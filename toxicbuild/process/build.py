@@ -41,7 +41,7 @@ class DynamicBuild(Build):
 
     def create_step(self, cmd):
         env = self.get_step_env()
-        scmd = ShellCommand(command=cmd, env=env)
+        scmd = ShellCommand(env=env, **cmd)
         step = interfaces.IBuildStepFactory(scmd)
         return step
 

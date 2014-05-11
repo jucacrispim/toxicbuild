@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from copy import copy
 import yaml
 from buildbot.config import BuilderConfig
 
@@ -10,10 +11,12 @@ class ConfigReader(object):
         self.steps = self.parse_steps()
 
     def parse_steps(self):
-        steps = self.config['steps']
+        steps = self.config
         steps_list = []
         for step in steps:
-            steps_list.append(step.split())
+            s = copy(step)
+            s['command'] = step['command'].split()
+            steps_list.append(s)
         return steps_list
 
 

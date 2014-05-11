@@ -131,4 +131,6 @@ class ToxicBuildTestCase(unittest.TestCase):
 
         json_response = json.loads(response)
 
-        self.assertEqual(len(json_response['steps']), 4)
+        self.assertEqual(len(json_response['steps']), 5)
+        # asserting steps order
+        self.assertEqual(json_response['steps'][-1]['name'], 'grep')

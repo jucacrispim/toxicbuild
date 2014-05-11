@@ -7,16 +7,21 @@ from toxicbuild.process.factory import DynamicBuildFactory
 
 class ConfigReaderTestCase(unittest.TestCase):
     def setUp(self):
-        self.configstr = """steps:
-        - python setup.py test
-        - sh ./check_something.sh
-        """
+        self.configstr = """
+- name: run tests
+  command: python setup.py test
+
+- name: check something
+  command: sh ./check_something.sh
+"""
 
         self.config = ConfigReader(self.configstr)
 
     def test_parse_steps(self):
-        expected = [['python', 'setup.py', 'test'],
-                    ['sh', './check_something.sh']]
+        expected = [{'name': 'run tests', 'command':
+                     ['python', 'setup.py', 'test']},
+                    {'name': 'check something', 'command':
+                     ['sh', './check_something.sh']}]
 
         steps = self.config.parse_steps()
 
