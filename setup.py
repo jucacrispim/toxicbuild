@@ -27,5 +27,6 @@ setup(name='toxicbuild',
           'Topic :: Software Development :: Build Tools',
           'Topic :: Software Development :: Testing',
       ],
+      scripts=['script/toxicbuild'],
       test_suite='tests',
       provides=['toxicbuild'],)
