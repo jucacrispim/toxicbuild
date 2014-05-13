@@ -16,7 +16,7 @@ class DynamicBuildTestCase(unittest.TestCase):
         cmd = {'name': 'nice',
                'command':
                ['sh', './some_nice_script.sh', '--do-the-right-way']}
-        path = os.path.abspath('bla/ble/bin')
+        path = 'bla/ble/bin'
         expected = {'command': cmd['command'],
                     'name': 'nice',
                     'env': {'PATH': [path, '${PATH}']}}
@@ -27,7 +27,7 @@ class DynamicBuildTestCase(unittest.TestCase):
         self.assertEqual(expected, called)
 
     def test_get_step_env(self):
-        path = os.path.abspath('bla/ble/bin')
+        path = 'bla/ble/bin'
         expected = {'PATH': [path, '${PATH}']}
         returned = self.build.get_step_env()
 

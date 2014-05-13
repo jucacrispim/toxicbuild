@@ -65,7 +65,7 @@ class DynamicBuild(Build):
         return steps
 
     def get_step_env(self):
-        bin_dir = os.path.join(os.path.abspath(self.venv_path), 'bin')
+        bin_dir = os.path.join(self.venv_path, 'bin')
 
         env = {'PATH': [bin_dir, '${PATH}']}
         return env
