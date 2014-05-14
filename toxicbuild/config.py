@@ -1,14 +1,32 @@
 # -*- coding: utf-8 -*-
 
+import os
+import sys
 from copy import copy
-import yaml
 from buildbot.config import BuilderConfig
 
 
 class ConfigReader(object):
     def __init__(self, conf_in):
-        self.config = yaml.load(conf_in)
+
+        self.config = self._read_config(conf_in)
         self.steps = self.parse_steps()
+
+    def _read_config(self, conf_in):
+        localDict = {
+            'basedir': os.path.expanduser('.'),
+            '__file__': os.path.abspath('nothinghere'),
+        }
+        old_sys_path = sys.path[:]
+        sys.path.append(localDict)
+        try:
+            # ops
+            conf = 'conf = {"userconf": %s}' % conf_in
+            exec conf in localDict
+        finally:
+            sys.path[:] = old_sys_path
+
+        return localDict['conf']['userconf']
 
     def parse_steps(self):
         steps = self.config

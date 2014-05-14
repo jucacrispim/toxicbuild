@@ -8,11 +8,11 @@ from toxicbuild.process.factory import DynamicBuildFactory
 class ConfigReaderTestCase(unittest.TestCase):
     def setUp(self):
         self.configstr = """
-- name: run tests
-  command: python setup.py test
+[{'name': 'run tests',
+  'command': 'python setup.py test'},
 
-- name: check something
-  command: sh ./check_something.sh
+ {'name': 'check something',
+  'command': 'sh ./check_something.sh'}]
 """
 
         self.config = ConfigReader(self.configstr)
