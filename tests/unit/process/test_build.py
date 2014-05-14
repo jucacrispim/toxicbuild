@@ -38,8 +38,8 @@ class DynamicBuildTestCase(unittest.TestCase):
     def test_setupBuild(self):
         revconf = Mock()
         revconf.config = """
-[{'name': 'run tests',
-  'command': 'python setup.py test --settings=settings_test'}]
+steps = [{'name': 'run tests',
+          'command': 'python setup.py test --settings=settings_test'}]
 """
         build.RevisionConfig.get_revconf.return_value = revconf
 

@@ -20,13 +20,11 @@ class ConfigReader(object):
         old_sys_path = sys.path[:]
         sys.path.append(localDict)
         try:
-            # ops
-            conf = 'conf = {"userconf": %s}' % conf_in
-            exec conf in localDict
+            exec conf_in in localDict
         finally:
             sys.path[:] = old_sys_path
 
-        return localDict['conf']['userconf']
+        return localDict['steps']
 
     def parse_steps(self):
         steps = self.config
