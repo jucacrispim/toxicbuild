@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import os
 import unittest
 from mock import Mock, patch
 from toxicbuild.process import build
