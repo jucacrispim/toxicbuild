@@ -106,7 +106,6 @@ class ToxicBuildTestCase(unittest.TestCase):
         login_form.set_value('toxicbuild', 'passwd')
         cls.wb.submit_form(login_form)
         cls.wb.urlopen(cls.toxic_builder_url)
-        force_form = cls.wb.current_page.forms['force_build']
 
     def test_1_force_build(self):
 
@@ -141,8 +140,8 @@ class ToxicBuildTestCase(unittest.TestCase):
             fd.write(content)
 
         add_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'add', '.']
-        commit_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'commit',
-                      '-m"bla"']
+        commit_cmd = ['cd', '%s' % self.fakeproject_dest,
+                      '&&', 'git', 'commit', '-m"bla"']
         cmds = [add_cmd, commit_cmd]
         for cmd in cmds:
             os.system(' '.join(cmd))
