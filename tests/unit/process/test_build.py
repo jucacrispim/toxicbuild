@@ -46,3 +46,26 @@ steps = [{'name': 'run tests',
         self.build.setupBuild()
         # 4 steps. 3 from get_default_steps and 1 from config file
         self.assertEqual(len(self.build.stepFactories), 4)
+
+    @patch.object(build, 'RevisionConfig', Mock())
+    @patch.object(build.Build, 'setupBuild', Mock())
+    @patch.object(build.DynamicBuild, 'getProperty', Mock())
+    def test_setupBuild_with_not_config_ok(self):
+        revconf = Mock()
+        revconf.config = """
+= [{'name': 'run tests',
+    'command': 'python setup.py test --settings=settings_test'}]
+"""
+        build.RevisionConfig.get_revconf.return_value = revconf
+
+        self.build.setupBuild()
+        # BombStep!
+        self.assertEqual(len(self.build.stepFactories), 1)
+
+
+class BombStepTestCase(unittest.TestCase):
+    def test_raises(self):
+        exception = KeyError
+        b = build.BombStep(exception=exception)
+        with self.assertRaises(KeyError):
+            b.startStep()

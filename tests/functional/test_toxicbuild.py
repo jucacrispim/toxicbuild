@@ -12,6 +12,26 @@ from webrunner import WebBrowser
 class ToxicBuildTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.setClassAttrs()
+        cls.create()
+        cls.start()
+        cls.weblogin()
+
+    @classmethod
+    def tearDownClass(cls):
+        stop_master_cmd = ['buildbot', 'stop', '%s' % cls.master_path]
+        stop_slave_cmd = ['buildslave', 'stop', '%s' % cls.slave_path]
+
+        subprocess.call(stop_master_cmd)
+        subprocess.call(stop_slave_cmd)
+
+        try:
+            subprocess.call(['rm', '-rf', '%s' % cls.basedir])
+        except OSError:
+            pass
+
+    @classmethod
+    def setClassAttrs(cls):
         cls.basedir = os.path.abspath('../toxic-test')
 
         cls.master_cfg_file = os.path.join(os.path.join(cls.basedir, 'master'),
@@ -35,102 +55,109 @@ class ToxicBuildTestCase(unittest.TestCase):
         cls.fakeproject_dest = os.path.join(cls.master_path, 'fakeproject')
 
     @classmethod
-    def tearDownClass(cls):
-        stop_master_cmd = ['buildbot', 'stop', '%s' % cls.master_path]
-        stop_slave_cmd = ['buildslave', 'stop', '%s' % cls.slave_path]
-
-        subprocess.call(stop_master_cmd)
-        subprocess.call(stop_slave_cmd)
-
-        try:
-            subprocess.call(['rm', '-rf', '%s' % cls.basedir])
-        except OSError:
-            pass
-
-    def test_1_create_new_project(self):
+    def create(cls):
         # creating a new project
         create_project_cmd = [
             'export PYTHONPATH="." && ./script/toxicbuild create %s '
-            % self.basedir]
-        msg = ''
-        success = not subprocess.call(create_project_cmd, shell=True)
+            % cls.basedir]
 
+        subprocess.call(create_project_cmd, shell=True)
         # copying master sample config for tests
-        try:
-            shutil.copyfile(self.sampleconfig, self.master_cfg_file)
-        except shutil.Error:
-            success = False
-            msg += 'error on copyfile\n'
+        shutil.copyfile(cls.sampleconfig, cls.master_cfg_file)
 
         # copying slave sample config for tests
-        try:
-            shutil.copyfile(self.slaveconfig, self.slave_cfg_file)
-        except shutil.Error:
-            success = False
-            msg += 'error on copyfile\n'
+        shutil.copyfile(cls.slaveconfig, cls.slave_cfg_file)
 
         # creating test project
-        try:
-            shutil.copytree(self.fakeproject, self.fakeproject_dest)
-        except shutil.Error:
-            success = False
-            msg += 'error copying fakeproject'
+        shutil.copytree(cls.fakeproject, cls.fakeproject_dest)
 
-        init_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'init']
-        add_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'add', '.']
-        commit_cmd = ['cd', '%s' % self.fakeproject_dest, '&&',
+        init_cmd = ['cd', '%s' % cls.fakeproject_dest, '&&', 'git', 'init']
+        add_cmd = ['cd', '%s' % cls.fakeproject_dest, '&&', 'git', 'add', '.']
+        commit_cmd = ['cd', '%s' % cls.fakeproject_dest, '&&',
                       'git', 'commit', '-m"test"']
         cmds = [init_cmd, add_cmd, commit_cmd]
         for cmd in cmds:
-            error = os.system(' '.join(cmd))
-            if error:
-                success = False
+            os.system(' '.join(cmd))
 
         # sym link to toxicbuild
         toxicbuild_path = os.path.abspath('toxicbuild/')
         toxicbuild_link_path = os.path.abspath(os.path.join(
-            os.path.join(self.basedir, 'pythonpath'), 'toxicbuild'))
+            os.path.join(cls.basedir, 'pythonpath'), 'toxicbuild'))
 
         symlink_cmd = ['ln', '-s', toxicbuild_path, toxicbuild_link_path]
-        success = subprocess.call(symlink_cmd) or success
+        subprocess.call(symlink_cmd)
 
-        self.assertTrue(success)
+    @classmethod
+    def start(cls):
+        start_master_cmd = ['buildbot', 'start', '%s' % cls.master_path]
+        start_slave_cmd = ['buildslave', 'start', '%s' % cls.slave_path]
 
-    def test_2_start_toxicbuild(self):
-        start_master_cmd = ['buildbot', 'start', '%s' % self.master_path]
-        start_slave_cmd = ['buildslave', 'start', '%s' % self.slave_path]
+        subprocess.call(start_master_cmd)
+        subprocess.call(start_slave_cmd)
 
-        master_success = not subprocess.call(start_master_cmd)
-        slave_success = not subprocess.call(start_slave_cmd)
+    @classmethod
+    def weblogin(cls):
+        # login to web interface
+        cls.wb = WebBrowser()
+        cls.wb.urlopen(cls.toxic_builder_url)
 
-        self.assertTrue(master_success and slave_success)
-
-    def test_3_force_build(self):
-        wb = WebBrowser()
-        wb.urlopen(self.toxic_builder_url)
-
-        # only authenticated users can force builds
-        login_form = wb.current_page.forms['login']
+        login_form = cls.wb.current_page.forms['login']
         login_form.set_value('toxicbuild', 'username')
         login_form.set_value('toxicbuild', 'passwd')
-        wb.submit_form(login_form)
+        cls.wb.submit_form(login_form)
+        cls.wb.urlopen(cls.toxic_builder_url)
+        force_form = cls.wb.current_page.forms['force_build']
+
+    def test_1_force_build(self):
 
         # forcing a build
-        wb.urlopen(self.toxic_builder_url)
-        force_form = wb.current_page.forms['force_build']
-        wb.submit_form(force_form)
+        self.wb.urlopen(self.toxic_builder_url)
+        force_form = self.wb.current_page.forms['force_build']
+        self.wb.submit_form(force_form)
         # here we need to wait to build have time to be shown
         # in the web.
         time.sleep(1)
         # getting build info
         url = 'http://localhost:8020/json/builders/dynamic-builder/builds/0'
-        wb.urlopen(url)
+        self.wb.urlopen(url)
 
-        # odd json sent by buildbot json api
-        response = str(wb.current_page.soup).replace('</toxicbuild>', '')
+        response = str(self.wb.current_page._web_doc)
 
         json_response = json.loads(response)
 
         self.assertEqual(len(json_response['steps']), 5)
         # asserting steps order
         self.assertEqual(json_response['steps'][-1]['name'], 'grep')
+
+    def test_2_income_changes_with_not_config_ok(self):
+        # build must be marked as Exception
+        # broken config file
+        cfile = os.path.join(self.fakeproject_dest, 'toxicbuild.conf')
+        with open(cfile, 'r') as fd:
+            content = fd.read()
+
+        with open(cfile, 'w') as fd:
+            content = content.replace('steps', '')
+            fd.write(content)
+
+        add_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'add', '.']
+        commit_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'commit',
+                      '-m"bla"']
+        cmds = [add_cmd, commit_cmd]
+        for cmd in cmds:
+            os.system(' '.join(cmd))
+
+        # here we need to wait to build have time to be shown
+        # in the web.
+        time.sleep(3)
+        # getting build info
+        url = 'http://localhost:8020/json/builders/dynamic-builder/builds/1'
+        self.wb.urlopen(url)
+
+        response = str(self.wb.current_page._web_doc)
+
+        json_response = json.loads(response)
+
+        self.assertEqual(len(json_response['steps']), 1)
+        # asserting steps order
+        self.assertEqual(json_response['steps'][-1]['name'], 'bomb!')

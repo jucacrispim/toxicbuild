@@ -32,7 +32,18 @@ class DynamicBuild(Build):
         # BuildFactory class but the revision is not known there
         # so I need to do it here.
         steps = self.get_default_steps(revconf)
-        config = ConfigReader(revconf.config)
+        config_ok = False
+        try:
+            config = ConfigReader(revconf.config)
+            config_ok = True
+        except Exception as e:
+            # If I can't read the config file, send a BombStep
+            steps = [interfaces.IBuildStepFactory(
+                BombStep(e, name='bomb!'))]
+
+        if not config_ok:
+            return steps
+
         for cmd in config.steps:
             step = self.create_step(cmd)
             steps.append(step)
@@ -69,3 +80,20 @@ class DynamicBuild(Build):
 
         env = {'PATH': [bin_dir, '${PATH}']}
         return env
+
+
+class BombStep(ShellCommand):
+    """
+    Make a build be marked as exception
+    """
+    def __init__(self, *args, **kwargs):
+        try:
+            self.exception = kwargs['exception']
+            del kwargs['exception']
+        except KeyError:
+            self.exception = Exception
+
+        ShellCommand.__init__(self, *args, **kwargs)
+
+    def startStep(self, *args, **kwargs):
+        raise self.exception
