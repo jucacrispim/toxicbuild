@@ -32,7 +32,7 @@ class DynamicBuildTestCase(unittest.TestCase):
 
         self.assertEqual(expected, returned)
 
-    @patch.object(build, 'RevisionConfig', Mock())
+    @patch.object(build.master, 'TOXICDB', Mock())
     @patch.object(build.Build, 'setupBuild', Mock())
     @patch.object(build.DynamicBuild, 'getProperty', Mock())
     def test_setupBuild(self):
@@ -41,13 +41,14 @@ class DynamicBuildTestCase(unittest.TestCase):
 steps = [{'name': 'run tests',
           'command': 'python setup.py test --settings=settings_test'}]
 """
-        build.RevisionConfig.get_revconf.return_value = revconf
+        build.master.TOXICDB.revisionconfig._getRevisionConfig.\
+            return_value = revconf
 
         self.build.setupBuild()
         # 4 steps. 3 from get_default_steps and 1 from config file
         self.assertEqual(len(self.build.stepFactories), 4)
 
-    @patch.object(build, 'RevisionConfig', Mock())
+    @patch.object(build.master, 'TOXICDB', Mock())
     @patch.object(build.Build, 'setupBuild', Mock())
     @patch.object(build.DynamicBuild, 'getProperty', Mock())
     def test_setupBuild_with_not_config_ok(self):
@@ -56,7 +57,8 @@ steps = [{'name': 'run tests',
 = [{'name': 'run tests',
     'command': 'python setup.py test --settings=settings_test'}]
 """
-        build.RevisionConfig.get_revconf.return_value = revconf
+        build.master.TOXICDB.revisionconfig.getRevisionConfig.\
+            return_value = revconf
 
         self.build.setupBuild()
         # BombStep!

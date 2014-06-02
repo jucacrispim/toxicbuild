@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import os
+import jinja2
 from pkg_resources import resource_filename
 from twisted.internet import defer
 from twisted.python import util
 from buildbot.util import in_reactor
-from buildbot.scripts.create_master import (makeBasedir, makeTAC,
+from buildbot.scripts.create_master import (makeBasedir,
                                             makePublicHtml,
                                             makeTemplatesDir, createDB)
 from buildslave.scripts.runner import createSlave
@@ -76,6 +77,32 @@ def makeSampleConfig(config):  # pragma: no cover
     with open(target, "wt") as f:
         f.write(config_sample)
     os.chmod(target, 0600)
+
+
+def makeTAC(config):  # pragma: no cover
+    # copy/paste from buildbot
+    # render buildbot_tac.tmpl using the config
+    loader = jinja2.FileSystemLoader(os.path.dirname(__file__))
+    env = jinja2.Environment(loader=loader, undefined=jinja2.StrictUndefined)
+    env.filters['repr'] = repr
+    tpl = env.get_template('buildbot_tac.tmpl')
+    cxt = dict((k.replace('-', '_'), v) for k, v in config.iteritems())
+    contents = tpl.render(cxt)
+
+    tacfile = os.path.join(config['basedir'], "buildbot.tac")
+    if os.path.exists(tacfile):
+        with open(tacfile, "rt") as f:
+            oldcontents = f.read()
+        if oldcontents == contents:
+            if not config['quiet']:
+                print "buildbot.tac already exists and is correct"
+            return
+        if not config['quiet']:
+            print "not touching existing buildbot.tac"
+            print "creating buildbot.tac.new instead"
+        tacfile += ".new"
+    with open(tacfile, "wt") as f:
+        f.write(contents)
 
 
 def _get_master_config(config):

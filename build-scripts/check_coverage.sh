@@ -1,19 +1,30 @@
 #!/bin/sh
 
-err=`coverage run --source=toxicbuild --omit="*migrations*" setup.py test --test-suite=tests.unit -q 2>&1 | egrep -i 'fail|error'`;
+err=`coverage run --source=toxicbuild --omit="*migrations*" $VIRTUAL_ENV/bin/trial tests.unit 2>&1 | egrep -i 'fail|error'`;
 coverage=`coverage report -m | grep TOTAL | sed 's/TOTAL\s*\w*\s*\w*\s*//g' | cut -d'%' -f1`
 
 echo 'coverage was:' $coverage '%'
 
 if [ "$err" != "" ]
 then
-    echo "But something went wrong";
-    exit 1;
+    if [ $coverage -eq 100 ]
+    then
+	exit 1
+    fi
 fi
 
 if [ $coverage -eq 100 ]
 then
-    exit 0
+    if [ "$err" != "" ]
+    then
+	echo "But something went wrong";
+	echo "err";
+	exit 1;
+    else
+	echo "Everything ok, buddy!";
+	exit 0;
+    fi
+
 else
     coverage report -m
     exit 1

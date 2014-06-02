@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+from toxicbuild import config
 from toxicbuild.config import ConfigReader, DynamicBuilderConfig
 from toxicbuild.process.factory import DynamicBuildFactory
 
@@ -28,7 +29,7 @@ steps = [{'name': 'run tests',
         self.assertEqual(expected, steps)
 
 
-class ToxicbuilderConfigTestCase(unittest.TestCase):
+class DynamcBuilderConfigTestCase(unittest.TestCase):
     def test_create_builder(self):
         builder = DynamicBuilderConfig(venv_path='venv',
                                        pyversion='/usr/bin/python3',
@@ -36,3 +37,17 @@ class ToxicbuilderConfigTestCase(unittest.TestCase):
                                        slavenames=['slave1'])
 
         self.assertTrue(isinstance(builder.factory, DynamicBuildFactory))
+
+
+class MasterConfigTestCase(unittest.TestCase):
+    def setUp(self):
+        self.masterconfig = config.MasterConfig()
+
+    def test_load_db(self):
+        filename = 'master.cfg'
+        config_dict = {'db': {'toxicbuild_db_url': 'sqlite:///bla.sqlite'}}
+        self.masterconfig.db = {'db_poll_interval': 1}
+        self.masterconfig.load_db(filename, config_dict)
+
+        self.assertEqual(self.masterconfig.db['toxicbuild_db_url'],
+                         'sqlite:///bla.sqlite')

@@ -4,6 +4,7 @@ import os
 import sys
 from copy import copy
 from buildbot.config import BuilderConfig
+from buildbot.config import MasterConfig as MasterConfigBase
 
 
 class ConfigReader(object):
@@ -34,6 +35,18 @@ class ConfigReader(object):
             s['command'] = step['command'].split()
             steps_list.append(s)
         return steps_list
+
+
+class MasterConfig(MasterConfigBase):
+    def __init__(self):
+        MasterConfigBase.__init__(self)
+        self.db.update({'toxicbuild_db_url': 'sqlite:///toxicbuild.sqlite'})
+
+    def load_db(self, filename, config_dict):
+        MasterConfigBase.load_db(self, filename, config_dict)
+        if 'db' in config_dict:
+            if 'toxicbuild_db_url' in config_dict['db']:
+                self.db['toxicbuild_db_url'] = config_dict['toxicbuild_db_url']
 
 
 class DynamicBuilderConfig(BuilderConfig):

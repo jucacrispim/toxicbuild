@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import os
+from twisted.internet import defer
 from buildbot import interfaces
 from buildbot.process.build import Build
 from buildbot.steps.source.git import Git
 from buildbot.steps.shell import ShellCommand
-from toxicbuild.db.models import RevisionConfig
+from toxicbuild import master
 from toxicbuild.config import ConfigReader
 
 
@@ -21,11 +22,16 @@ class DynamicBuild(Build):
     def setupBuild(self, *args, **kwargs):
         revision = self.getProperty('revision')
         branch = self.getProperty('branch') or 'master'
-        revconf = RevisionConfig.get_revconf(branch, revision=revision)
+        # I really need to block things here, otherwise
+        # I would have to change lots of things to work
+        # async.
+        conn = master.TOXICDB.pool.engine.connect()
+        revconf = master.TOXICDB.revisionconfig._getRevisionConfig(conn,
+            branch, revision=revision)
         self.steps = self.get_steps(revconf)
 
         self.setStepFactories(self.steps)
-        return Build.setupBuild(self, *args, **kwargs)
+        Build.setupBuild(self, *args, **kwargs)
 
     def get_steps(self, revconf):
         # I think the 'right' place for it should be in the
@@ -39,7 +45,7 @@ class DynamicBuild(Build):
         except Exception as e:
             # If I can't read the config file, send a BombStep
             steps = [interfaces.IBuildStepFactory(
-                BombStep(e, name='bomb!'))]
+                BombStep(e, name='Config Error!'))]
 
         if not config_ok:
             return steps

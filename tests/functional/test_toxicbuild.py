@@ -85,7 +85,7 @@ class ToxicBuildTestCase(unittest.TestCase):
             os.path.join(cls.basedir, 'pythonpath'), 'toxicbuild'))
 
         symlink_cmd = ['ln', '-s', toxicbuild_path, toxicbuild_link_path]
-        subprocess.call(symlink_cmd)
+        os.system(' '.join(symlink_cmd))
 
     @classmethod
     def start(cls):
@@ -159,4 +159,4 @@ class ToxicBuildTestCase(unittest.TestCase):
 
         self.assertEqual(len(json_response['steps']), 1)
         # asserting steps order
-        self.assertEqual(json_response['steps'][-1]['name'], 'bomb!')
+        self.assertEqual(json_response['steps'][-1]['name'], 'Config Error!')

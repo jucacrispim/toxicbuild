@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from twisted.internet import defer
 from buildbot.changes.gitpoller import GitPoller as GitPollerBase
-from toxicbuild.db.models import RevisionConfig
+from toxicbuild import master
 
 STEPS_FILE = 'toxicbuild.conf'
 
@@ -55,4 +55,5 @@ class GitPoller(GitPollerBase):
         conf = yield self._dovccmd('show', ['%s:%s' % (revision, STEPS_FILE)],
                                    path=self.workdir)
 
-        RevisionConfig.save_revconf(revision, branch, self.repourl, conf)
+        master.TOXICDB.revisionconfig.saveRevisionConfig(revision, branch,
+                                                         self.repourl, conf)

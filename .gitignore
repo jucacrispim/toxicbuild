@@ -16,3 +16,4 @@ pip-log.txt
 dist/
 build/
 *.egg-info/
+_trial_temp

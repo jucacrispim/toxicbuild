@@ -14,7 +14,7 @@ class GitPollerTestCase(unittest.TestCase):
             repourl=self.repourl, workdir=self.workdir)
 
     @patch.object(gitpoller.GitPoller, '_dovccmd', Mock())
-    @patch.object(gitpoller, 'RevisionConfig', Mock())
+    @patch.object(gitpoller.master, 'TOXICDB', Mock())
     def test_save_revconf(self):
         revision = 'asf3333'
         branch = 'master'
@@ -25,7 +25,8 @@ class GitPollerTestCase(unittest.TestCase):
         self.poller._save_revconf(revision, branch)
 
         expected_save = (revision, branch, self.poller.repourl, config)
-        called_save = gitpoller.RevisionConfig.save_revconf.call_args[0]
+        called_save = gitpoller.master.TOXICDB.revisionconfig.\
+                      saveRevisionConfig.call_args[0]
 
         self.assertEqual(expected_save, called_save)
 
