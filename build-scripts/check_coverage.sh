@@ -9,6 +9,8 @@ if [ "$err" != "" ]
 then
     if [ $coverage -eq 100 ]
     then
+	echo "But something went wrong";
+	echo "$err";
 	exit 1
     fi
 fi
@@ -18,7 +20,7 @@ then
     if [ "$err" != "" ]
     then
 	echo "But something went wrong";
-	echo "err";
+	echo "$err";
 	exit 1;
     else
 	echo "Everything ok, buddy!";

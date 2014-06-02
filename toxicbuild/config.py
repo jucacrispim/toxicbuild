@@ -46,7 +46,8 @@ class MasterConfig(MasterConfigBase):
         MasterConfigBase.load_db(self, filename, config_dict)
         if 'db' in config_dict:
             if 'toxicbuild_db_url' in config_dict['db']:
-                self.db['toxicbuild_db_url'] = config_dict['toxicbuild_db_url']
+                db_url = config_dict['db']['toxicbuild_db_url']
+                self.db['toxicbuild_db_url'] = db_url
 
 
 class DynamicBuilderConfig(BuilderConfig):
