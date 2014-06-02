@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import sqlalchemy as sa
 from sqlalchemy.schema import MetaData
 from twisted.python import log
 from buildbot.test.util.db import RealDatabaseMixin
@@ -34,7 +35,6 @@ class RealDatabaseMixin(RealDatabaseMixin):
     #  - avoids repetitive implementation
     #  - cooperates better at runtime with thread-sensitive DBAPI's
 
-
     def __thd_clean_database(self, conn):
         # drop the known tables, although sometimes this misses dependencies
         try:
@@ -49,8 +49,8 @@ class RealDatabaseMixin(RealDatabaseMixin):
 
     def __thd_create_tables(self, conn, table_names):
         all_table_names = set(table_names)
-        ordered_tables = [ t for t in model.Model.metadata.sorted_tables
-                        if t.name in all_table_names ]
+        ordered_tables = [t for t in model.Model.metadata.sorted_tables
+                          if t.name in all_table_names]
 
         for tbl in ordered_tables:
             tbl.create(bind=conn, checkfirst=True)
@@ -64,13 +64,14 @@ class RealDatabaseMixin(RealDatabaseMixin):
         @returns: Deferred
         """
         # sort the tables by dependency
-        all_table_names = set([ row.table for row in rows ])
-        ordered_tables = [ t for t in model.Model.metadata.sorted_tables
-                           if t.name in all_table_names ]
+        all_table_names = set([row.table for row in rows])
+        ordered_tables = [t for t in model.Model.metadata.sorted_tables
+                          if t.name in all_table_names]
+
         def thd(conn):
             # insert into tables -- in order
             for tbl in ordered_tables:
-                for row in [ r for r in rows if r.table == tbl.name ]:
+                for row in [r for r in rows if r.table == tbl.name]:
                     tbl = model.Model.metadata.tables[row.table]
                     try:
                         tbl.insert(bind=conn).execute(row.values)

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import mock
 from twisted.internet import defer
 from twisted.trial import unittest
 from buildbot import config

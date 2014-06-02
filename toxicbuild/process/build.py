@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-from twisted.internet import defer
 from buildbot import interfaces
 from buildbot.process.build import Build
 from buildbot.steps.source.git import Git
@@ -26,8 +25,8 @@ class DynamicBuild(Build):
         # I would have to change lots of things to work
         # async.
         conn = master.TOXICDB.pool.engine.connect()
-        revconf = master.TOXICDB.revisionconfig._getRevisionConfig(conn,
-            branch, revision=revision)
+        revconf = master.TOXICDB.revisionconfig._getRevisionConfig(
+            conn, branch, revision=revision)
         self.steps = self.get_steps(revconf)
 
         self.setStepFactories(self.steps)

@@ -33,7 +33,7 @@ class MasterConfigTestCase(unittest.TestCase):
         reactor = self.make_reactor()
 
         d = self.master.startService(_reactor=reactor)
-        d.addCallback(lambda _ : self.master.stopService())
+        d.addCallback(lambda _: self.master.stopService())
 
         @d.addCallback
         def check(_):
@@ -44,6 +44,7 @@ class MasterConfigTestCase(unittest.TestCase):
 
     def test_startService_not_ready_database(self):
         reactor = self.make_reactor()
+
         def db_setup():
             raise connector.DatabaseNotReadyError()
         self.master.toxicdb.setup = db_setup

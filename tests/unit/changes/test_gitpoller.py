@@ -26,7 +26,7 @@ class GitPollerTestCase(unittest.TestCase):
 
         expected_save = (revision, branch, self.poller.repourl, config)
         called_save = gitpoller.master.TOXICDB.revisionconfig.\
-                      saveRevisionConfig.call_args[0]
+            saveRevisionConfig.call_args[0]
 
         self.assertEqual(expected_save, called_save)
 

@@ -8,6 +8,7 @@ from tests.util import db
 # another copy/paste from buildbot, now only changing RealDatabaseMixin
 # to use the monkey patched one.
 
+
 class ConnectorComponentMixin(db.RealDatabaseMixin):
     """
     Implements a mock DBConnector object, replete with a thread pool and a DB
@@ -22,6 +23,7 @@ class ConnectorComponentMixin(db.RealDatabaseMixin):
     def setUpConnectorComponent(self, table_names=[], basedir='basedir'):
         """Set up C{self.db}, using the given db_url and basedir."""
         d = self.setUpRealDatabase(table_names=table_names, basedir=basedir)
+
         def finish_setup(_):
             self.db = FakeDBConnector()
             self.db.pool = self.db_pool
@@ -32,6 +34,7 @@ class ConnectorComponentMixin(db.RealDatabaseMixin):
 
     def tearDownConnectorComponent(self):
         d = self.tearDownRealDatabase()
+
         def finish_cleanup(_):
             self.db_pool.shutdown()
             # break some reference loops, just for fun
