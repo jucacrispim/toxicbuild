@@ -38,9 +38,9 @@ class GitPollerTestCase(unittest.TestCase):
         branch = 'master'
         self.poller._process_changes(newRev, branch)
 
-        # 3 calls. One from last rev the the other from revList
+        # 2 calls. One from last rev the the other from revList
         calls = len(gitpoller.GitPoller._save_revconf.call_args_list)
-        self.assertEqual(calls, 3)
+        self.assertEqual(calls, 2)
 
     @patch.object(gitpoller.GitPollerBase, 'poll', Mock())
     @patch.object(gitpoller.GitPoller, '_save_revconf', Mock())

@@ -29,7 +29,6 @@ class DynamicBuild(Build):
             conn, branch, revision=revision)
 
         self.steps = self.get_steps(revconf)
-
         self.setStepFactories(self.steps)
         Build.setupBuild(self, *args, **kwargs)
 

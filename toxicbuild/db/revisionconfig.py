@@ -37,7 +37,7 @@ class RevisionConfigConnectorComponent(base.DBConnectorComponent):
         if revision:
             query = query.where(tbl.c.revision == revision)
         else:
-            query = query.order_by('-timestamp')
+            query = query.order_by('-id')
 
         r = conn.execute(query)
         return r.fetchone()
