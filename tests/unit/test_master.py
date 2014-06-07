@@ -13,6 +13,7 @@ class MasterConfigTestCase(unittest.TestCase):
     def setUp(self):
         master.BuildMaster.basedir = 'bla'
         self.master = master.BuildMaster()
+        self.master.config.change_sources = [Mock()]
         self.master.umask = None
         self.master.db_loop = False
 

@@ -8,7 +8,10 @@ from toxicbuild.process import build
 class DynamicBuildTestCase(unittest.TestCase):
     def setUp(self):
         requests = [Mock()]
+        builder = Mock()
+        builder.name = 'b1'
         self.build = build.DynamicBuild(requests)
+        self.build.setBuilder(builder)
         self.build.venv_path = 'bla/ble/'
 
     def test_create_step(self):
@@ -38,8 +41,9 @@ class DynamicBuildTestCase(unittest.TestCase):
     def test_setupBuild(self):
         revconf = Mock()
         revconf.config = """
-steps = [{'name': 'run tests',
-          'command': 'python setup.py test --settings=settings_test'}]
+builders = [{'name': 'b1',
+             'steps': [{'name': 'run tests',
+                 'command': 'python setup.py test --settings=settings_test'}]}]
 """
         build.master.TOXICDB.revisionconfig._getRevisionConfig.\
             return_value = revconf

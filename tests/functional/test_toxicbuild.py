@@ -48,7 +48,7 @@ class ToxicBuildTestCase(unittest.TestCase):
         cls.slave_path = os.path.join(cls.basedir, 'slave')
 
         cls.toxic_url = 'http://localhost:8020'
-        cls.toxic_builder_url = cls.toxic_url + '/builders/dynamic-builder'
+        cls.toxic_builder_url = cls.toxic_url + '/builders/b1'
 
         cls.fakeproject = os.path.join(
             os.path.abspath(os.path.dirname((__file__))), 'fakeproject')
@@ -99,44 +99,45 @@ class ToxicBuildTestCase(unittest.TestCase):
     def weblogin(cls):
         # login to web interface
         cls.wb = WebBrowser()
-        cls.wb.urlopen(cls.toxic_builder_url)
+        cls.wb.urlopen(cls.toxic_url)
 
         login_form = cls.wb.current_page.forms['login']
         login_form.set_value('toxicbuild', 'username')
         login_form.set_value('toxicbuild', 'passwd')
         cls.wb.submit_form(login_form)
-        cls.wb.urlopen(cls.toxic_builder_url)
 
-    def test_1_force_build(self):
+    def test_1_check_builders(self):
+        time.sleep(2)
+        # check if builders were created correctly
+        self.wb.urlopen(self.toxic_url + '/builders')
+        # checking the numbers of builders created
+        table = self.wb.current_page.soup.findAll('table')[0]
 
-        # forcing a build
+        self.assertEqual(len(table.findAll('tr')), 2)
+
+    def test_2_force_build(self):
+        # forces a build
         self.wb.urlopen(self.toxic_builder_url)
         force_form = self.wb.current_page.forms['force_build']
         self.wb.submit_form(force_form)
-        # here we need to wait to build have time to be shown
-        # in the web.
-        time.sleep(1)
         # getting build info
-        url = 'http://localhost:8020/json/builders/dynamic-builder/builds/0'
+        time.sleep(2)
+        url = self.toxic_url + '/builders/b1/builds/0'
         self.wb.urlopen(url)
 
-        response = str(self.wb.current_page._web_doc)
+        # getting the number of steps created
+        steps = self.wb.current_page.soup.find('ol').find('li')
 
-        json_response = json.loads(response)
+        self.assertEqual(len(steps), 5)
 
-        self.assertEqual(len(json_response['steps']), 5)
-        # asserting steps order
-        self.assertEqual(json_response['steps'][-1]['name'], 'grep')
-
-    def test_2_income_changes_with_not_config_ok(self):
-        # build must be marked as Exception
-        # broken config file
+    def test_3_income_changes_with_not_config_ok(self):
+        # must be create only one builder called 'Config Error!'
         cfile = os.path.join(self.fakeproject_dest, 'toxicbuild.conf')
         with open(cfile, 'r') as fd:
             content = fd.read()
 
         with open(cfile, 'w') as fd:
-            content = content.replace('steps', '')
+            content = content.replace('builders', '')
             fd.write(content)
 
         add_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'add', '.']
@@ -148,15 +149,8 @@ class ToxicBuildTestCase(unittest.TestCase):
 
         # here we need to wait to build have time to be shown
         # in the web.
-        time.sleep(3)
+        time.sleep(2)
         # getting build info
-        url = 'http://localhost:8020/json/builders/dynamic-builder/builds/1'
+        url = self.toxic_url + '/builders/Config%20Error%21'
         self.wb.urlopen(url)
-
-        response = str(self.wb.current_page._web_doc)
-
-        json_response = json.loads(response)
-
-        self.assertEqual(len(json_response['steps']), 1)
-        # asserting steps order
-        self.assertEqual(json_response['steps'][-1]['name'], 'Config Error!')
+        self.assertTrue(self.wb.current_page)

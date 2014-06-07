@@ -27,6 +27,7 @@ class DynamicBuild(Build):
         conn = master.TOXICDB.pool.engine.connect()
         revconf = master.TOXICDB.revisionconfig._getRevisionConfig(
             conn, branch, revision=revision)
+
         self.steps = self.get_steps(revconf)
 
         self.setStepFactories(self.steps)
@@ -37,21 +38,29 @@ class DynamicBuild(Build):
         # BuildFactory class but the revision is not known there
         # so I need to do it here.
         steps = self.get_default_steps(revconf)
-        config_ok = False
+        bomb_step = interfaces.IBuildStepFactory(
+            BombStep(name='Config Error!'))
+
+        # config_ok = False
+        # try:
+        config = ConfigReader(revconf.config)
+        #     config_ok = True
+        # except Exception as e:
+        #     # If I can't read the config file, send a BombStep
+        #     bomb_step.exception = e
+        #     steps = [bomb_step]
+
+        # if not config_ok:
+        #     return steps
+
+        builder = config.getBuilder(self.builder.name)
         try:
-            config = ConfigReader(revconf.config)
-            config_ok = True
+            for cmd in builder['steps']:
+                step = self.create_step(cmd)
+                steps.append(step)
         except Exception as e:
-            # If I can't read the config file, send a BombStep
-            steps = [interfaces.IBuildStepFactory(
-                BombStep(e, name='Config Error!'))]
-
-        if not config_ok:
-            return steps
-
-        for cmd in config.steps:
-            step = self.create_step(cmd)
-            steps.append(step)
+            bomb_step.exception = e
+            steps = [bomb_step]
 
         return steps
 

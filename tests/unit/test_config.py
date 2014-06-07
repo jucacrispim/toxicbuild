@@ -9,24 +9,42 @@ from toxicbuild.process.factory import DynamicBuildFactory
 class ConfigReaderTestCase(unittest.TestCase):
     def setUp(self):
         self.configstr = """
-steps = [{'name': 'run tests',
-          'command': 'python setup.py test'},
+builders = [{'name': 'b1',
+             'steps': [{'name': 'run tests',
+                        'command': 'python setup.py test'},
 
-         {'name': 'check something',
-          'command': 'sh ./check_something.sh'}]
+                       {'name': 'check something',
+                        'command': 'sh ./check_something.sh'}]}]
 """
 
         self.config = ConfigReader(self.configstr)
 
-    def test_parse_steps(self):
+    def test_getSteps(self):
         expected = [{'name': 'run tests', 'command':
                      ['python', 'setup.py', 'test']},
                     {'name': 'check something', 'command':
                      ['sh', './check_something.sh']}]
 
-        steps = self.config.parse_steps()
+        builder = {'name': 'b1',
+                   'steps': [{'name': 'run tests',
+                              'command': 'python setup.py test'},
+                             {'name': 'check something',
+                              'command': 'sh ./check_something.sh'}]}
+
+        steps = self.config._getSteps(builder)
 
         self.assertEqual(expected, steps)
+
+    def test_getBuilders(self):
+
+        expected = [{'name': 'b1',
+                     'steps': [{'name': 'run tests',
+                                'command': ['python', 'setup.py', 'test']},
+                               {'name': 'check something',
+                                'command': ['sh', './check_something.sh']}]}]
+
+        builders = self.config.getBuilders()
+        self.assertEqual(builders, expected)
 
 
 class DynamcBuilderConfigTestCase(unittest.TestCase):

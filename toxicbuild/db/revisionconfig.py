@@ -28,6 +28,7 @@ class RevisionConfigConnectorComponent(base.DBConnectorComponent):
         return self.db.pool.do(thd)
 
     def _getRevisionConfig(self, conn, branch, repourl=None, revision=None):
+        # the silly thing again
         tbl = self.db.model.revisionconfig
         query = tbl.select(whereclause=(tbl.c.branch == branch))
         if repourl:
