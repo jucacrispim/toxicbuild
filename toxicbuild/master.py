@@ -33,6 +33,6 @@ class BuildMaster(BuildMasterBase):
 
         # polling early to have some builders as soon as posible
         for poller in self.config.change_sources:
-             yield poller.doPoll()
+            yield poller.doPoll()
 
         log.msg("Toxicbuild is running")

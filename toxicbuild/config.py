@@ -3,7 +3,6 @@
 import os
 import sys
 from copy import copy
-from twisted.python import log
 from buildbot.config import BuilderConfig
 from buildbot.config import MasterConfig as MasterConfigBase
 
@@ -14,7 +13,7 @@ class ConfigReader(object):
         try:
             self.config = self._read_config(conf_in)
             self.builders = self.getBuilders()
-        except Exception as e:
+        except:
             self.config = 'Config Error!'
             self.builders = [{'name': 'Config Error!'}]
 
