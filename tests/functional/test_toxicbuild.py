@@ -74,7 +74,8 @@ class ToxicBuildTestCase(unittest.TestCase):
         add_cmd = ['cd', '%s' % cls.fakeproject_dest, '&&', 'git', 'add', '.']
         commit_cmd = ['cd', '%s' % cls.fakeproject_dest, '&&',
                       'git', 'commit', '-m"test"']
-        cmds = [init_cmd, add_cmd, commit_cmd]
+        new_brach_cmd = ['cd', '%s' % cls.fakeproject_dest, '&&', 'git', 'branch', 'dev']
+        cmds = [init_cmd, add_cmd, commit_cmd, new_brach_cmd]
         for cmd in cmds:
             os.system(' '.join(cmd))
 
@@ -129,7 +130,7 @@ class ToxicBuildTestCase(unittest.TestCase):
 
         self.assertEqual(len(steps), 5)
 
-    def test_3_income_changes_with_not_config_ok(self):
+    def test_3_income_changes_with_not_config_ok_in_branch_dev(self):
         # must be create only one builder called 'Config Error!'
         cfile = os.path.join(self.fakeproject_dest, 'toxicbuild.conf')
         with open(cfile, 'r') as fd:
@@ -139,10 +140,11 @@ class ToxicBuildTestCase(unittest.TestCase):
             content = content.replace('builders', '')
             fd.write(content)
 
+        checkout_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'checkout', 'dev']
         add_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'add', '.']
         commit_cmd = ['cd', '%s' % self.fakeproject_dest,
                       '&&', 'git', 'commit', '-m"bla"']
-        cmds = [add_cmd, commit_cmd]
+        cmds = [checkout_cmd, add_cmd, commit_cmd]
         for cmd in cmds:
             os.system(' '.join(cmd))
 

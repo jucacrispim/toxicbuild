@@ -22,31 +22,38 @@ class AddBuildsetForChangesTestCase(unittest.TestCase):
                                                'codebase': '',
                                                'changeid': 'sdf'}
 
-    @patch.object(base, 'ConfigReader', Mock())
-    def test_createBuildersForCodebase(self):
-        base.ConfigReader.return_value.builders = [{'name': 'a'}]
-        lastchageid = '2'
+    def test_getBuildersForChanges(self):
+        revconf_mock = Mock()
+        revconf_mock.config = """
+builders = [{'name': 'b1',
+             'branch': 'master',
+             'steps': [{'name': 'step 1',
+                       'command': 'ls -la'}]}]
+"""
+        self.instance.master.toxicdb.revisionconfig\
+            .getRevisionConfig.return_value = revconf_mock
 
-        d = base.createBuildersForCodebase(self.instance, lastchageid)
+        d = base.getBuildersForChanges(self.instance, ['asdf', 'qwer'])
 
-        def check(bnames):
-            expected = ['a']
+        def check(builders):
+            expected = ['b1']
+            bnames = [b['name'] for b in builders]
             self.assertEqual(bnames, expected)
 
         d.addCallback(check)
         return d
 
     @patch.object(base, 'ConfigReader', Mock())
-    def test_createBuildersForCodebases(self):
+    def test_getLastChange(self):
         base.ConfigReader.return_value.builders = [{'name': 'a'},
                                                    {'name': 'b'}]
 
-        changeids = ['123']
-        d = base.createBuildersForCodebases(self.instance, changeids)
+        changeids = ['123', 'sdf']
+        d = base.getLastChange(self.instance, changeids)
 
-        def check(bnames):
-            expected = ['a', 'b']
-            self.assertEqual(bnames, expected)
+        def check(_):
+            called = self.instance.master.db.changes.getChange.call_args[0][0]
+            self.assertEqual(called, 'sdf')
 
         d.addCallback(check)
         return d
@@ -54,8 +61,9 @@ class AddBuildsetForChangesTestCase(unittest.TestCase):
     @patch.object(base, 'ConfigReader', Mock())
     @patch.object(base, 'BaseScheduler', Mock())
     def test_addBuildsetForChanges(self):
-        base.ConfigReader.return_value.builders = [{'name': 'a'},
-                                                   {'name': 'b'}]
+        base.ConfigReader.return_value.getBuildersForBranch\
+                                      .return_value = [{'name': 'a'},
+                                                       {'name': 'b'}]
 
         d = base.addBuildsetForChanges(self.instance,
                                        changeids=['123'])

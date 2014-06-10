@@ -31,10 +31,11 @@ def createBuildersFromConfig(master, config):
 
 def createBuilderFromDict(master, bdict):
     builder = Builder(bdict['name'])
-    try:
-        del bdict['steps']
-    except KeyError:
-        pass
+    for key in ['steps', 'branch']:
+        try:
+            del bdict[key]
+        except KeyError:
+            pass
 
     if 'slavenames' not in bdict.keys():
         bdict['slavenames'] = [s.slavename for s in

@@ -10,6 +10,7 @@ class ConfigReaderTestCase(unittest.TestCase):
     def setUp(self):
         self.configstr = """
 builders = [{'name': 'b1',
+             'branch': 'master',
              'steps': [{'name': 'run tests',
                         'command': 'python setup.py test'},
 
@@ -38,6 +39,7 @@ builders = [{'name': 'b1',
     def test_getBuilders(self):
 
         expected = [{'name': 'b1',
+                     'branch': 'master',
                      'steps': [{'name': 'run tests',
                                 'command': ['python', 'setup.py', 'test']},
                                {'name': 'check something',
@@ -45,6 +47,29 @@ builders = [{'name': 'b1',
 
         builders = self.config.getBuilders()
         self.assertEqual(builders, expected)
+
+    def test_getBuilder(self):
+        expected = {'name': 'b1',
+                    'branch': 'master',
+                    'steps': [{'name': 'run tests',
+                               'command': ['python', 'setup.py', 'test']},
+                              {'name': 'check something',
+                               'command': ['sh', './check_something.sh']}]}
+
+        returned = self.config.getBuilder('b1')
+        self.assertEqual(returned, expected)
+
+    def test_getBuildersForBranch(self):
+        expected = [{'name': 'b1',
+                     'branch': 'master',
+                     'steps': [{'name': 'run tests',
+                                'command': ['python', 'setup.py', 'test']},
+                               {'name': 'check something',
+                                'command': ['sh', './check_something.sh']}]}]
+
+        returned = self.config.getBuildersForBranch('master')
+        self.assertEqual(returned, expected)
+
 
 
 class DynamcBuilderConfigTestCase(unittest.TestCase):

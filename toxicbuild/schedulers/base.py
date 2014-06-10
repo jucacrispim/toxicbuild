@@ -11,7 +11,8 @@ from toxicbuild.process.builder import createBuildersFromConfig
 @defer.inlineCallbacks
 def addBuildsetForChanges(instance, reason='', external_idstring=None,
                           changeids=[], builderNames=None, properties=None):
-    builderNames = yield createBuildersForCodebases(instance, changeids)
+    builders = yield getBuildersForChanges(instance, changeids)
+    builderNames = [b['name'] for b in builders]
 
     rev = yield BaseScheduler.addBuildsetForChanges(
         instance, reason, external_idstring, changeids, builderNames,
@@ -21,7 +22,19 @@ def addBuildsetForChanges(instance, reason='', external_idstring=None,
 
 
 @defer.inlineCallbacks
-def createBuildersForCodebases(instance, changeids):
+def getBuildersForChanges(instance, changeids):
+    lastChange = yield getLastChange(instance, changeids)
+    revconf = yield instance.master.toxicdb.revisionconfig.getRevisionConfig(
+        lastChange['branch'], lastChange['repository'],
+        lastChange['revision'])
+
+    config = ConfigReader(revconf.config)
+    builders = config.getBuildersForBranch(lastChange['branch'])
+    defer.returnValue(builders)
+
+
+@defer.inlineCallbacks
+def getLastChange(instance, changeids):
     changesByCodebase = {}
 
     def get_last_change_for_codebase(codebase):
@@ -33,27 +46,10 @@ def createBuildersForCodebases(instance, changeids):
         # group change by codebase
         changesByCodebase.setdefault(chdict["codebase"], []).append(chdict)
 
-    builderNames = None
+    lastchangeid = None
     for codebase in instance.codebases:
         if codebase in changesByCodebase:
-            lastchageid = get_last_change_for_codebase(codebase)['changeid']
-            builderNames = yield createBuildersForCodebase(instance,
-                                                           lastchageid)
+            lastchangeid = get_last_change_for_codebase(codebase)['changeid']
 
-    defer.returnValue(builderNames)
-
-
-@defer.inlineCallbacks
-def createBuildersForCodebase(instance, lastchageid):
-
-    lastChange = yield instance.master.db.changes.getChange(lastchageid)
-
-    toxicdb = instance.master.toxicdb
-    revconf = yield toxicdb.revisionconfig.getRevisionConfig(
-        lastChange['branch'], lastChange['repository'],
-        lastChange['revision'])
-
-    config = ConfigReader(revconf.config)
-
-    builderNames = createBuildersFromConfig(instance.master, config)
-    defer.returnValue(builderNames)
+    lastChange = yield instance.master.db.changes.getChange(lastchangeid)
+    defer.returnValue(lastChange)

@@ -45,6 +45,17 @@ class ConfigReader(object):
             if builder['name'] == builder_name:
                 return builder
 
+    def getBuildersForBranch(self, branch):
+        builders = []
+        for builder in self.builders:
+            try:
+                if branch == builder['branch']:
+                    builders.append(builder)
+            except KeyError:  # pragma: no cover
+                pass
+
+        return builders
+
     def _getSteps(self, builder):
         steps = builder['steps']
         steps_list = []
