@@ -23,7 +23,7 @@ class GitPoller(GitPollerBase):
 
     @defer.inlineCallbacks
     def _process_changes(self, newRev, branch):
-#        yield self._save_revconf(newRev, branch)
+        #        yield self._save_revconf(newRev, branch)
         lastRev = self.lastRev.get(branch)
         yield self._make_revList(lastRev, newRev)
         for rev in self.revList:

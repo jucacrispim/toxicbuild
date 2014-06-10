@@ -3,7 +3,6 @@
 from twisted.internet import defer
 from buildbot.schedulers.base import BaseScheduler
 from toxicbuild.config import ConfigReader
-from toxicbuild.process.builder import createBuildersFromConfig
 
 
 # yeah, dirty and ugly. but works and i don't need to write it twice!

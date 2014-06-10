@@ -74,7 +74,8 @@ class ToxicBuildTestCase(unittest.TestCase):
         add_cmd = ['cd', '%s' % cls.fakeproject_dest, '&&', 'git', 'add', '.']
         commit_cmd = ['cd', '%s' % cls.fakeproject_dest, '&&',
                       'git', 'commit', '-m"test"']
-        new_brach_cmd = ['cd', '%s' % cls.fakeproject_dest, '&&', 'git', 'branch', 'dev']
+        new_brach_cmd = ['cd', '%s' % cls.fakeproject_dest, '&&', 'git',
+                         'branch', 'dev']
         cmds = [init_cmd, add_cmd, commit_cmd, new_brach_cmd]
         for cmd in cmds:
             os.system(' '.join(cmd))
@@ -140,7 +141,8 @@ class ToxicBuildTestCase(unittest.TestCase):
             content = content.replace('builders', '')
             fd.write(content)
 
-        checkout_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'checkout', 'dev']
+        checkout_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git',
+                        'checkout', 'dev']
         add_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'add', '.']
         commit_cmd = ['cd', '%s' % self.fakeproject_dest,
                       '&&', 'git', 'commit', '-m"bla"']

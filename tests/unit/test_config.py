@@ -71,7 +71,6 @@ builders = [{'name': 'b1',
         self.assertEqual(returned, expected)
 
 
-
 class DynamcBuilderConfigTestCase(unittest.TestCase):
     def test_create_builder(self):
         builder = DynamicBuilderConfig(venv_path='venv',
