@@ -13,9 +13,12 @@ class ConfigReader(object):
         try:
             self.config = self._read_config(conf_in)
             self.builders = self.getBuilders()
-        except:
+        except Exception as e:
             self.config = 'Config Error!'
-            self.builders = [{'name': 'Config Error!'}]
+            steps = [{'name': 'show stack',
+                      'command': 'echo %s' % str(e)}]
+            self.builders = [{'name': 'Config Error!',
+                              'steps': steps}]
 
     def _read_config(self, conf_in):
         localDict = {
@@ -48,11 +51,8 @@ class ConfigReader(object):
     def getBuildersForBranch(self, branch):
         builders = []
         for builder in self.builders:
-            try:
-                if branch == builder['branch']:
+            if branch == builder.get('branch', 'master'):
                     builders.append(builder)
-            except KeyError:  # pragma: no cover
-                pass
 
         return builders
 

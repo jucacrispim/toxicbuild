@@ -19,7 +19,7 @@ if [ $coverage -eq 100 ]
 then
     if [ "$err" != "" ]
     then
-	echo "But something went wrong";
+	echo "And something went wrong";
 	echo "$err";
 	exit 1;
     else

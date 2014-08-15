@@ -157,3 +157,39 @@ class ToxicBuildTestCase(unittest.TestCase):
         url = self.toxic_url + '/builders/Config%20Error%21'
         self.wb.urlopen(url)
         self.assertTrue(self.wb.current_page)
+
+    def test_4_remove_old_builders(self):
+        # with new builders, builder 'b2' must be removed
+        new_conf = """
+SETTINGS = '--settings=setting_test'
+builders = [{'name': 'b1',
+             'branch': 'master',
+             'steps': [{'name': 'list files',
+                        'command': 'ls'},
+
+                       {'name': 'grep',
+                        'command': "grep -ir 'nada'"}]},
+
+            {'name': 'b3',
+             'branch': 'dev',
+             'steps': [{'name': 's', 'command': 'cd'}]}]
+
+"""
+        cfile = os.path.join(self.fakeproject_dest, 'toxicbuild.conf')
+        with open(cfile, 'w') as fd:
+             fd.write(new_conf)
+
+        add_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'add', '.']
+        commit_cmd = ['cd', '%s' % self.fakeproject_dest,
+                      '&&', 'git', 'commit', '-m"bla"']
+        cmds = [add_cmd, commit_cmd]
+        for cmd in cmds:
+            os.system(' '.join(cmd))
+
+        # here we need to wait to build have time to be shown
+        # in the web.
+        time.sleep(2)
+        # getting build info
+        self.wb.urlopen(self.toxic_url + '/builders/b3')
+        with self.assertRaises(Exception):
+                    self.wb.urlopen(self.toxic_url + '/builders/b2')

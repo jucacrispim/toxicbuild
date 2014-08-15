@@ -36,6 +36,26 @@ class CreateBuildersTestCase(unittest.TestCase):
         self.assertTrue(bnames, expected)
         self.assertEqual(len(builder.log.msg.call_args_list), 1)
 
+    @patch.object(builder.log, 'msg', Mock())
+    def test_createBuildersFromConfig_removing_old_builders(self):
+        master = Mock()
+        s1, s2 = Mock(), Mock()
+        s1.slavename, s2.slavename = 's1', 's2'
+        master.config.slaves = [s1, s2]
+        master.config.schedulers = {}
+        master.botmaster.builderNames = ['b1', 'b3']
+        master.botmaster.builders = {'b1': Mock(),
+                                     'b3': Mock()}
+        config = Mock()
+        config.builders = [{'name': 'b1'},
+                           {'name': 'b2', 'steps': ['ls']}]
+
+        bnames = builder.createBuildersFromConfig(master, config)
+        expected = ['b1', 'b2']
+
+        self.assertTrue(bnames, expected)
+        self.assertEqual(len(builder.log.msg.call_args_list), 2)
+
     def test_setInForceScheduler(self):
         master = Mock()
         sched = ForceScheduler('scheduler', ['a'])

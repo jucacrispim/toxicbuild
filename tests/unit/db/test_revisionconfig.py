@@ -24,6 +24,7 @@ class TestRevisionConfigConnectorComponent(
         return d
 
     def tearDown(self):
+        super(TestRevisionConfigConnectorComponent, self).tearDown()
         return self.tearDownConnectorComponent()
 
     def test_getRevisionConfig(self):

@@ -6,6 +6,8 @@ from toxicbuild.config import ConfigReader
 from toxicbuild.process.builder import createBuildersFromConfig
 
 STEPS_FILE = 'toxicbuild.conf'
+# :/
+WRONG_CONFIG_TOKEN = 'BADCONF'
 
 
 class GitPoller(GitPollerBase):
@@ -54,8 +56,12 @@ class GitPoller(GitPollerBase):
     @defer.inlineCallbacks
     def _save_revconf(self, revision, branch):
 
-        conf = yield self._dovccmd('show', ['%s:%s' % (revision, STEPS_FILE)],
-                                   path=self.workdir)
+        try:
+            conf = yield self._dovccmd('show',
+                                       ['%s:%s' % (revision, STEPS_FILE)],
+                                       path=self.workdir)
+        except:
+            conf = WRONG_CONFIG_TOKEN
 
         master.TOXICDB.revisionconfig.saveRevisionConfig(revision, branch,
                                                          self.repourl, conf)

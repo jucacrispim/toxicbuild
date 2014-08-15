@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import copy
 from twisted.python import log
 from buildbot.process.builder import Builder
 from buildbot.schedulers.forcesched import ForceScheduler
@@ -7,6 +8,20 @@ from toxicbuild.config import DynamicBuilderConfig
 
 
 def createBuildersFromConfig(master, config):
+
+    builderNames = copy.copy(master.botmaster.builderNames)
+    new_builders = [b['name'] for b in config.builders]
+    for b in builderNames:
+        if b in new_builders:
+            continue
+
+        log.msg('builder: removing builder %s' % b)
+        master.status.builderRemoved(b)
+        master.botmaster.builderNames.pop(
+            master.botmaster.builderNames.index(b))
+        builder = master.botmaster.builders[b]
+        builder.disownServiceParent()
+        del master.botmaster.builders[b]
 
     builders = {}
     for bdict in config.builders:

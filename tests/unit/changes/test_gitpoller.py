@@ -30,6 +30,22 @@ class GitPollerTestCase(unittest.TestCase):
 
         self.assertEqual(expected_save, called_save)
 
+    @patch.object(gitpoller.GitPoller, '_dovccmd', Mock())
+    @patch.object(gitpoller.master, 'TOXICDB', Mock())
+    def test_save_revconf_with_wrong_config(self):
+        revision = 'asf3333'
+        branch = 'master'
+        gitpoller.GitPoller._dovccmd.side_effect = [Exception]
+
+        self.poller._save_revconf(revision, branch)
+
+        expected_save = (revision, branch, self.poller.repourl,
+                         gitpoller.WRONG_CONFIG_TOKEN)
+        called_save = gitpoller.master.TOXICDB.revisionconfig.\
+            saveRevisionConfig.call_args[0]
+
+        self.assertEqual(expected_save, called_save)
+
     @patch.object(gitpoller.GitPoller, '_save_revconf', Mock())
     @patch.object(gitpoller.GitPollerBase, '_process_changes', Mock())
     @patch.object(gitpoller.GitPoller, 'revList', [1, 2])

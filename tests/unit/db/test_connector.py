@@ -37,10 +37,7 @@ class DBConnectorTestCase(db.RealDatabaseMixin, unittest.TestCase):
         self.db.startService()
         yield self.db.reconfigService(self.master.config)
 
-    # tests
-
     def test_has_revisionconfig(self):
-        # tests if revisionconfig attribute is present
         d = self.startService()
 
         @d.addCallback
