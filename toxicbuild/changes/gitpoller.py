@@ -3,7 +3,7 @@ from twisted.internet import defer
 from buildbot.changes.gitpoller import GitPoller as GitPollerBase
 from toxicbuild import master
 from toxicbuild.config import ConfigReader
-from toxicbuild.process.builder import createBuildersFromConfig
+from toxicbuild.process.builder import BuilderManager
 
 STEPS_FILE = 'toxicbuild.conf'
 # :/
@@ -21,7 +21,8 @@ class GitPoller(GitPollerBase):
         for branch, rev in self.lastRev.items():
             conf = yield self._save_revconf(rev, branch)
             config = ConfigReader(conf)
-            createBuildersFromConfig(self.master, config)
+            manager = BuilderManager(self.master, config)
+            manager.updateBuilders()
 
     @defer.inlineCallbacks
     def _process_changes(self, newRev, branch):

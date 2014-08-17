@@ -7,75 +7,99 @@ from buildbot.schedulers.forcesched import ForceScheduler
 from toxicbuild.config import DynamicBuilderConfig
 
 
-def createBuildersFromConfig(master, config):
+class BuilderManager:
+    def __init__(self, master, config, category=None):
+        self.master = master
+        self.config = config
+        self.category = category
 
-    builderNames = copy.copy(master.botmaster.builderNames)
-    new_builders = [b['name'] for b in config.builders]
-    for b in builderNames:
-        if b in new_builders:
-            continue
+    # def createBuildersFromConfig(self):
+    def updateBuilders(self):
+        """
+        Creates new builders and remove old ones based on self.config
+        """
 
-        log.msg('builder: removing builder %s' % b)
-        master.status.builderRemoved(b)
-        master.botmaster.builderNames.pop(
-            master.botmaster.builderNames.index(b))
-        builder = master.botmaster.builders[b]
-        builder.disownServiceParent()
-        del master.botmaster.builders[b]
+        removed = self.removeOldBuilders()
+        builders = self.createNewBuilders()
+        self.updateSlaves()
+        return builders, removed
 
-    builders = {}
-    for bdict in config.builders:
-        if bdict['name'] in master.botmaster.builderNames:
-            continue
+    def createNewBuilders(self):
 
-        log.msg('builder: creating builder %s' % bdict['name'])
+        builders = {}
+        for bdict in self.config.builders:
+            if bdict['name'] in self.master.botmaster.builderNames:
+                continue
 
-        builder = createBuilderFromDict(master, bdict)
-        builders[bdict['name']] = builder
-        setInForceScheduler(master, builder)
+            log.msg('builder: creating builder %s' % bdict['name'])
 
-    builderNames = [b['name'] for b in config.builders]
-    master.botmaster.builders.update(builders)
-    master.botmaster.builderNames = master.botmaster.builders.keys()
+            force = bdict.get('forceScheduler', True)
+            builder = self.createBuilderFromDict(bdict)
+            builders[bdict['name']] = builder
+            if force:
+                self.addToForceScheduler(builder)
 
-    for s in master.config.slaves:
-        s.updateSlave()
+        builderNames = [b['name'] for b in self.config.builders]
+        self.master.botmaster.builders.update(builders)
+        self.master.botmaster.builderNames = self.master.botmaster.\
+            builders.keys()
 
-    return builderNames
+        return builderNames
 
+    def updateSlaves(self):
+        for s in self.master.config.slaves:
+            s.updateSlave()
 
-def createBuilderFromDict(master, bdict):
-    builder = Builder(bdict['name'])
-    for key in ['steps', 'branch']:
-        try:
-            del bdict[key]
-        except KeyError:
-            pass
+    def removeOldBuilders(self):
+        builderNames = copy.copy(self.master.botmaster.builderNames)
+        new_builders = [b['name'] for b in self.config.builders]
+        removed = []
+        for b in builderNames:
+            if b in new_builders:
+                continue
 
-    if 'slavenames' not in bdict.keys():
-        bdict['slavenames'] = [s.slavename for s in
-                               master.config.slaves]
+            log.msg('builder: removing builder %s' % b)
+            removed.append(b)
+            self.master.status.builderRemoved(b)
+            self.master.botmaster.builderNames.pop(
+                self.master.botmaster.builderNames.index(b))
+            builder = self.master.botmaster.builders[b]
+            builder.disownServiceParent()
+            del self.master.botmaster.builders[b]
 
-    bconf = DynamicBuilderConfig(**bdict)
-    builder.config = bconf
-    builder.master = master
-    builder.botmaster = master.botmaster
-    builder.builder_status = master.status.builderAdded(
-        bconf.name,
-        bconf.builddir,
-        bconf.category,
-        bconf.description)
+        return removed
 
-    builder.setServiceParent(builder.botmaster)
-    return builder
+    def createBuilderFromDict(self, bdict):
+        builder = Builder(bdict['name'])
+        for key in ['steps', 'branch', 'forceScheduler']:
+            try:
+                del bdict[key]
+            except KeyError:
+                pass
 
+        if 'slavenames' not in bdict.keys():
+            bdict['slavenames'] = [s.slavename for s in
+                                   self.master.config.slaves]
 
-def setInForceScheduler(master, builder):
-    """
-    Sets the builder in all force schedulers configured
-    in master
-    """
+        bconf = DynamicBuilderConfig(**bdict)
+        builder.config = bconf
+        builder.master = self.master
+        builder.botmaster = self.master.botmaster
+        builder.builder_status = self.master.status.builderAdded(
+            bconf.name,
+            bconf.builddir,
+            bconf.category,
+            bconf.description)
 
-    for sched in master.config.schedulers.values():
-        if isinstance(sched, ForceScheduler):
-            sched.builderNames.append(builder.name)
+        builder.setServiceParent(builder.botmaster)
+        return builder
+
+    def addToForceScheduler(self, builder):
+        """
+        Sets the builder in all force schedulers configured
+        in master
+        """
+
+        for sched in self.master.config.schedulers.values():
+            if isinstance(sched, ForceScheduler):
+                sched.builderNames.append(builder.name)

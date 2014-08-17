@@ -61,13 +61,13 @@ class GitPollerTestCase(unittest.TestCase):
     @patch.object(gitpoller.GitPollerBase, 'poll', Mock())
     @patch.object(gitpoller.GitPoller, '_save_revconf', Mock())
     @patch.object(gitpoller, 'ConfigReader', Mock())
-    @patch.object(gitpoller, 'createBuildersFromConfig', Mock())
+    @patch.object(gitpoller, 'BuilderManager', Mock())
     def test_poll(self):
         self.poller.lastRev = {'master': 'asf90'}
         self.poller.poll()
 
         self.assertTrue(self.poller._save_revconf.called)
-        self.assertTrue(gitpoller.createBuildersFromConfig.called)
+        self.assertTrue(gitpoller.BuilderManager.called)
 
     def test_get_revList(self):
         self.poller._revList = [1, 2, 3]
