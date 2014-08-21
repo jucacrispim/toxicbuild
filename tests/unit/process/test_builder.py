@@ -22,7 +22,6 @@ class BuilderManagerTest(unittest.TestCase):
 
         self.manager = builder.BuilderManager(master, config)
 
-
     def test_createBuilderFromDict(self):
         bdict = {'name': 'b1'}
 

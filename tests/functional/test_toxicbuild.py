@@ -177,7 +177,7 @@ builders = [{'name': 'b1',
 """
         cfile = os.path.join(self.fakeproject_dest, 'toxicbuild.conf')
         with open(cfile, 'w') as fd:
-             fd.write(new_conf)
+            fd.write(new_conf)
 
         add_cmd = ['cd', '%s' % self.fakeproject_dest, '&&', 'git', 'add', '.']
         commit_cmd = ['cd', '%s' % self.fakeproject_dest,

@@ -10,15 +10,8 @@ from buildbot.config import MasterConfig as MasterConfigBase
 class ConfigReader(object):
     def __init__(self, conf_in):
 
-        try:
-            self.config = self._read_config(conf_in)
-            self.builders = self.getBuilders()
-        except Exception as e:
-            self.config = 'Config Error!'
-            steps = [{'name': 'show stack',
-                      'command': 'echo %s' % str(e)}]
-            self.builders = [{'name': 'Config Error!',
-                              'steps': steps}]
+        self.config = self._read_config(conf_in)
+        self.builders = self.getBuilders()
 
     def _read_config(self, conf_in):
         localDict = {

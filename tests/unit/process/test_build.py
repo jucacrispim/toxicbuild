@@ -42,15 +42,19 @@ class DynamicBuildTestCase(unittest.TestCase):
         revconf = Mock()
         revconf.config = """
 builders = [{'name': 'b1',
-             'steps': [{'name': 'run tests',
-                 'command': 'python setup.py test --settings=settings_test'}]}]
+             'steps': [{
+                 'name': 'run tests',
+                 'command': 'python setup.py test --settings=settings_test'}],
+             'candies' : [{'name': 'python-virtualenv',
+                           'venv_path': 'py34env',
+                           'pyversion': '/usr/bin/python3.4'}]}]
 """
         build.master.TOXICDB.revisionconfig._getRevisionConfig.\
             return_value = revconf
 
         self.build.setupBuild()
-        # 4 steps. 3 from get_default_steps and 1 from config file
-        self.assertEqual(len(self.build.stepFactories), 4)
+        # 3 steps. 2 from python-virtualenv candy and 1 from config file
+        self.assertEqual(len(self.build.stepFactories), 3)
 
     @patch.object(build.master, 'TOXICDB', Mock())
     @patch.object(build.Build, 'setupBuild', Mock())

@@ -13,7 +13,6 @@ class BuilderManager:
         self.config = config
         self.category = category
 
-    # def createBuildersFromConfig(self):
     def updateBuilders(self):
         """
         Creates new builders and remove old ones based on self.config
@@ -71,7 +70,8 @@ class BuilderManager:
 
     def createBuilderFromDict(self, bdict):
         builder = Builder(bdict['name'])
-        for key in ['steps', 'branch', 'forceScheduler']:
+        keys2delete = ['steps', 'branch', 'forceScheduler', 'candies']
+        for key in keys2delete:
             try:
                 del bdict[key]
             except KeyError:

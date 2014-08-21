@@ -7,6 +7,7 @@ from buildbot.steps.source.git import Git
 from buildbot.steps.shell import ShellCommand
 from toxicbuild import master
 from toxicbuild.config import ConfigReader
+from toxicbuild.candies import Candy, CandyNotFound
 
 
 class DynamicBuild(Build):
@@ -27,39 +28,67 @@ class DynamicBuild(Build):
         conn = master.TOXICDB.pool.engine.connect()
         revconf = master.TOXICDB.revisionconfig._getRevisionConfig(
             conn, branch, revision=revision)
+        try:
+            self.config = ConfigReader(revconf.config)
+        except Exception as e:
+            name = "Config Error!"
+            self.steps = [self._createBombStep(name=name, exception=e)]
+        else:
+            self.builder_dict = self.config.getBuilder(self.builder.name)
+            self.steps = self.getSteps()
 
-        self.steps = self.get_steps(revconf)
         self.setStepFactories(self.steps)
         Build.setupBuild(self, *args, **kwargs)
 
-    def get_steps(self, revconf):
+    def getSteps(self):
         # I think the 'right' place for it should be in the
         # BuildFactory class but the revision is not known there
         # so I need to do it here.
-        steps = self.get_default_steps(revconf)
-        bomb_step = interfaces.IBuildStepFactory(
-            BombStep(name='Config Error!'))
+        steps = self.getCandiesSteps()
 
-        # config_ok = False
-        # try:
-        config = ConfigReader(revconf.config)
-        #     config_ok = True
-        # except Exception as e:
-        #     # If I can't read the config file, send a BombStep
-        #     bomb_step.exception = e
-        #     steps = [bomb_step]
-
-        # if not config_ok:
-        #     return steps
-
-        builder = config.getBuilder(self.builder.name)
         try:
-            for cmd in builder['steps']:
+            configured_steps = self.builder_dict['steps']
+        except KeyError:
+            e = Exception(
+                'Steps not found for builder named %s' % self.builder.name)
+            step_name = 'Config Error!'
+            steps.append(self._createBombStep(name=step_name, exception=e))
+
+        for cmd in configured_steps:
+            try:
                 step = self.create_step(cmd)
                 steps.append(step)
-        except Exception as e:
-            bomb_step.exception = e
-            steps = [bomb_step]
+            except Exception as e:
+                step_name = 'Step config error!'
+                steps.append(self._createBombStep(name=step_name, exception=e))
+
+        return steps
+
+    def getCandiesSteps(self):
+        steps = []
+        candies = self.builder_dict.get('candies')
+        if not candies:
+            return steps
+
+        for cdict in candies:
+            cname = cdict['name']
+            try:
+                candy_class = Candy.getCandy(cname)
+            except CandyNotFound as e:
+                step_name = 'Candy not found!'
+                steps.append(self._createBombStep(name=step_name, exception=e))
+                continue
+
+            try:
+                candy = candy_class(**cdict)
+            except Exception as e:
+                step_name = 'Candy config error!'
+                steps.append(self._createBombStep(name=step_name, exception=e))
+
+            try:
+                steps += candy.getSteps()
+            except NotImplementedError:
+                pass
 
         return steps
 
@@ -69,30 +98,15 @@ class DynamicBuild(Build):
         step = interfaces.IBuildStepFactory(scmd)
         return step
 
-    def get_default_steps(self, revconf):
-        env = self.get_step_env()
-        git_step = interfaces.IBuildStepFactory(Git(name="checkout code",
-                                                    repourl=revconf.repourl,
-                                                    mode='incremental',
-                                                    env=env))
-        venv_cmd = ShellCommand(name='virtual env',
-                                env=env,
-                                command=['virtualenv', '%s' % self.venv_path,
-                                         '--python=%s' % self.pyversion])
-        venv_step = interfaces.IBuildStepFactory(venv_cmd)
-        deps_step = interfaces.IBuildStepFactory(
-            ShellCommand(name='install deps',
-                         command=['pip', 'install', '-r', 'requirements.txt'],
-                         env=env))
-
-        steps = [git_step, venv_step, deps_step]
-        return steps
-
     def get_step_env(self):
         bin_dir = os.path.join(self.venv_path, 'bin')
 
         env = {'PATH': [bin_dir, '${PATH}']}
         return env
+
+    def _createBombStep(self, name, exception):
+        bomb_step = BombStep(name=name, exception=exception)
+        return interfaces.IBuildStepFactory(bomb_step)
 
 
 class BombStep(ShellCommand):
