@@ -59,6 +59,10 @@ builders = [{'name': 'b1',
         returned = self.config.getBuilder('b1')
         self.assertEqual(returned, expected)
 
+    def test_getBuilder_without_expected_builder(self):
+        with self.assertRaises(config.BuilderNotFound):
+            self.config.getBuilder('nada!')
+
     def test_getBuildersForBranch(self):
         expected = [{'name': 'b1',
                      'branch': 'master',

@@ -154,7 +154,7 @@ class ToxicBuildTestCase(unittest.TestCase):
         # in the web.
         time.sleep(2)
         # getting build info
-        url = self.toxic_url + '/builders/Config%20Error%21'
+        url = self.toxic_url + '/builders/Config%20Error'
         self.wb.urlopen(url)
         self.assertTrue(self.wb.current_page)
 

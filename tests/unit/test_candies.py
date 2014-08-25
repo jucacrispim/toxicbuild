@@ -51,6 +51,10 @@ class PythonVirtualenvTest(unittest.TestCase):
 
         self.assertEqual(returned, expected)
 
+    def test_constructor_without_mandatory_args(self):
+        with self.assertRaises(Exception):
+            candies.PythonVirtualenv()
+
 
 class GitUpdateAndCheckoutTest(unittest.TestCase):
 
@@ -64,3 +68,7 @@ class GitUpdateAndCheckoutTest(unittest.TestCase):
         steps = self.candy.getSteps()
 
         self.assertEqual(len(steps), 2)
+
+    def test_constructor_without_mandatory_args(self):
+        with self.assertRaises(Exception):
+            candies.GitUpdateAndCheckout()

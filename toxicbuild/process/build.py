@@ -17,6 +17,7 @@ class DynamicBuild(Build):
     def __init__(self, *args, **kwargs):
         self.venv_path = None
         self.pyversion = None
+        self.builder_dict = {}
         Build.__init__(self, *args, **kwargs)
 
     def setupBuild(self, *args, **kwargs):
@@ -28,13 +29,15 @@ class DynamicBuild(Build):
         conn = master.TOXICDB.pool.engine.connect()
         revconf = master.TOXICDB.revisionconfig._getRevisionConfig(
             conn, branch, revision=revision)
+
+        self.config = ConfigReader(revconf.config)
+
         try:
-            self.config = ConfigReader(revconf.config)
+            self.builder_dict = self.config.getBuilder(self.builder.name)
         except Exception as e:
             name = "Config Error!"
             self.steps = [self._createBombStep(name=name, exception=e)]
         else:
-            self.builder_dict = self.config.getBuilder(self.builder.name)
             self.steps = self.getSteps()
 
         self.setStepFactories(self.steps)
@@ -46,51 +49,43 @@ class DynamicBuild(Build):
         # so I need to do it here.
         steps = self.getCandiesSteps()
 
-        try:
-            configured_steps = self.builder_dict['steps']
-        except KeyError:
-            e = Exception(
-                'Steps not found for builder named %s' % self.builder.name)
-            step_name = 'Config Error!'
-            steps.append(self._createBombStep(name=step_name, exception=e))
-
+        configured_steps = self.builder_dict['steps']
         for cmd in configured_steps:
-            try:
-                step = self.create_step(cmd)
-                steps.append(step)
-            except Exception as e:
-                step_name = 'Step config error!'
-                steps.append(self._createBombStep(name=step_name, exception=e))
-
+            step = self.create_step(cmd)
+            steps.append(step)
         return steps
 
     def getCandiesSteps(self):
         steps = []
-        candies = self.builder_dict.get('candies')
-        if not candies:
-            return steps
+        try:
+            candies = self.getCandies()
+        except Exception as e:
+            step_name = 'Candy config error!'
+            step = BombStep(name=step_name, exception=e)
+            steps.append(interfaces.IBuildStepFactory(step))
+            candies = []
 
-        for cdict in candies:
-            cname = cdict['name']
-            try:
-                candy_class = Candy.getCandy(cname)
-            except CandyNotFound as e:
-                step_name = 'Candy not found!'
-                steps.append(self._createBombStep(name=step_name, exception=e))
-                continue
-
-            try:
-                candy = candy_class(**cdict)
-            except Exception as e:
-                step_name = 'Candy config error!'
-                steps.append(self._createBombStep(name=step_name, exception=e))
-
+        for candy in candies:
             try:
                 steps += candy.getSteps()
             except NotImplementedError:
                 pass
 
         return steps
+
+    def getCandies(self):
+        candies = []
+        candies_config = self.builder_dict.get('candies') or []
+        if not candies_config:
+            return candies
+
+        for cdict in candies_config:
+            cname = cdict['name']
+            candy_class = Candy.getCandy(cname)
+            candy = candy_class(**cdict)
+            candies.append(candy)
+
+        return candies
 
     def create_step(self, cmd):
         env = self.get_step_env()
@@ -99,9 +94,13 @@ class DynamicBuild(Build):
         return step
 
     def get_step_env(self):
-        bin_dir = os.path.join(self.venv_path, 'bin')
+        env = {}
+        for candy in self.getCandies():
+            try:
+                env.update(candy.getEnv())
+            except NotImplementedError:
+                pass
 
-        env = {'PATH': [bin_dir, '${PATH}']}
         return env
 
     def _createBombStep(self, name, exception):

@@ -4,10 +4,7 @@ import os
 from buildbot import interfaces
 from buildbot.steps.shell import ShellCommand
 from buildbot.steps.source.git import Git
-
-
-class CandyNotFound(Exception):
-    pass
+from toxicbuild.exceptions import CandyNotFound
 
 
 class Candy(object):

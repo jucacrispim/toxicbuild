@@ -5,13 +5,18 @@ import sys
 from copy import copy
 from buildbot.config import BuilderConfig
 from buildbot.config import MasterConfig as MasterConfigBase
+from toxicbuild.exceptions import BuilderNotFound
 
 
 class ConfigReader(object):
     def __init__(self, conf_in):
-
-        self.config = self._read_config(conf_in)
-        self.builders = self.getBuilders()
+        try:
+            self.config = self._read_config(conf_in)
+            self.builders = self.getBuilders()
+        except Exception as e:
+            self.builders = [{'name': 'Config Error',
+                              'steps': [{'name': 'show stack',
+                                         'command': 'echo %s;exit 1' % e}]}]
 
     def _read_config(self, conf_in):
         localDict = {
@@ -40,6 +45,11 @@ class ConfigReader(object):
         for builder in self.builders:
             if builder['name'] == builder_name:
                 return builder
+
+        msg = 'The builder named "%s" was not found. ' % builder_name
+        msg += 'Maybe a bad config file?'
+        raise BuilderNotFound(
+            )
 
     def getBuildersForBranch(self, branch):
         builders = []
