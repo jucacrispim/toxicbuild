@@ -54,7 +54,7 @@ class PythonVirtualenv(Candy):
     name = 'python-virtualenv'
 
     def __init__(self, **kwargs):
-        if not kwargs.has_key('venv_path') or not kwargs.has_key('pyversion'):
+        if 'venv_path' not in kwargs or 'pyversion' not in kwargs:
             raise Exception('venv_path and pyversion params are mandatory')
 
         self.venv_path = kwargs.get('venv_path')

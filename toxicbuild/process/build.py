@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import os
 from buildbot import interfaces
 from buildbot.process.build import Build
-from buildbot.steps.source.git import Git
 from buildbot.steps.shell import ShellCommand
 from toxicbuild import master
 from toxicbuild.config import ConfigReader
-from toxicbuild.candies import Candy, CandyNotFound
+from toxicbuild.candies import Candy
 
 
 class DynamicBuild(Build):
@@ -30,7 +28,6 @@ class DynamicBuild(Build):
         conn = master.TOXICDB.pool.engine.connect()
         revconf = master.TOXICDB.revisionconfig._getRevisionConfig(
             conn, branch, revision=revision)
-
 
         self.config = ConfigReader(revconf.config)
         self.repourl = revconf.repourl
