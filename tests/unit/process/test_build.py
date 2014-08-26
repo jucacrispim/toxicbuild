@@ -125,10 +125,32 @@ builders = [{'name': 'b1',
         # BombStep!
         self.assertEqual(len(self.build.stepFactories), 1)
 
+    @patch.object(build.DynamicBuild, 'getCandies',
+                  Mock(side_effect=Exception))
+    def test_getCandiesSteps_with_config_error(self):
+        steps = self.build.getCandiesSteps()
+
+        self.assertEqual(len(steps), 1)
+        step = steps[0].buildStep()
+        self.assertEqual(step.name, 'Candy config error!')
+
+    def test_getCandies_without_candies_config(self):
+        self.build.builder_dict = {}
+        expected = []
+        returned = self.build.getCandies()
+
+        self.assertEqual(returned, expected)
+
 
 class BombStepTestCase(unittest.TestCase):
     def test_raises(self):
         exception = KeyError
         b = build.BombStep(exception=exception)
         with self.assertRaises(KeyError):
+            b.startStep()
+
+    def test_raises_defaut(self):
+        # must raises Exception
+        b = build.BombStep()
+        with self.assertRaises(Exception):
             b.startStep()

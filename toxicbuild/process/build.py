@@ -32,14 +32,7 @@ class DynamicBuild(Build):
         self.config = ConfigReader(revconf.config)
         self.repourl = revconf.repourl
         self.named_tree = revision or branch
-
-        try:
-            self.builder_dict = self.config.getBuilder(self.builder.name)
-        except Exception as e:
-            name = "Config Error!"
-            self.steps = [self._createBombStep(name=name, exception=e)]
-        else:
-            self.steps = self.getSteps()
+        self.steps = self.getSteps()
 
         self.setStepFactories(self.steps)
         Build.setupBuild(self, *args, **kwargs)
@@ -48,6 +41,17 @@ class DynamicBuild(Build):
         # I think the 'right' place for it should be in the
         # BuildFactory class but the revision is not known there
         # so I need to do it here.
+        builder_config_error = False
+        try:
+            self.builder_dict = self.config.getBuilder(self.builder.name)
+        except Exception as e:
+            name = "Config Error"
+            steps = [self._createBombStep(name=name, exception=e)]
+            builder_config_error = True
+
+        if builder_config_error:
+            return steps
+
         steps = self.getCandiesSteps()
 
         configured_steps = self.builder_dict['steps']
@@ -69,7 +73,7 @@ class DynamicBuild(Build):
         for candy in candies:
             try:
                 steps += candy.getSteps()
-            except NotImplementedError:
+            except NotImplementedError:  # pragma: no cover
                 pass
 
         return steps
@@ -100,7 +104,7 @@ class DynamicBuild(Build):
         for candy in self.getCandies():
             try:
                 env.update(candy.getEnv())
-            except NotImplementedError:
+            except NotImplementedError:  # pragma: no cover
                 pass
 
         return env

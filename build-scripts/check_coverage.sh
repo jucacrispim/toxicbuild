@@ -1,6 +1,6 @@
 #!/bin/sh
 
-err=`coverage run --source=toxicbuild --omit="*migrations*" $VIRTUAL_ENV/bin/trial tests.unit 2>&1 | egrep -i 'fail|error'`;
+err=`coverage run --source=toxicbuild --omit="*migrations*" $VIRTUAL_ENV/bin/trial tests.unit 2>&1 | egrep -i '\[fail\]|\[error\]'`;
 coverage=`coverage report -m | grep TOTAL | sed 's/TOTAL\s*\w*\s*\w*\s*//g' | cut -d'%' -f1`
 
 echo 'coverage was:' $coverage '%'
