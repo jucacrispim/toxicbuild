@@ -63,13 +63,13 @@ class PythonVirtualenv(Candy):
     def getSteps(self):
         env = self.getEnv()
         create_env = ShellCommand(
-            name='Creating virtualenv at %s' % self.venv_path,
+            name=str('Creating virtualenv at %s' % self.venv_path),
             command=['virtualenv', '%s' % self.venv_path,
                      '--python=%s' % self.pyversion],
             env=env)
 
         install_deps = ShellCommand(
-            name='Installing dependencies with pip',
+            name=str('Installing dependencies with pip'),
             command=['pip', 'install', '-r', 'requirements.txt'],
             env=env)
 
@@ -89,12 +89,12 @@ class GitUpdateAndCheckout(Candy):
 
     def getSteps(self):
         update = Git(
-            name="updating code at %s" % self.build.repourl,
+            name=str("Updating code at %s" % self.build.repourl),
             repourl=self.build.repourl,
             mode='incremental')
 
         checkout = ShellCommand(
-            name="Checking out to %s" % self.build.named_tree,
+            name=str("Checking out to %s" % self.build.named_tree),
             command=['git', 'checkout', '%s' % self.build.named_tree])
 
         steps = [interfaces.IBuildStepFactory(update),
