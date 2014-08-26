@@ -2,6 +2,7 @@
 
 import os
 import unittest
+from mock import Mock
 from toxicbuild import candies
 
 
@@ -63,12 +64,9 @@ class GitUpdateAndCheckoutTest(unittest.TestCase):
         self.repourl = 'git@somewhere.com'
         self.candy = candies.GitUpdateAndCheckout(repourl=self.repourl,
                                                   named_tree=self.named_tree)
+        self.candy.build = Mock()
 
     def test_getSteps(self):
         steps = self.candy.getSteps()
 
         self.assertEqual(len(steps), 2)
-
-    def test_constructor_without_mandatory_args(self):
-        with self.assertRaises(Exception):
-            candies.GitUpdateAndCheckout()

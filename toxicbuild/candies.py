@@ -14,8 +14,8 @@ class Candy(object):
 
     name = 'Candy'
 
-    def __init__(*args, **kwargs):
-        pass
+    def __init__(self, *args, **kwargs):
+        self.build = kwargs.get('build')
 
     def getSteps(self):
         """
@@ -87,22 +87,15 @@ class PythonVirtualenv(Candy):
 class GitUpdateAndCheckout(Candy):
     name = 'git-update-and-checkout'
 
-    def __init__(self, **kwargs):
-        if not kwargs.has_key('repourl') or not kwargs.has_key('named_tree'):
-            raise Exception('repourl and named_tree params are mandatory')
-
-        self.repourl = kwargs.get('repourl')
-        self.named_tree = kwargs.get('named_tree')
-
     def getSteps(self):
         update = Git(
-            name="updating code at %s" % self.repourl,
-            repourl=self.repourl,
+            name="updating code at %s" % self.build.repourl,
+            repourl=self.build.repourl,
             mode='incremental')
 
         checkout = ShellCommand(
-            name="Checking out to %s" % self.named_tree,
-            command=['git', 'checkout', '%s' % self.named_tree])
+            name="Checking out to %s" % self.build.named_tree,
+            command=['git', 'checkout', '%s' % self.build.named_tree])
 
         steps = [interfaces.IBuildStepFactory(update),
                  interfaces.IBuildStepFactory(checkout)]

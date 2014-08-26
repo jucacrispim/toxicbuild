@@ -15,9 +15,10 @@ class DynamicBuild(Build):
     Build that creates per-buid config based steps.
     """
     def __init__(self, *args, **kwargs):
-        self.venv_path = None
-        self.pyversion = None
         self.builder_dict = {}
+        self.repourl = None
+        # named_tree is a branch or revision
+        self.named_tree = None
         Build.__init__(self, *args, **kwargs)
 
     def setupBuild(self, *args, **kwargs):
@@ -30,7 +31,10 @@ class DynamicBuild(Build):
         revconf = master.TOXICDB.revisionconfig._getRevisionConfig(
             conn, branch, revision=revision)
 
+
         self.config = ConfigReader(revconf.config)
+        self.repourl = revconf.repourl
+        self.named_tree = revision or branch
 
         try:
             self.builder_dict = self.config.getBuilder(self.builder.name)
@@ -83,6 +87,7 @@ class DynamicBuild(Build):
             cname = cdict['name']
             candy_class = Candy.getCandy(cname)
             candy = candy_class(**cdict)
+            candy.build = self
             candies.append(candy)
 
         return candies
