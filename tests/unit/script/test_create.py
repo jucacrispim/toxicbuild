@@ -36,14 +36,15 @@ class CreateTestCase(unittest.TestCase):
                     'relocatable': True,
                     'no-logrotate': False,
                     'umask': 'None',
-                    'log-size': "10000000",
-                    'log-count': "10",
+                    'log-size': 10000000,
+                    'log-count': 10,
                     'keepalive': 600,
                     'maxdelay': 300,
                     'allow-shutdown': None,
                     'usepty': 0,
                     'name': 'easyslave',
-                    'master': 'localhost:9989',
+                    'host': 'localhost',
+                    'port': 9989,
                     'passwd': 'dummypass'}
 
         returned = create._get_slave_config(config)
