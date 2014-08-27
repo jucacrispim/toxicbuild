@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-VERSION = '0.2-b3'
+VERSION = '0.2-b4'
 DESCRIPTION = """
 Hackish pieces of software to an easy buildbot config
 """
@@ -17,7 +17,7 @@ setup(name='toxicbuild',
       long_description=LONG_DESCRIPTION,
       packages=find_packages(exclude=['tests', 'tests.*']),
       include_package_data=True,
-      install_requires=['buildbot>=0.8.8', 'buildbot-slave>=0.8.8'],
+      install_requires=['buildbot>=0.8.9', 'buildbot-slave>=0.8.9'],
       classifiers=[
           'Development Status :: 3 - Alpha',
           'Environment :: No Input/Output (Daemon)',

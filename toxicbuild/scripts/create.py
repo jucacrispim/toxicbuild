@@ -9,7 +9,7 @@ from buildbot.util import in_reactor
 from buildbot.scripts.create_master import (makeBasedir,
                                             makePublicHtml,
                                             makeTemplatesDir, createDB)
-from buildslave.scripts.runner import createSlave
+from buildslave.scripts.create_slave import createSlave
 from migrate.versioning.api import version_control, test, upgrade
 
 
