@@ -129,8 +129,8 @@ def _get_slave_config(config):
     slave_config['force'] = False
     slave_config['relocatable'] = True
     slave_config['no-logrotate'] = False
-    slave_config['log-size'] = "10000000"
-    slave_config['log-count'] = "10"
+    slave_config['log-size'] = 10000000
+    slave_config['log-count'] = 10
     slave_config['umask'] = "None"
     slave_config['usepty'] = 0
     slave_config['keepalive'] = 600
@@ -138,7 +138,8 @@ def _get_slave_config(config):
     slave_config['allow-shutdown'] = None
     slave_config['name'] = 'easyslave'
     slave_config['passwd'] = 'dummypass'
-    slave_config['master'] = 'localhost:9989'
+    slave_config['host'] = 'localhost'
+    slave_config['port'] = 9989
 
     return slave_config
 
