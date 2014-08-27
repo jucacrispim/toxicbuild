@@ -32,11 +32,11 @@ new buildbot master and a new buildbot slave in the specified directory.
 With this command, a new master was created in ~/toxicCI/master and a new
 slave was created in ~/toxicCI/slave.
 
-Edit the master.cfg file to your needs. Namely the TOXICBUILD_SOURCE,
-POLLINTERVAL and BRANCHES variables.
+Edit the master.cfg file to your needs. Namely the PROJECT_NAME,
+TOXICBUILD_SOURCE, BRANCHES and POLLINTERVAL variables.
 
-Now you have to start buildbot master and buildbot slave. Execute this commands
-in your command line:
+Now you have to start buildbot master and buildbot slave. Execute these
+commands in your command line:
 
 .. code-block:: sh
 
@@ -47,17 +47,56 @@ You have now your toxicbuild instance configured and ready to build your
 application. The only thing that is still missing is the config file for
 builders and its steps. In order to do so, in the root directory of your
 project, put the following code in the ``toxicbuild.conf`` file.
+
 .. code-block:: python
 
-	builders [{'name': 'builder 1',
-	           'steps': [{'name': 'run tests',
-		              'command': 'python setup.py test',
-			      'haltOnFailure': True},
-			      {'name': 'say hello',
-			      'command': 'echo "hello"'}]},
-		   {'name': 'builder 2',
-		   'steps': [{'name': 'echo',
-		              'command': 'echo 1'}]}]
+    # candies are pre-configured steps for common tasks.
+    candies = [
+	# this git candy updates the codebase and checkout
+	# to a named_tree (a branch, a commit...)
+	{'name': 'git-update-and-checkout'},
+
+	# this python-virtualenv candy creates a virtualenv,
+	# install the dependencies using pip + requirements.txt file
+	# and sets the env vars to use the virutalenv in every step.
+	{'name': 'python-virtualenv',
+	 'venv_path': 'toxicenv',
+	 'pyversion': '/usr/bin/python2.7'}
+    ]
+
+    # These steps are shell commands. The rootdir for the
+    # commands execution is the directory containing this file.
+    steps = [{'name': 'Unit tests and coverage',
+	      'command': 'sh ./build-scripts/check_coverage.sh'},
+
+	     {'name': 'Checking coding style',
+	      'command': 'sh ./build-scripts/check_code.sh',
+	      'warnOnFailure': True,
+	      'flunkOnFailure': False},
+
+	     {'name': 'Functional tests',
+	      'command': 'python setup.py test --test-suite=tests.functional'}]
+
+    release_steps = steps + [{'name': 'Upload to pypi',
+			      'command': 'python setup.py sdist'}]
+
+    # This is the main variable for toxicbuild.conf.
+    # Bulders can be configured on a per-branch basis.
+    # The builder name must be unique.
+    builders = [
+	{'name': 'default',
+	 'branch': 'master',
+
+	 'candies': candies,
+	 'steps': steps}
+
+	{'name': 'release',
+	 'branch': 'release',
+
+	 'candies': candies,
+	 'steps': release_steps}
+
+    ]
 
 And that's it. Commit, push and your build will begin automatically.
 
