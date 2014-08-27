@@ -1,5 +1,5 @@
-buildbot==0.8.8
-buildbot-slave==0.8.8
+buildbot==0.8.9
+buildbot-slave==0.8.9
 coverage==3.7
 mock==1.0.1
 webrunner==0.1
