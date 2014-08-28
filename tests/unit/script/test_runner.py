@@ -40,3 +40,18 @@ class StartToxicBuildOptionsTest(unittest.TestCase):
     def test_getSynopsis(self):
         opt = runner.StartToxicBuildOptions()
         self.assertTrue(opt.getSynopsis())
+
+
+class StopToxicBuildOptionsTest(unittest.TestCase):
+    def test_stop_toxicbuild_options(self):
+        opt = runner.StopToxicBuildOptions()
+
+        flags = [['quiet', 'q', 'Do not emit the commands being run']]
+
+        everything_ok = flags == opt.optFlags
+
+        self.assertTrue(everything_ok)
+
+    def test_getSynopsis(self):
+        opt = runner.StopToxicBuildOptions()
+        self.assertTrue(opt.getSynopsis())
