@@ -25,3 +25,18 @@ class CreateToxicbuildOptionsTestCase(unittest.TestCase):
         returned = opt.getSynopsis()
 
         self.assertEqual(expected, returned)
+
+
+class StartToxicBuildOptionsTest(unittest.TestCase):
+    def test_start_toxicbuild_options(self):
+        opt = runner.StartToxicBuildOptions()
+
+        flags = [['quiet', 'q', 'Do not emit the commands being run']]
+
+        everything_ok = flags == opt.optFlags
+
+        self.assertTrue(everything_ok)
+
+    def test_getSynopsis(self):
+        opt = runner.StartToxicBuildOptions()
+        self.assertTrue(opt.getSynopsis())

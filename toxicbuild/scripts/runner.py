@@ -19,8 +19,30 @@ class CreateToxicbuildOptions(base.BasedirMixin, base.SubcommandOptions):
         return 'Usage: toxicbuild create <basedir>'
 
 
+class StartToxicBuildOptions(base.BasedirMixin, base.SubcommandOptions):
+    subcommandFunction = 'toxicbuild.scripts.start.start'
+
+    optFlags = [['quiet', 'q', 'Do not emit the commands being run']]
+
+    def getSynopsis(self):
+        return 'Usage: toxicbuild toxicstart <basedir>'
+
+
+class StopToxicBuildOptions(base.BasedirMixin, base.SubcommandOptions):
+    subcommandFunction = 'toxicbuild.scripts.stop.stop'
+
+    optFlags = [['quiet', 'q', 'Do not emit the commands being run']]
+
+    def getSynopsis(self):
+        return 'Usage: toxicbuild toxicstop <basedir>'
+
+
 Options.subCommands.append(['create', None, CreateToxicbuildOptions,
                             "create easy buildbot install"])
+Options.subCommands.append(['toxicstart', None, StartToxicBuildOptions,
+                            'start master and slave'])
+Options.subCommands.append(['toxicstop', None, StopToxicBuildOptions,
+                            'stop master and slave'])
 
 
 def run():  # pragma: no cover

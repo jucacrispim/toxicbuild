@@ -35,13 +35,12 @@ slave was created in ~/toxicCI/slave.
 Edit the master.cfg file to your needs. Namely the PROJECT_NAME,
 TOXICBUILD_SOURCE, BRANCHES and POLLINTERVAL variables.
 
-Now you have to start buildbot master and buildbot slave. Execute these
-commands in your command line:
+Now you have to start buildbot master and buildbot slave. Execute this
+command in your command line:
 
 .. code-block:: sh
 
-    $ buildbot start ~/toxicCI/master
-    $ buildslave start ~/toxicCI/slave
+    $ toxicbuild toxicstart ~/toxicCI/
 
 You have now your toxicbuild instance configured and ready to build your
 application. The only thing that is still missing is the config file for

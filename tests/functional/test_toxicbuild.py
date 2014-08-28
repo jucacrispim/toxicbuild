@@ -18,11 +18,10 @@ class ToxicBuildTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        stop_master_cmd = ['buildbot', 'stop', '%s' % cls.master_path]
-        stop_slave_cmd = ['buildslave', 'stop', '%s' % cls.slave_path]
+        stop_cmd = ['export', 'PYTHONPATH="."', '&&',
+                    './script/toxicbuild', 'toxicstop', '%s' % cls.basedir]
 
-        subprocess.call(stop_master_cmd)
-        subprocess.call(stop_slave_cmd)
+        os.system(' '.join(stop_cmd))
 
         try:
             subprocess.call(['rm', '-rf', '%s' % cls.basedir])
@@ -90,11 +89,12 @@ class ToxicBuildTestCase(unittest.TestCase):
 
     @classmethod
     def start(cls):
-        start_master_cmd = ['buildbot', 'start', '%s' % cls.master_path]
-        start_slave_cmd = ['buildslave', 'start', '%s' % cls.slave_path]
-
-        subprocess.call(start_master_cmd)
-        subprocess.call(start_slave_cmd)
+        start_cmd = [
+            'export', 'PYTHONPATH="."', '&&',
+            './script/toxicbuild', 'toxicstart', '%s' % cls.basedir]
+        err = os.system(' '.join(start_cmd))
+        if err:
+            raise Exception('Error while starting toxicbuild')
 
     @classmethod
     def weblogin(cls):
