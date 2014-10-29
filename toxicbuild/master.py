@@ -23,7 +23,7 @@ class BuildMaster(BuildMasterBase):
 
     @defer.inlineCallbacks
     def startService(self, _reactor=reactor):
-        BuildMasterBase.startService(self, _reactor=reactor)
+        yield BuildMasterBase.startService(self, _reactor=reactor)
         try:
             yield self.toxicdb.setup()
         except connector.connector.DatabaseNotReadyError:

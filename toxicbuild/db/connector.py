@@ -44,7 +44,7 @@ class DBConnector(connector.DBConnector):
 
     def reconfigService(self, new_config):
         # double-check -- the master ensures this in config checks
-        assert self.configured_url == new_config.db['toxicbuild_db_url']
+        # assert self.configured_url == new_config.db['toxicbuild_db_url']
 
         return config.ReconfigurableServiceMixin.reconfigService(self,
                                                                  new_config)
