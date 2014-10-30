@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from twisted.trial import unittest
-from twisted.internet import reactor
+#from twisted.internet import reactor
 from mock import Mock, patch
 from toxicbuild import master
 from toxicbuild.db.connector import connector
@@ -19,16 +19,15 @@ class MasterConfigTestCase(unittest.TestCase):
 
     def make_reactor(self):
         r = Mock()
-        r.callWhenRunning = reactor.callWhenRunning
+ #       r.callWhenRunning = reactor.callWhenRunning
         return r
 
-    @patch.object(master, 'BuildMasterBase', Mock())
-    @patch.object(master, 'connector', Mock())
     def test_toxicbuilddb(self):
         # tests if toxicbuild db is setted correctly
         # on globals
         self.assertTrue(master.TOXICDB)
 
+    @patch.object(master, 'BuildMasterBase', Mock())
     @patch.object(master, 'log', Mock())
     def test_startService(self):
         reactor = self.make_reactor()
@@ -43,6 +42,7 @@ class MasterConfigTestCase(unittest.TestCase):
 
         return d
 
+    @patch.object(master, 'BuildMasterBase', Mock())
     def test_startService_not_ready_database(self):
         reactor = self.make_reactor()
 
