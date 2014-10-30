@@ -110,6 +110,13 @@ using git cvs, but I'm still working on it.
 Stay tuned for new features!
 
 
+.. toctree::
+   :maxdepth: 1
+
+   CHANGELOG
+
+
+
 Contents:
 
 .. toctree::
