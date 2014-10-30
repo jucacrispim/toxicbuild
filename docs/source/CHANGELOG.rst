@@ -1,6 +1,10 @@
 Changelog
 =========
 
+* 0.2.1.1
+
+  - MANIFEST.in corrected. Added waterfall.html
+
 * 0.2.1
 
   - Corrected gitpoller branches behavior
