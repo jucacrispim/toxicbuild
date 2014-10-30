@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-VERSION = '0.2.1-b0'
+VERSION = '0.2.1'
 DESCRIPTION = """
 Hackish pieces of software to an easy buildbot config
 """
