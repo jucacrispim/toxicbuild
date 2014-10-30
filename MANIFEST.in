@@ -1,3 +1,4 @@
 include toxicbuild/scripts/sample.cfg
 include toxicbuild/scripts/buildbot_tac.tmpl
 include toxicbuild/migrations/migrate.cfg
+include toxicbuild/status/web/templates/waterfall.html
