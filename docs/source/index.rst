@@ -29,8 +29,9 @@ new buildbot master and a new buildbot slave in the specified directory.
 
     $ toxicbuild create ~/toxicCI
 
-With this command, a new master was created in ~/toxicCI/master and a new
-slave was created in ~/toxicCI/slave.
+
+By using the ``toxicbuild create`` command, a new master was created
+in ~/toxicCI/master and a new slave was created in ~/toxicCI/slave.
 
 Edit the master.cfg file to your needs. Namely the PROJECT_NAME,
 TOXICBUILD_SOURCE, BRANCHES and POLLINTERVAL variables.
