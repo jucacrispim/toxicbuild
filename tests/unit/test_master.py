@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from twisted.trial import unittest
-#from twisted.internet import reactor
 from mock import Mock, patch
 from toxicbuild import master
 from toxicbuild.db.connector import connector
@@ -19,7 +18,7 @@ class MasterConfigTestCase(unittest.TestCase):
 
     def make_reactor(self):
         r = Mock()
- #       r.callWhenRunning = reactor.callWhenRunning
+        # r.callWhenRunning = reactor.callWhenRunning
         return r
 
     def test_toxicbuilddb(self):
