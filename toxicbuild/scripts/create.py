@@ -65,7 +65,7 @@ def createMaster(config):  # pragma: no cover
     yield createDB(config)
 
 
-def copyCustomTemplates(config):
+def copyCustomTemplates(config):  # pragma: no cover
     templates_dir = os.path.dirname(os.path.abspath(toxicbuild.__file__))
     templates_dir = os.path.join(templates_dir, 'status')
     templates_dir = os.path.join(templates_dir, 'web')
@@ -82,7 +82,6 @@ def copyCustomTemplates(config):
 
         with open(os.path.join(destdir, template), 'w') as f:
             f.write(content)
-
 
 
 def makeSampleConfig(config):  # pragma: no cover
