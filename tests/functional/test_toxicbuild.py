@@ -193,3 +193,8 @@ builders = [{'name': 'b1',
         self.wb.urlopen(self.toxic_url + '/builders/b3')
         with self.assertRaises(Exception):
                     self.wb.urlopen(self.toxic_url + '/builders/b2')
+
+    def test_5_custom_waterfall_template(self):
+        self.wb.urlopen(self.toxic_url + '/waterfall')
+        script = self.wb.current_page.soup.find('script')
+        self.assertTrue(script)

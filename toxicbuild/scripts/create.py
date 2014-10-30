@@ -11,6 +11,7 @@ from buildbot.scripts.create_master import (makeBasedir,
                                             makeTemplatesDir, createDB)
 from buildslave.scripts.create_slave import createSlave
 from migrate.versioning.api import version_control, test, upgrade
+import toxicbuild
 
 
 @in_reactor
@@ -60,7 +61,28 @@ def createMaster(config):  # pragma: no cover
     makeSampleConfig(config)
     makePublicHtml(config)
     makeTemplatesDir(config)
+    copyCustomTemplates(config)
     yield createDB(config)
+
+
+def copyCustomTemplates(config):
+    templates_dir = os.path.dirname(os.path.abspath(toxicbuild.__file__))
+    templates_dir = os.path.join(templates_dir, 'status')
+    templates_dir = os.path.join(templates_dir, 'web')
+    templates_dir = os.path.join(templates_dir, 'templates')
+
+    destdir = os.path.join(config['basedir'], 'templates')
+
+    templates = ['waterfall.html']
+    for template in templates:
+        if not config['quiet']:
+            print('%s > %s' % (template, destdir))
+        with open(os.path.join(templates_dir, template), 'r') as f:
+            content = f.read()
+
+        with open(os.path.join(destdir, template), 'w') as f:
+            f.write(content)
+
 
 
 def makeSampleConfig(config):  # pragma: no cover
