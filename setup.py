@@ -17,7 +17,7 @@ setup(name='toxicbuild',
       long_description=LONG_DESCRIPTION,
       packages=find_packages(exclude=['tests', 'tests.*']),
       include_package_data=True,
-      install_requires=['buildbot>=0.8.9', 'buildbot-slave>=0.8.9'],
+      install_requires=['tornado>=4.1'],
       classifiers=[
           'Development Status :: 3 - Alpha',
           'Environment :: No Input/Output (Daemon)',

@@ -1,0 +1,86 @@
+# -*- coding: utf-8 -*-
+
+# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+
+# This file is part of toxicbuild.
+
+# toxicbuild is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# toxicbuild is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
+
+import asyncio
+import datetime
+import tornado
+from tornado.testing import AsyncTestCase, gen_test
+from toxicbuild.master import repositories
+
+
+class RepositoryTest(AsyncTestCase):
+    def setUp(self):
+        super(RepositoryTest, self).setUp()
+        self.repo = repositories.Repository(
+            url="git@somewhere.com/project.git", vcs_type='git',
+            update_seconds=100)
+
+    def tearDown(self):
+        repositories.Repository.drop_collection()
+        repositories.RepositoryRevision.drop_collection()
+        super(RepositoryTest, self).tearDown()
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
+
+    def test_workdir(self):
+        expected = 'src/gitsomewhere.com-project.git'
+        self.assertEqual(self.repo.workdir, expected)
+
+    def test_poller(self):
+        self.assertEqual(type(self.repo.poller), repositories.Poller)
+
+    @gen_test
+    def test_get_latest_revision_for_branch(self):
+        yield from self._create_db_revisions()
+        expected = '123asdf1'
+        rev = yield from self.repo.get_latest_revision_for_branch('master')
+        self.assertEqual(expected, rev.commit)
+
+    @gen_test
+    def test_get_latest_revisions(self):
+        yield from self._create_db_revisions()
+        revs = yield from self.repo.get_latest_revisions()
+
+        self.assertEqual(revs['master'].commit, '123asdf1')
+        self.assertEqual(revs['dev'].commit, '123asdf1')
+
+    @gen_test
+    def test_add_revision(self):
+        yield self.repo.save()
+        branch = 'master'
+        commit = 'asdf213'
+        commit_date = datetime.datetime.now()
+        rev = yield from self.repo.add_revision(branch, commit, commit_date)
+        self.assertTrue(rev.id)
+
+    @asyncio.coroutine
+    def _create_db_revisions(self):
+        yield self.repo.save()
+        rep = self.repo
+        now = datetime.datetime.now()
+
+        for r in range(2):
+            for branch in ['master', 'dev']:
+                rev = repositories.RepositoryRevision(
+                    repository=rep, commit='123asdf{}'.format(str(r)),
+                    branch=branch,
+                    commit_date=now + datetime.timedelta(r))
+
+                yield rev.save()
