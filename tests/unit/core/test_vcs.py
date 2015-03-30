@@ -90,6 +90,18 @@ class GitTest(AsyncTestCase):
         self.assertEqual(cmd, expected_cmd)
 
     @gen_test
+    def test_checkout(self):
+        expected_cmd = 'git checkout master'
+
+        @asyncio.coroutine
+        def e(cmd, cwd):
+            assert cmd == expected_cmd
+
+        vcs.exec_cmd = e
+
+        yield from self.vcs.checkout('master')
+
+    @gen_test
     def test_get_remote_branches(self):
         expected = 'git branch -r'
 

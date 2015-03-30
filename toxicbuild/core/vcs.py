@@ -67,6 +67,13 @@ class VCS:
         raise NotImplementedError
 
     @asyncio.coroutine
+    def checkout(self, named_tree):  # pragma: no cover
+        """ Checkout to ``named_tree``
+        :param named_tree: A commit, branch, tag...
+        """
+        raise NotImplementedError
+
+    @asyncio.coroutine
     def has_changes(self):  # pragma: no cover
         """ Informs if has changes on repository
         """
@@ -128,6 +135,14 @@ class Git(VCS):
         cmd = '%s %s origin' % (self.vcsbin, 'fetch')
         fetched = yield from self.exec_cmd(cmd)
         return fetched
+
+    @asyncio.coroutine
+    def checkout(self, named_tree):
+        """ Checkout to ``named_tree``
+        :param named_tree: A commit, branch, tag...
+        """
+        cmd = '{} checkout {}'.format(self.vcsbin, named_tree)
+        yield from self.exec_cmd(cmd)
 
     @asyncio.coroutine
     def get_revisions(self, since={}):
