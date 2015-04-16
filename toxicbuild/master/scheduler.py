@@ -71,47 +71,35 @@ class TaskScheduler:
 
     def remove(self, task_call_or_coro):
         """ Removes ``task_call_or_coro`` from the scheduler
-        :param task_call_or_coro: callable or coroutine remove
+        :param task_call_or_coro: callable or coroutine to remove
         """
         cc_hash = hash(task_call_or_coro)
         task = self.tasks[cc_hash]
         del self.consumption_table[task]
         del self.tasks[cc_hash]
 
-    @asyncio.coroutine
     def consume_tasks(self):
-        """ Consumes pending tasks
-        """
         now = time.time()
         # all tasks that is time to consume again
         tasks2consume = [task for task, t in self.consumption_table.items()
                          if t + task.interval <= now]
 
         for task in tasks2consume:
-            try:
-                self.consumption_table[task] = now
-            except KeyError:  # pragma: no cover
-                # if has a KeyError here, the task was removed
-                # really hard to test it. :P
-                continue
+            self.consumption_table[task] = now
             asyncio.async(task.coro())
 
     @asyncio.coroutine
     def start(self):
-        """ Starts the scheduler
-        """
         if self._started:  # pragma: no cover
             return
 
         self._started = True
 
         while not self._stop:
-            yield from self.consume_tasks()
+            self.consume_tasks()
             yield from asyncio.sleep(1)
 
         self._started = False
 
     def stop(self):
-        """ Stops the scheduler
-        """
         self._stop = True

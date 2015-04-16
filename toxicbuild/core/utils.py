@@ -54,9 +54,8 @@ def load_module_from_file(filename):
         err_msg = 'Config file "%s" does not exist!' % (filename)
         raise FileNotFoundError(err_msg)
     except Exception as e:
-        err_msg = 'There is something wrong with your config file. '
-        err_msg += 'The original exception was:\n{}'
-        err_msg.format(e.args[0])
+        err_msg = 'There is something wrong with your file. '
+        err_msg += 'The original exception was:\n{}'.format(e.args[0])
         raise ConfigError(err_msg)
 
     return module
