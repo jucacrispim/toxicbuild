@@ -22,6 +22,7 @@ import asyncio
 import importlib
 import os
 from subprocess import PIPE
+import sys
 from toxicbuild.core.exceptions import ExecCmdError, ConfigError
 
 
@@ -59,3 +60,51 @@ def load_module_from_file(filename):
         raise ConfigError(err_msg)
 
     return module
+
+
+# Sorry, but not willing to test  a daemonizer.
+def run_as_a_daemon(call, cargs, ckwargs, stdout, stderr,
+                    workdir, pidfile):  # pragma: no cover
+    """ Run a callable as a daemon
+
+    :param call: a callable.
+    :param cargs: args to ``call``.
+    :param ckwargs: kwargs to ``call``.
+    :param stdout: daemon's stdout.
+    :param stderr: daemon's stderr.
+    :param workdir: daemon's workdir
+    :param pidfile: pidfile's path
+    """
+    create_daemon(stdout, stderr, workdir)
+    pid = os.getpid()
+    with open(pidfile, 'w') as f:
+        f.write(str(pid))
+
+    call(*cargs, **cwargs)
+
+def _create_daemon(stdout, stderr, workdir):  # pragma: no cover
+    _fork_off_and_die()
+    os.setsid()
+    _fork_off_and_die()
+    os.umask(0)
+    os.chdir(workdir)
+    _close_file_descriptors()
+    _redirect_file_descriptors(stdout, stderr)
+
+
+def _fork_off_and_die():  # pragma: no cover
+    pid = os.fork()
+    if pid != 0:
+        sys.exit(0)
+
+
+def _redirect_file_descriptors(stdout, stderr):  # pragma: no cover
+    for fd in sys.stdout, sys.stderr:
+        fd.flush()
+
+    sys.stdout= open(stdout, 'a', 1)
+    sys.stderr = open(stderr, 'a', 1)
+
+
+def _close_file_descriptors():  # pragma: no cover
+    sys.stdin.close()
