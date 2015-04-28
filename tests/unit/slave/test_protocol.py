@@ -35,10 +35,13 @@ class ProtocolTest(AsyncTestCase):
         self.protocol._stream_writer.write = w
 
         @asyncio.coroutine
-        def r():
+        def r(limit):
             return self.message
 
         self.protocol._stream_reader.read = r
+
+    def test_call(self):
+        self.assertEqual(self.protocol(), self.protocol)
 
     @gen_test
     def test_send_response(self):

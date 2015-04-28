@@ -63,7 +63,7 @@ def load_module_from_file(filename):
 
 
 # Sorry, but not willing to test  a daemonizer.
-def run_as_a_daemon(call, cargs, ckwargs, stdout, stderr,
+def daemonize(call, cargs, ckwargs, stdout, stderr,
                     workdir, pidfile):  # pragma: no cover
     """ Run a callable as a daemon
 
@@ -75,12 +75,12 @@ def run_as_a_daemon(call, cargs, ckwargs, stdout, stderr,
     :param workdir: daemon's workdir
     :param pidfile: pidfile's path
     """
-    create_daemon(stdout, stderr, workdir)
+    _create_daemon(stdout, stderr, workdir)
     pid = os.getpid()
     with open(pidfile, 'w') as f:
         f.write(str(pid))
-
-    call(*cargs, **cwargs)
+    print(call)
+    call(*cargs, **ckwargs)
 
 def _create_daemon(stdout, stderr, workdir):  # pragma: no cover
     _fork_off_and_die()

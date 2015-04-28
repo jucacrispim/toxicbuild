@@ -30,12 +30,11 @@ class BuildServerProtocol(asyncio.StreamReaderProtocol):
     def __init__(self, loop):
         self.raw_data = None
         self.data = None
-        self._stream_reader = asyncio.StreamReader(loop)
-        self._stream_writer = None
-        self._loop = loop
+        reader = asyncio.StreamReader(loop=loop)
+        super().__init__(reader, loop=loop)
 
-        self.actions = {'healthcheck': self.healthcheck,
-                        'build': self.build}
+    def __call__(self):
+        return self
 
     def connection_made(self, transport):
         self._transport = transport
@@ -76,7 +75,8 @@ class BuildServerProtocol(asyncio.StreamReaderProtocol):
                 # I tought, instead of the iterable, use messages sent from
                 # BuildManager and captured by the protocol, but didn't try
                 # that yet. Any ideas?
-                yield from self.build()
+                build_info = yield from self.build()
+                yield from self.send_response(code=0, body=build_info)
         except BadData:
             msg = 'Something wrong with your data {!r}'.format(self.raw_data)
             yield from self.send_response(code=1, body=msg)
@@ -150,13 +150,14 @@ class BuildServerProtocol(asyncio.StreamReaderProtocol):
     def get_raw_data(self):
         """ Returns the raw data sent by the client
         """
-        data = yield from self._stream_reader.read()
+        data = yield from self._stream_reader.read(self._stream_reader._limit)
         return data
 
     def get_json_data(self):
         """Returns the json sent by the client."""
 
         data = self.raw_data.decode()
+
         try:
             data = json.loads(data)
         except Exception:  # pragma: no cover

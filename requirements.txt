@@ -6,5 +6,6 @@ ipython==3.0.0
 pep8==1.6.2
 pyflakes==0.8.1
 sphinx-rtd-theme==0.1.7
-mongomotor==0.2.2
+mongomotor==0.3.1
 asyncblink==0.1.1
+mando==0.3.2
