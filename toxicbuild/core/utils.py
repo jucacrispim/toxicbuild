@@ -62,6 +62,10 @@ def load_module_from_file(filename):
     return module
 
 
+def log(msg, output=sys.stdout):
+    output.write('{}\n'.format(msg))
+
+
 # Sorry, but not willing to test  a daemonizer.
 def daemonize(call, cargs, ckwargs, stdout, stderr,
                     workdir, pidfile):  # pragma: no cover
@@ -102,7 +106,7 @@ def _redirect_file_descriptors(stdout, stderr):  # pragma: no cover
     for fd in sys.stdout, sys.stderr:
         fd.flush()
 
-    sys.stdout= open(stdout, 'a', 1)
+    sys.stdout = open(stdout, 'a', 1)
     sys.stderr = open(stderr, 'a', 1)
 
 

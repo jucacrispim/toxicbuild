@@ -25,7 +25,7 @@ from toxicbuild.core import utils
 from tests.unit.core import TEST_DATA_DIR
 
 
-class ExecCmdTest(AsyncTestCase):
+class UtilsTest(AsyncTestCase):
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
@@ -58,3 +58,14 @@ class ExecCmdTest(AsyncTestCase):
         mod = utils.load_module_from_file(filename)
 
         self.assertEqual(mod.BLA, 'val')
+
+    def test_log(self):
+        msg = 'a nice message'
+
+        class output:
+            @classmethod
+            def write(cls, msg):
+                cls.msg = msg
+
+        utils.log(msg, output=output)
+        self.assertEqual(output.msg, msg + '\n')
