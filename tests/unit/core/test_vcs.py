@@ -103,6 +103,18 @@ class GitTest(AsyncTestCase):
         yield from self.vcs.checkout('master')
 
     @gen_test
+    def test_pull(self):
+        expected_cmd = 'git pull --no-edit origin master'
+
+        @asyncio.coroutine
+        def e(cmd, cwd):
+            assert cmd == expected_cmd
+
+        vcs.exec_cmd = e
+
+        yield from self.vcs.pull('master')
+
+    @gen_test
     def test_get_remote_branches(self):
         expected = 'git branch -r'
 

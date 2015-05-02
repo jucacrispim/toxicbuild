@@ -21,7 +21,7 @@ import asyncio
 import datetime
 import os
 from toxicbuild.core.exceptions import VCSError, ImpossibillityError
-from toxicbuild.core.utils import exec_cmd, log
+from toxicbuild.core.utils import exec_cmd, log, inherit_docs
 
 
 class VCS:
@@ -78,6 +78,15 @@ class VCS:
         raise NotImplementedError
 
     @asyncio.coroutine
+    def pull(self, branch_name):  # pragma: no cover
+        """ Pull changes from ``branch_name`` on remote repo.
+
+        :param branch_name: A branch name, like 'master'.
+        """
+
+        raise NotImplementedError
+
+    @asyncio.coroutine
     def has_changes(self):  # pragma: no cover
         """ Informs if has changes on repository
         """
@@ -114,6 +123,7 @@ class VCS:
         raise ImpossibillityError(msg)
 
 
+@inherit_docs
 class Git(VCS):
     """ An interface to git version control system
     """
@@ -125,10 +135,6 @@ class Git(VCS):
 
     @asyncio.coroutine
     def clone(self, url):
-        """ Clones a git repository into ``self.workdir``
-        :param url: git repository url
-        """
-
         self.log('cloning {} into {}'.format(url, self.workdir))
 
         cmd = '%s clone %s %s' % (self.vcsbin, url, self.workdir)
@@ -137,9 +143,6 @@ class Git(VCS):
 
     @asyncio.coroutine
     def fetch(self):
-        """ Fetch changes from remote repository (origin)
-        """
-
         self.log('fetching changes for {}'.format(self.workdir))
 
         cmd = '%s %s origin' % (self.vcsbin, 'fetch')
@@ -148,9 +151,6 @@ class Git(VCS):
 
     @asyncio.coroutine
     def checkout(self, named_tree):
-        """ Checkout to ``named_tree``
-        :param named_tree: A commit, branch, tag...
-        """
 
         self.log('checking out {} to {}'.format(self.workdir, named_tree))
 
@@ -158,11 +158,17 @@ class Git(VCS):
         yield from self.exec_cmd(cmd)
 
     @asyncio.coroutine
+    def pull(self, branch_name):
+
+        self.log('pulling changes from {} brach {}'.format(self.workdir,
+                                                           branch_name))
+        cmd = '{} pull --no-edit origin {}'.format(self.vcsbin, branch_name)
+
+        yield from self.exec_cmd(cmd)
+
+    @asyncio.coroutine
     def get_revisions(self, since={}):
-        """ Returns the revisions for all branches since ``since``.
-        :param since: dictionary in the format: {branch_name: since_date}.
-          ``since`` is a datetime object.
-        """
+
         remote_branches = yield from self.get_remote_branches()
         revisions = {}
         for branch in remote_branches:
@@ -175,14 +181,7 @@ class Git(VCS):
 
     @asyncio.coroutine
     def get_revisions_for_branch(self, branch, since=None):
-        """ Returns the revisions for ``branch`` since ``since``.
-        If ``since`` is None, all revisions will be returned. The order for
-        revisions is from the oldest to newest, so revisions[0] is the oldest
-        and revisions[-1] is the newest.
 
-        :param branch: branch name
-        :param since: datetime
-        """
 
         self.log('getting revisions for {} on branch {}'.format(self.workdir,
                                                                 branch))
@@ -206,8 +205,6 @@ class Git(VCS):
 
     @asyncio.coroutine
     def get_remote_branches(self):
-        """ Returns a list of the remote branches available on origin
-        """
         self.log('getting remote branches for {}'.format(self.workdir))
 
         cmd = '%s branch -r' % self.vcsbin
@@ -217,8 +214,6 @@ class Git(VCS):
 
     @asyncio.coroutine
     def has_changes(self):
-        """ Informs if has changes on repository
-        """
         fetched = yield from self.fetch()
         return bool(fetched)
 
