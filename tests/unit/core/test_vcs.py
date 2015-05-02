@@ -62,6 +62,7 @@ class VCSTest(AsyncTestCase):
 
 
 @mock.patch.object(vcs, 'exec_cmd', mock.MagicMock())
+@mock.patch.object(vcs, 'log', mock.MagicMock())
 class GitTest(AsyncTestCase):
     def setUp(self):
         super(GitTest, self).setUp()

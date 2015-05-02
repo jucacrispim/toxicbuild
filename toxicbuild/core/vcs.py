@@ -21,7 +21,7 @@ import asyncio
 import datetime
 import os
 from toxicbuild.core.exceptions import VCSError, ImpossibillityError
-from toxicbuild.core.utils import exec_cmd
+from toxicbuild.core.utils import exec_cmd, log
 
 
 class VCS:
@@ -52,6 +52,10 @@ class VCS:
         """ Informs if the workdir for this vcs exists
         """
         return os.path.exists(self.workdir)
+
+    def log(self, msg):
+        vcsmsg = '{}: {}'.format(self.vcsbin, msg)
+        log(vcsmsg)
 
     @asyncio.coroutine
     def clone(self, url):  # pragma: no cover
@@ -124,6 +128,9 @@ class Git(VCS):
         """ Clones a git repository into ``self.workdir``
         :param url: git repository url
         """
+
+        self.log('cloning {} into {}'.format(url, self.workdir))
+
         cmd = '%s clone %s %s' % (self.vcsbin, url, self.workdir)
         # we can't go to self.workdir while we do not clone the repo
         yield from self.exec_cmd(cmd, cwd='.')
@@ -132,6 +139,9 @@ class Git(VCS):
     def fetch(self):
         """ Fetch changes from remote repository (origin)
         """
+
+        self.log('fetching changes for {}'.format(self.workdir))
+
         cmd = '%s %s origin' % (self.vcsbin, 'fetch')
         fetched = yield from self.exec_cmd(cmd)
         return fetched
@@ -141,6 +151,9 @@ class Git(VCS):
         """ Checkout to ``named_tree``
         :param named_tree: A commit, branch, tag...
         """
+
+        self.log('checking out {} to {}'.format(self.workdir, named_tree))
+
         cmd = '{} checkout {}'.format(self.vcsbin, named_tree)
         yield from self.exec_cmd(cmd)
 
@@ -171,6 +184,9 @@ class Git(VCS):
         :param since: datetime
         """
 
+        self.log('getting revisions for {} on branch {}'.format(self.workdir,
+                                                                branch))
+
         cmd = '{} log --pretty=format:"%H | %ad" '.format(self.vcsbin)
         if since:
             date = datetime.datetime.strftime(since, self.date_format)
@@ -192,6 +208,8 @@ class Git(VCS):
     def get_remote_branches(self):
         """ Returns a list of the remote branches available on origin
         """
+        self.log('getting remote branches for {}'.format(self.workdir))
+
         cmd = '%s branch -r' % self.vcsbin
 
         remote_branches = yield from self.exec_cmd(cmd)
