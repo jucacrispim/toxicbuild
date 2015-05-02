@@ -72,7 +72,9 @@ class DummyBuildClient:
 
         build_resp = []
         r = self.recv()
+
         while r:
+            r = json.loads(r.decode())
             build_resp.append(r)
             r = self.recv()
 
@@ -80,7 +82,7 @@ class DummyBuildClient:
         return steps, build_status
 
     def list_builders(self):
-        data = {'action': 'build',
+        data = {'action': 'list_builders',
                 'body': {'repo_url': self.repo_url,
                          'branch': 'master',
                          'vcs_type': 'git',
@@ -88,6 +90,7 @@ class DummyBuildClient:
 
         self.send(json.dumps(data))
         r = self.recv()
+        r = json.loads(r.decode())
         return r
 
 class SlaveTest(unittest.TestCase):
@@ -112,4 +115,14 @@ class SlaveTest(unittest.TestCase):
             self.assertTrue(client.is_server_alive())
 
     def test_list_builders(self):
-        pass
+        with DummyBuildClient('localhost', 7777) as client:
+            builders = client.list_builders()['body']['builders']
+
+        self.assertEqual(builders, ['builder-1'], builders)
+
+    def test_build(self):
+        with DummyBuildClient('localhost', 7777) as client:
+            steps, build_status = client.build('builder-1')
+
+        self.assertEqual(len(steps), 1)
+        self.assertEqual(build_status['body']['status'], 'success')
