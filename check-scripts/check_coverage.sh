@@ -1,6 +1,6 @@
 #!/bin/sh
 
-err=`coverage run --source=toxicbuild setup.py test -q`;
+err=`coverage run --source=toxicbuild setup.py test --test-suite=tests.unit -q`;
 coverage=`coverage report -m | grep TOTAL | sed 's/TOTAL\s*\w*\s*\w*\s*//g' | cut -d'%' -f1`
 
 echo 'coverage was:' $coverage'%'
