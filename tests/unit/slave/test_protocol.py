@@ -7,9 +7,11 @@ from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.slave import protocols, build
 
 
+@mock.patch.object(protocols.utils, 'log', mock.MagicMock())
 class ProtocolTest(AsyncTestCase):
     @mock.patch.object(protocols.asyncio, 'StreamReader', mock.MagicMock())
     @mock.patch.object(protocols.asyncio, 'StreamWriter', mock.MagicMock())
+    @mock.patch.object(protocols.utils, 'log', mock.MagicMock())
     def setUp(self):
         super().setUp()
         loop = mock.MagicMock()
@@ -147,6 +149,20 @@ class ProtocolTest(AsyncTestCase):
     @gen_test
     def test_client_connected_with_bad_data(self):
         self.message = b'{"action": "build"}'
+
+        yield from self.protocol.client_connected()
+
+        self.assertEqual(self.response['code'], 1)
+
+    @gen_test
+    def test_client_connected_with_exception(self):
+        self.message = b'{"action": "build"}'
+
+        @asyncio.coroutine
+        def build(*a, **kw):
+            raise Exception('sauci fufu!')
+
+        self.protocol.build = build
 
         yield from self.protocol.client_connected()
 

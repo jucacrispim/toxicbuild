@@ -27,8 +27,14 @@ from toxicbuild.slave import build, protocols
 from tests.unit.slave import TEST_DATA_DIR
 
 
+TOXICCONF = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
+TOXICCONF = load_module_from_file(TOXICCONF)
+
+
+@mock.patch.object(build, 'load_module_from_file',
+                   mock.MagicMock(return_value=TOXICCONF))
 class BuilderManagerTest(AsyncTestCase):
-    @mock.patch.object(build, 'load_module_from_file', mock.MagicMock())
+
     @mock.patch.object(build, 'get_vcs', mock.MagicMock())
     def setUp(self):
         super().setUp()
@@ -39,11 +45,6 @@ class BuilderManagerTest(AsyncTestCase):
             pass
 
         protocol.send_response = s
-
-        toxicconf = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
-        toxicconf = load_module_from_file(toxicconf)
-
-        build.load_module_from_file.return_value = toxicconf
 
         self.manager = build.BuildManager(protocol, 'git@repo.git', 'git',
                                           'master', 'v0.1')

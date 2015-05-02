@@ -36,7 +36,13 @@ class BuildManager:
         self.branch = branch
         self.named_tree = named_tree
         self.configfile = os.path.join(self.workdir, 'toxicbuild.conf')
-        self.configmodule = load_module_from_file(self.configfile)
+        self._configmodule = None
+
+    @property
+    def configmodule(self):
+        if not self._configmodule:
+            self._configmodule = load_module_from_file(self.configfile)
+        return self._configmodule
 
     @property
     def workdir(self):
@@ -57,7 +63,8 @@ class BuildManager:
             yield from self.vcs.clone(self.repo_url)
 
         yield from self.vcs.fetch()
-        yield from self.vcs.checkout()
+        yield from self.vcs.checkout(self.named_tree)
+        yield from self.vcs.pull(self.named_tree)
 
     # the whole purpose of toxicbuild is this!
     # see the git history and look for the first versions.
@@ -130,7 +137,8 @@ class Builder:
                     build_status = step_info['status']
 
                 build_info['steps'].append(step_info)
-                asyncio.async(self.manager.step_complete(step_info))
+
+                yield from self.manager.step_complete(step_info)
 
         build_info['status'] = build_status
         build_info['total_steps'] = len(self.steps)

@@ -19,6 +19,8 @@
 
 import asyncio
 import json
+import sys
+from toxicbuild.core import utils
 from toxicbuild.slave import BuildManager
 from toxicbuild.slave.exceptions import BadData
 
@@ -43,6 +45,9 @@ class BuildServerProtocol(asyncio.StreamReaderProtocol):
                                                    self._stream_reader,
                                                    self._loop)
 
+        peername = self._transport.get_extra_info('peername')
+        self.log('client connected from {}'.format(peername))
+
         res = self.client_connected()
         self._loop.create_task(res)
 
@@ -51,6 +56,7 @@ class BuildServerProtocol(asyncio.StreamReaderProtocol):
         self.raw_data = yield from self.get_raw_data()
         self.data = self.get_json_data()
         if not self.data:
+            self.log('no data')
             msg = 'Something wrong with your data {!r}'.format(self.raw_data)
             yield from self.send_response(code=1, body=msg)
             return self.close_connection()
@@ -58,17 +64,21 @@ class BuildServerProtocol(asyncio.StreamReaderProtocol):
         action = self.data.get('action')
         if not action:
             msg = 'No action found!'
+            self.log(msg)
             yield from self.send_response(code=1, body=msg)
             return self.close_connection()
 
         try:
             if action == 'healthcheck':
+                self.log('executing {}'.format(action))
                 yield from self.healthcheck()
 
             elif action == 'list_builders':
+                self.log('executing {}'.format(action))
                 yield from self.list_builders()
 
             elif action == 'build':
+                self.log('executing {}'.format(action))
                 # build has a strange behavior. It sends messages to the client
                 # directly. I think it should be an iterable here and the
                 # protocol should send the messages. But how do to that?
@@ -79,7 +89,11 @@ class BuildServerProtocol(asyncio.StreamReaderProtocol):
                 yield from self.send_response(code=0, body=build_info)
         except BadData:
             msg = 'Something wrong with your data {!r}'.format(self.raw_data)
+            self.log('bad data')
             yield from self.send_response(code=1, body=msg)
+        except Exception as e:
+            self.log(e.args[0])
+            yield from self.send_response(code=1, body=e.args[0])
 
         self.close_connection()
 
@@ -124,10 +138,12 @@ class BuildServerProtocol(asyncio.StreamReaderProtocol):
 
         builder = manager.load_builder(builder_name)
         build_info = yield from builder.build()
+        return build_info
 
     def close_connection(self):
         """ Closes the connection with the client
         """
+        self.log('closing connection')
         self._stream_writer.close()
 
     @asyncio.coroutine
@@ -164,3 +180,6 @@ class BuildServerProtocol(asyncio.StreamReaderProtocol):
             data = None
 
         return data
+
+    def log(self, msg, output=sys.stdout):
+        utils.log(msg, output)
