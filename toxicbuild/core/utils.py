@@ -66,6 +66,25 @@ def log(msg, output=sys.stdout):
     output.write('{}\n'.format(msg))
 
 
+# inherit_docs thanks to Raymond Hettinger on stackoverflow
+# stackoverflow.com/questions/8100166/inheriting-methods-docstrings-in-python
+def inherit_docs(cls):
+    """ Inherit docstrings from base classes' methods.
+    Can be used as a decorator
+
+    :param cls: Class that will inherit docstrings from its parents.
+    """
+    for name, func in vars(cls).items():
+        if not func.__doc__:
+            for parent in cls.__bases__:
+                parfunc = getattr(parent, name)
+                if parfunc and getattr(parfunc, '__doc__', None):
+                    func.__doc__ = parfunc.__doc__
+                    break
+    return cls
+
+
+
 # Sorry, but not willing to test  a daemonizer.
 def daemonize(call, cargs, ckwargs, stdout, stderr,
                     workdir, pidfile):  # pragma: no cover

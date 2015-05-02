@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
+import asyncio
 import os
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
@@ -69,3 +70,19 @@ class UtilsTest(AsyncTestCase):
 
         utils.log(msg, output=output)
         self.assertEqual(output.msg, msg + '\n')
+
+    def test_inherit_docs(self):
+
+        class A:
+            @asyncio.coroutine
+            def m():
+                """ some doc"""
+                return True
+
+        @utils.inherit_docs
+        class B(A):
+            @asyncio.coroutine
+            def m():
+                return False
+
+        self.assertEqual(B.m.__doc__, A.m.__doc__)
