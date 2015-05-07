@@ -1,13 +1,17 @@
 #!/bin/sh
 
-err=`coverage run --source=toxicbuild setup.py test --test-suite=tests.unit -q`;
+ERRORFILE="errors.txt"
+coverage run --source=$1 setup.py test --test-suite=tests.unit -q 1>/dev/null 2>$ERRORFILE;
+haserr=`grep FAILED $ERRORFILE`;
+err=`cat $ERRORFILE`
+rm $ERRORFILE;
 coverage=`coverage report -m | grep TOTAL | sed 's/TOTAL\s*\w*\s*\w*\s*//g' | cut -d'%' -f1`
 
 echo 'coverage was:' $coverage'%'
 
-if [ "$err" != "" ]
+if [ "$haserr" != "" ]
 then
-    if [ $coverage -eq 100 ]
+    if [ $coverage -eq $2 ]
     then
 	echo "But something went wrong";
 	echo "$err";
@@ -15,15 +19,15 @@ then
     fi
 fi
 
-if [ $coverage -eq 100 ]
+if [ $coverage -eq $2 ]
 then
-    if [ "$err" != "" ]
+    if [ "$haserr" != "" ]
     then
 	echo "And something went wrong";
 	echo "$err";
 	exit 1;
     else
-	echo "Everything ok, buddy!";
+	echo "Yay! Everything ok!";
 	exit 0;
     fi
 
