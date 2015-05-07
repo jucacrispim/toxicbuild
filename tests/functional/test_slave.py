@@ -122,7 +122,8 @@ class SlaveTest(unittest.TestCase):
 
     def test_build(self):
         with DummyBuildClient('localhost', 7777) as client:
-            steps, build_status = client.build('builder-1')
+            step_info, build_status = client.build('builder-1')
 
-        self.assertEqual(len(steps), 1)
+        self.assertEqual(len(step_info), 2)
+        self.assertEqual(build_status['body']['total_steps'], 1)
         self.assertEqual(build_status['body']['status'], 'success')

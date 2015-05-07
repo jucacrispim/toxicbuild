@@ -105,7 +105,7 @@ class BuildManager:
 
     # kind of wierd place for this thing
     @asyncio.coroutine
-    def step_complete(self, step_info):
+    def send_step_info(self, step_info):
         yield from self.protocol.send_response(code=0, body=step_info)
 
 
@@ -131,14 +131,21 @@ class Builder:
 
         with change_dir(self.workdir):
             for step in self.steps:
-                step_info = yield from step.execute()
+                step_info = {'status': 'running',
+                             'cmd': step.command,
+                             'name': step.name,
+                             'output': ''}
+
+                yield from self.manager.send_step_info(step_info)
+
+                step_info.update((yield from step.execute()))
 
                 if build_status is None or build_status == 'success':
                     build_status = step_info['status']
 
                 build_info['steps'].append(step_info)
 
-                yield from self.manager.step_complete(step_info)
+                yield from self.manager.send_step_info(step_info)
 
         build_info['status'] = build_status
         build_info['total_steps'] = len(self.steps)
