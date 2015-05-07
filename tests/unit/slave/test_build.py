@@ -23,7 +23,7 @@ import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core.utils import load_module_from_file
-from toxicbuild.slave import build, protocols
+from toxicbuild.slave import build
 from tests.unit.slave import TEST_DATA_DIR
 
 
@@ -48,7 +48,6 @@ class BuilderManagerTest(AsyncTestCase):
 
         self.manager = build.BuildManager(protocol, 'git@repo.git', 'git',
                                           'master', 'v0.1')
-
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
@@ -76,9 +75,11 @@ class BuilderManagerTest(AsyncTestCase):
     def test_load_builder_with_not_found(self):
         with self.assertRaises(build.BuilderNotFound):
             builder = self.manager.load_builder('builder3')
+            del builder
 
 
 class BuilderTest(AsyncTestCase):
+
     @mock.patch.object(build, 'load_module_from_file', mock.MagicMock())
     def setUp(self):
         super().setUp()

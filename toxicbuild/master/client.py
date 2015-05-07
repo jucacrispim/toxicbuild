@@ -19,15 +19,11 @@
 
 import asyncio
 import json
-from mongomotor import Document
-from mongomotor.fields import StringField, BooleanField
-from toxicbuild.core.utils import log
 from toxicbuild.master.exceptions import BuildClientException
-from toxicbuild.master.signals import (step_started, step_finished,
-                                       build_started, build_finished)
 
 
 class BuildClient:
+
     """ A client to :class:`toxicbuild.slave.server.BuildServer`
     """
 
@@ -93,6 +89,7 @@ class BuildClient:
         try:
             self.write(data)
             response = yield from self.get_response()
+            del response
             return True
         except:
             return False

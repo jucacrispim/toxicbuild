@@ -84,10 +84,9 @@ def inherit_docs(cls):
     return cls
 
 
-
 # Sorry, but not willing to test  a daemonizer.
 def daemonize(call, cargs, ckwargs, stdout, stderr,
-                    workdir, pidfile):  # pragma: no cover
+              workdir, pidfile):  # pragma: no cover
     """ Run a callable as a daemon
 
     :param call: a callable.
@@ -104,6 +103,7 @@ def daemonize(call, cargs, ckwargs, stdout, stderr,
         f.write(str(pid))
     print(call)
     call(*cargs, **ckwargs)
+
 
 def _create_daemon(stdout, stderr, workdir):  # pragma: no cover
     _fork_off_and_die()

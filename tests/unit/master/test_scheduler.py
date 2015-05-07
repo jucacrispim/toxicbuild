@@ -7,6 +7,7 @@ from toxicbuild.master import scheduler
 
 
 class SchedulerTest(AsyncTestCase):
+
     def setUp(self):
         super(SchedulerTest, self).setUp()
         self.scheduler = scheduler.TaskScheduler()
@@ -62,7 +63,6 @@ class SchedulerTest(AsyncTestCase):
 
         def task_call():
             self.TASK_CALL_CONSUMED = True
-
 
         self.scheduler.add(task_coro, interval=1)
         self.scheduler.add(task_call, interval=1)

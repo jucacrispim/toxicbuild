@@ -4,11 +4,12 @@ import asyncio
 import json
 import mock
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.slave import protocols, build
+from toxicbuild.slave import protocols
 
 
 @mock.patch.object(protocols.utils, 'log', mock.MagicMock())
 class ProtocolTest(AsyncTestCase):
+
     @mock.patch.object(protocols.asyncio, 'StreamReader', mock.MagicMock())
     @mock.patch.object(protocols.asyncio, 'StreamWriter', mock.MagicMock())
     @mock.patch.object(protocols.utils, 'log', mock.MagicMock())
@@ -93,6 +94,7 @@ class ProtocolTest(AsyncTestCase):
 
         with self.assertRaises(protocols.BadData):
             builder = yield from self.protocol.get_buildmanager()
+            del builder
 
     def test_close_connection(self):
         self.protocol.close_connection()

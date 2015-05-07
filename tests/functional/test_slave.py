@@ -26,6 +26,7 @@ from tests.functional import REPO_DIR, SCRIPTS_DIR, SLAVE_ROOT_DIR
 
 
 class DummyBuildClient:
+
     def __init__(self, addr, port):
         self.addr = addr
         self.port = port
@@ -86,14 +87,16 @@ class DummyBuildClient:
                 'body': {'repo_url': self.repo_url,
                          'branch': 'master',
                          'vcs_type': 'git',
-                         'named_tree': 'master',}}
+                         'named_tree': 'master', }}
 
         self.send(json.dumps(data))
         r = self.recv()
         r = json.loads(r.decode())
         return r
 
+
 class SlaveTest(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.toxicslave = os.path.join(SCRIPTS_DIR, 'toxicslave')

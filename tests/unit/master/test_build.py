@@ -32,6 +32,7 @@ from toxicbuild.master import build, repositories
 @mock.patch.object(build, 'step_started', mock.Mock())
 @mock.patch.object(build, 'step_finished', mock.Mock())
 class SlaveTest(AsyncTestCase):
+
     def setUp(self):
         super().setUp()
         self.slave = build.Slave(addr='127.0.0.1', port=7777)
@@ -177,6 +178,7 @@ class SlaveTest(AsyncTestCase):
 
 
 class BuildManagerTest(AsyncTestCase):
+
     def tearDown(self):
         build.Slave.drop_collection()
         build.Build.drop_collection()
@@ -214,7 +216,8 @@ class BuildManagerTest(AsyncTestCase):
         self.slave.build = b
 
         yield from build.BuildManager.execute_build(mock.Mock(), self.build)
-        for task in asyncio.Task.all_tasks(): pass
+        for task in asyncio.Task.all_tasks():
+            pass
 
         yield from task
 

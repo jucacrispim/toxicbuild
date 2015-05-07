@@ -15,3 +15,7 @@ settings = Settings(ENVVAR, DEFAULT_SETTINGS)
 # here the database connection
 dbsettings = settings.DATABASE
 dbconn = connect(**dbsettings)
+
+make_pyflakes_happy = [Repository]
+
+del make_pyflakes_happy

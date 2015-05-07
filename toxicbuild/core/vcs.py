@@ -25,6 +25,7 @@ from toxicbuild.core.utils import exec_cmd, log, inherit_docs
 
 
 class VCS:
+
     """ Generic inteface to a vcs (clone, fetch, get revisions etc...).
     """
     vcsbin = None
@@ -125,6 +126,7 @@ class VCS:
 
 @inherit_docs
 class Git(VCS):
+
     """ An interface to git version control system
     """
 
@@ -181,7 +183,6 @@ class Git(VCS):
 
     @asyncio.coroutine
     def get_revisions_for_branch(self, branch, since=None):
-
 
         self.log('getting revisions for {} on branch {}'.format(self.workdir,
                                                                 branch))

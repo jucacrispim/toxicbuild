@@ -26,6 +26,7 @@ from toxicbuild.master import client
 
 @mock.patch.object(client, 'log', mock.Mock())
 class BuildClientTest(AsyncTestCase):
+
     def setUp(self):
         super().setUp()
 
@@ -35,7 +36,8 @@ class BuildClientTest(AsyncTestCase):
     def test_enter_without_connect(self):
         with self.assertRaises(client.BuildClientException):
             with self.client as client_inst:
-                pass
+                make_pyflakes_happy = client_inst
+                del make_pyflakes_happy
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @gen_test

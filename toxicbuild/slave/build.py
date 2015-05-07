@@ -27,8 +27,10 @@ from toxicbuild.slave.exceptions import BuilderNotFound
 
 
 class BuildManager:
+
     """ A manager for remote build requests
     """
+
     def __init__(self, protocol, repo_url, vcs_type, branch, named_tree):
         self.protocol = protocol
         self.repo_url = repo_url
@@ -76,7 +78,7 @@ class BuildManager:
         """
         builders = [b['name'] for b in self.configmodule.BUILDERS
                     if (b.get('branch') == self.branch or b.get(
-                            'branch')is None)]
+                        'branch')is None)]
 
         return builders
 
@@ -87,7 +89,7 @@ class BuildManager:
 
         try:
             bdict = [b for b in self.configmodule.BUILDERS if (b.get(
-                'branch') is None and b['name'] == name ) or (b.get(
+                'branch') is None and b['name'] == name) or (b.get(
                     'branch') == self.branch and b['name'] == name)][0]
         except IndexError:
             msg = 'builder {} does not exist for {} branch {}'.format(
@@ -110,6 +112,7 @@ class BuildManager:
 
 
 class Builder:
+
     """ A builder executes build steps. Builders are configured in
     the toxicbuild.conf file
     """
@@ -153,6 +156,7 @@ class Builder:
 
 
 class BuildStep:
+
     def __init__(self, name, cmd):
         """:param name: name for the command
         :param cmd: a string the be executed in a shell

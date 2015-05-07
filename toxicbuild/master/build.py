@@ -19,12 +19,10 @@
 
 import asyncio
 import datetime
-import uuid
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                ReferenceField, DateTimeField, BooleanField,
                                IntField)
-from tornado import gen
 from toxicbuild.core.utils import log
 from toxicbuild.master.client import get_build_client
 from toxicbuild.master.signals import (build_started, build_finished,
@@ -33,6 +31,7 @@ from toxicbuild.master.signals import (build_started, build_finished,
 
 
 class BuildStep(EmbeddedDocument):
+
     """ A step for build
     """
     name = StringField(required=True)
@@ -44,6 +43,7 @@ class BuildStep(EmbeddedDocument):
 
 
 class Build(Document):
+
     """ A set of steps for a repository
     """
     repository = ReferenceField('toxicbuild.master.Repository', required=True)
@@ -58,6 +58,7 @@ class Build(Document):
 
 
 class Slave(Document):
+
     """ Slaves are the entities that actualy do the work
     of execute steps. The comunication to slaves is through
     the network (using :class:`toxicbuild.master.client.BuildClient`)
@@ -134,7 +135,6 @@ class Slave(Document):
                 if 'total_steps' in build_info:
                     break
 
-
                 step = yield from self._get_step(build, build_info['cmd'],
                                                  build_info['name'],
                                                  build_info['status'],
@@ -195,6 +195,7 @@ class Slave(Document):
 
 
 class BuildManager:
+
     """ A manager for builds
     """
 
