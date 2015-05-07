@@ -17,6 +17,8 @@ class SchedulerTest(AsyncTestCase):
 
     def tearDown(self):
         self.scheduler.stop()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks()))
         super(SchedulerTest, self).tearDown()
 
     def test_add_with_call(self):

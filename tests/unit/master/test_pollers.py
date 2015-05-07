@@ -19,7 +19,7 @@
 
 import asyncio
 import datetime
-import mock
+from unittest import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.master import pollers, repositories
@@ -44,26 +44,17 @@ class GitPollerTest(AsyncTestCase):
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
+    @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     def test_notify_changes(self):
-        self.CALLED = False
-
-        def recv(sender, revision=None):
-            self.CALLED = True
-
-        pollers.revision_added.connect(recv)
         self.poller.notify_change(mock.MagicMock())
 
-        self.assertTrue(self.CALLED)
+        self.assertTrue(pollers.revision_added.send.called)
 
+    # mocking here again so I can zero the count
+    @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @gen_test
     def test_process_changes(self):
         now = datetime.datetime.now()
-        self.CALLED = 0
-
-        def recv(*a, **kw):
-            self.CALLED += 1
-
-        pollers.revision_added.connect(recv)
 
         yield from self._create_db_revisions()
 
@@ -76,8 +67,9 @@ class GitPollerTest(AsyncTestCase):
         yield from self.poller.process_changes()
 
         # call only 1 because self.poller.notify_only_latest is True
-        self.assertEqual(self.CALLED, 1)
+        self.assertEqual(len(pollers.revision_added.send.call_args_list), 1)
 
+    @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @gen_test
     def test_poll(self):
         yield from self._create_db_revisions()
