@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from toxicbuild.core.conf import Settings
 from mongomotor import connect
+from toxicbuild.core.conf import Settings
+
+# the api
+from toxicbuild.master.repositories import Repository
 
 
 ENVVAR = 'TOXICMASTER_SETTINGS'

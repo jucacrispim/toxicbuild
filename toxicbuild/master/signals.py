@@ -21,3 +21,8 @@ from asyncblink import signal
 
 
 revision_added = signal('revision-added')
+step_started = signal('step-started')
+step_finished = signal('step-finished')
+build_started = signal('build-started')
+build_finished = signal('build-finished')
+build_added = signal('build-added')

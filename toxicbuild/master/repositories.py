@@ -21,8 +21,9 @@ import asyncio
 import os
 from mongomotor import Document
 from mongomotor.fields import (StringField, IntField, ReferenceField,
-                               DateTimeField)
+                               DateTimeField, ListField)
 from tornado.platform.asyncio import to_asyncio_future
+from toxicbuild.master.build import Slave
 from toxicbuild.master.pollers import Poller
 
 
@@ -30,6 +31,7 @@ class Repository(Document):
     url = StringField(required=True)
     update_seconds = IntField(default=300, required=True)
     vcs_type = StringField(required=True, default='git')
+    slaves = ListField(ReferenceField(Slave))
 
     def __init__(self, *args, **kwargs):
         super(Repository, self).__init__(*args, **kwargs)
@@ -45,11 +47,10 @@ class Repository(Document):
 
     @property
     def poller(self):
-        if self._poller_instance is not None:  # pragma: no cover
-            return self._poller_instance
+        if self._poller_instance is None:
+            vcs_type = self.vcs_type or 'git'
+            self._poller_instance = Poller(self, vcs_type, self.workdir)
 
-        vcs_type = self.vcs_type or 'git'
-        self._poller_instance = Poller(self, vcs_type, self.workdir)
         return self._poller_instance
 
     @asyncio.coroutine
