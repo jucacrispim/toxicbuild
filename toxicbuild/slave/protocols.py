@@ -18,43 +18,19 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import json
-import sys
-from toxicbuild.core import utils
+from toxicbuild.core.protocol import BaseToxicProtocol
 from toxicbuild.slave import BuildManager
 from toxicbuild.slave.exceptions import BadData
 
 
-class BuildServerProtocol(asyncio.StreamReaderProtocol):
+class BuildServerProtocol(BaseToxicProtocol):
+
     """ A simple server for build requests.
     """
 
-    def __init__(self, loop):
-        self.raw_data = None
-        self.data = None
-        reader = asyncio.StreamReader(loop=loop)
-        super().__init__(reader, loop=loop)
-
-    def __call__(self):
-        return self
-
-    def connection_made(self, transport):
-        self._transport = transport
-        self._stream_reader.set_transport(transport)
-        self._stream_writer = asyncio.StreamWriter(transport, self,
-                                                   self._stream_reader,
-                                                   self._loop)
-
-        peername = self._transport.get_extra_info('peername')
-        self.log('client connected from {}'.format(peername))
-
-        res = self.client_connected()
-        self._loop.create_task(res)
-
     @asyncio.coroutine
     def client_connected(self):
-        self.raw_data = yield from self.get_raw_data()
-        self.data = self.get_json_data()
+        self.data = yield from self.get_json_data()
         if not self.data:
             self.log('no data')
             msg = 'Something wrong with your data {!r}'.format(self.raw_data)
@@ -98,20 +74,6 @@ class BuildServerProtocol(asyncio.StreamReaderProtocol):
         self.close_connection()
 
     @asyncio.coroutine
-    def send_response(self, code, body):
-        """ Send a response to client formated by the (unknown) toxicbuild
-        remote build specs.
-        :param code: code for this message. code == 0 is success and
-          code > 0 is error.
-        :param body: response body. It has to be a serializable object.
-        """
-        response = {'code': code,
-                    'body': body}
-        data = json.dumps(response).encode('utf-8')
-        self._stream_writer.write(data)
-        yield from self._stream_writer.drain()
-
-    @asyncio.coroutine
     def healthcheck(self):
         """ Informs that the server is up and running
         """
@@ -140,12 +102,6 @@ class BuildServerProtocol(asyncio.StreamReaderProtocol):
         build_info = yield from builder.build()
         return build_info
 
-    def close_connection(self):
-        """ Closes the connection with the client
-        """
-        self.log('closing connection')
-        self._stream_writer.close()
-
     @asyncio.coroutine
     def get_buildmanager(self):
         """ Returns the builder manager for this request
@@ -161,25 +117,3 @@ class BuildServerProtocol(asyncio.StreamReaderProtocol):
         manager = BuildManager(self, repo_url, vcs_type, branch, named_tree)
         yield from manager.update_and_checkout()
         return manager
-
-    @asyncio.coroutine
-    def get_raw_data(self):
-        """ Returns the raw data sent by the client
-        """
-        data = yield from self._stream_reader.read(self._stream_reader._limit)
-        return data
-
-    def get_json_data(self):
-        """Returns the json sent by the client."""
-
-        data = self.raw_data.decode()
-
-        try:
-            data = json.loads(data)
-        except Exception:  # pragma: no cover
-            data = None
-
-        return data
-
-    def log(self, msg, output=sys.stdout):
-        utils.log(msg, output)
