@@ -30,31 +30,17 @@ class BuildServerProtocol(BaseToxicProtocol):
 
     @asyncio.coroutine
     def client_connected(self):
-        self.data = yield from self.get_json_data()
-        if not self.data:
-            self.log('no data')
-            msg = 'Something wrong with your data {!r}'.format(self.raw_data)
-            yield from self.send_response(code=1, body=msg)
-            return self.close_connection()
-
-        action = self.data.get('action')
-        if not action:
-            msg = 'No action found!'
-            self.log(msg)
-            yield from self.send_response(code=1, body=msg)
-            return self.close_connection()
-
         try:
-            if action == 'healthcheck':
-                self.log('executing {}'.format(action))
+            if self.action == 'healthcheck':
+                self.log('executing {}'.format(self.action))
                 yield from self.healthcheck()
 
-            elif action == 'list_builders':
-                self.log('executing {}'.format(action))
+            elif self.action == 'list_builders':
+                self.log('executing {}'.format(self.action))
                 yield from self.list_builders()
 
-            elif action == 'build':
-                self.log('executing {}'.format(action))
+            elif self.action == 'build':
+                self.log('executing {}'.format(self.action))
                 # build has a strange behavior. It sends messages to the client
                 # directly. I think it should be an iterable here and the
                 # protocol should send the messages. But how do to that?

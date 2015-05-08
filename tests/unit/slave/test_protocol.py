@@ -23,6 +23,8 @@ from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.slave import protocols
 
 
+@mock.patch.object(asyncio, 'StreamReader', mock.Mock())
+@mock.patch.object(asyncio, 'StreamWriter', mock.MagicMock())
 @mock.patch.object(protocols.BaseToxicProtocol, 'log', mock.MagicMock())
 class ProtocolTest(AsyncTestCase):
 
@@ -36,9 +38,11 @@ class ProtocolTest(AsyncTestCase):
     def setUp(self):
         super().setUp()
         loop = mock.MagicMock()
-        transport = mock.MagicMock()
         self.protocol = protocols.BuildServerProtocol(loop)
-        self.protocol.connection_made(transport)
+        self.transport = mock.Mock()
+        # self.protocol.connection_made(transport)
+        self.protocol._stream_reader = mock.MagicMock()
+        self.protocol._stream_writer = mock.MagicMock()
 
         self.response = None
 
@@ -72,7 +76,10 @@ class ProtocolTest(AsyncTestCase):
         expected = {'code': 0,
                     'body': 'I\'m alive!'}
 
-        yield from self.protocol.healthcheck()
+        self.message = {'action': 'healthcheck'}
+
+        self.protocol.connection_made(self.transport)
+        self._wait_futures()
 
         self.assertEqual(expected, self.response)
 
@@ -131,18 +138,11 @@ class ProtocolTest(AsyncTestCase):
         self.assertEqual(self.response, expected)
 
     @gen_test
-    def test_client_connected_without_data(self):
-        self.message = {}
-
-        yield from self.protocol.client_connected()
-
-        self.assertEqual(self.response['code'], 1)
-
-    @gen_test
     def test_client_connected_with_bad_data(self):
         self.message = {"action": "build"}
 
-        yield from self.protocol.client_connected()
+        self.protocol.connection_made(self.transport)
+        self._wait_futures()
 
         self.assertEqual(self.response['code'], 1)
 
@@ -156,13 +156,8 @@ class ProtocolTest(AsyncTestCase):
 
         self.protocol.build = build
 
-        yield from self.protocol.client_connected()
-
-        self.assertEqual(self.response['code'], 1)
-
-    @gen_test
-    def test_client_connected_without_action(self):
-        self.message = {"notaction": "bla"}
+        self.protocol.connection_made(self.transport)
+        self._wait_futures()
 
         yield from self.protocol.client_connected()
 
@@ -172,10 +167,13 @@ class ProtocolTest(AsyncTestCase):
                        mock.MagicMock(spec=protocols.BuildManager))
     @gen_test
     def test_client_connected_list_builders(self):
+
         manager = protocols.BuildManager.return_value
 
         manager.list_builders.return_value = ['b1', 'b2']
-        yield from self.protocol.client_connected()
+
+        self.protocol.connection_made(self.transport)
+        self._wait_futures()
 
         self.assertEqual(self.response['body']['builders'], ['b1', 'b2'])
 
@@ -183,7 +181,9 @@ class ProtocolTest(AsyncTestCase):
     def test_client_connected_heathcheck(self):
         self.message = {'action': 'healthcheck'}
 
-        yield from self.protocol.client_connected()
+        self.protocol.connection_made(self.transport)
+        self._wait_futures()
+
         self.assertEqual(self.response['body'], 'I\'m alive!')
 
     @mock.patch.object(protocols, 'BuildManager',
@@ -198,10 +198,18 @@ class ProtocolTest(AsyncTestCase):
                             'vcs_type': 'git',
                             'builder_name': 'bla'}}
 
-        yield from self.protocol.client_connected()
+        self.protocol.connection_made(self.transport)
+
+        self._wait_futures()
 
         manager = protocols.BuildManager.return_value
 
         builder = manager.load_builder.return_value
 
         self.assertTrue(builder.build.called)
+
+    def _wait_futures(self):
+        loop = asyncio.get_event_loop()
+
+        loop.run_until_complete(self.protocol._check_data_future)
+        loop.run_until_complete(self.protocol._client_connected_future)

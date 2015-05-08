@@ -24,17 +24,16 @@ from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core import protocol
 
 
+@mock.patch.object(protocol.utils, 'log', mock.MagicMock())
 class BaseToxicProtocolTest(AsyncTestCase):
 
-    @mock.patch.object(protocol.asyncio, 'StreamReader', mock.MagicMock())
-    @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
     @mock.patch.object(protocol.utils, 'log', mock.MagicMock())
     def setUp(self):
         super().setUp()
-        loop = mock.MagicMock()
-        transport = mock.MagicMock()
+        loop = mock.Mock()
         self.protocol = protocol.BaseToxicProtocol(loop)
-        self.protocol.connection_made(transport)
+        self.protocol._stream_reader = mock.MagicMock()
+        self.protocol._stream_writer = mock.MagicMock()
 
         self.response = None
 
@@ -45,7 +44,7 @@ class BaseToxicProtocolTest(AsyncTestCase):
 
         # the return of _stream_reader.read()
         self.message = json.dumps(
-            {'some': 'thing'}).encode('utf-8')
+            {'action': 'thing'}).encode('utf-8')
 
         @asyncio.coroutine
         def r(limit):
@@ -54,7 +53,53 @@ class BaseToxicProtocolTest(AsyncTestCase):
         self.protocol._stream_reader.read = r
 
     def test_call(self):
+
         self.assertEqual(self.protocol(), self.protocol)
+
+    @mock.patch.object(protocol.asyncio, 'StreamReader', mock.Mock())
+    @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
+    @gen_test
+    def test_connection_made(self):
+        loop = mock.Mock()
+        prot = protocol.BaseToxicProtocol(loop)
+        prot._stream_reader = mock.MagicMock()
+        prot._stream_writer = mock.MagicMock()
+        prot._stream_reader.read = self.protocol._stream_reader.read
+        transport = mock.Mock()
+        cc_mock = mock.Mock()
+
+        @asyncio.coroutine
+        def cc():
+            cc_mock()
+
+        prot.client_connected = cc
+        prot.connection_made(transport)
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks()))
+        self.assertTrue(cc_mock.called)
+
+    @gen_test
+    def test_check_data_without_data(self):
+        self.message = b''
+
+        yield from self.protocol.check_data()
+
+        self.assertEqual(self.response['code'], 1)
+
+    @gen_test
+    def test_check_data_without_action(self):
+        self.message = b'{"sauci": "fufu"}'
+
+        yield from self.protocol.check_data()
+        self.assertEqual(self.response['code'], 1)
+
+    @gen_test
+    def test_check_data(self):
+        self.message = b'{"action": "hack!"}'
+
+        yield from self.protocol.check_data()
+
+        self.assertEqual(self.protocol.action, 'hack!')
 
     @gen_test
     def test_send_response(self):

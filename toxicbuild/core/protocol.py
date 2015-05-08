@@ -31,6 +31,12 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
     def __init__(self, loop):
         self.raw_data = None
         self.json_data = None
+        self.action = None
+        self._connected = False
+        # make tests easier
+        self._check_data_future = None
+        self._client_connected_future = None
+
         reader = asyncio.StreamReader(loop=loop)
         super().__init__(reader, loop=loop)
 
@@ -45,17 +51,43 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
         self._stream_writer = asyncio.StreamWriter(transport, self,
                                                    self._stream_reader,
                                                    self._loop)
+        self._connected = True
 
         peername = self._transport.get_extra_info('peername')
         self.log('client connected from {}'.format(peername))
 
-        res = self.client_connected()
-        self._loop.create_task(res)
+        self._check_data_future = asyncio.async(self.check_data())
+        self._check_data_future.add_done_callback(self._check_data_cb)
+
+    @asyncio.coroutine
+    def check_data(self):
+        """ Checks if the data is valid, it means, checks if has some data,
+        checks if it is a valid json and checks if it has a ``action`` key
+        """
+
+        self.data = yield from self.get_json_data()
+
+        if not self.data:
+            self.log('no data')
+            msg = 'Something wrong with your data {!r}'.format(self.raw_data)
+            yield from self.send_response(code=1, body=msg)
+            return self.close_connection()
+
+        self.action = self.data.get('action')
+
+        if not self.action:
+            msg = 'No action found!'
+            self.log(msg)
+            yield from self.send_response(code=1, body=msg)
+            return self.close_connection()
 
     @asyncio.coroutine
     def client_connected(self):  # pragma no cover
         """ Coroutine that handles connections. You must implement this
-        on your sub-classes.
+        in your sub-classes. When this method is called, ``self.data``,
+        containing a dictionary with the data passed in the request and
+        ``self.action``, a string indicating which action to take are already
+        available.
         """
         raise NotImplementedError
 
@@ -64,6 +96,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
         """
         self.log('closing connection')
         self._stream_writer.close()
+        self._connected = False
 
     @asyncio.coroutine
     def send_response(self, code, body):
@@ -102,3 +135,11 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
 
     def log(self, msg, output=sys.stdout):
         utils.log(msg, output)
+
+    def _check_data_cb(self, future):
+        # The thing here is: run client_connected only if everything ok
+        # on check_data
+        if not self._connected:  # pragma no cover
+            return
+
+        self._client_connected_future = asyncio.async(self.client_connected())
