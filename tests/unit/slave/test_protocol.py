@@ -1,18 +1,38 @@
 # -*- coding: utf-8 -*-
 
+# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+
+# This file is part of toxicbuild.
+
+# toxicbuild is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# toxicbuild is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
+
 import asyncio
-import json
 import mock
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.slave import protocols
 
 
-@mock.patch.object(protocols.utils, 'log', mock.MagicMock())
+@mock.patch.object(protocols.BaseToxicProtocol, 'log', mock.MagicMock())
 class ProtocolTest(AsyncTestCase):
 
-    @mock.patch.object(protocols.asyncio, 'StreamReader', mock.MagicMock())
-    @mock.patch.object(protocols.asyncio, 'StreamWriter', mock.MagicMock())
-    @mock.patch.object(protocols.utils, 'log', mock.MagicMock())
+    @mock.patch.object(protocols.BaseToxicProtocol, 'send_response',
+                       mock.MagicMock())
+    @mock.patch.object(protocols.BaseToxicProtocol, 'get_json_data',
+                       mock.MagicMock())
+    @mock.patch.object(asyncio, 'StreamReader', mock.MagicMock())
+    @mock.patch.object(asyncio, 'StreamWriter', mock.MagicMock())
+    @mock.patch.object(protocols.BaseToxicProtocol, 'log', mock.MagicMock())
     def setUp(self):
         super().setUp()
         loop = mock.MagicMock()
@@ -22,38 +42,30 @@ class ProtocolTest(AsyncTestCase):
 
         self.response = None
 
-        # the return of _stream_reader.read()
-        self.message = json.dumps(
-            {'action': 'list_builders',
-             'body': {
-                 'repo_url': 'git@bla.com',
-                 'branch': 'master',
-                 'named_tree': 'v0.1',
-                 'vcs_type': 'git',
-                 'builder_name': 'bla'}}).encode('utf-8')
-
-        def w(msg):
-            self.response = json.loads(msg.decode())
-
-        self.protocol._stream_writer.write = w
+        # the return of get_json_data()
+        self.message = {'action': 'list_builders',
+                        'body': {
+                            'repo_url': 'git@bla.com',
+                            'branch': 'master',
+                            'named_tree': 'v0.1',
+                            'vcs_type': 'git',
+                            'builder_name': 'bla'}}
 
         @asyncio.coroutine
-        def r(limit):
+        def w(code, body):
+            self.response = {'code': code,
+                             'body': body}
+
+        self.protocol.send_response = w
+
+        @asyncio.coroutine
+        def r():
             return self.message
 
-        self.protocol._stream_reader.read = r
+        self.protocol.get_json_data = r
 
     def test_call(self):
         self.assertEqual(self.protocol(), self.protocol)
-
-    @gen_test
-    def test_send_response(self):
-        expected = {'code': 0,
-                    'body': 'something!'}
-
-        yield from self.protocol.send_response(code=0, body='something!')
-
-        self.assertEqual(expected, self.response)
 
     @gen_test
     def test_healthcheck(self):
@@ -64,49 +76,29 @@ class ProtocolTest(AsyncTestCase):
 
         self.assertEqual(expected, self.response)
 
-    @gen_test
-    def test_get_raw_data(self):
-        raw = yield from self.protocol.get_raw_data()
-        self.assertEqual(raw, self.message)
-
-    @gen_test
-    def test_get_json_data(self):
-        self.protocol.raw_data = yield from self.protocol.get_raw_data()
-        json_data = self.protocol.get_json_data()
-
-        self.assertEqual(json_data, json.loads(self.message.decode()))
-
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @gen_test
     def test_get_buildmanager(self):
-        self.protocol.raw_data = yield from self.protocol.get_raw_data()
-        self.protocol.data = self.protocol.get_json_data()
+        self.protocol.data = yield from self.protocol.get_json_data()
 
         builder = yield from self.protocol.get_buildmanager()
         self.assertTrue(builder.update_and_checkout.called)
 
     @gen_test
     def test_get_buildmanager_with_bad_data(self):
-        self.protocol.raw_data = yield from self.protocol.get_raw_data()
-        self.protocol.data = self.protocol.get_json_data()
+        self.protocol.data = yield from self.protocol.get_json_data()
         del self.protocol.data['body']
 
         with self.assertRaises(protocols.BadData):
             builder = yield from self.protocol.get_buildmanager()
             del builder
 
-    def test_close_connection(self):
-        self.protocol.close_connection()
-
-        self.assertTrue(self.protocol._stream_writer.close.called)
-
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @gen_test
     def test_build(self):
-        self.protocol.raw_data = yield from self.protocol.get_raw_data()
-        self.protocol.data = self.protocol.get_json_data()
+        self.protocol.data = yield from self.protocol.get_json_data()
 
         yield from self.protocol.build()
 
@@ -115,8 +107,7 @@ class ProtocolTest(AsyncTestCase):
 
     @gen_test
     def test_build_with_bad_data(self):
-        self.protocol.raw_data = yield from self.protocol.get_raw_data()
-        self.protocol.data = self.protocol.get_json_data()
+        self.protocol.data = yield from self.protocol.get_json_data()
         del self.protocol.data['body']
 
         with self.assertRaises(protocols.BadData):
@@ -129,8 +120,7 @@ class ProtocolTest(AsyncTestCase):
         expected = {'code': 0,
                     'body': {'builders': ['b1', 'b2']}}
 
-        self.protocol.raw_data = yield from self.protocol.get_raw_data()
-        self.protocol.data = self.protocol.get_json_data()
+        self.protocol.data = yield from self.protocol.get_json_data()
 
         manager = protocols.BuildManager.return_value
 
@@ -142,7 +132,7 @@ class ProtocolTest(AsyncTestCase):
 
     @gen_test
     def test_client_connected_without_data(self):
-        self.message = b''
+        self.message = {}
 
         yield from self.protocol.client_connected()
 
@@ -150,7 +140,7 @@ class ProtocolTest(AsyncTestCase):
 
     @gen_test
     def test_client_connected_with_bad_data(self):
-        self.message = b'{"action": "build"}'
+        self.message = {"action": "build"}
 
         yield from self.protocol.client_connected()
 
@@ -158,7 +148,7 @@ class ProtocolTest(AsyncTestCase):
 
     @gen_test
     def test_client_connected_with_exception(self):
-        self.message = b'{"action": "build"}'
+        self.message = {"action": "build"}
 
         @asyncio.coroutine
         def build(*a, **kw):
@@ -172,7 +162,7 @@ class ProtocolTest(AsyncTestCase):
 
     @gen_test
     def test_client_connected_without_action(self):
-        self.message = b'{"notaction": "bla"}'
+        self.message = {"notaction": "bla"}
 
         yield from self.protocol.client_connected()
 
@@ -191,9 +181,7 @@ class ProtocolTest(AsyncTestCase):
 
     @gen_test
     def test_client_connected_heathcheck(self):
-        self.message = json.dumps(
-            {'action': 'healthcheck'}
-        ).encode('utf-8')
+        self.message = {'action': 'healthcheck'}
 
         yield from self.protocol.client_connected()
         self.assertEqual(self.response['body'], 'I\'m alive!')
@@ -202,14 +190,13 @@ class ProtocolTest(AsyncTestCase):
                        mock.MagicMock(spec=protocols.BuildManager))
     @gen_test
     def test_client_connected_build(self):
-        self.message = json.dumps(
-            {'action': 'build',
-             'body': {
-                 'repo_url': 'git@bla.com',
-                 'branch': 'master',
-                 'named_tree': 'v0.1',
-                 'vcs_type': 'git',
-                 'builder_name': 'bla'}}).encode('utf-8')
+        self.message = {'action': 'build',
+                        'body': {
+                            'repo_url': 'git@bla.com',
+                            'branch': 'master',
+                            'named_tree': 'v0.1',
+                            'vcs_type': 'git',
+                            'builder_name': 'bla'}}
 
         yield from self.protocol.client_connected()
 
