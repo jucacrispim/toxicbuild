@@ -21,10 +21,11 @@ import asyncio
 import datetime
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.master import repositories
+from toxicbuild.master import repositories, build
 
 
 class RepositoryTest(AsyncTestCase):
+
     def setUp(self):
         super(RepositoryTest, self).setUp()
         self.repo = repositories.Repository(
@@ -34,10 +35,30 @@ class RepositoryTest(AsyncTestCase):
     def tearDown(self):
         repositories.Repository.drop_collection()
         repositories.RepositoryRevision.drop_collection()
+        build.Slave.drop_collection()
         super(RepositoryTest, self).tearDown()
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
+
+    @gen_test
+    def test_create(self):
+        slave = yield from build.Slave.create('bla.com', 1234)
+        repo = yield from repositories.Repository.create(
+            'git@somewhere.com', 300, 'git', slaves=[slave])
+
+        self.assertTrue(repo.id)
+        self.assertEqual(repo.slaves[0], slave)
+
+    @gen_test
+    def test_get(self):
+        slave = yield from build.Slave.create('bla.com', 1234)
+        old_repo = yield from repositories.Repository.create(
+            'git@somewhere.com', 300, 'git', slaves=[slave])
+        new_repo = yield from repositories.Repository.get(url=old_repo.url)
+
+        self.assertEqual(old_repo, new_repo)
+        self.assertEqual(new_repo.slaves[0], slave)
 
     def test_workdir(self):
         expected = 'src/gitsomewhere.com-project.git'

@@ -47,6 +47,20 @@ class SlaveTest(AsyncTestCase):
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
+    @gen_test
+    def test_create(self):
+        slave = yield from build.Slave.create('somewhere.net', 7777)
+        self.assertTrue(slave.id)
+
+    @gen_test
+    def test_get(self):
+        slave = yield from build.Slave.create('somewhere.net', 7777)
+        slave_id = slave.id
+
+        slave = yield from build.Slave.get('somewhere.net', 7777)
+
+        self.assertEqual(slave_id, slave.id)
+
     @mock.patch.object(toxicbuild.master.client.asyncio, 'open_connection',
                        mock.Mock())
     @gen_test

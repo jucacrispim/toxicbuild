@@ -5,6 +5,7 @@ from toxicbuild.core.conf import Settings
 
 # the api
 from toxicbuild.master.repositories import Repository
+from toxicbuild.master.build import Slave
 
 
 ENVVAR = 'TOXICMASTER_SETTINGS'
@@ -16,6 +17,6 @@ settings = Settings(ENVVAR, DEFAULT_SETTINGS)
 dbsettings = settings.DATABASE
 dbconn = connect(**dbsettings)
 
-make_pyflakes_happy = [Repository]
+make_pyflakes_happy = [Repository, Slave]
 
 del make_pyflakes_happy

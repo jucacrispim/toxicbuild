@@ -69,6 +69,19 @@ class Slave(Document):
     port = IntField()
     is_alive = BooleanField(default=False)
 
+    @classmethod
+    @asyncio.coroutine
+    def create(cls, addr, port):
+        slave = cls(addr=addr, port=port)
+        yield slave.save()
+        return slave
+
+    @classmethod
+    @asyncio.coroutine
+    def get(cls, host, port):
+        slave = yield cls.objects.get(addr=host, port=port)
+        return slave
+
     @asyncio.coroutine
     def get_client(self):
         """ Returns a :class:`toxicbuild.master.client.BuildClient` instance

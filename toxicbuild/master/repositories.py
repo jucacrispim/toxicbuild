@@ -28,7 +28,7 @@ from toxicbuild.master.pollers import Poller
 
 
 class Repository(Document):
-    url = StringField(required=True)
+    url = StringField(required=True, unique=True)
     update_seconds = IntField(default=300, required=True)
     vcs_type = StringField(required=True, default='git')
     slaves = ListField(ReferenceField(Slave))
@@ -36,6 +36,22 @@ class Repository(Document):
     def __init__(self, *args, **kwargs):
         super(Repository, self).__init__(*args, **kwargs)
         self._poller_instance = None
+
+    @classmethod
+    @asyncio.coroutine
+    def create(cls, url, update_seconds, vcs_type, slaves=None):
+        slaves = slaves or []
+
+        repo = cls(url=url, update_seconds=update_seconds, vcs_type=vcs_type,
+                   slaves=slaves)
+        yield repo.save()
+        return repo
+
+    @classmethod
+    @asyncio.coroutine
+    def get(cls, url):
+        repo = yield cls.objects.get(url=url)
+        return repo
 
     @property
     def workdir(self):
