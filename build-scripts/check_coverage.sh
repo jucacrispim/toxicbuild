@@ -16,21 +16,17 @@ then
 	echo "But something went wrong";
 	echo "$err";
 	exit 1
+    else
+	echo "And something went wrong"
+	echo "$err";
+	exit 1
     fi
 fi
 
 if [ $coverage -eq $2 ]
 then
-    if [ "$haserr" != "" ]
-    then
-	echo "And something went wrong";
-	echo "$err";
-	exit 1;
-    else
-	echo "Yay! Everything ok!";
-	exit 0;
-    fi
-
+    echo "Yay! Everything ok!";
+    exit 0;
 else
     coverage report -m
     exit 1
