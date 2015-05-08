@@ -24,7 +24,6 @@ from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.master import client
 
 
-@mock.patch.object(client, 'log', mock.Mock())
 class BuildClientTest(AsyncTestCase):
 
     def setUp(self):
@@ -174,8 +173,6 @@ class BuildClientTest(AsyncTestCase):
 
         self.assertEqual(expected, builders)
 
-    @mock.patch.object(client.step_started, 'send', mock.Mock())
-    @mock.patch.object(client.step_finished, 'send', mock.Mock())
     @gen_test
     def test_build(self):
         self.client.write = mock.Mock()
