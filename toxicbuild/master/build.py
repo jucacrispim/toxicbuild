@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+
 import asyncio
 import datetime
 from mongomotor import Document, EmbeddedDocument
@@ -127,6 +128,8 @@ class Slave(Document):
                                            build.branch, build.named_tree,
                                            build.builder_name):
 
+                # Ahhh! bad place for step time stuff. Need to put it on
+                # slave
                 build.started = datetime.datetime.now()
                 yield build.save()
                 build_started.send(self, build=build)
@@ -147,8 +150,6 @@ class Slave(Document):
                         step.command, repository.url)
 
                     self.log(msg)
-                    # Ahhh! bad place for step time stuff. Need to put it on
-                    # slave
                     step.started = datetime.datetime.now()
                     yield build.save()
                     step_started.send(self, build=build, step=step)

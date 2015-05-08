@@ -23,6 +23,7 @@ from toxicbuild.core.vcs import get_vcs
 
 
 class Poller:
+
     """ Class to poll changes from a vcs, process them and notificate about
     incoming changes
     """
@@ -67,6 +68,9 @@ class Poller:
             for rev in revisions:
                 revision = yield from self.repository.add_revision(
                     branch, **rev)
+                # the thing here is: if self.notify_only_latest, we only
+                # send a signal for the most recent revision, the last
+                # one of the revisions list
                 if (not revisions[-1] == rev and self.notify_only_latest):
                     continue
 
