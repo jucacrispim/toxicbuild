@@ -32,3 +32,7 @@ class ImpossibillityError(Exception):
 
 class ConfigError(Exception):
     pass
+
+
+class ToxicClientException(Exception):
+    pass

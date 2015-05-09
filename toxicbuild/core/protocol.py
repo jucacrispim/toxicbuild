@@ -68,7 +68,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
         self.data = yield from self.get_json_data()
 
         if not self.data:
-            self.log('no data')
+            self.log('no or bad data {!r}'.format(self.raw_data))
             msg = 'Something wrong with your data {!r}'.format(self.raw_data)
             yield from self.send_response(code=1, body=msg)
             return self.close_connection()

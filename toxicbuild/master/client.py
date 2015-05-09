@@ -18,68 +18,13 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import json
-from toxicbuild.master.exceptions import BuildClientException
+from toxicbuild.core import BaseToxicClient
 
 
-class BuildClient:
+class BuildClient(BaseToxicClient):
 
     """ A client to :class:`toxicbuild.slave.server.BuildServer`
     """
-
-    def __init__(self, addr, port):
-        self.addr = addr
-        self.port = port
-        self.loop = asyncio.get_event_loop()
-        self.reader = None
-        self.writer = None
-        self._connected = False
-
-    def __enter__(self):
-        if not self._connected:
-            msg = 'You must connect with "yield from client.connect()" '
-            msg += 'before you can __enter__ on it. Sorry.'
-            raise BuildClientException(msg)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.disconnect()
-
-    @asyncio.coroutine
-    def connect(self):
-        self.reader, self.writer = yield from asyncio.open_connection(
-            self.addr, self.port, loop=self.loop)
-        self._connected = True
-
-    def disconnect(self):
-        self.reader.close()
-        self.writer.close()
-        self._connected = False
-
-    def write(self, data):
-        """ Writes ``data`` to the server.
-
-        :param data: Data to be sent to the server. Will be
-          converted to json and enconded using utf-8.
-        """
-        data = json.dumps(data)
-        data = data.encode('utf-8')
-        self.writer.write(data)
-
-    @asyncio.coroutine
-    def read(self):
-        # '{}' is decoded as an empty dict, so in json
-        # context we can consider it as being a False json
-        data = yield from self.reader.read(1000) or '{}'
-        data = data.decode()
-        return json.loads(data)
-
-    @asyncio.coroutine
-    def get_response(self):
-        response = yield from self.read()
-        if 'code' in response and int(response['code']) != 0:
-            raise BuildClientException(response['body'])
-        return response
 
     @asyncio.coroutine
     def healthcheck(self):
