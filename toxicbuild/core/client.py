@@ -51,7 +51,6 @@ class BaseToxicClient:
         self._connected = True
 
     def disconnect(self):
-        self.reader.close()
         self.writer.close()
         self._connected = False
 
