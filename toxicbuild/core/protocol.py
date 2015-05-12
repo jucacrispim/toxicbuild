@@ -134,6 +134,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
         return data
 
     def log(self, msg, output=sys.stdout):
+        msg = '[{}] {}'.format(type(self).__name__, msg)
         utils.log(msg, output)
 
     def _check_data_cb(self, future):
