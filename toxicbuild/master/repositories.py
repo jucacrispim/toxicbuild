@@ -21,8 +21,10 @@ import asyncio
 import os
 from mongomotor import Document
 from mongomotor.fields import (StringField, IntField, ReferenceField,
-                               DateTimeField, ListField)
+                               DateTimeField, ListField, BooleanField)
 from tornado.platform.asyncio import to_asyncio_future
+from toxicbuild.core import utils
+from toxicbuild.master.scheduler import scheduler
 from toxicbuild.master.build import Slave
 from toxicbuild.master.pollers import Poller
 
@@ -32,10 +34,29 @@ class Repository(Document):
     update_seconds = IntField(default=300, required=True)
     vcs_type = StringField(required=True, default='git')
     slaves = ListField(ReferenceField(Slave))
+    notify_only_latest = BooleanField(default=False)
 
     def __init__(self, *args, **kwargs):
         super(Repository, self).__init__(*args, **kwargs)
         self._poller_instance = None
+
+    @property
+    def workdir(self):
+        """ The directory where the source code of this repository is
+        cloned into
+        """
+        workdir = self.url.replace('/', '-').replace('@', '').replace(':', '')
+        return os.path.join('src', workdir)
+
+    @property
+    def poller(self):
+        if self._poller_instance is None:
+            vcs_type = self.vcs_type or 'git'
+            self._poller_instance = Poller(
+                self, vcs_type, self.workdir,
+                notify_only_latest=self.notify_only_latest)
+
+        return self._poller_instance
 
     @classmethod
     @asyncio.coroutine
@@ -53,21 +74,49 @@ class Repository(Document):
         repo = yield cls.objects.get(url=url)
         return repo
 
-    @property
-    def workdir(self):
-        """ The directory where the source code of this repository is
-        cloned into
-        """
-        workdir = self.url.replace('/', '-').replace('@', '').replace(':', '')
-        return os.path.join('src', workdir)
+    def schedule(self):
+        """ Adds self.poller.poll() to the scheduler. """
 
-    @property
-    def poller(self):
-        if self._poller_instance is None:
-            vcs_type = self.vcs_type or 'git'
-            self._poller_instance = Poller(self, vcs_type, self.workdir)
+        # bizarro!
+        @asyncio.coroutine
+        def __do_poll():
+            yield from self.poller.poll()
 
-        return self._poller_instance
+        self.log('Scheduling {url}'.format(url=self.url))
+        scheduler.add(__do_poll, self.update_seconds)
+
+    @classmethod
+    @asyncio.coroutine
+    def schedule_all(cls):
+        """ Schedule all repositories. """
+
+        repos = yield cls.objects.all().to_list()
+        for repo in repos:
+            repo.schedule()
+
+    def first_run(self):
+        """ Must be called first time when the repo is created. """
+
+        self.poller.notify_only_latest = True
+        future = asyncio.async(self.poller.poll())
+
+        def __first_run_cb(future):
+            self.poller.notify_only_latest = self.notify_only_latest
+            self.schedule()
+
+        future.add_done_callback(__first_run_cb)
+
+    @asyncio.coroutine
+    def add_slave(self, slave):
+        self.slaves.append(slave)
+        yield self.save()
+        return slave
+
+    @asyncio.coroutine
+    def remove_slave(self, slave):
+        self.slaves.pop(self.slaves.index(slave))
+        yield self.save()
+        return slave
 
     @asyncio.coroutine
     def get_latest_revision_for_branch(self, branch):
@@ -103,6 +152,10 @@ class Repository(Document):
                                       branch=branch, commit_date=commit_date)
         yield from to_asyncio_future(revision.save())
         return revision
+
+    def log(self, msg):
+        msg = '[{}] - {}'.format(type(self).__name__, msg)
+        utils.log(msg)
 
 
 class RepositoryRevision(Document):

@@ -35,11 +35,12 @@ class SlaveTest(AsyncTestCase):
 
     def setUp(self):
         super().setUp()
-        self.slave = build.Slave(addr='127.0.0.1', port=7777)
+        self.slave = build.Slave(host='127.0.0.1', port=7777)
 
     def tearDown(self):
         build.Slave.drop_collection()
         build.Build.drop_collection()
+        build.Builder.drop_collection()
         repositories.RepositoryRevision.drop_collection()
         repositories.Repository.drop_collection()
         super().tearDown()
@@ -184,9 +185,12 @@ class SlaveTest(AsyncTestCase):
 
         yield self.revision.save()
 
+        self.builder = build.Builder(repository=self.repo, name='builder-1')
+        yield self.builder.save()
+
         self.build = build.Build(repository=self.repo, slave=self.slave,
                                  branch='master', named_tree='v0.1',
-                                 builder_name='builder-1')
+                                 builder=self.builder)
 
         self.build.save()
 
@@ -230,16 +234,15 @@ class BuildManagerTest(AsyncTestCase):
         self.slave.build = b
 
         yield from build.BuildManager.execute_build(mock.Mock(), self.build)
-        for task in asyncio.Task.all_tasks():
-            pass
 
-        yield from task
+        for task in asyncio.Task.all_tasks():
+            yield from task
 
         self.assertTrue(self.BUILDED)
 
     @asyncio.coroutine
     def _create_test_data(self):
-        self.slave = build.Slave(addr='127.0.0.1', port=7777)
+        self.slave = build.Slave(host='127.0.0.1', port=7777)
         yield self.slave.save()
         self.repo = repositories.Repository(
             url='git@somewhere', update_seconds=300, vcs_type='git',
@@ -254,6 +257,8 @@ class BuildManagerTest(AsyncTestCase):
 
         yield self.revision.save()
 
+        self.builder = build.Builder(repository=self.repo, name='builder-1')
+        yield self.builder.save()
         self.build = build.Build(repository=self.repo, slave=self.slave,
                                  branch='master', named_tree='v0.1',
-                                 builder_name='builder-1')
+                                 builder=self.builder)

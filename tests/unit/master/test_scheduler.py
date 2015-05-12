@@ -3,14 +3,14 @@
 import asyncio
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.master import scheduler
+from toxicbuild.master.scheduler import TaskScheduler
 
 
 class SchedulerTest(AsyncTestCase):
 
     def setUp(self):
         super(SchedulerTest, self).setUp()
-        self.scheduler = scheduler.TaskScheduler()
+        self.scheduler = TaskScheduler()
         asyncio.async(self.scheduler.start())
 
     def get_new_ioloop(self):

@@ -19,6 +19,7 @@
 
 import asyncio
 import datetime
+from unittest.mock import Mock, patch
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.master import repositories, build
@@ -41,6 +42,13 @@ class RepositoryTest(AsyncTestCase):
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
+    def test_workdir(self):
+        expected = 'src/gitsomewhere.com-project.git'
+        self.assertEqual(self.repo.workdir, expected)
+
+    def test_poller(self):
+        self.assertEqual(type(self.repo.poller), repositories.Poller)
+
     @gen_test
     def test_create(self):
         slave = yield from build.Slave.create('bla.com', 1234)
@@ -60,12 +68,62 @@ class RepositoryTest(AsyncTestCase):
         self.assertEqual(old_repo, new_repo)
         self.assertEqual(new_repo.slaves[0], slave)
 
-    def test_workdir(self):
-        expected = 'src/gitsomewhere.com-project.git'
-        self.assertEqual(self.repo.workdir, expected)
+    @patch.object(repositories.utils, 'log', Mock())
+    @patch.object(repositories, 'scheduler', Mock(
+        spec=repositories.scheduler))
+    def test_schedule(self):
+        self.repo.schedule()
 
-    def test_poller(self):
-        self.assertEqual(type(self.repo.poller), repositories.Poller)
+        self.assertTrue(repositories.scheduler.add.called)
+
+    @patch.object(repositories.utils, 'log', Mock())
+    @patch.object(repositories, 'scheduler', Mock(
+        spec=repositories.scheduler))
+    @gen_test
+    def test_schedule_all(self):
+        yield from self._create_db_revisions()
+        yield from self.repo.schedule_all()
+
+        self.assertTrue(repositories.scheduler.add.called)
+
+    @gen_test
+    def test_first_run(self):
+        yield from self._create_db_revisions()
+
+        mpoll = Mock()
+
+        @asyncio.coroutine
+        def poll():
+            mpoll()
+
+        self.repo.poller.poll = poll
+        self.repo.schedule = Mock()
+
+        self.repo.first_run()
+
+        for task in asyncio.Task.all_tasks():
+            yield from task
+
+        self.assertTrue(self.repo.schedule.called)
+
+    @gen_test
+    def test_add_slave(self):
+        yield from self._create_db_revisions()
+        slave = yield from repositories.Slave.create(host='127.0.0.1',
+                                                     port=7777)
+        yield from self.repo.add_slave(slave)
+
+        self.assertEqual(len(self.repo.slaves), 1)
+
+    @gen_test
+    def test_remove_slave(self):
+        yield from self._create_db_revisions()
+        slave = yield from repositories.Slave.create(host='127.0.0.1',
+                                                     port=7777)
+        yield from self.repo.add_slave(slave)
+        yield from self.repo.remove_slave(slave)
+
+        self.assertEqual(len(self.repo.slaves), 0)
 
     @gen_test
     def test_get_latest_revision_for_branch(self):

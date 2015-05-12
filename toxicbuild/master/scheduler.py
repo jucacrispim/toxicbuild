@@ -27,6 +27,7 @@ A very simple implementation of a in memory task scheduler using asyncio.
 
 
 class PeriodicTask:
+
     """ A task that will be executed in a periodic time interval
     """
 
@@ -39,6 +40,7 @@ class PeriodicTask:
 
 
 class TaskScheduler:
+
     """ A simple scheduler for periodic tasks.
     """
 
@@ -58,6 +60,7 @@ class TaskScheduler:
         :param task_call_or_coro: callable or coroutine to be consumed.
         :param interval: time in seconds to consume task_call_or_coro.
         """
+
         coro = task_call_or_coro
         if not asyncio.coroutines.iscoroutine(task_call_or_coro):
             coro = asyncio.coroutine(task_call_or_coro)
@@ -103,3 +106,6 @@ class TaskScheduler:
 
     def stop(self):
         self._stop = True
+
+scheduler = TaskScheduler()
+scheduler.start()

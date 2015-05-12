@@ -31,6 +31,15 @@ from toxicbuild.master.signals import (build_started, build_finished,
                                        step_started, step_finished)
 
 
+class Builder(Document):
+
+    """ The entity responsible for execute the build steps
+    """
+
+    name = StringField()
+    repository = ReferenceField('toxicbuild.master.Repository')
+
+
 class BuildStep(EmbeddedDocument):
 
     """ A step for build
@@ -53,7 +62,7 @@ class Build(Document):
     named_tree = StringField(required=True)
     started = DateTimeField()
     finished = DateTimeField()
-    builder_name = StringField(required=True)
+    builder = ReferenceField(Builder, required=True)
     status = StringField(default='pending')
     steps = ListField(EmbeddedDocumentField(BuildStep))
 
@@ -65,21 +74,21 @@ class Slave(Document):
     the network (using :class:`toxicbuild.master.client.BuildClient`)
     and all code, including toxicbuild.conf, is executed on slave.
     """
-    addr = StringField()
+    host = StringField()
     port = IntField()
     is_alive = BooleanField(default=False)
 
     @classmethod
     @asyncio.coroutine
-    def create(cls, addr, port):
-        slave = cls(addr=addr, port=port)
+    def create(cls, host, port):
+        slave = cls(host=host, port=port)
         yield slave.save()
         return slave
 
     @classmethod
     @asyncio.coroutine
     def get(cls, host, port):
-        slave = yield cls.objects.get(addr=host, port=port)
+        slave = yield cls.objects.get(host=host, port=port)
         return slave
 
     @asyncio.coroutine
@@ -87,7 +96,7 @@ class Slave(Document):
         """ Returns a :class:`toxicbuild.master.client.BuildClient` instance
         already connected to the server.
         """
-        connected_client = yield from get_build_client(self.addr, self.port)
+        connected_client = yield from get_build_client(self.host, self.port)
         return connected_client
 
     @asyncio.coroutine
@@ -137,9 +146,10 @@ class Slave(Document):
         repository = yield build.repository
 
         with (yield from self.get_client()) as client:
+            builder_name = (yield build.builder).name
             for build_info in client.build(repository.url, repository.vcs_type,
                                            build.branch, build.named_tree,
-                                           build.builder_name):
+                                           builder_name):
 
                 # Ahhh! bad place for step time stuff. Need to put it on
                 # slave
@@ -185,7 +195,7 @@ class Slave(Document):
         return build
 
     def log(self, msg):
-        basemsg = '[slave {} - {}] '.format((self.addr, self.port),
+        basemsg = '[slave {} - {}] '.format((self.host, self.port),
                                             datetime.datetime.now())
         msg = basemsg + msg
         log(msg)
@@ -225,10 +235,17 @@ class BuildManager:
         repository = yield revision.repository
         for slave in repository.slaves:
             builders = yield from slave.list_builders(revision)
-            for builder in builders:
+            for builder_name in builders:
+                try:
+                    builder = yield Builder.objects.get(name=builder_name,
+                                                        repository=repository)
+                except Builder.DoesNotExist:
+                    builder = Builder(name=builder_name, repository=repository)
+                    yield builder.save()
+
                 build = Build(repository=repository, branch=revision.branch,
                               named_tree=revision.commit, slave=slave,
-                              builder_name=builder)
+                              builder=builder)
 
                 yield build.save()
                 build_added.send(cls, build=build)
