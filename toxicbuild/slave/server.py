@@ -5,6 +5,7 @@ from toxicbuild.slave.protocols import BuildServerProtocol
 
 
 class BuildServer:
+
     def __init__(self, addr='0.0.0.0', port=7777):
         self.protocol = BuildServerProtocol
         self.loop = asyncio.get_event_loop()
@@ -23,7 +24,6 @@ class BuildServer:
         self.server.close()
         self.loop.run_until_complete(self.server.wait_closed())
         self.loop.close()
-        return False
 
     def start(self):
         self.loop.run_forever()
