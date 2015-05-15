@@ -173,8 +173,8 @@ class SlaveTest(AsyncTestCase):
     def _create_test_data(self):
         yield self.slave.save()
         self.repo = repositories.Repository(
-            url='git@somewhere', update_seconds=300, vcs_type='git',
-            slaves=[self.slave])
+            name='reponame', url='git@somewhere', update_seconds=300,
+            vcs_type='git', slaves=[self.slave])
 
         yield self.repo.save()
 
@@ -247,8 +247,8 @@ class BuildManagerTest(AsyncTestCase):
         self.slave = build.Slave(host='127.0.0.1', port=7777)
         yield self.slave.save()
         self.repo = repositories.Repository(
-            url='git@somewhere', update_seconds=300, vcs_type='git',
-            slaves=[self.slave])
+            name='reponame', url='git@somewhere', update_seconds=300,
+            vcs_type='git', slaves=[self.slave])
 
         yield self.repo.save()
 

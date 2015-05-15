@@ -123,7 +123,8 @@ class HoleHandler:
         return siginfo
 
     @asyncio.coroutine
-    def repo_add(self, repo_url, update_seconds, vcs_type, slaves=None):
+    def repo_add(self, repo_name, repo_url, update_seconds, vcs_type,
+                 slaves=None):
         """ Adds a new repository and first_run() it. """
 
         slaves_info = slaves or []
@@ -132,8 +133,8 @@ class HoleHandler:
             slave = yield from Slave.get(host=host, port=port)
             slaves.append(slave)
 
-        repo = yield from Repository.create(repo_url, update_seconds, vcs_type,
-                                            slaves)
+        repo = yield from Repository.create(repo_name, repo_url,
+                                            update_seconds, vcs_type, slaves)
         repo = json.loads(repo.to_json())
         return {'repo-add': repo}
 

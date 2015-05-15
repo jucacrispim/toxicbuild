@@ -136,6 +136,7 @@ class HoleHandlerTest(AsyncTestCase):
     def test_repo_add(self):
         yield from self._create_test_data()
 
+        name = 'reponameoutro'
         url = 'git@somehere.com'
         vcs_type = 'git'
         update_seconds = 300
@@ -143,7 +144,7 @@ class HoleHandlerTest(AsyncTestCase):
         action = 'repo-add'
         handler = hole.HoleHandler({}, action, MagicMock())
 
-        repo = yield from handler.repo_add(url, update_seconds, vcs_type,
+        repo = yield from handler.repo_add(name, url, update_seconds, vcs_type,
                                            slaves)
 
         self.assertTrue(repo['repo-add']['_id'])
@@ -299,7 +300,7 @@ class HoleHandlerTest(AsyncTestCase):
         self.slave = hole.Slave(host='127.0.0.1', port=7777)
         yield self.slave.save()
         self.repo = yield from hole.Repository.create(
-            'git@somewhere.com', 300, 'git')
+            'reponame', 'git@somewhere.com', 300, 'git')
 
         self.builds = []
         for i in range(3):
@@ -347,7 +348,8 @@ class UIStreamHandlerTest(AsyncTestCase):
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
     @gen_test
     def test_send_info_step(self):
-        testrepo = yield from repositories.Repository.create('git@git.nada',
+        testrepo = yield from repositories.Repository.create('name',
+                                                             'git@git.nada',
                                                              300, 'git')
         testslave = yield from build.Slave.create('localhost', 1234)
         testbuilder = yield from build.Builder.create(name='b1',
@@ -383,7 +385,8 @@ class UIStreamHandlerTest(AsyncTestCase):
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
     @gen_test
     def test_send_info_build(self):
-        testrepo = yield from repositories.Repository.create('git@git.nada',
+        testrepo = yield from repositories.Repository.create('name',
+                                                             'git@git.nada',
                                                              300, 'git')
         testslave = yield from build.Slave.create('localhost', 1234)
         testbuilder = yield from build.Builder.create(name='b1',

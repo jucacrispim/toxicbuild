@@ -19,6 +19,7 @@
 
 import asyncio
 import os
+import re
 import shutil
 from threading import Thread
 from mongomotor import Document
@@ -39,6 +40,7 @@ _scheduler_hashes = {}
 
 
 class Repository(Document):
+    name = StringField(required=True, unique=True)
     url = StringField(required=True, unique=True)
     update_seconds = IntField(default=300, required=True)
     vcs_type = StringField(required=True, default='git')
@@ -54,7 +56,10 @@ class Repository(Document):
         """ The directory where the source code of this repository is
         cloned into
         """
-        workdir = self.url.replace('/', '-').replace('@', '').replace(':', '')
+
+        workdir = re.sub(re.compile('http(s|)://'), '', self.url)
+        workdir = workdir.replace('/', '-').replace('@', '-').replace(':', '')
+        workdir = workdir.strip()
         return os.path.join('src', workdir)
 
     @property
@@ -69,12 +74,12 @@ class Repository(Document):
 
     @classmethod
     @asyncio.coroutine
-    def create(cls, url, update_seconds, vcs_type, slaves=None):
+    def create(cls, name, url, update_seconds, vcs_type, slaves=None):
         """ Creates a new repository and schedule it. """
         slaves = slaves or []
 
         repo = cls(url=url, update_seconds=update_seconds, vcs_type=vcs_type,
-                   slaves=slaves)
+                   slaves=slaves, name=name)
         yield from to_asyncio_future(repo.save())
         repo.schedule()
         return repo

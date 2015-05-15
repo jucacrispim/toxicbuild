@@ -31,7 +31,7 @@ class GitPollerTest(AsyncTestCase):
     def setUp(self):
         super(GitPollerTest, self).setUp()
         self.repo = repositories.Repository(
-            url='git@somewhere.org/project.git')
+            name='reponame', url='git@somewhere.org/project.git')
 
         self.poller = pollers.Poller(
             self.repo, vcs_type='git', workdir='workdir',
@@ -52,6 +52,7 @@ class GitPollerTest(AsyncTestCase):
         self.assertTrue(pollers.revision_added.send.called)
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
+    @mock.patch.object(pollers, 'log', mock.Mock())
     @gen_test
     def test_process_changes(self):
         # now in the future, of course!
@@ -75,6 +76,7 @@ class GitPollerTest(AsyncTestCase):
         self.assertEqual(len(pollers.revision_added.send.call_args_list), 2)
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
+    @mock.patch.object(pollers, 'log', mock.Mock())
     @gen_test
     def test_poll(self):
         yield from self._create_db_revisions()

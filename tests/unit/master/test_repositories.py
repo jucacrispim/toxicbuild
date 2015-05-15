@@ -30,8 +30,8 @@ class RepositoryTest(AsyncTestCase):
     def setUp(self):
         super(RepositoryTest, self).setUp()
         self.repo = repositories.Repository(
-            url="git@somewhere.com/project.git", vcs_type='git',
-            update_seconds=100)
+            name='reponame', url="git@somewhere.com/project.git",
+            vcs_type='git', update_seconds=100)
 
     def tearDown(self):
         repositories.Repository.drop_collection()
@@ -43,17 +43,18 @@ class RepositoryTest(AsyncTestCase):
         return tornado.ioloop.IOLoop.instance()
 
     def test_workdir(self):
-        expected = 'src/gitsomewhere.com-project.git'
+        expected = 'src/git-somewhere.com-project.git'
         self.assertEqual(self.repo.workdir, expected)
 
     def test_poller(self):
         self.assertEqual(type(self.repo.poller), repositories.Poller)
 
+    @patch.object(repositories.Repository, 'log', Mock())
     @gen_test
     def test_create(self):
         slave = yield from build.Slave.create('bla.com', 1234)
         repo = yield from repositories.Repository.create(
-            'git@somewhere.com', 300, 'git', slaves=[slave])
+            'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave])
 
         self.assertTrue(repo.id)
         self.assertEqual(repo.slaves[0], slave)
@@ -63,7 +64,7 @@ class RepositoryTest(AsyncTestCase):
     @gen_test
     def test_remove(self):
         repo = yield from repositories.Repository.create(
-            'git@somewhere.com', 300, 'git')
+            'reponame', 'git@somewhere.com', 300, 'git')
         repo.schedule()
         builder = repositories.Builder(name='b1', repository=repo)
         yield builder.save()
@@ -77,11 +78,12 @@ class RepositoryTest(AsyncTestCase):
         with self.assertRaises(repositories.Repository.DoesNotExist):
             yield from repositories.Repository.get(repo.url)
 
+    @patch.object(repositories.Repository, 'log', Mock())
     @gen_test
     def test_get(self):
         slave = yield from build.Slave.create('bla.com', 1234)
         old_repo = yield from repositories.Repository.create(
-            'git@somewhere.com', 300, 'git', slaves=[slave])
+            'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave])
         new_repo = yield from repositories.Repository.get(url=old_repo.url)
 
         self.assertEqual(old_repo, new_repo)
