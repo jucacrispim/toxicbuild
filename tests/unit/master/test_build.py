@@ -233,10 +233,12 @@ class BuildManagerTest(AsyncTestCase):
 
         self.slave.build = b
 
-        yield from build.BuildManager.execute_build(mock.Mock(), self.build)
+        # taking the return and yield from coro are only for
+        # tests purposes.
+        coro = yield from build.BuildManager.execute_build(mock.Mock(),
+                                                           self.build)
 
-        for task in asyncio.Task.all_tasks():
-            yield from task
+        yield from coro
 
         self.assertTrue(self.BUILDED)
 

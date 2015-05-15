@@ -19,14 +19,23 @@
 
 import asyncio
 import os
+import shutil
+from threading import Thread
 from mongomotor import Document
 from mongomotor.fields import (StringField, IntField, ReferenceField,
                                DateTimeField, ListField, BooleanField)
 from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core import utils
 from toxicbuild.master.scheduler import scheduler
-from toxicbuild.master.build import Slave
+from toxicbuild.master.build import Slave, Build, Builder
 from toxicbuild.master.pollers import Poller
+
+
+# The thing here is: When a repository poller is scheduled, I need to
+# keep track of the hashes so I can remove it from the scheduler
+# when needed.
+# The format is {repourl: hash}
+_scheduler_hashes = {}
 
 
 class Repository(Document):
@@ -61,61 +70,74 @@ class Repository(Document):
     @classmethod
     @asyncio.coroutine
     def create(cls, url, update_seconds, vcs_type, slaves=None):
+        """ Creates a new repository and schedule it. """
         slaves = slaves or []
 
         repo = cls(url=url, update_seconds=update_seconds, vcs_type=vcs_type,
                    slaves=slaves)
-        yield repo.save()
+        yield from to_asyncio_future(repo.save())
+        repo.schedule()
         return repo
+
+    @asyncio.coroutine
+    def remove(self):
+        """ Removes all builds and builders and revisions related to the
+        repository, removes the poller from the scheduler, removes the
+        source code from the file system and then removes the repository.
+        """
+
+        builds = Build.objects.filter(repository=self)
+        yield from to_asyncio_future(builds.delete())
+
+        builders = Builder.objects.filter(repository=self)
+        yield from to_asyncio_future(builders.delete())
+
+        revisions = RepositoryRevision.objects.filter(repository=self)
+        yield from to_asyncio_future(revisions.delete())
+
+        try:
+            sched_hash = _scheduler_hashes[self.url]
+            scheduler.remove_by_hash(sched_hash)
+        except KeyError:  # pragma no cover
+            # means the repository was not scheduled
+            pass
+
+        Thread(target=shutil.rmtree, args=[self.workdir]).start()
+
+        yield from to_asyncio_future(self.delete())
 
     @classmethod
     @asyncio.coroutine
     def get(cls, url):
-        repo = yield cls.objects.get(url=url)
+        repo = yield from to_asyncio_future(cls.objects.get(url=url))
         return repo
 
     def schedule(self):
         """ Adds self.poller.poll() to the scheduler. """
 
-        # bizarro!
-        @asyncio.coroutine
-        def __do_poll():
-            yield from self.poller.poll()
-
         self.log('Scheduling {url}'.format(url=self.url))
-        scheduler.add(__do_poll, self.update_seconds)
+        sched_hash = scheduler.add(self.poller.poll, self.update_seconds)
+        _scheduler_hashes[self.url] = sched_hash
 
     @classmethod
     @asyncio.coroutine
     def schedule_all(cls):
         """ Schedule all repositories. """
 
-        repos = yield cls.objects.all().to_list()
+        repos = yield from to_asyncio_future(cls.objects.all().to_list())
         for repo in repos:
             repo.schedule()
-
-    def first_run(self):
-        """ Must be called first time when the repo is created. """
-
-        self.poller.notify_only_latest = True
-        future = asyncio.async(self.poller.poll())
-
-        def __first_run_cb(future):
-            self.poller.notify_only_latest = self.notify_only_latest
-            self.schedule()
-
-        future.add_done_callback(__first_run_cb)
 
     @asyncio.coroutine
     def add_slave(self, slave):
         self.slaves.append(slave)
-        yield self.save()
+        yield from to_asyncio_future(self.save())
         return slave
 
     @asyncio.coroutine
     def remove_slave(self, slave):
         self.slaves.pop(self.slaves.index(slave))
-        yield self.save()
+        yield from to_asyncio_future(self.save())
         return slave
 
     @asyncio.coroutine
@@ -132,14 +154,23 @@ class Repository(Document):
     def get_latest_revisions(self):
         """ Returns the latest revision for all known branches
         """
-        branches = yield from to_asyncio_future(
-            RepositoryRevision.objects.distinct('branch'))
+        branches = yield from self.get_known_branches()
         revs = {}
         for branch in branches:
             rev = yield from self.get_latest_revision_for_branch(branch)
             revs[branch] = rev
 
         return revs
+
+    @asyncio.coroutine
+    def get_known_branches(self):
+        """ Returns the names for the branches that already have some
+        revision here.
+        """
+        branches = yield from to_asyncio_future(
+            RepositoryRevision.objects.distinct('branch'))
+
+        return branches
 
     @asyncio.coroutine
     def add_revision(self, branch, commit, commit_date):

@@ -28,6 +28,7 @@ from toxicbuild.core import vcs
 
 @mock.patch.object(vcs, 'exec_cmd', mock.MagicMock())
 class VCSTest(AsyncTestCase):
+
     def setUp(self):
         super(VCSTest, self).setUp()
         self.vcs = vcs.VCS('/some/workdir')
@@ -62,8 +63,8 @@ class VCSTest(AsyncTestCase):
 
 
 @mock.patch.object(vcs, 'exec_cmd', mock.MagicMock())
-@mock.patch.object(vcs, 'log', mock.MagicMock())
 class GitTest(AsyncTestCase):
+
     def setUp(self):
         super(GitTest, self).setUp()
         self.vcs = vcs.Git('/some/workdir')
@@ -79,7 +80,7 @@ class GitTest(AsyncTestCase):
 
     @gen_test
     def test_fetch(self):
-        expected_cmd = 'git fetch origin'
+        expected_cmd = 'git fetch 2>&1'
 
         @asyncio.coroutine
         def e(cmd, cwd):
@@ -112,20 +113,37 @@ class GitTest(AsyncTestCase):
 
         vcs.exec_cmd = e
 
-        yield from self.vcs.pull('master')
+        yield from self.vcs.pull('origin/master')
+
+    @gen_test
+    def test_has_changes(self):
+        @asyncio.coroutine
+        def e(cmd, cwd):
+            return 'has changes!'
+
+        vcs.exec_cmd = e
+
+        has_changes = yield from self.vcs.has_changes()
+
+        self.assertTrue(has_changes)
 
     @gen_test
     def test_get_remote_branches(self):
         expected = 'git branch -r'
 
+        emock = mock.Mock()
+
         @asyncio.coroutine
         def e(*a, **kw):
-            return a[0]
+            emock(a[0])
+            return 'origin/HEAD  -> origin/master\norigin/dev\norigin/master'
 
+        expected_branches = ['origin/dev', 'origin/master']
         vcs.exec_cmd = e
-        called_cmd = yield from self.vcs.get_remote_branches()
-        called_cmd = called_cmd[0]
+        branches = yield from self.vcs.get_remote_branches()
+        called_cmd = emock.call_args[0][0]
         self.assertEqual(expected, called_cmd)
+        self.assertEqual(expected_branches, branches)
 
     @gen_test
     def test_get_revisions_for_branch(self):
@@ -154,7 +172,7 @@ class GitTest(AsyncTestCase):
 
         @asyncio.coroutine
         def remote_branches(*a, **kw):
-            return ['dev', 'master']
+            return ['origin/dev', 'origin/master']
 
         @asyncio.coroutine
         def branch_revisions(*a, **kw):
@@ -165,23 +183,5 @@ class GitTest(AsyncTestCase):
 
         revisions = yield from self.vcs.get_revisions(since=since)
 
-        self.assertEqual(len(revisions['master']), 2)
-        self.assertEqual(len(revisions['dev']), 2)
-
-    @gen_test
-    def test_has_changes(self):
-        m = mock.MagicMock(side_effect=['haschanges', ''])
-
-        @asyncio.coroutine
-        def f():
-            return m()
-
-        self.vcs.fetch = f
-        # first side effect
-        has_changes = yield from self.vcs.has_changes()
-
-        self.assertTrue(has_changes)
-
-        # second side effect
-        has_changes = yield from self.vcs.has_changes()
-        self.assertFalse(has_changes)
+        self.assertEqual(len(revisions['origin/master']), 2)
+        self.assertEqual(len(revisions['origin/dev']), 2)

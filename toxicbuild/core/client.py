@@ -68,7 +68,7 @@ class BaseToxicClient:
     def read(self):
         # '{}' is decoded as an empty dict, so in json
         # context we can consider it as being a False json
-        data = yield from self.reader.read(1000) or '{}'
+        data = yield from self.reader.read(10000) or '{}'
         data = data.decode()
         return json.loads(data)
 

@@ -31,11 +31,11 @@ class PeriodicTask:
     """ A task that will be executed in a periodic time interval
     """
 
-    def __init__(self, coro, interval):
-        """:param coro: coroutine to be consumed at ``ìnterval``.
-        :param interval: Time in seconds to consume the coroutine.
+    def __init__(self, call_or_coro, interval):
+        """:param call_or_coro: coroutine to be consumed at ``ìnterval``.
+        :param interval: Time in seconds to consume call_or_coro
         """
-        self.coro = coro
+        self.call_or_coro = call_or_coro
         self.interval = interval
 
 
@@ -54,29 +54,33 @@ class TaskScheduler:
         self._stop = False
         self._started = False
 
-    def add(self, task_call_or_coro, interval):
-        """ Adds ``task_call_or_coro`` to be consumed at ``interval``.
+    def add(self, call_or_coro, interval):
+        """ Adds ``call_or_coro`` to be consumed at ``interval``.
 
-        :param task_call_or_coro: callable or coroutine to be consumed.
-        :param interval: time in seconds to consume task_call_or_coro.
+        :param call_or_coro: callable or coroutine to be consumed.
+        :param interval: time in seconds to consume call_or_coro.
         """
 
-        coro = task_call_or_coro
-        if not asyncio.coroutines.iscoroutine(task_call_or_coro):
-            coro = asyncio.coroutine(task_call_or_coro)
+        task = PeriodicTask(call_or_coro, interval)
+        cc_hash = hash(call_or_coro)
 
-        task = PeriodicTask(coro, interval)
-
-        self.tasks[hash(task_call_or_coro)] = task
+        self.tasks[cc_hash] = task
 
         # timestamp 0 for the task to be consumed on firt time
         self.consumption_table[task] = 0.0
 
-    def remove(self, task_call_or_coro):
-        """ Removes ``task_call_or_coro`` from the scheduler
-        :param task_call_or_coro: callable or coroutine to remove
+        return cc_hash
+
+    def remove(self, call_or_coro):
+        """ Removes ``call_or_coro`` from the scheduler
+        :param call_or_coro: callable or coroutine to remove
         """
-        cc_hash = hash(task_call_or_coro)
+        cc_hash = hash(call_or_coro)
+        self.remove_by_hash(cc_hash)
+
+    def remove_by_hash(self, cc_hash):
+        """ Removes the callable or couroutine scheduled using ``cc_hash``. """
+
         task = self.tasks[cc_hash]
         del self.consumption_table[task]
         del self.tasks[cc_hash]
@@ -86,10 +90,11 @@ class TaskScheduler:
         # all tasks that is time to consume again
         tasks2consume = [task for task, t in self.consumption_table.items()
                          if t + task.interval <= now]
-
         for task in tasks2consume:
             self.consumption_table[task] = now
-            asyncio.async(task.coro())
+            ret = task.call_or_coro()
+            if asyncio.coroutines.iscoroutine(ret):
+                asyncio.async(ret)
 
     @asyncio.coroutine
     def start(self):
@@ -107,5 +112,6 @@ class TaskScheduler:
     def stop(self):
         self._stop = True
 
+
 scheduler = TaskScheduler()
-scheduler.start()
+asyncio.async(scheduler.start())

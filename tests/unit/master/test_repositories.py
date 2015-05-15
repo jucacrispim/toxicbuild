@@ -58,6 +58,25 @@ class RepositoryTest(AsyncTestCase):
         self.assertTrue(repo.id)
         self.assertEqual(repo.slaves[0], slave)
 
+    @patch.object(repositories, 'shutil', Mock())
+    @patch.object(repositories.Repository, 'log', Mock())
+    @gen_test
+    def test_remove(self):
+        repo = yield from repositories.Repository.create(
+            'git@somewhere.com', 300, 'git')
+        repo.schedule()
+        builder = repositories.Builder(name='b1', repository=repo)
+        yield builder.save()
+        yield from repo.remove()
+
+        builders_count = yield repositories.Builder.objects.filter(
+            repository=repo).count()
+
+        self.assertEqual(builders_count, 0)
+
+        with self.assertRaises(repositories.Repository.DoesNotExist):
+            yield from repositories.Repository.get(repo.url)
+
     @gen_test
     def test_get(self):
         slave = yield from build.Slave.create('bla.com', 1234)
@@ -85,26 +104,6 @@ class RepositoryTest(AsyncTestCase):
         yield from self.repo.schedule_all()
 
         self.assertTrue(repositories.scheduler.add.called)
-
-    @gen_test
-    def test_first_run(self):
-        yield from self._create_db_revisions()
-
-        mpoll = Mock()
-
-        @asyncio.coroutine
-        def poll():
-            mpoll()
-
-        self.repo.poller.poll = poll
-        self.repo.schedule = Mock()
-
-        self.repo.first_run()
-
-        for task in asyncio.Task.all_tasks():
-            yield from task
-
-        self.assertTrue(self.repo.schedule.called)
 
     @gen_test
     def test_add_slave(self):

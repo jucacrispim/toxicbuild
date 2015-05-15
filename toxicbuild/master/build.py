@@ -24,6 +24,7 @@ from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                ReferenceField, DateTimeField, BooleanField,
                                IntField)
+from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core.utils import log
 from toxicbuild.master.client import get_build_client
 from toxicbuild.master.signals import (build_started, build_finished,
@@ -38,6 +39,19 @@ class Builder(Document):
 
     name = StringField()
     repository = ReferenceField('toxicbuild.master.Repository')
+
+    @classmethod
+    @asyncio.coroutine
+    def create(cls, **kwargs):
+        repo = cls(**kwargs)
+        yield from to_asyncio_future(repo.save())
+        return repo
+
+    @classmethod
+    @asyncio.coroutine
+    def get(cls, **kwargs):
+        builder = yield from to_asyncio_future(cls.objects.get(**kwargs))
+        return builder
 
 
 class BuildStep(EmbeddedDocument):
@@ -82,13 +96,14 @@ class Slave(Document):
     @asyncio.coroutine
     def create(cls, host, port):
         slave = cls(host=host, port=port)
-        yield slave.save()
+        yield from to_asyncio_future(slave.save())
         return slave
 
     @classmethod
     @asyncio.coroutine
     def get(cls, host, port):
-        slave = yield cls.objects.get(host=host, port=port)
+        slave = yield from to_asyncio_future(
+            cls.objects.get(host=host, port=port))
         return slave
 
     @asyncio.coroutine
@@ -109,7 +124,7 @@ class Slave(Document):
         self.is_alive = alive
         # using yield instead of yield from because mongomotor's
         # save returns a tornado Future, not a asyncio Future
-        yield self.save()
+        yield from to_asyncio_future(self.save())
         return self.is_alive
 
     @asyncio.coroutine
@@ -119,7 +134,7 @@ class Slave(Document):
         :param revision: An instance of
           :class:`toxicbuild.master.repositories.RepositoryRevision`
         """
-        repository = yield revision.repository
+        repository = yield from to_asyncio_future(revision.repository)
         repo_url = repository.url
         vcs_type = repository.vcs_type
         branch = revision.branch
@@ -143,10 +158,10 @@ class Slave(Document):
         # the build. It sends 2 infos about steps, when it is started and when
         # it is finished and the last respose from the server is the
         # info about the build itself.
-        repository = yield build.repository
+        repository = yield from to_asyncio_future(build.repository)
 
         with (yield from self.get_client()) as client:
-            builder_name = (yield build.builder).name
+            builder_name = (yield from to_asyncio_future(build.builder)).name
             for build_info in client.build(repository.url, repository.vcs_type,
                                            build.branch, build.named_tree,
                                            builder_name):
@@ -154,7 +169,7 @@ class Slave(Document):
                 # Ahhh! bad place for step time stuff. Need to put it on
                 # slave
                 build.started = datetime.datetime.now()
-                yield build.save()
+                yield from to_asyncio_future(build.save())
                 build_started.send(self, build=build)
 
                 # response with total_steps is the last one
@@ -174,7 +189,7 @@ class Slave(Document):
 
                     self.log(msg)
                     step.started = datetime.datetime.now()
-                    yield build.save()
+                    yield from to_asyncio_future(build.save())
                     step_started.send(self, build=build, step=step)
 
                 # here the step was finished
@@ -190,7 +205,7 @@ class Slave(Document):
         build.status = build_info['status']
         build.finished = datetime.datetime.now()
         # again the asyncio Future vs tornado Future
-        yield build.save()
+        yield from to_asyncio_future(build.save())
         build_finished.send(self, build)
         return build
 
@@ -214,7 +229,7 @@ class Slave(Document):
                                        status=status, output=output)
             build.steps.append(requested_step)
 
-        yield build.save()
+        yield from to_asyncio_future(build.save())
         return requested_step
 
 
@@ -232,29 +247,32 @@ class BuildManager:
         :param sender: The vcs instance that sent the signal
         :param revision: Instance of :class:`toxicubuild.master.build.Slave`
         """
-        repository = yield revision.repository
+        repository = yield from to_asyncio_future(revision.repository)
         for slave in repository.slaves:
             builders = yield from slave.list_builders(revision)
             for builder_name in builders:
                 try:
-                    builder = yield Builder.objects.get(name=builder_name,
-                                                        repository=repository)
+                    builder = yield from to_asyncio_future(
+                        Builder.objects.get(name=builder_name,
+                                            repository=repository))
                 except Builder.DoesNotExist:
                     builder = Builder(name=builder_name, repository=repository)
-                    yield builder.save()
+                    yield from to_asyncio_future(builder.save())
 
                 build = Build(repository=repository, branch=revision.branch,
                               named_tree=revision.commit, slave=slave,
                               builder=builder)
 
-                yield build.save()
+                yield from to_asyncio_future(build.save())
                 build_added.send(cls, build=build)
 
     @classmethod
     @asyncio.coroutine
     def execute_build(cls, sender, build):
-        slave = yield build.slave
-        asyncio.async(slave.build(build))
+        slave = yield from to_asyncio_future(build.slave)
+        coro = slave.build(build)
+        asyncio.async(coro)
+        return coro
 
 
 # This first signal is sent by a vcs when a new revision is detected.

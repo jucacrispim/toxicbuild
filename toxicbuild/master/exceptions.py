@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
 
 
-class BuildClientException(Exception):
+class UIFunctionNotFound(Exception):
     pass

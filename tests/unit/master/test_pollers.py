@@ -26,6 +26,7 @@ from toxicbuild.master import pollers, repositories
 
 
 class GitPollerTest(AsyncTestCase):
+
     @mock.patch.object(pollers, 'get_vcs', mock.MagicMock())
     def setUp(self):
         super(GitPollerTest, self).setUp()
@@ -50,24 +51,28 @@ class GitPollerTest(AsyncTestCase):
 
         self.assertTrue(pollers.revision_added.send.called)
 
-    # mocking here again so I can zero the count
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @gen_test
     def test_process_changes(self):
-        now = datetime.datetime.now()
+        # now in the future, of course!
+        now = datetime.datetime.now() + datetime.timedelta(100)
 
         yield from self._create_db_revisions()
 
         @asyncio.coroutine
         def gr(*a, **kw):
             return {'master': [{'commit': '123sdf', 'commit_date': now},
-                               {'commit': 'asdf213', 'commit_date': now}]}
+                               {'commit': 'asdf213', 'commit_date': now}],
+                    'dev': [{'commit': 'sdfljfew', 'commit_date': now},
+                            {'commit': 'sdlfjslfer3', 'commit_date': now}]}
 
         self.poller.vcs.get_revisions = gr
+
         yield from self.poller.process_changes()
 
         # call only 1 because self.poller.notify_only_latest is True
-        self.assertEqual(len(pollers.revision_added.send.call_args_list), 1)
+        # for master and call 1 for last revision for dev
+        self.assertEqual(len(pollers.revision_added.send.call_args_list), 2)
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @gen_test

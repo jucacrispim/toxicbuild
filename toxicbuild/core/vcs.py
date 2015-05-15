@@ -21,7 +21,7 @@ import asyncio
 import datetime
 import os
 from toxicbuild.core.exceptions import VCSError, ImpossibillityError
-from toxicbuild.core.utils import exec_cmd, log, inherit_docs
+from toxicbuild.core.utils import exec_cmd, inherit_docs
 
 
 class VCS:
@@ -54,10 +54,6 @@ class VCS:
         """
         return os.path.exists(self.workdir)
 
-    def log(self, msg):
-        vcsmsg = '{}: {}'.format(self.vcsbin, msg)
-        log(vcsmsg)
-
     @asyncio.coroutine
     def clone(self, url):  # pragma: no cover
         """ Clones a repository into ``self.workdir``
@@ -89,7 +85,7 @@ class VCS:
 
     @asyncio.coroutine
     def has_changes(self):  # pragma: no cover
-        """ Informs if has changes on repository
+        """ Informs if there are new revisions in the repository
         """
         raise NotImplementedError
 
@@ -137,24 +133,22 @@ class Git(VCS):
 
     @asyncio.coroutine
     def clone(self, url):
-        self.log('cloning {} into {}'.format(url, self.workdir))
-
         cmd = '%s clone %s %s' % (self.vcsbin, url, self.workdir)
         # we can't go to self.workdir while we do not clone the repo
         yield from self.exec_cmd(cmd, cwd='.')
 
     @asyncio.coroutine
     def fetch(self):
-        self.log('fetching changes for {}'.format(self.workdir))
+        # HACK!
+        # fucking git fetch send its response to stderr even
+        # if everything was ok
+        cmd = '%s %s 2>&1' % (self.vcsbin, 'fetch')
 
-        cmd = '%s %s origin' % (self.vcsbin, 'fetch')
         fetched = yield from self.exec_cmd(cmd)
         return fetched
 
     @asyncio.coroutine
     def checkout(self, named_tree):
-
-        self.log('checking out {} to {}'.format(self.workdir, named_tree))
 
         cmd = '{} checkout {}'.format(self.vcsbin, named_tree)
         yield from self.exec_cmd(cmd)
@@ -162,11 +156,16 @@ class Git(VCS):
     @asyncio.coroutine
     def pull(self, branch_name):
 
-        self.log('pulling changes from {} brach {}'.format(self.workdir,
-                                                           branch_name))
-        cmd = '{} pull --no-edit origin {}'.format(self.vcsbin, branch_name)
+        cmd = '{} pull --no-edit {}'.format(self.vcsbin,
+                                            branch_name.replace('/', ' '))
 
-        yield from self.exec_cmd(cmd)
+        ret = yield from self.exec_cmd(cmd)
+        return ret
+
+    @asyncio.coroutine
+    def has_changes(self):
+        ret = yield from self.fetch()
+        return bool(ret)
 
     @asyncio.coroutine
     def get_revisions(self, since={}):
@@ -174,6 +173,9 @@ class Git(VCS):
         remote_branches = yield from self.get_remote_branches()
         revisions = {}
         for branch in remote_branches:
+            # branches are like origin/master
+            yield from self.checkout(branch.split('/')[1])
+            yield from self.pull(branch)
             since_date = since.get(branch)
 
             revs = yield from self.get_revisions_for_branch(branch, since_date)
@@ -183,9 +185,6 @@ class Git(VCS):
 
     @asyncio.coroutine
     def get_revisions_for_branch(self, branch, since=None):
-
-        self.log('getting revisions for {} on branch {}'.format(self.workdir,
-                                                                branch))
 
         cmd = '{} log --pretty=format:"%H | %ad" '.format(self.vcsbin)
         if since:
@@ -206,17 +205,12 @@ class Git(VCS):
 
     @asyncio.coroutine
     def get_remote_branches(self):
-        self.log('getting remote branches for {}'.format(self.workdir))
-
         cmd = '%s branch -r' % self.vcsbin
 
-        remote_branches = yield from self.exec_cmd(cmd)
-        return remote_branches.split('\n')
-
-    @asyncio.coroutine
-    def has_changes(self):
-        fetched = yield from self.fetch()
-        return bool(fetched)
+        remote_branches = (yield from self.exec_cmd(cmd)).split('\n')
+        # master, with some shitty arrow...
+        remote_branches.pop(0)
+        return [b.strip() for b in remote_branches]
 
 
 VCS_TYPES = {'git': Git}
