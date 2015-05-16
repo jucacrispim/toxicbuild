@@ -88,22 +88,22 @@ class Slave(Document):
     the network (using :class:`toxicbuild.master.client.BuildClient`)
     and all code, including toxicbuild.conf, is executed on slave.
     """
-    host = StringField()
-    port = IntField()
+    name = StringField(required=True, unique=True)
+    host = StringField(required=True)
+    port = IntField(required=True)
     is_alive = BooleanField(default=False)
 
     @classmethod
     @asyncio.coroutine
-    def create(cls, host, port):
-        slave = cls(host=host, port=port)
+    def create(cls, **kwargs):
+        slave = cls(**kwargs)
         yield from to_asyncio_future(slave.save())
         return slave
 
     @classmethod
     @asyncio.coroutine
-    def get(cls, host, port):
-        slave = yield from to_asyncio_future(
-            cls.objects.get(host=host, port=port))
+    def get(cls, **kwargs):
+        slave = yield from to_asyncio_future(cls.objects.get(**kwargs))
         return slave
 
     @asyncio.coroutine

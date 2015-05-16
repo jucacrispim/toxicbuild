@@ -172,38 +172,40 @@ class HoleHandler:
         return {'repo-update': 'ok'}
 
     @asyncio.coroutine
-    def repo_add_slave(self, repo_url, slave_host, slave_port):
+    def repo_add_slave(self, repo_url, slave_name, slave_host, slave_port):
         """ Adds a slave to a repository. """
 
         repo = yield from Repository.get(repo_url)
-        slave = yield from Slave.get(slave_host, slave_port)
+        slave = yield from Slave.get(name=slave_name, host=slave_host,
+                                     port=slave_port)
         yield from repo.add_slave(slave)
         return {'repo-add-slave': 'ok'}
 
     @asyncio.coroutine
-    def repo_remove_slave(self, repo_url, slave_host, slave_port):
+    def repo_remove_slave(self, repo_url, slave_name):
         """ Removes a slave from toxicbuild. """
 
         repo = yield from Repository.get(repo_url)
 
-        slave = yield from Slave.get(slave_host, slave_port)
+        slave = yield from Slave.get(name=slave_name)
         yield from repo.remove_slave(slave)
         return {'repo-remove-slave': 'ok'}
 
     @asyncio.coroutine
-    def slave_add(self, slave_host, slave_port):
+    def slave_add(self, name, host, port):
         """ Adds a new slave to toxicbuild. """
 
-        slave = yield from Slave.create(slave_host, slave_port)
+        slave = yield from Slave.create(name=name, host=host, port=port)
 
         slave_dict = json.loads(slave.to_json())
         return {'slave-add': slave_dict}
 
     @asyncio.coroutine
-    def slave_remove(self, slave_host, slave_port):
+    def slave_remove(self, name):
         """ Removes a slave from toxicbuild. """
 
-        slave = yield from Slave.get(slave_host, slave_port)
+        slave = yield from Slave.get(name=name)
+
         yield from to_asyncio_future(slave.delete())
 
         return {'slave-remove', 'ok'}

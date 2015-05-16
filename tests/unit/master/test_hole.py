@@ -185,7 +185,8 @@ class HoleHandlerTest(AsyncTestCase):
     def test_repo_add_slave(self):
         yield from self._create_test_data()
 
-        slave = yield from hole.Slave.create(host='127.0.0.1', port=1234)
+        slave = yield from hole.Slave.create(name='name2',
+                                             host='127.0.0.1', port=1234)
 
         repo_url = self.repo.url
         slave_host = slave.host
@@ -195,6 +196,7 @@ class HoleHandlerTest(AsyncTestCase):
         handler = hole.HoleHandler({}, action, MagicMock())
 
         yield from handler.repo_add_slave(repo_url=repo_url,
+                                          slave_name='name2',
                                           slave_host=slave_host,
                                           slave_port=slave_port)
 
@@ -206,16 +208,13 @@ class HoleHandlerTest(AsyncTestCase):
     def test_repo_remove_slave(self):
         yield from self._create_test_data()
 
-        slave = yield from hole.Slave.create(host='127.0.0.1', port=1234)
+        slave = yield from hole.Slave.create(name='name2', host='127.0.0.1',
+                                             port=1234)
         yield from self.repo.add_slave(slave)
-
-        host = slave.host
-        port = slave.port
 
         handler = hole.HoleHandler({}, 'repo-remove-slave', MagicMock())
 
-        yield from handler.repo_remove_slave(self.repo.url, slave_host=host,
-                                             slave_port=port)
+        yield from handler.repo_remove_slave(self.repo.url, slave.name)
 
         repo = yield from hole.Repository.get(self.repo.url)
 
@@ -225,8 +224,8 @@ class HoleHandlerTest(AsyncTestCase):
     def test_slave_add(self):
         data = {'host': '127.0.0.1', 'port': 1234}
         handler = hole.HoleHandler(data, 'slave-add', MagicMock())
-        slave = yield from handler.slave_add(slave_host='localhost',
-                                             slave_port=1234)
+        slave = yield from handler.slave_add(name='slave', host='locahost',
+                                             port=1234)
         slave = slave['slave-add']
 
         self.assertTrue(slave['_id'])
@@ -236,8 +235,7 @@ class HoleHandlerTest(AsyncTestCase):
         yield from self._create_test_data()
         data = {'host': '127.0.0.1', 'port': 7777}
         handler = hole.HoleHandler(data, 'slave-remove', MagicMock())
-        yield from handler.slave_remove(slave_host='127.0.0.1',
-                                        slave_port=7777)
+        yield from handler.slave_remove(name='name')
 
         self.assertEqual((yield hole.Slave.objects.count()), 0)
 
@@ -251,6 +249,7 @@ class HoleHandlerTest(AsyncTestCase):
 
     @gen_test
     def test_builder_list(self):
+
         yield from self._create_test_data()
         handler = hole.HoleHandler({}, 'builder-list', MagicMock())
 
@@ -297,7 +296,8 @@ class HoleHandlerTest(AsyncTestCase):
     @patch.object(repositories.utils, 'log', Mock())
     @asyncio.coroutine
     def _create_test_data(self):
-        self.slave = hole.Slave(host='127.0.0.1', port=7777)
+
+        self.slave = hole.Slave(name='name', host='127.0.0.1', port=7777)
         yield self.slave.save()
         self.repo = yield from hole.Repository.create(
             'reponame', 'git@somewhere.com', 300, 'git')
@@ -327,6 +327,7 @@ class UIStreamHandlerTest(AsyncTestCase):
     def tearDown(self):
         build.Build.drop_collection()
         build.Builder.drop_collection()
+        build.Slave.drop_collection()
         repositories.Repository.drop_collection()
 
     @patch.object(hole, 'step_started', Mock())
@@ -351,7 +352,10 @@ class UIStreamHandlerTest(AsyncTestCase):
         testrepo = yield from repositories.Repository.create('name',
                                                              'git@git.nada',
                                                              300, 'git')
-        testslave = yield from build.Slave.create('localhost', 1234)
+        testslave = yield from build.Slave.create(name='name',
+                                                  host='localhost',
+                                                  port=1234)
+
         testbuilder = yield from build.Builder.create(name='b1',
                                                       repository=testrepo)
         testbuild = build.Build(repository=testrepo, slave=testslave,
@@ -388,7 +392,9 @@ class UIStreamHandlerTest(AsyncTestCase):
         testrepo = yield from repositories.Repository.create('name',
                                                              'git@git.nada',
                                                              300, 'git')
-        testslave = yield from build.Slave.create('localhost', 1234)
+        testslave = yield from build.Slave.create(name='name',
+                                                  host='localhost',
+                                                  port=1234)
         testbuilder = yield from build.Builder.create(name='b1',
                                                       repository=testrepo)
         testbuild = build.Build(repository=testrepo, slave=testslave,

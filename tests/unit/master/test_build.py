@@ -35,7 +35,7 @@ class SlaveTest(AsyncTestCase):
 
     def setUp(self):
         super().setUp()
-        self.slave = build.Slave(host='127.0.0.1', port=7777)
+        self.slave = build.Slave(name='slave', host='127.0.0.1', port=7777)
 
     def tearDown(self):
         build.Slave.drop_collection()
@@ -50,15 +50,18 @@ class SlaveTest(AsyncTestCase):
 
     @gen_test
     def test_create(self):
-        slave = yield from build.Slave.create('somewhere.net', 7777)
+        slave = yield from build.Slave.create(name='name',
+                                              host='somewhere.net', port=7777)
         self.assertTrue(slave.id)
 
     @gen_test
     def test_get(self):
-        slave = yield from build.Slave.create('somewhere.net', 7777)
+        slave = yield from build.Slave.create(name='name',
+                                              host='somewhere.net', port=7777)
         slave_id = slave.id
 
-        slave = yield from build.Slave.get('somewhere.net', 7777)
+        slave = yield from build.Slave.get(name='name', host='somewhere.net',
+                                           port=7777)
 
         self.assertEqual(slave_id, slave.id)
 
@@ -244,7 +247,7 @@ class BuildManagerTest(AsyncTestCase):
 
     @asyncio.coroutine
     def _create_test_data(self):
-        self.slave = build.Slave(host='127.0.0.1', port=7777)
+        self.slave = build.Slave(host='127.0.0.1', port=7777, name='slave')
         yield self.slave.save()
         self.repo = repositories.Repository(
             name='reponame', url='git@somewhere', update_seconds=300,

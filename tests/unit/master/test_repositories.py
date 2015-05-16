@@ -52,7 +52,8 @@ class RepositoryTest(AsyncTestCase):
     @patch.object(repositories.Repository, 'log', Mock())
     @gen_test
     def test_create(self):
-        slave = yield from build.Slave.create('bla.com', 1234)
+        slave = yield from build.Slave.create(name='name', host='bla.com',
+                                              port=1234)
         repo = yield from repositories.Repository.create(
             'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave])
 
@@ -81,7 +82,8 @@ class RepositoryTest(AsyncTestCase):
     @patch.object(repositories.Repository, 'log', Mock())
     @gen_test
     def test_get(self):
-        slave = yield from build.Slave.create('bla.com', 1234)
+        slave = yield from build.Slave.create(name='name', host='bla.com',
+                                              port=1234)
         old_repo = yield from repositories.Repository.create(
             'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave])
         new_repo = yield from repositories.Repository.get(url=old_repo.url)
@@ -110,7 +112,8 @@ class RepositoryTest(AsyncTestCase):
     @gen_test
     def test_add_slave(self):
         yield from self._create_db_revisions()
-        slave = yield from repositories.Slave.create(host='127.0.0.1',
+        slave = yield from repositories.Slave.create(name='name',
+                                                     host='127.0.0.1',
                                                      port=7777)
         yield from self.repo.add_slave(slave)
 
@@ -119,7 +122,8 @@ class RepositoryTest(AsyncTestCase):
     @gen_test
     def test_remove_slave(self):
         yield from self._create_db_revisions()
-        slave = yield from repositories.Slave.create(host='127.0.0.1',
+        slave = yield from repositories.Slave.create(name='name',
+                                                     host='127.0.0.1',
                                                      port=7777)
         yield from self.repo.add_slave(slave)
         yield from self.repo.remove_slave(slave)
