@@ -142,7 +142,7 @@ class HoleHandler:
     def repo_remove(self, repo_url):
         """ Removes a repository from toxicubild """
 
-        repo = yield from Repository.get(repo_url)
+        repo = yield from Repository.get(url=repo_url)
         yield from repo.remove()
         return {'repo-remove': 'ok'}
 
@@ -164,7 +164,7 @@ class HoleHandler:
     def repo_update(self, repo_url, vcs_type=None, update_seconds=None):
         """ Updates repository information. """
 
-        repo = yield from Repository.get(repo_url)
+        repo = yield from Repository.get(url=repo_url)
         repo.vcs_type = vcs_type or repo.vcs_type
         repo.update_seconds = update_seconds or repo.update_seconds
 
@@ -175,7 +175,7 @@ class HoleHandler:
     def repo_add_slave(self, repo_url, slave_name, slave_host, slave_port):
         """ Adds a slave to a repository. """
 
-        repo = yield from Repository.get(repo_url)
+        repo = yield from Repository.get(url=repo_url)
         slave = yield from Slave.get(name=slave_name, host=slave_host,
                                      port=slave_port)
         yield from repo.add_slave(slave)
@@ -185,7 +185,7 @@ class HoleHandler:
     def repo_remove_slave(self, repo_url, slave_name):
         """ Removes a slave from toxicbuild. """
 
-        repo = yield from Repository.get(repo_url)
+        repo = yield from Repository.get(url=repo_url)
 
         slave = yield from Slave.get(name=slave_name)
         yield from repo.remove_slave(slave)
@@ -253,7 +253,7 @@ class HoleHandler:
 
         kwargs = {'name': builder_name}
         if repo_url:
-            repo = yield from Repository.get(repo_url)
+            repo = yield from Repository.get(url=repo_url)
             kwargs.update({'repository': repo})
 
         builder = yield from Builder.get(**kwargs)

@@ -113,8 +113,8 @@ class Repository(Document):
 
     @classmethod
     @asyncio.coroutine
-    def get(cls, url):
-        repo = yield from to_asyncio_future(cls.objects.get(url=url))
+    def get(cls, **kwargs):
+        repo = yield from to_asyncio_future(cls.objects.get(**kwargs))
         return repo
 
     def schedule(self):

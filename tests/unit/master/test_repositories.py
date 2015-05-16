@@ -77,7 +77,7 @@ class RepositoryTest(AsyncTestCase):
         self.assertEqual(builders_count, 0)
 
         with self.assertRaises(repositories.Repository.DoesNotExist):
-            yield from repositories.Repository.get(repo.url)
+            yield from repositories.Repository.get(url=repo.url)
 
     @patch.object(repositories.Repository, 'log', Mock())
     @gen_test
