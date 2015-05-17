@@ -155,7 +155,7 @@ class HoleHandlerTest(AsyncTestCase):
         yield from self._create_test_data()
         action = 'repo-remove'
         handler = hole.HoleHandler({}, action, MagicMock())
-        yield from handler.repo_remove(repo_url='git@somewhere.com')
+        yield from handler.repo_remove(repo_name='reponame')
 
         self.assertEqual((yield hole.Repository.objects.count()), 0)
 
@@ -175,9 +175,9 @@ class HoleHandlerTest(AsyncTestCase):
                 'update_seconds': 60}
         action = 'repo-update'
         handler = hole.HoleHandler(data, action, MagicMock())
-        yield from handler.repo_update(repo_url='git@somewhere.com',
+        yield from handler.repo_update(repo_name=self.repo.name,
                                        update_seconds=60)
-        repo = yield from hole.Repository.get(url=self.repo.url)
+        repo = yield from hole.Repository.get(name=self.repo.name)
 
         self.assertEqual(repo.update_seconds, 60)
 
@@ -188,14 +188,14 @@ class HoleHandlerTest(AsyncTestCase):
         slave = yield from hole.Slave.create(name='name2',
                                              host='127.0.0.1', port=1234)
 
-        repo_url = self.repo.url
+        repo_name = self.repo.name
         slave_host = slave.host
         slave_port = slave.port
         action = 'repo-add-slave'
 
         handler = hole.HoleHandler({}, action, MagicMock())
 
-        yield from handler.repo_add_slave(repo_url=repo_url,
+        yield from handler.repo_add_slave(repo_name=repo_name,
                                           slave_name='name2',
                                           slave_host=slave_host,
                                           slave_port=slave_port)
@@ -214,7 +214,7 @@ class HoleHandlerTest(AsyncTestCase):
 
         handler = hole.HoleHandler({}, 'repo-remove-slave', MagicMock())
 
-        yield from handler.repo_remove_slave(self.repo.url, slave.name)
+        yield from handler.repo_remove_slave(self.repo.name, slave.name)
 
         repo = yield from hole.Repository.get(url=self.repo.url)
 
@@ -253,7 +253,7 @@ class HoleHandlerTest(AsyncTestCase):
         yield from self._create_test_data()
         handler = hole.HoleHandler({}, 'builder-list', MagicMock())
 
-        builders = yield from handler.builder_list(self.repo.url)
+        builders = yield from handler.builder_list(self.repo.name)
         builders = builders['builder-list']
         self.assertEqual(len(builders), 3)
 
@@ -264,7 +264,7 @@ class HoleHandlerTest(AsyncTestCase):
         data = {'name': 'b0', 'repo-url': self.repo.url}
         action = 'builder-show'
         handler = hole.HoleHandler(data, action, MagicMock())
-        builder = yield from handler.builder_show(repo_url=self.repo.url,
+        builder = yield from handler.builder_show(repo_name=self.repo.name,
                                                   builder_name='b0')
         builder = builder['builder-show']
 

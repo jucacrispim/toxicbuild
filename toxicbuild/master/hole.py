@@ -139,10 +139,10 @@ class HoleHandler:
         return {'repo-add': repo}
 
     @asyncio.coroutine
-    def repo_remove(self, repo_url):
+    def repo_remove(self, repo_name):
         """ Removes a repository from toxicubild """
 
-        repo = yield from Repository.get(url=repo_url)
+        repo = yield from Repository.get(name=repo_name)
         yield from repo.remove()
         return {'repo-remove': 'ok'}
 
@@ -161,31 +161,30 @@ class HoleHandler:
         return {'repo-list': repo_list}
 
     @asyncio.coroutine
-    def repo_update(self, repo_url, vcs_type=None, update_seconds=None):
+    def repo_update(self, repo_name, **kwargs):
         """ Updates repository information. """
 
-        repo = yield from Repository.get(url=repo_url)
-        repo.vcs_type = vcs_type or repo.vcs_type
-        repo.update_seconds = update_seconds or repo.update_seconds
+        repo = yield from Repository.get(name=repo_name)
+        [setattr(repo, k, v) for k, v in kwargs.items()]
 
         yield from to_asyncio_future(repo.save())
         return {'repo-update': 'ok'}
 
     @asyncio.coroutine
-    def repo_add_slave(self, repo_url, slave_name, slave_host, slave_port):
+    def repo_add_slave(self, repo_name, slave_name, slave_host, slave_port):
         """ Adds a slave to a repository. """
 
-        repo = yield from Repository.get(url=repo_url)
+        repo = yield from Repository.get(name=repo_name)
         slave = yield from Slave.get(name=slave_name, host=slave_host,
                                      port=slave_port)
         yield from repo.add_slave(slave)
         return {'repo-add-slave': 'ok'}
 
     @asyncio.coroutine
-    def repo_remove_slave(self, repo_url, slave_name):
+    def repo_remove_slave(self, repo_name, slave_name):
         """ Removes a slave from toxicbuild. """
 
-        repo = yield from Repository.get(url=repo_url)
+        repo = yield from Repository.get(name=repo_name)
 
         slave = yield from Slave.get(name=slave_name)
         yield from repo.remove_slave(slave)
@@ -224,13 +223,15 @@ class HoleHandler:
         return {'slave-list': slave_list}
 
     @asyncio.coroutine
-    def builder_list(self, repo_url=None):
-        """ Lists all builders. If ``repo_url``, only builders from
-        this repository will be listed. """
+    def builder_list(self, repo_name=None):
+        """ Lists all builders.
+
+        If ``repo_name``, only builders from this repository will be listed.
+        """
 
         builders = Builder.objects
-        if repo_url:
-            repository = yield from Repository.get(url=repo_url)
+        if repo_name:
+            repository = yield from Repository.get(name=repo_name)
             builders = builders.filter(repository=repository)
 
         builders = yield from to_asyncio_future(builders.to_list())
@@ -248,12 +249,12 @@ class HoleHandler:
         return {'builder-list': builder_list}
 
     @asyncio.coroutine
-    def builder_show(self, repo_url, builder_name):
+    def builder_show(self, repo_name, builder_name):
         """ Returns information about one specific builder. """
 
         kwargs = {'name': builder_name}
-        if repo_url:
-            repo = yield from Repository.get(url=repo_url)
+        if repo_name:
+            repo = yield from Repository.get(name=repo_name)
             kwargs.update({'repository': repo})
 
         builder = yield from Builder.get(**kwargs)
