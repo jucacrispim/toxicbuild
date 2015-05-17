@@ -85,13 +85,11 @@ class Poller:
                 revision = yield from self.repository.add_revision(
                     branch, **rev)
                 # the thing here is: if self.notify_only_latest, we only
-                # send a signal for the most recent revision, the last
-                # one of the revisions list
+                # add the most recent revision, the last one of the revisions
+                # list to the revisionset
                 if (not revisions[-1] == rev and self.notify_only_latest):
                     continue
 
-                # not sure if the right place for this notification  is
-                # here or in Repository. Who knows...
                 self.notify_change(revision)
 
             if len(revisions):
@@ -100,9 +98,9 @@ class Poller:
                                     branch))
 
     def notify_change(self, revision):
-        """ Notify about an incoming change
-        """
-        revision_added.send(self, revision=revision)
+        """ Notify about incoming changes. """
+
+        revision_added.send(self.repository, revision=revision)
 
     def log(self, msg):
-        log('[poller] ' + msg)
+        log('[{}] {} '.format(type(self).__name__, msg))

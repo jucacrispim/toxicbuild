@@ -28,7 +28,7 @@ from mongomotor.fields import (StringField, IntField, ReferenceField,
 from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core import utils
 from toxicbuild.master.scheduler import scheduler
-from toxicbuild.master.build import Slave, Build, Builder
+from toxicbuild.master.build import Slave, Build, Builder, BuildManager
 from toxicbuild.master.pollers import Poller
 
 
@@ -50,6 +50,7 @@ class Repository(Document):
     def __init__(self, *args, **kwargs):
         super(Repository, self).__init__(*args, **kwargs)
         self._poller_instance = None
+        self.build_manager = BuildManager(self)
 
     @property
     def workdir(self):
@@ -65,7 +66,7 @@ class Repository(Document):
     @property
     def poller(self):
         if self._poller_instance is None:
-            vcs_type = self.vcs_type or 'git'
+            vcs_type = self.vcs_type
             self._poller_instance = Poller(
                 self, vcs_type, self.workdir,
                 notify_only_latest=self.notify_only_latest)

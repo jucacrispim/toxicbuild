@@ -19,6 +19,7 @@
 
 
 import asyncio
+from collections import defaultdict, deque
 import datetime
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
@@ -28,8 +29,8 @@ from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core.utils import log
 from toxicbuild.master.client import get_build_client
 from toxicbuild.master.signals import (build_started, build_finished,
-                                       build_added, revision_added,
-                                       step_started, step_finished)
+                                       revision_added, step_started,
+                                       step_finished)
 
 
 class Builder(Document):
@@ -70,6 +71,9 @@ class Build(Document):
 
     """ A set of steps for a repository
     """
+
+    PENDING = 'pending'
+
     repository = ReferenceField('toxicbuild.master.Repository', required=True)
     slave = ReferenceField('Slave', required=True)
     branch = StringField(required=True)
@@ -77,8 +81,25 @@ class Build(Document):
     started = DateTimeField()
     finished = DateTimeField()
     builder = ReferenceField(Builder, required=True)
-    status = StringField(default='pending')
+    status = StringField(default=PENDING)
     steps = ListField(EmbeddedDocumentField(BuildStep))
+
+    @asyncio.coroutine
+    def get_parallels(self):
+        """ Returns builds that can be executed in parallel.
+
+        Builds that can be executed in parallel are those that have the
+        same branch and named_tree, but different builders.
+
+        This method returns the parallels builds for the same slave and
+        repository of this build.
+        """
+
+        parallels = type(self).objects.filter(
+            id__ne=self.id, branch=self.branch, named_tree=self.named_tree,
+            builder__ne=self.builder, slave=self.slave)
+        parallels = yield from to_asyncio_future(parallels.to_list())
+        return parallels
 
 
 class Slave(Document):
@@ -169,6 +190,7 @@ class Slave(Document):
                 # Ahhh! bad place for step time stuff. Need to put it on
                 # slave
                 build.started = datetime.datetime.now()
+                build.status = 'running'
                 yield from to_asyncio_future(build.save())
                 build_started.send(self, build=build)
 
@@ -235,48 +257,99 @@ class Slave(Document):
 
 class BuildManager:
 
-    """ A manager for builds
+    """ Controls which builds should be executed sequentially or
+    in parallel.
     """
 
-    @classmethod
-    @asyncio.coroutine
-    def add_builds(cls, sender, revision):
-        """ Asks for builders for ``revision`` and creates all nedded
-        :class:`toxicbuild.master.Build` instances.
+    def __init__(self, repository):
+        self.repository = repository
+        # each slave has its own queue
+        self._queues = defaultdict(deque)
 
-        :param sender: The vcs instance that sent the signal
-        :param revision: Instance of :class:`toxicubuild.master.build.Slave`
-        """
+        # to keep track of which slave is already working
+        # on consume its queue
+        self._is_working = defaultdict(lambda: False)
+
+        self.connect2signals()
+
+    @asyncio.coroutine
+    def add_builds(self, revision):
+        """ Adds the builds for a given revision in the build queue. """
+
         repository = yield from to_asyncio_future(revision.repository)
         for slave in repository.slaves:
-            builders = yield from slave.list_builders(revision)
-            for builder_name in builders:
-                try:
-                    builder = yield from to_asyncio_future(
-                        Builder.objects.get(name=builder_name,
-                                            repository=repository))
-                except Builder.DoesNotExist:
-                    builder = Builder(name=builder_name, repository=repository)
-                    yield from to_asyncio_future(builder.save())
-
-                build = Build(repository=repository, branch=revision.branch,
+            builders = yield from self.get_builders(slave, revision)
+            for builder in builders:
+                build = Build(repository=repository,
+                              branch=revision.branch,
                               named_tree=revision.commit, slave=slave,
                               builder=builder)
 
                 yield from to_asyncio_future(build.save())
-                build_added.send(cls, build=build)
+                self._queues[slave].append(build)
 
-    @classmethod
+            if not self._is_working[slave]:
+                asyncio.async(self._execute_builds(slave))
+
     @asyncio.coroutine
-    def execute_build(cls, sender, build):
-        slave = yield from to_asyncio_future(build.slave)
-        coro = slave.build(build)
-        asyncio.async(coro)
-        return coro
+    def get_builders(self, slave, revision):
+        """ Get builders for a given revision. """
+
+        repository = yield from to_asyncio_future(revision.repository)
+        builders = yield from slave.list_builders(revision)
+        blist = []
+        for builder_name in builders:
+            try:
+                builder = yield from to_asyncio_future(
+                    Builder.objects.get(name=builder_name,
+                                        repository=repository))
+            except Builder.DoesNotExist:
+                builder = Builder(name=builder_name, repository=repository)
+                yield from to_asyncio_future(builder.save())
+
+            blist.append(builder)
+
+        return blist
+
+    def connect2signals(self):
+
+        @asyncio.coroutine
+        def revadded(sender, revision):  # pragma no cover
+            yield from self.add_builds(revision)
+
+        revision_added.connect(revadded, sender=self.repository)
+
+    @asyncio.coroutine
+    def _execute_builds(self, slave):
+        """ Execute the builds in the queue of a given slave. """
+
+        self._is_working[slave] = True
+        try:
+            while True:
+                try:
+                    build = self._queues[slave].popleft()
+                    # the build could be executed in parallel with some
+                    # other preceding build
+                    while build.status != build.PENDING:
+                        build = self._queues[slave].popleft()
+                except IndexError:
+                    break
+
+                parallels = [build] + (yield from build.get_parallels())
+                yield from self._execute_in_parallel(slave, parallels)
+        finally:
+            self._is_working[slave] = False
+
+    @asyncio.coroutine
+    def _execute_in_parallel(self, slave, builds):
+        fs = []
+        for build in builds:
+            f = asyncio.async(slave.build(build))
+            fs.append(f)
+
+        yield from asyncio.wait(fs)
+        return fs
 
 
 # This first signal is sent by a vcs when a new revision is detected.
 revision_added.connect(BuildManager.add_builds)
-
-# This one is sent by BuildManager when a new build is added to db.
-build_added.connect(BuildManager.execute_build)

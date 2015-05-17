@@ -26,6 +26,68 @@ import toxicbuild
 from toxicbuild.master import build, repositories
 
 
+class BuildTest(AsyncTestCase):
+
+    def tearDown(self):
+        build.Build.drop_collection()
+        build.Builder.drop_collection()
+        build.Slave.drop_collection()
+        repositories.RepositoryRevision.drop_collection()
+        repositories.Repository.drop_collection()
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
+
+    @gen_test
+    def test_get_parallels(self):
+        yield from self._create_test_data()
+
+        build = self.builds[0]
+        parallels = yield from build.get_parallels()
+
+        self.assertEqual(len(parallels), 1)
+
+    @asyncio.coroutine
+    def _create_test_data(self):
+        self.slave = yield from build.Slave.create(name='slave',
+                                                   host='localhost',
+                                                   port=7777)
+        self.repo = repositories.Repository(
+            name='reponame', url='git@somewhere', update_seconds=300,
+            vcs_type='git', slaves=[self.slave])
+
+        yield self.repo.save()
+
+        self.revision = repositories.RepositoryRevision(
+            repository=self.repo, branch='master', commit='bgcdf3123',
+            commit_date=datetime.datetime.now()
+        )
+
+        yield self.revision.save()
+
+        self.builders = []
+        for i in range(2):
+            builder = build.Builder(repository=self.repo,
+                                    name='builder-%s' % i)
+            yield builder.save()
+            self.builders.append(builder)
+
+        self.builds = []
+        for i in range(3):
+            try:
+                builder = self.builders[i]
+            except IndexError:
+                builder = self.builders[0]
+
+            binst = build.Build(repository=self.repo, slave=self.slave,
+                                branch='master', named_tree='v0.1',
+                                builder=builder)
+
+            yield binst.save()
+
+            self.builds.append(binst)
+
+
 @mock.patch.object(build, 'log', mock.Mock())
 @mock.patch.object(build, 'build_started', mock.Mock())
 @mock.patch.object(build, 'build_finished', mock.Mock())
@@ -200,6 +262,14 @@ class SlaveTest(AsyncTestCase):
 
 class BuildManagerTest(AsyncTestCase):
 
+    def setUp(self):
+        super().setUp()
+
+        repo = mock.MagicMock()
+        repo.__self__ = repo
+        repo.__func__ = lambda: None
+        self.manager = build.BuildManager(repo)
+
     def tearDown(self):
         build.Slave.drop_collection()
         build.Build.drop_collection()
@@ -210,7 +280,6 @@ class BuildManagerTest(AsyncTestCase):
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
-    @mock.patch.object(build, 'build_added', mock.Mock())
     @gen_test
     def test_add_builds(self):
         yield from self._create_test_data()
@@ -221,33 +290,57 @@ class BuildManagerTest(AsyncTestCase):
 
         self.slave.list_builders = lb
 
-        yield from build.BuildManager.add_builds(mock.Mock(), self.revision)
+        yield from self.manager.add_builds(self.revision)
 
-        self.assertEqual(len(build.build_added.send.call_args_list), 2)
+        self.assertEqual(len(self.manager._queues[self.slave]), 2)
+
+    @gen_test
+    def test_get_builders(self):
+        yield from self._create_test_data()
+
+        @asyncio.coroutine
+        def lb(revision):
+            return ['builder-1', 'builder-2']
+
+        self.slave.list_builders = lb
+
+        builders = yield from self.manager.get_builders(self.slave,
+                                                        self.revision)
+
+        for b in builders:
+            self.assertTrue(isinstance(b, build.Document))
+
+        self.assertEqual(len(builders), 2)
 
     @gen_test
     def test_execute_build(self):
         yield from self._create_test_data()
-        self.BUILDED = False
 
-        @asyncio.coroutine
-        def b(build):
-            self.BUILDED = True
+        self.manager._execute_in_parallel = mock.MagicMock()
+        self.manager._queues[self.slave].extend(
+            [self.build, self.consumed_build])
+        yield from self.manager._execute_builds(self.slave)
+        called_args = self.manager._execute_in_parallel.call_args[0]
 
-        self.slave.build = b
+        self.assertEqual(len(called_args), 2)
 
-        # taking the return and yield from coro are only for
-        # tests purposes.
-        coro = yield from build.BuildManager.execute_build(mock.Mock(),
-                                                           self.build)
+    @gen_test
+    def test_execute_in_parallel(self):
+        yield from self._create_test_data()
 
-        yield from coro
+        builds = [self.build, self.consumed_build]
 
-        self.assertTrue(self.BUILDED)
+        self.slave.build = asyncio.coroutine(lambda x: None)
+
+        fs = yield from self.manager._execute_in_parallel(self.slave, builds)
+
+        for f in fs:
+            self.assertTrue(f.done())
 
     @asyncio.coroutine
     def _create_test_data(self):
         self.slave = build.Slave(host='127.0.0.1', port=7777, name='slave')
+        self.slave.build = asyncio.coroutine(lambda x: None)
         yield self.slave.save()
         self.repo = repositories.Repository(
             name='reponame', url='git@somewhere', update_seconds=300,
@@ -267,3 +360,10 @@ class BuildManagerTest(AsyncTestCase):
         self.build = build.Build(repository=self.repo, slave=self.slave,
                                  branch='master', named_tree='v0.1',
                                  builder=self.builder)
+        yield self.build.save()
+        self.consumed_build = build.Build(repository=self.repo,
+                                          slave=self.slave, branch='master',
+                                          named_tree='v0.1',
+                                          builder=self.builder,
+                                          status='running')
+        yield self.consumed_build.save()
