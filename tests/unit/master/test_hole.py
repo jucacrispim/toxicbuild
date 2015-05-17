@@ -270,6 +270,18 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual(len(builder['builds']), 1)
 
+    @patch.object(hole.Repository, 'add_build', MagicMock())
+    @gen_test
+    def test_builder_start_build(self):
+        yield from self._create_test_data()
+
+        handler = hole.HoleHandler({}, 'repo-add-slave', MagicMock())
+        yield from handler.builder_start_build(self.repo.name, 'b0',
+                                               branch='master',
+                                               slaves_names=['name'])
+
+        self.assertEqual(len(self.repo.add_build.call_args_list), 1)
+
     def test_get_method_signature(self):
 
         def target(a, b='bla', c=None):

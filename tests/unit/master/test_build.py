@@ -283,6 +283,8 @@ class BuildManagerTest(AsyncTestCase):
     @gen_test
     def test_add_builds(self):
         yield from self._create_test_data()
+        self.manager.repository = self.repo
+        self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
 
         @asyncio.coroutine
         def lb(revision):
@@ -303,6 +305,8 @@ class BuildManagerTest(AsyncTestCase):
             return ['builder-1', 'builder-2']
 
         self.slave.list_builders = lb
+
+        self.manager._execute_builds = mock.MagicMock()
 
         builders = yield from self.manager.get_builders(self.slave,
                                                         self.revision)

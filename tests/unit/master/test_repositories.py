@@ -19,7 +19,7 @@
 
 import asyncio
 import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, MagicMock, patch
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.master import repositories, build
@@ -153,6 +153,19 @@ class RepositoryTest(AsyncTestCase):
         commit_date = datetime.datetime.now()
         rev = yield from self.repo.add_revision(branch, commit, commit_date)
         self.assertTrue(rev.id)
+
+    @gen_test
+    def test_add_build(self):
+        yield self.repo.save()
+        self.repo.build_manager.add_build = MagicMock()
+
+        kw = {'branch': 'master', 'builder': Mock()}
+
+        yield from self.repo.add_build(**kw)
+
+        called_kw = self.repo.build_manager.add_build.call_args[1]
+
+        self.assertEqual(called_kw, kw)
 
     @asyncio.coroutine
     def _create_db_revisions(self):

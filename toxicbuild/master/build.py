@@ -276,20 +276,22 @@ class BuildManager:
     def add_builds(self, revision):
         """ Adds the builds for a given revision in the build queue. """
 
-        repository = yield from to_asyncio_future(revision.repository)
-        for slave in repository.slaves:
+        for slave in self.repository.slaves:
             builders = yield from self.get_builders(slave, revision)
             for builder in builders:
-                build = Build(repository=repository,
-                              branch=revision.branch,
-                              named_tree=revision.commit, slave=slave,
-                              builder=builder)
+                yield from self.add_build(builder, revision.branch,
+                                          revision.commit, slave)
 
-                yield from to_asyncio_future(build.save())
-                self._queues[slave].append(build)
+    @asyncio.coroutine
+    def add_build(self, builder, branch, named_tree, slave):
+        build = Build(repository=self.repository, branch=branch,
+                      named_tree=named_tree, slave=slave,
+                      builder=builder)
 
-            if not self._is_working[slave]:
-                asyncio.async(self._execute_builds(slave))
+        yield from to_asyncio_future(build.save())
+        self._queues[slave].append(build)
+        if not self._is_working[slave]:
+            asyncio.async(self._execute_builds(slave))
 
     @asyncio.coroutine
     def get_builders(self, slave, revision):

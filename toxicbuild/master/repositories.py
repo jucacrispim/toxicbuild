@@ -190,6 +190,10 @@ class Repository(Document):
         yield from to_asyncio_future(revision.save())
         return revision
 
+    @asyncio.coroutine
+    def add_build(self, **kwargs):
+        yield from self.build_manager.add_build(**kwargs)
+
     def log(self, msg):
         msg = '[{}] - {}'.format(type(self).__name__, msg)
         utils.log(msg)

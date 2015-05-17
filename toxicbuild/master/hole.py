@@ -271,6 +271,28 @@ class HoleHandler:
         builder_dict.update({'builds': build_list})
         return {'builder-show': builder_dict}
 
+    @asyncio.coroutine
+    def builder_start_build(self, repo_name, builder_name, branch,
+                            named_tree=None, slaves_names=None):
+        repo = yield from Repository.get(name=repo_name)
+        slaves_names = slaves_names or []
+        slaves = []
+        for name in slaves_names:
+            slave = yield from Slave.get(name=name)
+            slaves.append(slave)
+
+        slaves = slaves or repo.slaves
+
+        named_tree = named_tree or branch
+        builder = yield from Builder.get(name=builder_name)
+
+        for slave in slaves:
+            yield from repo.add_build(builder=builder, branch=branch,
+                                      slave=slave,
+                                      named_tree=named_tree)
+
+        return {'repo-start-build': '{} builds added'.format(len(slaves))}
+
     def list_funcs(self):
         """ Lists the functions available for user interfaces. """
 
