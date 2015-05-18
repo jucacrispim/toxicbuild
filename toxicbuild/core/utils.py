@@ -21,6 +21,7 @@
 import asyncio
 import importlib
 import os
+import resource
 from subprocess import PIPE
 import sys
 from toxicbuild.core.exceptions import ExecCmdError, ConfigError
@@ -111,7 +112,6 @@ def _create_daemon(stdout, stderr, workdir):  # pragma: no cover
     _fork_off_and_die()
     os.umask(0)
     os.chdir(workdir)
-    _close_file_descriptors()
     _redirect_file_descriptors(stdout, stderr)
 
 
@@ -127,7 +127,3 @@ def _redirect_file_descriptors(stdout, stderr):  # pragma: no cover
 
     sys.stdout = open(stdout, 'a', 1)
     sys.stderr = open(stderr, 'a', 1)
-
-
-def _close_file_descriptors():  # pragma: no cover
-    sys.stdin.close()
