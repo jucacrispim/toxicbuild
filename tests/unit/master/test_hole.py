@@ -92,7 +92,7 @@ class HoleHandlerTest(AsyncTestCase):
     def test_handle(self):
         protocol = MagicMock()
         handler = hole.HoleHandler({}, 'my-action', protocol)
-        handler.funcs = {'my-action': lambda *a, **kw: None}
+        handler.my_action = lambda *a, **kw: None
 
         yield from handler.handle()
         code = protocol.send_response.call_args[1]['code']
@@ -108,7 +108,7 @@ class HoleHandlerTest(AsyncTestCase):
         def my_action(*a, ** kw):
             return True
 
-        handler.funcs = {'my-action': my_action}
+        handler.my_action = my_action
 
         yield from handler.handle()
         code = protocol.send_response.call_args[1]['code']
@@ -226,7 +226,7 @@ class HoleHandlerTest(AsyncTestCase):
         yield from self._create_test_data()
         data = {'host': '127.0.0.1', 'port': 7777}
         handler = hole.HoleHandler(data, 'slave-remove', MagicMock())
-        yield from handler.slave_remove(name='name')
+        yield from handler.slave_remove(slave_name='name')
 
         self.assertEqual((yield hole.Slave.objects.count()), 0)
 
@@ -294,7 +294,10 @@ class HoleHandlerTest(AsyncTestCase):
         handler = hole.HoleHandler({}, 'action', MagicMock())
         funcs = handler.list_funcs()['list-funcs']
 
-        self.assertEqual(funcs.keys(), handler.funcs.keys())
+        keys = sorted([k.replace('_', '-') for k
+                       in handler._get_action_methods().keys()])
+        funcs = sorted(list(funcs.keys()))
+        self.assertEqual(funcs, keys)
 
     @patch.object(repositories.utils, 'log', Mock())
     @asyncio.coroutine

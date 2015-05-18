@@ -75,27 +75,16 @@ class HoleHandler:
         self.data = data
         self.action = action
         self.protocol = protocol
-        self.funcs = {'repo-add': self.repo_add,
-                      'repo-remove': self.repo_remove,
-                      'repo-list': self.repo_list,
-                      'repo-update': self.repo_update,
-                      'repo-add-slave': self.repo_add_slave,
-                      'repo-remove-slave': self.repo_remove_slave,
-                      'slave-add': self.slave_add,
-                      'slave-remove': self.slave_remove,
-                      'slave-list': self.slave_list,
-                      'builder-list': self.builder_list,
-                      'builder-show': self.builder_show,
-                      'list-funcs': self.list_funcs}
 
     @asyncio.coroutine
     def handle(self):
         self.log('Executing {}'.format(self.action))
 
-        func = self.funcs.get(self.action)
-        if not func:
+        attrname = self.action.replace('-', '_')
+        if not attrname in self._get_action_methods():
             raise UIFunctionNotFound(self.action)
 
+        func = getattr(self, attrname)
         r = func(**self.data)
         if asyncio.coroutines.iscoroutine(r):
             r = yield from r
@@ -198,14 +187,14 @@ class HoleHandler:
         return {'slave-add': slave_dict}
 
     @asyncio.coroutine
-    def slave_remove(self, name):
+    def slave_remove(self, slave_name):
         """ Removes a slave from toxicbuild. """
 
-        slave = yield from Slave.get(name=name)
+        slave = yield from Slave.get(name=slave_name)
 
         yield from to_asyncio_future(slave.delete())
 
-        return {'slave-remove', 'ok'}
+        return {'slave-remove': 'ok'}
 
     @asyncio.coroutine
     def slave_list(self):
@@ -272,6 +261,7 @@ class HoleHandler:
     @asyncio.coroutine
     def builder_start_build(self, repo_name, builder_name, branch,
                             named_tree=None, slaves_names=None):
+        """ Starts a build in a given repository. """
         repo = yield from Repository.get(name=repo_name)
         slaves_names = slaves_names or []
         slaves = []
@@ -294,10 +284,22 @@ class HoleHandler:
     def list_funcs(self):
         """ Lists the functions available for user interfaces. """
 
-        funcs = {k: self._get_method_signature(v)
-                 for k, v in self.funcs.items() if v}
+        funcs = self._get_action_methods()
+
+        funcs = {n.replace('_', '-'): self._get_method_signature(m)
+                 for n, m in funcs.items()}
 
         return {'list-funcs': funcs}
+
+    def _get_action_methods(self):
+        """ Returns the methods that are avaliable as actions for users. """
+        forbiden = ['handle', 'protocol', 'log']
+
+        func_names = [n for n in dir(self) if not n.startswith('_')
+                      and n not in forbiden and callable(getattr(self, n))]
+
+        funcs = {n: getattr(self, n) for n in func_names}
+        return funcs
 
     def log(self, msg):
         msg = '[{}] {}'.format(type(self).__name__, msg)
