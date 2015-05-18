@@ -156,8 +156,7 @@ class Git(VCS):
     @asyncio.coroutine
     def pull(self, branch_name):
 
-        cmd = '{} pull --no-edit {}'.format(self.vcsbin,
-                                            branch_name.replace('/', ' '))
+        cmd = '{} pull --no-edit origin {}'.format(self.vcsbin, branch_name)
 
         ret = yield from self.exec_cmd(cmd)
         return ret
@@ -210,7 +209,7 @@ class Git(VCS):
         remote_branches = (yield from self.exec_cmd(cmd)).split('\n')
         # master, with some shitty arrow...
         remote_branches.pop(0)
-        return [b.strip() for b in remote_branches]
+        return [b.strip().split('/')[1] for b in remote_branches]
 
 
 VCS_TYPES = {'git': Git}

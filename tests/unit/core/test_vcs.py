@@ -113,7 +113,7 @@ class GitTest(AsyncTestCase):
 
         vcs.exec_cmd = e
 
-        yield from self.vcs.pull('origin/master')
+        yield from self.vcs.pull('master')
 
     @gen_test
     def test_has_changes(self):
@@ -138,7 +138,7 @@ class GitTest(AsyncTestCase):
             emock(a[0])
             return 'origin/HEAD  -> origin/master\norigin/dev\norigin/master'
 
-        expected_branches = ['origin/dev', 'origin/master']
+        expected_branches = ['dev', 'master']
         vcs.exec_cmd = e
         branches = yield from self.vcs.get_remote_branches()
         called_cmd = emock.call_args[0][0]
