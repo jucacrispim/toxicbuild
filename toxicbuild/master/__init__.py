@@ -6,7 +6,7 @@ from toxicbuild.core.utils import log
 from toxicbuild.core.conf import Settings
 
 # the api
-from toxicbuild.master.repositories import Repository
+from toxicbuild.master.repositories import Repository, RepositoryRevision
 from toxicbuild.master.build import Slave, Build, Builder
 from toxicbuild.master.hole import HoleServer
 

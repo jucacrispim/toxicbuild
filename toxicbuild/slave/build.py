@@ -66,6 +66,7 @@ class BuildManager:
 
         yield from self.vcs.fetch()
         yield from self.vcs.checkout(self.named_tree)
+
         yield from self.vcs.pull(self.named_tree)
 
     # the whole purpose of toxicbuild is this!

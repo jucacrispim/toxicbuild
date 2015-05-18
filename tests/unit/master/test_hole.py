@@ -123,16 +123,6 @@ class HoleHandlerTest(AsyncTestCase):
             yield from handler.handle()
 
     @gen_test
-    def test_handle_with_exception(self):
-        protocol = MagicMock()
-        handler = hole.HoleHandler({}, 'my-action', protocol)
-        handler.funcs = {'my-action': MagicMock(side_effect=[Exception])}
-        yield from handler.handle()
-        code = protocol.send_response.call_args[1]['code']
-
-        self.assertEqual(code, 1)
-
-    @gen_test
     def test_repo_add(self):
         yield from self._create_test_data()
 
@@ -224,8 +214,9 @@ class HoleHandlerTest(AsyncTestCase):
     def test_slave_add(self):
         data = {'host': '127.0.0.1', 'port': 1234}
         handler = hole.HoleHandler(data, 'slave-add', MagicMock())
-        slave = yield from handler.slave_add(name='slave', host='locahost',
-                                             port=1234)
+        slave = yield from handler.slave_add(slave_name='slave',
+                                             slave_host='locahost',
+                                             slave_port=1234)
         slave = slave['slave-add']
 
         self.assertTrue(slave['_id'])

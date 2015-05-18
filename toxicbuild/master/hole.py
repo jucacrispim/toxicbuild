@@ -47,7 +47,7 @@ class UIHole(BaseToxicProtocol):
             yield from handler.handle()
         except Exception as e:
             msg = str(e)
-            self.send_response(code=1, body={'error': msg})
+            yield from self.send_response(code=1, body={'error': msg})
         finally:
             self.close_connection()
 
@@ -96,14 +96,11 @@ class HoleHandler:
         if not func:
             raise UIFunctionNotFound(self.action)
 
-        try:
-            r = func(**self.data)
-            if asyncio.coroutines.iscoroutine(r):
-                r = yield from r
-            self.protocol.send_response(code=0, body=r)
-        except Exception as e:
-            msg = str(e)
-            self.protocol.send_response(code=1, body={'error': msg})
+        r = func(**self.data)
+        if asyncio.coroutines.iscoroutine(r):
+            r = yield from r
+
+        yield from self.protocol.send_response(code=0, body=r)
 
     def _get_method_signature(self, method):
         sig = inspect.signature(method)
@@ -191,10 +188,11 @@ class HoleHandler:
         return {'repo-remove-slave': 'ok'}
 
     @asyncio.coroutine
-    def slave_add(self, name, host, port):
+    def slave_add(self, slave_name, slave_host, slave_port):
         """ Adds a new slave to toxicbuild. """
 
-        slave = yield from Slave.create(name=name, host=host, port=port)
+        slave = yield from Slave.create(name=slave_name, host=slave_host,
+                                        port=slave_port)
 
         slave_dict = json.loads(slave.to_json())
         return {'slave-add': slave_dict}

@@ -68,13 +68,14 @@ class BaseToxicClient:
     def read(self):
         # '{}' is decoded as an empty dict, so in json
         # context we can consider it as being a False json
-        data = yield from self.reader.read(10000) or '{}'
-        data = data.decode()
+        data = (yield from self.reader.read(10000)).decode()
+        data = data.strip('\n') or '{}'
         return json.loads(data)
 
     @asyncio.coroutine
     def get_response(self):
         response = yield from self.read()
-        if 'code' in response and int(response['code']) != 0:
+
+        if not response or ('code' in response and int(response['code']) != 0):
             raise ToxicClientException(response['body'])
         return response
