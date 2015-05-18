@@ -43,15 +43,12 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
 
     from toxicbuild.master import run
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run())
-
     if daemonize:
         pidfile = 'toxicmaster.pid'
-        daemon(call=loop.run_forever, cargs=(), ckwargs={}, stdout=stdout,
+        daemon(call=run, cargs=(), ckwargs={}, stdout=stdout,
                stderr=stderr, workdir=workdir, pidfile=pidfile)
     else:
-        loop.run_forever()
+        run()
 
 
 @command

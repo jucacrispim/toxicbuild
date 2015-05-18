@@ -102,7 +102,7 @@ def daemonize(call, cargs, ckwargs, stdout, stderr,
     pid = os.getpid()
     with open(pidfile, 'w') as f:
         f.write(str(pid))
-    print(call)
+
     call(*cargs, **ckwargs)
 
 

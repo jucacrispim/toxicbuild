@@ -22,20 +22,29 @@ dbconn = connect(**dbsettings)
 
 
 @asyncio.coroutine
-def run():  # pragma no cover
-    """ Runs Toxicbuild """
+def toxicinit():
+    """ Initialize services. """
 
-    log('[main] Scheduling all')
+    log('[init] Scheduling all')
     yield from Repository.schedule_all()
     if settings.ENABLE_HOLE:
         hole_host = settings.HOLE_ADDR
         hole_port = settings.HOLE_PORT
         server = HoleServer(hole_host, hole_port)
-        log('[main] Serving UIHole')
+        log('[init] Serving UIHole')
         server.serve()
 
-    log('[main] Toxicbuild is running!')
+    log('[init] Toxicbuild is running!')
 
-make_pyflakes_happy = [Slave, Build, Builder]
+
+def run():  # pragma no cover
+    """ Runs Toxicbuild """
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(toxicinit())
+    loop.run_forever()
+
+
+make_pyflakes_happy = [Slave, Build, Builder, RepositoryRevision]
 
 del make_pyflakes_happy
