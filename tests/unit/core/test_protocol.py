@@ -24,10 +24,8 @@ from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core import protocol
 
 
-@mock.patch.object(protocol.utils, 'log', mock.MagicMock())
 class BaseToxicProtocolTest(AsyncTestCase):
 
-    @mock.patch.object(protocol.utils, 'log', mock.MagicMock())
     def setUp(self):
         super().setUp()
         loop = mock.Mock()

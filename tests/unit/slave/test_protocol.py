@@ -25,7 +25,6 @@ from toxicbuild.slave import protocols
 
 @mock.patch.object(asyncio, 'StreamReader', mock.Mock())
 @mock.patch.object(asyncio, 'StreamWriter', mock.MagicMock())
-@mock.patch.object(protocols.BaseToxicProtocol, 'log', mock.MagicMock())
 class ProtocolTest(AsyncTestCase):
 
     @mock.patch.object(protocols.BaseToxicProtocol, 'send_response',
@@ -34,7 +33,6 @@ class ProtocolTest(AsyncTestCase):
                        mock.MagicMock())
     @mock.patch.object(asyncio, 'StreamReader', mock.MagicMock())
     @mock.patch.object(asyncio, 'StreamWriter', mock.MagicMock())
-    @mock.patch.object(protocols.BaseToxicProtocol, 'log', mock.MagicMock())
     def setUp(self):
         super().setUp()
         loop = mock.MagicMock()

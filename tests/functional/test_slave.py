@@ -102,7 +102,7 @@ class SlaveTest(unittest.TestCase):
         cls.toxicslave = os.path.join(SCRIPTS_DIR, 'toxicslave')
         start_cmd = '{} start {} --daemonize'.format(
             cls.toxicslave, SLAVE_ROOT_DIR).split()
-        cls.pidfile = os.path.join(SLAVE_ROOT_DIR, 'toxicslave7777.pid')
+        cls.pidfile = os.path.join(SLAVE_ROOT_DIR, 'toxicslave.pid')
         subprocess.call(start_cmd)
 
     @classmethod

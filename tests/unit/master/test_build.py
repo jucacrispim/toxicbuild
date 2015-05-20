@@ -88,7 +88,6 @@ class BuildTest(AsyncTestCase):
             self.builds.append(binst)
 
 
-@mock.patch.object(build, 'log', mock.Mock())
 @mock.patch.object(build, 'build_started', mock.Mock())
 @mock.patch.object(build, 'build_finished', mock.Mock())
 @mock.patch.object(build, 'step_started', mock.Mock())

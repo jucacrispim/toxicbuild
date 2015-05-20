@@ -52,7 +52,6 @@ class GitPollerTest(AsyncTestCase):
         self.assertTrue(pollers.revision_added.send.called)
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
-    @mock.patch.object(pollers, 'log', mock.Mock())
     @gen_test
     def test_process_changes(self):
         # now in the future, of course!
@@ -76,7 +75,6 @@ class GitPollerTest(AsyncTestCase):
         self.assertEqual(len(pollers.revision_added.send.call_args_list), 2)
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
-    @mock.patch.object(pollers, 'log', mock.Mock())
     @gen_test
     def test_poll(self):
         yield from self._create_db_revisions()
