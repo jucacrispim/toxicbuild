@@ -27,7 +27,8 @@ import json
 from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import log
-from toxicbuild.master import Slave, Repository, Build, Builder
+from toxicbuild.master import (Slave, Repository, Build, Builder,
+                               RepositoryRevision)
 from toxicbuild.master.exceptions import UIFunctionNotFound
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished)
@@ -63,6 +64,7 @@ class HoleHandler:
     * `repo-update`
     * `repo-add-slave`
     * `repo-remove-slave`
+    * `repo-start-build`
     * `slave-add`
     * `slave-list`
     * `slave-remove`
@@ -115,8 +117,8 @@ class HoleHandler:
 
         slaves_info = slaves or []
         slaves = []
-        for host, port in slaves_info:
-            slave = yield from Slave.get(host=host, port=port)
+        for name in slaves_info:
+            slave = yield from Slave.get(name=name)
             slaves.append(slave)
 
         repo = yield from Repository.create(repo_name, repo_url,
@@ -157,12 +159,11 @@ class HoleHandler:
         return {'repo-update': 'ok'}
 
     @asyncio.coroutine
-    def repo_add_slave(self, repo_name, slave_name, slave_host, slave_port):
+    def repo_add_slave(self, repo_name, slave_name):
         """ Adds a slave to a repository. """
 
         repo = yield from Repository.get(name=repo_name)
-        slave = yield from Slave.get(name=slave_name, host=slave_host,
-                                     port=slave_port)
+        slave = yield from Slave.get(name=slave_name)
         yield from repo.add_slave(slave)
         return {'repo-add-slave': 'ok'}
 
@@ -175,6 +176,42 @@ class HoleHandler:
         slave = yield from Slave.get(name=slave_name)
         yield from repo.remove_slave(slave)
         return {'repo-remove-slave': 'ok'}
+
+    @asyncio.coroutine
+    def repo_start_build(self, repo_name, branch, builder_name=None,
+                         named_tree=None, slaves=[]):
+        """ Starts a(some) build(s) in a given repository. """
+
+        # Mutable stuff on method declaration Sin!!! Take that, PyLint!
+
+        repo = yield from Repository.get(name=repo_name)
+
+        slaves = yield from [(yield from Slave.get(name=name))
+                             for name in slaves]
+        slaves = slaves or repo.slaves
+
+        if not named_tree:
+            rev = yield from repo.get_latest_revision_for_branch(branch)
+        else:
+            rev = RepositoryRevision.objects.get(repository=repo,
+                                                 branch=branch,
+                                                 commit=named_tree)
+
+        if not builder_name:
+            builders = yield from self._get_builders(slaves, rev)
+        else:
+            blist = [(yield from Builder.get(name=builder_name))]
+            builders = {}
+            for slave in slaves:
+                builders.update({slave: blist})
+
+        for slave in slaves:
+            for builder in builders[slave]:
+                yield from repo.add_build(builder=builder, branch=branch,
+                                          slave=slave,
+                                          named_tree=named_tree)
+
+        return {'repo-start-build': '{} builds added'.format(len(slaves))}
 
     @asyncio.coroutine
     def slave_add(self, slave_name, slave_host, slave_port):
@@ -258,29 +295,6 @@ class HoleHandler:
         builder_dict.update({'builds': build_list})
         return {'builder-show': builder_dict}
 
-    @asyncio.coroutine
-    def builder_start_build(self, repo_name, builder_name, branch,
-                            named_tree=None, slaves_names=None):
-        """ Starts a build in a given repository. """
-        repo = yield from Repository.get(name=repo_name)
-        slaves_names = slaves_names or []
-        slaves = []
-        for name in slaves_names:
-            slave = yield from Slave.get(name=name)
-            slaves.append(slave)
-
-        slaves = slaves or repo.slaves
-
-        named_tree = named_tree or branch
-        builder = yield from Builder.get(name=builder_name)
-
-        for slave in slaves:
-            yield from repo.add_build(builder=builder, branch=branch,
-                                      slave=slave,
-                                      named_tree=named_tree)
-
-        return {'repo-start-build': '{} builds added'.format(len(slaves))}
-
     def list_funcs(self):
         """ Lists the functions available for user interfaces. """
 
@@ -300,6 +314,16 @@ class HoleHandler:
 
         funcs = {n: getattr(self, n) for n in func_names}
         return funcs
+
+    @asyncio.coroutine
+    def _get_builders(self, slaves, revision):
+
+        # slave: [builders]
+        builders = {}
+        for slave in slaves:
+            builders[slave] = (yield from slave.list_builders(revision))
+
+        return builders
 
     def log(self, msg):
         msg = '[{}] {}'.format(type(self).__name__, msg)

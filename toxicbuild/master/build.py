@@ -164,7 +164,11 @@ class Slave(Document):
         with (yield from self.get_client()) as client:
             builders = yield from client.list_builders(repo_url, vcs_type,
                                                        branch, named_tree)
-        return builders
+
+        builders = yield from [
+            (yield from Builder.get(repository=repository, name=bname))
+            for bname in builders]
+        return list(builders)
 
     @asyncio.coroutine
     def build(self, build):

@@ -178,7 +178,8 @@ class SlaveTest(AsyncTestCase):
         self.slave.get_client = gc
 
         builders = yield from self.slave.list_builders(self.revision)
-        self.assertEqual(builders, ['builder-1', 'builder-2'])
+
+        self.assertEqual(builders, [self.builder, self.other_builder])
 
     @gen_test
     def test_build(self):
@@ -251,6 +252,10 @@ class SlaveTest(AsyncTestCase):
         yield self.revision.save()
 
         self.builder = build.Builder(repository=self.repo, name='builder-1')
+        yield self.builder.save()
+        self.other_builder = build.Builder(repository=self.repo,
+                                           name='builder-2')
+        yield self.other_builder.save()
         yield self.builder.save()
 
         self.build = build.Build(repository=self.repo, slave=self.slave,

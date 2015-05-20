@@ -138,6 +138,13 @@ class RepositoryTest(AsyncTestCase):
         self.assertEqual(expected, rev.commit)
 
     @gen_test
+    def test_get_latest_revision_for_branch_without_revision(self):
+        yield from self._create_db_revisions()
+        rev = yield from self.repo.get_latest_revision_for_branch(
+            'nonexistant')
+        self.assertIsNone(rev)
+
+    @gen_test
     def test_get_latest_revisions(self):
         yield from self._create_db_revisions()
         revs = yield from self.repo.get_latest_revisions()

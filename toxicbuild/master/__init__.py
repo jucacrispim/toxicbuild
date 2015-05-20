@@ -22,7 +22,7 @@ dbconn = connect(**dbsettings)
 
 
 @asyncio.coroutine
-def toxicinit():
+def toxicinit():  # pragma no cover
     """ Initialize services. """
 
     log('[init] Scheduling all')

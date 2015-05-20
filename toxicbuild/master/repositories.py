@@ -152,8 +152,14 @@ class Repository(Document):
         :param branch: branch name
         """
         latest = RepositoryRevision.objects.filter(
-            repository=self).order_by('-commit_date')
-        latest = yield from to_asyncio_future(latest.first())
+            repository=self, branch=branch).order_by('-commit_date')
+
+        try:
+            latest = yield from to_asyncio_future(latest.first())
+        except AttributeError:
+            # when first is None
+            latest = None
+
         return latest
 
     @asyncio.coroutine
