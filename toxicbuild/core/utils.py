@@ -20,8 +20,8 @@
 
 import asyncio
 import importlib
+import logging
 import os
-import resource
 from subprocess import PIPE
 import sys
 from toxicbuild.core.exceptions import ExecCmdError, ConfigError
@@ -63,8 +63,9 @@ def load_module_from_file(filename):
     return module
 
 
-def log(msg, output=sys.stdout):
-    output.write('{}\n'.format(msg))
+def log(msg, level='info'):
+    log = getattr(logging, level)
+    log(msg)
 
 
 # inherit_docs thanks to Raymond Hettinger on stackoverflow

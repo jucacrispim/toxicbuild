@@ -133,9 +133,9 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
 
         return data
 
-    def log(self, msg, output=sys.stdout):
+    def log(self, msg):
         msg = '[{}] {}'.format(type(self).__name__, msg)
-        utils.log(msg, output)
+        utils.log(msg)
 
     def _check_data_cb(self, future):
         # The thing here is: run client_connected only if everything ok

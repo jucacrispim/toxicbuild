@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import logging
 from mongomotor import connect
 from toxicbuild.core.utils import log
 from toxicbuild.core.conf import Settings
@@ -37,8 +38,11 @@ def toxicinit():  # pragma no cover
     log('[init] Toxicbuild is running!')
 
 
-def run():  # pragma no cover
+def run(loglevel):  # pragma no cover
     """ Runs Toxicbuild """
+
+    loglevel = getattr(logging, loglevel.upper())
+    logging.basicConfig(level=loglevel)
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(toxicinit())

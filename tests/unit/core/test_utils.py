@@ -20,6 +20,7 @@
 
 import asyncio
 import os
+from unittest.mock import patch, Mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core import utils
@@ -60,20 +61,15 @@ class UtilsTest(AsyncTestCase):
 
         self.assertEqual(mod.BLA, 'val')
 
+    @patch.object(utils.logging, 'info', Mock())
     def test_log(self):
-        msg = 'a nice message'
-
-        class output:
-            @classmethod
-            def write(cls, msg):
-                cls.msg = msg
-
-        utils.log(msg, output=output)
-        self.assertEqual(output.msg, msg + '\n')
+        utils.log('msg')
+        self.assertTrue(utils.logging.info.called)
 
     def test_inherit_docs(self):
 
         class A:
+
             @asyncio.coroutine
             def m():
                 """ some doc"""
@@ -81,6 +77,7 @@ class UtilsTest(AsyncTestCase):
 
         @utils.inherit_docs
         class B(A):
+
             @asyncio.coroutine
             def m():
                 return False

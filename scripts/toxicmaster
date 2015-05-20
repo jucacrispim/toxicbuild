@@ -27,7 +27,7 @@ PIDFILE = 'toxicmaster.pid'
 
 @command
 def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
-          conffile=None):
+          conffile=None, loglevel='info'):
     """ Starts toxicbuild master.
 
     :param workdir: Work directory for server.
@@ -37,6 +37,7 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
     :param -c, --conffile: path to config file. Defaults to None.
       If not conffile, will look for a file called ``toxicmaster.conf``
       inside ``workdir``
+    :param --loglevel: Level for logging messages. Defaults to `info`.
     """
 
     if conffile:
@@ -45,10 +46,10 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
     from toxicbuild.master import run
 
     if daemonize:
-        daemon(call=run, cargs=(), ckwargs={}, stdout=stdout,
+        daemon(call=run, cargs=(loglevel,), ckwargs={}, stdout=stdout,
                stderr=stderr, workdir=workdir, pidfile=PIDFILE)
     else:
-        run()
+        run(loglevel)
 
 
 @command
