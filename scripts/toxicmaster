@@ -18,10 +18,11 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 import os
 from mando import command, main
 from toxicbuild.core.utils import daemonize as daemon
+
+PIDFILE = 'toxicmaster.pid'
 
 
 @command
@@ -44,24 +45,26 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
     from toxicbuild.master import run
 
     if daemonize:
-        pidfile = 'toxicmaster.pid'
         daemon(call=run, cargs=(), ckwargs={}, stdout=stdout,
-               stderr=stderr, workdir=workdir, pidfile=pidfile)
+               stderr=stderr, workdir=workdir, pidfile=PIDFILE)
     else:
         run()
 
 
 @command
-def stop(pidfile):
+def stop(workdir):
     """ Kills toxicmaster.
 
-    :param pidfile: file containing process id.
+    :param workdir: Workdir for master to be killed. Looks for a file
+      ``toxicmaster.pid`` inside ``workdir``.
     """
 
-    with open(pidfile) as fd:
+    os.chdir(workdir)
+    with open(PIDFILE) as fd:
         pid = int(fd.read())
 
     os.kill(pid, 9)
+    os.remove(PIDFILE)
 
 
 if __name__ == '__main__':

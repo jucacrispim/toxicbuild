@@ -22,6 +22,8 @@ import os
 from mando import command, main
 from toxicbuild.core.utils import daemonize as daemon
 
+PIDFILE = 'toxicslave.pid'
+
 
 @command
 def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
@@ -52,25 +54,27 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
     port = settings.PORT
 
     if daemonize:
-        pidfile = 'toxicslave{}.pid'.format(port)
         daemon(call=server.run_server, cargs=(addr, port), ckwargs={},
-               stdout=stdout, stderr=stderr, workdir=workdir, pidfile=pidfile)
+               stdout=stdout, stderr=stderr, workdir=workdir, pidfile=PIDFILE)
     else:
         os.chdir(workdir)
         server.run_server(addr, port)
 
 
 @command
-def stop(pidfile):
+def stop(workdir):
     """ Stops a buid server instance.
 
-    :param pidfile: file containing process id.
+    :param workdir: Workdir for master to be killed. Looks for a file
+      ``toxicslave.pid`` inside ``workdir``.
     """
 
-    with open(pidfile) as fd:
+    os.chdir(workdir)
+    with open(PIDFILE) as fd:
         pid = int(fd.read())
 
     os.kill(pid, 9)
+    os.remove(PIDFILE)
 
 
 if __name__ == '__main__':
