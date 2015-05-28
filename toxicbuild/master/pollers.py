@@ -52,8 +52,7 @@ class Poller:
         if not self.vcs.workdir_exists():
             yield from self.vcs.clone(self.repository.url)
 
-        if (yield from self.vcs.has_changes()):
-            yield from self.process_changes()
+        yield from self.process_changes()
 
     @asyncio.coroutine
     def process_changes(self):

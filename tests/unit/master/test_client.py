@@ -18,10 +18,10 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import json
 from unittest import mock
+import tornado
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.master import client
+from toxicbuild.master import client, build, repositories
 
 
 class BuildClientTest(AsyncTestCase):
@@ -30,11 +30,21 @@ class BuildClientTest(AsyncTestCase):
         super().setUp()
 
         addr, port = '127.0.0.1', 7777
-        self.client = client.BuildClient(addr, port)
+        slave = mock.Mock()
+        self.client = client.BuildClient(slave, addr, port)
+
+    def tearDown(self):
+        build.Build.drop_collection()
+        repositories.Repository.drop_collection()
+        build.Slave.drop_collection()
+        build.Builder.drop_collection()
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
 
     @gen_test
     def test_healthcheck_not_alive(self):
-        self.client.write = mock.Mock(side_effect=Exception)
+        self.client.write = mock.MagicMock(side_effect=Exception)
 
         isalive = yield from self.client.healthcheck()
 
@@ -42,7 +52,7 @@ class BuildClientTest(AsyncTestCase):
 
     @gen_test
     def test_healthcheck_alive(self):
-        self.client.write = mock.Mock()
+        self.client.write = mock.MagicMock()
 
         @asyncio.coroutine
         def gr(*a, **kw):
@@ -56,7 +66,7 @@ class BuildClientTest(AsyncTestCase):
 
     @gen_test
     def test_list_builders(self):
-        self.client.write = mock.Mock()
+        self.client.write = mock.MagicMock()
 
         @asyncio.coroutine
         def gr():
@@ -74,7 +84,7 @@ class BuildClientTest(AsyncTestCase):
 
     @gen_test
     def test_build(self):
-        self.client.write = mock.Mock()
+        self.client.write = mock.MagicMock()
 
         self.GR_COUNT = -1
 
@@ -99,18 +109,36 @@ class BuildClientTest(AsyncTestCase):
 
         @asyncio.coroutine
         def gr():
+            # I need this sleep here so I can test the exact
+            # behavior of the get_response method. No, it does not
+            # sleep, but pass the control to the select thing.
+            yield from asyncio.sleep(0.1)
             self.GR_COUNT += 1
             return self.GR_RETURNS[self.GR_COUNT]
 
         self.client.get_response = gr
 
-        for build_info in self.client.build('repo_url', 'vcs_type', 'branch',
-                                            'named_tree', 'builder_name'):
+        slave = build.Slave(name='slv', host='localhost', port=1234)
+        yield slave.save()
+        process = mock.Mock()
 
-            self.assertEqual(build_info,
-                             self.GR_RETURNS[self.GR_COUNT]['body'])
+        self.client.slave._process_build_info = asyncio.coroutine(
+            lambda build, build_info: process())
 
-        self.assertEqual(self.GR_COUNT, 3)
+        repo = repositories.Repository(name='repo', url='git@somewhere.com',
+                                       slaves=[slave], update_seconds=300,
+                                       vcs_type='git')
+        yield repo.save()
+        builder = build.Builder(repository=repo, name='b1')
+        yield builder.save()
+
+        buildinstance = build.Build(repository=repo, slave=slave,
+                                    builder=builder, branch='master',
+                                    named_tree='123sdf09')
+        yield buildinstance.save()
+
+        yield from self.client.build(buildinstance)
+        self.assertEqual(len(process.call_args_list), 3)
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @gen_test
@@ -122,6 +150,7 @@ class BuildClientTest(AsyncTestCase):
 
         client.asyncio.open_connection = oc
 
-        inst = yield from client.get_build_client('localhost', 7777)
+        slave = mock.Mock()
+        inst = yield from client.get_build_client(slave, 'localhost', 7777)
 
         self.assertTrue(inst._connected)

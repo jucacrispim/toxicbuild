@@ -172,8 +172,7 @@ class Git(VCS):
         remote_branches = yield from self.get_remote_branches()
         revisions = {}
         for branch in remote_branches:
-            # branches are like origin/master
-            yield from self.checkout(branch.split('/')[1])
+            yield from self.checkout(branch)
             yield from self.pull(branch)
             since_date = since.get(branch)
 

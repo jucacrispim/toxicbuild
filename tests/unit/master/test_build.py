@@ -183,55 +183,91 @@ class SlaveTest(AsyncTestCase):
     @gen_test
     def test_build(self):
         yield from self._create_test_data()
+        client = mock.MagicMock()
 
         @asyncio.coroutine
         def gc():
-            client = mock.MagicMock()
 
             @asyncio.coroutine
-            def b(repo_url, vcs_type, branch, named_tree, builder_name):
-                yield {'status': 'running', 'cmd': 'ls', 'name': 'list_files',
-                       'output': ''}
-
-                yield {'status': 'success', 'cmd': 'ls', 'name': 'list_files',
-                       'output': 'somefile.txt\n'}
-
-                yield {'status': 'success', 'total_steps': 1,
-                       'steps': [{'status': 'success', 'cmd': 'ls',
-                                  'name': 'list_files',
-                                  'output': 'somefile.txt\n'}]}
+            def b(build):
+                client.build()
+                return []
 
             client.__enter__.return_value.build = b
             return client
 
         self.slave.get_client = gc
-        build = yield from self.slave.build(self.build)
+        future = yield from self.slave.build(self.build)
+        yield from future
+        self.assertTrue(client.build.called)
 
-        self.assertEqual(build.status, 'success')
-        self.assertEqual(len(build.steps), 1)
-        self.assertTrue(build.finished)
+    @mock.patch.object(build, 'build_started', mock.Mock())
+    @gen_test
+    def test_process_build_info_with_build_started(self):
+        yield from self._create_test_data()
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+
+        build_info = {'status': 'running', 'steps': [],
+                      'started': now, 'finished': None}
+
+        yield from self.slave._process_build_info(self.build, build_info)
+        self.assertTrue(build.build_started.send.called)
+
+    @mock.patch.object(build, 'build_finished', mock.Mock())
+    @gen_test
+    def test_process_build_info_with_build_finished(self):
+        yield from self._create_test_data()
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+
+        build_info = {'status': 'running', 'steps': [],
+                      'started': now, 'finished': now}
+
+        yield from self.slave._process_build_info(self.build, build_info)
+        self.assertTrue(build.build_finished.send.called)
 
     @gen_test
-    def test_get_step_new(self):
+    def test_process_build_info_with_step(self):
         yield from self._create_test_data()
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
 
-        step = yield from self.slave._get_step(self.build, 'ls', 'run ls',
-                                               'running', '')
-        self.assertEqual(step, self.build.steps[0])
+        build_info = {'status': 'running', 'cmd': 'ls', 'name': 'ls',
+                      'started': now, 'finished': None, 'output': ''}
+
+        self.slave._set_step_info = mock.MagicMock(
+            spec=self.slave._set_step_info)
+        yield from self.slave._process_build_info(self.build, build_info)
+        self.assertTrue(self.slave._set_step_info.called)
 
     @gen_test
-    def test_get_step(self):
+    def test_set_step_info_new(self):
         yield from self._create_test_data()
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+        started = now.strftime('%a %b %d %H:%M:%S %Y %z')
+        finished = now.strftime('%a %b %d %H:%M:%S %Y %z')
 
-        step = yield from self.slave._get_step(self.build, 'ls', 'run ls',
-                                               'running', '')
-        step_cmd = step.command
+        yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
+                                             'running', '', started, finished)
+        self.assertEqual(len(self.build.steps), 1)
 
-        step = yield from self.slave._get_step(self.build, 'ls', 'run ls',
-                                               'success', 'somefile.txt\n')
+    @gen_test
+    def test_set_step_info(self):
+        yield from self._create_test_data()
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+        started = now.strftime('%a %b %d %H:%M:%S %Y %z')
+        finished = now.strftime('%a %b %d %H:%M:%S %Y %z')
 
-        self.assertEqual(step.command, step_cmd)
-        self.assertEqual(step.status, 'success')
+        yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
+                                             'running', '', started, finished)
+        yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
+                                             'success', 'somefile.txt\n',
+                                             started, finished)
+
+        self.assertEqual(self.build.steps[0].status, 'success')
         self.assertEqual(len(self.build.steps), 1)
 
     @asyncio.coroutine
@@ -298,7 +334,7 @@ class BuildManagerTest(AsyncTestCase):
 
         yield from self.manager.add_builds(self.revision)
 
-        self.assertEqual(len(self.manager._queues[self.slave]), 2)
+        self.assertEqual(len(self.manager._queues[self.slave.name]), 2)
 
     @gen_test
     def test_get_builders(self):
@@ -325,7 +361,7 @@ class BuildManagerTest(AsyncTestCase):
         yield from self._create_test_data()
 
         self.manager._execute_in_parallel = mock.MagicMock()
-        self.manager._queues[self.slave].extend(
+        self.manager._queues[self.slave.name].extend(
             [self.build, self.consumed_build])
         yield from self.manager._execute_builds(self.slave)
         called_args = self.manager._execute_in_parallel.call_args[0]
@@ -375,3 +411,54 @@ class BuildManagerTest(AsyncTestCase):
                                           builder=self.builder,
                                           status='running')
         yield self.consumed_build.save()
+
+
+class BuilderTest(AsyncTestCase):
+
+    def tearDown(self):
+        build.Builder.drop_collection()
+        repositories.Repository.drop_collection()
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
+
+    @gen_test
+    def test_create(self):
+        repo = repositories.Repository(name='bla', url='git@bla.com',
+                                       update_seconds=300, vcs_type='git')
+        yield repo.save()
+
+        builder = yield from build.Builder.create(repository=repo, name='b1')
+        self.assertTrue(builder.id)
+
+    @gen_test
+    def test_get(self):
+        repo = repositories.Repository(name='bla', url='git@bla.com',
+                                       update_seconds=300, vcs_type='git')
+        yield repo.save()
+        builder = yield from build.Builder.create(repository=repo, name='b1')
+
+        returned = yield from build.Builder.get(repository=repo, name='b1')
+
+        self.assertEqual(returned, builder)
+
+    @mock.patch.object(build.Builder, 'create', mock.MagicMock())
+    @gen_test
+    def test_get_or_create_with_create(self):
+
+        yield from build.Builder.get_or_create(name='bla')
+
+        self.assertTrue(build.Builder.create.called)
+
+    @mock.patch.object(build.Builder, 'create', mock.MagicMock())
+    @gen_test
+    def test_get_or_create_with_get(self):
+        repo = repositories.Repository(name='bla', url='git@bla.com',
+                                       update_seconds=300, vcs_type='git')
+        yield repo.save()
+        builder = yield from build.Builder.create(repository=repo, name='b1')
+
+        returned = yield from build.Builder.get_or_create(
+            repository=repo, name='b1')
+
+        self.assertEqual(returned, builder)

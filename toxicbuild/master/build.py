@@ -54,6 +54,16 @@ class Builder(Document):
         builder = yield from to_asyncio_future(cls.objects.get(**kwargs))
         return builder
 
+    @classmethod
+    @asyncio.coroutine
+    def get_or_create(cls, **kwargs):
+        try:
+            builder = yield from cls.get(**kwargs)
+        except cls.DoesNotExist:
+            builder = yield from cls.create(**kwargs)
+
+        return builder
+
 
 class BuildStep(EmbeddedDocument):
 
@@ -132,7 +142,8 @@ class Slave(Document):
         """ Returns a :class:`toxicbuild.master.client.BuildClient` instance
         already connected to the server.
         """
-        connected_client = yield from get_build_client(self.host, self.port)
+        connected_client = yield from get_build_client(self, self.host,
+                                                       self.port)
         return connected_client
 
     @asyncio.coroutine
@@ -166,7 +177,8 @@ class Slave(Document):
                                                        branch, named_tree)
 
         builders = yield from [
-            (yield from Builder.get(repository=repository, name=bname))
+            (yield from Builder.get_or_create(repository=repository,
+                                              name=bname))
             for bname in builders]
         return list(builders)
 
@@ -177,86 +189,63 @@ class Slave(Document):
         :param build: An instance of :class:`toxicbuild.master.build.Build`
         """
 
-        # messy method! not so sure if this works! be careful! sorry!
-        # It supposedly works as follows:
-        # client.build() is a generator, each iteration returns a info about
-        # the build. It sends 2 infos about steps, when it is started and when
-        # it is finished and the last respose from the server is the
-        # info about the build itself.
-        repository = yield from to_asyncio_future(build.repository)
-
         with (yield from self.get_client()) as client:
-            builder_name = (yield from to_asyncio_future(build.builder)).name
-            for build_info in client.build(repository.url, repository.vcs_type,
-                                           build.branch, build.named_tree,
-                                           builder_name):
-
-                # Ahhh! bad place for step time stuff. Need to put it on
-                # slave
-                build.started = datetime.datetime.now()
-                build.status = 'running'
-                yield from to_asyncio_future(build.save())
-                build_started.send(self, build=build)
-
-                # response with total_steps is the last one
-                if 'total_steps' in build_info:
-                    break
-
-                step = yield from self._get_step(build, build_info['cmd'],
-                                                 build_info['name'],
-                                                 build_info['status'],
-                                                 build_info['output'])
-
-                # when a running step is sent it means that the step
-                # has just started
-                if step.status == 'running':
-                    msg = 'Executing command {} for {}'.format(
-                        step.command, repository.url)
-
-                    self.log(msg)
-                    step.started = datetime.datetime.now()
-                    yield from to_asyncio_future(build.save())
-                    step_started.send(self, build=build, step=step)
-
-                # here the step was finished
-                else:
-                    msg = 'Command {} for {} finished with output {}'.format(
-                        step.command,  repository.url, step.output)
-
-                    self.log(msg)
-                    # same time stuff shit
-                    step.finished = datetime.datetime.now()
-                    step_finished.send(self, build=build, step=step)
-
-        build.status = build_info['status']
-        build.finished = datetime.datetime.now()
-        # again the asyncio Future vs tornado Future
-        yield from to_asyncio_future(build.save())
-        build_finished.send(self, build)
-        return build
-
-    def log(self, msg):
-        basemsg = '[slave {} - {}] '.format((self.host, self.port),
-                                            datetime.datetime.now())
-        msg = basemsg + msg
-        log(msg)
+            builds = yield from client.build(build)
+        return builds
 
     @asyncio.coroutine
-    def _get_step(self, build, cmd, name, status, output):
+    def _process_build_info(self, build, build_info):
+        """ This method is called by the client when some information about
+        the build is sent by the build server.
+        """
+        # when there's the steps key it's a build info
+        if 'steps' in build_info:
+            repo = yield from to_asyncio_future(build.repository)
+            build.status = build_info['status']
+            build.started = build_info['started']
+            build.finished = build_info['finished']
+            yield from to_asyncio_future(build.save())
+            if not build.finished:
+                build_started.send(sender=repo, build=build)
+            else:
+                build_finished.send(sender=repo, build=build)
+
+        else:
+            # here is the step info
+            self._set_step_info(build, build_info['cmd'], build_info['name'],
+                                build_info['status'], build_info['output'],
+                                build_info['started'], build_info['finished'])
+
+    @asyncio.coroutine
+    def _set_step_info(self, build, cmd, name, status, output, started,
+                       finished):
+        dtformat = lambda dtstr: datetime.datetime.strptime(
+            dtstr, '%a %b %d %H:%M:%S %Y %z')
+
+        repo = yield from to_asyncio_future(build.repository)
         requested_step = None
         for step in build.steps:
             if step.command == cmd:
                 step.status = status
                 step.output = output
+                step.finished = dtformat(finished)
                 requested_step = step
+                step_finished.send(repo, build=build, step=requested_step)
 
         if not requested_step:
             requested_step = BuildStep(name=name, command=cmd,
-                                       status=status, output=output)
+                                       status=status, output=output,
+                                       started=dtformat(started))
+            step_started.send(repo, build=build, step=requested_step)
             build.steps.append(requested_step)
 
         yield from to_asyncio_future(build.save())
-        return requested_step
+
+    # def log(self, msg):
+    #     basemsg = '[slave {} - {}] '.format((self.host, self.port),
+    #                                         datetime.datetime.now())
+    #     msg = basemsg + msg
+    #     log(msg)
 
 
 class BuildManager:
@@ -288,13 +277,15 @@ class BuildManager:
 
     @asyncio.coroutine
     def add_build(self, builder, branch, named_tree, slave):
+
         build = Build(repository=self.repository, branch=branch,
                       named_tree=named_tree, slave=slave,
                       builder=builder)
 
         yield from to_asyncio_future(build.save())
-        self._queues[slave].append(build)
-        if not self._is_working[slave]:
+        self._queues[slave.name].append(build)
+
+        if not self._is_working[slave.name]:
             asyncio.async(self._execute_builds(slave))
 
     @asyncio.coroutine
@@ -329,22 +320,22 @@ class BuildManager:
     def _execute_builds(self, slave):
         """ Execute the builds in the queue of a given slave. """
 
-        self._is_working[slave] = True
+        self._is_working[slave.name] = True
         try:
             while True:
                 try:
-                    build = self._queues[slave].popleft()
+                    build = self._queues[slave.name].popleft()
                     # the build could be executed in parallel with some
                     # other preceding build
                     while build.status != build.PENDING:
-                        build = self._queues[slave].popleft()
+                        build = self._queues[slave.name].popleft()
                 except IndexError:
                     break
 
                 parallels = [build] + (yield from build.get_parallels())
                 yield from self._execute_in_parallel(slave, parallels)
         finally:
-            self._is_working[slave] = False
+            self._is_working[slave.name] = False
 
     @asyncio.coroutine
     def _execute_in_parallel(self, slave, builds):
@@ -358,4 +349,4 @@ class BuildManager:
 
 
 # This first signal is sent by a vcs when a new revision is detected.
-revision_added.connect(BuildManager.add_builds)
+# revision_added.connect(BuildManager.add_builds)

@@ -79,12 +79,13 @@ class BuildClientTest(AsyncTestCase):
         self.client.disconnect()
         self.assertFalse(self.client._connected)
 
+    @gen_test
     def test_write(self):
-        self.client.writer = mock.Mock()
+        self.client.writer = mock.MagicMock()
 
         data = {'some': 'data'}
 
-        self.client.write(data)
+        yield from self.client.write(data)
 
         written_data = self.client.writer.write.call_args[0][0]
         written_data = json.loads(written_data.decode())

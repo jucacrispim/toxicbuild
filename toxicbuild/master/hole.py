@@ -192,6 +192,7 @@ class HoleHandler:
 
         if not named_tree:
             rev = yield from repo.get_latest_revision_for_branch(branch)
+            named_tree = rev.commit
         else:
             rev = RepositoryRevision.objects.get(repository=repo,
                                                  branch=branch,
@@ -205,13 +206,16 @@ class HoleHandler:
             for slave in slaves:
                 builders.update({slave: blist})
 
+        builds_count = 0
+
         for slave in slaves:
             for builder in builders[slave]:
+                builds_count += 1
                 yield from repo.add_build(builder=builder, branch=branch,
                                           slave=slave,
                                           named_tree=named_tree)
 
-        return {'repo-start-build': '{} builds added'.format(len(slaves))}
+        return {'repo-start-build': '{} builds added'.format(builds_count)}
 
     @asyncio.coroutine
     def slave_add(self, slave_name, slave_host, slave_port):

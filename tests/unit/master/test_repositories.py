@@ -50,6 +50,7 @@ class RepositoryTest(AsyncTestCase):
         self.assertEqual(type(self.repo.poller), repositories.Poller)
 
     @patch.object(repositories.Repository, 'log', Mock())
+    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_create(self):
         slave = yield from build.Slave.create(name='name', host='bla.com',
@@ -60,8 +61,33 @@ class RepositoryTest(AsyncTestCase):
         self.assertTrue(repo.id)
         self.assertEqual(repo.slaves[0], slave)
 
+    @gen_test
+    def test_fist_run(self):
+        repo = repositories.Repository('repo', 'git@bla.com', 300, 'git')
+        yield repo.save()
+
+        @asyncio.coroutine
+        def clone(url):
+            return True
+
+        repo.poller.vcs.clone = clone
+
+        @asyncio.coroutine
+        def gr():
+            now = datetime.datetime.now()
+            return {'master': [{'commit': 's23sdf', 'commit_date': now},
+                               {'commit': 'sdf34', 'commit_date': now}]}
+
+        repo.poller.vcs.get_revisions = gr
+
+        yield from repo.first_run()
+
+        revisions = repositories.RepositoryRevision.objects.all()
+        self.assertEqual((yield revisions.count()), 1)
+
     @patch.object(repositories, 'shutil', Mock())
     @patch.object(repositories.Repository, 'log', Mock())
+    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_remove(self):
         repo = yield from repositories.Repository.create(
@@ -80,6 +106,7 @@ class RepositoryTest(AsyncTestCase):
             yield from repositories.Repository.get(url=repo.url)
 
     @patch.object(repositories.Repository, 'log', Mock())
+    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_get(self):
         slave = yield from build.Slave.create(name='name', host='bla.com',

@@ -82,8 +82,21 @@ class Repository(Document):
         repo = cls(url=url, update_seconds=update_seconds, vcs_type=vcs_type,
                    slaves=slaves, name=name)
         yield from to_asyncio_future(repo.save())
+        yield from repo.first_run()
         repo.schedule()
         return repo
+
+    @asyncio.coroutine
+    def first_run(self):
+        """ Called when a repository is created. Gets the last revision
+        for each one of the remote branches, but do not start builds. """
+
+        yield from self.poller.vcs.clone(self.url)
+
+        branch_revisions = yield from self.poller.vcs.get_revisions()
+        for branch, revisions in branch_revisions.items():
+            last_rev = revisions[-1]
+            yield from self.add_revision(branch, **last_rev)
 
     @asyncio.coroutine
     def remove(self):

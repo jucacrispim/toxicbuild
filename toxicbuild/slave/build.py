@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from datetime import datetime
 import os
 from toxicbuild.core import get_vcs
 from toxicbuild.core.exceptions import ExecCmdError
@@ -64,10 +65,11 @@ class BuildManager:
         if not self.vcs.workdir_exists():
             yield from self.vcs.clone(self.repo_url)
 
-        yield from self.vcs.fetch()
-        yield from self.vcs.checkout(self.named_tree)
+        # yield from self.vcs.fetch()
 
-        yield from self.vcs.pull(self.named_tree)
+        yield from self.vcs.checkout(self.branch)
+        yield from self.vcs.pull(self.branch)
+        yield from self.vcs.checkout(self.named_tree)
 
     # the whole purpose of toxicbuild is this!
     # see the git history and look for the first versions.
@@ -77,6 +79,7 @@ class BuildManager:
         """ Returns a list with all builders names for this branch
         based on toxicbuild.conf file
         """
+
         builders = [b['name'] for b in self.configmodule.BUILDERS
                     if (b.get('branch') == self.branch or b.get(
                         'branch')is None)]
@@ -108,8 +111,8 @@ class BuildManager:
 
     # kind of wierd place for this thing
     @asyncio.coroutine
-    def send_step_info(self, step_info):
-        yield from self.protocol.send_response(code=0, body=step_info)
+    def send_info(self, info):
+        yield from self.protocol.send_response(code=0, body=info)
 
 
 class Builder:
@@ -130,26 +133,37 @@ class Builder:
 
     @asyncio.coroutine
     def build(self):
+        dtformat = lambda dt: dt.strftime('%a %b %d %H:%M:%S %Y %z')
         build_status = None
-        build_info = {'steps': []}
+        build_info = {'steps': [],
+                      'status': 'running',
+                      'started': dtformat(datetime.now()),
+                      'finished': None}
 
         with change_dir(self.workdir):
+            # self.manager.send_info(build_info)
+
             for step in self.steps:
                 step_info = {'status': 'running',
                              'cmd': step.command,
                              'name': step.name,
+                             'started': dtformat(datetime.now()),
+                             'finished': None,
                              'output': ''}
 
-                yield from self.manager.send_step_info(step_info)
+                yield from self.manager.send_info(step_info)
 
                 step_info.update((yield from step.execute()))
+                step_info.update({'finished': dtformat(datetime.now())})
+                yield from self.manager.send_info(step_info)
 
+                # here is: if build_status is something other than None
+                # or success (ie failed) we don't change it anymore, the build
+                # is failed anyway.
                 if build_status is None or build_status == 'success':
                     build_status = step_info['status']
 
                 build_info['steps'].append(step_info)
-
-                yield from self.manager.send_step_info(step_info)
 
         build_info['status'] = build_status
         build_info['total_steps'] = len(self.steps)
@@ -172,7 +186,6 @@ class BuildStep:
             output = yield from exec_cmd(self.command, cwd='.')
             status = 'success'
         except ExecCmdError as e:
-            # ?
             output = e.args[0]
             status = 'fail'
 

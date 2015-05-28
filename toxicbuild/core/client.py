@@ -54,6 +54,7 @@ class BaseToxicClient:
         self.writer.close()
         self._connected = False
 
+    @asyncio.coroutine
     def write(self, data):
         """ Writes ``data`` to the server.
 
@@ -63,6 +64,7 @@ class BaseToxicClient:
         data = json.dumps(data)
         data = data.encode('utf-8')
         self.writer.write(data)
+        yield from self.writer.drain()
 
     @asyncio.coroutine
     def read(self):

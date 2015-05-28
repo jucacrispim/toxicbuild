@@ -59,8 +59,8 @@ class BuilderManagerTest(AsyncTestCase):
         yield from self.manager.update_and_checkout()
 
         self.assertTrue(self.manager.vcs.clone.called)
-        self.assertTrue(self.manager.vcs.fetch.called)
         self.assertTrue(self.manager.vcs.checkout.called)
+        self.assertTrue(self.manager.vcs.pull.called)
 
     def test_list_builders(self):
         expected = ['builder1', 'builder2']
