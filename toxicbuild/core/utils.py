@@ -20,6 +20,7 @@
 
 import asyncio
 import importlib
+import json
 import logging
 import os
 from subprocess import PIPE
@@ -84,6 +85,45 @@ def inherit_docs(cls):
                     func.__doc__ = parfunc.__doc__
                     break
     return cls
+
+
+@asyncio.coroutine
+def read_stream(reader):
+    """ Reads the input stream. First reads the bytes until the first \n.
+    These first bytes are the length of the full message.
+
+    :param reader: An instance of :class:`asyncio.StreamReader`
+    """
+
+    data = yield from reader.read(1)
+    if not data or data == b'\n':
+        raw_data = b''
+    else:
+        char = None
+        while char != b'\n' and char != b'':
+            char = yield from reader.read(1)
+            data += char
+
+        len_data = int(data)
+
+        raw_data = yield from reader.read(len_data)
+
+    return raw_data
+
+
+@asyncio.coroutine
+def write_stream(writer, data):
+    """ Writes ``data`` to output. Encodes data to utf-8 and prepend the
+    lenth of the data before sending it.
+
+    :param writer: An instance of asyncio.StreamWriter
+    :param data: String data to be sent.
+    """
+
+    data = data.encode('utf-8')
+    data = '{}\n'.format(len(data)).encode('utf-8') + data
+    writer.write(data)
+    yield from writer.drain()
 
 
 # Sorry, but not willing to test  a daemonizer.

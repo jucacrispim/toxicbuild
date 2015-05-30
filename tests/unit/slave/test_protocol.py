@@ -206,6 +206,16 @@ class ProtocolTest(AsyncTestCase):
 
         self.assertTrue(builder.build.called)
 
+    @gen_test
+    def test_client_connected_with_wrong_action(self):
+        self.message = {'action': 'bla'}
+
+        self.protocol.connection_made(self.transport)
+
+        self._wait_futures()
+
+        self.assertTrue(self.response['code'], 1)
+
     def _wait_futures(self):
         loop = asyncio.get_event_loop()
 

@@ -25,7 +25,6 @@ from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.master import hole, build, repositories
 
 
-@patch.object(hole.BaseToxicProtocol, 'log', Mock())
 class UIHoleTest(AsyncTestCase):
 
     @patch.object(hole.HoleHandler, 'handle', MagicMock())

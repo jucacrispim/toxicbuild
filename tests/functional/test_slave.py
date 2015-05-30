@@ -17,50 +17,39 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import json
+import asyncio
 import os
-import unittest
-import socket
+import tornado
+from tornado.testing import AsyncTestCase, gen_test
+from toxicbuild.core import BaseToxicClient
+from toxicbuild.core.exceptions import ToxicClientException
 import subprocess
 from tests.functional import REPO_DIR, SCRIPTS_DIR, SLAVE_ROOT_DIR
 
 
-class DummyBuildClient:
+class DummyBuildClient(BaseToxicClient):
 
-    def __init__(self, addr, port):
-        self.addr = addr
-        self.port = port
-        self.sock = socket.socket()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.repo_url = REPO_DIR
 
-    def __enter__(self):
-        self.connect()
-        return self
+    @asyncio.coroutine
+    def request2server(self, action, body):
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.disconnect()
+        data = {'action': action, 'body': body}
+        yield from self.write(data)
 
-    def connect(self):
-        self.sock.connect((self.addr, self.port))
+        response = yield from self.get_response()
+        return response
 
-    def disconnect(self):
-        self.sock.close()
-
-    def send(self, data):
-        if isinstance(data, str):
-            data = data.encode('utf-8')
-        self.sock.send(data)
-
-    def recv(self):
-        r = self.sock.recv(1000)
-        return r
-
+    @asyncio.coroutine
     def is_server_alive(self):
-        data = {'action': 'healthcheck'}
-        self.send(json.dumps(data))
-        resp = json.loads(self.recv().decode())
-        return not bool(int(resp['code']))
 
+        resp = yield from self.request2server('healthcheck', {})
+        code = int(resp['code'])
+        return code == 0
+
+    @asyncio.coroutine
     def build(self, builder_name):
         data = {'action': 'build',
                 'body': {'repo_url': self.repo_url,
@@ -69,19 +58,19 @@ class DummyBuildClient:
                          'named_tree': 'master',
                          'builder_name': builder_name}}
 
-        self.send(json.dumps(data))
+        r = yield from self.request2server(data['action'], data['body'])
 
         build_resp = []
-        r = self.recv()
-
         while r:
-            r = json.loads(r.decode())
             build_resp.append(r)
-            r = self.recv()
+            r = yield from self.get_response()
+            if not r:
+                break
 
         steps, build_status = build_resp[:-1], build_resp[-1]
         return steps, build_status
 
+    @asyncio.coroutine
     def list_builders(self):
         data = {'action': 'list_builders',
                 'body': {'repo_url': self.repo_url,
@@ -89,13 +78,21 @@ class DummyBuildClient:
                          'vcs_type': 'git',
                          'named_tree': 'master', }}
 
-        self.send(json.dumps(data))
-        r = self.recv()
-        r = json.loads(r.decode())
+        r = yield from self.request2server(data['action'], data['body'])
         return r
 
 
-class SlaveTest(unittest.TestCase):
+@asyncio.coroutine
+def get_dummy_client():
+    dc = DummyBuildClient('localhost', 7777)
+    yield from dc.connect()
+    return dc
+
+
+class SlaveTest(AsyncTestCase):
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
 
     @classmethod
     def setUpClass(cls):
@@ -113,19 +110,23 @@ class SlaveTest(unittest.TestCase):
         os.kill(pid, 9)
         os.remove(cls.pidfile)
 
+    @gen_test
     def test_healthcheck(self):
-        with DummyBuildClient('localhost', 7777) as client:
-            self.assertTrue(client.is_server_alive())
+        with (yield from get_dummy_client()) as client:
+            is_alive = yield from client.is_server_alive()
+            self.assertTrue(is_alive)
 
+    @gen_test
     def test_list_builders(self):
-        with DummyBuildClient('localhost', 7777) as client:
-            builders = client.list_builders()['body']['builders']
+        with (yield from get_dummy_client()) as client:
+            builders = (yield from client.list_builders())['body']['builders']
 
         self.assertEqual(builders, ['builder-1'], builders)
 
+    @gen_test
     def test_build(self):
-        with DummyBuildClient('localhost', 7777) as client:
-            step_info, build_status = client.build('builder-1')
+        with (yield from get_dummy_client()) as client:
+            step_info, build_status = yield from client.build('builder-1')
 
         self.assertEqual(len(step_info), 2)
         self.assertEqual(build_status['body']['total_steps'], 1)

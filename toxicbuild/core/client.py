@@ -19,6 +19,7 @@
 
 import asyncio
 import json
+from toxicbuild.core import utils
 from toxicbuild.core.exceptions import ToxicClientException
 
 
@@ -62,22 +63,20 @@ class BaseToxicClient:
           converted to json and enconded using utf-8.
         """
         data = json.dumps(data)
-        data = data.encode('utf-8')
-        self.writer.write(data)
-        yield from self.writer.drain()
+        yield from utils.write_stream(self.writer, data)
 
     @asyncio.coroutine
     def read(self):
         # '{}' is decoded as an empty dict, so in json
         # context we can consider it as being a False json
-        data = (yield from self.reader.read(10000)).decode()
-        data = data.strip('\n') or '{}'
+        data = yield from utils.read_stream(self.reader)
+        data = data.decode() or '{}'
         return json.loads(data)
 
     @asyncio.coroutine
     def get_response(self):
         response = yield from self.read()
 
-        if not response or ('code' in response and int(response['code']) != 0):
+        if 'code' in response and int(response['code']) != 0:
             raise ToxicClientException(response['body'])
         return response

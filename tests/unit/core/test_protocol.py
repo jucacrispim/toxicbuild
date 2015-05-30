@@ -36,7 +36,17 @@ class BaseToxicProtocolTest(AsyncTestCase):
         self.response = None
 
         def w(msg):
-            self.response = json.loads(msg.decode())
+            data = ''
+            for i, ordin in enumerate(msg):
+                char = chr(ordin)
+                if char == '\n':
+                    break
+                data += char
+
+            y = i + 1
+            full_data = msg[y:y + int(data)]
+
+            self.response = json.loads(full_data.decode())
 
         self.protocol._stream_writer.write = w
 
@@ -44,9 +54,16 @@ class BaseToxicProtocolTest(AsyncTestCase):
         self.message = json.dumps(
             {'action': 'thing'}).encode('utf-8')
 
+        self.full_message = '{}\n'.format(len(self.message)).encode(
+            'utf-8') + self.message
+
+        self._rlimit = 0
+
         @asyncio.coroutine
         def r(limit):
-            return self.message
+            part = self.full_message[self._rlimit:limit + self._rlimit]
+            self._rlimit += limit
+            return part
 
         self.protocol._stream_reader.read = r
 
@@ -78,7 +95,7 @@ class BaseToxicProtocolTest(AsyncTestCase):
 
     @gen_test
     def test_check_data_without_data(self):
-        self.message = b''
+        self.full_message = b''
 
         yield from self.protocol.check_data()
 
@@ -86,14 +103,18 @@ class BaseToxicProtocolTest(AsyncTestCase):
 
     @gen_test
     def test_check_data_without_action(self):
-        self.message = b'{"sauci": "fufu"}'
+        message = '{"sauci": "fufu"}'
+        self.full_message = '{}\n'.format(len(message)) + message
+        self.full_message = self.full_message.encode('utf-8')
 
         yield from self.protocol.check_data()
         self.assertEqual(self.response['code'], 1)
 
     @gen_test
     def test_check_data(self):
-        self.message = b'{"action": "hack!"}'
+        message = '{"action": "hack!"}'
+        self.full_message = '{}\n'.format(len(message)) + message
+        self.full_message = self.full_message.encode('utf-8')
 
         yield from self.protocol.check_data()
 

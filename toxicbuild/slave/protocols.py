@@ -21,6 +21,7 @@ import asyncio
 from toxicbuild.core.protocol import BaseToxicProtocol
 from toxicbuild.slave import BuildManager
 from toxicbuild.slave.exceptions import BadData
+from toxicbuild.core.utils import log
 
 
 class BuildServerProtocol(BaseToxicProtocol):
@@ -31,26 +32,31 @@ class BuildServerProtocol(BaseToxicProtocol):
     @asyncio.coroutine
     def client_connected(self):
         try:
+            self.log('executing {} for {}'.format(self.action, self.peername))
             if self.action == 'healthcheck':
-                self.log('executing {}'.format(self.action))
                 yield from self.healthcheck()
 
             elif self.action == 'list_builders':
-                self.log('executing {}'.format(self.action))
                 yield from self.list_builders()
 
             elif self.action == 'build':
-                self.log('executing {}'.format(self.action))
                 # build has a strange behavior. It sends messages to the client
                 # directly. I think it should be an iterable here and the
                 # protocol should send the messages. But how do to that?
                 # I tought, instead of the iterable, use messages sent from
                 # BuildManager and captured by the protocol, but didn't try
                 # that yet. Any ideas?
+
                 build_info = yield from self.build()
+
                 yield from self.send_response(code=0, body=build_info)
+            else:
+                msg = 'Action {} does not exist'.format(self.action)
+                self.log(msg)
+                yield from self.send_response(code=1, body={'eror': msg})
+
         except BadData:
-            msg = 'Something wrong with your data {!r}'.format(self.raw_data)
+            msg = 'Something wrong with your data {}'.format(self.raw_data)
             self.log('bad data')
             yield from self.send_response(code=1, body=msg)
         except Exception as e:
@@ -103,3 +109,6 @@ class BuildServerProtocol(BaseToxicProtocol):
         manager = BuildManager(self, repo_url, vcs_type, branch, named_tree)
         yield from manager.update_and_checkout()
         return manager
+
+    def log(self, msg, level='info'):
+        log(msg, level)

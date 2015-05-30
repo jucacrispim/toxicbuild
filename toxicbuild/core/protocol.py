@@ -19,7 +19,6 @@
 
 import asyncio
 import json
-import sys
 from toxicbuild.core import utils
 
 
@@ -53,8 +52,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
                                                    self._loop)
         self._connected = True
 
-        peername = self._transport.get_extra_info('peername')
-        self.log('client connected from {}'.format(peername))
+        self.peername = self._transport.get_extra_info('peername')
 
         self._check_data_future = asyncio.async(self.check_data())
         self._check_data_future.add_done_callback(self._check_data_cb)
@@ -68,7 +66,6 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
         self.data = yield from self.get_json_data()
 
         if not self.data:
-            self.log('no or bad data {!r}'.format(self.raw_data))
             msg = 'Something wrong with your data {!r}'.format(self.raw_data)
             yield from self.send_response(code=1, body=msg)
             return self.close_connection()
@@ -77,7 +74,6 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
 
         if not self.action:
             msg = 'No action found!'
-            self.log(msg)
             yield from self.send_response(code=1, body=msg)
             return self.close_connection()
 
@@ -94,7 +90,6 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
     def close_connection(self):
         """ Closes the connection with the client
         """
-        self.log('closing connection')
         self._stream_writer.close()
         self._connected = False
 
@@ -108,17 +103,14 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
         """
         response = {'code': code,
                     'body': body}
-        data = json.dumps(response).encode('utf-8')
-        self._stream_writer.write(data)
-        yield from self._stream_writer.drain()
+        data = json.dumps(response)
+        yield from utils.write_stream(self._stream_writer, data)
 
     @asyncio.coroutine
     def get_raw_data(self):
         """ Returns the raw data sent by the client
         """
-        data = yield from self._stream_reader.read(self._stream_reader._limit)
-        self.raw_data = data
-        return self.raw_data
+        return utils.read_stream(self._stream_reader)
 
     @asyncio.coroutine
     def get_json_data(self):
@@ -132,10 +124,6 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
             data = None
 
         return data
-
-    def log(self, msg):
-        msg = '[{}] {}'.format(type(self).__name__, msg)
-        utils.log(msg)
 
     def _check_data_cb(self, future):
         # The thing here is: run client_connected only if everything ok

@@ -20,7 +20,7 @@
 
 import asyncio
 import os
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, MagicMock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core import utils
@@ -83,3 +83,55 @@ class UtilsTest(AsyncTestCase):
                 return False
 
         self.assertEqual(B.m.__doc__, A.m.__doc__)
+
+
+class StreamUtilsTest(AsyncTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.bad_data = b'\n'
+        self.good_data = b'17\n{"action": "bla"}'
+        self.data = b'{"action": "bla"}'
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
+
+    @gen_test
+    def test_read_stream_without_data(self):
+        reader = Mock()
+
+        @asyncio.coroutine
+        def read(limit):
+            return self.bad_data
+        reader.read = read
+
+        ret = yield from utils.read_stream(reader)
+
+        self.assertFalse(ret)
+
+    @gen_test
+    def test_read_stream_good_data(self):
+        reader = Mock()
+
+        self._rlimit = 0
+
+        @asyncio.coroutine
+        def read(limit):
+            part = self.good_data[self._rlimit: limit + self._rlimit]
+            self._rlimit += limit
+            return part
+
+        reader.read = read
+
+        ret = yield from utils.read_stream(reader)
+
+        self.assertEqual(ret, self.data)
+
+    @gen_test
+    def test_write_stream(self):
+        writer = MagicMock()
+        yield from utils.write_stream(writer, self.data.decode())
+
+        called_arg = writer.write.call_args[0][0]
+
+        self.assertEqual(called_arg, self.good_data)

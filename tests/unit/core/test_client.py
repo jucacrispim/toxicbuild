@@ -18,7 +18,6 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import json
 from unittest import mock
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core import client
@@ -83,21 +82,27 @@ class BuildClientTest(AsyncTestCase):
     def test_write(self):
         self.client.writer = mock.MagicMock()
 
-        data = {'some': 'data'}
+        data = {"some": "json"}
+        msg = '16\n{"some": "json"}'.encode('utf-8')
 
         yield from self.client.write(data)
 
-        written_data = self.client.writer.write.call_args[0][0]
-        written_data = json.loads(written_data.decode())
+        called_arg = self.client.writer.write.call_args[0][0].decode()
 
-        self.assertEqual(written_data, data)
+        self.assertEqual(called_arg, msg.decode())
 
     @gen_test
     def test_read(self):
 
+        msg = '16\n{"some": "json"}'.encode('utf-8')
+
+        self._rlimit = 0
+
         @asyncio.coroutine
         def read(nbytes):
-            return '{"some": "json"}'.encode('utf-8')
+            part = msg[self._rlimit: self._rlimit + nbytes]
+            self._rlimit += nbytes
+            return part
 
         self.client.reader = mock.Mock()
         self.client.reader.read = read
