@@ -23,6 +23,7 @@ from unittest import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 import toxicbuild
+from toxicbuild.core.utils import datetime2string
 from toxicbuild.master import build, repositories
 
 
@@ -206,7 +207,7 @@ class SlaveTest(AsyncTestCase):
     def test_process_build_info_with_build_started(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
-        now = datetime.datetime.now(tz=tz)
+        now = datetime2string(datetime.datetime.now(tz=tz))
 
         build_info = {'status': 'running', 'steps': [],
                       'started': now, 'finished': None}
@@ -219,7 +220,7 @@ class SlaveTest(AsyncTestCase):
     def test_process_build_info_with_build_finished(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
-        now = datetime.datetime.now(tz=tz)
+        now = datetime2string(datetime.datetime.now(tz=tz))
 
         build_info = {'status': 'running', 'steps': [],
                       'started': now, 'finished': now}

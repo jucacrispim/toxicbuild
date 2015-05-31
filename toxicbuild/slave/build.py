@@ -22,7 +22,8 @@ from datetime import datetime
 import os
 from toxicbuild.core import get_vcs
 from toxicbuild.core.exceptions import ExecCmdError
-from toxicbuild.core.utils import load_module_from_file, exec_cmd
+from toxicbuild.core.utils import(
+    load_module_from_file, exec_cmd, log, datetime2string)
 from toxicbuild.slave.contextmanagers import change_dir
 from toxicbuild.slave.exceptions import BuilderNotFound
 
@@ -133,21 +134,22 @@ class Builder:
 
     @asyncio.coroutine
     def build(self):
-        dtformat = lambda dt: dt.strftime('%a %b %d %H:%M:%S %Y %z')
         build_status = None
         build_info = {'steps': [],
                       'status': 'running',
-                      'started': dtformat(datetime.now()),
+                      'started': datetime2string(datetime.now()),
                       'finished': None}
 
         with change_dir(self.workdir):
-            # self.manager.send_info(build_info)
+            self.manager.send_info(build_info)
 
             for step in self.steps:
+                msg = 'Executing %s' % step.command
+                log(msg)
                 step_info = {'status': 'running',
                              'cmd': step.command,
                              'name': step.name,
-                             'started': dtformat(datetime.now()),
+                             'started': datetime2string(datetime.now()),
                              'finished': None,
                              'output': ''}
 

@@ -19,12 +19,13 @@
 
 
 import asyncio
+from datetime import datetime, timezone, timedelta
 import importlib
-import json
 import logging
 import os
 from subprocess import PIPE
 import sys
+import time
 from toxicbuild.core.exceptions import ExecCmdError, ConfigError
 
 
@@ -67,6 +68,22 @@ def load_module_from_file(filename):
 def log(msg, level='info'):
     log = getattr(logging, level)
     log(msg)
+
+
+def datetime2string(dt, dtformat='%a %b %d %H:%M:%S %Y %z'):
+    return datetime.strftime(dt, dtformat)
+
+
+def string2datetime(dtstr, dtformat='%a %b %d %H:%M:%S %Y %z'):
+    return datetime.strptime(dtstr, dtformat)
+
+
+def now():
+    """ Returns the localtime with timezone info. """
+
+    off = time.localtime().tm_gmtoff
+    tz = timezone(timedelta(seconds=off))
+    return datetime.now(tz=tz)
 
 
 # inherit_docs thanks to Raymond Hettinger on stackoverflow

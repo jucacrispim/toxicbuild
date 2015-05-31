@@ -26,7 +26,7 @@ from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                ReferenceField, DateTimeField, BooleanField,
                                IntField)
 from tornado.platform.asyncio import to_asyncio_future
-from toxicbuild.core.utils import log
+from toxicbuild.core.utils import log, string2datetime
 from toxicbuild.master.client import get_build_client
 from toxicbuild.master.signals import (build_started, build_finished,
                                        revision_added, step_started,
@@ -202,8 +202,11 @@ class Slave(Document):
         if 'steps' in build_info:
             repo = yield from to_asyncio_future(build.repository)
             build.status = build_info['status']
-            build.started = build_info['started']
-            build.finished = build_info['finished']
+            build.started = string2datetime(build_info['started'])
+            finished = build_info['finished']
+            if finished:
+                build.finished = string2datetime(finished)
+
             yield from to_asyncio_future(build.save())
             if not build.finished:
                 build_started.send(sender=repo, build=build)
@@ -219,8 +222,6 @@ class Slave(Document):
     @asyncio.coroutine
     def _set_step_info(self, build, cmd, name, status, output, started,
                        finished):
-        dtformat = lambda dtstr: datetime.datetime.strptime(
-            dtstr, '%a %b %d %H:%M:%S %Y %z')
 
         repo = yield from to_asyncio_future(build.repository)
         requested_step = None
@@ -228,14 +229,14 @@ class Slave(Document):
             if step.command == cmd:
                 step.status = status
                 step.output = output
-                step.finished = dtformat(finished)
+                step.finished = string2datetime(finished)
                 requested_step = step
                 step_finished.send(repo, build=build, step=requested_step)
 
         if not requested_step:
             requested_step = BuildStep(name=name, command=cmd,
                                        status=status, output=output,
-                                       started=dtformat(started))
+                                       started=string2datetime(started))
             step_started.send(repo, build=build, step=requested_step)
             build.steps.append(requested_step)
 

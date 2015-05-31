@@ -19,7 +19,9 @@
 
 
 import asyncio
+import datetime
 import os
+import time
 from unittest.mock import patch, Mock, MagicMock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
@@ -83,6 +85,42 @@ class UtilsTest(AsyncTestCase):
                 return False
 
         self.assertEqual(B.m.__doc__, A.m.__doc__)
+
+    def test_datetime2string(self):
+        dt = utils.now()
+        expected = datetime.datetime.strftime(dt, '%a %b %d %H:%M:%S %Y %z')
+        returned = utils.datetime2string(dt)
+
+        self.assertEqual(returned, expected)
+
+    def test_datetime2string_with_other_format(self):
+        dt = utils.now()
+
+        expected = datetime.datetime.strftime(dt, '%y %d')
+        returned = utils.datetime2string(dt, dtformat='%y %d')
+
+        self.assertEqual(returned, expected)
+
+    def test_string2datetime(self):
+        dt = utils.now()
+        dtstr = dt.strftime('%a %b %d %H:%M:%S %Y %z')
+
+        returned = utils.string2datetime(dtstr)
+        tz = returned.utcoffset().total_seconds()
+        self.assertEqual(tz, time.localtime().tm_gmtoff)
+
+    def test_string2datetime_with_other_format(self):
+        dt = utils.now()
+        dtstr = dt.strftime('%a %b %z')
+        returned = utils.string2datetime(dtstr, dtformat="%a %b %z")
+
+        tz = returned.utcoffset().total_seconds()
+        self.assertEqual(tz, time.localtime().tm_gmtoff)
+
+    def test_now(self):
+        n = utils.now()
+        self.assertEqual(n.utcoffset().total_seconds(),
+                         time.localtime().tm_gmtoff)
 
 
 class StreamUtilsTest(AsyncTestCase):

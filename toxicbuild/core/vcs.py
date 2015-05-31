@@ -18,10 +18,10 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import datetime
 import os
 from toxicbuild.core.exceptions import VCSError, ImpossibillityError
-from toxicbuild.core.utils import exec_cmd, inherit_docs
+from toxicbuild.core.utils import(exec_cmd, inherit_docs, string2datetime,
+                                  datetime2string)
 
 
 class VCS:
@@ -186,7 +186,7 @@ class Git(VCS):
 
         cmd = '{} log --pretty=format:"%H | %ad" '.format(self.vcsbin)
         if since:
-            date = datetime.datetime.strftime(since, self.date_format)
+            date = datetime2string(since, self.date_format)
             cmd += '--since="%s"' % date
 
         last_revs = [r for r in (yield from self.exec_cmd(cmd)).split('\n')
@@ -196,7 +196,8 @@ class Git(VCS):
 
         for rev in last_revs:
             rev_uuid, date = rev.split('|')
-            date = datetime.datetime.strptime(date.strip(), self.date_format)
+            date = string2datetime(date.strip(), dtformat=self.date_format)
+
             revisions.append({'commit': rev_uuid.strip(), 'commit_date': date})
 
         return revisions
