@@ -156,7 +156,7 @@ class Builder:
                 yield from self.manager.send_info(step_info)
 
                 step_info.update((yield from step.execute()))
-                step_info.update({'finished': dtformat(datetime.now())})
+                step_info.update({'finished': datetime2string(datetime.now())})
                 yield from self.manager.send_info(step_info)
 
                 # here is: if build_status is something other than None
