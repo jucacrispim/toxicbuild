@@ -374,6 +374,26 @@ class HoleHandlerTest(AsyncTestCase):
         funcs = sorted(list(funcs.keys()))
         self.assertEqual(funcs, keys)
 
+    def test_get_action_methods(self):
+        handler = hole.HoleHandler({}, 'action', MagicMock())
+        expected = {'list_funcs': handler.list_funcs,
+                    'repo_add': handler.repo_add,
+                    'repo_list': handler.repo_list,
+                    'repo_remove': handler.repo_remove,
+                    'repo_update': handler.repo_update,
+                    'repo_add_slave': handler.repo_add_slave,
+                    'repo_remove_slave': handler.repo_remove_slave,
+                    'repo_start_build': handler.repo_start_build,
+                    'slave_add': handler.slave_add,
+                    'slave_list': handler.slave_list,
+                    'slave_remove': handler.slave_remove,
+                    'builder_list': handler.builder_list,
+                    'builder_show': handler.builder_show}
+
+        action_methods = handler._get_action_methods()
+
+        self.assertEqual(action_methods, expected)
+
     @patch.object(repositories.utils, 'log', Mock())
     @asyncio.coroutine
     def _create_test_data(self):
