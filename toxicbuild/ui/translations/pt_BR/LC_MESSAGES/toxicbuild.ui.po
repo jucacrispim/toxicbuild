@@ -1,0 +1,35 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR ORGANIZATION
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2015-05-21 03:28+BRT\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+
+#: toxicbuild/ui/shell.py:198
+msgid "Command \"{}\" does not exist"
+msgstr "Comando \"{}\" não existe"
+
+#: toxicbuild/ui/shell.py:220
+msgid "Welcome to {toxicbuild}"
+msgstr "Bem-vindo ao {toxicbuild}"
+
+#: toxicbuild/ui/shell.py:228
+msgid "Type {cmd}h{clear} for help and {cmd}q{clear} for quit"
+msgstr "Digite {cmd}h{clear} para ajuda e {cmd}q{clear} para sair"
+
+#: toxicbuild/ui/shell.py:239
+msgid "Displays this help text."
+msgstr "Mostra este texto de ajuda."
+
+#: toxicbuild/ui/shell.py:244
+msgid "Finishes the program"
+msgstr "Termina o programa"
