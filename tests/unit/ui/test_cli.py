@@ -585,3 +585,9 @@ class ToxicCliTest(unittest.TestCase):
         returned = self.cli._get_column_sizes(output)
 
         self.assertEqual(returned, expected)
+
+    def test_format_result(self):
+        result = {'some': ['thing list']}
+        returned = self.cli._format_result(result)
+
+        self.assertEqual(str(result), returned)
