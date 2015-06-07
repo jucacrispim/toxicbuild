@@ -218,6 +218,19 @@ class ToxicCliActions:
         cmdkwargs.update(get_kwargs(known_params, cmdargs))
         return cmd, cmdkwargs
 
+    def get_action_help(self, action_name):
+        try:
+            action_sig = self.actions[action_name]
+        except KeyError:
+            msg = _('Command "{}" does not exist').format(action)  # noqa
+            raise ToxicShellError(msg)
+
+        action_help = {}
+        action_help['short_doc'] = action_sig['doc'].splitlines()[0]
+        action_help['doc'] = action_sig['doc']
+        action_help['parameters'] = action_sig['parameters']
+        return action_help
+
     @asyncio.coroutine
     def execute_action(self, cmdline):
         """ Execute some action based on the ``cmdline`` inputted by
@@ -252,7 +265,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
 
             if action in self.actions.keys():
                 return self._format_result
-        return super().__getattr__(attrname)
+        raise AttributeError(attrname)
 
     def run(self):
         palette = [('bold_blue', 'dark blue,bold', ''),
@@ -288,11 +301,17 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         """ Executes an action requested by the user and show
         its output. """
 
-        try:
-            action, response = yield from self.execute_action(cmdline)
-        except (ToxicShellError, ToxicClientException) as e:
-            self.messages.set_text(('error', str(e)))
-            return
+        if cmdline in ['help', 'h']:
+            action, response = 'help', self.get_help_screen()
+        elif cmdline in ['quit', 'q']:
+            # return just for tests
+            return self.quit()
+        else:
+            try:
+                action, response = yield from self.execute_action(cmdline)
+            except (ToxicShellError, ToxicClientException) as e:
+                self.messages.set_text(('error', str(e)))
+                return
 
         meth_name = '_format_' + action.replace('-', '_')
         format_meth = getattr(self, meth_name)
@@ -303,10 +322,13 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
     # from here to eternity are the methods that write the screens
     # or methods related to that.
     def show_welcome_screen(self):
+        """ Displays the welcome screen for toxiccli.
+        """
 
-        # Translators: Do not translate what is inside {}
-        text = [_('Welcome to {toxicbuild}'), '\n']  # noqa
-        text[0] = text[0].replace('{toxicbuild}', '')
+        welcome = self._get_welcome_text()
+        welcome = welcome.replace('{toxicbuild}', '')
+
+        text = [welcome, '\n']
 
         toxicbuild = random.choice(inutils.LOGOS)
         text += toxicbuild
@@ -315,47 +337,40 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         text.append(random.choice(inutils.SENTENCES))
         text.append('\n\n')
 
-        # all noqa is because pyflakes complain about _ being
-        # an undefined name...
+        help_text = self._get_help_text()
 
-        # Translators: Do not translate what is inside {}
-        msg = _('Type {h} for help and {q} for quit')  # noqa
-        # all this mess to put colors on h and q... pfff
-        msg0, msg1 = msg.split('{h}')[0], msg.split('{h}')[1].split('{q}')[0]
-        msg2 = msg.split('{h}')[1].split('{q}')[1]
+        formated_help = self._format_help_text(help_text)
 
-        msgstyle = [msg0, ('action-name', 'h'), msg1, ('action-name', 'q'),
-                    msg2]
-        text += msgstyle
+        text += formated_help
 
         text.append('\n\n\n')
 
         self.main_screen.set_text(text)
 
     def get_action_help_screen(self, action, full=True):
+        """ Returns a list already formated to be displayed by
+        ``self.main_screen`` as the help for a command.
+        """
 
-        try:
-            action_sig = self._actions[action]
-        except KeyError:
-            msg = _('Command "{}" does not exist').format(action)  # noqa
-            raise ToxicShellError(msg)
-
-        short_doc = action_sig['doc'].splitlines()[0]
-        text = [('action-name', action), ' - %s' % short_doc]
+        action_help = self.get_action_help(action)
+        text = [('action-name', action), ' - ',
+                '%s' % action_help['short_doc']]
 
         if full:
             params = _('Parameters')  # noqa
             required = _('Required')  # noqa
-            full_doc = [l.strip() for l in action_sig['doc'].splitlines()[1:]]
-            text += full_doc + ['\n']
-            text.append('%s: ' % params)
-            for param in action_sig['parameters']:
-                req = param['required']
-                name = param['name']
-                lineinit = ' ' * len(params + ': ')
-                text.append('%s{param}%s{clear} ' % (lineinit, name))
-                if req:
-                    text[-1] += '{required}(%s){clear}\n' % required
+
+            text += [action_help['doc'], '\n']
+
+            if action_help['parameters']:
+                text.append('%s: ' % params)
+
+                for param in action_help['parameters']:
+                    name = param['name']
+                    lineinit = ' ' * len(params + ': ')
+                    text.append('%s{param}%s{clear} ' % (lineinit, name))
+                    if param['required']:
+                        text[-1] += '{required}(%s){clear}\n' % required
         text.append('\n')
         return text
 
@@ -372,16 +387,37 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         text.append(_('Finishes the program'))  # noqa
         text.append('\n')
 
-        ordered_actions = sorted(self._actions.keys())
+        ordered_actions = sorted(self.actions.keys())
 
         for action in ordered_actions:
             text += self.get_action_help_screen(action, full=False)
 
         return text
 
+    def _get_welcome_text(self):
+        # Translators: Do not translate what is inside {}
+        return _('Welcome to {toxicbuild}')  # noqa
+
+    def _get_help_text(self):
+        # Translators: Do not translate what is inside {}
+        return _('Type {h} for help and {q} for quit')  # noqa
+
+    def _format_help_text(self, text):
+        # all this mess to put colors on h and q... pfff
+        msg0, msg1 = text.split('{h}')[0], text.split('{h}')[1].split('{q}')[0]
+        msg2 = text.split('{h}')[1].split('{q}')[1]
+
+        textstyle = [msg0, ('action-name', 'h'), msg1, ('action-name', 'q'),
+                     msg2]
+        return textstyle
+
     def _get_column_sizes(self, output):
         """ Returns a list with the max sizes of for the columns
-        of the output. """
+        of the output. ``output`` is a tuple of tuples, like this:
+        `(('a_thing' 'other_thing'), ('value', 'valueb')...)` and returns
+        `[7, 11]`.
+
+        """
 
         sizes = [len(max(c, key=lambda x: len(str(x)))) for c in zip(*output)]
         return sizes

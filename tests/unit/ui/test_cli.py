@@ -31,6 +31,10 @@ from toxicbuild.ui import cli
 import locale
 locale.setlocale(locale.LC_ALL, 'C')
 
+# installing gettext so we can text the cli properly
+import gettext
+gettext.install('toxicbuild.ui', 'fakedir')
+
 
 class CliCommandTest(unittest.TestCase):
 
@@ -42,6 +46,13 @@ class CliCommandTest(unittest.TestCase):
                     ['toxicbuild', 'git@toxicbuild.com/toxicbuild.git', 300,
                      'git'], {})
 
+        returned = cli.parse_cmdline(cmdline)
+
+        self.assertEqual(returned, expected)
+
+    def test_parse_cmdline_without_args(self):
+        cmdline = 'repo-list'
+        expected = ('repo-list', [], {})
         returned = cli.parse_cmdline(cmdline)
 
         self.assertEqual(returned, expected)
@@ -363,6 +374,12 @@ class ToxicCliActionsTest(AsyncTestCase):
         with self.assertRaises(cli.ToxicShellError):
             self.cli_actions.get_action_from_command_line(cmdline)
 
+    def test_get_action_help(self):
+        action_help = self.cli_actions.get_action_help('builder-list')
+        short_doc = ' Lists all builders.'
+
+        self.assertEqual(short_doc, action_help['short_doc'])
+
     @gen_test
     def test_execute_action(self):
         client = MagicMock()
@@ -476,14 +493,14 @@ class ToxicCliTest(unittest.TestCase):
     def test_execute_and_show_with_custom_format_method(self):
         @asyncio.coroutine
         def ea(cmdline):
-            return 'help', {}
+            return 'repo-list', {}
 
         self.cli.execute_action = ea
-        self.cli._format_help = Mock(spec=self.cli._format_help,
-                                     return_value='')
+        self.cli._format_repo_list = Mock(spec=self.cli._format_repo_list,
+                                          return_value='')
 
         self.loop.run_until_complete(self.cli.execute_and_show(''))
-        self.assertTrue(self.cli._format_help.called)
+        self.assertTrue(self.cli._format_repo_list.called)
 
     def test_execute_and_show_with_default_format(self):
         @asyncio.coroutine
@@ -496,3 +513,75 @@ class ToxicCliTest(unittest.TestCase):
 
         self.loop.run_until_complete(self.cli.execute_and_show(''))
         self.assertTrue(self.cli._format_result.called)
+
+    def test_execute_with_help(self):
+        cmdline = 'help'
+        self.cli._format_help = Mock(spec=self.cli._format_help,
+                                     return_value='')
+
+        self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
+        self.assertTrue(self.cli._format_help.called)
+
+    def test_execute_with_quit(self):
+        cmdline = 'quit'
+        self.cli.quit = Mock(spec=self.cli.quit,
+                             return_value='')
+
+        self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
+        self.assertTrue(self.cli.quit.called)
+
+    def test_get_welcome_text(self):
+        expected = _('Welcome to {toxicbuild}')  # noqa
+
+        returned = self.cli._get_welcome_text()
+        self.assertEqual(expected, returned)
+
+    def test_get_help_text(self):
+        expected = _('Type {h} for help and {q} for quit')  # noqa
+        returned = self.cli._get_help_text()
+
+        self.assertEqual(expected, returned)
+
+    def test_format_help_text(self):
+        text = _('Type {h} for help and {q} for quit')  # noqa
+        formated = self.cli._format_help_text(text)
+        self.assertIn(('action-name', 'h'), formated)
+        self.assertIn(('action-name', 'q'), formated)
+
+    def test_show_welcome_screen(self):
+        self.cli._get_welcome_text = Mock(spec=self.cli._get_welcome_text,
+                                          return_value='Welcome!')
+
+        self.cli._get_help_text = Mock(spec=self.cli._get_help_text,
+                                       return_value='t {h} help {q} quit')
+
+        self.cli.main_screen.set_text = Mock(
+            spec=self.cli.main_screen.set_text)
+        self.cli.show_welcome_screen()
+
+        self.assertTrue(self.cli._get_welcome_text.called)
+        self.assertTrue(self.cli._get_help_text.called)
+        self.assertTrue(self.cli.main_screen.set_text.called)
+
+    def test_get_action_help_screen_full(self):
+        formated_help = self.cli.get_action_help_screen('repo-add-slave')
+
+        self.assertIn(('action-name', 'repo-add-slave'), formated_help)
+
+    def test_get_help_screen(self):
+        self.cli.get_action_help_screen = Mock(
+            return_value=[], spec=self.cli.get_action_help_screen)
+
+        self.cli.get_help_screen()
+        times = len(self.cli.actions.keys())
+        self.assertEqual(len(self.cli.get_action_help_screen.call_args_list),
+                         times)
+
+    def test_get_column_sizes(self):
+        output = (('name', 'url', 'vcs'),
+                  ('some-repo', 'git@somewhere.com', 'git'))
+        expected = [9, 17, 3]
+
+        returned = self.cli._get_column_sizes(output)
+
+        self.assertEqual(returned, expected)
