@@ -208,8 +208,12 @@ class Slave(Document):
 
             yield from to_asyncio_future(build.save())
             if not build.finished:
+                msg = 'build started at {}'.format(build_info['started'])
+                log(msg)
                 build_started.send(sender=repo, build=build)
             else:
+                msg = 'build finished at {}'.format(build_info['finished'])
+                log(msg)
                 build_finished.send(sender=repo, build=build)
 
         else:
@@ -230,12 +234,18 @@ class Slave(Document):
                 step.output = output
                 step.finished = string2datetime(finished)
                 requested_step = step
+                msg = 'step {} finished at {} with status'.format(
+                    step.command, finished, step.status)
+                log(msg)
                 step_finished.send(repo, build=build, step=requested_step)
 
         if not requested_step:
             requested_step = BuildStep(name=name, command=cmd,
                                        status=status, output=output,
                                        started=string2datetime(started))
+            msg = 'step {} started at {}'.format(requested_step.command,
+                                                 started)
+            log(msg)
             step_started.send(repo, build=build, step=requested_step)
             build.steps.append(requested_step)
 
