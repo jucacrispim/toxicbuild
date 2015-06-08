@@ -20,7 +20,6 @@
 
 import asyncio
 from collections import defaultdict, deque
-import datetime
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                ReferenceField, DateTimeField, BooleanField,

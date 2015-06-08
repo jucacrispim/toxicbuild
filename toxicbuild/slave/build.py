@@ -18,12 +18,11 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-from datetime import datetime
 import os
 from toxicbuild.core import get_vcs
 from toxicbuild.core.exceptions import ExecCmdError
 from toxicbuild.core.utils import(
-    load_module_from_file, exec_cmd, log, datetime2string)
+    load_module_from_file, exec_cmd, log, datetime2string, now)
 from toxicbuild.slave.contextmanagers import change_dir
 from toxicbuild.slave.exceptions import BuilderNotFound
 
@@ -137,7 +136,7 @@ class Builder:
         build_status = None
         build_info = {'steps': [],
                       'status': 'running',
-                      'started': datetime2string(datetime.now()),
+                      'started': datetime2string(now()),
                       'finished': None}
 
         with change_dir(self.workdir):
@@ -149,7 +148,7 @@ class Builder:
                 step_info = {'status': 'running',
                              'cmd': step.command,
                              'name': step.name,
-                             'started': datetime2string(datetime.now()),
+                             'started': datetime2string(now()),
                              'finished': None,
                              'output': ''}
 
@@ -159,8 +158,9 @@ class Builder:
 
                 msg = 'Finished {} with status {}'.format(step.command,
                                                           step_info['status'])
+                log(msg)
 
-                step_info.update({'finished': datetime2string(datetime.now())})
+                step_info.update({'finished': datetime2string(now())})
                 yield from self.manager.send_info(step_info)
 
                 # here is: if build_status is something other than None
