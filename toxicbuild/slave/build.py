@@ -156,6 +156,10 @@ class Builder:
                 yield from self.manager.send_info(step_info)
 
                 step_info.update((yield from step.execute()))
+
+                msg = 'Finished {} with status {}'.format(step.command,
+                                                          step_info['status'])
+
                 step_info.update({'finished': datetime2string(datetime.now())})
                 yield from self.manager.send_info(step_info)
 
