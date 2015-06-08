@@ -22,9 +22,7 @@ import os
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core import BaseToxicClient
-from toxicbuild.core.exceptions import ToxicClientException
-import subprocess
-from tests.functional import REPO_DIR, SCRIPTS_DIR, SLAVE_ROOT_DIR
+from tests.functional import REPO_DIR, SCRIPTS_DIR, SLAVE_ROOT_DIR, SOURCE_DIR
 
 
 class DummyBuildClient(BaseToxicClient):
@@ -97,10 +95,10 @@ class SlaveTest(AsyncTestCase):
     @classmethod
     def setUpClass(cls):
         cls.toxicslave = os.path.join(SCRIPTS_DIR, 'toxicslave')
-        start_cmd = '{} start {} --daemonize'.format(
-            cls.toxicslave, SLAVE_ROOT_DIR).split()
+        start_cmd = 'export PYTHONPATH="{}" && {} start {} --daemonize'.format(
+            SOURCE_DIR, cls.toxicslave, SLAVE_ROOT_DIR)
         cls.pidfile = os.path.join(SLAVE_ROOT_DIR, 'toxicslave.pid')
-        subprocess.call(start_cmd)
+        os.system(start_cmd)
 
     @classmethod
     def tearDownClass(cls):

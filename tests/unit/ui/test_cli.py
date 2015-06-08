@@ -181,6 +181,18 @@ class HistoryEditTest(unittest.TestCase):
 
         self.assertEqual(next_item, item_c)
 
+    def test_get_next_in_the_end_of_the_list(self):
+        item_a, item_b, item_c = 'a', 'b', 'c'
+
+        self.history_edit.append_to_history(item_c)
+        self.history_edit.append_to_history(item_b)
+        self.history_edit.append_to_history(item_a)
+        self.history_edit._history_position = 3
+
+        next_item = self.history_edit.get_next()
+
+        self.assertEqual(next_item, item_c)
+
     def test_keypress_with_enter(self):
         self.history_edit.get_edit_text = Mock(return_value='some text')
         self.history_edit.keypress((10,), 'enter')
@@ -380,6 +392,10 @@ class ToxicCliActionsTest(AsyncTestCase):
 
         self.assertEqual(short_doc, action_help['short_doc'])
 
+    def test_get_action_help_unknown_command(self):
+        with self.assertRaises(cli.ToxicShellError):
+            self.cli_actions.get_action_help('i-dont-exist')
+
     @gen_test
     def test_execute_action(self):
         client = MagicMock()
@@ -428,6 +444,10 @@ class ToxicCliTest(unittest.TestCase):
 
         self.assertTrue(self.cli._format_result.called)
 
+    def test_getattr_attribute_error(self):
+        with self.assertRaises(AttributeError):
+            self.cli._i_dont_exist()
+
     @patch.object(cli.urwid, 'AsyncioEventLoop', Mock())
     @patch.object(cli.urwid, 'MainLoop', Mock())
     def test_run(self):
@@ -461,6 +481,24 @@ class ToxicCliTest(unittest.TestCase):
         loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks()))
 
         self.assertEqual(self.cmdline, 'repo-list')
+
+    def test_keypree_with_enter_and_no_data(self):
+        self.cli.input.set_edit_text('')
+
+        self.cmdline = None
+
+        @asyncio.coroutine
+        def exec_and_show(cmdline):
+            self.cmdline = cmdline
+
+        self.cli.execute_and_show = exec_and_show
+
+        self.cli.keypress((10, 10), 'enter')
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks()))
+
+        self.assertEqual(self.cmdline, None)
 
     def test_key_press(self):
         self.cli.input.set_edit_text('repo-add ')
@@ -591,3 +629,59 @@ class ToxicCliTest(unittest.TestCase):
         returned = self.cli._format_result(result)
 
         self.assertEqual(str(result), returned)
+
+    def test_format_help(self):
+        result = ['some', ('styled', 'result')]
+
+        returned = self.cli._format_help(result)
+
+        self.assertEqual(result, returned)
+
+    def test_format_row(self):
+        sizes = [15, 17, 5]
+        row = ('some-repo', 'git@somewhere.com', 'git')
+        expected = 'some-repo' + (' ' * 10) + 'git@somewhere.com' + (' ' * 4)
+        expected += 'git' + ' ' * 6
+
+        formated = self.cli._format_row(sizes, row)
+
+        self.assertEqual(formated, expected)
+
+    def test_format_output_columns(self):
+        output = (('name', 'url', 'vcs'),
+                  ('some-repo', 'git@somewhere.com', 'git'))
+        expected = 'name' + (' ' * 9) + 'url' + (' ' * 18) + 'vcs'
+        expected += (' ' * 4) + '\n'
+        expected += 'some-repo' + (' ' * 4) + 'git@somewhere.com' + (' ' * 4)
+        expected += 'git' + ' ' * 6
+
+        formated = self.cli._format_output_columns(output)
+
+        self.assertEqual(formated.strip(), expected.strip())
+
+    def test_format_repo_list(self):
+        self.cli._format_output_columns = Mock()
+
+        repos = []
+
+        self.cli._format_repo_list(repos)
+
+        called = self.cli._format_output_columns.call_args[0][0][0]
+
+        self.assertEqual(called, (_('name'), _('vcs')))  # noqa
+
+    def test_format_slave_list(self):
+        self.cli._format_output_columns = Mock()
+        slaves = []
+        self.cli._format_slave_list(slaves)
+
+        called = self.cli._format_output_columns.call_args[0][0][0]
+        self.assertEqual(called, (_('name'), _('host'), _('port')))  # noqa
+
+    def test_format_builder_list(self):
+        self.cli._format_output_columns = Mock()
+        builders = []
+        self.cli._format_builder_list(builders)
+
+        called = self.cli._format_output_columns.call_args[0][0][0]
+        self.assertEqual(called, (_('name'), _('repo'), _('branch')))  # noqa

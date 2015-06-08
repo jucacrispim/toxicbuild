@@ -20,11 +20,10 @@
 import asyncio
 import os
 import tornado
-import subprocess
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.master.scheduler import scheduler
-from tests.functional import (SCRIPTS_DIR, REPO_DIR,
+from tests.functional import (SCRIPTS_DIR, REPO_DIR, SOURCE_DIR,
                               MASTER_ROOT_DIR, SLAVE_ROOT_DIR)
 
 
@@ -101,16 +100,17 @@ class ToxicMasterTest(AsyncTestCase):
 
         # start slave
         toxicslave_cmd = os.path.join(SCRIPTS_DIR, 'toxicslave')
-        cmd = ['python', toxicslave_cmd, 'start', SLAVE_ROOT_DIR,
-               '--daemonize']
+        cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
+               toxicslave_cmd, 'start', SLAVE_ROOT_DIR, '--daemonize']
 
-        subprocess.call(cmd)
+        os.system(' '.join(cmd))
 
         # start master
         toxicmaster_cmd = os.path.join(SCRIPTS_DIR, 'toxicmaster')
-        cmd = ['python', toxicmaster_cmd, 'start', MASTER_ROOT_DIR,
-               '--daemonize']
-        subprocess.call(cmd)
+        cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
+               toxicmaster_cmd, 'start', MASTER_ROOT_DIR, '--daemonize']
+
+        os.system(' '.join(cmd))
 
     @classmethod
     def tearDownClass(cls):
@@ -121,13 +121,16 @@ class ToxicMasterTest(AsyncTestCase):
 
         # stop slave
         toxicslave_cmd = os.path.join(SCRIPTS_DIR, 'toxicslave')
-        cmd = ['python', toxicslave_cmd, 'stop', SLAVE_ROOT_DIR]
-        subprocess.call(cmd)
+        cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
+               'python', toxicslave_cmd, 'stop', SLAVE_ROOT_DIR]
+
+        os.system(' '.join(cmd))
 
         # stop master
         toxicmaster_cmd = os.path.join(SCRIPTS_DIR, 'toxicmaster')
-        cmd = ['python', toxicmaster_cmd, 'stop', MASTER_ROOT_DIR]
-        subprocess.call(cmd)
+        cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
+               'python', toxicmaster_cmd, 'stop', MASTER_ROOT_DIR]
+        os.system(' '.join(cmd))
 
         super().tearDownClass()
 

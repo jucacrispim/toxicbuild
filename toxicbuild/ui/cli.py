@@ -222,7 +222,7 @@ class ToxicCliActions:
         try:
             action_sig = self.actions[action_name]
         except KeyError:
-            msg = _('Command "{}" does not exist').format(action)  # noqa
+            msg = _('Command "{}" does not exist').format(action_name)  # noqa
             raise ToxicShellError(msg)
 
         action_help = {}
@@ -428,16 +428,22 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
     def _format_help(self, result):
         return result
 
+    def _format_row(self, sizes, row):
+        formated_row = []
+        for i, item in enumerate(row):
+            item = str(item)
+            size = sizes[i]
+            itemstr = item + ' ' * (size - len(item)) + ' ' * 4
+            formated_row.append(itemstr)
+
+        return ''.join(formated_row)
+
     def _format_output_columns(self, output):
         sizes = self._get_column_sizes(output)
         formated_output = []
         for row in output:
-            for i, item in enumerate(row):
-                item = str(item)
-                size = sizes[i]
-                # can't print \t don't know why.
-                itemstr = item + ' ' * (size - len(item)) + ' ' * 4
-                formated_output.append(itemstr)
+            row = self._format_row(sizes, row)
+            formated_output.append(row)
 
             formated_output.append('\n')
 
@@ -459,9 +465,9 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         return self._format_output_columns(output)
 
 
-def main():
+def main():  # pragma: no cover
     cli = ToxicCli()
     cli.run()
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     main()
