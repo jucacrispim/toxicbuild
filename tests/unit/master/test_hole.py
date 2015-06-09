@@ -454,6 +454,10 @@ class UIStreamHandlerTest(AsyncTestCase):
     def test_getattr(self):
         self.assertTrue(self.handler.step_started())
 
+    def test_getattr_with_attribute_error(self):
+        with self.assertRaises(AttributeError):
+            self.handler.i_dont_exist()
+
     @patch.object(repositories.Repository, 'schedule', Mock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
     @patch.object(repositories.Repository, 'first_run', MagicMock())

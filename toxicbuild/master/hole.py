@@ -345,12 +345,16 @@ class UIStreamHandler:
         self._connect2signals()
 
     def __getattr__(self, attrname):
-        name = attrname.replace('-', '_')
+        _signals = ['step_started', 'step_finished',
+                    'build_started', 'build_finished']
 
-        def wrapper(**kw):
-            return self.send_info(name, **kw)
+        if attrname in _signals:
+            def wrapper(**kw):
+                return self.send_info(attrname, **kw)
 
-        return wrapper
+            return wrapper
+
+        raise AttributeError
 
     def _connect2signals(self):
         step_started.connect(self.step_started)
