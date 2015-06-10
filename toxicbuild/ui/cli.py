@@ -259,6 +259,8 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
                                 self.div, self.input])
         super().__init__(self.pile, valign='bottom', host=host, port=port)
 
+        self._stop_peek = False
+
     def __getattr__(self, attrname):
         if attrname.startswith('_format'):
             action = attrname.replace('_format_', '').replace('_', '-')
@@ -306,6 +308,8 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         elif cmdline in ['quit', 'q']:
             # return just for tests
             return self.quit()
+        elif cmdline == 'peek':
+            yield from self.peek()
         else:
             try:
                 action, response = yield from self.execute_action(cmdline)
@@ -318,6 +322,25 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         response = format_meth(response)
 
         self.main_screen.set_text(response)
+
+    @asyncio.coroutine
+    def peek(self):
+        """Peeks throught the master's hole."""
+
+        with (yield from self.get_client()) as client:
+
+            response = yield from client.request2server('stream', {})
+            self.main_screen.set_text(self._format_result(response))
+            while True:
+                response = yield from client.get_response()
+                if self._stop_peek:
+                    break
+                self.main_screen.set_text(self._format_result(response))
+
+        self._stop_peek = False
+
+    def stop_peek(self):
+        self._stop_peek = True
 
     # from here to eternity are the methods that write the screens
     # or methods related to that.
