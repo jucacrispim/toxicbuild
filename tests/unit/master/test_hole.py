@@ -458,6 +458,16 @@ class UIStreamHandlerTest(AsyncTestCase):
         with self.assertRaises(AttributeError):
             self.handler.i_dont_exist()
 
+    @gen_test
+    def test_handle(self):
+        self.handler._connect2signals = Mock()
+        self.handler.protocol.send_response = MagicMock()
+
+        yield from self.handler.handle()
+
+        self.assertTrue(self.handler._connect2signals.called)
+        self.assertTrue(self.handler.protocol.send_response.called)
+
     @patch.object(repositories.Repository, 'schedule', Mock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
     @patch.object(repositories.Repository, 'first_run', MagicMock())

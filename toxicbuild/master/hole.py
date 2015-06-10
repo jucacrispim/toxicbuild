@@ -49,7 +49,6 @@ class UIHole(BaseToxicProtocol):
         except Exception as e:
             msg = str(e)
             yield from self.send_response(code=1, body={'error': msg})
-        finally:
             self.close_connection()
 
 
@@ -83,7 +82,7 @@ class HoleHandler:
         self.log('Executing {}'.format(self.action))
 
         attrname = self.action.replace('-', '_')
-        if not attrname in self._get_action_methods():
+        if attrname not in self._get_action_methods():
             raise UIFunctionNotFound(self.action)
 
         func = getattr(self, attrname)
@@ -92,6 +91,7 @@ class HoleHandler:
             r = yield from r
 
         yield from self.protocol.send_response(code=0, body=r)
+        self.protocol.close_connection()
 
     def _get_method_signature(self, method):
         sig = inspect.signature(method)
@@ -342,7 +342,6 @@ class UIStreamHandler:
 
     def __init__(self, protocol):
         self.protocol = protocol
-        self._connect2signals()
 
     def __getattr__(self, attrname):
         _signals = ['step_started', 'step_finished',
@@ -361,6 +360,11 @@ class UIStreamHandler:
         step_finished.connect(self.step_finished)
         build_started.connect(self.build_started)
         build_finished.connect(self.build_finished)
+
+    @asyncio.coroutine
+    def handle(self):
+        self._connect2signals()
+        yield from self.protocol.send_response(code=0, body={'stream': 'ok'})
 
     @asyncio.coroutine
     def send_info(self, info_type, build=None, step=None):
