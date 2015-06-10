@@ -198,6 +198,7 @@ class Slave(Document):
         the build is sent by the build server.
         """
         # when there's the steps key it's a build info
+
         if 'steps' in build_info:
             repo = yield from to_asyncio_future(build.repository)
             build.status = build_info['status']
@@ -210,17 +211,20 @@ class Slave(Document):
             if not build.finished:
                 msg = 'build started at {}'.format(build_info['started'])
                 log(msg)
-                build_started.send(sender=repo, build=build)
+                build_started.send(repo, build=build)
             else:
                 msg = 'build finished at {}'.format(build_info['finished'])
                 log(msg)
-                build_finished.send(sender=repo, build=build)
+                build_finished.send(repo, build=build)
 
         else:
             # here is the step info
-            self._set_step_info(build, build_info['cmd'], build_info['name'],
-                                build_info['status'], build_info['output'],
-                                build_info['started'], build_info['finished'])
+            yield from self._set_step_info(build, build_info['cmd'],
+                                           build_info['name'],
+                                           build_info['status'],
+                                           build_info['output'],
+                                           build_info['started'],
+                                           build_info['finished'])
 
     @asyncio.coroutine
     def _set_step_info(self, build, cmd, name, status, output, started,
@@ -228,6 +232,7 @@ class Slave(Document):
 
         repo = yield from to_asyncio_future(build.repository)
         requested_step = None
+
         for step in build.steps:
             if step.command == cmd:
                 step.status = status
@@ -250,12 +255,6 @@ class Slave(Document):
             build.steps.append(requested_step)
 
         yield from to_asyncio_future(build.save())
-
-    # def log(self, msg):
-    #     basemsg = '[slave {} - {}] '.format((self.host, self.port),
-    #                                         datetime.datetime.now())
-    #     msg = basemsg + msg
-    #     log(msg)
 
 
 class BuildManager:
@@ -356,7 +355,3 @@ class BuildManager:
 
         yield from asyncio.wait(fs)
         return fs
-
-
-# This first signal is sent by a vcs when a new revision is detected.
-# revision_added.connect(BuildManager.add_builds)

@@ -138,6 +138,7 @@ class Builder:
                       'status': 'running',
                       'started': datetime2string(now()),
                       'finished': None}
+        yield from self.manager.send_info(build_info)
 
         with change_dir(self.workdir):
             self.manager.send_info(build_info)
@@ -173,6 +174,7 @@ class Builder:
 
         build_info['status'] = build_status
         build_info['total_steps'] = len(self.steps)
+        build_info['finished'] = datetime2string(now())
         return build_info
 
 

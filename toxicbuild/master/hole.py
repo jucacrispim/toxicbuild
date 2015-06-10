@@ -348,7 +348,7 @@ class UIStreamHandler:
                     'build_started', 'build_finished']
 
         if attrname in _signals:
-            def wrapper(**kw):
+            def wrapper(*args, **kw):
                 return self.send_info(attrname, **kw)
 
             return wrapper
@@ -356,10 +356,11 @@ class UIStreamHandler:
         raise AttributeError
 
     def _connect2signals(self):
-        step_started.connect(self.step_started)
-        step_finished.connect(self.step_finished)
-        build_started.connect(self.build_started)
-        build_finished.connect(self.build_finished)
+
+        step_started.connect(self.step_started, weak=False)
+        step_finished.connect(self.step_finished, weak=False)
+        build_started.connect(self.build_started, weak=False)
+        build_finished.connect(self.build_finished, weak=False)
 
     @asyncio.coroutine
     def handle(self):

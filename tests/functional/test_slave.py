@@ -65,7 +65,7 @@ class DummyBuildClient(BaseToxicClient):
             if not r:
                 break
 
-        steps, build_status = build_resp[:-1], build_resp[-1]
+        steps, build_status = build_resp[1:-1], build_resp[-1]
         return steps, build_status
 
     @asyncio.coroutine
