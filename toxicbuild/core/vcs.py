@@ -55,27 +55,27 @@ class VCS(metaclass=ABCMeta):
         """
         return os.path.exists(self.workdir)
 
-    @abstractmethod
+    @abstractmethod  # pragma no branch
     @asyncio.coroutine
     def clone(self, url):
         """ Clones a repository into ``self.workdir``
         :param url: repository url
         """
 
-    @abstractmethod
+    @abstractmethod  # pragma no branch
     @asyncio.coroutine
     def fetch(self):
         """ Fetch changes from remote repository
         """
 
-    @abstractmethod
+    @abstractmethod  # pragma no branch
     @asyncio.coroutine
     def checkout(self, named_tree):
         """ Checkout to ``named_tree``
         :param named_tree: A commit, branch, tag...
         """
 
-    @abstractmethod
+    @abstractmethod  # pragma no branch
     @asyncio.coroutine
     def pull(self, branch_name):
         """ Pull changes from ``branch_name`` on remote repo.
@@ -83,13 +83,13 @@ class VCS(metaclass=ABCMeta):
         :param branch_name: A branch name, like 'master'.
         """
 
-    @abstractmethod
+    @abstractmethod  # pragma no branch
     @asyncio.coroutine
     def has_changes(self):
         """ Informs if there are new revisions in the repository
         """
 
-    @abstractmethod
+    @abstractmethod  # pragma no branch
     @asyncio.coroutine
     def get_revisions(self, since={}):
         """ Returns the revisions for all branches since ``since``.
@@ -97,7 +97,7 @@ class VCS(metaclass=ABCMeta):
           ``since`` is a datetime object.
         """
 
-    @abstractmethod
+    @abstractmethod  # pragma no branch
     @asyncio.coroutine
     def get_revisions_for_branch(self, branch, since=None):
         """ Returns the revisions for ``branch`` since ``since``.
@@ -106,7 +106,7 @@ class VCS(metaclass=ABCMeta):
         :param since: datetime
         """
 
-    @abstractmethod
+    @abstractmethod  # pragma no branch
     @asyncio.coroutine
     def get_remote_branches(self):
         """ Returns a list of the remote branches available.
