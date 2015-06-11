@@ -2,11 +2,11 @@
 
 ERRORFILE="errors.txt"
 echo "\nChecking coverage for Python code\n"
-coverage run --source=$1 setup.py test --test-suite=tests.unit -q 1>/dev/null 2>$ERRORFILE;
+coverage run --source=$1 --branch setup.py test --test-suite=tests.unit -q 1>/dev/null 2>$ERRORFILE;
 haserr=`grep FAILED $ERRORFILE`;
 err=`cat $ERRORFILE`
 rm $ERRORFILE;
-coverage=`coverage report -m | grep TOTAL | sed 's/TOTAL\s*\w*\s*\w*\s*//g' | cut -d'%' -f1`
+coverage=`coverage report -m | grep TOTAL | sed 's/TOTAL\s*\w*\s*\w*\s*\w*\s*\w*//g' | cut -d'%' -f1`
 
 echo 'coverage was:' $coverage'%'
 
