@@ -1,1 +1,8 @@
-Hackish pieces of software to an easy buildbot config
+Toxicbuild is disributed a tool to continuous integration, heavly inspired
+on buidbot, but with its own nicities.
+
+Using toxicbuild you can still configure all your builders and steps using the
+full expressiveness of Python, but these configuratoins stay on your project's
+source code, so you can versionate it within your project.
+
+Please, see more at the documentation on the docs/ directory.
