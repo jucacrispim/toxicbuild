@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+from abc import ABCMeta, abstractmethod
 import asyncio
 import os
 from toxicbuild.core.exceptions import VCSError, ImpossibillityError
@@ -24,7 +25,7 @@ from toxicbuild.core.utils import(exec_cmd, inherit_docs, string2datetime,
                                   datetime2string)
 
 
-class VCS:
+class VCS(metaclass=ABCMeta):
 
     """ Generic inteface to a vcs (clone, fetch, get revisions etc...).
     """
@@ -54,70 +55,62 @@ class VCS:
         """
         return os.path.exists(self.workdir)
 
+    @abstractmethod
     @asyncio.coroutine
-    def clone(self, url):  # pragma: no cover
+    def clone(self, url):
         """ Clones a repository into ``self.workdir``
         :param url: repository url
         """
-        raise NotImplementedError
 
+    @abstractmethod
     @asyncio.coroutine
-    def fetch(self):  # pragma: no cover
+    def fetch(self):
         """ Fetch changes from remote repository
         """
-        raise NotImplementedError
 
+    @abstractmethod
     @asyncio.coroutine
-    def checkout(self, named_tree):  # pragma: no cover
+    def checkout(self, named_tree):
         """ Checkout to ``named_tree``
         :param named_tree: A commit, branch, tag...
         """
-        raise NotImplementedError
 
+    @abstractmethod
     @asyncio.coroutine
-    def pull(self, branch_name):  # pragma: no cover
+    def pull(self, branch_name):
         """ Pull changes from ``branch_name`` on remote repo.
 
         :param branch_name: A branch name, like 'master'.
         """
 
-        raise NotImplementedError
-
+    @abstractmethod
     @asyncio.coroutine
-    def has_changes(self):  # pragma: no cover
+    def has_changes(self):
         """ Informs if there are new revisions in the repository
         """
-        raise NotImplementedError
 
+    @abstractmethod
     @asyncio.coroutine
-    def get_revisions(self, since={}):  # pragma: no cover
+    def get_revisions(self, since={}):
         """ Returns the revisions for all branches since ``since``.
         :param since: dictionary in the format: {branch_name: since_date}.
           ``since`` is a datetime object.
         """
-        # do not change since dict or satan will catch you.
-        raise NotImplementedError
 
+    @abstractmethod
     @asyncio.coroutine
-    def get_revisions_for_branch(self, branch, since=None):  # pragma: no cover
+    def get_revisions_for_branch(self, branch, since=None):
         """ Returns the revisions for ``branch`` since ``since``.
         If ``since`` is None, all revisions will be returned.
         :param branch: branch name
         :param since: datetime
         """
-        raise NotImplementedError
 
+    @abstractmethod
     @asyncio.coroutine
-    def get_remote_branches(self):  # pragma: no cover
+    def get_remote_branches(self):
         """ Returns a list of the remote branches available.
         """
-        raise NotImplementedError
-
-    def commit(self):  # pragma: no cover
-        """ Not a chance. It's not made to change your repository
-        """
-        msg = 'Not a chance. You can\'t change anything here.'
-        raise ImpossibillityError(msg)
 
 
 @inherit_docs

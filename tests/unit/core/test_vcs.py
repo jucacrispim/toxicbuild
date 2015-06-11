@@ -30,8 +30,34 @@ from toxicbuild.core import vcs
 class VCSTest(AsyncTestCase):
 
     def setUp(self):
+        class DummyVcs(vcs.VCS):
+
+            def checkout(self, name):
+                pass
+
+            def clone(self, name):
+                pass
+
+            def fetch(self):
+                pass
+
+            def pull(self, name):
+                pass
+
+            def has_changes(self):
+                pass
+
+            def get_revisions(self):
+                pass
+
+            def get_revisions_for_branch(self, branch, since={}):
+                pass
+
+            def get_remote_branches(self):
+                pass
+
         super(VCSTest, self).setUp()
-        self.vcs = vcs.VCS('/some/workdir')
+        self.vcs = DummyVcs('/some/workdir')
 
     @gen_test
     def test_exec_cmd(self):
