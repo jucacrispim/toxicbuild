@@ -64,7 +64,8 @@ class GitPollerTest(AsyncTestCase):
             return {'master': [{'commit': '123sdf', 'commit_date': now},
                                {'commit': 'asdf213', 'commit_date': now}],
                     'dev': [{'commit': 'sdfljfew', 'commit_date': now},
-                            {'commit': 'sdlfjslfer3', 'commit_date': now}]}
+                            {'commit': 'sdlfjslfer3', 'commit_date': now}],
+                    'other': []}
 
         self.poller.vcs.get_revisions = gr
 
@@ -109,6 +110,41 @@ class GitPollerTest(AsyncTestCase):
 
         self.assertTrue(self.CLONE_CALLED)
 
+    @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
+    @gen_test
+    def test_poll_without_clone(self):
+        yield from self._create_db_revisions()
+
+        now = datetime.datetime.now()
+
+        def workdir_exists():
+            return True
+
+        self.CLONE_CALLED = False
+
+        @asyncio.coroutine
+        def clone(url):
+            self.CLONE_CALLED = True
+            return True
+
+        @asyncio.coroutine
+        def has_changes():
+            return True
+
+        @asyncio.coroutine
+        def gr(*a, **kw):
+            return {'master': [{'commit': '123sdf', 'commit_date': now},
+                               {'commit': 'asdf213', 'commit_date': now}]}
+
+        self.poller.vcs.get_revisions = gr
+        self.poller.vcs.workdir_exists = workdir_exists
+        self.poller.vcs.clone = clone
+        self.poller.vcs.has_changes = has_changes
+
+        yield from self.poller.poll()
+
+        self.assertFalse(self.CLONE_CALLED)
+
     @asyncio.coroutine
     def _create_db_revisions(self):
         yield self.repo.save()
@@ -118,6 +154,12 @@ class GitPollerTest(AsyncTestCase):
         for r in range(2):
             rev = repositories.RepositoryRevision(
                 repository=rep, commit='123asdf', branch='master',
+                commit_date=now)
+
+            yield rev.save()
+
+            rev = repositories.RepositoryRevision(
+                repository=rep, commit='123asef', branch='other',
                 commit_date=now)
 
             yield rev.save()

@@ -321,6 +321,17 @@ class HoleHandlerTest(AsyncTestCase):
 
     @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
+    def test_builder_list_without_repo_name(self):
+
+        yield from self._create_test_data()
+        handler = hole.HoleHandler({}, 'builder-list', MagicMock())
+
+        builders = yield from handler.builder_list()
+        builders = builders['builder-list']
+        self.assertEqual(len(builders), 3)
+
+    @patch.object(repositories.Repository, 'first_run', MagicMock())
+    @gen_test
     def test_builder_show(self):
         yield from self._create_test_data()
 

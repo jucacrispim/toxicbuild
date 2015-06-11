@@ -175,10 +175,11 @@ class Slave(Document):
             builders = yield from client.list_builders(repo_url, vcs_type,
                                                        branch, named_tree)
 
-        builders = yield from [
-            (yield from Builder.get_or_create(repository=repository,
-                                              name=bname))
-            for bname in builders]
+        builders = [(yield from Builder.get_or_create(repository=repository,
+                                                      name=bname))
+                    for bname in builders]
+
+        builders = yield from builders
         return list(builders)
 
     @asyncio.coroutine
@@ -294,7 +295,7 @@ class BuildManager:
         yield from to_asyncio_future(build.save())
         self._queues[slave.name].append(build)
 
-        if not self._is_working[slave.name]:
+        if not self._is_working[slave.name]:  # pragma: no branch
             asyncio.async(self._execute_builds(slave))
 
     @asyncio.coroutine

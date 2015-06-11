@@ -165,6 +165,21 @@ class GitTest(AsyncTestCase):
         self.assertEqual(revisions[0]['commit'], '0sdflf095')
 
     @gen_test
+    def test_get_revisions_for_branch_without_since(self):
+        expected_cmd = '{} log --pretty=format:"%H | %ad" '.format('git')
+
+        @asyncio.coroutine
+        def e(*a, **kw):
+            assert a[0] == expected_cmd, a[0]
+            log = '0sdflf093 | Thu Oct 20 16:30:23 2014 -0200\n'
+            log += '0sdflf095 | Thu Oct 20 16:20:23 2014 -0200\n'
+            return log
+
+        vcs.exec_cmd = e
+        revisions = yield from self.vcs.get_revisions_for_branch('master')
+        self.assertEqual(revisions[0]['commit'], '0sdflf095')
+
+    @gen_test
     def test_get_revision(self):
         now = datetime.datetime.now()
         since = {'master': now,

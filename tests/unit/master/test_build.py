@@ -264,12 +264,14 @@ class SlaveTest(AsyncTestCase):
 
         yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
                                              'running', '', started, finished)
+        yield from self.slave._set_step_info(self.build, 'echo "oi"', 'echo',
+                                             'running', '', started, finished)
         yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
                                              'success', 'somefile.txt\n',
                                              started, finished)
 
         self.assertEqual(self.build.steps[0].status, 'success')
-        self.assertEqual(len(self.build.steps), 1)
+        self.assertEqual(len(self.build.steps), 2)
 
     @asyncio.coroutine
     def _create_test_data(self):

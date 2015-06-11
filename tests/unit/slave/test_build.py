@@ -62,6 +62,16 @@ class BuilderManagerTest(AsyncTestCase):
         self.assertTrue(self.manager.vcs.checkout.called)
         self.assertTrue(self.manager.vcs.pull.called)
 
+    @gen_test
+    def test_update_and_checkout_without_clone(self):
+        self.manager.vcs.workdir_exists.return_value = True
+
+        yield from self.manager.update_and_checkout()
+
+        self.assertTrue(self.manager.vcs.clone.called)
+        self.assertTrue(self.manager.vcs.checkout.called)
+        self.assertTrue(self.manager.vcs.pull.called)
+
     def test_list_builders(self):
         expected = ['builder1', 'builder2']
         returned = self.manager.list_builders()
@@ -116,7 +126,8 @@ class BuilderTest(AsyncTestCase):
     def test_build_fail(self):
         s1 = build.BuildStep(name='s1', cmd='ls')
         s2 = build.BuildStep(name='s2', cmd='exit 1')
-        self.builder.steps = [s1, s2]
+        s3 = build.BuildStep(name='s3', cmd='echo "oi"')
+        self.builder.steps = [s1, s2, s3]
 
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'fail')

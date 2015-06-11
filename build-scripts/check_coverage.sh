@@ -6,6 +6,7 @@ coverage run --source=$1 --branch setup.py test --test-suite=tests.unit -q 1>/de
 haserr=`grep FAILED $ERRORFILE`;
 err=`cat $ERRORFILE`
 rm $ERRORFILE;
+coverage html;
 coverage=`coverage report -m | grep TOTAL | sed 's/TOTAL\s*\w*\s*\w*\s*\w*\s*\w*//g' | cut -d'%' -f1`
 
 echo 'coverage was:' $coverage'%'

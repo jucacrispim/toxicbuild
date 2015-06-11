@@ -43,7 +43,7 @@ class BuildManager:
 
     @property
     def configmodule(self):
-        if not self._configmodule:
+        if not self._configmodule:  # pragma: no branch
             self._configmodule = load_module_from_file(self.configfile)
         return self._configmodule
 
@@ -64,8 +64,6 @@ class BuildManager:
         """
         if not self.vcs.workdir_exists():
             yield from self.vcs.clone(self.repo_url)
-
-        # yield from self.vcs.fetch()
 
         yield from self.vcs.checkout(self.branch)
         yield from self.vcs.pull(self.branch)

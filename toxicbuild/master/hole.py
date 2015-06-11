@@ -281,9 +281,8 @@ class HoleHandler:
         """ Returns information about one specific builder. """
 
         kwargs = {'name': builder_name}
-        if repo_name:
-            repo = yield from Repository.get(name=repo_name)
-            kwargs.update({'repository': repo})
+        repo = yield from Repository.get(name=repo_name)
+        kwargs.update({'repository': repo})
 
         builder = yield from Builder.get(**kwargs)
         builder_dict = json.loads(builder.to_json())
