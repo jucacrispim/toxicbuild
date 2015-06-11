@@ -30,18 +30,38 @@ from toxicbuild.core.exceptions import ExecCmdError, ConfigError
 
 
 @asyncio.coroutine
-def exec_cmd(cmd, cwd):
+def exec_cmd(cmd, cwd, **envvars):
     """ Executes a shell command. Raises with stderr if return code > 0
     :param cmd: command to run.
     :param cwd: Directory to execute the command.
     """
+
+    envvars = _get_envvars(envvars)
+
     ret = yield from asyncio.create_subprocess_shell(
-        cmd, stdout=PIPE, stderr=PIPE, cwd=cwd)
+        cmd, stdout=PIPE, stderr=PIPE, cwd=cwd, env=envvars)
+
     stdout, stderr = yield from ret.communicate()
     if int(ret.returncode) > 0:
         raise ExecCmdError(stderr.decode().strip())
 
     return stdout.decode().strip()
+
+
+def _get_envvars(envvars):
+    """Returns environment variables to be used in shell. Does the
+    interpolation of values using the current values from the envvar
+    and the values passed as parameters. """
+
+    newvars = {}
+    for var, value in envvars.items():
+        if var in value:
+            current = os.environ.get(var, '')
+            value = value.replace(var, current)
+
+        newvars[var] = value
+
+    return newvars
 
 
 def load_module_from_file(filename):

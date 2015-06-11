@@ -47,6 +47,28 @@ class UtilsTest(AsyncTestCase):
             # please, don't tell me you have a lsz command on your system.
             yield from utils.exec_cmd('lsz', cwd='.')
 
+    @gen_test
+    def test_exec_cmd_with_envvars(self):
+        envvars = {'PATH': 'PATH:venv/bin',
+                   'MYPROGRAMVAR': 'something'}
+
+        cmd = 'echo $MYPROGRAMVAR'
+
+        returned = yield from utils.exec_cmd(cmd, cwd='.', **envvars)
+
+        self.assertEqual(returned, 'something')
+
+    def test_get_envvars(self):
+        envvars = {'PATH': 'PATH:venv/bin',
+                   'MYPROGRAMVAR': 'something'}
+
+        expected = {'PATH': '{}:venv/bin'.format(os.environ.get('PATH')),
+                    'MYPROGRAMVAR': 'something'}
+
+        returned = utils._get_envvars(envvars)
+
+        self.assertEqual(returned, expected)
+
     def test_load_module_from_file_with_file_not_found(self):
         with self.assertRaises(FileNotFoundError):
             utils.load_module_from_file('/some/file/that/does/not/exist.conf')
