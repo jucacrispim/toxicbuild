@@ -25,6 +25,7 @@ import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.ui import cli
 
+
 # urwid changes the locale and this makes a test on vcs fail
 # so, changing it back here
 
@@ -422,8 +423,9 @@ class ToxicCliActionsTest(AsyncTestCase):
 
 class ToxicCliTest(unittest.TestCase):
 
+    @classmethod
     @patch.object(cli.ToxicCliActions, 'get_client', MagicMock())
-    def setUp(self):
+    def setUpClass(cls):
         @asyncio.coroutine
         def gc(*args, **kwargs):
             client = MagicMock()
@@ -433,13 +435,12 @@ class ToxicCliTest(unittest.TestCase):
 
         cli.ToxicCliActions.get_client = gc
 
-        self.cli = cli.ToxicCli()
-        self.cli.actions = ACTIONS
-        self.loop = asyncio.get_event_loop()
+        cls.cli = cli.ToxicCli()
+        cls.cli.actions = ACTIONS
+        cls.loop = asyncio.get_event_loop()
 
+    @patch.object(cli.ToxicCli, '_format_result', Mock())
     def test_getattr(self):
-        self.cli._format_result = Mock()
-
         self.cli._format_builder_show()
 
         self.assertTrue(self.cli._format_result.called)
@@ -450,9 +451,8 @@ class ToxicCliTest(unittest.TestCase):
 
     @patch.object(cli.urwid, 'AsyncioEventLoop', Mock())
     @patch.object(cli.urwid, 'MainLoop', Mock())
+    @patch.object(cli.ToxicCli, 'show_welcome_screen', Mock())
     def test_run(self):
-        self.cli.show_welcome_screen = Mock()
-
         self.cli.run()
 
         self.assertTrue(self.cli.show_welcome_screen.called)
@@ -528,42 +528,41 @@ class ToxicCliTest(unittest.TestCase):
 
         self.assertEqual(self.cli.messages.get_text()[1][0][0], 'error')
 
+    @patch.object(cli.ToxicCli, '_format_repo_list',
+                  Mock(spec=cli.ToxicCli._format_repo_list, return_value=''))
     def test_execute_and_show_with_custom_format_method(self):
         @asyncio.coroutine
         def ea(cmdline):
             return 'repo-list', {}
 
         self.cli.execute_action = ea
-        self.cli._format_repo_list = Mock(spec=self.cli._format_repo_list,
-                                          return_value='')
 
         self.loop.run_until_complete(self.cli.execute_and_show(''))
         self.assertTrue(self.cli._format_repo_list.called)
 
+    @patch.object(cli.ToxicCli, '_format_result',
+                  Mock(spec=cli.ToxicCli._format_result, return_value=''))
     def test_execute_and_show_with_default_format(self):
         @asyncio.coroutine
         def ea(cmdline):
             return 'builder-show', {}
 
         self.cli.execute_action = ea
-        self.cli._format_result = Mock(spec=self.cli._format_result,
-                                       return_value='')
 
         self.loop.run_until_complete(self.cli.execute_and_show(''))
         self.assertTrue(self.cli._format_result.called)
 
+    @patch.object(cli.ToxicCli, '_format_help',
+                  Mock(spec=cli.ToxicCli._format_help, return_value=''))
     def test_execute_with_help(self):
         cmdline = 'help'
-        self.cli._format_help = Mock(spec=self.cli._format_help,
-                                     return_value='')
-
         self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
         self.assertTrue(self.cli._format_help.called)
 
+    @patch.object(cli.ToxicCli, 'quit', Mock(spec=cli.ToxicCli.quit,
+                                             return_value=''))
     def test_execute_with_quit(self):
         cmdline = 'quit'
-        self.cli.quit = Mock(spec=self.cli.quit,
-                             return_value='')
 
         self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
         self.assertTrue(self.cli.quit.called)
@@ -659,9 +658,8 @@ class ToxicCliTest(unittest.TestCase):
 
         self.assertEqual(formated.strip(), expected.strip())
 
+    @patch.object(cli.ToxicCli, '_format_output_columns', Mock())
     def test_format_repo_list(self):
-        self.cli._format_output_columns = Mock()
-
         repos = []
 
         self.cli._format_repo_list(repos)
@@ -670,16 +668,16 @@ class ToxicCliTest(unittest.TestCase):
 
         self.assertEqual(called, (_('name'), _('vcs')))  # noqa
 
+    @patch.object(cli.ToxicCli, '_format_output_columns', Mock())
     def test_format_slave_list(self):
-        self.cli._format_output_columns = Mock()
         slaves = []
         self.cli._format_slave_list(slaves)
 
         called = self.cli._format_output_columns.call_args[0][0][0]
         self.assertEqual(called, (_('name'), _('host'), _('port')))  # noqa
 
+    @patch.object(cli.ToxicCli, '_format_output_columns', Mock())
     def test_format_builder_list(self):
-        self.cli._format_output_columns = Mock()
         builders = []
         self.cli._format_builder_list(builders)
 

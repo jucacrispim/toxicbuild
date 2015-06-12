@@ -296,7 +296,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         self.messages.set_text('')
         if not input_text:
             return
-        asyncio.async(self.execute_and_show(input_text))
+        asyncio.ensure_future(self.execute_and_show(input_text))
 
     @asyncio.coroutine
     def execute_and_show(self, cmdline):
