@@ -58,6 +58,7 @@ class HoleHandler:
     methods available to the clients:
 
     * `repo-add`
+    * `repo-get`
     * `repo-list`
     * `repo-remove`
     * `repo-update`
@@ -123,8 +124,26 @@ class HoleHandler:
 
         repo = yield from Repository.create(repo_name, repo_url,
                                             update_seconds, vcs_type, slaves)
-        repo = json.loads(repo.to_json())
-        return {'repo-add': repo}
+        repo_dict = json.loads(repo.to_json())
+        repo_dict['id'] = str(repo.id)
+        return {'repo-add': repo_dict}
+
+    @asyncio.coroutine
+    def repo_get(self, repo_name=None, repo_url=None):
+        if not (repo_name or repo_url):
+            raise TypeError("repo_name or repo_url required")
+
+        kw = {}
+        if repo_name:
+            kw['name'] = repo_name
+
+        if repo_url:
+            kw['url'] = repo_url
+
+        repo = yield from Repository.get(**kw)
+        repo_dict = json.loads(repo.to_json())
+        repo_dict['id'] = str(repo.id)
+        return {'repo-get': repo_dict}
 
     @asyncio.coroutine
     def repo_remove(self, repo_name):
@@ -144,6 +163,7 @@ class HoleHandler:
         for repo in repos:
 
             repo_dict = json.loads(repo.to_json())
+            repo_dict['id'] = str(repo.id)
             repo_list.append(repo_dict)
 
         return {'repo-list': repo_list}
@@ -225,7 +245,15 @@ class HoleHandler:
                                         port=slave_port)
 
         slave_dict = json.loads(slave.to_json())
+        slave_dict['id'] = str(slave.id)
         return {'slave-add': slave_dict}
+
+    @asyncio.coroutine
+    def slave_get(self, slave_name=None):
+        slave = yield from Slave.get(name=slave_name)
+        slave_dict = json.loads(slave.to_json())
+        slave_dict['id'] = str(slave.id)
+        return {'slave-get': slave_dict}
 
     @asyncio.coroutine
     def slave_remove(self, slave_name):
@@ -246,7 +274,9 @@ class HoleHandler:
         slave_list = []
 
         for slave in slaves:
-            slave_list.append(json.loads(slave.to_json()))
+            slave_dict = json.loads(slave.to_json())
+            slave_dict['id'] = str(slave.id)
+            slave_list.append(slave_dict)
 
         return {'slave-list': slave_list}
 
@@ -268,6 +298,7 @@ class HoleHandler:
 
         for builder in builders:
             builder_dict = json.loads(builder.to_json())
+            builder_dict['id'] = str(builder.id)
             builder_dict['status'] = (yield from to_asyncio_future(
                 Build.objects.filter(builder=builder).
                 order_by('-started')[0])).status
@@ -286,6 +317,7 @@ class HoleHandler:
 
         builder = yield from Builder.get(**kwargs)
         builder_dict = json.loads(builder.to_json())
+        builder_dict['id'] = str(builder.id)
 
         build_list = []
         builds = yield from to_asyncio_future(
@@ -293,6 +325,7 @@ class HoleHandler:
 
         for build in builds:
             build_dict = json.loads(build.to_json())
+            build_dict['id'] = str(build.id)
             build_list.append(build_dict)
 
         builder_dict.update({'builds': build_list})

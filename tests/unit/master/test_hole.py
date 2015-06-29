@@ -137,7 +137,38 @@ class HoleHandlerTest(AsyncTestCase):
         repo = yield from handler.repo_add(name, url, update_seconds, vcs_type,
                                            slaves)
 
-        self.assertTrue(repo['repo-add']['_id'])
+        self.assertTrue(repo['repo-add']['id'])
+
+    @patch.object(repositories.Repository, 'first_run', MagicMock())
+    @gen_test
+    def test_repo_get_with_repo_name(self):
+        yield from self._create_test_data()
+        repo_name = 'reponame'
+        action = 'repo-get'
+        handler = hole.HoleHandler({}, action, MagicMock())
+        repo = (yield from handler.repo_get(repo_name=repo_name))['repo-get']
+
+        self.assertEqual(repo['name'], repo_name)
+        self.assertTrue(repo['id'])
+
+    @patch.object(repositories.Repository, 'first_run', MagicMock())
+    @gen_test
+    def test_repo_get_with_repo_url(self):
+        yield from self._create_test_data()
+        repo_url = 'git@somewhere.com'
+        action = 'repo-get'
+        handler = hole.HoleHandler({}, action, MagicMock())
+        repo = (yield from handler.repo_get(repo_url=repo_url))['repo-get']
+
+        self.assertEqual(repo['url'], repo_url)
+
+    @gen_test
+    def test_repo_get_without_params(self):
+        action = 'repo-get'
+        handler = hole.HoleHandler({}, action, MagicMock())
+
+        with self.assertRaises(TypeError):
+            yield from handler.repo_get()
 
     @patch.object(repositories, 'shutil', Mock())
     @patch.object(repositories.Repository, 'first_run', MagicMock())
@@ -287,7 +318,20 @@ class HoleHandlerTest(AsyncTestCase):
                                              slave_port=1234)
         slave = slave['slave-add']
 
-        self.assertTrue(slave['_id'])
+        self.assertTrue(slave['id'])
+
+    @patch.object(repositories.Repository, 'first_run', MagicMock())
+    @gen_test
+    def test_slave_get(self):
+        yield from self._create_test_data()
+        slave_name = 'name'
+        action = 'slave-get'
+        handler = hole.HoleHandler({}, action, MagicMock())
+        slave = (yield from handler.slave_get(
+            slave_name=slave_name))['slave-get']
+
+        self.assertEqual(slave['name'], slave_name)
+        self.assertTrue(slave['id'])
 
     @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
@@ -311,7 +355,6 @@ class HoleHandlerTest(AsyncTestCase):
     @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_builder_list(self):
-
         yield from self._create_test_data()
         handler = hole.HoleHandler({}, 'builder-list', MagicMock())
 
@@ -389,6 +432,7 @@ class HoleHandlerTest(AsyncTestCase):
         handler = hole.HoleHandler({}, 'action', MagicMock())
         expected = {'list_funcs': handler.list_funcs,
                     'repo_add': handler.repo_add,
+                    'repo_get': handler.repo_get,
                     'repo_list': handler.repo_list,
                     'repo_remove': handler.repo_remove,
                     'repo_update': handler.repo_update,
@@ -396,6 +440,7 @@ class HoleHandlerTest(AsyncTestCase):
                     'repo_remove_slave': handler.repo_remove_slave,
                     'repo_start_build': handler.repo_start_build,
                     'slave_add': handler.slave_add,
+                    'slave_get': handler.slave_get,
                     'slave_list': handler.slave_list,
                     'slave_remove': handler.slave_remove,
                     'builder_list': handler.builder_list,
