@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from toxicbuild.core.conf import Settings
-from toxicbuild.slave.build import BuildManager
+from toxicbuild.slave.managers import BuildManager
 
 
 ENVVAR = 'TOXICSLAVE_SETTINGS'

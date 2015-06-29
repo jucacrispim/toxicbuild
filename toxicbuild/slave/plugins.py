@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from toxicbuild.slave.exceptions import PluginNotFound
+from toxicbuild.slave.build import BuildStep
 
 
 class Plugin:
@@ -66,21 +67,20 @@ class PythonVenvPlugin(Plugin):
         self.remove_env = remove_env
 
     def get_steps_before(self):
-        create_env = {'name': 'create venv',
-                      'command': 'virtualenv venv -p {}'.format(
-                          self.pyversion)}
+        create_env = BuildStep('create venv',
+                               'virtualenv venv -p {}'.format(self.pyversion))
 
-        install_deps = {'name': 'install dependencies using pip',
-                        'command': 'pip install -r {}'.format(
-                            self.requirements_file)}
+        install_deps = BuildStep('install dependencies using pip',
+                                 'pip install -r {}'.format(
+                                     self.requirements_file))
 
         return [create_env, install_deps]
 
     def get_steps_after(self):
         steps = []
         if self.remove_env:
-            steps.append({'name': 'remove-env',
-                          'command': 'rm -rf venv'})
+            steps.append(BuildStep('remove-env',
+                                   'rm -rf venv'))
         return steps
 
     def get_env_vars(self):

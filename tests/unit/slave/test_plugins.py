@@ -59,10 +59,10 @@ class PythonVenvPluginTest(unittest.TestCase):
 
     def test_get_steps_before(self):
         expected = [
-            {'name': 'create venv',
-             'command': 'virtualenv venv -p /usr/bin/python3.4'},
-            {'name': 'install dependencies using pip',
-             'command': 'pip install -r requirements.txt'}
+            plugins.BuildStep('create venv',
+                              'virtualenv venv -p /usr/bin/python3.4'),
+            plugins.BuildStep('install dependencies using pip',
+                              'pip install -r requirements.txt')
         ]
 
         steps_before = self.plugin.get_steps_before()
@@ -76,7 +76,7 @@ class PythonVenvPluginTest(unittest.TestCase):
         self.assertEqual(expected, steps_after)
 
     def test_get_steps_after_removing(self):
-        expected = [{'name': 'remove-env', 'command': 'rm -rf venv'}]
+        expected = [plugins.BuildStep('remove-env', 'rm -rf venv')]
         self.plugin.remove_env = True
         steps_after = self.plugin.get_steps_after()
 
