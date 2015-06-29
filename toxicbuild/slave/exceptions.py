@@ -7,3 +7,7 @@ class BuilderNotFound(Exception):
 
 class BadData(Exception):
     pass
+
+
+class PluginNotFound(Exception):
+    pass

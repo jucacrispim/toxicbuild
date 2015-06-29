@@ -25,6 +25,7 @@ from toxicbuild.core.utils import(
     load_module_from_file, exec_cmd, log, datetime2string, now)
 from toxicbuild.slave.contextmanagers import change_dir
 from toxicbuild.slave.exceptions import BuilderNotFound
+from toxicbuild.slave.plugins import Plugin
 
 
 class BuildManager:
@@ -99,11 +100,20 @@ class BuildManager:
             raise BuilderNotFound(msg)
 
         builder = Builder(self, bdict['name'], self.workdir)
+        plugins_conf = bdict.get('plugins')
+        if plugins_conf:
+            builder.plugins = self._load_plugins(plugins_conf)
+
+        for plugin in builder.plugins:
+            builder.steps += plugin.get_steps_before()
 
         for sdict in bdict['steps']:
             sname, command = sdict['name'], sdict['command']
             step = BuildStep(sname, command)
             builder.steps.append(step)
+
+        for plugin in builder.plugins:
+            builder.steps += plugin.get_steps_after()
 
         return builder
 
@@ -111,6 +121,19 @@ class BuildManager:
     @asyncio.coroutine
     def send_info(self, info):
         yield from self.protocol.send_response(code=0, body=info)
+
+    def _load_plugins(self, plugins_config):
+        """ Returns a list of :class:`toxicbuild.slave.plugins.Plugin`
+        subclasses based on the plugins list based on the plugins listed
+        on the config for a builder."""
+
+        plist = []
+        for pdict in plugins_config:
+            plugin_class = Plugin.get(pdict['name'])
+            del pdict['name']
+            plugin = plugin_class(**pdict)
+            plist.append(plugin)
+        return plist
 
 
 class Builder:
@@ -128,6 +151,7 @@ class Builder:
         self.name = name
         self.workdir = workdir
         self.steps = []
+        self.plugins = []
 
     @asyncio.coroutine
     def build(self):
@@ -153,7 +177,8 @@ class Builder:
 
                 yield from self.manager.send_info(step_info)
 
-                step_info.update((yield from step.execute()))
+                envvars = self._get_env_vars()
+                step_info.update((yield from step.execute(**envvars)))
 
                 msg = 'Finished {} with status {}'.format(step.command,
                                                           step_info['status'])
@@ -175,6 +200,12 @@ class Builder:
         build_info['finished'] = datetime2string(now())
         return build_info
 
+    def _get_env_vars(self):
+        envvars = {}
+        for plugin in self.plugins:
+            envvars.update(plugin.get_env_vars())
+        return envvars
+
 
 class BuildStep:
 
@@ -186,10 +217,10 @@ class BuildStep:
         self.command = cmd
 
     @asyncio.coroutine
-    def execute(self):
+    def execute(self, **envvars):
         step_status = {}
         try:
-            output = yield from exec_cmd(self.command, cwd='.')
+            output = yield from exec_cmd(self.command, cwd='.', **envvars)
             status = 'success'
         except ExecCmdError as e:
             output = e.args[0]

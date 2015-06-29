@@ -23,7 +23,7 @@ import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core.utils import load_module_from_file
-from toxicbuild.slave import build
+from toxicbuild.slave import build, plugins
 from tests.unit.slave import TEST_DATA_DIR
 
 
@@ -32,7 +32,7 @@ TOXICCONF = load_module_from_file(TOXICCONF)
 
 
 @mock.patch.object(build, 'load_module_from_file',
-                   mock.MagicMock(return_value=TOXICCONF))
+                   mock.Mock(return_value=TOXICCONF))
 class BuilderManagerTest(AsyncTestCase):
 
     @mock.patch.object(build, 'get_vcs', mock.MagicMock())
@@ -73,7 +73,7 @@ class BuilderManagerTest(AsyncTestCase):
         self.assertTrue(self.manager.vcs.pull.called)
 
     def test_list_builders(self):
-        expected = ['builder1', 'builder2']
+        expected = ['builder1', 'builder2', 'builder3']
         returned = self.manager.list_builders()
 
         self.assertEqual(returned, expected)
@@ -82,10 +82,21 @@ class BuilderManagerTest(AsyncTestCase):
         builder = self.manager.load_builder('builder1')
         self.assertEqual(len(builder.steps), 2)
 
+    def test_load_builder_with_plugin(self):
+        builder = self.manager.load_builder('builder3')
+        self.assertEqual(len(builder.steps), 3)
+
     def test_load_builder_with_not_found(self):
         with self.assertRaises(build.BuilderNotFound):
-            builder = self.manager.load_builder('builder3')
+            builder = self.manager.load_builder('builder300')
             del builder
+
+    def test_load_plugins(self):
+        plugins_conf = [{'name': 'python-venv',
+                         'pyversion': '/usr/bin/python3.4'}]
+        returned = self.manager._load_plugins(plugins_conf)
+
+        self.assertEqual(type(returned[0]), plugins.PythonVenvPlugin)
 
 
 class BuilderTest(AsyncTestCase):
@@ -131,6 +142,14 @@ class BuilderTest(AsyncTestCase):
 
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'fail')
+
+    def test_get_env_vars(self):
+        pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
+        self.builder.plugins = self.builder.manager._load_plugins(pconfig)
+        expected = {'PATH': 'PATH:venv/bin'}
+        returned = self.builder._get_env_vars()
+
+        self.assertEqual(expected, returned)
 
 
 class BuildStepTest(AsyncTestCase):
