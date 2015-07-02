@@ -37,6 +37,8 @@ class RepositoryTest(AsyncTestCase):
         repositories.Repository.drop_collection()
         repositories.RepositoryRevision.drop_collection()
         build.Slave.drop_collection()
+        build.Build.drop_collection()
+        build.Builder.drop_collection()
         super(RepositoryTest, self).tearDown()
 
     def get_new_ioloop(self):
@@ -201,11 +203,55 @@ class RepositoryTest(AsyncTestCase):
 
         self.assertEqual(called_kw, kw)
 
+    @gen_test
+    def test_status_with_running_build(self):
+        yield from self._create_db_revisions()
+
+        running_build = build.Build(repository=self.repo, slave=self.slave,
+                                    branch='master', named_tree='master',
+                                    started=datetime.datetime.now(),
+                                    status='running', builder=self.builder)
+        yield running_build.save()
+        self.assertEqual((yield from self.repo.status), 'running')
+
+    @gen_test
+    def test_status_with_success_build(self):
+        yield from self._create_db_revisions()
+
+        success_build = build.Build(repository=self.repo, slave=self.slave,
+                                    branch='master', named_tree='master',
+                                    started=datetime.datetime.now(),
+                                    status='success', builder=self.builder)
+        yield success_build.save()
+        self.assertEqual((yield from self.repo.status), 'success')
+
+    @gen_test
+    def test_status_with_fail_build(self):
+        yield from self._create_db_revisions()
+
+        success_build = build.Build(repository=self.repo, slave=self.slave,
+                                    branch='master', named_tree='master',
+                                    started=datetime.datetime.now(),
+                                    status='fail', builder=self.builder)
+        yield success_build.save()
+        self.assertEqual((yield from self.repo.status), 'fail')
+
+    @gen_test
+    def test_status_without_build(self):
+        yield from self._create_db_revisions()
+
+        self.assertEqual((yield from self.repo.status), '')
+
     @asyncio.coroutine
     def _create_db_revisions(self):
         yield self.repo.save()
         rep = self.repo
         now = datetime.datetime.now()
+        self.builder = yield from build.Builder.create(name='builder0',
+                                                       repository=self.repo)
+        self.slave = yield from build.Slave.create(name='slave',
+                                                   host='localhost',
+                                                   port=1234)
 
         for r in range(2):
             for branch in ['master', 'dev']:

@@ -73,6 +73,24 @@ class Repository(Document):
 
         return self._poller_instance
 
+    @property
+    @asyncio.coroutine
+    def status(self):
+        is_running = (yield from to_asyncio_future(Build.objects.filter(
+            repository=self, status='running').count())) > 0
+
+        if is_running:
+            status = 'running'
+        else:
+            try:
+                status = (yield from to_asyncio_future(Build.objects.filter(
+                    repository=self).order_by('-started').first())).status
+            except AttributeError:
+                # ugly mongomotor error for no first thing
+                status = ''
+
+        return status
+
     @classmethod
     @asyncio.coroutine
     def create(cls, name, url, update_seconds, vcs_type, slaves=None):

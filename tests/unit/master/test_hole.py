@@ -150,6 +150,7 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual(repo['name'], repo_name)
         self.assertTrue(repo['id'])
+        self.assertIn('status', repo.keys())
 
     @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
@@ -189,6 +190,7 @@ class HoleHandlerTest(AsyncTestCase):
         repo_list = (yield from handler.repo_list())['repo-list']
 
         self.assertEqual(len(repo_list), 1)
+        self.assertIn('status', repo_list[0].keys())
 
     @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test

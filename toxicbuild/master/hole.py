@@ -143,6 +143,7 @@ class HoleHandler:
         repo = yield from Repository.get(**kw)
         repo_dict = json.loads(repo.to_json())
         repo_dict['id'] = str(repo.id)
+        repo_dict['status'] = yield from repo.status
         return {'repo-get': repo_dict}
 
     @asyncio.coroutine
@@ -164,6 +165,7 @@ class HoleHandler:
 
             repo_dict = json.loads(repo.to_json())
             repo_dict['id'] = str(repo.id)
+            repo_dict['status'] = yield from repo.status
             repo_list.append(repo_dict)
 
         return {'repo-list': repo_list}
