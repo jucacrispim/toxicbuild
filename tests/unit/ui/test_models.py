@@ -28,7 +28,9 @@ def get_client_mock(r2s_return_value=None):
     def r2s(action, body):
         if r2s_return_value is None:
             return {'id': '23sfs34', 'vcs_type': 'git', 'name': 'my-repo',
-                    'update_seconds': 300, 'slaves': []}
+                    'update_seconds': 300, 'slaves':
+                    [{'name': 'bla', 'id': '123sd', 'host': 'localhost',
+                      'port': 1234}]}
         else:
             return r2s_return_value
 
@@ -64,6 +66,12 @@ class RepositoryTest(AsyncTestCase):
 
         repo = yield from models.Repository.get(name='some-repo')
         self.assertTrue(repo.id)
+
+    @patch.object(models.Repository, 'get_client', get_client_mock)
+    @gen_test
+    def test_repo_slaves(self):
+        repo = yield from models.Repository.get(name='some-repo')
+        self.assertEqual(type(repo.slaves[0]), models.Slave)
 
     @patch.object(models.Repository, 'get_client', lambda:
                   get_client_mock([{'name': 'repo0'}, {'name': 'repo1'}]))

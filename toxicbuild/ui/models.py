@@ -22,6 +22,14 @@ class BaseModel:
 
 class Repository(BaseModel):
 
+    def __init__(self, **kwargs):
+        if 'slaves' in kwargs:
+            slaves = [Slave(**kw) for kw in kwargs['slaves']]
+            self.slaves = slaves
+            del kwargs['slaves']
+
+        super().__init__(**kwargs)
+
     @classmethod
     @asyncio.coroutine
     def add(cls, name, url, vcs_type, update_seconds=300, slaves=[]):
