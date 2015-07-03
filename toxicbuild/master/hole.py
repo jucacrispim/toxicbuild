@@ -353,6 +353,19 @@ class HoleHandler:
         funcs = {n: getattr(self, n) for n in func_names}
         return funcs
 
+    def _get_repo_dict(self, repo):
+        """Returns a dictionary for a given repository"""
+        repo_dict = json.loads(repo.to_json())
+        repo_dict['id'] = str(repo.id)
+        repo_dict['status'] = repo.status
+        repo_dict['slaves'] = [self._get_slave_dict(s) for s in repo.slaves]
+        return repo_dict
+
+    def _get_slave_dict(self, slave):
+        slave_dict = json.loads(slave.to_json())
+        slave_dict['id'] = str(slave.id)
+        return slave_dict
+
     @asyncio.coroutine
     def _get_builders(self, slaves, revision):
 

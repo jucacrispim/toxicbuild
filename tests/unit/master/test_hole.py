@@ -452,6 +452,30 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual(action_methods, expected)
 
+    @patch.object(repositories.Repository, 'first_run', MagicMock())
+    @gen_test
+    def test_get_repo_dict(self):
+        yield from self._create_test_data()
+        self.repo.slaves = [self.slave]
+
+        handler = hole.HoleHandler({}, 'action', MagicMock())
+        repo_dict = handler._get_repo_dict(self.repo)
+
+        self.assertIn('id', repo_dict)
+        self.assertIn('slaves', repo_dict)
+        self.assertTrue('status', repo_dict)
+        self.assertTrue(repo_dict['slaves'][0]['name'])
+
+    @patch.object(repositories.Repository, 'first_run', MagicMock())
+    @gen_test
+    def test_get_slave_dict(self):
+        yield from self._create_test_data()
+
+        handler = hole.HoleHandler({}, 'action', MagicMock())
+        slave_dict = handler._get_slave_dict(self.slave)
+
+        self.assertEqual(type(slave_dict['id']), str)
+
     @patch.object(repositories.utils, 'log', Mock())
     @asyncio.coroutine
     def _create_test_data(self):
