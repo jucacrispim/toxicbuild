@@ -459,7 +459,7 @@ class HoleHandlerTest(AsyncTestCase):
         self.repo.slaves = [self.slave]
 
         handler = hole.HoleHandler({}, 'action', MagicMock())
-        repo_dict = handler._get_repo_dict(self.repo)
+        repo_dict = yield from handler._get_repo_dict(self.repo)
 
         self.assertIn('id', repo_dict)
         self.assertIn('slaves', repo_dict)

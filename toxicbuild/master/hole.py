@@ -124,8 +124,7 @@ class HoleHandler:
 
         repo = yield from Repository.create(repo_name, repo_url,
                                             update_seconds, vcs_type, slaves)
-        repo_dict = json.loads(repo.to_json())
-        repo_dict['id'] = str(repo.id)
+        repo_dict = yield from self._get_repo_dict(repo)
         return {'repo-add': repo_dict}
 
     @asyncio.coroutine
@@ -141,9 +140,7 @@ class HoleHandler:
             kw['url'] = repo_url
 
         repo = yield from Repository.get(**kw)
-        repo_dict = json.loads(repo.to_json())
-        repo_dict['id'] = str(repo.id)
-        repo_dict['status'] = yield from repo.status
+        repo_dict = yield from self._get_repo_dict(repo)
         return {'repo-get': repo_dict}
 
     @asyncio.coroutine
@@ -163,9 +160,7 @@ class HoleHandler:
         repo_list = []
         for repo in repos:
 
-            repo_dict = json.loads(repo.to_json())
-            repo_dict['id'] = str(repo.id)
-            repo_dict['status'] = yield from repo.status
+            repo_dict = yield from self._get_repo_dict(repo)
             repo_list.append(repo_dict)
 
         return {'repo-list': repo_list}
@@ -246,15 +241,13 @@ class HoleHandler:
         slave = yield from Slave.create(name=slave_name, host=slave_host,
                                         port=slave_port)
 
-        slave_dict = json.loads(slave.to_json())
-        slave_dict['id'] = str(slave.id)
+        slave_dict = self._get_slave_dict(slave)
         return {'slave-add': slave_dict}
 
     @asyncio.coroutine
     def slave_get(self, slave_name=None):
         slave = yield from Slave.get(name=slave_name)
-        slave_dict = json.loads(slave.to_json())
-        slave_dict['id'] = str(slave.id)
+        slave_dict = self._get_slave_dict(slave)
         return {'slave-get': slave_dict}
 
     @asyncio.coroutine
@@ -276,8 +269,7 @@ class HoleHandler:
         slave_list = []
 
         for slave in slaves:
-            slave_dict = json.loads(slave.to_json())
-            slave_dict['id'] = str(slave.id)
+            slave_dict = self._get_slave_dict(slave)
             slave_list.append(slave_dict)
 
         return {'slave-list': slave_list}
@@ -353,11 +345,12 @@ class HoleHandler:
         funcs = {n: getattr(self, n) for n in func_names}
         return funcs
 
+    @asyncio.coroutine
     def _get_repo_dict(self, repo):
         """Returns a dictionary for a given repository"""
         repo_dict = json.loads(repo.to_json())
         repo_dict['id'] = str(repo.id)
-        repo_dict['status'] = repo.status
+        repo_dict['status'] = yield from repo.status
         repo_dict['slaves'] = [self._get_slave_dict(s) for s in repo.slaves]
         return repo_dict
 
