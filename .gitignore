@@ -21,3 +21,4 @@ _trial_temp
 tests/functional/data/slave/src/
 .dir-locals.el
 /htmlcov/
+/.eggs/
