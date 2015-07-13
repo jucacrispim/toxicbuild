@@ -96,3 +96,9 @@ class BuildStepTest(AsyncTestCase):
         step = build.BuildStep(name='test', cmd='lsz')
         status = yield from step.execute()
         self.assertEqual(status['status'], 'fail')
+
+    def test_equal_with_other_object(self):
+        """ Ensure that one step is not equal something that is not a step"""
+
+        step = build.BuildStep(name='test', cmd='lsz')
+        self.assertNotEqual(step, {})

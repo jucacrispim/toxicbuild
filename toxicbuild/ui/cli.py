@@ -117,7 +117,8 @@ class HistoryEditMixin:
     def append_to_history(self, item):
         # If you type the same command repeatedly we will not store
         # all these times on history.
-        if self.history and item == self.history[-1]:
+        item = item.strip().strip('\n')
+        if (not item or (self.history and item == self.history[-1])):
             return
 
         if len(self.history) < self.history_limit:
@@ -168,7 +169,7 @@ class HistoryEditMixin:
             history = deque()
         else:
             with open(self.history_file, 'r') as fd:
-                lines = fd.readlines()
+                lines = [l.strip().strip('\n') for l in fd.readlines()]
                 history = deque()
                 history.extend(lines)
 
@@ -309,7 +310,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
             # return just for tests
             return self.quit()
         elif cmdline == 'peek':
-            yield from self.peek()
+            return (yield from self.peek())
         else:
             try:
                 action, response = yield from self.execute_action(cmdline)
@@ -335,7 +336,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
                 response = yield from client.get_response()
                 if self._stop_peek:
                     break
-                self.main_screen.set_text(self._format_result(response))
+                self.main_screen.set_text(self._format_peek(response))
 
         self._stop_peek = False
 
@@ -486,6 +487,42 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         output = [(_('name'), _('repo'), _('branch'))]  # noqa
         output += [(b['name'], b['repo'], b['branch']) for b in builders]
         return self._format_output_columns(output)
+
+    def _format_peek(self, response):
+        response = response['body']
+
+        if 'steps' in response:
+            msg = self._format_peek_build(response)
+        else:
+            msg = self._format_peek_step(response)
+
+        return msg
+
+    def _format_peek_build(self, response):
+        if response.get('finished'):
+            msg = 'build finished with status {}'.format(
+                response['status'])
+
+            for step in response['steps']:
+                msg += '\n step {} - {}'.format(step['command'],
+                                                step['status'])
+        else:
+            msg = 'build started'
+
+        return msg
+
+    def _format_peek_step(self, response):
+        if response.get('finished'):
+            # Translators: Do not translate what is inside {}
+            msg = _('step {step} finished with status {status}')  # noqa
+            msg = msg.format(step=response['command'],
+                             status=response['status'])
+        else:
+            # Translators: Do not translate what is inside {}
+            msg = _('step {step} is running')  # noqa
+            msg = msg.format(step=response['command'])
+
+        return msg
 
 
 def main():  # pragma: no cover

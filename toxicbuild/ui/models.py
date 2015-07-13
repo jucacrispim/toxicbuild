@@ -1,5 +1,23 @@
 # -*- coding: utf-8 -*-
 
+# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+
+# This file is part of toxicbuild.
+
+# toxicbuild is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# toxicbuild is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
+
+
 import asyncio
 from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui import settings
@@ -24,6 +42,7 @@ class Repository(BaseModel):
 
     def __init__(self, **kwargs):
         if 'slaves' in kwargs:
+
             slaves = [Slave(**kw) for kw in kwargs['slaves']]
             self.slaves = slaves
             del kwargs['slaves']
@@ -35,8 +54,6 @@ class Repository(BaseModel):
     def add(cls, name, url, vcs_type, update_seconds=300, slaves=[]):
         kw = {'repo_name': name, 'repo_url': url, 'vcs_type': vcs_type,
               'update_seconds': update_seconds}
-
-        slaves = [s.name for s in slaves]
 
         kw.update({'slaves': slaves})
         client = yield from cls.get_client()
@@ -84,7 +101,8 @@ class Repository(BaseModel):
                     slaves=[]):
 
         client = yield from self.get_client()
-        resp = yield from client.repo_start_build(branch=branch,
+        resp = yield from client.repo_start_build(repo_name=self.name,
+                                                  branch=branch,
                                                   builder_name=builder_name,
                                                   named_tree=named_tree,
                                                   slaves=slaves)

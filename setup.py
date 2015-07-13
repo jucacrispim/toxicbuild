@@ -18,7 +18,7 @@ setup(name='toxicbuild',
       packages=find_packages(exclude=['tests', 'tests.*']),
       include_package_data=True,
       install_requires=['tornado>=4.1', 'mongomotor>=0.3', 'asyncblink>=0.1.1',
-                        'mando>=0.3.2'],
+                        'mando>=0.3.2', 'pyrocumulus==0.5-rc5'],
       classifiers=[
           'Development Status :: 3 - Alpha',
           'Environment :: No Input/Output (Daemon)',

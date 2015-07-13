@@ -1,0 +1,39 @@
+.alert{
+    display:none;
+    margin-top: 5%;
+}
+
+.img-logo{
+    width: 190px;
+    margin-top: -4%;
+}
+
+.background-main{
+    background-color: #fff;
+}
+
+.master-msg{
+    color: #fff;
+    margin-top:9%;
+}
+
+.btn-status{
+    width: 80px;
+}
+
+.btn-toxicbuild-default {
+  color: #fff;
+  background-color: #868B90;
+  border-color: #7A7E83;
+}
+
+
+.btn-toxicbuild-default:hover {
+  color: #fff;
+  background-color: #575C61;
+  border-color: #7A7E83;
+}
+
+#btn-delete-repo{
+    display: none;
+}

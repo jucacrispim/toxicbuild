@@ -9,3 +9,4 @@ sphinx-rtd-theme==0.1.7
 mongomotor==0.3.1
 asyncblink==0.1.1
 mando==0.3.2
+pyrocumulus==0.5-rc5

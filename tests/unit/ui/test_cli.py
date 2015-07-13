@@ -315,7 +315,11 @@ ACTIONS = {'builder-show':
            'repo-add-slave':
            {'parameters': [{'name': 'repo_name', 'required': True},
                            {'name': 'slave_name', 'required': True}],
-            'doc': ' Adds a slave to a repository. '}}
+            'doc': ' Adds a slave to a repository. '},
+
+           'peek':
+           {'parameters': [],
+            'doc': 'Peeks throught the master\'s hole'}}
 
 
 class ToxicCliActionsTest(AsyncTestCase):
@@ -349,11 +353,10 @@ class ToxicCliActionsTest(AsyncTestCase):
     @patch.object(cli, 'get_hole_client', MagicMock())
     def test_get_actions(self):
         client = MagicMock()
-        list_funcs = MagicMock()
 
         @asyncio.coroutine
         def lf():
-            list_funcs()
+            return ACTIONS
 
         client.list_funcs = lf
 
@@ -364,9 +367,9 @@ class ToxicCliActionsTest(AsyncTestCase):
 
         cli.get_hole_client = ghc
 
-        self.cli_actions.get_actions()
+        actions = self.cli_actions.get_actions()
 
-        self.assertTrue(list_funcs.called)
+        self.assertEqual(actions, ACTIONS)
 
     def test_get_action_from_command_line(self):
         cmdline = 'repo-add toxicbuild git@toxicbuild.org 300 git'
@@ -566,6 +569,29 @@ class ToxicCliTest(unittest.TestCase):
 
         self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
         self.assertTrue(self.cli.quit.called)
+
+    @patch.object(cli.ToxicCli, 'peek', MagicMock(spec=cli.ToxicCli.peek))
+    def test_execute_with_peek(self):
+        cmdline = 'peek'
+
+        self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
+        self.assertTrue(self.cli.peek.called)
+
+    def test_peek(self):
+        client_mock = MagicMock()
+        client_mock.__enter__.return_value = client_mock
+
+        @asyncio.coroutine
+        def gc():
+            return client_mock
+
+        self.cli._stop_peek = True
+        self.cli.get_client = gc
+        self.loop.run_until_complete(self.cli.peek())
+
+        stream_called = client_mock.request2server.call_args[0][0] == 'stream'
+        self.assertTrue(stream_called)
+        self.assertTrue(client_mock.get_response.called)
 
     def test_get_welcome_text(self):
         expected = _('Welcome to {toxicbuild}')  # noqa

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block main_area %}
+
+<div class="page-header">
+  <h3>Repositories</h3>
+
+  <!-- Button trigger modal add repository -->
+  <button type="button" class="btn btn-info btn-xs" data-toggle="modal" data-target="#repoModal">
+    Add new repo
+  </button>
+</div>
+
+{% include "repository_modal.html" %}
+
+{% include "start_build_modal.html" %}
+
+<div class="row">
+  <table class="table">
+    <thead>
+      <th>Name</th>
+      <th>URL</th>
+      <th>Status</th>
+    </thead>
+    <tbody id="tbody-repos">
+      {% for repo in repos %}
+      <tr id="row-{{repo.name}}">
+	<td>
+	  <a href="javascript:showRepoModal('{{repo.name}}', '{{repo.url}}', '{{repo.vcs_type}}', {{repo.update_seconds}}, {{[s.name for s in repo.slaves]}})">
+	    {{repo.name}}
+	  </a>
+	</td>
+	<td>{{repo.url}}</td>
+	<td><button type="button" class="btn btn-xs btn-{{get_btn_class(repo.status)}} btn-status">{{repo.status}}</button></td>
+	<td><button type="button" id="start-build-btn" class="btn btn-xs btn-info btn-status"
+		    data-toggle="modal" data-repo-name="{{repo.name}}"data-target="#startBuildModal">start build</button></td>
+      </tr>
+      {% end %}
+    </tbody>
+  </table>
+</div>
+
+
+<div class="page-header">
+  <h3>Slaves</h3>
+</div>
+<div class="row">
+  <table class="table">
+    <thead>
+      <th>Name</th>
+      <th>Host</th>
+      <th>Port</th>
+    </thead>
+    <tbody>
+      {% for slave in slaves %}
+      <tr>
+	<td>{{slave.name}}</td>
+	<td>{{slave.host}}</td>
+	<td>{{slave.port}}</td>
+      </tr>
+      {% end %}
+    </tbody>
+  </table>
+</div>
+
+{% end %}

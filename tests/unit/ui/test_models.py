@@ -55,7 +55,6 @@ class RepositoryTest(AsyncTestCase):
     @patch.object(models.Repository, 'get_client', get_client_mock)
     @gen_test
     def test_add(self):
-
         repo = yield from models.Repository.add('some-repo',
                                                 'git@somewhere.com', 'git')
         self.assertTrue(repo.id)

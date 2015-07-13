@@ -1,0 +1,57 @@
+<div class="modal fade" id="repoModal" tabindex="-1" role="dialog" aria-labelledby="Repository">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="repoModalLabel">Add repository</h4>
+      </div>
+
+      <input type="hidden" value="post"  id="repo-req-type"/>
+
+      <!-- modal body -->
+      <form role="form" id="repo-form">
+	<div class="modal-body">
+
+	  <div class="form-group">
+	    <label for="repo_name" class="control-label">Name:</label>
+	    <input type="text" name="repo_name" id="repo_name" class="form-control" required /><br/>
+	  </div>
+
+	  <div class="form-group">
+	    <label for="repo_url" class="control-label">URL:</label>
+	    <input type="text" name="repo_url" id="repo_url" class="form-control" required /><br/>
+	  </div>
+
+	  <div class="form-group">
+	    <label for="repo_vcs_type" class="control-label">VCS Type:</label>
+	    <select class="form-control" id="repo_vcs_type">
+	      <option value="git">Git</option>
+	    </select><br/>
+	  </div>
+
+	  <div class="form-group">
+	    <label for="repo_update_seconds" class="control-label">Update Seconds:</label>
+	    <input type="text" name="repo_update_seconds" id="repo_update_seconds" class="form-control" required /><br/>
+	  </div>
+
+	  <div class="form-group">
+	    <label for="repo_slaves" class="control-label">Slaves:</label>
+	    <select multiple class="form-control" id="repo_slaves">
+	      {% for slave in slaves %}
+	      <option value="{{slave.name}}">{{slave.name}}</option>
+	      {% end %}
+	    </select><br/>
+	  </div>
+
+	</div>
+
+	<!-- modal footer -->
+	<div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+	  <button type="submit" class="btn btn-primary btn-danger" id="btn-delete-repo">Delete</button>
+	</div>
+      </form>
+    </div>
+  </div>
+</div>
