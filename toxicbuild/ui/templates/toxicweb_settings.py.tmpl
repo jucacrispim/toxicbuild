@@ -1,0 +1,12 @@
+# -*- coding: utf-8 -*-
+
+import pkg_resources
+
+
+STATIC_URL = '/static/'
+STATIC_DIRS = [pkg_resources.resource_filename('toxicbuild.ui', 'static')]
+TEMPLATE_DIRS = [pkg_resources.resource_filename('toxicbuild.ui', 'templates')]
+
+APPLICATIONS = ['toxicbuild.ui.web.app',
+                'toxicbuild.ui.web.static_app',
+                'toxicbuild.ui.web.api_app']
