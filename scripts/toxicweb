@@ -20,6 +20,8 @@
 
 
 import os
+import pkg_resources
+import shutil
 import sys
 from mando import command, main
 from pyrocumulus.commands.base import get_command
@@ -81,6 +83,29 @@ def stop(workdir, pidfile=None):
     command.kill = True
     command.run()
 
+
+@command
+def create(root_dir):
+    """ Create a new toxicweb project.
+
+    :param --root_dir: Root directory for toxicweb.
+    """
+    print('Creating root_dir {}'.format(root_dir))
+
+    os.mkdir(root_dir)
+
+    fakesettings = os.path.join(root_dir, 'fakesettings.py')
+    with open(fakesettings, 'w') as f:
+        f.write('DATABASE = {}')
+    os.environ['TOXICUI_SETTINGS'] = fakesettings
+
+    template_fname = 'toxicweb_settings.py.tmpl'
+    template_dir = pkg_resources.resource_filename('toxicbuild.ui',
+                                                   'templates')
+    template_file = os.path.join(template_dir, template_fname)
+    dest_file = os.path.join(root_dir, 'toxicweb_settings.py')
+    shutil.copyfile(template_file, dest_file)
+    os.remove(fakesettings)
 
 if __name__ == '__main__':
     main()
