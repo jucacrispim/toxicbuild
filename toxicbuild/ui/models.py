@@ -19,6 +19,7 @@
 
 
 import asyncio
+import json
 from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui import settings
 
@@ -36,6 +37,22 @@ class BaseModel:
         port = settings.HOLE_PORT
         client = yield from get_hole_client(host, port)
         return client
+
+    def to_dict(self):
+
+        attrs = [a for a in dir(self) if not a.startswith('_')]
+
+        d = {}
+        for attr in attrs:
+            objattr = getattr(self, attr)
+            if not callable(objattr):
+                d[attr] = objattr
+
+        return d
+
+    def to_json(self):
+        d = self.to_dict()
+        return json.dumps(d)
 
 
 class Repository(BaseModel):

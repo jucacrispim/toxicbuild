@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import json
 from unittest.mock import MagicMock, patch
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
@@ -18,6 +19,22 @@ class BaseModelTest(AsyncTestCase):
     def test_get_client(self):
         yield from models.BaseModel.get_client()
         self.assertTrue(models.get_hole_client.called)
+
+    def test_to_dict(self):
+        instance = models.BaseModel(name='bla', other='ble')
+
+        instance_dict = instance.to_dict()
+
+        expected = {'name': 'bla', 'other': 'ble'}
+        self.assertEqual(expected, instance_dict)
+
+    def test_to_json(self):
+        instance = models.BaseModel(name='bla', other='ble')
+
+        instance_json = instance.to_json()
+
+        expected = json.dumps({'name': 'bla', 'other': 'ble'})
+        self.assertEqual(expected, instance_json)
 
 
 @asyncio.coroutine
