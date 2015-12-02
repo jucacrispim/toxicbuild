@@ -252,7 +252,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
     def __init__(self, host='localhost', port=6666):
 
         self.prompt = 'toxicbuild> '
-        self.input = HistoryEdit(self.prompt)  # urwid.Edit(self.prompt)
+        self.input = HistoryEdit(self.prompt)
         self.messages = urwid.Text('')
         self.main_screen = urwid.Text('')
         self.div = urwid.Divider()
@@ -297,7 +297,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         self.messages.set_text('')
         if not input_text:
             return
-        asyncio.ensure_future(self.execute_and_show(input_text))
+        asyncio.async(self.execute_and_show(input_text))
 
     @asyncio.coroutine
     def execute_and_show(self, cmdline):
@@ -335,8 +335,10 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
             while True:
                 response = yield from client.get_response()
                 if self._stop_peek:
+                    client.diconnect()
                     break
-                self.main_screen.set_text(self._format_peek(response))
+                self.main_screen.set_text(
+                    self._format_peek(response))  # pragma no cover
 
         self._stop_peek = False
 
@@ -523,11 +525,3 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
             msg = msg.format(step=response['command'])
 
         return msg
-
-
-def main():  # pragma: no cover
-    cli = ToxicCli()
-    cli.run()
-
-if __name__ == '__main__':  # pragma: no cover
-    main()

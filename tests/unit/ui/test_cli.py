@@ -237,7 +237,9 @@ class HistoryEditTest(unittest.TestCase):
         self.assertEqual(len(history), 0)
 
     @patch.object(builtins, 'open', MagicMock(spec=builtins.open))
+    @patch.object(cli.os.path, 'exists', Mock(return_value=True))
     def test_get_history_with_history_file(self):
+
         fd = builtins.open.return_value.__enter__.return_value
         fd.readlines.return_value = ['one item', 'two items', 'bla bla bla']
 
@@ -452,6 +454,10 @@ class ToxicCliTest(unittest.TestCase):
         with self.assertRaises(AttributeError):
             self.cli._i_dont_exist()
 
+    def test_getattr_with_bad_format(self):
+        with self.assertRaises(AttributeError):
+            self.cli._format_inexistent()
+
     @patch.object(cli.urwid, 'AsyncioEventLoop', Mock())
     @patch.object(cli.urwid, 'MainLoop', Mock())
     @patch.object(cli.ToxicCli, 'show_welcome_screen', Mock())
@@ -585,7 +591,7 @@ class ToxicCliTest(unittest.TestCase):
         def gc():
             return client_mock
 
-        self.cli._stop_peek = True
+        self.cli.stop_peek()
         self.cli.get_client = gc
         self.loop.run_until_complete(self.cli.peek())
 
@@ -630,6 +636,16 @@ class ToxicCliTest(unittest.TestCase):
         formated_help = self.cli.get_action_help_screen('repo-add-slave')
 
         self.assertIn(('action-name', 'repo-add-slave'), formated_help)
+
+    def test_get_action_help_screen_full_with_peek(self):
+        # It is here to test all branches
+        formated_help = self.cli.get_action_help_screen('peek')
+        self.assertIn(('action-name', 'peek'), formated_help)
+
+    def test_get_action_help_screen_full_with_builder_list(self):
+        # It is here to test all branches
+        formated_help = self.cli.get_action_help_screen('builder-list')
+        self.assertIn(('action-name', 'builder-list'), formated_help)
 
     def test_get_help_screen(self):
         self.cli.get_action_help_screen = Mock(
@@ -709,3 +725,54 @@ class ToxicCliTest(unittest.TestCase):
 
         called = self.cli._format_output_columns.call_args[0][0][0]
         self.assertEqual(called, (_('name'), _('repo'), _('branch')))  # noqa
+
+    def test_format_peek_with_build(self):
+        response = {'body': {'steps': []}}
+        self.cli._format_peek_build = Mock()
+
+        self.cli._format_peek(response)
+
+        self.assertTrue(self.cli._format_peek_build.called)
+
+    def test_format_peek_with_step(self):
+        response = {'body': {'command': 'ls'}}
+        self.cli._format_peek_step = Mock()
+
+        self.cli._format_peek(response)
+
+        self.assertTrue(self.cli._format_peek_step.called)
+
+    def test_format_peek_build_started(self):
+        response = {'started': 'bla'}
+
+        msg = self.cli._format_peek_build(response)
+
+        self.assertEqual(msg, 'build started')
+
+    def test_format_peek_build_finished(self):
+        response = {'finished': 'bla', 'status': 'success',
+                    'steps': [{'command': 'ls', 'status': 'success'}]}
+
+        msg = self.cli._format_peek_build(response)
+
+        expected = 'build finished with status {}'.format(response['status'])
+        for step in response['steps']:
+            expected += '\n step {} - {}'.format(step['command'],
+                                                 step['status'])
+
+        self.assertEqual(msg, expected)
+
+    def test_format_peek_step_started(self):
+        response = {'command': 'ls'}
+        expected = _('step ls is running')  # noqa
+        msg = self.cli._format_peek_step(response)
+
+        self.assertEqual(msg, expected)
+
+    def test_format_peek_step_finished(self):
+        response = {'command': 'ls', 'finished': 'bla',
+                    'status': 'fail'}
+        expected = _('step ls finished with status fail')  # noqa
+        msg = self.cli._format_peek_step(response)
+
+        self.assertEqual(msg, expected)
