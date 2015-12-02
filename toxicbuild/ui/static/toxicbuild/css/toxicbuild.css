@@ -37,3 +37,7 @@
 #btn-delete-repo{
     display: none;
 }
+
+#btn-delete-slave{
+    display: none;
+}

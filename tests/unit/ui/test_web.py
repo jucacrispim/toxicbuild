@@ -48,17 +48,27 @@ class BaseModelHandlerTest(AsyncTestCase):
 
     @gen_test
     def test_get_item(self):
+
         yield from self.handler.get_item(id='123fsdf')
 
         self.assertTrue(self.mock_model.get.called)
 
     @gen_test
     def test_get(self):
+
+        gi_mock = MagicMock()
+
+        @asyncio.coroutine
+        def gi(**kw):
+            return gi_mock(**kw)
+
+        self.handler.get_item = gi
+
         self.handler.request.arguments = {'url': 'bla@bla.com'}
 
         yield self.handler.get()
 
-        called_args = self.mock_model.get.call_args[1]
+        called_args = gi_mock.call_args[1]
 
         self.assertEqual(called_args, {'url': 'bla@bla.com'})
 
@@ -66,18 +76,35 @@ class BaseModelHandlerTest(AsyncTestCase):
     def test_add(self):
         kwargs = {'url': 'bla@bla.com',
                   'name': 'test'}
+
+        add_mock = MagicMock()
+
+        @asyncio.coroutine
+        def add(**kw):
+            return add_mock()
+
+        self.handler.model.add = add
         yield from self.handler.add(**kwargs)
 
-        self.assertTrue(self.mock_model.add.called)
+        self.assertTrue(add_mock.called)
 
+    @patch.object(web.BaseModelHandler, 'write', MagicMock())
     @gen_test
     def test_post(self):
         kwargs = {'url': 'bla@bla.com', 'name': 'test'}
         self.handler.request.arguments = kwargs
 
+        add_mock = MagicMock()
+
+        @asyncio.coroutine
+        def add(**kw):
+            return add_mock(**kw)
+
+        self.handler.model.add = add
+
         yield self.handler.post()
 
-        called_args = self.mock_model.add.call_args[1]
+        called_args = add_mock.call_args[1]
 
         self.assertEqual(called_args, kwargs)
 
@@ -200,6 +227,32 @@ class RepositoryHandlerTest(AsyncTestCase):
 
         self.assertFalse(post_mock.called)
         self.assertTrue(item.start_build.called)
+
+
+class SlaveHandlerTest(AsyncTestCase):
+
+    def setUp(self):
+        super().setUp()
+        request = MagicMock()
+        request.arguments = {'name': [b'myrepo'], 'host': [b'bla.com'],
+                             'port': [b'1234']}
+        application = MagicMock()
+        self.handler = web.SlaveHandler(application, request=request,
+                                        model=web.Repository)
+
+    def test_prepare(self):
+        expected = {'name': 'myrepo', 'host': 'bla.com', 'port': '1234'}
+
+        self.handler.prepare()
+
+        self.assertEqual(expected, self.handler.request.arguments)
+
+    @patch.object(web.BaseModelHandler, 'delete',
+                  gen.coroutine(lambda x: None))
+    @gen_test
+    def test_delete(self, *args):
+        yield self.handler.delete()
+        self.assertIn('slave_name', self.handler.request.arguments)
 
 
 class MainHandlerTest(AsyncTestCase):

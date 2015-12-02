@@ -11,6 +11,18 @@ var REPO_ROW_TEMPLATE = [
   '</tr>',
 ];
 
+var SLAVE_ROW_TEMPLATE = [
+  '<tr id="row-{{slave.name}}">',
+  '<td>',
+  '<a href="javascript:showSlaveModal(\'{{slave.name}}\', \'{{slave.host}}\', \'{{slave.port}}\')">',
+  '{{slave.name}}',
+  '</a>',
+  '</td>',
+  '<td>{{slave.host}}</td>',
+  '<td>{{slave.port}}</td>',
+  '</tr>',
+];
+
 
 // Repository stuff
 $('#repoModal').on('hidden.bs.modal', function (event) {
@@ -59,12 +71,12 @@ $("#repoModal").on('submit', function(event){
 	_remove_repo_row(name);
       }
       $('#repo-req-type').val('post');
-      repo_modal.modal('hide')
+      repo_modal.modal('toggle');
       $('#success-message').alert()
     },
     error: function(response){
       $('#repo-req-type').val('post')
-      repo_modal.modal('hide');
+      repo_modal.modal('toggle');
       $('#error-message').alert()
     }
   })
@@ -74,13 +86,14 @@ $("#repoModal").on('submit', function(event){
 
 
 function _insert_repo_row(name, url, vcs_type, update_seconds, slaves){
+  //var repo_modal =
   repo_modal.modal('hide');
   $('#success-message').alert();
-  var repo_row = REPO_ROW_TEMPLATE.replace('{{repo.name}}', name);
-  repo_row = repo_row.replace('{{repo.url}}', url);
-  repo_row = repo_row.replace('{{repo.vcs_type}}', vcs_type);
-  repo_row = repo_row.replace('{{repo.update_seconds}}', update_seconds);
-  repo_row = repo_row.replace('{{[s.name for s in repo.slaves]}}',
+  var repo_row = REPO_ROW_TEMPLATE.join('').replace(/{{repo.name}}/g, name);
+  repo_row = repo_row.replace(/{{repo.url}}/g, url);
+  repo_row = repo_row.replace(/{{repo.vcs_type}}/g, vcs_type);
+  repo_row = repo_row.replace(/{{repo.update_seconds}}/g, update_seconds);
+  repo_row = repo_row.replace(/{{[s.name for s in repo.slaves]}}/g,
 			      str(slaves));
   $('#tbody-repos').append(repo_row);
 }
@@ -159,3 +172,84 @@ $("#startBuildModal").on('submit', function(event){
 
   });
 })
+
+
+// slave stuff
+
+$('#slaveModal').on('hidden.bs.modal', function (event) {
+  var slave_modal = $(this)
+  slave_modal.find('.modal-title').text('Add slave')
+  slave_modal.find('#slave_name').val('');
+  slave_modal.find('#slave_host').val('');
+  slave_modal.find('#slave_port').val('');
+  slave_modal.find("#btn-delete-slave").hide()
+});
+
+
+function showSlaveModal(name, host, port){
+  var slave_modal = $('#slaveModal');
+  slave_modal.find('#repo-req-type').val('put');
+  slave_modal.find('.modal-title').text(name);
+  slave_modal.find('#slave_name').val(name);
+  slave_modal.find('#slave_host').val(host);
+  slave_modal.find('#slave_port').val(port);
+  slave_modal.find("#btn-delete-slave").show()
+  slave_modal.modal('toggle')
+}
+
+$('#btn-delete-slave').on('click', function(){
+  $('#slave-req-type').val('delete');
+})
+
+
+function _insert_slave_row(name, host, port){
+  var slave_modal = $('#slaveModal');
+  slave_modal.modal('hide');
+  $('#success-message').alert();
+  var slave_row = SLAVE_ROW_TEMPLATE.join('').replace(/{{slave.name}}/g, name);
+  slave_row = slave_row.replace(/{{slave.host}}/g, host);
+  slave_row = slave_row.replace(/{{slave.port}}/g, port);
+
+  $('#tbody-slaves').append(slave_row);
+}
+
+$("#slaveModal").on('submit', function(event){
+  // event prevented here means that the form was not considered valid.
+  if (event.isDefaultPrevented()){
+    return false;
+  }
+
+  event.preventDefault();
+
+  var modal = $('#slaveModal');
+  var name = modal.find('#slave_name').val();
+  var host = modal.find('#slave_host').val();
+  var port = modal.find('#slave_port').val();
+  $.ajax({
+    type: jQuery('#slave-req-type').val(),
+    url: '/api/slave/',
+    data: {'name': name, 'host': host, 'port': port},
+    traditional: true,
+
+    success: function(respone){
+      var old_action = $('#slave-req-type').val();
+      if (old_action == 'post' || old_action == 'put'){
+	_insert_slave_row(name, host, port);
+      }
+
+      else if (old_action == 'delete'){
+	_remove_repo_row(name);
+      }
+
+      $('#slave-req-type').val('post');
+      modal.modal('hide')
+      $('#success-message').alert()
+    },
+    error: function(response){
+      $('#slave-req-type').val('post')
+      modal.modal('hide');
+      $('#error-message').alert()
+    }
+  })
+
+});

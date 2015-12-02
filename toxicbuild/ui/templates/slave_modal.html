@@ -1,0 +1,40 @@
+<div class="modal fade" id="slaveModal" tabindex="-1" role="dialog" aria-labelledby="Add Slave">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="addSlaveModalLabel">Add Slave</h4>
+      </div>
+
+      <!-- modal body -->
+      <form role="form" id="start-build-form">
+	<div class="modal-body">
+	  <input type="hidden" id="slave-req-type" value="post"/>
+	  <div class="form-group">
+	    <label for="name" class="control-label">Name:</label>
+	    <input type="text" name="slave_name" id="slave_name" class="form-control" required /><br/>
+	  </div>
+
+	  <div class="form-group">
+	    <label for="builder_name" class="control-label">Host:</label>
+	    <input type="text" name="slave_host" id="slave_host" class="form-control" /><br/>
+	  </div>
+
+	  <div class="form-group">
+	    <label for="named_tree" class="control-label">Port:</label>
+	    <input type="text" name="slave_port" id="slave_port" class="form-control" /><br/>
+	  </div>
+
+
+	</div>
+
+	<!-- modal footer -->
+	<div class="modal-footer">
+	  <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+	  <button type="submit" class="btn btn-primary btn-danger" id="btn-delete-slave">Delete</button>
+	</div>
+      </form>
+    </div>
+  </div>
+</div>

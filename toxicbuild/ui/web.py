@@ -43,19 +43,23 @@ class BaseModelHandler(TemplateHandler):
 
     @asyncio.coroutine
     def add(self, **kwargs):
-        return (yield from self.model.add(**kwargs))
+        resp = yield from self.model.add(**kwargs)
+
+        json_resp = resp.to_json()
+        return json_resp
 
     @gen.coroutine
     def get(self, *args):
         kwargs = self.request.arguments
         resp = yield from self.get_item(**kwargs)
-        return resp
+        json_resp = resp.to_json()
+        return json_resp
 
     @gen.coroutine
     def post(self, *args):
         kwargs = self.request.arguments
         resp = yield from self.add(**kwargs)
-        return resp
+        self.write(resp)
 
     @gen.coroutine
     def delete(self, *args):
@@ -70,7 +74,7 @@ class RepositoryHandler(BaseModelHandler):
     def post(self, *args):
         if'start-build' not in args:
             ret = yield super().post(*args)
-            return ret
+            return
         ret = yield from self.start_build()
         self.write(ret)
 
@@ -117,6 +121,24 @@ class RepositoryHandler(BaseModelHandler):
         yield super().delete(*args)
 
 
+class SlaveHandler(BaseModelHandler):
+
+    def prepare(self):
+        kw = {}
+        kw['name'] = self.request.arguments.get('name', [b''])[0].decode()
+        kw['host'] = self.request.arguments.get('host', [b''])[0].decode()
+        kw['port'] = self.request.arguments.get('port', [b''])[0].decode()
+        self.request.arguments = kw
+
+    @gen.coroutine
+    def delete(self, *args):
+        name = self.request.arguments['name']
+        del self.request.arguments['name']
+        self.request.arguments = {'slave_name': name}
+
+        yield super().delete(*args)
+
+
 class MainHandler(TemplateHandler):
     main_template = 'main.html'
 
@@ -137,6 +159,15 @@ class MainHandler(TemplateHandler):
         return {'success': 'success', 'fail': 'danger',
                 'running': 'info'}.get(status)
 
+
+class WaterfallHandler(TemplateHandler):  # pragma no cover
+    template = 'waterfall.html'
+
+    def get(self):
+        # repo_name = self.request.arguments.get('repo')
+        pass
+
+
 url = URLSpec('/$', MainHandler)
 app = Application(url_prefix='', extra_urls=[url])
 static_app = StaticApplication()
@@ -145,6 +176,6 @@ repo_kwargs = {'model': Repository}
 repo_api_url = URLSpec('/api/repo/(.*)', RepositoryHandler, repo_kwargs)
 
 slave_kwargs = {'model': Slave}
-slave_api_url = URLSpec('/api/slave/(.*)', BaseModelHandler, slave_kwargs)
+slave_api_url = URLSpec('/api/slave/(.*)', SlaveHandler, slave_kwargs)
 
 api_app = Application(url_prefix='', extra_urls=[repo_api_url, slave_api_url])

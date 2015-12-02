@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-VERSION = '0.2.1.1'
+VERSION = '0.3-a0'
 DESCRIPTION = """
 Hackish pieces of software to an easy buildbot config
 """
@@ -11,7 +11,7 @@ LONG_DESCRIPTION = DESCRIPTION
 setup(name='toxicbuild',
       version=VERSION,
       author='Juca Crispim',
-      author_email='jucacrispim@gmail.com',
+      author_email='juca@poraodojuca.net',
       url='http://toxicbuild.readthedocs.org/en/latest/',
       description=DESCRIPTION,
       long_description=LONG_DESCRIPTION,
@@ -30,6 +30,7 @@ setup(name='toxicbuild',
           'Topic :: Software Development :: Build Tools',
           'Topic :: Software Development :: Testing',
       ],
-      scripts=['script/toxicbuild'],
+      scripts=['scripts/toxicmaster', 'scripts/toxicslave',
+               'scripts/toxicweb'],
       test_suite='tests',
       provides=['toxicbuild'],)
