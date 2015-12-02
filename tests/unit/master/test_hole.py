@@ -75,13 +75,13 @@ class UIHoleTest(AsyncTestCase):
 @patch.object(repositories.utils, 'log', Mock())
 class HoleHandlerTest(AsyncTestCase):
 
+    @gen_test
     def tearDown(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks()))
-        hole.Slave.drop_collection()
-        hole.Repository.drop_collection()
-        build.Builder.drop_collection()
-        build.Build.drop_collection()
+        yield from asyncio.gather(*asyncio.Task.all_tasks())
+        yield hole.Slave.drop_collection()
+        yield hole.Repository.drop_collection()
+        yield build.Builder.drop_collection()
+        yield build.Build.drop_collection()
         super().tearDown()
 
     def get_new_ioloop(self):
@@ -363,6 +363,7 @@ class HoleHandlerTest(AsyncTestCase):
         builders = yield from handler.builder_list(self.repo.name)
         builders = builders['builder-list']
         self.assertEqual(len(builders), 3)
+        self.assertEqual(len(builders[0]['builds']), 3)
 
     @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
@@ -384,7 +385,7 @@ class HoleHandlerTest(AsyncTestCase):
         action = 'builder-show'
         handler = hole.HoleHandler(data, action, MagicMock())
         builder = yield from handler.builder_show(repo_name=self.repo.name,
-                                                  builder_name='b0')
+                                                  builder_name='b1')
         builder = builder['builder-show']
 
         self.assertEqual(len(builder['builds']), 1)
@@ -405,6 +406,24 @@ class HoleHandlerTest(AsyncTestCase):
         returned = handler._get_method_signature(target)
 
         self.assertEqual(returned, expected, returned)
+
+    @patch.object(repositories.Repository, 'first_run', MagicMock())
+    @gen_test
+    def test_get_builds(self):
+        yield from self._create_test_data()
+        builder = yield from hole.Builder.get(name='b0')
+        handler = hole.HoleHandler({}, 'action', MagicMock())
+        builds = yield from handler._get_builds(builder)
+        self.assertEqual(len(builds), 3)
+
+    @patch.object(repositories.Repository, 'first_run', MagicMock())
+    @gen_test
+    def test_get_builds_with_skip_and_offset(self):
+        yield from self._create_test_data()
+        builder = yield from hole.Builder.get(name='b0')
+        handler = hole.HoleHandler({}, 'action', MagicMock())
+        builds = yield from handler._get_builds(builder, skip=1, offset=2)
+        self.assertEqual(len(builds), 2)
 
     @patch.object(repositories.Repository, 'first_run', MagicMock())
     @patch.object(hole.Slave, 'list_builders', MagicMock())
@@ -496,13 +515,21 @@ class HoleHandlerTest(AsyncTestCase):
         for i in range(3):
             builder = build.Builder(name='b{}'.format(i), repository=self.repo)
             yield builder.save()
-            build_inst = hole.Build(repository=self.repo, slave=self.slave,
-                                    branch='master', named_tree='v0.{}'.format(i),
-                                    started=datetime.now(),
-                                    finished=datetime.now(),
-                                    builder=builder, status='success')
-            yield build_inst.save()
-            self.builders.append(build_inst)
+            if i == 0:
+                r = 3
+            else:
+                r = 1
+
+            for j in range(r):
+                build_inst = hole.Build(repository=self.repo,
+                                        slave=self.slave,
+                                        branch='master',
+                                        named_tree='v0.{}'.format(j),
+                                        started=datetime.now(),
+                                        finished=datetime.now(),
+                                        builder=builder, status='success')
+                yield build_inst.save()
+                self.builders.append(build_inst)
 
 
 class UIStreamHandlerTest(AsyncTestCase):

@@ -275,10 +275,13 @@ class HoleHandler:
         return {'slave-list': slave_list}
 
     @asyncio.coroutine
-    def builder_list(self, repo_name=None):
+    def builder_list(self, repo_name=None, builds_skip=0, builds_offset=None):
         """ Lists all builders.
 
         If ``repo_name``, only builders from this repository will be listed.
+        :param repo_name: Repository's name.
+        :param builds_skip: skip for builds list.
+        :param builds_offset: offset for builds list.
         """
 
         builders = Builder.objects
@@ -293,6 +296,8 @@ class HoleHandler:
         for builder in builders:
             builder_dict = json.loads(builder.to_json())
             builder_dict['id'] = str(builder.id)
+            builder_dict['builds'] = yield from self._get_builds(
+                builder, builds_skip, builds_offset)
             builder_dict['status'] = (yield from to_asyncio_future(
                 Build.objects.filter(builder=builder).
                 order_by('-started')[0])).status
@@ -312,17 +317,8 @@ class HoleHandler:
         builder = yield from Builder.get(**kwargs)
         builder_dict = json.loads(builder.to_json())
         builder_dict['id'] = str(builder.id)
-
-        build_list = []
-        builds = yield from to_asyncio_future(
-            Build.objects.filter(builder=builder).to_list())
-
-        for build in builds:
-            build_dict = json.loads(build.to_json())
-            build_dict['id'] = str(build.id)
-            build_list.append(build_dict)
-
-        builder_dict.update({'builds': build_list})
+        builds = yield from self._get_builds(builder)
+        builder_dict.update({'builds': builds})
         return {'builder-show': builder_dict}
 
     def list_funcs(self):
@@ -335,12 +331,35 @@ class HoleHandler:
 
         return {'list-funcs': funcs}
 
+    @asyncio.coroutine
+    def _get_builds(self, builder, skip=0, offset=None):
+        """Returns builds for a given builder."""
+
+        build_list = []
+        builds = Build.objects.filter(builder=builder)
+
+        total = yield from to_asyncio_future(builds.count())
+
+        if offset is None:
+            offset = total
+        else:
+            offset = skip + offset
+
+        builds = yield from to_asyncio_future(builds[skip:offset])
+        builds = yield from to_asyncio_future(builds.to_list())
+
+        for build in builds:
+            build_dict = json.loads(build.to_json())
+            build_dict['id'] = str(build.id)
+            build_list.append(build_dict)
+        return build_list
+
     def _get_action_methods(self):
         """ Returns the methods that are avaliable as actions for users. """
         forbiden = ['handle', 'protocol', 'log']
 
-        func_names = [n for n in dir(self) if not n.startswith('_')
-                      and n not in forbiden and callable(getattr(self, n))]
+        func_names = [n for n in dir(self) if not n.startswith('_') and
+                      n not in forbiden and callable(getattr(self, n))]
 
         funcs = {n: getattr(self, n) for n in func_names}
         return funcs
