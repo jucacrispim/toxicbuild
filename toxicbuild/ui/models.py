@@ -159,3 +159,14 @@ class Slave(BaseModel):
         client = yield from self.get_client()
         resp = yield from client.slave_remove(slave_name=self.name)
         return resp
+
+
+class Builder(BaseModel):
+
+    @classmethod
+    @asyncio.coroutine
+    def list(cls):
+        client = yield from cls.get_client()
+        builders = yield from client.builder_list()
+        builders_list = [cls(**builder) for builder in builders]
+        return builders_list
