@@ -527,7 +527,8 @@ class HoleHandlerTest(AsyncTestCase):
                                         named_tree='v0.{}'.format(j),
                                         started=datetime.now(),
                                         finished=datetime.now(),
-                                        builder=builder, status='success')
+                                        builder=builder, status='success',
+                                        number=j)
                 yield build_inst.save()
                 self.builders.append(build_inst)
 
@@ -593,7 +594,8 @@ class UIStreamHandlerTest(AsyncTestCase):
                                                       repository=testrepo)
         testbuild = build.Build(repository=testrepo, slave=testslave,
                                 branch='master', named_tree='master',
-                                builder=testbuilder, status='running')
+                                builder=testbuilder, status='running',
+                                number=0)
         yield testbuild.save()
 
         teststep = build.BuildStep(name='s1', command='ls', status='running',
@@ -633,7 +635,8 @@ class UIStreamHandlerTest(AsyncTestCase):
                                                       repository=testrepo)
         testbuild = build.Build(repository=testrepo, slave=testslave,
                                 branch='master', named_tree='master',
-                                builder=testbuilder, status='running')
+                                builder=testbuilder, status='running',
+                                number=0)
         yield testbuild.save()
 
         self.CODE = None

@@ -90,6 +90,9 @@ class Build(Document):
     started = DateTimeField()
     finished = DateTimeField()
     builder = ReferenceField(Builder, required=True)
+    # A build number is considered by the number of builds
+    # of a builder.
+    number = IntField(required=True)
     status = StringField(default=PENDING)
     steps = ListField(EmbeddedDocumentField(BuildStep))
 
@@ -277,7 +280,11 @@ class BuildManager:
 
     @asyncio.coroutine
     def add_builds(self, revision):
-        """ Adds the builds for a given revision in the build queue. """
+        """ Adds the builds for a given revision in the build queue.
+
+        :param revision: A
+          :class:`toxicbuild.master.repositories.RepositoryRevision`
+          instance for the build."""
 
         for slave in self.repository.slaves:
             builders = yield from self.get_builders(slave, revision)
@@ -287,10 +294,17 @@ class BuildManager:
 
     @asyncio.coroutine
     def add_build(self, builder, branch, named_tree, slave):
+        """Adds a new buld to the queue.
 
+        :param builder: A :class:`toxicbuild.master.build.Builder` instance.
+        :param branch: Branch name.
+        :named_tree: Named tree for the build.
+        :param slave: A :class:`toxicbuild.master.build.Slave` instance."""
+
+        number = yield from self._get_next_build_number(builder)
         build = Build(repository=self.repository, branch=branch,
                       named_tree=named_tree, slave=slave,
-                      builder=builder)
+                      builder=builder, number=number)
 
         yield from to_asyncio_future(build.save())
         self._queues[slave.name].append(build)
@@ -300,7 +314,12 @@ class BuildManager:
 
     @asyncio.coroutine
     def get_builders(self, slave, revision):
-        """ Get builders for a given revision. """
+        """ Get builders for a given slave and revision.
+
+        :param slave: A :class:`toxicbuild.master.build.Slave` instance.
+        :param revision: A
+          :class:`toxicbuild.master.repositories.RepositoryRevision`.
+        """
 
         repository = yield from to_asyncio_future(revision.repository)
         builders = yield from slave.list_builders(revision)
@@ -319,6 +338,7 @@ class BuildManager:
         return blist
 
     def connect2signals(self):
+        """ Connects the BuildManager to the revision_added signal."""
 
         @asyncio.coroutine
         def revadded(sender, revision):  # pragma no cover
@@ -328,7 +348,9 @@ class BuildManager:
 
     @asyncio.coroutine
     def _execute_builds(self, slave):
-        """ Execute the builds in the queue of a given slave. """
+        """ Execute the builds in the queue of a given slave.
+
+        :param slave: A :class:`toxicbuild.master.build.Slave` instance."""
 
         self._is_working[slave.name] = True
         try:
@@ -349,6 +371,12 @@ class BuildManager:
 
     @asyncio.coroutine
     def _execute_in_parallel(self, slave, builds):
+        """Executes builds in parallel in a slave.
+
+        :param slave: A :class:`toxicbuild.master.build.Slave` instance.
+        :param builds: A list of
+          :class:`toxicbuild.master.build.Build` instances."""
+
         fs = []
         for build in builds:
             f = asyncio.async(slave.build(build))
@@ -356,3 +384,20 @@ class BuildManager:
 
         yield from asyncio.wait(fs)
         return fs
+
+    @asyncio.coroutine
+    def _get_next_build_number(self, builder):
+        """Returns the next build number for a given build.
+
+        :param builder: A :class:`toxicbuild.master.build.Builder`
+          instance."""
+
+        qs = Build.objects.filter(builder=builder).order_by('-number')
+        try:
+            build = (yield from to_asyncio_future(qs.to_list()))[0]
+        except IndexError:
+            number = 0
+        else:
+            number = build.number + 1
+
+        return number

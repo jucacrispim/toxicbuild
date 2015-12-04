@@ -82,7 +82,7 @@ class BuildTest(AsyncTestCase):
 
             binst = build.Build(repository=self.repo, slave=self.slave,
                                 branch='master', named_tree='v0.1',
-                                builder=builder)
+                                builder=builder, number=i)
 
             yield binst.save()
 
@@ -298,7 +298,7 @@ class SlaveTest(AsyncTestCase):
 
         self.build = build.Build(repository=self.repo, slave=self.slave,
                                  branch='master', named_tree='v0.1',
-                                 builder=self.builder)
+                                 builder=self.builder, number=0)
 
         self.build.save()
 
@@ -384,6 +384,19 @@ class BuildManagerTest(AsyncTestCase):
         for f in fs:
             self.assertTrue(f.done())
 
+    @gen_test
+    def test_get_next_build_number_without_build(self):
+        yield from self._create_test_data()
+        yield from build.to_asyncio_future(build.Build.drop_collection())
+        number = yield from self.manager._get_next_build_number(self.builder)
+        self.assertEqual(number, 0)
+
+    @gen_test
+    def test_get_next_build_number_with_build(self):
+        yield from self._create_test_data()
+        number = yield from self.manager._get_next_build_number(self.builder)
+        self.assertEqual(number, 2)
+
     @asyncio.coroutine
     def _create_test_data(self):
         self.slave = build.Slave(host='127.0.0.1', port=7777, name='slave')
@@ -406,13 +419,13 @@ class BuildManagerTest(AsyncTestCase):
         yield self.builder.save()
         self.build = build.Build(repository=self.repo, slave=self.slave,
                                  branch='master', named_tree='v0.1',
-                                 builder=self.builder)
+                                 builder=self.builder, number=0)
         yield self.build.save()
         self.consumed_build = build.Build(repository=self.repo,
                                           slave=self.slave, branch='master',
                                           named_tree='v0.1',
                                           builder=self.builder,
-                                          status='running')
+                                          status='running', number=1)
         yield self.consumed_build.save()
 
 

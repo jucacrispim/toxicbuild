@@ -134,7 +134,7 @@ class BuildClientTest(AsyncTestCase):
 
         buildinstance = build.Build(repository=repo, slave=slave,
                                     builder=builder, branch='master',
-                                    named_tree='123sdf09')
+                                    named_tree='123sdf09', number=0)
         yield buildinstance.save()
 
         yield from self.client.build(buildinstance)

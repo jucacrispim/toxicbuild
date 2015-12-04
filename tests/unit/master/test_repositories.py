@@ -210,7 +210,8 @@ class RepositoryTest(AsyncTestCase):
         running_build = build.Build(repository=self.repo, slave=self.slave,
                                     branch='master', named_tree='master',
                                     started=datetime.datetime.now(),
-                                    status='running', builder=self.builder)
+                                    status='running', builder=self.builder,
+                                    number=0)
         yield running_build.save()
         self.assertEqual((yield from self.repo.status), 'running')
 
@@ -221,7 +222,8 @@ class RepositoryTest(AsyncTestCase):
         success_build = build.Build(repository=self.repo, slave=self.slave,
                                     branch='master', named_tree='master',
                                     started=datetime.datetime.now(),
-                                    status='success', builder=self.builder)
+                                    status='success', builder=self.builder,
+                                    number=0)
         yield success_build.save()
         self.assertEqual((yield from self.repo.status), 'success')
 
@@ -232,7 +234,8 @@ class RepositoryTest(AsyncTestCase):
         success_build = build.Build(repository=self.repo, slave=self.slave,
                                     branch='master', named_tree='master',
                                     started=datetime.datetime.now(),
-                                    status='fail', builder=self.builder)
+                                    status='fail', builder=self.builder,
+                                    number=0)
         yield success_build.save()
         self.assertEqual((yield from self.repo.status), 'fail')
 
