@@ -116,6 +116,8 @@ class HoleHandler:
                  slaves=None):
         """ Adds a new repository and first_run() it. """
 
+        repo_name = repo_name.strip()
+        repo_url = repo_url.strip()
         slaves_info = slaves or []
         slaves = []
         for name in slaves_info:
