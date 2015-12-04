@@ -273,8 +273,7 @@ class MainHandlerTest(AsyncTestCase):
         self.handler.render_template = MagicMock()
 
         expected_context = {'repos': None, 'slaves': None,
-                            'get_btn_class': self.handler._get_btn_class,
-                            'master_location': 'localhost:1234'}
+                            'get_btn_class': self.handler._get_btn_class}
 
         yield self.handler.get()
         context = self.handler.render_template.call_args[0][1]
