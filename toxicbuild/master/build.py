@@ -63,6 +63,18 @@ class Builder(Document):
 
         return builder
 
+    @asyncio.coroutine
+    def get_status(self):
+
+        try:
+            qs = Build.objects.filter(builder=self).order_by('-started')
+            last = (yield from to_asyncio_future(qs.to_list()))[0]
+        except (IndexError, AttributeError):
+            status = 'idle'
+        else:
+            status = last.status
+        return status
+
 
 class BuildStep(EmbeddedDocument):
 

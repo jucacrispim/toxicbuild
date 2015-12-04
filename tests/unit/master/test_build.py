@@ -23,7 +23,7 @@ from unittest import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 import toxicbuild
-from toxicbuild.core.utils import datetime2string
+from toxicbuild.core.utils import datetime2string, now
 from toxicbuild.master import build, repositories
 
 
@@ -431,9 +431,10 @@ class BuildManagerTest(AsyncTestCase):
 
 class BuilderTest(AsyncTestCase):
 
+    @gen_test
     def tearDown(self):
-        build.Builder.drop_collection()
-        repositories.Repository.drop_collection()
+        yield build.Builder.drop_collection()
+        yield repositories.Repository.drop_collection()
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
@@ -478,3 +479,30 @@ class BuilderTest(AsyncTestCase):
             repository=repo, name='b1')
 
         self.assertEqual(returned, builder)
+
+    @gen_test
+    def test_get_status_without_build(self):
+        repo = repositories.Repository(name='bla', url='git@bla.com',
+                                       update_seconds=300, vcs_type='git')
+        yield repo.save()
+        builder = yield from build.Builder.create(repository=repo, name='b1')
+        status = yield from builder.get_status()
+
+        self.assertEqual(status, 'idle')
+
+    @gen_test
+    def test_get_status(self):
+        repo = repositories.Repository(name='bla', url='git@bla.com',
+                                       update_seconds=300, vcs_type='git')
+        yield repo.save()
+        slave = build.Slave(name='bla', host='localhost', port=1234)
+        yield slave.save()
+        builder = yield from build.Builder.create(repository=repo, name='b1')
+        buildinst = build.Build(repository=repo, slave=slave,
+                                branch='master', named_tree='v0.1',
+                                builder=builder, number=0,
+                                status='success', started=now())
+        yield buildinst.save()
+        status = yield from builder.get_status()
+
+        self.assertEqual(status, 'success')
