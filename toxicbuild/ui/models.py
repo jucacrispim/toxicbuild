@@ -225,7 +225,7 @@ class Builder(BaseModel):
     @asyncio.coroutine
     def list(cls, repo_name=None):
         client = yield from cls.get_client()
-        builders = yield from client.builder_list(builds_limit=20)
+        builders = yield from client.builder_list(builds_offset=20)
         builders_list = [cls(**builder) for builder in builders]
         return builders_list
 
