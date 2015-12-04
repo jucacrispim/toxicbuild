@@ -143,7 +143,9 @@ def read_stream(reader):
 
         len_data = int(data)
 
-        raw_data = yield from reader.read(len_data)
+        raw_data = yield from reader.read(1024)
+        while len(raw_data) < len_data:
+            raw_data += yield from reader.read(len_data)
 
     return raw_data
 
