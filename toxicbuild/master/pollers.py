@@ -61,7 +61,7 @@ class Poller:
         dbrevisions = yield from self.repository.get_latest_revisions()
 
         since = dict((branch, r.commit_date) for branch, r
-                     in dbrevisions.items())
+                     in dbrevisions.items() if r)
 
         newer_revisions = yield from self.vcs.get_revisions(since=since)
 
