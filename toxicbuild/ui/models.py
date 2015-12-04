@@ -33,12 +33,15 @@ class BaseModel:
     @classmethod
     @asyncio.coroutine
     def get_client(cls):
+        """Returns a client connected to master."""
+
         host = settings.HOLE_HOST
         port = settings.HOLE_PORT
         client = yield from get_hole_client(host, port)
         return client
 
     def to_dict(self):
+        """Transforms a model into a dict."""
 
         attrs = [a for a in dir(self) if not a.startswith('_')]
 
@@ -51,24 +54,37 @@ class BaseModel:
         return d
 
     def to_json(self):
+        """Transforms a model into a json."""
+
         d = self.to_dict()
         return json.dumps(d)
 
 
 class Repository(BaseModel):
 
-    def __init__(self, **kwargs):
-        if 'slaves' in kwargs:
+    """Class representing a repository."""
 
-            slaves = [Slave(**kw) for kw in kwargs['slaves']]
-            self.slaves = slaves
+    def __init__(self, **kwargs):
+        slaves = [Slave(**kw) for kw in kwargs.get('slaves', [])]
+        self.slaves = slaves
+        try:
             del kwargs['slaves']
+        except KeyError:
+            pass
 
         super().__init__(**kwargs)
 
     @classmethod
     @asyncio.coroutine
     def add(cls, name, url, vcs_type, update_seconds=300, slaves=[]):
+        """Adds a new repository.
+
+        :param name: Repository's name.
+        :param url: Repository's url.
+        :param vcs_type: VCS type used on the repository.
+        :param update_seconds: Interval to update the repository code.
+        :param slaves: List with slave names for this reporitory."""
+
         kw = {'repo_name': name, 'repo_url': url, 'vcs_type': vcs_type,
               'update_seconds': update_seconds}
 
@@ -81,6 +97,10 @@ class Repository(BaseModel):
     @classmethod
     @asyncio.coroutine
     def get(cls, **kwargs):
+        """Returns a repository.
+
+        :param kwargs: kwargs to get the repository."""
+
         client = yield from cls.get_client()
         repo_dict = yield from client.repo_get(**kwargs)
         repo = cls(**repo_dict)
@@ -89,6 +109,8 @@ class Repository(BaseModel):
     @classmethod
     @asyncio.coroutine
     def list(cls):
+        """Lists all repositories."""
+
         client = yield from cls.get_client()
         repos = yield from client.repo_list()
         repo_list = [cls(**repo) for repo in repos]
@@ -96,12 +118,18 @@ class Repository(BaseModel):
 
     @asyncio.coroutine
     def delete(self):
+        """Delete a repository."""
+
         client = yield from self.get_client()
         resp = yield from client.repo_remove(repo_name=self.name)
         return resp
 
     @asyncio.coroutine
     def add_slave(self, slave):
+        """Adds a slave to the repository.
+
+        :param slave: A Slave instance."""
+
         client = yield from self.get_client()
         resp = yield from client.repo_add_slave(repo_name=self.name,
                                                 slave_name=slave.name)
@@ -109,8 +137,14 @@ class Repository(BaseModel):
 
     @asyncio.coroutine
     def remove_slave(self, slave):
+        """Removes a slave from the repository.
+
+        :param slave: A Slave instance.
+        """
+
         client = yield from self.get_client()
-        resp = yield from client.repo_remove_slave()
+        resp = yield from client.repo_remove_slave(repo_name=self.name,
+                                                   slave_name=slave.name)
         return resp
 
     @asyncio.coroutine
@@ -131,6 +165,13 @@ class Slave(BaseModel):
     @classmethod
     @asyncio.coroutine
     def add(cls, name, host, port):
+        """Adds a new slave.
+
+        :param name: Slave name.
+        :param host: Slave host.
+        :param port: Slave port.
+        """
+
         kw = {'slave_name': name, 'slave_host': host,
               'slave_port': port}
         client = yield from cls.get_client()
@@ -141,6 +182,10 @@ class Slave(BaseModel):
     @classmethod
     @asyncio.coroutine
     def get(cls, **kwargs):
+        """Returns a slave.
+
+        :param kwargs: kwargs to get the slave."""
+
         client = yield from cls.get_client()
         repo_dict = yield from client.slave_get(**kwargs)
         repo = cls(**repo_dict)
@@ -149,6 +194,8 @@ class Slave(BaseModel):
     @classmethod
     @asyncio.coroutine
     def list(cls):
+        """Lists all slaves."""
+
         client = yield from cls.get_client()
         slaves = yield from client.slave_list()
         slave_list = [cls(**slave) for slave in slaves]
@@ -156,6 +203,8 @@ class Slave(BaseModel):
 
     @asyncio.coroutine
     def delete(self):
+        """Delete a slave."""
+
         client = yield from self.get_client()
         resp = yield from client.slave_remove(slave_name=self.name)
         return resp
@@ -163,10 +212,35 @@ class Slave(BaseModel):
 
 class Builder(BaseModel):
 
+    def __init__(self, **kwargs):
+        self.builds = [Build(**b) for b in kwargs.get('builds', [])]
+        try:
+            del kwargs['builds']
+        except KeyError:
+            pass
+
+        super().__init__(**kwargs)
+
     @classmethod
     @asyncio.coroutine
-    def list(cls):
+    def list(cls, repo_name=None):
         client = yield from cls.get_client()
-        builders = yield from client.builder_list()
+        builders = yield from client.builder_list(builds_limit=20)
         builders_list = [cls(**builder) for builder in builders]
         return builders_list
+
+
+class Build(BaseModel):
+
+    def __init__(self, **kwargs):
+        self.steps = [Step(**s) for s in kwargs.get('steps', [])]
+        try:
+            del kwargs['steps']
+        except KeyError:
+            pass
+
+        super().__init__(**kwargs)
+
+
+class Step(BaseModel):
+    pass

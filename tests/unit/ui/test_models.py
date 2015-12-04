@@ -177,8 +177,11 @@ class BuilderTest(AsyncTestCase):
         return tornado.ioloop.IOLoop.instance()
 
     @patch.object(models.Builder, 'get_client', lambda: get_client_mock(
-        [{'name': 'b0'}, {'name': 'b1'}]))
+        [{'name': 'b0', 'builds': [{'steps': [{'name': 'unit'}]}]},
+         {'name': 'b1', 'builds': [{}]},
+         {'name': 'b2'}]))
     @gen_test
     def test_list(self):
         builders = yield from models.Builder.list()
-        self.assertEqual(len(builders), 2)
+        self.assertEqual(len(builders), 3)
+        self.assertTrue(len(builders[0].builds[0].steps), 1)
