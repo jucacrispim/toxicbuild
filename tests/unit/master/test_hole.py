@@ -415,6 +415,7 @@ class HoleHandlerTest(AsyncTestCase):
         handler = hole.HoleHandler({}, 'action', MagicMock())
         builds = yield from handler._get_builds(builder)
         self.assertEqual(len(builds), 3)
+        self.assertGreater(builds[0]['number'], builds[1]['number'])
 
     @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test

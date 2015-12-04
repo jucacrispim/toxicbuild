@@ -298,9 +298,7 @@ class HoleHandler:
             builder_dict['id'] = str(builder.id)
             builder_dict['builds'] = yield from self._get_builds(
                 builder, builds_skip, builds_offset)
-            builder_dict['status'] = (yield from to_asyncio_future(
-                Build.objects.filter(builder=builder).
-                order_by('-started')[0])).status
+            builder_dict['status'] = yield from builder.get_status()
 
             builder_list.append(builder_dict)
 
@@ -336,7 +334,7 @@ class HoleHandler:
         """Returns builds for a given builder."""
 
         build_list = []
-        builds = Build.objects.filter(builder=builder)
+        builds = Build.objects.filter(builder=builder).order_by('-number')
 
         total = yield from to_asyncio_future(builds.count())
 
