@@ -20,7 +20,7 @@
 from abc import ABCMeta, abstractmethod
 import asyncio
 import os
-from toxicbuild.core.exceptions import VCSError, ImpossibillityError
+from toxicbuild.core.exceptions import VCSError
 from toxicbuild.core.utils import(exec_cmd, inherit_docs, string2datetime,
                                   datetime2string)
 
@@ -126,6 +126,7 @@ class Git(VCS):
 
     @asyncio.coroutine
     def clone(self, url):
+
         cmd = '%s clone %s %s' % (self.vcsbin, url, self.workdir)
         # we can't go to self.workdir while we do not clone the repo
         yield from self.exec_cmd(cmd, cwd='.')
