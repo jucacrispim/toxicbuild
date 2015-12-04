@@ -85,7 +85,7 @@ class DummyUIClient(BaseToxicClient):
 
 @asyncio.coroutine
 def get_dummy_client():
-    dc = DummyUIClient('localhost', 6666)
+    dc = DummyUIClient('localhost', 1111)
     yield from dc.connect()
     return dc
 

@@ -82,7 +82,7 @@ class DummyBuildClient(BaseToxicClient):
 
 @asyncio.coroutine
 def get_dummy_client():
-    dc = DummyBuildClient('localhost', 7777)
+    dc = DummyBuildClient('localhost', 2222)
     yield from dc.connect()
     return dc
 
@@ -130,7 +130,7 @@ class SlaveTest(AsyncTestCase):
         self.assertEqual(build_status['body']['total_steps'], 1)
         self.assertEqual(build_status['body']['status'], 'success')
 
-    @gen_test
+    @gen_test(timeout=10)
     def test_build_with_plugin(self):
         with (yield from get_dummy_client()) as client:
             step_info, build_status = yield from client.build('builder-2')
