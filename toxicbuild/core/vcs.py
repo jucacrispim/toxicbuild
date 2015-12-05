@@ -122,7 +122,7 @@ class Git(VCS):
     vcsbin = 'git'
     # this date_format is used to ask git about revisions since
     # some date
-    date_format = '%a %b %d %H:%M:%S %Y %z'
+    date_format = '%a %b %d %H:%M:%S %Y'
 
     @asyncio.coroutine
     def clone(self, url):
