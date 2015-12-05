@@ -194,8 +194,8 @@ class GitTest(AsyncTestCase):
         @asyncio.coroutine
         def e(*a, **kw):
             assert a[0] == expected_cmd, a[0]
-            log = '0sdflf093 | Thu Oct 20 16:30:23 2014 -0200\n'
-            log += '0sdflf095 | Thu Oct 20 16:20:23 2014 -0200\n'
+            log = '0sdflf093 | Thu Oct 20 16:30:23 2014\n'
+            log += '0sdflf095 | Thu Oct 20 16:20:23 2014\n'
             return log
 
         vcs.exec_cmd = e
@@ -210,8 +210,8 @@ class GitTest(AsyncTestCase):
         @asyncio.coroutine
         def e(*a, **kw):
             assert a[0] == expected_cmd, a[0]
-            log = '0sdflf093 | Thu Oct 20 16:30:23 2014 -0200\n'
-            log += '0sdflf095 | Thu Oct 20 16:20:23 2014 -0200\n'
+            log = '0sdflf093 | Thu Oct 20 16:30:23 2014\n'
+            log += '0sdflf095 | Thu Oct 20 16:20:23 2014\n'
             return log
 
         vcs.exec_cmd = e
