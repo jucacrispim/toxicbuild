@@ -23,7 +23,7 @@ import datetime
 import os
 import mock
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.core import vcs
+from toxicbuild.core import vcs, utils
 
 
 @mock.patch.object(vcs, 'exec_cmd', mock.MagicMock())
@@ -185,10 +185,11 @@ class GitTest(AsyncTestCase):
 
     @gen_test
     def test_get_revisions_for_branch(self):
-        now = datetime.datetime.now()
+        now = utils.now()
+        local = utils.utc2localtime(now)
         expected_cmd = '{} log --pretty=format:"%H | %ad" '.format('git')
-        expected_cmd += '--since="{}"'.format(
-            datetime.datetime.strftime(now, self.vcs.date_format))
+        expected_cmd += '--since="{}" --date=local'.format(
+            datetime.datetime.strftime(local, self.vcs.date_format))
 
         @asyncio.coroutine
         def e(*a, **kw):

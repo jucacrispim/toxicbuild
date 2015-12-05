@@ -22,7 +22,7 @@ import asyncio
 import os
 from toxicbuild.core.exceptions import VCSError
 from toxicbuild.core.utils import(exec_cmd, inherit_docs, string2datetime,
-                                  datetime2string)
+                                  datetime2string, utc2localtime)
 
 
 class VCS(metaclass=ABCMeta):
@@ -186,8 +186,9 @@ class Git(VCS):
 
         cmd = '{} log --pretty=format:"%H | %ad" '.format(self.vcsbin)
         if since:
-            date = datetime2string(since, self.date_format)
-            cmd += '--since="%s"' % date
+            localtime = utc2localtime(since)
+            date = datetime2string(localtime, self.date_format)
+            cmd += '--since="%s" --date=local' % date
 
         last_revs = [r for r in (yield from self.exec_cmd(cmd)).split('\n')
                      if r]
