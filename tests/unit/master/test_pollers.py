@@ -145,6 +145,15 @@ class GitPollerTest(AsyncTestCase):
 
         self.assertFalse(self.CLONE_CALLED)
 
+    @gen_test
+    def test_poll_with_submodule(self):
+        self.poller.process_changes = mock.MagicMock()
+        self.poller.vcs.workdir_exists = lambda: True
+        self.poller.vcs.update_submodule = mock.MagicMock()
+        yield from self.poller.poll()
+
+        self.assertTrue(self.poller.vcs.update_submodule.called)
+
     @asyncio.coroutine
     def _create_db_revisions(self):
         yield self.repo.save()

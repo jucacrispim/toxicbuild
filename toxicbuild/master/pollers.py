@@ -50,7 +50,14 @@ class Poller:
         self.log('Polling changes for {}'.format(self.repository.url))
 
         if not self.vcs.workdir_exists():
+            self.log('clonning repo')
             yield from self.vcs.clone(self.repository.url)
+
+        # for git.
+        # remove no branch when hg is implemented
+        if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
+            self.log('updating submodule')
+            yield from self.vcs.update_submodule()
 
         yield from self.process_changes()
 
