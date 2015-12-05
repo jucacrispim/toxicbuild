@@ -192,6 +192,10 @@ class Git(VCS):
 
         last_revs = [r for r in (yield from self.exec_cmd(cmd)).split('\n')
                      if r]
+
+        # The first revision here is the last one consumed, so
+        # popping it to not build this again.
+        last_revs.pop(0)
         last_revs.reverse()
         revisions = []
 
