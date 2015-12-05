@@ -117,7 +117,10 @@ def inherit_docs(cls):
     for name, func in vars(cls).items():
         if not func.__doc__:
             for parent in cls.__bases__:
-                parfunc = getattr(parent, name)
+                try:
+                    parfunc = getattr(parent, name)
+                except:
+                    continue
                 if parfunc and getattr(parfunc, '__doc__', None):
                     func.__doc__ = parfunc.__doc__
                     break
