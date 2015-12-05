@@ -127,7 +127,7 @@ class Git(VCS):
     @asyncio.coroutine
     def clone(self, url):
 
-        cmd = '%s clone %s %s' % (self.vcsbin, url, self.workdir)
+        cmd = '%s clone %s %s --recursive' % (self.vcsbin, url, self.workdir)
         # we can't go to self.workdir while we do not clone the repo
         yield from self.exec_cmd(cmd, cwd='.')
 
@@ -159,6 +159,12 @@ class Git(VCS):
     def has_changes(self):
         ret = yield from self.fetch()
         return bool(ret)
+
+    @asyncio.coroutine
+    def update_submodule(self):
+        cmd = '{} submodule update'.format(self.vcsbin)
+        ret = yield from self.exec_cmd(cmd)
+        return ret
 
     @asyncio.coroutine
     def get_revisions(self, since={}):

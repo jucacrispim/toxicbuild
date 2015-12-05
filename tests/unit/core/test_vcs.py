@@ -101,8 +101,8 @@ class GitTest(AsyncTestCase):
         yield from self.vcs.clone(url)
 
         called_cmd = vcs.exec_cmd.call_args[0][0]
-        self.assertEqual(called_cmd, 'git clone %s %s' % (url,
-                                                          self.vcs.workdir))
+        self.assertEqual(called_cmd, 'git clone %s %s --recursive' % (
+            url, self.vcs.workdir))
 
     @gen_test
     def test_fetch(self):
@@ -152,6 +152,18 @@ class GitTest(AsyncTestCase):
         has_changes = yield from self.vcs.has_changes()
 
         self.assertTrue(has_changes)
+
+    @gen_test
+    def test_update_submodule(self):
+        expected_cmd = 'git submodule update'
+
+        @asyncio.coroutine
+        def e(cmd, cwd):
+            assert cmd == expected_cmd
+
+        vcs.exec_cmd = e
+
+        yield from self.vcs.update_submodule()
 
     @gen_test
     def test_get_remote_branches(self):
