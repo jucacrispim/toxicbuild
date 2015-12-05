@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block main_area %}
+<table>
+  <tbody>
+    <tr>
+      {% for builder in builders %}
+      <td>
+	<ul><li class="builder builder-{{builder.status}}">
+	    {{builder.name}}
+	</li></ul>
+	{% for build in builder.builds %}
+	<ul>
+	  <li class="step step-{{build.status}}">
+	    Build {{build.number}} - {{build.status}}
+	  </li>
+	  {% for step in build.steps %}
+	  <li class="step step-{{step.status}}">
+	    {{step.name}} - {{step.status}}
+	    <a href="#" class="a-step-more">
+	      more
+	    </a>
+	    <ul class="toxic-ul step-details" style="display:none">
+	      <li>
+		command: {{step.command}}
+	      </li>
+	      <li>
+		<pre>output: {{step.output}}</pre>
+	      </li>
+	    </ul>
+	  </li>
+	  {% end %}
+	</ul>
+	{% end %}
+      </td>
+      {% end %}
+    </tr>
+  </tbody>
+</table>
+{% end %}

@@ -1,3 +1,24 @@
+/* main */
+.background-main,
+body{
+    background-color: #4c4a49;
+    color: #D0D0D0;
+}
+a:hover,
+a {
+    color: #1A8FF5;
+    text-decoration: none;
+}
+.modal-content{
+    background-color: #4c4a49;
+}
+.page-header{
+    border: 0;
+}
+.toxicweb-container{
+    margin-left: 0;
+}
+
 .alert{
     display:none;
     margin-top: 5%;
@@ -8,9 +29,6 @@
     margin-top: -4%;
 }
 
-.background-main{
-    background-color: #fff;
-}
 
 .master-msg{
     color: #fff;
@@ -40,4 +58,37 @@
 
 #btn-delete-slave{
     display: none;
+}
+
+/* waterfall */
+
+.step{
+    border-bottom: 1px solid #4c4a49;
+}
+
+.toxic-ul{
+    list-style: none;
+}
+
+.builder,
+.step{
+    border-radius: 3px;
+    list-style: none;
+    padding: 10px
+}
+
+.builder-fail,
+.step-fail{
+    background-color: #d9534f;
+
+}
+
+.builder-success,
+.step-success{
+    background-color: #5cb85c;
+}
+
+.builder-running,
+.step-running{
+    background-color: #31b0d5;
 }

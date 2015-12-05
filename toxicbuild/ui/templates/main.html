@@ -3,7 +3,7 @@
 {% block main_area %}
 
 <div class="page-header">
-  <h3>Repositories</h3>
+  <h4>Repositories</h4>
 
   <!-- Button trigger modal add repository -->
   <button type="button" class="btn btn-primary btn-xs" data-toggle="modal" data-target="#repoModal">
@@ -31,8 +31,14 @@
 	  </a>
 	</td>
 	<td>{{repo.url}}</td>
-	<td><button type="button" class="btn btn-xs btn-{{get_btn_class(repo.status)}} btn-status">{{repo.status}}</button></td>
-	<td><button type="button" id="start-build-btn" class="btn btn-xs btn-info btn-status"
+	<td>
+	  <form action="/waterfall">
+	    <input type="hidden" name="repo" value="{{repo.name}}">
+	    <button type="submit" class="btn btn-xs btn-{{get_btn_class(repo.status)}} btn-status">{{repo.status}}
+	    </button>
+	  </form>
+	</td>
+	<td><button type="button"  class="btn btn-xs btn-info btn-status start-build-btn"
 		    data-toggle="modal" data-repo-name="{{repo.name}}"data-target="#startBuildModal">start build</button></td>
       </tr>
       {% end %}
@@ -42,7 +48,7 @@
 
 
 <div class="page-header">
-  <h3>Slaves</h3>
+  <h4>Slaves</h4>
   <button type="button" class="btn btn-primary btn-xs" data-toggle="modal" data-target="#slaveModal">
     Add new slave
   </button>

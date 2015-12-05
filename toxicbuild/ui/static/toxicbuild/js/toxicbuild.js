@@ -120,8 +120,8 @@ function showRepoModal(name, url, vcs_type, update_seconds, slaves){
 
 // start build stuff
 
-$('#start-build-btn').on('click', function(event){
-  $('#repo-start-build-name').val($('#start-build-btn').data('repo-name'));
+$('.start-build-btn').on('click', function(event){
+  $('#repo-start-build-name').val($(this).data('repo-name'));
 });
 
 
@@ -252,4 +252,11 @@ $("#slaveModal").on('submit', function(event){
     }
   })
 
+});
+
+
+// waterfall
+
+$('.a-step-more').on('click', function(event){
+  $('.step-details', $(this).parent()).toggle();
 });

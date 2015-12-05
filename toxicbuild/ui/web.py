@@ -23,7 +23,7 @@ from pyrocumulus.web.applications import Application, StaticApplication
 from pyrocumulus.web.handlers import TemplateHandler
 from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.ui import settings
-from toxicbuild.ui.models import Repository, Slave
+from toxicbuild.ui.models import Repository, Slave, Builder
 
 
 class BaseModelHandler(TemplateHandler):
@@ -147,12 +147,8 @@ class MainHandler(TemplateHandler):
         repos = yield from Repository.list()
         slaves = yield from Slave.list()
 
-        master_location = '{}:{}'.format(
-            settings.HOLE_HOST, settings.HOLE_PORT)
-
         context = {'repos': repos, 'slaves': slaves,
-                   'get_btn_class': self._get_btn_class,
-                   'master_location': master_location}
+                   'get_btn_class': self._get_btn_class}
         self.render_template(self.main_template, context)
 
     def _get_btn_class(self, status):
@@ -163,13 +159,17 @@ class MainHandler(TemplateHandler):
 class WaterfallHandler(TemplateHandler):  # pragma no cover
     template = 'waterfall.html'
 
+    @gen.coroutine
     def get(self):
-        # repo_name = self.request.arguments.get('repo')
-        pass
+        repo_name = self.request.arguments.get('repo')[0].decode()
+        builders = yield from Builder.list(repo_name=repo_name)
+        context = {'builders': builders}
+        self.render_template(self.template, context)
 
 
 url = URLSpec('/$', MainHandler)
-app = Application(url_prefix='', extra_urls=[url])
+waterfall = URLSpec('/waterfall$', WaterfallHandler)
+app = Application(url_prefix='', extra_urls=[url, waterfall])
 static_app = StaticApplication()
 
 repo_kwargs = {'model': Repository}
