@@ -43,7 +43,10 @@ def exec_cmd(cmd, cwd, **envvars):
 
     stdout, stderr = yield from ret.communicate()
     if int(ret.returncode) > 0:
-        raise ExecCmdError(stderr.decode().strip())
+        output = stderr.decode().strip()
+        if not output:
+            output = stdout.decode().strip()
+        raise ExecCmdError(output)
 
     return stdout.decode().strip()
 
