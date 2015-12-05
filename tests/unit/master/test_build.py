@@ -397,6 +397,18 @@ class BuildManagerTest(AsyncTestCase):
         number = yield from self.manager._get_next_build_number(self.builder)
         self.assertEqual(number, 2)
 
+    @gen_test
+    def test_add_builds_from_signal(self):
+        # ensures that builds are added when revision_added signal is sent.
+
+        yield from self._create_test_data()
+        yield build.Build.drop_collection()
+        self.repo.build_manager.add_builds = mock.MagicMock()
+        ret = self.repo.poller.notify_change(self.revision)
+        futures = [r[1] for r in ret]
+        yield from asyncio.gather(*futures)
+        self.assertTrue(self.repo.build_manager.add_builds.called)
+
     @asyncio.coroutine
     def _create_test_data(self):
         self.slave = build.Slave(host='127.0.0.1', port=7777, name='slave')

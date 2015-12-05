@@ -106,7 +106,8 @@ class Poller:
     def notify_change(self, revision):
         """ Notify about incoming changes. """
 
-        revision_added.send(self.repository, revision=revision)
+        # returning for testing purposes
+        return revision_added.send(self.repository, revision=revision)
 
     def log(self, msg):
         log('[{}] {} '.format(type(self).__name__, msg))

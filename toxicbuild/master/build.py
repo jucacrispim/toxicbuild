@@ -356,7 +356,10 @@ class BuildManager:
         def revadded(sender, revision):  # pragma no cover
             yield from self.add_builds(revision)
 
-        revision_added.connect(revadded, sender=self.repository)
+        # connect here needs not to be weak otherwise no
+        # receiver is available when polling is triggered by the
+        # scheduler.
+        revision_added.connect(revadded, sender=self.repository, weak=False)
 
     @asyncio.coroutine
     def _execute_builds(self, slave):
