@@ -94,11 +94,33 @@ def log(msg, level='info'):
 
 
 def datetime2string(dt, dtformat='%a %b %d %H:%M:%S %Y %z'):
+    """Transforms a datetime object into a formated string.
+
+    :param dt: The datetime object.
+    :param dtformat: The format to use."""
+
     return datetime.strftime(dt, dtformat)
 
 
 def string2datetime(dtstr, dtformat='%a %b %d %H:%M:%S %Y %z'):
+    """Transforns a string into a datetime object acording to ``dtformat``.
+
+    :param dtstr: The string containing the formated date.
+    :param dtformat: The format of the formated date.
+    """
     return datetime.strptime(dtstr, dtformat)
+
+
+def utc2localtime(utcdatetime):
+    """Transforms a utc datetime object into a datetime object"""
+    off = time.localtime().tm_gmtoff
+    td = timedelta(seconds=off)
+    tz = timezone(td)
+    local = utcdatetime + td
+    localtime = datetime(local.year, local.month, local.day,
+                         local.hour, local.minute, local.second,
+                         tzinfo=tz)
+    return localtime
 
 
 def now():

@@ -139,6 +139,12 @@ class UtilsTest(AsyncTestCase):
         tz = returned.utcoffset().total_seconds()
         self.assertEqual(tz, time.localtime().tm_gmtoff)
 
+    def test_utc2localtime(self):
+        utc = datetime.datetime.now()
+        local = utils.utc2localtime(utc)
+        self.assertEqual(local.utcoffset().total_seconds(),
+                         time.localtime().tm_gmtoff)
+
     def test_now(self):
         n = utils.now()
         self.assertEqual(n.utcoffset().total_seconds(),
