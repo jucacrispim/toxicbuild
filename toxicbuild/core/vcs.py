@@ -186,10 +186,13 @@ class Git(VCS):
 
         cmd = '{} log --pretty=format:"%H | %ad" '.format(self.vcsbin)
         if since:
+            # Here we change the time to localtime since we can't get
+            # utc time in git commits unless we are using git 2.7+
             localtime = utc2localtime(since)
             date = datetime2string(localtime, self.date_format)
-            cmd += '--since="%s" --date=local' % date
+            cmd += '--since="%s" ' % date
 
+        cmd += '--date=local'
         last_revs = [r for r in (yield from self.exec_cmd(cmd)).split('\n')
                      if r]
 
@@ -199,12 +202,14 @@ class Git(VCS):
         for rev in last_revs:
             rev_uuid, date = rev.split('|')
             date = string2datetime(date.strip(), dtformat=self.date_format)
+            # Here we change the date from git, that is in localtime to
+            # utc before saving to database.
 
             revisions.append({'commit': rev_uuid.strip(), 'commit_date': date})
 
-        # The thing here is that the last revision in the list
+        # The thing here is that the first revision in the list
         # is the last one consumed on last time
-        return revisions[:-1]
+        return revisions[1:]
 
     @asyncio.coroutine
     def get_remote_branches(self):

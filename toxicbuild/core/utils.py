@@ -112,15 +112,37 @@ def string2datetime(dtstr, dtformat='%a %b %d %H:%M:%S %Y %z'):
 
 
 def utc2localtime(utcdatetime):
-    """Transforms a utc datetime object into a datetime object"""
+    """Transforms a utc datetime object into a datetime object
+    in local time.
+
+    :param utcdatetime: A datetime object"""
+
     off = time.localtime().tm_gmtoff
     td = timedelta(seconds=off)
     tz = timezone(td)
     local = utcdatetime + td
     localtime = datetime(local.year, local.month, local.day,
                          local.hour, local.minute, local.second,
+                         local.microsecond,
                          tzinfo=tz)
     return localtime
+
+
+def localtime2utc(localdatetime):
+    """Transforms a local datetime object into a datetime object
+    in utc time.
+
+    :param localdatetime: A datetime object."""
+    off = time.localtime().tm_gmtoff
+    td = timedelta(seconds=off)
+    tz = timezone(td)
+    utc = localdatetime - td
+    utctz = timezone(timedelta(seconds=0))
+    utctime = datetime(utc.year, utc.month, utc.day,
+                       utc.hour, utc.minute, utc.second,
+                       utc.microsecond,
+                       tzinfo=utctz)
+    return utctime
 
 
 def now():

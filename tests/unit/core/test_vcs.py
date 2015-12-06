@@ -201,11 +201,12 @@ class GitTest(AsyncTestCase):
         vcs.exec_cmd = e
         revisions = yield from self.vcs.get_revisions_for_branch('master',
                                                                  since=now)
-        self.assertEqual(revisions[0]['commit'], '0sdflf095')
+        self.assertEqual(revisions[0]['commit'], '0sdflf093')
 
     @gen_test
     def test_get_revisions_for_branch_without_since(self):
-        expected_cmd = '{} log --pretty=format:"%H | %ad" '.format('git')
+        expected_cmd = '{} log --pretty=format:"%H | %ad" --date=local'.format(
+            'git')
 
         @asyncio.coroutine
         def e(*a, **kw):
@@ -216,7 +217,7 @@ class GitTest(AsyncTestCase):
 
         vcs.exec_cmd = e
         revisions = yield from self.vcs.get_revisions_for_branch('master')
-        self.assertEqual(revisions[0]['commit'], '0sdflf095')
+        self.assertEqual(revisions[0]['commit'], '0sdflf093')
 
     @gen_test
     def test_get_revision(self):
