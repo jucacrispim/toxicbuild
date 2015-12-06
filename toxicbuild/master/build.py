@@ -282,11 +282,11 @@ class BuildManager:
     def __init__(self, repository):
         self.repository = repository
         # each slave has its own queue
-        self._queues = defaultdict(deque)
+        self._build_queues = defaultdict(deque)
 
         # to keep track of which slave is already working
         # on consume its queue
-        self._is_working = defaultdict(lambda: False)
+        self._is_building = defaultdict(lambda: False)
 
         self.connect2signals()
 
@@ -319,9 +319,9 @@ class BuildManager:
                       builder=builder, number=number)
 
         yield from to_asyncio_future(build.save())
-        self._queues[slave.name].append(build)
+        self._build_queues[slave.name].append(build)
 
-        if not self._is_working[slave.name]:  # pragma: no branch
+        if not self._is_building[slave.name]:  # pragma: no branch
             asyncio.async(self._execute_builds(slave))
 
     @asyncio.coroutine
@@ -354,22 +354,22 @@ class BuildManager:
 
         :param slave: A :class:`toxicbuild.master.build.Slave` instance."""
 
-        self._is_working[slave.name] = True
+        self._is_building[slave.name] = True
         try:
             while True:
                 try:
-                    build = self._queues[slave.name].popleft()
+                    build = self._build_queues[slave.name].popleft()
                     # the build could be executed in parallel with some
                     # other preceding build
                     while build.status != build.PENDING:
-                        build = self._queues[slave.name].popleft()
+                        build = self._build_queues[slave.name].popleft()
                 except IndexError:
                     break
 
                 parallels = [build] + (yield from build.get_parallels())
                 yield from self._execute_in_parallel(slave, parallels)
         finally:
-            self._is_working[slave.name] = False
+            self._is_building[slave.name] = False
 
     @asyncio.coroutine
     def _execute_in_parallel(self, slave, builds):

@@ -337,7 +337,7 @@ class BuildManagerTest(AsyncTestCase):
 
         yield from self.manager.add_builds(self.revision)
 
-        self.assertEqual(len(self.manager._queues[self.slave.name]), 1)
+        self.assertEqual(len(self.manager._build_queues[self.slave.name]), 1)
 
     @gen_test
     def test_get_builders(self):
@@ -364,7 +364,7 @@ class BuildManagerTest(AsyncTestCase):
         yield from self._create_test_data()
 
         self.manager._execute_in_parallel = mock.MagicMock()
-        self.manager._queues[self.slave.name].extend(
+        self.manager._build_queues[self.slave.name].extend(
             [self.build, self.consumed_build])
         yield from self.manager._execute_builds(self.slave)
         called_args = self.manager._execute_in_parallel.call_args[0]
