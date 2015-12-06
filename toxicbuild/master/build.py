@@ -292,18 +292,19 @@ class BuildManager:
         self.connect2signals()
 
     @asyncio.coroutine
-    def add_builds(self, revision):
+    def add_builds(self, revisions):
         """ Adds the builds for a given revision in the build queue.
 
-        :param revision: A
+        :param revision: A list of
           :class:`toxicbuild.master.repositories.RepositoryRevision`
-          instance for the build."""
+          instances for the build."""
 
-        for slave in self.repository.slaves:
-            builders = yield from self.get_builders(slave, revision)
-            for builder in builders:
-                yield from self.add_build(builder, revision.branch,
-                                          revision.commit, slave)
+        for revision in revisions:
+            for slave in self.repository.slaves:
+                builders = yield from self.get_builders(slave, revision)
+                for builder in builders:
+                    yield from self.add_build(builder, revision.branch,
+                                              revision.commit, slave)
 
     @asyncio.coroutine
     def add_build(self, builder, branch, named_tree, slave):
@@ -347,8 +348,8 @@ class BuildManager:
         """ Connects the BuildManager to the revision_added signal."""
 
         @asyncio.coroutine
-        def revadded(sender, revision):  # pragma no cover
-            yield from self.add_builds(revision)
+        def revadded(sender, revisions):  # pragma no cover
+            yield from self.add_builds(revisions)
 
         # connect here needs not to be weak otherwise no
         # receiver is available when polling is triggered by the

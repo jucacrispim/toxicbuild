@@ -74,12 +74,12 @@ class Poller:
 
         known_branches = dbrevisions.keys()
 
-        for branch, revisions in newer_revisions.items():
+        for branch, revs in newer_revisions.items():
             # the thing here is that if the branch is a new one
             # or is the first time its running, I don't what to get all
             # revisions, but the last one only.
             if branch not in known_branches:
-                rev = revisions[0]
+                rev = revs[0]
                 revision = yield from self.repository.add_revision(branch,
                                                                    **rev)
                 msg = 'Last revision for {} on branch {} added'
@@ -87,27 +87,29 @@ class Poller:
                 self.notify_change(revision)
                 continue
 
-            for rev in revisions:
+            revisions = []
+            for rev in revs:
                 revision = yield from self.repository.add_revision(
                     branch, **rev)
                 # the thing here is: if self.notify_only_latest, we only
                 # add the most recent revision, the last one of the revisions
                 # list to the revisionset
-                if (not revisions[-1] == rev and self.notify_only_latest):
+                if (not revs[-1] == rev and self.notify_only_latest):
                     continue
 
-                self.notify_change(revision)
+                revisions.append(revision)
 
-            if len(revisions):
+            if revisions:
                 msg = '{} new revisions for {} on branch {} added'
                 self.log(msg.format(len(revisions), self.repository.url,
                                     branch))
+                self.notify_change(*revisions)
 
-    def notify_change(self, revision):
+    def notify_change(self, *revisions):
         """ Notify about incoming changes. """
 
         # returning for testing purposes
-        return revision_added.send(self.repository, revision=revision)
+        return revision_added.send(self.repository, revisions=revisions)
 
     def log(self, msg):
         log('[{}] {} '.format(type(self).__name__, msg))

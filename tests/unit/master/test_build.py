@@ -337,7 +337,7 @@ class BuildManagerTest(AsyncTestCase):
 
         self.manager.get_builders = lb
 
-        yield from self.manager.add_builds(self.revision)
+        yield from self.manager.add_builds([self.revision])
 
         self.assertEqual(len(self.manager._build_queues[self.slave.name]), 1)
 
@@ -402,7 +402,7 @@ class BuildManagerTest(AsyncTestCase):
         yield from self._create_test_data()
         yield build.Build.drop_collection()
         self.repo.build_manager.add_builds = mock.MagicMock()
-        ret = self.repo.poller.notify_change(self.revision)
+        ret = self.repo.poller.notify_change(*[self.revision])
         futures = [r[1] for r in ret]
         yield from asyncio.gather(*futures)
         self.assertTrue(self.repo.build_manager.add_builds.called)
