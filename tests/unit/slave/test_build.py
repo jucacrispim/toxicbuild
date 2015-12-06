@@ -29,7 +29,7 @@ from tests.unit.slave import TEST_DATA_DIR
 
 class BuilderTest(AsyncTestCase):
 
-    @mock.patch.object(managers, 'load_module_from_file', mock.MagicMock())
+    @mock.patch.object(managers, 'get_toxicbuildconf', mock.MagicMock())
     def setUp(self):
         super().setUp()
         protocol = mock.MagicMock()
@@ -45,7 +45,7 @@ class BuilderTest(AsyncTestCase):
         toxicconf = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
         toxicconf = load_module_from_file(toxicconf)
 
-        managers.load_module_from_file.return_value = toxicconf
+        managers.get_toxicbuildconf.return_value = toxicconf
 
         self.builder = build.Builder(manager, 'builder1', '.')
 

@@ -159,6 +159,24 @@ class UtilsTest(AsyncTestCase):
         self.assertEqual(n.utcoffset().total_seconds(),
                          time.localtime().tm_gmtoff)
 
+    @patch.object(utils, 'load_module_from_file', Mock())
+    def test_get_toxicbuildconf(self):
+        utils.get_toxicbuildconf('/some/dir/')
+        called_conffile = utils.load_module_from_file.call_args[0][0]
+        self.assertTrue(utils.load_module_from_file.called)
+        self.assertEqual(called_conffile, '/some/dir/toxicbuild.conf')
+
+    def test_list_builders_from_config(self):
+        confmodule = Mock()
+        slave = Mock()
+        slave.name = 'myslave'
+        confmodule.BUILDERS = [{'name': 'b0'},
+                               {'name': 'b1', 'branch': 'other'},
+                               {'name': 'b2',
+                                'slave': 'myslave', 'branch': 'master'}]
+        builders = utils.list_builders_from_config(confmodule, 'master', slave)
+        self.assertEqual(len(builders), 2)
+
 
 class StreamUtilsTest(AsyncTestCase):
 

@@ -20,7 +20,7 @@
 import asyncio
 import os
 from toxicbuild.core import get_vcs
-from toxicbuild.core.utils import load_module_from_file
+from toxicbuild.core.utils import get_toxicbuildconf
 from toxicbuild.slave.build import Builder, BuildStep
 from toxicbuild.slave.exceptions import BuilderNotFound
 from toxicbuild.slave.plugins import Plugin
@@ -37,13 +37,12 @@ class BuildManager:
         self.vcs = get_vcs(vcs_type)(self.workdir)
         self.branch = branch
         self.named_tree = named_tree
-        self.configfile = os.path.join(self.workdir, 'toxicbuild.conf')
         self._configmodule = None
 
     @property
     def configmodule(self):
         if not self._configmodule:  # pragma: no branch
-            self._configmodule = load_module_from_file(self.configfile)
+            self._configmodule = get_toxicbuildconf(self.workdir)
         return self._configmodule
 
     @property
@@ -122,8 +121,8 @@ class BuildManager:
 
     def _load_plugins(self, plugins_config):
         """ Returns a list of :class:`toxicbuild.slave.plugins.Plugin`
-        subclasses based on the plugins list based on the plugins listed
-        on the config for a builder."""
+        subclasses based on the plugins listed on the config for a builder.
+        """
 
         plist = []
         for pdict in plugins_config:

@@ -135,7 +135,6 @@ def localtime2utc(localdatetime):
     :param localdatetime: A datetime object."""
     off = time.localtime().tm_gmtoff
     td = timedelta(seconds=off)
-    tz = timezone(td)
     utc = localdatetime - td
     utctz = timezone(timedelta(seconds=0))
     utctime = datetime(utc.year, utc.month, utc.day,
@@ -151,6 +150,22 @@ def now():
     off = time.localtime().tm_gmtoff
     tz = timezone(timedelta(seconds=off))
     return datetime.now(tz=tz)
+
+
+def get_toxicbuildconf(directory):
+    """Returns the toxicbuild.conf module.
+
+    :param directory: Directory to look for toxicbuild.conf"""
+
+    configfile = os.path.join(directory, 'toxicbuild.conf')
+    return load_module_from_file(configfile)
+
+
+def list_builders_from_config(confmodule, branch, slave):
+    builders = [b['name'] for b in confmodule.BUILDERS
+                if (b.get('branch') == branch or b.get('branch')is None) and
+                (b.get('slave') == slave.name or b.get('slave') is None)]
+    return builders
 
 
 # inherit_docs thanks to Raymond Hettinger on stackoverflow

@@ -23,14 +23,14 @@ from unittest.mock import patch, MagicMock, Mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core.utils import load_module_from_file
-from toxicbuild.slave import build, plugins, managers
+from toxicbuild.slave import plugins, managers
 from tests.unit.slave import TEST_DATA_DIR
 
 TOXICCONF = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
 TOXICCONF = load_module_from_file(TOXICCONF)
 
 
-@patch.object(managers, 'load_module_from_file',
+@patch.object(managers, 'get_toxicbuildconf',
               Mock(return_value=TOXICCONF))
 class BuilderManagerTest(AsyncTestCase):
 
