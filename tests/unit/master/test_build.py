@@ -331,13 +331,13 @@ class BuildManagerTest(AsyncTestCase):
 
         @asyncio.coroutine
         def lb(revision):
-            return ['builder-1', 'builder-2']
+            return [self.builder]
 
         self.slave.list_builders = lb
 
         yield from self.manager.add_builds(self.revision)
 
-        self.assertEqual(len(self.manager._queues[self.slave.name]), 2)
+        self.assertEqual(len(self.manager._queues[self.slave.name]), 1)
 
     @gen_test
     def test_get_builders(self):
@@ -345,7 +345,7 @@ class BuildManagerTest(AsyncTestCase):
 
         @asyncio.coroutine
         def lb(revision):
-            return ['builder-1', 'builder-2']
+            return [self.builder]
 
         self.slave.list_builders = lb
 
@@ -357,7 +357,7 @@ class BuildManagerTest(AsyncTestCase):
         for b in builders:
             self.assertTrue(isinstance(b, build.Document))
 
-        self.assertEqual(len(builders), 2)
+        self.assertEqual(len(builders), 1)
 
     @gen_test
     def test_execute_build(self):

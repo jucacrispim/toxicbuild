@@ -333,21 +333,8 @@ class BuildManager:
           :class:`toxicbuild.master.repositories.RepositoryRevision`.
         """
 
-        repository = yield from to_asyncio_future(revision.repository)
         builders = yield from slave.list_builders(revision)
-        blist = []
-        for builder_name in builders:
-            try:
-                builder = yield from to_asyncio_future(
-                    Builder.objects.get(name=builder_name,
-                                        repository=repository))
-            except Builder.DoesNotExist:
-                builder = Builder(name=builder_name, repository=repository)
-                yield from to_asyncio_future(builder.save())
-
-            blist.append(builder)
-
-        return blist
+        return builders
 
     def connect2signals(self):
         """ Connects the BuildManager to the revision_added signal."""
