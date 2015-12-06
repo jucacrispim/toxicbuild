@@ -25,7 +25,8 @@ from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                ReferenceField, DateTimeField, BooleanField,
                                IntField)
 from tornado.platform.asyncio import to_asyncio_future
-from toxicbuild.core.utils import log, string2datetime
+from toxicbuild.core.utils import (log, string2datetime, get_toxicbuildconf,
+                                   list_builders_from_config)
 from toxicbuild.master.client import get_build_client
 from toxicbuild.master.signals import (build_started, build_finished,
                                        revision_added, step_started,
@@ -332,8 +333,14 @@ class BuildManager:
         :param revision: A
           :class:`toxicbuild.master.repositories.RepositoryRevision`.
         """
+        yield from self.repository.poller.vcs.checkout(revision.commit)
+        conf = get_toxicbuildconf(self.repository.poller.vcs.workdir)
+        names = list_builders_from_config(conf, revision.branch, slave)
+        builders = []
+        for name in names:
+            builder = yield from Builder.get_or_create(name=name)
+            builders.append(builder)
 
-        builders = yield from slave.list_builders(revision)
         return builders
 
     def connect2signals(self):

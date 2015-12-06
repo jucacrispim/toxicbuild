@@ -313,11 +313,13 @@ class BuildManagerTest(AsyncTestCase):
         repo.__func__ = lambda: None
         self.manager = build.BuildManager(repo)
 
+    @gen_test
     def tearDown(self):
-        build.Slave.drop_collection()
-        build.Build.drop_collection()
-        repositories.RepositoryRevision.drop_collection()
-        repositories.Repository.drop_collection()
+        yield build.Slave.drop_collection()
+        yield build.Build.drop_collection()
+        yield build.Builder.drop_collection()
+        yield repositories.RepositoryRevision.drop_collection()
+        yield repositories.Repository.drop_collection()
         super().tearDown()
 
     def get_new_ioloop(self):
@@ -330,26 +332,22 @@ class BuildManagerTest(AsyncTestCase):
         self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
 
         @asyncio.coroutine
-        def lb(revision):
+        def lb(branch, slave):
             return [self.builder]
 
-        self.slave.list_builders = lb
+        self.manager.get_builders = lb
 
         yield from self.manager.add_builds(self.revision)
 
         self.assertEqual(len(self.manager._build_queues[self.slave.name]), 1)
 
+    @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
+    @mock.patch.object(build, 'list_builders_from_config',
+                       mock.Mock(return_value=['builder-0', 'builder-1']))
     @gen_test
     def test_get_builders(self):
         yield from self._create_test_data()
-
-        @asyncio.coroutine
-        def lb(revision):
-            return [self.builder]
-
-        self.slave.list_builders = lb
-
-        self.manager._execute_builds = mock.MagicMock()
+        self.manager.repository.poller.vcs.checkout = mock.MagicMock()
 
         builders = yield from self.manager.get_builders(self.slave,
                                                         self.revision)
@@ -357,7 +355,7 @@ class BuildManagerTest(AsyncTestCase):
         for b in builders:
             self.assertTrue(isinstance(b, build.Document))
 
-        self.assertEqual(len(builders), 1)
+        self.assertEqual(len(builders), 2)
 
     @gen_test
     def test_execute_build(self):
