@@ -193,9 +193,6 @@ class Git(VCS):
         last_revs = [r for r in (yield from self.exec_cmd(cmd)).split('\n')
                      if r]
 
-        # The first revision here is the last one consumed, so
-        # popping it to not build this again.
-        last_revs.pop(0)
         last_revs.reverse()
         revisions = []
 
@@ -205,7 +202,9 @@ class Git(VCS):
 
             revisions.append({'commit': rev_uuid.strip(), 'commit_date': date})
 
-        return revisions
+        # The thing here is that the last revision in the list
+        # is the last one consumed on last time
+        return revisions[:-1]
 
     @asyncio.coroutine
     def get_remote_branches(self):
