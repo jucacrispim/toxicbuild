@@ -205,8 +205,7 @@ class GitTest(AsyncTestCase):
 
     @gen_test
     def test_get_revisions_for_branch_without_since(self):
-        expected_cmd = '{} log --pretty=format:"%H | %ad" --date=local'.format(
-            'git')
+        expected_cmd = 'git log --pretty=format:"%H | %ad" --date=local'
 
         @asyncio.coroutine
         def e(*a, **kw):

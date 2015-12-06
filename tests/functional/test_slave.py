@@ -130,7 +130,7 @@ class SlaveTest(AsyncTestCase):
         self.assertEqual(build_status['body']['total_steps'], 1)
         self.assertEqual(build_status['body']['status'], 'success')
 
-    @gen_test(timeout=10)
+    @gen_test(timeout=15)
     def test_build_with_plugin(self):
         with (yield from get_dummy_client()) as client:
             step_info, build_status = yield from client.build('builder-2')
