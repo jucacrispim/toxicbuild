@@ -121,7 +121,6 @@ class HoleHandlerTest(AsyncTestCase):
         with self.assertRaises(hole.UIFunctionNotFound):
             yield from handler.handle()
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_add(self):
         yield from self._create_test_data()
@@ -139,7 +138,6 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertTrue(repo['repo-add']['id'])
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_get_with_repo_name(self):
         yield from self._create_test_data()
@@ -152,7 +150,6 @@ class HoleHandlerTest(AsyncTestCase):
         self.assertTrue(repo['id'])
         self.assertIn('status', repo.keys())
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_get_with_repo_url(self):
         yield from self._create_test_data()
@@ -172,7 +169,6 @@ class HoleHandlerTest(AsyncTestCase):
             yield from handler.repo_get()
 
     @patch.object(repositories, 'shutil', Mock())
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_remove(self):
         yield from self._create_test_data()
@@ -182,7 +178,6 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual((yield hole.Repository.objects.count()), 0)
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_list(self):
         yield from self._create_test_data()
@@ -192,7 +187,6 @@ class HoleHandlerTest(AsyncTestCase):
         self.assertEqual(len(repo_list), 1)
         self.assertIn('status', repo_list[0].keys())
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_update(self):
         yield from self._create_test_data()
@@ -207,7 +201,6 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual(repo.update_seconds, 60)
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_add_slave(self):
         yield from self._create_test_data()
@@ -227,7 +220,6 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual(repo.slaves[0].id, slave.id)
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_remove_slave(self):
         yield from self._create_test_data()
@@ -246,7 +238,6 @@ class HoleHandlerTest(AsyncTestCase):
 
     @patch.object(repositories, 'BuildManager', MagicMock())
     @patch.object(hole.Repository, 'add_build', MagicMock())
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_start_build(self):
         yield from self._create_test_data()
@@ -262,7 +253,6 @@ class HoleHandlerTest(AsyncTestCase):
 
     @patch.object(hole.HoleHandler, '_get_builders', MagicMock())
     @patch.object(hole.Repository, 'add_build', MagicMock())
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_start_build_with_builder_name(self):
         yield from self._create_test_data()
@@ -279,7 +269,6 @@ class HoleHandlerTest(AsyncTestCase):
 
     @patch.object(repositories, 'BuildManager', MagicMock())
     @patch.object(hole.Repository, 'add_build', MagicMock())
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_start_build_with_named_tree(self):
         yield from self._create_test_data()
@@ -298,7 +287,6 @@ class HoleHandlerTest(AsyncTestCase):
 
     @patch.object(repositories, 'BuildManager', MagicMock())
     @patch.object(hole.Repository, 'add_build', MagicMock())
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_start_build_with_slave(self):
         yield from self._create_test_data()
@@ -325,7 +313,6 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertTrue(slave['id'])
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_slave_get(self):
         yield from self._create_test_data()
@@ -338,7 +325,6 @@ class HoleHandlerTest(AsyncTestCase):
         self.assertEqual(slave['name'], slave_name)
         self.assertTrue(slave['id'])
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_slave_remove(self):
         yield from self._create_test_data()
@@ -348,7 +334,6 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual((yield hole.Slave.objects.count()), 0)
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_slave_list(self):
         yield from self._create_test_data()
@@ -357,7 +342,6 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual(len(slaves), 1)
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_builder_list(self):
         yield from self._create_test_data()
@@ -368,7 +352,6 @@ class HoleHandlerTest(AsyncTestCase):
         self.assertEqual(len(builders), 3)
         self.assertEqual(len(builders[0]['builds']), 3)
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_builder_list_without_repo_name(self):
 
@@ -379,7 +362,6 @@ class HoleHandlerTest(AsyncTestCase):
         builders = builders['builder-list']
         self.assertEqual(len(builders), 3)
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_builder_show(self):
         yield from self._create_test_data()
@@ -410,7 +392,6 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual(returned, expected, returned)
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_get_builds(self):
         yield from self._create_test_data()
@@ -420,7 +401,6 @@ class HoleHandlerTest(AsyncTestCase):
         self.assertEqual(len(builds), 3)
         self.assertGreater(builds[0]['number'], builds[1]['number'])
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_get_builds_with_skip_and_offset(self):
         yield from self._create_test_data()
@@ -430,7 +410,6 @@ class HoleHandlerTest(AsyncTestCase):
         self.assertEqual(len(builds), 2)
 
     @patch.object(repositories, 'BuildManager', MagicMock())
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_get_builders(self):
         yield from self._create_test_data()
@@ -475,7 +454,6 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual(action_methods, expected)
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_get_repo_dict(self):
         yield from self._create_test_data()
@@ -489,7 +467,6 @@ class HoleHandlerTest(AsyncTestCase):
         self.assertTrue('status', repo_dict)
         self.assertTrue(repo_dict['slaves'][0]['name'])
 
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_get_slave_dict(self):
         yield from self._create_test_data()
@@ -584,7 +561,6 @@ class UIStreamHandlerTest(AsyncTestCase):
 
     @patch.object(repositories.Repository, 'schedule', Mock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_send_info_step(self):
         testrepo = yield from repositories.Repository.create('name',
@@ -626,7 +602,6 @@ class UIStreamHandlerTest(AsyncTestCase):
 
     @patch.object(repositories.Repository, 'schedule', Mock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
-    @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_send_info_build(self):
         testrepo = yield from repositories.Repository.create('name',

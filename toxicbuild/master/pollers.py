@@ -40,6 +40,7 @@ class Poller:
         self.repository = repository
         self.vcs = get_vcs(vcs_type)(workdir)
         self.notify_only_latest = notify_only_latest
+        self._is_processing_changes = False
 
     @asyncio.coroutine
     def poll(self):
@@ -65,6 +66,11 @@ class Poller:
     def process_changes(self):
         """ Process all changes since the last revision in db
         """
+        if self._is_processing_changes:
+            self.log('alreay processing for {}. leaving'.format(
+                self.repository.url), level='debug')
+            return
+        self._is_processing_changes = True
         self.log('processing changes for {}'.format(self.repository.url),
                  level='debug')
 
@@ -85,7 +91,7 @@ class Poller:
             # or is the first time its running, I don't what to get all
             # revisions, but the last one only.
             if branch not in known_branches:
-                rev = revs[0]
+                rev = revs[-1]
                 revision = yield from self.repository.add_revision(branch,
                                                                    **rev)
                 msg = 'Last revision for {} on branch {} added'
@@ -114,6 +120,7 @@ class Poller:
                                     branch))
 
         self.notify_change(*revisions)
+        self._is_processing_changes = False
 
     def notify_change(self, *revisions):
         """ Notify about incoming changes. """

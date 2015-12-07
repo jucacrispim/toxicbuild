@@ -78,6 +78,15 @@ class GitPollerTest(AsyncTestCase):
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @gen_test
+    def test_process_changes_locked(self):
+        # now in the future, of course!
+        self.poller._is_processing_changes = True
+        yield from self.poller.process_changes()
+
+        self.assertFalse(pollers.revision_added.send.called)
+
+    @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
+    @gen_test
     def test_poll(self):
         yield from self._create_db_revisions()
 
