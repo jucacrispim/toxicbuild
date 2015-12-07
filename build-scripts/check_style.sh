@@ -1,32 +1,12 @@
 #!/bin/bash
 
-pep=`pep8 toxicbuild/`;
-peep=`pep8 tests/`;
-flakes=`pyflakes toxicbuild tests`;
-errors=0;
+flake=`flake8 toxicbuild tests --exclude=tests/functional/data`;
 
-if  [ "$pep" != "" ]
-then
-    errors=1;
-fi
 
-if [ "$peep" != "" ]
-then
-    errors=1;
-fi
-
-if [ "$flakes" != "" ]
-then
-    errors=1;
-fi
-
-if [ $errors -eq 1 ]
+if [ "$flake" != "" ]
 then
     echo "#### Ops! some thing went WRONG! ####";
-
-    echo "$pep";
-    echo "$peep";
-    echo "$flakes";
+    echo "$flake";
     exit 1
 else
     echo "hell yeah! nice code, mate.";
