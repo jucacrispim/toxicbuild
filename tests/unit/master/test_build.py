@@ -358,6 +358,21 @@ class BuildManagerTest(AsyncTestCase):
 
         self.assertEqual(len(builders), 2)
 
+    @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
+    @mock.patch.object(build, 'list_builders_from_config',
+                       mock.Mock(side_effect=AttributeError))
+    @mock.patch.object(build, 'log', mock.Mock())
+    @gen_test
+    def test_get_builders_with_bad_toxicbuildconf(self):
+        yield from self._create_test_data()
+        self.manager.repository = self.repo
+        self.manager.repository.poller.vcs.checkout = mock.MagicMock()
+
+        builders = yield from self.manager.get_builders(self.slave,
+                                                        self.revision)
+        self.assertFalse(builders)
+        self.assertTrue(build.log.called)
+
     @gen_test
     def test_execute_build(self):
         yield from self._create_test_data()
