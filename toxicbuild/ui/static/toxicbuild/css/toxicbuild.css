@@ -88,6 +88,11 @@ a {
     background-color: #5cb85c;
 }
 
+.builder-pending,
+.step-pending{
+    background-color: #B7B206;
+}
+
 .builder-running,
 .step-running{
     background-color: #31b0d5;
