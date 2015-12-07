@@ -77,6 +77,11 @@ a {
     vertical-align: top;
 }
 
+.builder-container{
+    margin-left: 11%;
+    border-radius: 3px;
+}
+
 .builder,
 .step{
     border-radius: 3px;
@@ -105,6 +110,10 @@ a {
     background-color: #31b0d5;
 }
 
+.builder-warning,
+.step-warning{
+    background-color: #D25728;
+}
 .btn-step-details:focus,
 .btn-step-details{
     color: #B5A8A8;
