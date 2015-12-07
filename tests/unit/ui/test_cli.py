@@ -33,7 +33,7 @@ import locale
 locale.setlocale(locale.LC_ALL, 'C')
 
 # installing gettext so we can text the cli properly
-import gettext
+import gettext  # flake8:  noqa
 gettext.install('toxicbuild.ui', 'fakedir')
 
 

@@ -255,5 +255,10 @@ class RepositoryRevisionTest(AsyncTestCase):
         repo = repositories.Repository(name='bla', url='bla@bl.com/aaa')
         yield repo.save()
         rev = repositories.RepositoryRevision(repository=repo,
-                                              commit='asdfasf', branch='master',
+                                              commit='asdfasf',
+                                              branch='master',
                                               commit_date=utils.now())
+        yield rev.save()
+        r = yield from repositories.RepositoryRevision.get(
+            commit='asdfasf', repository=repo)
+        self.assertEqual(r, rev)

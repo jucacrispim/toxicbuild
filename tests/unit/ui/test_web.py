@@ -265,11 +265,8 @@ class MainHandlerTest(AsyncTestCase):
 
     @patch.object(web, 'Repository', MagicMock())
     @patch.object(web, 'Slave', MagicMock())
-    @patch.object(web, 'settings', MagicMock)
     @gen_test
     def test_get(self):
-        web.settings.HOLE_HOST = 'localhost'
-        web.settings.HOLE_PORT = 1234
         self.handler.render_template = MagicMock()
 
         expected_context = {'repos': None, 'slaves': None,

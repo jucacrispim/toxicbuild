@@ -22,7 +22,6 @@ from tornado import gen
 from pyrocumulus.web.applications import Application, StaticApplication
 from pyrocumulus.web.handlers import TemplateHandler
 from pyrocumulus.web.urlmappers import URLSpec
-from toxicbuild.ui import settings
 from toxicbuild.ui.models import Repository, Slave, Builder
 
 
