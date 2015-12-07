@@ -73,9 +73,8 @@ class Repository(Document):
 
         return self._poller_instance
 
-    @property
     @asyncio.coroutine
-    def status(self):
+    def get_status(self):
         is_running = (yield from to_asyncio_future(Build.objects.filter(
             repository=self, status='running').count())) > 0
 

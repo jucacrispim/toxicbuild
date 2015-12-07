@@ -370,7 +370,7 @@ class HoleHandler:
         """Returns a dictionary for a given repository"""
         repo_dict = json.loads(repo.to_json())
         repo_dict['id'] = str(repo.id)
-        repo_dict['status'] = yield from repo.status
+        repo_dict['status'] = yield from repo.get_status()
         repo_dict['slaves'] = [self._get_slave_dict(s) for s in repo.slaves]
         return repo_dict
 

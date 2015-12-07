@@ -178,7 +178,7 @@ class RepositoryTest(AsyncTestCase):
         self.assertEqual(called_kw, kw)
 
     @gen_test
-    def test_status_with_running_build(self):
+    def test_get_status_with_running_build(self):
         yield from self._create_db_revisions()
 
         running_build = build.Build(repository=self.repo, slave=self.slave,
@@ -187,10 +187,10 @@ class RepositoryTest(AsyncTestCase):
                                     status='running', builder=self.builder,
                                     number=0)
         yield running_build.save()
-        self.assertEqual((yield from self.repo.status), 'running')
+        self.assertEqual((yield from self.repo.get_status()), 'running')
 
     @gen_test
-    def test_status_with_success_build(self):
+    def test_get_status_with_success_build(self):
         yield from self._create_db_revisions()
 
         success_build = build.Build(repository=self.repo, slave=self.slave,
@@ -199,10 +199,10 @@ class RepositoryTest(AsyncTestCase):
                                     status='success', builder=self.builder,
                                     number=0)
         yield success_build.save()
-        self.assertEqual((yield from self.repo.status), 'success')
+        self.assertEqual((yield from self.repo.get_status()), 'success')
 
     @gen_test
-    def test_status_with_fail_build(self):
+    def test_get_status_with_fail_build(self):
         yield from self._create_db_revisions()
 
         success_build = build.Build(repository=self.repo, slave=self.slave,
@@ -211,13 +211,13 @@ class RepositoryTest(AsyncTestCase):
                                     status='fail', builder=self.builder,
                                     number=0)
         yield success_build.save()
-        self.assertEqual((yield from self.repo.status), 'fail')
+        self.assertEqual((yield from self.repo.get_status()), 'fail')
 
     @gen_test
-    def test_status_without_build(self):
+    def test_get_status_without_build(self):
         yield from self._create_db_revisions()
 
-        self.assertEqual((yield from self.repo.status), '')
+        self.assertEqual((yield from self.repo.get_status()), '')
 
     @asyncio.coroutine
     def _create_db_revisions(self):
