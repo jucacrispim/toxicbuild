@@ -29,6 +29,13 @@ from toxicbuild.master import build, repositories
 
 class BuildStepTest(AsyncTestCase):
 
+    def test_to_dict(self):
+        bs = build.BuildStep(name='bla', command='ls', status='fail',
+                             started=now(), finished=now())
+
+        objdict = bs.to_dict()
+        self.assertTrue(objdict['started'])
+
     def test_to_json(self):
         bs = build.BuildStep(name='bla',
                              command='ls',
