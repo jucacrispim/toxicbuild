@@ -132,3 +132,7 @@ a {
     float: right;
     margin-left: 15px;
 }
+
+.modal-dialog-step{
+    width:90%;
+}
