@@ -22,6 +22,7 @@ import datetime
 from unittest.mock import Mock, MagicMock, patch
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
+from toxicbuild.core import utils
 from toxicbuild.master import repositories, build
 
 
@@ -264,3 +265,22 @@ class RepositoryTest(AsyncTestCase):
                     commit_date=now + datetime.timedelta(r))
 
                 yield rev.save()
+
+
+class RepositoryRevisionTest(AsyncTestCase):
+
+    @gen_test
+    def tearDown(self):
+        yield repositories.RepositoryRevision.drop_collection()
+        yield repositories.Repository.drop_collection()
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
+
+    @gen_test
+    def test_get(self):
+        repo = repositories.Repository(name='bla', url='bla@bl.com/aaa')
+        yield repo.save()
+        rev = repositories.RepositoryRevision(repository=repo,
+                                              commit='asdfasf', branch='master',
+                                              commit_date=utils.now())

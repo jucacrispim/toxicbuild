@@ -213,14 +213,15 @@ class HoleHandler:
             rev = yield from repo.get_latest_revision_for_branch(branch)
             named_tree = rev.commit
         else:
-            rev = RepositoryRevision.objects.get(repository=repo,
-                                                 branch=branch,
-                                                 commit=named_tree)
+            rev = yield from RepositoryRevision.get(repository=repo,
+                                                    branch=branch,
+                                                    commit=named_tree)
 
         if not builder_name:
             builders = yield from self._get_builders(slaves, rev)
         else:
-            blist = [(yield from Builder.get(name=builder_name))]
+            blist = [(yield from Builder.get(name=builder_name,
+                                             repository=repo))]
             builders = {}
             for slave in slaves:
                 builders.update({slave: blist})
@@ -380,11 +381,11 @@ class HoleHandler:
 
     @asyncio.coroutine
     def _get_builders(self, slaves, revision):
-
-        # slave: [builders]
+        repo = yield from to_asyncio_future(revision.repository)
         builders = {}
         for slave in slaves:
-            builders[slave] = (yield from slave.list_builders(revision))
+            builders[slave] = yield from repo.build_manager.get_builders(
+                slave, revision)
 
         return builders
 

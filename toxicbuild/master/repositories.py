@@ -241,3 +241,9 @@ class RepositoryRevision(Document):
     commit = StringField(required=True)
     branch = StringField(required=True)
     commit_date = DateTimeField(required=True)
+
+    @classmethod
+    @asyncio.coroutine
+    def get(cls, **kwargs):
+        ret = yield from to_asyncio_future(cls.objects.get(**kwargs))
+        return ret

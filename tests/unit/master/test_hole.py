@@ -244,14 +244,14 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual(len(repo.slaves), 0)
 
-    @patch.object(hole.Slave, 'list_builders', MagicMock())
+    @patch.object(repositories, 'BuildManager', MagicMock())
     @patch.object(hole.Repository, 'add_build', MagicMock())
     @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_start_build(self):
         yield from self._create_test_data()
-
-        hole.Slave.list_builders = asyncio.coroutine(lambda s, r: [Mock()])
+        (yield self.revision.repository).build_manager\
+            .get_builders = asyncio.coroutine(lambda s, r: [self.builders[0]])
         handler = hole.HoleHandler({}, 'repo-start-build', MagicMock())
         self.repo.slaves = [self.slave]
         yield self.repo.save()
@@ -260,14 +260,14 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual(len(self.repo.add_build.call_args_list), 1)
 
-    @patch.object(hole.Slave, 'list_builders', MagicMock())
+    @patch.object(hole.HoleHandler, '_get_builders', MagicMock())
     @patch.object(hole.Repository, 'add_build', MagicMock())
     @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_start_build_with_builder_name(self):
         yield from self._create_test_data()
-
-        hole.Slave.list_builders = asyncio.coroutine(lambda s, r: [Mock()])
+        hole.HoleHandler._get_builders = asyncio.coroutine(
+            lambda s, r: [self.builders[0]])
         handler = hole.HoleHandler({}, 'repo-start-build', MagicMock())
         self.repo.slaves = [self.slave]
         yield self.repo.save()
@@ -277,14 +277,16 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual(len(self.repo.add_build.call_args_list), 1)
 
-    @patch.object(hole.Slave, 'list_builders', MagicMock())
+    @patch.object(repositories, 'BuildManager', MagicMock())
     @patch.object(hole.Repository, 'add_build', MagicMock())
     @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_start_build_with_named_tree(self):
         yield from self._create_test_data()
 
-        hole.Slave.list_builders = asyncio.coroutine(lambda s, r: [Mock()])
+        (yield self.revision.repository).build_manager\
+            .get_builders = asyncio.coroutine(lambda s, r: [self.builders[0]])
+
         handler = hole.HoleHandler({}, 'repo-start-build', MagicMock())
         self.repo.slaves = [self.slave]
         yield self.repo.save()
@@ -294,14 +296,15 @@ class HoleHandlerTest(AsyncTestCase):
 
         self.assertEqual(len(self.repo.add_build.call_args_list), 1)
 
-    @patch.object(hole.Slave, 'list_builders', MagicMock())
+    @patch.object(repositories, 'BuildManager', MagicMock())
     @patch.object(hole.Repository, 'add_build', MagicMock())
     @patch.object(repositories.Repository, 'first_run', MagicMock())
     @gen_test
     def test_repo_start_build_with_slave(self):
         yield from self._create_test_data()
 
-        hole.Slave.list_builders = asyncio.coroutine(lambda s, r: [Mock()])
+        (yield self.revision.repository).build_manager\
+            .get_builders = asyncio.coroutine(lambda s, r: [self.builders[0]])
         handler = hole.HoleHandler({}, 'repo-start-build', MagicMock())
         self.repo.slaves = [self.slave]
         yield self.repo.save()
@@ -426,13 +429,13 @@ class HoleHandlerTest(AsyncTestCase):
         builds = yield from handler._get_builds(builder, skip=1, offset=2)
         self.assertEqual(len(builds), 2)
 
+    @patch.object(repositories, 'BuildManager', MagicMock())
     @patch.object(repositories.Repository, 'first_run', MagicMock())
-    @patch.object(hole.Slave, 'list_builders', MagicMock())
     @gen_test
     def test_get_builders(self):
         yield from self._create_test_data()
-        hole.Slave.list_builders = asyncio.coroutine(
-            lambda s, r: [self.builders[0]])
+        (yield self.revision.repository).build_manager\
+            .get_builders = asyncio.coroutine(lambda s, r: [self.builders[0]])
         slaves = [self.slave]
         expected = {self.slave: [self.builders[0]]}
         handler = hole.HoleHandler({}, 'action', self)
