@@ -258,7 +258,7 @@ class Slave(Document):
                 requested_step = step
                 msg = 'step {} finished at {} with status'.format(
                     step.command, finished, step.status)
-                log(msg)
+                log(msg, level='debug')
                 step_finished.send(repo, build=build, step=requested_step)
 
         if not requested_step:
@@ -267,7 +267,7 @@ class Slave(Document):
                                        started=string2datetime(started))
             msg = 'step {} started at {}'.format(requested_step.command,
                                                  started)
-            log(msg)
+            log(msg, level='debug')
             step_started.send(repo, build=build, step=requested_step)
             build.steps.append(requested_step)
 

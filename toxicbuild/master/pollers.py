@@ -50,13 +50,13 @@ class Poller:
         self.log('Polling changes for {}'.format(self.repository.url))
 
         if not self.vcs.workdir_exists():
-            self.log('clonning repo')
+            self.log('clonning repo {}'.format(self.repository.url))
             yield from self.vcs.clone(self.repository.url)
 
         # for git.
         # remove no branch when hg is implemented
         if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
-            self.log('updating submodule')
+            self.log('updating submodule', level='debug')
             yield from self.vcs.update_submodule()
 
         yield from self.process_changes()
@@ -65,6 +65,9 @@ class Poller:
     def process_changes(self):
         """ Process all changes since the last revision in db
         """
+        self.log('processing changes for {}'.format(self.repository.url),
+                 level='debug')
+
         dbrevisions = yield from self.repository.get_latest_revisions()
 
         since = dict((branch, r.commit_date) for branch, r
@@ -76,6 +79,8 @@ class Poller:
 
         revisions = []
         for branch, revs in newer_revisions.items():
+            self.log('processing changes for branch {}'.format(branch),
+                     level='debug')
             # the thing here is that if the branch is a new one
             # or is the first time its running, I don't what to get all
             # revisions, but the last one only.
@@ -84,7 +89,8 @@ class Poller:
                 revision = yield from self.repository.add_revision(branch,
                                                                    **rev)
                 msg = 'Last revision for {} on branch {} added'
-                self.log(msg.format(self.repository.url, branch))
+                self.log(msg.format(self.repository.url, branch),
+                         level='debug')
                 revisions.append(revision)
                 continue
 
@@ -115,5 +121,5 @@ class Poller:
         # returning for testing purposes
         return revision_added.send(self.repository, revisions=revisions)
 
-    def log(self, msg):
-        log('[{}] {} '.format(type(self).__name__, msg))
+    def log(self, msg, level='info'):
+        log('[{}] {} '.format(type(self).__name__, msg), level)
