@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 VERSION = '0.3-a0'
 DESCRIPTION = """
-Hackish pieces of software to an easy buildbot config
+Easy and flexible continuous integration.
 """
 LONG_DESCRIPTION = DESCRIPTION
 
@@ -17,7 +17,7 @@ setup(name='toxicbuild',
       long_description=LONG_DESCRIPTION,
       packages=find_packages(exclude=['tests', 'tests.*']),
       include_package_data=True,
-      install_requires=['tornado>=4.1', 'mongomotor>=0.3', 'asyncblink>=0.1.1',
+      install_requires=['tornado>=4.1', 'mongomotor==0.3.1', 'asyncblink>=0.1.1',
                         'mando>=0.3.2', 'pyrocumulus==0.5-rc5'],
       classifiers=[
           'Development Status :: 3 - Alpha',

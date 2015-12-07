@@ -66,8 +66,15 @@ a {
     border-bottom: 1px solid #4c4a49;
 }
 
+.step a{
+    color: #05335A;
+}
 .toxic-ul{
     list-style: none;
+}
+
+.builder-column{
+    vertical-align: top;
 }
 
 .builder,
@@ -96,4 +103,23 @@ a {
 .builder-running,
 .step-running{
     background-color: #31b0d5;
+}
+
+.btn-step-details:focus,
+.btn-step-details{
+    color: #B5A8A8;
+    background-color: #1F1D1D;
+    border-color: #191818;
+    padding: 1px 6px;
+    float: right;
+    margin-left: 15px;
+}
+
+.btn-step-details:hover{
+    color: #fff;
+    background-color: #1F1D1D;
+    border-color: #191818;
+    padding: 1px 6px;
+    float: right;
+    margin-left: 15px;
 }

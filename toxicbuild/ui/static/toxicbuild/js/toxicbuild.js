@@ -260,3 +260,20 @@ $("#slaveModal").on('submit', function(event){
 $('.a-step-more').on('click', function(event){
   $('.step-details', $(this).parent()).toggle();
 });
+
+
+$('#stepDetailsModal').on('show.bs.modal', function (event) {
+  var button = $(event.relatedTarget);
+  var command = button.data('step-command');
+  var output = button.data('step-output');
+  var status = button.data('step-status');
+  var start = button.data('step-start');
+  var end = button.data('step-end');
+
+  var modal = $(this)
+  modal.find('#step-command').text(command);
+  modal.find('#step-output').text(output);
+  modal.find('#step-status').text(status);
+  modal.find('#step-start').text(start);
+  modal.find('#step-end').text(end);
+})

@@ -161,7 +161,10 @@ class WaterfallHandler(TemplateHandler):  # pragma no cover
 
     @gen.coroutine
     def get(self):
-        repo_name = self.request.arguments.get('repo')[0].decode()
+        try:
+            repo_name = self.request.arguments.get('repo', [])[0].decode()
+        except IndexError:
+            repo_name = None
         builders = yield from Builder.list(repo_name=repo_name)
         context = {'builders': builders}
         self.render_template(self.template, context)
