@@ -71,9 +71,10 @@ class GitPollerTest(AsyncTestCase):
 
         yield from self.poller.process_changes()
 
+        called_revs = pollers.revision_added.send.call_args[1]['revisions']
         # call only 1 because self.poller.notify_only_latest is True
         # for master and call 1 for last revision for dev
-        self.assertEqual(len(pollers.revision_added.send.call_args_list), 2)
+        self.assertEqual(len(called_revs), 2)
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @gen_test

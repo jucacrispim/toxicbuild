@@ -22,7 +22,8 @@ import asyncio
 import os
 from toxicbuild.core.exceptions import VCSError
 from toxicbuild.core.utils import(exec_cmd, inherit_docs, string2datetime,
-                                  datetime2string, utc2localtime)
+                                  datetime2string, utc2localtime,
+                                  localtime2utc)
 
 
 class VCS(metaclass=ABCMeta):
@@ -204,7 +205,7 @@ class Git(VCS):
             date = string2datetime(date.strip(), dtformat=self.date_format)
             # Here we change the date from git, that is in localtime to
             # utc before saving to database.
-
+            date = localtime2utc(date)
             revisions.append({'commit': rev_uuid.strip(), 'commit_date': date})
 
         # The thing here is that the first revision in the list
