@@ -96,12 +96,13 @@ class Builder:
 
 class BuildStep:
 
-    def __init__(self, name, cmd):
+    def __init__(self, name, command, warning_on_fail=False):
         """:param name: name for the command
         :param cmd: a string the be executed in a shell
         """
         self.name = name
-        self.command = cmd
+        self.command = command
+        self.warning_on_fail = warning_on_fail
 
     def __eq__(self, other):
         if not hasattr(other, 'command'):
@@ -117,7 +118,10 @@ class BuildStep:
             status = 'success'
         except ExecCmdError as e:
             output = e.args[0]
-            status = 'fail'
+            if self.warning_on_fail:
+                status = 'warning'
+            else:
+                status = 'fail'
 
         step_status['status'] = status
         step_status['output'] = output

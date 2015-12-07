@@ -54,8 +54,8 @@ class BuilderTest(AsyncTestCase):
 
     @gen_test
     def test_build_success(self):
-        s1 = build.BuildStep(name='s1', cmd='ls')
-        s2 = build.BuildStep(name='s2', cmd='echo "uhu!"')
+        s1 = build.BuildStep(name='s1', command='ls')
+        s2 = build.BuildStep(name='s2', command='echo "uhu!"')
         self.builder.steps = [s1, s2]
 
         build_info = yield from self.builder.build()
@@ -63,9 +63,9 @@ class BuilderTest(AsyncTestCase):
 
     @gen_test
     def test_build_fail(self):
-        s1 = build.BuildStep(name='s1', cmd='ls')
-        s2 = build.BuildStep(name='s2', cmd='exit 1')
-        s3 = build.BuildStep(name='s3', cmd='echo "oi"')
+        s1 = build.BuildStep(name='s1', command='ls')
+        s2 = build.BuildStep(name='s2', command='exit 1')
+        s3 = build.BuildStep(name='s3', command='echo "oi"')
         self.builder.steps = [s1, s2, s3]
 
         build_info = yield from self.builder.build()
@@ -87,18 +87,25 @@ class BuildStepTest(AsyncTestCase):
 
     @gen_test
     def test_step_success(self):
-        step = build.BuildStep(name='test', cmd='ls')
+        step = build.BuildStep(name='test', command='ls')
         status = yield from step.execute()
         self.assertEqual(status['status'], 'success')
 
     @gen_test
     def test_step_fail(self):
-        step = build.BuildStep(name='test', cmd='lsz')
+        step = build.BuildStep(name='test', command='lsz')
         status = yield from step.execute()
         self.assertEqual(status['status'], 'fail')
+
+    @gen_test
+    def test_step_warning_on_fail(self):
+        step = build.BuildStep(
+            name='test', command='lsz', warning_on_fail=True)
+        status = yield from step.execute()
+        self.assertEqual(status['status'], 'warning')
 
     def test_equal_with_other_object(self):
         """ Ensure that one step is not equal something that is not a step"""
 
-        step = build.BuildStep(name='test', cmd='lsz')
+        step = build.BuildStep(name='test', command='lsz')
         self.assertNotEqual(step, {})

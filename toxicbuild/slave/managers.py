@@ -105,8 +105,7 @@ class BuildManager:
             builder.steps += plugin.get_steps_before()
 
         for sdict in bdict['steps']:
-            sname, command = sdict['name'], sdict['command']
-            step = BuildStep(sname, command)
+            step = BuildStep(**sdict)
             builder.steps.append(step)
 
         for plugin in builder.plugins:
