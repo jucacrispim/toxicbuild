@@ -20,6 +20,7 @@
 
 import asyncio
 from collections import defaultdict, deque
+import json
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                ReferenceField, DateTimeField, BooleanField,
@@ -85,8 +86,23 @@ class BuildStep(EmbeddedDocument):
     command = StringField(required=True)
     status = StringField(required=True)
     output = StringField()
-    started = DateTimeField()
-    finished = DateTimeField()
+    started = DateTimeField(default=None)
+    finished = DateTimeField(default=None)
+
+    def to_dict(self):
+        objson = super().to_json()
+        objdict = json.loads(objson)
+        keys = objdict.keys()
+        if 'started' not in keys:
+            objdict['started'] = None
+
+        if 'finished' not in keys:
+            objdict['finished'] = None
+
+        return objdict
+
+    def to_json(self):
+        return json.dumps(self.to_dict())
 
 
 class Build(Document):
@@ -108,6 +124,16 @@ class Build(Document):
     number = IntField(required=True)
     status = StringField(default=PENDING)
     steps = ListField(EmbeddedDocumentField(BuildStep))
+
+    def to_dict(self):
+        steps = [s.to_dict() for s in self.steps]
+        objson = super().to_json()
+        objdict = json.loads(objson)
+        objdict['steps'] = steps
+        return objdict
+
+    def to_json(self):
+        return json.dumps(self.to_dict())
 
     @asyncio.coroutine
     def get_parallels(self):

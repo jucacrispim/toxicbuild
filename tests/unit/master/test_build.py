@@ -27,6 +27,16 @@ from toxicbuild.core.utils import datetime2string, now
 from toxicbuild.master import build, repositories
 
 
+class BuildStepTest(AsyncTestCase):
+
+    def test_to_json(self):
+        bs = build.BuildStep(name='bla',
+                             command='ls',
+                             status='pending')
+        bsd = build.json.loads(bs.to_json())
+        self.assertIn('finished', bsd.keys())
+
+
 class BuildTest(AsyncTestCase):
 
     def tearDown(self):
@@ -38,6 +48,15 @@ class BuildTest(AsyncTestCase):
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
+
+    def test_to_json(self):
+        bs = build.BuildStep(name='bla',
+                             command='ls',
+                             status='pending')
+        b = build.Build()
+        b.steps.append(bs)
+        bd = build.json.loads(b.to_json())
+        self.assertIn('finished', bd['steps'][0].keys())
 
     @gen_test
     def test_get_parallels(self):
