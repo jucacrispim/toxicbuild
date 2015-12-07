@@ -74,6 +74,7 @@ class Poller:
 
         known_branches = dbrevisions.keys()
 
+        revisions = []
         for branch, revs in newer_revisions.items():
             # the thing here is that if the branch is a new one
             # or is the first time its running, I don't what to get all
@@ -84,10 +85,10 @@ class Poller:
                                                                    **rev)
                 msg = 'Last revision for {} on branch {} added'
                 self.log(msg.format(self.repository.url, branch))
-                self.notify_change(revision)
+                revisions.append(revision)
                 continue
 
-            revisions = []
+            branch_revs = []
             for rev in revs:
                 revision = yield from self.repository.add_revision(
                     branch, **rev)
@@ -98,12 +99,15 @@ class Poller:
                     continue
 
                 revisions.append(revision)
+                # branch_revs just for logging
+                branch_revs.append(revision)
 
-            if revisions:
+            if branch_revs:
                 msg = '{} new revisions for {} on branch {} added'
-                self.log(msg.format(len(revisions), self.repository.url,
+                self.log(msg.format(len(branch_revs), self.repository.url,
                                     branch))
-                self.notify_change(*revisions)
+
+        self.notify_change(*revisions)
 
     def notify_change(self, *revisions):
         """ Notify about incoming changes. """
