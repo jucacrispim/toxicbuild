@@ -90,6 +90,8 @@ def load_module_from_file(filename):
 
 def log(msg, level='info'):
     log = getattr(logging, level)
+    dt = now().strftime('%Y-%m-%d %H:%M:%S')
+    msg = ' {} - {}'.format(dt, msg)
     log(msg)
 
 
