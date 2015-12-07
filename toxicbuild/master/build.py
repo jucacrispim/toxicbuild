@@ -321,6 +321,8 @@ class BuildManager:
                       builder=builder, number=number)
 
         yield from to_asyncio_future(build.save())
+        log('build added for named_tree {} on branch {}'.format(named_tree,
+                                                                branch))
         self._build_queues[slave.name].append(build)
 
         if not self._is_building[slave.name]:  # pragma: no branch
@@ -334,12 +336,22 @@ class BuildManager:
         :param revision: A
           :class:`toxicbuild.master.repositories.RepositoryRevision`.
         """
+        log('checkout on {} to {}'.format(
+            self.repository.url, revision.commit), level='debug')
         yield from self.repository.poller.vcs.checkout(revision.commit)
-        conf = get_toxicbuildconf(self.repository.poller.vcs.workdir)
-        names = list_builders_from_config(conf, revision.branch, slave)
+        try:
+            conf = get_toxicbuildconf(self.repository.poller.vcs.workdir)
+            names = list_builders_from_config(conf, revision.branch, slave)
+        except Exception as e:
+            msg = 'Something wrong with your toxicbuild.conf. Original '
+            msg += 'exception was:\n {}'.format(str(e))
+            log(msg, level='warning')
+            return []
+
         builders = []
         for name in names:
-            builder = yield from Builder.get_or_create(name=name)
+            builder = yield from Builder.get_or_create(
+                name=name, repository=self.repository)
             builders.append(builder)
 
         return builders

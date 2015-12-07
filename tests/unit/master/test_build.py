@@ -347,6 +347,7 @@ class BuildManagerTest(AsyncTestCase):
     @gen_test
     def test_get_builders(self):
         yield from self._create_test_data()
+        self.manager.repository = self.repo
         self.manager.repository.poller.vcs.checkout = mock.MagicMock()
 
         builders = yield from self.manager.get_builders(self.slave,
