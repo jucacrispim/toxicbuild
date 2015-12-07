@@ -163,6 +163,8 @@ class Git(VCS):
 
     @asyncio.coroutine
     def update_submodule(self):
+        cmd = '{} submodule init'.format(self.vcsbin)
+        yield from self.exec_cmd(cmd)
         cmd = '{} submodule update'.format(self.vcsbin)
         ret = yield from self.exec_cmd(cmd)
         return ret

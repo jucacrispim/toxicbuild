@@ -155,11 +155,14 @@ class GitTest(AsyncTestCase):
 
     @gen_test
     def test_update_submodule(self):
-        expected_cmd = 'git submodule update'
+        expected_cmd = ['git submodule init',
+                        'git submodule update']
+        self.COUNT = 0
 
         @asyncio.coroutine
         def e(cmd, cwd):
-            assert cmd == expected_cmd
+            assert cmd == expected_cmd[self.COUNT]
+            self.COUNT += 1
 
         vcs.exec_cmd = e
 
