@@ -27,7 +27,8 @@ from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                IntField)
 from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core.utils import (log, string2datetime, get_toxicbuildconf,
-                                   list_builders_from_config)
+                                   list_builders_from_config, datetime2string,
+                                   utc2localtime)
 from toxicbuild.master.client import get_build_client
 from toxicbuild.master.signals import (build_started, build_finished,
                                        revision_added, step_started,
@@ -95,9 +96,15 @@ class BuildStep(EmbeddedDocument):
         keys = objdict.keys()
         if 'started' not in keys:
             objdict['started'] = None
+        else:
+            objdict['started'] = datetime2string(
+                utc2localtime(self.started))
 
         if 'finished' not in keys:
             objdict['finished'] = None
+        else:
+            objdict['finished'] = datetime2string(
+                utc2localtime(self.finished))
 
         return objdict
 
