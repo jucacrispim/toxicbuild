@@ -115,7 +115,7 @@ class SlaveTest(AsyncTestCase):
             self.assertTrue(is_alive)
 
     @gen_test
-    def test_list_builders(self):
+    def test_list_builders(self, timeout=10):
         with (yield from get_dummy_client()) as client:
             builders = (yield from client.list_builders())['body']['builders']
 
