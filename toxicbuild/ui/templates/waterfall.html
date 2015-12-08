@@ -7,9 +7,13 @@
     <tr>
       {% for builder in builders %}
       <td class="builder-column">
-	<ul><li class="builder builder-{{builder.status}}">
-	    {{builder.name}}
-	</li></ul>
+	<div class="builder-outer builder-container">
+	  <ul class="builder-fixed">
+	    <li class="builder builder-{{builder.status}}">
+		{{builder.name}}
+	    </li>
+	  </ul>
+	</div>
 	{% for build in builder.builds %}
 	<ul>
 	  <li class="step step-{{build.status}}">
