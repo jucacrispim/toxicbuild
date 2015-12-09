@@ -155,6 +155,16 @@ class GitPollerTest(AsyncTestCase):
 
         self.assertFalse(self.CLONE_CALLED)
 
+    @mock.patch.object(pollers, 'log', mock.Mock())
+    @gen_test
+    def test_poll_with_exception_processing_changes(self):
+        self.poller.vcs.workdir_exists = mock.Mock(return_value=True)
+        self.poller.vcs.update_submodule = mock.MagicMock()
+        self.poller.vcs.process_changes = mock.Mock(side_effect=Exception)
+        yield from self.poller.poll()
+        log_level = pollers.log.call_args[1]['level']
+        self.assertEqual(log_level, 'error')
+
     @gen_test
     def test_poll_with_submodule(self):
         self.poller.process_changes = mock.MagicMock()
