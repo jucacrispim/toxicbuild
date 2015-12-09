@@ -130,7 +130,10 @@ class HoleHandler:
         return {'repo-add': repo_dict}
 
     @asyncio.coroutine
-    def repo_get(self, repo_name=None, repo_url=None):
+    def repo_show(self, repo_name=None, repo_url=None):
+        """Shows information about one specific repository.
+        One of ``repo_name`` or ``repo_url`` is required. """
+
         if not (repo_name or repo_url):
             raise TypeError("repo_name or repo_url required")
 
@@ -248,7 +251,9 @@ class HoleHandler:
         return {'slave-add': slave_dict}
 
     @asyncio.coroutine
-    def slave_get(self, slave_name=None):
+    def slave_show(self, slave_name):
+        """Returns information about on specific slave"""
+
         slave = yield from Slave.get(name=slave_name)
         slave_dict = self._get_slave_dict(slave)
         return {'slave-get': slave_dict}
@@ -422,6 +427,12 @@ class UIStreamHandler:
         build_started.connect(self.build_started, weak=False)
         build_finished.connect(self.build_finished, weak=False)
 
+    def _disconnectfromsignals(self):
+        step_started.diconnect(self.step_started)
+        step_finished.disconnect(self.step_finished)
+        build_started.disconnect(self.build_started)
+        build_finished.disconnect(self.build_finished)
+
     @asyncio.coroutine
     def handle(self):
         self._connect2signals()
@@ -453,6 +464,13 @@ class UIStreamHandler:
         final_info.update(info)
 
         f = asyncio.async(self.protocol.send_response(code=0, body=final_info))
+
+        def close_on_exc(fut):
+            if fut.exception():
+                self._disconnectfromsignals()
+
+        f.add_done_callback(close_on_exc)
+
         return f
 
 

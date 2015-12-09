@@ -102,7 +102,7 @@ class Repository(BaseModel):
         :param kwargs: kwargs to get the repository."""
 
         client = yield from cls.get_client()
-        repo_dict = yield from client.repo_get(**kwargs)
+        repo_dict = yield from client.repo_show(**kwargs)
         repo = cls(**repo_dict)
         return repo
 
@@ -187,7 +187,7 @@ class Slave(BaseModel):
         :param kwargs: kwargs to get the slave."""
 
         client = yield from cls.get_client()
-        repo_dict = yield from client.slave_get(**kwargs)
+        repo_dict = yield from client.slave_show(**kwargs)
         repo = cls(**repo_dict)
         return repo
 
