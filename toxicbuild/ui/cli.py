@@ -17,6 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+# Messy! Have fun trying to debug it. I had. :P
+# It's just for fun, if you want to implement another ui to toxicubuild
+# you should take a look at toxicbuild.ui.models instead of interacting
+# directly with master.hole as is done in ToxicCliAction - or you could
+# use it directly, that's your code!
+
 import asyncio
 from collections import deque
 import os
@@ -228,6 +234,7 @@ class ToxicCliActions:
 
         action_help = {}
         action_help['short_doc'] = action_sig['doc'].splitlines()[0]
+
         action_help['doc'] = action_sig['doc']
         action_help['parameters'] = action_sig['parameters']
         return action_help
@@ -306,11 +313,19 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
 
         if cmdline in ['help', 'h']:
             action, response = 'help', self.get_help_screen()
+        elif cmdline.startswith('help'):
+            action, response = 'help', self.get_action_help_screen(
+                cmdline.split(' ')[1], full=True)
         elif cmdline in ['quit', 'q']:
             # return just for tests
             return self.quit()
         elif cmdline == 'peek':
             return (yield from self.peek())
+
+        elif cmdline == 'stop-peek':
+            self.stop_peek()
+            self.main_screen.set_text('stopped!')
+            return
         else:
             try:
                 action, response = yield from self.execute_action(cmdline)
@@ -391,12 +406,12 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
             if action_help['parameters']:
                 text.append('%s: ' % params)
 
-                for param in action_help['parameters']:
+                for i, param in enumerate(action_help['parameters']):
                     name = param['name']
-                    lineinit = ' ' * len(params + ': ')
-                    text.append('%s{param}%s{clear} ' % (lineinit, name))
+                    lineinit = ' ' * len(params + ': ') if i != 0 else ''
+                    text += [lineinit, ('param', name), ' ']
                     if param['required']:
-                        text[-1] += '{required}(%s){clear}\n' % required
+                        text += [('required', required), '\n']
         text.append('\n')
         return text
 
@@ -486,8 +501,9 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         return self._format_output_columns(output)
 
     def _format_builder_list(self, builders):
-        output = [(_('name'), _('repo'), _('branch'))]  # noqa
-        output += [(b['name'], b['repo'], b['branch']) for b in builders]
+        output = [(_('name'), _('status'))]  # noqa
+        output += [(b['name'], b['status'])
+                   for b in builders]
         return self._format_output_columns(output)
 
     def _format_peek(self, response):

@@ -314,6 +314,13 @@ ACTIONS = {'builder-show':
                             'required': False}],
             'doc': ' Adds a new repository and first_run() it. '},
 
+           'repo-show':
+           {'parameters': [{'name': 'repo_name', 'required': False},
+                           {'name': 'repo_url', 'required': False}],
+
+            'doc': """Shows information about one specific repository.
+            One of ``repo_name`` or ``repo_url`` is required. """},
+
            'repo-add-slave':
            {'parameters': [{'name': 'repo_name', 'required': True},
                            {'name': 'slave_name', 'required': True}],
@@ -583,6 +590,13 @@ class ToxicCliTest(unittest.TestCase):
         self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
         self.assertTrue(self.cli.peek.called)
 
+    @patch.object(cli.ToxicCli, 'stop_peek', MagicMock(spec=cli.ToxicCli.peek))
+    def test_execute_with_stop_peek(self):
+        cmdline = 'stop-peek'
+
+        self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
+        self.assertTrue(self.cli.stop_peek.called)
+
     def test_peek(self):
         client_mock = MagicMock()
         client_mock.__enter__.return_value = client_mock
@@ -724,7 +738,7 @@ class ToxicCliTest(unittest.TestCase):
         self.cli._format_builder_list(builders)
 
         called = self.cli._format_output_columns.call_args[0][0][0]
-        self.assertEqual(called, (_('name'), _('repo'), _('branch')))  # noqa
+        self.assertEqual(called, (_('name'), _('status')))  # noqa
 
     def test_format_peek_with_build(self):
         response = {'body': {'steps': []}}

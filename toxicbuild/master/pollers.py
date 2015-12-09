@@ -60,7 +60,13 @@ class Poller:
             self.log('updating submodule', level='debug')
             yield from self.vcs.update_submodule()
 
-        yield from self.process_changes()
+        try:
+            yield from self.process_changes()
+        except Exception as e:
+            # shit happends
+            log(str(e), level='error')
+            # but the show must go on
+            self._is_processing_changes = False
 
     @asyncio.coroutine
     def process_changes(self):

@@ -9,6 +9,11 @@ a {
     color: #1A8FF5;
     text-decoration: none;
 }
+
+
+.table>thead>tr>th {
+    border-bottom: 0;
+}
 .modal-content{
     background-color: #4c4a49;
 }
@@ -122,6 +127,8 @@ a {
 .step-warning{
     background-color: #D25728;
 }
+
+
 .btn-step-details:focus,
 .btn-step-details{
     color: #B5A8A8;
