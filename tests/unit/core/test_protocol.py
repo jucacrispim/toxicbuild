@@ -93,6 +93,16 @@ class BaseToxicProtocolTest(AsyncTestCase):
         loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks()))
         self.assertTrue(cc_mock.called)
 
+    @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
+    def test_connection_lost(self):
+        self.protocol.connection_lost(mock.Mock())
+        self.assertTrue(self.protocol._stream_writer.close.called)
+
+    @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
+    def test_connection_lost_wihout_exc(self):
+        self.protocol.connection_lost(None)
+        self.assertFalse(self.protocol._stream_writer.close.called)
+
     @gen_test
     def test_check_data_without_data(self):
         self.full_message = b''

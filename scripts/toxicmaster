@@ -85,6 +85,7 @@ def create(root_dir):
     os.mkdir(root_dir)
 
     # :/
+    # need fake settings here or pkg_resources does not work.
     fakesettings = os.path.join(root_dir, 'fakesettings.py')
     with open(fakesettings, 'w') as f:
         f.write('DATABASE = {}')

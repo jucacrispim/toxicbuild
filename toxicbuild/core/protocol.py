@@ -57,6 +57,10 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
         self._check_data_future = asyncio.async(self.check_data())
         self._check_data_future.add_done_callback(self._check_data_cb)
 
+    def connection_lost(self, exc):
+        if exc:
+            self.close_connection()
+
     @asyncio.coroutine
     def check_data(self):
         """ Checks if the data is valid, it means, checks if has some data,
