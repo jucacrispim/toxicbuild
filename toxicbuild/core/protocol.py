@@ -27,7 +27,11 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
     """ Base protocol for toxicbulid servers
     """
 
-    def __init__(self, loop):
+    def __init__(self, loop, connection_lost_cb=None):
+        """:param loop: An asyncio loop.
+        :param connection_lost_cb: Callable to be executed when connection
+          is closed. Gets an exception or None as parameter."""
+
         self.raw_data = None
         self.json_data = None
         self.action = None
@@ -35,6 +39,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
         # make tests easier
         self._check_data_future = None
         self._client_connected_future = None
+        self.connection_lost_cb = connection_lost_cb
 
         reader = asyncio.StreamReader(loop=loop)
         super().__init__(reader, loop=loop)
@@ -43,7 +48,10 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
         return self
 
     def connection_made(self, transport):
-        """ Called once, when the client connects
+        """ Called once, when the client connects.
+
+        :param transport: transport for asyncio.StreamReader and
+          asyncio.StreamWriter.
         """
         self._transport = transport
         self._stream_reader.set_transport(transport)
@@ -58,8 +66,9 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
         self._check_data_future.add_done_callback(self._check_data_cb)
 
     def connection_lost(self, exc):
-        if exc:
-            self.close_connection()
+        self.close_connection()
+        if self.connection_lost_cb:
+            self.connection_lost_cb(exc)
 
     @asyncio.coroutine
     def check_data(self):

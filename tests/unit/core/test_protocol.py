@@ -88,6 +88,7 @@ class BaseToxicProtocolTest(AsyncTestCase):
             cc_mock()
 
         prot.client_connected = cc
+
         prot.connection_made(transport)
         loop = asyncio.get_event_loop()
         loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks()))
@@ -99,9 +100,11 @@ class BaseToxicProtocolTest(AsyncTestCase):
         self.assertTrue(self.protocol._stream_writer.close.called)
 
     @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
-    def test_connection_lost_wihout_exc(self):
-        self.protocol.connection_lost(None)
-        self.assertFalse(self.protocol._stream_writer.close.called)
+    def test_connection_lost_with_cb(self):
+        self.protocol.connection_lost_cb = mock.Mock()
+        self.protocol.connection_lost(mock.Mock())
+        self.assertTrue(self.protocol._stream_writer.close.called)
+        self.assertTrue(self.protocol.connection_lost_cb.called)
 
     @gen_test
     def test_check_data_without_data(self):
@@ -113,7 +116,7 @@ class BaseToxicProtocolTest(AsyncTestCase):
 
     @gen_test
     def test_check_data_without_action(self):
-        message = '{"sauci": "fufu"}'
+        message = '{"salci": "fufu"}'
         self.full_message = '{}\n'.format(len(message)) + message
         self.full_message = self.full_message.encode('utf-8')
 
