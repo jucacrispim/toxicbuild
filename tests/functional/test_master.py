@@ -187,17 +187,33 @@ class ToxicMasterTest(AsyncTestCase):
                 {'repo_name': 'test-repo', 'slave_name': 'test-slave'})
         self.assertTrue(resp)
 
+    # @gen_test
+    # def test_8_start_build(self):
+    #     pass
+
     @gen_test
-    def test_7_slave_remove(self):
+    def test_7_slave_get(self):
+        with (yield from get_dummy_client()) as client:
+            resp = yield from client.request2server('slave-get',
+                                                    {'slave_name':
+                                                     'test-slave2'})
+        self.assertTrue(resp)
+
+    @gen_test
+    def test_8_repo_get(self):
+        with (yield from get_dummy_client()) as client:
+            resp = yield from client.request2server('repo-get',
+                                                    {'repo_name':
+                                                     'test-repo'})
+        self.assertTrue(resp)
+
+    @gen_test
+    def test_9_slave_remove(self):
         with (yield from get_dummy_client()) as client:
             resp = yield from client.request2server('slave-remove',
                                                     {'slave_name':
                                                      'test-slave2'})
         self.assertTrue(resp)
-
-    # @gen_test
-    # def test_8_start_build(self):
-    #     pass
 
     @classmethod
     def _delete_test_data(cls):

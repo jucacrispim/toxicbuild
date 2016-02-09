@@ -20,6 +20,7 @@
 # Welcome to the strange land of the user interface hole,
 # the place where master's clients can ask for what they need...
 # ... e onde tudo pode acontecer...
+# In fact, boring module!
 
 import asyncio
 import inspect
@@ -66,6 +67,7 @@ class HoleHandler:
     * `repo-remove-slave`
     * `repo-start-build`
     * `slave-add`
+    * `slave-get`
     * `slave-list`
     * `slave-remove`
     * `builder-list`
@@ -130,7 +132,7 @@ class HoleHandler:
         return {'repo-add': repo_dict}
 
     @asyncio.coroutine
-    def repo_show(self, repo_name=None, repo_url=None):
+    def repo_get(self, repo_name=None, repo_url=None):
         """Shows information about one specific repository.
         One of ``repo_name`` or ``repo_url`` is required. """
 
@@ -251,7 +253,7 @@ class HoleHandler:
         return {'slave-add': slave_dict}
 
     @asyncio.coroutine
-    def slave_show(self, slave_name):
+    def slave_get(self, slave_name):
         """Returns information about on specific slave"""
 
         slave = yield from Slave.get(name=slave_name)
@@ -408,6 +410,11 @@ class UIStreamHandler:
     def __init__(self, protocol):
         self.protocol = protocol
 
+        def connection_lost_cb(exc):  # pragma no cover
+            self._disconnectfromsignals()
+
+        self.protocol.connection_lost_cb = connection_lost_cb
+
     def __getattr__(self, attrname):
         _signals = ['step_started', 'step_finished',
                     'build_started', 'build_finished']
@@ -421,14 +428,13 @@ class UIStreamHandler:
         raise AttributeError
 
     def _connect2signals(self):
-
         step_started.connect(self.step_started, weak=False)
         step_finished.connect(self.step_finished, weak=False)
         build_started.connect(self.build_started, weak=False)
         build_finished.connect(self.build_finished, weak=False)
 
     def _disconnectfromsignals(self):
-        step_started.diconnect(self.step_started)
+        step_started.disconnect(self.step_started)
         step_finished.disconnect(self.step_finished)
         build_started.disconnect(self.build_started)
         build_finished.disconnect(self.build_finished)
@@ -464,12 +470,6 @@ class UIStreamHandler:
         final_info.update(info)
 
         f = asyncio.async(self.protocol.send_response(code=0, body=final_info))
-
-        def close_on_exc(fut):
-            if fut.exception():
-                self._disconnectfromsignals()
-
-        f.add_done_callback(close_on_exc)
 
         return f
 
