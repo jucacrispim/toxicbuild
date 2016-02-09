@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,9 +18,10 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-from toxicbuild.master.signals import revision_added
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.core.utils import log
+from toxicbuild.master.exceptions import CloneException
+from toxicbuild.master.signals import revision_added
 
 
 class Poller:
@@ -52,7 +53,11 @@ class Poller:
 
         if not self.vcs.workdir_exists():
             self.log('clonning repo {}'.format(self.repository.url))
-            yield from self.vcs.clone(self.repository.url)
+            try:
+                yield from self.vcs.clone(self.repository.url)
+            except Exception as e:
+                self.log(str(e), level='error')
+                raise CloneException(str(e))
 
         # for git.
         # remove no branch when hg is implemented

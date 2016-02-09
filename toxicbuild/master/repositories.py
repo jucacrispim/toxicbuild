@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -29,6 +29,7 @@ from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core import utils
 from toxicbuild.master.scheduler import scheduler
 from toxicbuild.master.build import Slave, Build, Builder, BuildManager
+from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.pollers import Poller
 
 
@@ -46,6 +47,8 @@ class Repository(Document):
     vcs_type = StringField(required=True, default='git')
     slaves = ListField(ReferenceField(Slave))
     notify_only_latest = BooleanField(default=False)
+    clone_status = StringField(choices=('cloning', 'done', 'clone exception'),
+                               default='cloning')
 
     def __init__(self, *args, **kwargs):
         super(Repository, self).__init__(*args, **kwargs)
@@ -78,7 +81,9 @@ class Repository(Document):
         is_running = (yield from to_asyncio_future(Build.objects.filter(
             repository=self, status='running').count())) > 0
 
-        if is_running:
+        if self.clone_status in ['cloning', 'clone exception']:
+            status = self.clone_status
+        elif is_running:
             status = 'running'
         else:
             try:
@@ -135,11 +140,25 @@ class Repository(Document):
         repo = yield from to_asyncio_future(cls.objects.get(**kwargs))
         return repo
 
+    @asyncio.coroutine
+    def update_code(self):
+        """Updates the repositoy's code. It is just a wrapper for
+        self.poller.poll, so I can handle exceptions there."""
+
+        try:
+            yield from self.poller.poll()
+            clone_status = 'done'
+        except CloneException:
+            clone_status = 'clone exception'
+
+        self.clone_status = clone_status
+        yield from to_asyncio_future(self.save())
+
     def schedule(self):
         """ Adds self.poller.poll() to the scheduler. """
 
         self.log('Scheduling {url}'.format(url=self.url))
-        sched_hash = scheduler.add(self.poller.poll, self.update_seconds)
+        sched_hash = scheduler.add(self.update_code, self.update_seconds)
         _scheduler_hashes[self.url] = sched_hash
 
     @classmethod

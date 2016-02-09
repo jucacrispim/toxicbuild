@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -23,6 +23,7 @@ from unittest import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.master import pollers, repositories
+from toxicbuild.master.exceptions import CloneException
 
 
 class GitPollerTest(AsyncTestCase):
@@ -119,6 +120,24 @@ class GitPollerTest(AsyncTestCase):
         yield from self.poller.poll()
 
         self.assertTrue(self.CLONE_CALLED)
+
+    @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
+    @mock.patch.object(pollers, 'log', mock.Mock())
+    @gen_test
+    def test_poll_with_clone_exception(self):
+
+        def workdir_exists():
+            return False
+
+        @asyncio.coroutine
+        def clone(url):
+            raise CloneException
+
+        self.poller.vcs.workdir_exists = workdir_exists
+        self.poller.vcs.clone = clone
+
+        with self.assertRaises(CloneException):
+            yield from self.poller.poll()
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @gen_test

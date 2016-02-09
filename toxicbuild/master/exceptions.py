@@ -3,3 +3,7 @@
 
 class UIFunctionNotFound(Exception):
     pass
+
+
+class CloneException(Exception):
+    pass

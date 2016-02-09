@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -24,6 +24,7 @@ import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core import utils
 from toxicbuild.master import repositories, build
+from toxicbuild.master.exceptions import CloneException
 
 
 class RepositoryTest(AsyncTestCase):
@@ -32,7 +33,7 @@ class RepositoryTest(AsyncTestCase):
         super(RepositoryTest, self).setUp()
         self.repo = repositories.Repository(
             name='reponame', url="git@somewhere.com/project.git",
-            vcs_type='git', update_seconds=100)
+            vcs_type='git', update_seconds=100, clone_status='done')
 
     def tearDown(self):
         repositories.Repository.drop_collection()
@@ -93,6 +94,23 @@ class RepositoryTest(AsyncTestCase):
 
         self.assertEqual(old_repo, new_repo)
         self.assertEqual(new_repo.slaves[0], slave)
+
+    @gen_test
+    def test_update_code_with_clone_exception(self):
+        self.repo._poller_instance = MagicMock()
+
+        self.repo._poller_instance.poll.side_effect = CloneException
+        yield from self.repo.update_code()
+        self.assertEqual(self.repo.clone_status, 'clone exception')
+
+    @gen_test
+    def test_update_code(self):
+        self.repo.clone_status = 'cloning'
+        yield self.repo.save()
+        self.repo._poller_instance = MagicMock()
+
+        yield from self.repo.update_code()
+        self.assertEqual(self.repo.clone_status, 'done')
 
     @patch.object(repositories.utils, 'log', Mock())
     @patch.object(repositories, 'scheduler', Mock(
@@ -212,6 +230,20 @@ class RepositoryTest(AsyncTestCase):
                                     number=0)
         yield success_build.save()
         self.assertEqual((yield from self.repo.get_status()), 'fail')
+
+    @gen_test
+    def test_get_status_cloning_repo(self):
+        yield from self._create_db_revisions()
+        self.repo.clone_status = 'cloning'
+        status = yield from self.repo.get_status()
+        self.assertEqual(status, 'cloning')
+
+    @gen_test
+    def test_get_status_clone_exception(self):
+        yield from self._create_db_revisions()
+        self.repo.clone_status = 'clone exception'
+        status = yield from self.repo.get_status()
+        self.assertEqual(status, 'clone exception')
 
     @gen_test
     def test_get_status_without_build(self):
