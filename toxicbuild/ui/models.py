@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -102,7 +102,7 @@ class Repository(BaseModel):
         :param kwargs: kwargs to get the repository."""
 
         client = yield from cls.get_client()
-        repo_dict = yield from client.repo_show(**kwargs)
+        repo_dict = yield from client.repo_get(**kwargs)
         repo = cls(**repo_dict)
         return repo
 
@@ -152,11 +152,9 @@ class Repository(BaseModel):
                     slaves=[]):
 
         client = yield from self.get_client()
-        resp = yield from client.repo_start_build(repo_name=self.name,
-                                                  branch=branch,
-                                                  builder_name=builder_name,
-                                                  named_tree=named_tree,
-                                                  slaves=slaves)
+        resp = yield from client.repo_start_build(
+            repo_name=self.name, branch=branch, builder_name=builder_name,
+            named_tree=named_tree, slaves=slaves)
         return resp
 
 
@@ -187,7 +185,7 @@ class Slave(BaseModel):
         :param kwargs: kwargs to get the slave."""
 
         client = yield from cls.get_client()
-        repo_dict = yield from client.slave_show(**kwargs)
+        repo_dict = yield from client.slave_get(**kwargs)
         repo = cls(**repo_dict)
         return repo
 
