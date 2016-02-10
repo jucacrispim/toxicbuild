@@ -6,7 +6,7 @@
   <h4>Repositories</h4>
 
   <!-- Button trigger modal add repository -->
-  <button type="button" class="btn btn-toxicbuild-default btn-xs" data-toggle="modal" data-target="#repoModal">
+  <button type="button" class="btn btn-primary btn-xs" data-toggle="modal" data-target="#repoModal">
     Add new repo
   </button>
 </div>
@@ -24,11 +24,15 @@
     </thead>
     <tbody id="tbody-repos">
       {% for repo in repos %}
-      <tr id="row-{{repo.name}}">
+      <tr id="repo-row-{{repo.name}}">
 	<td>
-	  <a href="javascript:showRepoModal('{{repo.name}}', '{{repo.url}}', '{{repo.vcs_type}}', {{repo.update_seconds}}, {{[s.name for s in repo.slaves]}})">
+	  <button type="button" class="btn btn-toxicbuild-default btn-xs"
+		  data-toggle="modal" data-target="#repoModal"
+		  data-repo-name="{{repo.name}}" data-repo-url="{{repo.url}}"
+		  data-repo-update-seconds="{{repo.update_seconds}}"
+		  data-repo-vcs-type="{{repo.vcs_type}}">
 	    {{repo.name}}
-	  </a>
+	  </button>
 	</td>
 	<td>{{repo.url}}</td>
 	<td>
@@ -49,7 +53,7 @@
 
 <div class="page-header">
   <h4>Slaves</h4>
-  <button type="button" class="btn btn-toxicbuild-default btn-xs" data-toggle="modal" data-target="#slaveModal">
+  <button type="button" class="btn btn-primary btn-xs" data-toggle="modal" data-target="#slaveModal">
     Add new slave
   </button>
 </div>
@@ -65,11 +69,16 @@
     </thead>
     <tbody id="tbody-slaves">
       {% for slave in slaves %}
-      <tr>
+      <tr id="slave-row-{{slave.name}}">
 	<td>
-	  <a href="javascript:showSlaveModal('{{slave.name}}', '{{slave.host}}', '{{slave.port}}')">
+	  <button type="button" class="btn btn-toxicbuild-default btn-xs"
+		  data-toggle="modal"
+		  data-target="#slaveModal"
+		  data-slave-name="{{slave.name}}"
+		  data-slave-host="{{slave.host}}"
+		  data-slave-port="{{slave.port}}">
 	    {{slave.name}}
-	  </a>
+	  </button>
 	</td>
 	<td>{{slave.host}}</td>
 	<td>{{slave.port}}</td>
@@ -79,4 +88,16 @@
   </table>
 </div>
 
+{% end %}
+
+{% block js_bottom %}
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="{{static_url}}toxicbuild/js/jquery.min.js"></script>
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="{{static_url}}toxicbuild/js/bootstrap.min.js"></script>
+<script src="{{static_url}}toxicbuild/js/validator.js"></script>
+<script src="{{static_url}}toxicbuild/js/utils.js"></script>
+<script src="{{static_url}}toxicbuild/js/repository.js"></script>
+<script src="{{static_url}}toxicbuild/js/slave.js"></script>
+<script src="{{static_url}}toxicbuild/js/main.js"></script>
 {% end %}

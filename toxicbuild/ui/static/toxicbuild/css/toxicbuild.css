@@ -1,3 +1,21 @@
+/* base */
+.navbar{
+    margin-bottom: 0;
+}
+.jumbotron{
+    padding-top:0;
+}
+
+/* alert */
+.alert{
+    position: fixed;
+    width: 97.2%;
+    margin-top: -35px;
+    z-index: 1000;
+    opacity: 0.98;
+    box-shadow: 0px 0px 5px 1px #000;
+}
+
 /* main */
 .background-main,
 body{
@@ -14,6 +32,11 @@ a {
 .table>thead>tr>th {
     border-bottom: 0;
 }
+
+tr:nth-child(even) {
+    background-color: #696565;
+}
+
 .modal-content{
     background-color: #4c4a49;
 }
@@ -26,7 +49,6 @@ a {
 
 .alert{
     display:none;
-    margin-top: 5%;
 }
 
 .img-logo{
@@ -82,10 +104,6 @@ a {
     vertical-align: top;
 }
 
-.builder-fixed{
-    position: fixed;
-    width: 27.7%;
-}
 .builder-container{
     border-radius: 3px;
     min-height: 50px;
