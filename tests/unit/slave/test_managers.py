@@ -29,6 +29,9 @@ from tests.unit.slave import TEST_DATA_DIR
 TOXICCONF = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
 TOXICCONF = load_module_from_file(TOXICCONF)
 
+BADTOXICCONF = os.path.join(TEST_DATA_DIR, 'badtoxicbuild.conf')
+BADTOXICCONF = load_module_from_file(BADTOXICCONF)
+
 
 @patch.object(managers, 'get_toxicbuildconf',
               Mock(return_value=TOXICCONF))
@@ -76,6 +79,11 @@ class BuilderManagerTest(AsyncTestCase):
         returned = self.manager.list_builders()
 
         self.assertEqual(returned, expected)
+
+    def test_list_builders_with_bad_builder_config(self):
+        self.manager._configmodule = BADTOXICCONF
+        with self.assertRaises(managers.BadBuilderConfig):
+            self.manager.list_builders()
 
     def test_load_builder(self):
         builder = self.manager.load_builder('builder1')

@@ -54,7 +54,7 @@ class Builder:
 
             for step in self.steps:
                 msg = 'Executing %s' % step.command
-                log(msg)
+                self.log(msg)
                 step_info = {'status': 'running',
                              'cmd': step.command,
                              'name': step.name,
@@ -69,7 +69,7 @@ class Builder:
 
                 msg = 'Finished {} with status {}'.format(step.command,
                                                           step_info['status'])
-                log(msg)
+                self.log(msg)
 
                 step_info.update({'finished': datetime2string(now())})
                 yield from self.manager.send_info(step_info)
@@ -92,6 +92,9 @@ class Builder:
         for plugin in self.plugins:
             envvars.update(plugin.get_env_vars())
         return envvars
+
+    def log(self, msg, level='info'):
+        log('[{}] {} '.format(type(self).__name__, msg), level)
 
 
 class BuildStep:

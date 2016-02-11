@@ -22,7 +22,7 @@ import os
 from toxicbuild.core import get_vcs
 from toxicbuild.core.utils import get_toxicbuildconf
 from toxicbuild.slave.build import Builder, BuildStep
-from toxicbuild.slave.exceptions import BuilderNotFound
+from toxicbuild.slave.exceptions import BuilderNotFound, BadBuilderConfig
 from toxicbuild.slave.plugins import Plugin
 
 
@@ -76,9 +76,15 @@ class BuildManager:
         based on toxicbuild.conf file
         """
 
-        builders = [b['name'] for b in self.configmodule.BUILDERS
-                    if (b.get('branch') == self.branch or b.get(
-                        'branch')is None)]
+        try:
+            builders = [b['name'] for b in self.configmodule.BUILDERS
+                        if (b.get('branch') == self.branch or b.get(
+                            'branch')is None)]
+        except KeyError as e:
+            key = str(e)
+            msg = 'Your builder config does not have a required key'.format(
+                key)
+            raise BadBuilderConfig(msg)
 
         return builders
 

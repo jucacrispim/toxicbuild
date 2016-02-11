@@ -20,8 +20,8 @@
 import asyncio
 from toxicbuild.core.protocol import BaseToxicProtocol
 from toxicbuild.slave import BuildManager
-from toxicbuild.slave.exceptions import BadData
-from toxicbuild.core.utils import log
+from toxicbuild.slave.exceptions import BadData, BadBuilderConfig
+from toxicbuild.core.utils import log, datetime2string, now
 
 
 class BuildServerProtocol(BaseToxicProtocol):
@@ -87,11 +87,20 @@ class BuildServerProtocol(BaseToxicProtocol):
         manager = yield from self.get_buildmanager()
         try:
             builder_name = self.data['body']['builder_name']
-        except KeyError:  # pragma: no cover
+        except KeyError:
             raise BadData
 
-        builder = manager.load_builder(builder_name)
-        build_info = yield from builder.build()
+        try:
+            builder = manager.load_builder(builder_name)
+        except BadBuilderConfig:
+            build_info = {'steps': [], 'status': 'exception',
+                          'started': datetime2string(now()),
+                          'finished': datetime2string(now()),
+                          'branch': manager.branch,
+                          'named_tree': manager.named_tree}
+        else:
+            build_info = yield from builder.build()
+
         return build_info
 
     @asyncio.coroutine
@@ -111,4 +120,4 @@ class BuildServerProtocol(BaseToxicProtocol):
         return manager
 
     def log(self, msg, level='info'):
-        log(msg, level)
+        log('[{}] {} '.format(type(self).__name__, msg), level)

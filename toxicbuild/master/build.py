@@ -85,7 +85,8 @@ class BuildStep(EmbeddedDocument):
     """
     name = StringField(required=True)
     command = StringField(required=True)
-    status = StringField(required=True)
+    status = StringField(required=True, choices=('pending', 'fail', 'success'
+                                                 'exception'))
     output = StringField()
     started = DateTimeField(default=None)
     finished = DateTimeField(default=None)
@@ -239,8 +240,8 @@ class Slave(Document):
         """
 
         with (yield from self.get_client()) as client:
-            builds = yield from client.build(build)
-        return builds
+            build_info = yield from client.build(build)
+        return build_info
 
     @asyncio.coroutine
     def _process_build_info(self, build, build_info):
@@ -260,11 +261,11 @@ class Slave(Document):
             yield from to_asyncio_future(build.save())
             if not build.finished:
                 msg = 'build started at {}'.format(build_info['started'])
-                log(msg)
+                self.log(msg)
                 build_started.send(repo, build=build)
             else:
                 msg = 'build finished at {}'.format(build_info['finished'])
-                log(msg)
+                self.log(msg)
                 build_finished.send(repo, build=build)
 
         else:
@@ -291,7 +292,7 @@ class Slave(Document):
                 requested_step = step
                 msg = 'step {} finished at {} with status'.format(
                     step.command, finished, step.status)
-                log(msg, level='debug')
+                self.log(msg, level='debug')
                 step_finished.send(repo, build=build, step=requested_step)
 
         if not requested_step:
@@ -300,11 +301,14 @@ class Slave(Document):
                                        started=string2datetime(started))
             msg = 'step {} started at {}'.format(requested_step.command,
                                                  started)
-            log(msg, level='debug')
+            self.log(msg, level='debug')
             step_started.send(repo, build=build, step=requested_step)
             build.steps.append(requested_step)
 
         yield from to_asyncio_future(build.save())
+
+    def log(self, msg, level='info'):
+        log('[{}] {} '.format(type(self).__name__, msg), level)
 
 
 class BuildManager:
@@ -354,8 +358,8 @@ class BuildManager:
                       builder=builder, number=number)
 
         yield from to_asyncio_future(build.save())
-        log('build added for named_tree {} on branch {}'.format(named_tree,
-                                                                branch))
+        self.log('build added for named_tree {} on branch {}'.format(named_tree,
+                                                                     branch))
         self._build_queues[slave.name].append(build)
 
         if not self._is_building[slave.name]:  # pragma: no branch
@@ -369,7 +373,7 @@ class BuildManager:
         :param revision: A
           :class:`toxicbuild.master.repositories.RepositoryRevision`.
         """
-        log('checkout on {} to {}'.format(
+        self.log('checkout on {} to {}'.format(
             self.repository.url, revision.commit), level='debug')
         yield from self.repository.poller.vcs.checkout(revision.commit)
         try:
@@ -378,7 +382,7 @@ class BuildManager:
         except Exception as e:
             msg = 'Something wrong with your toxicbuild.conf. Original '
             msg += 'exception was:\n {}'.format(str(e))
-            log(msg, level='warning')
+            self.log(msg, level='warning')
             return []
 
         builders = []
@@ -456,3 +460,6 @@ class BuildManager:
             number = build.number + 1
 
         return number
+
+    def log(self, msg, level='info'):
+        log('[{}] {} '.format(type(self).__name__, msg), level)

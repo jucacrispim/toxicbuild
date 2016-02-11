@@ -11,3 +11,7 @@ class BadData(Exception):
 
 class PluginNotFound(Exception):
     pass
+
+
+class BadBuilderConfig(Exception):
+    pass

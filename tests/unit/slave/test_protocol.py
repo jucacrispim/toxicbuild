@@ -110,13 +110,26 @@ class ProtocolTest(AsyncTestCase):
         manager = protocols.BuildManager.return_value
         self.assertTrue(manager.load_builder.called)
 
+    @mock.patch.object(protocols, 'BuildManager',
+                       mock.MagicMock(spec=protocols.BuildManager))
     @gen_test
     def test_build_with_bad_data(self):
         self.protocol.data = yield from self.protocol.get_json_data()
-        del self.protocol.data['body']
+        del self.protocol.data['body']['builder_name']
 
         with self.assertRaises(protocols.BadData):
             yield from self.protocol.build()
+
+    @mock.patch.object(protocols, 'BuildManager',
+                       mock.MagicMock(spec=protocols.BuildManager))
+    @gen_test
+    def test_build_with_bad_builder_config(self):
+        protocols.BuildManager.return_value.load_builder = mock.Mock(
+            side_effect=protocols.BadBuilderConfig)
+        self.protocol.data = yield from self.protocol.get_json_data()
+
+        build_info = yield from self.protocol.build()
+        self.assertEqual(build_info['status'], 'exception')
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
