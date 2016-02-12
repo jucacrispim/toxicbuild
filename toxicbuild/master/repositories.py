@@ -47,7 +47,7 @@ class Repository(Document):
     vcs_type = StringField(required=True, default='git')
     slaves = ListField(ReferenceField(Slave))
     notify_only_latest = BooleanField(default=False)
-    clone_status = StringField(choices=('cloning', 'done', 'clone exception'),
+    clone_status = StringField(choices=('cloning', 'done', 'clone-exception'),
                                default='cloning')
 
     def __init__(self, *args, **kwargs):
@@ -81,7 +81,7 @@ class Repository(Document):
         is_running = (yield from to_asyncio_future(Build.objects.filter(
             repository=self, status='running').count())) > 0
 
-        if self.clone_status in ['cloning', 'clone exception']:
+        if self.clone_status in ['cloning', 'clone-exception']:
             status = self.clone_status
         elif is_running:
             status = 'running'
@@ -149,7 +149,7 @@ class Repository(Document):
             yield from self.poller.poll()
             clone_status = 'done'
         except CloneException:
-            clone_status = 'clone exception'
+            clone_status = 'clone-exception'
 
         self.clone_status = clone_status
         yield from to_asyncio_future(self.save())

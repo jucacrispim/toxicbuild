@@ -101,7 +101,7 @@ class RepositoryTest(AsyncTestCase):
 
         self.repo._poller_instance.poll.side_effect = CloneException
         yield from self.repo.update_code()
-        self.assertEqual(self.repo.clone_status, 'clone exception')
+        self.assertEqual(self.repo.clone_status, 'clone-exception')
 
     @gen_test
     def test_update_code(self):
@@ -241,9 +241,9 @@ class RepositoryTest(AsyncTestCase):
     @gen_test
     def test_get_status_clone_exception(self):
         yield from self._create_db_revisions()
-        self.repo.clone_status = 'clone exception'
+        self.repo.clone_status = 'clone-exception'
         status = yield from self.repo.get_status()
-        self.assertEqual(status, 'clone exception')
+        self.assertEqual(status, 'clone-exception')
 
     @gen_test
     def test_get_status_without_build(self):
