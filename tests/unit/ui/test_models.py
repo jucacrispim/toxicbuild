@@ -132,6 +132,11 @@ class RepositoryTest(AsyncTestCase):
 
         self.assertEqual(resp, 'start build ok')
 
+    def test_to_dict(self):
+        self.repository.slaves = [models.Slave(name='bla')]
+        repo_dict = self.repository.to_dict()
+        self.assertTrue(isinstance(repo_dict['slaves'][0], dict))
+
 
 class SlaveTest(AsyncTestCase):
 

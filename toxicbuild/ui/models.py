@@ -157,6 +157,11 @@ class Repository(BaseModel):
             named_tree=named_tree, slaves=slaves)
         return resp
 
+    def to_dict(self):
+        d = super().to_dict()
+        d['slaves'] = [s.to_dict() for s in d['slaves']]
+        return d
+
 
 class Slave(BaseModel):
 
