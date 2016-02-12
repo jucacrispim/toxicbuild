@@ -83,10 +83,12 @@ class BuildStep(EmbeddedDocument):
 
     """ A step for build
     """
+
+    STATUSES = ('running', 'fail', 'success', 'exception')
+
     name = StringField(required=True)
     command = StringField(required=True)
-    status = StringField(required=True, choices=('pending', 'fail', 'success'
-                                                 'exception'))
+    status = StringField(choices=STATUSES)
     output = StringField()
     started = DateTimeField(default=None)
     finished = DateTimeField(default=None)
@@ -119,6 +121,7 @@ class Build(Document):
     """
 
     PENDING = 'pending'
+    STATUSES = ('pending', 'running', 'fail', 'success', 'exception')
 
     repository = ReferenceField('toxicbuild.master.Repository', required=True)
     slave = ReferenceField('Slave', required=True)
@@ -130,7 +133,7 @@ class Build(Document):
     # A build number is considered by the number of builds
     # of a builder.
     number = IntField(required=True)
-    status = StringField(default=PENDING)
+    status = StringField(default=PENDING, choices=STATUSES)
     steps = ListField(EmbeddedDocumentField(BuildStep))
 
     def to_dict(self):
