@@ -18,13 +18,11 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import os
 import tornado
-from tornado.testing import AsyncTestCase, gen_test
+from tornado.testing import gen_test
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.master.scheduler import scheduler
-from tests.functional import (SCRIPTS_DIR, REPO_DIR, SOURCE_DIR,
-                              MASTER_ROOT_DIR, SLAVE_ROOT_DIR)
+from tests.functional import BaseFunctionalTest, REPO_DIR
 
 
 scheduler.stop()
@@ -90,27 +88,7 @@ def get_dummy_client():
     return dc
 
 
-class ToxicMasterTest(AsyncTestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls._loop = asyncio.get_event_loop()
-        cls._ruc = cls._loop.run_until_complete
-
-        # start slave
-        toxicslave_cmd = os.path.join(SCRIPTS_DIR, 'toxicslave')
-        cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
-               toxicslave_cmd, 'start', SLAVE_ROOT_DIR, '--daemonize']
-
-        os.system(' '.join(cmd))
-
-        # start master
-        toxicmaster_cmd = os.path.join(SCRIPTS_DIR, 'toxicmaster')
-        cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
-               toxicmaster_cmd, 'start', MASTER_ROOT_DIR, '--daemonize']
-
-        os.system(' '.join(cmd))
+class ToxicMasterTest(BaseFunctionalTest):
 
     @classmethod
     def tearDownClass(cls):
@@ -118,19 +96,6 @@ class ToxicMasterTest(AsyncTestCase):
             cls._delete_test_data()
         except OSError:
             pass
-
-        # stop slave
-        toxicslave_cmd = os.path.join(SCRIPTS_DIR, 'toxicslave')
-        cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
-               'python', toxicslave_cmd, 'stop', SLAVE_ROOT_DIR]
-
-        os.system(' '.join(cmd))
-
-        # stop master
-        toxicmaster_cmd = os.path.join(SCRIPTS_DIR, 'toxicmaster')
-        cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
-               'python', toxicmaster_cmd, 'stop', MASTER_ROOT_DIR]
-        os.system(' '.join(cmd))
 
         super().tearDownClass()
 

@@ -22,7 +22,7 @@ import os
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core import BaseToxicClient
-from tests.functional import REPO_DIR, SCRIPTS_DIR, SLAVE_ROOT_DIR, SOURCE_DIR
+from tests.functional import REPO_DIR, BaseFunctionalTest
 
 
 class DummyBuildClient(BaseToxicClient):
@@ -87,26 +87,18 @@ def get_dummy_client():
     return dc
 
 
-class SlaveTest(AsyncTestCase):
+class SlaveTest(BaseFunctionalTest):
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
     @classmethod
     def setUpClass(cls):
-        cls.toxicslave = os.path.join(SCRIPTS_DIR, 'toxicslave')
-        start_cmd = 'export PYTHONPATH="{}" && {} start {} --daemonize'.format(
-            SOURCE_DIR, cls.toxicslave, SLAVE_ROOT_DIR)
-        cls.pidfile = os.path.join(SLAVE_ROOT_DIR, 'toxicslave.pid')
-        os.system(start_cmd)
+        cls.start_slave()
 
     @classmethod
     def tearDownClass(cls):
-        with open(cls.pidfile, 'r') as fd:
-            pid = int(fd.read())
-
-        os.kill(pid, 9)
-        os.remove(cls.pidfile)
+        cls.stop_slave()
 
     @gen_test
     def test_healthcheck(self):
