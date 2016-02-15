@@ -216,7 +216,8 @@ class Repository(Document):
         revision here.
         """
         branches = yield from to_asyncio_future(
-            RepositoryRevision.objects.distinct('branch'))
+            RepositoryRevision.objects.filter(
+                repository=self).distinct('branch'))
 
         return branches
 

@@ -174,6 +174,14 @@ class RepositoryTest(AsyncTestCase):
         self.assertEqual(revs['dev'].commit, '123asdf1')
 
     @gen_test
+    def test_get_known_branches(self):
+        yield from self._create_db_revisions()
+        expected = ['master', 'dev']
+        returned = yield from self.repo.get_known_branches()
+
+        self.assertTrue(expected, returned)
+
+    @gen_test
     def test_add_revision(self):
         yield self.repo.save()
         branch = 'master'
@@ -266,6 +274,22 @@ class RepositoryTest(AsyncTestCase):
             for branch in ['master', 'dev']:
                 rev = repositories.RepositoryRevision(
                     repository=rep, commit='123asdf{}'.format(str(r)),
+                    branch=branch,
+                    commit_date=now + datetime.timedelta(r))
+
+                yield rev.save()
+
+        # creating another repo just to test the known branches stuff.
+        self.other_repo = repositories.Repository(name='bla', url='/bla/bla',
+                                                  update_seconds=300,
+                                                  vcs_type='git')
+        yield self.other_repo.save()
+
+        for r in range(2):
+            for branch in ['b1', 'b2']:
+                rev = repositories.RepositoryRevision(
+                    repository=self.other_repo,
+                    commit='123asdf{}'.format(str(r)),
                     branch=branch,
                     commit_date=now + datetime.timedelta(r))
 
