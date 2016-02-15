@@ -575,6 +575,14 @@ class ToxicCliTest(unittest.TestCase):
         self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
         self.assertTrue(self.cli._format_help.called)
 
+    @patch.object(cli.ToxicCli, 'get_action_help_screen',
+                  Mock(spec=cli.ToxicCli.get_action_help_screen,
+                       return_value=''))
+    def test_execute_with_command_help(self):
+        cmdline = 'help repo-add'
+        self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
+        self.assertTrue(self.cli.get_action_help_screen.called)
+
     @patch.object(cli.ToxicCli, 'quit', Mock(spec=cli.ToxicCli.quit,
                                              return_value=''))
     def test_execute_with_quit(self):
@@ -596,6 +604,14 @@ class ToxicCliTest(unittest.TestCase):
 
         self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
         self.assertTrue(self.cli.stop_peek.called)
+
+    @patch.object(cli.ToxicCli, 'show_welcome_screen',
+                  MagicMock(spec=cli.ToxicCli.show_welcome_screen))
+    def test_execute_with_show_welcome_screen(self):
+        cmdline = 'welcome-screen'
+
+        self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
+        self.assertTrue(self.cli.show_welcome_screen.called)
 
     def test_peek(self):
         client_mock = MagicMock()

@@ -311,6 +311,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         """ Executes an action requested by the user and show
         its output. """
 
+        # A bunch of ugly stuff, I know!
         if cmdline in ['help', 'h']:
             action, response = 'help', self.get_help_screen()
         elif cmdline.startswith('help'):
@@ -325,6 +326,9 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         elif cmdline == 'stop-peek':
             self.stop_peek()
             self.main_screen.set_text('stopped!')
+            return
+        elif cmdline == 'welcome-screen':
+            self.show_welcome_screen()
             return
         else:
             try:
