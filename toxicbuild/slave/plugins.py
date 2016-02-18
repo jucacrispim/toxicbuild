@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 from toxicbuild.slave.exceptions import PluginNotFound
 from toxicbuild.slave.build import BuildStep
 
@@ -65,10 +66,12 @@ class PythonVenvPlugin(Plugin):
         self.pyversion = pyversion
         self.requirements_file = requirements_file
         self.remove_env = remove_env
+        self.venv_dir = 'venv-{}'.format(self.pyversion.replace(os.sep, ''))
 
     def get_steps_before(self):
         create_env = BuildStep('create venv',
-                               'virtualenv venv -p {}'.format(self.pyversion))
+                               'virtualenv {} -p {}'.format(
+                                   self.venv_dir, self.pyversion))
 
         install_deps = BuildStep('install dependencies using pip',
                                  'pip install -r {}'.format(
@@ -79,8 +82,8 @@ class PythonVenvPlugin(Plugin):
     def get_steps_after(self):
         steps = []
         if self.remove_env:
-            steps.append(BuildStep('remove-env',
-                                   'rm -rf venv'))
+            steps.append(BuildStep('remove venv',
+                                   'rm -rf {}'.format(self.venv_dir)))
         return steps
 
     def get_env_vars(self):
