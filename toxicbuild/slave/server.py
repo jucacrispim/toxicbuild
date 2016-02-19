@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+from toxicbuild.core.utils import log
 from toxicbuild.slave.protocols import BuildServerProtocol
 
 
@@ -30,5 +31,6 @@ class BuildServer:
 
 
 def run_server(addr='0.0.0.0', port=7777):
+    log('Serving at {}'.format(port))
     with BuildServer(addr, port) as server:
         server.start()

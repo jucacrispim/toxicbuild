@@ -161,7 +161,12 @@ class Build(Document):
             id__ne=self.id, branch=self.branch, named_tree=self.named_tree,
             builder__ne=self.builder, slave=self.slave)
         parallels = yield from to_asyncio_future(parallels.to_list())
+        msg = 'There are {} parallels for {}'.format(len(parallels), self.id)
+        self.log(msg, level='debug')
         return parallels
+
+    def log(self, msg, level='info'):
+        log('[{}] {} '.format(type(self).__name__, msg), level)
 
 
 class Slave(Document):

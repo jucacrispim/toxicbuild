@@ -32,7 +32,7 @@ def toxicinit():  # pragma no cover
         hole_host = settings.HOLE_ADDR
         hole_port = settings.HOLE_PORT
         server = HoleServer(hole_host, hole_port)
-        log('[init] Serving UIHole')
+        log('[init] Serving UIHole at {}'.format(settings.HOLE_PORT))
         server.serve()
 
     log('[init] Toxicbuild is running!')

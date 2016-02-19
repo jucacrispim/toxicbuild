@@ -54,7 +54,7 @@ class Builder:
 
             for step in self.steps:
                 msg = 'Executing %s' % step.command
-                self.log(msg)
+                self.log(msg, level='debug')
                 step_info = {'status': 'running',
                              'cmd': step.command,
                              'name': step.name,
@@ -69,7 +69,7 @@ class Builder:
 
                 msg = 'Finished {} with status {}'.format(step.command,
                                                           step_info['status'])
-                self.log(msg)
+                self.log(msg, level='debug')
 
                 step_info.update({'finished': datetime2string(now())})
                 yield from self.manager.send_info(step_info)
