@@ -33,13 +33,9 @@ class BaseFunctionalTest(AsyncTestCase):
 
     @classmethod
     def stop_slave(cls):
-        toxicslave_conf = os.environ.get('TOXICSLAVE_SETTINGS')
         toxicslave_cmd = os.path.join(SCRIPTS_DIR, 'toxicslave')
         cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
                'python', toxicslave_cmd, 'stop', SLAVE_ROOT_DIR]
-
-        if toxicslave_conf:
-            cmd += ['-c', toxicslave_conf]
 
         os.system(' '.join(cmd))
 
@@ -57,14 +53,10 @@ class BaseFunctionalTest(AsyncTestCase):
 
     @classmethod
     def stop_master(cls):
-        toxicmaster_conf = os.environ.get('TOXICMASTER_SETTINGS')
         toxicmaster_cmd = os.path.join(SCRIPTS_DIR, 'toxicmaster')
 
         cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
                'python', toxicmaster_cmd, 'stop', MASTER_ROOT_DIR]
-
-        if toxicmaster_conf:
-            cmd += ['-c', toxicmaster_conf]
 
         os.system(' '.join(cmd))
 
