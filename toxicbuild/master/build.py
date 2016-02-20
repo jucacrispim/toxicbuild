@@ -367,8 +367,8 @@ class BuildManager:
                       builder=builder, number=number)
 
         yield from to_asyncio_future(build.save())
-        self.log('build added for named_tree {} on branch {}'.format(named_tree,
-                                                                     branch))
+        self.log('build added for named_tree {} on branch {}'.format(
+            named_tree, branch))
         self._build_queues[slave.name].append(build)
 
         if not self._is_building[slave.name]:  # pragma: no branch
