@@ -84,7 +84,8 @@ class BuildStep(EmbeddedDocument):
     """ A step for build
     """
 
-    STATUSES = ('running', 'fail', 'success', 'exception')
+    STATUSES = ['running', 'fail', 'success', 'exception',
+                'warning']
 
     name = StringField(required=True)
     command = StringField(required=True)
@@ -120,8 +121,8 @@ class Build(Document):
     """ A set of steps for a repository
     """
 
+    STATUSES = BuildStep.STATUSES + ['pending']
     PENDING = 'pending'
-    STATUSES = ('pending', 'running', 'fail', 'success', 'exception')
 
     repository = ReferenceField('toxicbuild.master.Repository', required=True)
     slave = ReferenceField('Slave', required=True)
