@@ -18,9 +18,8 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import os
 import tornado
-from tornado.testing import AsyncTestCase, gen_test
+from tornado.testing import gen_test
 from toxicbuild.core import BaseToxicClient
 from tests.functional import REPO_DIR, BaseFunctionalTest
 
