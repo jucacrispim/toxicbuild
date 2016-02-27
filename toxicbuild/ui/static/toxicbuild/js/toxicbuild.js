@@ -102,8 +102,6 @@ function _remove_repo_row(name){
   $('#row-' + name).remove();
 }
 
-$('#repo-form').validator();
-
 
 function showRepoModal(name, url, vcs_type, update_seconds, slaves){
   var repo_modal = $('#repoModal');

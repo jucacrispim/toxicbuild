@@ -111,7 +111,7 @@ var RepositoryManager = function(){
       repo_row = repo_row.replace(/{{repo.vcs_type}}/g, vcs_type);
       repo_row = repo_row.replace(/{{repo.update_seconds}}/g, update_seconds);
       repo_row = repo_row.replace(/{{[s.name for s in repo.slaves]}}/g,
-				  str(slaves));
+				  slaves.toString());
       $('#tbody-repos').append(repo_row);
 
     },

@@ -42,3 +42,11 @@
   </tbody>
 </table>
 {% end %}
+
+{% block js_bottom %}
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="{{static_url}}toxicbuild/js/jquery.min.js"></script>
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="{{static_url}}toxicbuild/js/bootstrap.min.js"></script>
+<script src="{{static_url}}toxicbuild/js/toxicbuild.js"></script>
+{% end %}
