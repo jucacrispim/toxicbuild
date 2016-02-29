@@ -31,6 +31,11 @@ class BuildManager:
     """ A manager for remote build requests
     """
 
+    # repositories that are being cloned
+    cloning_repos = set()
+    # repositories that are being updated
+    updating_repos = set()
+
     def __init__(self, protocol, repo_url, vcs_type, branch, named_tree):
         self.protocol = protocol
         self.repo_url = repo_url
@@ -54,18 +59,79 @@ class BuildManager:
             ':', '')
         return os.path.join('src', workdir)
 
+    @property
+    def is_cloning(self):
+        """Informs if this repository is being cloned."""
+
+        return self.repo_url in type(self).cloning_repos
+
+    @is_cloning.setter
+    def is_cloning(self, value):
+        if value is True:
+            type(self).cloning_repos.add(self.repo_url)
+        else:
+            type(self).cloning_repos.discard(self.repo_url)
+
+    @property
+    def is_updating(self):
+        """Informs it this repository is fetching changes"""
+        return self.repo_url in type(self).updating_repos
+
+    @is_updating.setter
+    def is_updating(self, value):
+        if value is True:
+            type(self).updating_repos.add(self.repo_url)
+        else:
+            type(self).updating_repos.discard(self.repo_url)
+
+    @property
+    def is_working(self):
+        """Informs if this repository is cloning or updating"""
+        return self.is_cloning or self.is_updating
+
+    @asyncio.coroutine
+    def wait_clone(self):
+        """Wait until the repository clone is complete."""
+
+        while self.is_cloning:
+            yield from asyncio.sleep(1)
+
+    @asyncio.coroutine
+    def wait_update(self):
+        """Wait until the repository update is complete."""
+
+        while self.is_updating:
+            yield from asyncio.sleep(1)
+
+    @asyncio.coroutine
+    def wait_all(self):
+        """Wait until clone and update are done."""
+
+        while self.is_working:
+            yield from asyncio.sleep(1)
+
     @asyncio.coroutine
     def update_and_checkout(self):
-        """ Fetches changes on repository and checkout to ``self.named_tree``.
+        """ Tries to checkout to ``self.named_tree``, if it does not
+        exisit, fetches changes from the repository.
         If the repository was not cloned before, clones it first
-
         """
+
+        if self.is_working:
+            yield from self.wait_all()
+
         if not self.vcs.workdir_exists():
             yield from self.vcs.clone(self.repo_url)
 
-        yield from self.vcs.checkout(self.branch)
-        yield from self.vcs.pull(self.branch)
-        yield from self.vcs.checkout(self.named_tree)
+        # Now we first try to checkout to named_tree
+        try:
+            yield from self.vcs.checkout(self.named_tree)
+        except:
+            # If it does not exist here, we fetch changes from
+            # remote repo
+            yield from self.vcs.checkout(self.branch)
+            yield from self.vcs.pull(self.branch)
+            yield from self.vcs.checkout(self.named_tree)
 
     # the whole purpose of toxicbuild is this!
     # see the git history and look for the first versions.

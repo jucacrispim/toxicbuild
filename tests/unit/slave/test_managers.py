@@ -51,8 +51,124 @@ class BuilderManagerTest(AsyncTestCase):
         self.manager = managers.BuildManager(protocol, 'git@repo.git', 'git',
                                              'master', 'v0.1')
 
+    def tearDown(self):
+        managers.BuildManager.cloning_repos = set()
+        managers.BuildManager.updating_repos = set()
+
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
+
+    def test_is_cloning_without_clone(self):
+        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+                                        'master', 'v0.1')
+
+        manager.is_cloning = False
+
+        self.assertFalse(self.manager.is_cloning)
+
+    def test_is_cloning(self):
+        try:
+            manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+                                            'master', 'v0.1')
+
+            manager.is_cloning = True
+
+            self.assertTrue(self.manager.is_cloning)
+
+        finally:
+            managers.BuildManager.cloning_repos = set()
+
+    def test_is_updating_without_update(self):
+        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+                                        'master', 'v0.1')
+
+        manager.is_updating = False
+
+        self.assertFalse(self.manager.is_updating)
+
+    def test_is_updating(self):
+        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+                                        'master', 'v0.1')
+
+        manager.is_updating = True
+
+        self.assertTrue(self.manager.is_updating)
+
+    def test_is_working_with_clone(self):
+        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+                                        'master', 'v0.1')
+
+        manager.is_cloning = True
+
+        self.assertTrue(self.manager.is_working)
+
+    def test_is_working_with_update(self):
+        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+                                        'master', 'v0.1')
+
+        manager.is_updating = True
+
+        self.assertTrue(self.manager.is_working)
+
+    def test_is_working_not_working(self):
+        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+                                        'master', 'v0.1')
+
+        manager.is_updating = False
+        manager.is_cloning = False
+
+        self.assertFalse(self.manager.is_working)
+
+    @gen_test
+    def test_wait_clone(self):
+        class TBM(managers.BuildManager):
+            clone_called = False
+            call_count = -1
+
+            @property
+            def is_cloning(self):
+                self.clone_called = True
+                self.call_count += 1
+                return [True, False][self.call_count]
+
+        manager = TBM(MagicMock(), 'git@repo.git', 'git', 'master', 'v0.1')
+        yield from manager.wait_clone()
+
+        self.assertTrue(manager.clone_called)
+
+    @gen_test
+    def test_wait_update(self):
+        class TBM(managers.BuildManager):
+            update_called = False
+            call_count = -1
+
+            @property
+            def is_updating(self):
+                self.update_called = True
+                self.call_count += 1
+                return [True, False][self.call_count]
+
+        manager = TBM(MagicMock(), 'git@repo.git', 'git', 'master', 'v0.1')
+        yield from manager.wait_update()
+
+        self.assertTrue(manager.update_called)
+
+    @gen_test
+    def test_wait_all(self):
+        class TBM(managers.BuildManager):
+            working_called = False
+            call_count = -1
+
+            @property
+            def is_working(self):
+                self.working_called = True
+                self.call_count += 1
+                return [True, False][self.call_count]
+
+        manager = TBM(MagicMock(), 'git@repo.git', 'git', 'master', 'v0.1')
+        yield from manager.wait_all()
+
+        self.assertTrue(manager.working_called)
 
     @gen_test
     def test_update_and_checkout_with_clone(self):
@@ -62,17 +178,50 @@ class BuilderManagerTest(AsyncTestCase):
 
         self.assertTrue(self.manager.vcs.clone.called)
         self.assertTrue(self.manager.vcs.checkout.called)
-        self.assertTrue(self.manager.vcs.pull.called)
+
+    @patch.object(managers.BuildManager, 'is_working', MagicMock())
+    @patch.object(managers.BuildManager, 'wait_all', MagicMock())
+    @gen_test
+    def test_update_and_checkout_working(self):
+        yield from self.manager.update_and_checkout()
+
+        self.assertTrue(self.manager.wait_all.called)
 
     @gen_test
     def test_update_and_checkout_without_clone(self):
+        self.manager.vcs.clone = MagicMock()
         self.manager.vcs.workdir_exists.return_value = True
 
         yield from self.manager.update_and_checkout()
 
-        self.assertTrue(self.manager.vcs.clone.called)
+        self.assertFalse(self.manager.vcs.clone.called)
         self.assertTrue(self.manager.vcs.checkout.called)
-        self.assertTrue(self.manager.vcs.pull.called)
+
+    @gen_test
+    def test_update_and_checkout_with_checkout_exception(self):
+        self.manager.vcs.workdir_exists.return_value = True
+
+        self.CO_CALL_COUNT = 0
+        co_mock = MagicMock()
+
+        @asyncio.coroutine
+        def co(*a, **kw):
+            co_mock()
+
+            if self.CO_CALL_COUNT == 0:
+                self.CO_CALL_COUNT += 1
+                raise Exception
+
+        try:
+            old_co = self.manager.vcs.checkout
+            self.manager.vcs.checkout = co
+            yield from self.manager.update_and_checkout()
+
+            self.assertFalse(self.manager.vcs.clone.called)
+            self.assertTrue(self.manager.vcs.pull.called)
+            self.assertTrue(co_mock.called)
+        finally:
+            self.manager.vcs.checkout = old_co
 
     def test_list_builders(self):
         expected = ['builder1', 'builder2', 'builder3']
