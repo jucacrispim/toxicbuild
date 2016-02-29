@@ -148,6 +148,7 @@ class ProtocolTest(AsyncTestCase):
 
         self.assertEqual(self.response, expected)
 
+    @mock.patch.object(protocols, 'log', mock.Mock())
     @gen_test
     def test_client_connected_with_bad_data(self):
         self.message = {"action": "build"}
@@ -157,6 +158,7 @@ class ProtocolTest(AsyncTestCase):
 
         self.assertEqual(self.response['code'], 1)
 
+    @mock.patch.object(protocols, 'log', mock.Mock())
     @gen_test
     def test_client_connected_with_exception(self):
         self.message = {"action": "build"}
@@ -219,6 +221,7 @@ class ProtocolTest(AsyncTestCase):
 
         self.assertTrue(builder.build.called)
 
+    @mock.patch.object(protocols, 'log', mock.Mock())
     @gen_test
     def test_client_connected_with_wrong_action(self):
         self.message = {'action': 'bla'}

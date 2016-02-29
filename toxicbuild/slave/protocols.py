@@ -52,15 +52,15 @@ class BuildServerProtocol(BaseToxicProtocol):
                 yield from self.send_response(code=0, body=build_info)
             else:
                 msg = 'Action {} does not exist'.format(self.action)
-                self.log(msg)
+                self.log(msg, level='error')
                 yield from self.send_response(code=1, body={'eror': msg})
 
         except BadData:
             msg = 'Something wrong with your data {}'.format(self.raw_data)
-            self.log('bad data')
+            self.log('bad data', level='error')
             yield from self.send_response(code=1, body=msg)
         except Exception as e:
-            self.log(e.args[0])
+            self.log(e.args[0], level='error')
             yield from self.send_response(code=1, body=e.args[0])
 
         self.close_connection()
