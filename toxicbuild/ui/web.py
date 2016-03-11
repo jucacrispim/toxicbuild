@@ -152,7 +152,7 @@ class MainHandler(TemplateHandler):
 
     def _get_btn_class(self, status):
         return {'success': 'success', 'fail': 'danger',
-                'running': 'info'}.get(status)
+                'running': 'info', 'exception': 'exception'}.get(status)
 
 
 class WaterfallHandler(TemplateHandler):  # pragma no cover

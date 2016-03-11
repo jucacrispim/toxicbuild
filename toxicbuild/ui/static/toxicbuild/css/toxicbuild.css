@@ -146,6 +146,11 @@ tr:nth-child(even) {
     background-color: #D25728;
 }
 
+.btn-exception,
+.builder-exception,
+.step-exception{
+    background-color: #75094A;
+}
 
 .btn-step-details:focus,
 .btn-step-details{
