@@ -22,7 +22,7 @@ from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.master import hole, build, repository
+from toxicbuild.master import hole, build, repository, slave
 
 
 class UIHoleTest(AsyncTestCase):
@@ -527,7 +527,7 @@ class UIStreamHandlerTest(AsyncTestCase):
     def tearDown(self):
         build.Build.drop_collection()
         build.Builder.drop_collection()
-        build.Slave.drop_collection()
+        slave.Slave.drop_collection()
         repository.Repository.drop_collection()
 
     @patch.object(hole, 'step_started', Mock())
@@ -578,7 +578,7 @@ class UIStreamHandlerTest(AsyncTestCase):
         testrepo = yield from repository.Repository.create('name',
                                                            'git@git.nada',
                                                            300, 'git')
-        testslave = yield from build.Slave.create(name='name',
+        testslave = yield from slave.Slave.create(name='name',
                                                   host='localhost',
                                                   port=1234)
 
@@ -619,7 +619,7 @@ class UIStreamHandlerTest(AsyncTestCase):
         testrepo = yield from repository.Repository.create('name',
                                                            'git@git.nada',
                                                            300, 'git')
-        testslave = yield from build.Slave.create(name='name',
+        testslave = yield from slave.Slave.create(name='name',
                                                   host='localhost',
                                                   port=1234)
         testbuilder = yield from build.Builder.create(name='b1',

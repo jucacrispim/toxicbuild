@@ -95,6 +95,16 @@ def log(msg, level='info'):
     log(msg)
 
 
+class LoggerMixin:
+
+    """A simple mixin to use log on a class."""
+
+    def log(self, msg, level='info'):
+        """Appends the class name before the log message. """
+
+        log('[{}] {} '.format(type(self).__name__, msg), level)
+
+
 def datetime2string(dt, dtformat='%a %b %d %H:%M:%S %Y %z'):
     """Transforms a datetime object into a formated string.
 

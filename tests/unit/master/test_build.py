@@ -22,9 +22,8 @@ import datetime
 from unittest import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
-import toxicbuild
-from toxicbuild.core.utils import datetime2string, now
-from toxicbuild.master import build, repository
+from toxicbuild.core.utils import now
+from toxicbuild.master import build, repository, slave
 
 
 class BuildStepTest(AsyncTestCase):
@@ -49,7 +48,7 @@ class BuildTest(AsyncTestCase):
     def tearDown(self):
         build.Build.drop_collection()
         build.Builder.drop_collection()
-        build.Slave.drop_collection()
+        slave.Slave.drop_collection()
         repository.RepositoryRevision.drop_collection()
         repository.Repository.drop_collection()
 
@@ -76,7 +75,7 @@ class BuildTest(AsyncTestCase):
 
     @asyncio.coroutine
     def _create_test_data(self):
-        self.slave = yield from build.Slave.create(name='slave',
+        self.slave = yield from slave.Slave.create(name='slave',
                                                    host='localhost',
                                                    port=7777)
         self.repo = repository.Repository(
@@ -115,220 +114,6 @@ class BuildTest(AsyncTestCase):
             self.builds.append(binst)
 
 
-@mock.patch.object(build, 'build_started', mock.Mock())
-@mock.patch.object(build, 'build_finished', mock.Mock())
-@mock.patch.object(build, 'step_started', mock.Mock())
-@mock.patch.object(build, 'step_finished', mock.Mock())
-class SlaveTest(AsyncTestCase):
-
-    def setUp(self):
-        super().setUp()
-        self.slave = build.Slave(name='slave', host='127.0.0.1', port=7777)
-
-    def tearDown(self):
-        build.Slave.drop_collection()
-        build.Build.drop_collection()
-        build.Builder.drop_collection()
-        repository.RepositoryRevision.drop_collection()
-        repository.Repository.drop_collection()
-        super().tearDown()
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
-
-    @gen_test
-    def test_create(self):
-        slave = yield from build.Slave.create(name='name',
-                                              host='somewhere.net', port=7777)
-        self.assertTrue(slave.id)
-
-    @gen_test
-    def test_get(self):
-        slave = yield from build.Slave.create(name='name',
-                                              host='somewhere.net', port=7777)
-        slave_id = slave.id
-
-        slave = yield from build.Slave.get(name='name', host='somewhere.net',
-                                           port=7777)
-
-        self.assertEqual(slave_id, slave.id)
-
-    @mock.patch.object(toxicbuild.master.client.asyncio, 'open_connection',
-                       mock.Mock())
-    @gen_test
-    def test_get_client(self):
-
-        @asyncio.coroutine
-        def oc(*a, **kw):
-            return [mock.MagicMock(), mock.MagicMock()]
-
-        toxicbuild.master.client.asyncio.open_connection = oc
-        client = yield from self.slave.get_client()
-        self.assertTrue(client._connected)
-
-    @gen_test
-    def test_healthcheck(self):
-
-        @asyncio.coroutine
-        def gc():
-            client = mock.MagicMock()
-
-            @asyncio.coroutine
-            def hc():  # x no pé!
-                return True
-
-            client.__enter__.return_value.healthcheck = hc
-            return client
-
-        self.slave.get_client = gc
-
-        yield from self.slave.healthcheck()
-
-        self.assertTrue(self.slave.is_alive)
-
-    @gen_test
-    def test_list_builders(self):
-        yield from self._create_test_data()
-
-        @asyncio.coroutine
-        def gc():
-            client = mock.MagicMock()
-
-            @asyncio.coroutine
-            def lb(repo_url, vcs_type, branch, named_tree):
-                return ['builder-1', 'builder-2']
-
-            client.__enter__.return_value.list_builders = lb
-            return client
-
-        self.slave.get_client = gc
-
-        builders = yield from self.slave.list_builders(self.revision)
-
-        self.assertEqual(builders, [self.builder, self.other_builder])
-
-    @gen_test
-    def test_build(self):
-        yield from self._create_test_data()
-        client = mock.MagicMock()
-
-        @asyncio.coroutine
-        def gc():
-
-            @asyncio.coroutine
-            def b(build):
-                client.build()
-                return []
-
-            client.__enter__.return_value.build = b
-            return client
-
-        self.slave.get_client = gc
-        future = yield from self.slave.build(self.build)
-        yield from future
-        self.assertTrue(client.build.called)
-
-    @mock.patch.object(build, 'build_started', mock.Mock())
-    @gen_test
-    def test_process_build_info_with_build_started(self):
-        yield from self._create_test_data()
-        tz = datetime.timezone(-datetime.timedelta(hours=3))
-        now = datetime2string(datetime.datetime.now(tz=tz))
-
-        build_info = {'status': 'running', 'steps': [],
-                      'started': now, 'finished': None}
-
-        yield from self.slave._process_build_info(self.build, build_info)
-        self.assertTrue(build.build_started.send.called)
-
-    @mock.patch.object(build, 'build_finished', mock.Mock())
-    @gen_test
-    def test_process_build_info_with_build_finished(self):
-        yield from self._create_test_data()
-        tz = datetime.timezone(-datetime.timedelta(hours=3))
-        now = datetime2string(datetime.datetime.now(tz=tz))
-
-        build_info = {'status': 'running', 'steps': [],
-                      'started': now, 'finished': now}
-
-        yield from self.slave._process_build_info(self.build, build_info)
-        self.assertTrue(build.build_finished.send.called)
-
-    @gen_test
-    def test_process_build_info_with_step(self):
-        yield from self._create_test_data()
-        tz = datetime.timezone(-datetime.timedelta(hours=3))
-        now = datetime.datetime.now(tz=tz)
-
-        build_info = {'status': 'running', 'cmd': 'ls', 'name': 'ls',
-                      'started': now, 'finished': None, 'output': ''}
-
-        self.slave._set_step_info = mock.MagicMock(
-            spec=self.slave._set_step_info)
-        yield from self.slave._process_build_info(self.build, build_info)
-        self.assertTrue(self.slave._set_step_info.called)
-
-    @gen_test
-    def test_set_step_info_new(self):
-        yield from self._create_test_data()
-        tz = datetime.timezone(-datetime.timedelta(hours=3))
-        now = datetime.datetime.now(tz=tz)
-        started = now.strftime('%a %b %d %H:%M:%S %Y %z')
-        finished = now.strftime('%a %b %d %H:%M:%S %Y %z')
-
-        yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
-                                             'running', '', started, finished)
-        self.assertEqual(len(self.build.steps), 1)
-
-    @gen_test
-    def test_set_step_info(self):
-        yield from self._create_test_data()
-        tz = datetime.timezone(-datetime.timedelta(hours=3))
-        now = datetime.datetime.now(tz=tz)
-        started = now.strftime('%a %b %d %H:%M:%S %Y %z')
-        finished = now.strftime('%a %b %d %H:%M:%S %Y %z')
-
-        yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
-                                             'running', '', started, finished)
-        yield from self.slave._set_step_info(self.build, 'echo "oi"', 'echo',
-                                             'running', '', started, finished)
-        yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
-                                             'success', 'somefile.txt\n',
-                                             started, finished)
-
-        self.assertEqual(self.build.steps[0].status, 'success')
-        self.assertEqual(len(self.build.steps), 2)
-
-    @asyncio.coroutine
-    def _create_test_data(self):
-        yield self.slave.save()
-        self.repo = repository.Repository(
-            name='reponame', url='git@somewhere', update_seconds=300,
-            vcs_type='git', slaves=[self.slave])
-
-        yield self.repo.save()
-
-        self.revision = repository.RepositoryRevision(
-            repository=self.repo, branch='master', commit='bgcdf3123',
-            commit_date=datetime.datetime.now()
-        )
-
-        yield self.revision.save()
-
-        self.builder = build.Builder(repository=self.repo, name='builder-1')
-        yield self.builder.save()
-        self.other_builder = build.Builder(repository=self.repo,
-                                           name='builder-2')
-        yield self.other_builder.save()
-        yield self.builder.save()
-
-        self.build = build.Build(repository=self.repo, slave=self.slave,
-                                 branch='master', named_tree='v0.1',
-                                 builder=self.builder, number=0)
-
-        self.build.save()
-
-
 class BuildManagerTest(AsyncTestCase):
 
     def setUp(self):
@@ -341,7 +126,7 @@ class BuildManagerTest(AsyncTestCase):
 
     @gen_test
     def tearDown(self):
-        yield build.Slave.drop_collection()
+        yield slave.Slave.drop_collection()
         yield build.Build.drop_collection()
         yield build.Builder.drop_collection()
         yield repository.RepositoryRevision.drop_collection()
@@ -451,7 +236,7 @@ class BuildManagerTest(AsyncTestCase):
 
     @asyncio.coroutine
     def _create_test_data(self):
-        self.slave = build.Slave(host='127.0.0.1', port=7777, name='slave')
+        self.slave = slave.Slave(host='127.0.0.1', port=7777, name='slave')
         self.slave.build = asyncio.coroutine(lambda x: None)
         yield self.slave.save()
         self.repo = repository.Repository(
@@ -547,10 +332,10 @@ class BuilderTest(AsyncTestCase):
         repo = repository.Repository(name='bla', url='git@bla.com',
                                      update_seconds=300, vcs_type='git')
         yield repo.save()
-        slave = build.Slave(name='bla', host='localhost', port=1234)
-        yield slave.save()
+        slave_inst = slave.Slave(name='bla', host='localhost', port=1234)
+        yield slave_inst.save()
         builder = yield from build.Builder.create(repository=repo, name='b1')
-        buildinst = build.Build(repository=repo, slave=slave,
+        buildinst = build.Build(repository=repo, slave=slave_inst,
                                 branch='master', named_tree='v0.1',
                                 builder=builder, number=0,
                                 status='success', started=now())

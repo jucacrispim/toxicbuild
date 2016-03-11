@@ -90,6 +90,16 @@ class UtilsTest(AsyncTestCase):
         utils.log('msg')
         self.assertTrue(utils.logging.info.called)
 
+    @patch.object(utils, 'log', Mock())
+    def test_logger_mixin(self):
+        class MyLogger(utils.LoggerMixin):
+            pass
+
+        logger = MyLogger()
+        logger.log('msg')
+        msg = utils.log.call_args[0][0]
+        self.assertTrue(msg.startswith('[MyLogger]'))
+
     def test_inherit_docs(self):
 
         class A:

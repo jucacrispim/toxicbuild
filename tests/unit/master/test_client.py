@@ -21,7 +21,7 @@ import asyncio
 from unittest import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.master import client, build, repository
+from toxicbuild.master import client, build, repository, slave
 
 
 class BuildClientTest(AsyncTestCase):
@@ -36,7 +36,7 @@ class BuildClientTest(AsyncTestCase):
     def tearDown(self):
         build.Build.drop_collection()
         repository.Repository.drop_collection()
-        build.Slave.drop_collection()
+        slave.Slave.drop_collection()
         build.Builder.drop_collection()
 
     def get_new_ioloop(self):
@@ -118,21 +118,21 @@ class BuildClientTest(AsyncTestCase):
 
         self.client.get_response = gr
 
-        slave = build.Slave(name='slv', host='localhost', port=1234)
-        yield slave.save()
+        slave_inst = slave.Slave(name='slv', host='localhost', port=1234)
+        yield slave_inst.save()
         process = mock.Mock()
 
         self.client.slave._process_build_info = asyncio.coroutine(
             lambda build, build_info: process())
 
         repo = repository.Repository(name='repo', url='git@somewhere.com',
-                                     slaves=[slave], update_seconds=300,
+                                     slaves=[slave_inst], update_seconds=300,
                                      vcs_type='git')
         yield repo.save()
         builder = build.Builder(repository=repo, name='b1')
         yield builder.save()
 
-        buildinstance = build.Build(repository=repo, slave=slave,
+        buildinstance = build.Build(repository=repo, slave=slave_inst,
                                     builder=builder, branch='master',
                                     named_tree='123sdf09', number=0)
         yield buildinstance.save()

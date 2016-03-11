@@ -8,7 +8,8 @@ from toxicbuild.core.conf import Settings
 
 # the api
 from toxicbuild.master.repository import Repository, RepositoryRevision
-from toxicbuild.master.build import Slave, Build, Builder
+from toxicbuild.master.build import Build, Builder
+from toxicbuild.master.slave import Slave
 from toxicbuild.master.hole import HoleServer
 
 

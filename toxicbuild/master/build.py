@@ -23,16 +23,12 @@ from collections import defaultdict, deque
 import json
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
-                               ReferenceField, DateTimeField, BooleanField,
-                               IntField)
+                               ReferenceField, DateTimeField, IntField)
 from tornado.platform.asyncio import to_asyncio_future
-from toxicbuild.core.utils import (log, string2datetime, get_toxicbuildconf,
+from toxicbuild.core.utils import (log, get_toxicbuildconf,
                                    list_builders_from_config, datetime2string,
                                    utc2localtime)
-from toxicbuild.master.client import get_build_client
-from toxicbuild.master.signals import (build_started, build_finished,
-                                       revision_added, step_started,
-                                       step_finished)
+from toxicbuild.master.signals import revision_added
 
 
 class Builder(Document):
@@ -170,156 +166,6 @@ class Build(Document):
         log('[{}] {} '.format(type(self).__name__, msg), level)
 
 
-class Slave(Document):
-
-    """ Slaves are the entities that actualy do the work
-    of execute steps. The comunication to slaves is through
-    the network (using :class:`toxicbuild.master.client.BuildClient`)
-    and all code, including toxicbuild.conf, is executed on slave.
-    """
-    name = StringField(required=True, unique=True)
-    host = StringField(required=True)
-    port = IntField(required=True)
-    is_alive = BooleanField(default=False)
-
-    @classmethod
-    @asyncio.coroutine
-    def create(cls, **kwargs):
-        slave = cls(**kwargs)
-        yield from to_asyncio_future(slave.save())
-        return slave
-
-    @classmethod
-    @asyncio.coroutine
-    def get(cls, **kwargs):
-        slave = yield from to_asyncio_future(cls.objects.get(**kwargs))
-        return slave
-
-    @asyncio.coroutine
-    def get_client(self):
-        """ Returns a :class:`toxicbuild.master.client.BuildClient` instance
-        already connected to the server.
-        """
-        connected_client = yield from get_build_client(self, self.host,
-                                                       self.port)
-        return connected_client
-
-    @asyncio.coroutine
-    def healthcheck(self):
-        """ Check if the build server is up and running
-        """
-        with (yield from self.get_client()) as client:
-            alive = yield from client.healthcheck()
-
-        self.is_alive = alive
-        # using yield instead of yield from because mongomotor's
-        # save returns a tornado Future, not a asyncio Future
-        yield from to_asyncio_future(self.save())
-        return self.is_alive
-
-    @asyncio.coroutine
-    def list_builders(self, revision):
-        """ List builder available in for a given revision
-
-        :param revision: An instance of
-          :class:`toxicbuild.master.repositories.RepositoryRevision`
-        """
-        repository = yield from to_asyncio_future(revision.repository)
-        repo_url = repository.url
-        vcs_type = repository.vcs_type
-        branch = revision.branch
-        named_tree = revision.commit
-
-        with (yield from self.get_client()) as client:
-            builders = yield from client.list_builders(repo_url, vcs_type,
-                                                       branch, named_tree)
-
-        builders = [(yield from Builder.get_or_create(repository=repository,
-                                                      name=bname))
-                    for bname in builders]
-
-        builders = yield from builders
-        return list(builders)
-
-    @asyncio.coroutine
-    def build(self, build):
-        """ Connects to a build server and requests a build on that server
-
-        :param build: An instance of :class:`toxicbuild.master.build.Build`
-        """
-
-        with (yield from self.get_client()) as client:
-            build_info = yield from client.build(build)
-        return build_info
-
-    @asyncio.coroutine
-    def _process_build_info(self, build, build_info):
-        """ This method is called by the client when some information about
-        the build is sent by the build server.
-        """
-        # when there's the steps key it's a build info
-
-        if 'steps' in build_info:
-            repo = yield from to_asyncio_future(build.repository)
-            build.status = build_info['status']
-            build.started = string2datetime(build_info['started'])
-            finished = build_info['finished']
-            if finished:
-                build.finished = string2datetime(finished)
-
-            yield from to_asyncio_future(build.save())
-            if not build.finished:
-                msg = 'build started at {}'.format(build_info['started'])
-                self.log(msg)
-                build_started.send(repo, build=build)
-            else:
-                msg = 'build finished at {}'.format(build_info['finished'])
-                self.log(msg)
-                build_finished.send(repo, build=build)
-
-        else:
-            # here is the step info
-            yield from self._set_step_info(build, build_info['cmd'],
-                                           build_info['name'],
-                                           build_info['status'],
-                                           build_info['output'],
-                                           build_info['started'],
-                                           build_info['finished'])
-
-    @asyncio.coroutine
-    def _set_step_info(self, build, cmd, name, status, output, started,
-                       finished):
-
-        repo = yield from to_asyncio_future(build.repository)
-        requested_step = None
-
-        for step in build.steps:
-            if step.command == cmd:
-                step.status = status
-                step.output = output
-                step.finished = string2datetime(finished)
-                requested_step = step
-                msg = 'step {} finished at {} with status'.format(
-                    step.command, finished, step.status)
-                self.log(msg, level='debug')
-                step_finished.send(repo, build=build, step=requested_step)
-
-        if not requested_step:
-            requested_step = BuildStep(name=name, command=cmd,
-                                       status=status, output=output,
-                                       started=string2datetime(started))
-            msg = 'step {} started at {}'.format(requested_step.command,
-                                                 started)
-            self.log(msg, level='debug')
-            step_started.send(repo, build=build, step=requested_step)
-            build.steps.append(requested_step)
-
-        yield from to_asyncio_future(build.save())
-
-    def log(self, msg, level='info'):
-        log('[{}] {} '.format(type(self).__name__, msg), level)
-
-
 class BuildManager:
 
     """ Controls which builds should be executed sequentially or
@@ -342,7 +188,7 @@ class BuildManager:
         """ Adds the builds for a given revision in the build queue.
 
         :param revision: A list of
-          :class:`toxicbuild.master.repositories.RepositoryRevision`
+          :class:`toxicbuild.master.repository.RepositoryRevision`
           instances for the build."""
 
         for revision in revisions:
@@ -359,7 +205,7 @@ class BuildManager:
         :param builder: A :class:`toxicbuild.master.build.Builder` instance.
         :param branch: Branch name.
         :named_tree: Named tree for the build.
-        :param slave: A :class:`toxicbuild.master.build.Slave` instance."""
+        :param slave: A :class:`toxicbuild.master.slave.Slave` instance."""
 
         number = yield from self._get_next_build_number(builder)
         build = Build(repository=self.repository, branch=branch,
@@ -378,9 +224,9 @@ class BuildManager:
     def get_builders(self, slave, revision):
         """ Get builders for a given slave and revision.
 
-        :param slave: A :class:`toxicbuild.master.build.Slave` instance.
+        :param slave: A :class:`toxicbuild.master.slave.Slave` instance.
         :param revision: A
-          :class:`toxicbuild.master.repositories.RepositoryRevision`.
+          :class:`toxicbuild.master.repository.RepositoryRevision`.
         """
         self.log('checkout on {} to {}'.format(
             self.repository.url, revision.commit), level='debug')
@@ -418,7 +264,7 @@ class BuildManager:
     def _execute_builds(self, slave):
         """ Execute the builds in the queue of a given slave.
 
-        :param slave: A :class:`toxicbuild.master.build.Slave` instance."""
+        :param slave: A :class:`toxicbuild.master.slave.Slave` instance."""
 
         self._is_building[slave.name] = True
         try:
@@ -441,7 +287,7 @@ class BuildManager:
     def _execute_in_parallel(self, slave, builds):
         """Executes builds in parallel in a slave.
 
-        :param slave: A :class:`toxicbuild.master.build.Slave` instance.
+        :param slave: A :class:`toxicbuild.master.slave.Slave` instance.
         :param builds: A list of
           :class:`toxicbuild.master.build.Build` instances."""
 

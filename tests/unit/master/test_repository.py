@@ -23,7 +23,7 @@ from unittest.mock import Mock, MagicMock, patch
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core import utils
-from toxicbuild.master import repository, build
+from toxicbuild.master import repository, build, slave
 from toxicbuild.master.exceptions import CloneException
 
 
@@ -38,7 +38,7 @@ class RepositoryTest(AsyncTestCase):
     def tearDown(self):
         repository.Repository.drop_collection()
         repository.RepositoryRevision.drop_collection()
-        build.Slave.drop_collection()
+        slave.Slave.drop_collection()
         build.Build.drop_collection()
         build.Builder.drop_collection()
         super(RepositoryTest, self).tearDown()
@@ -56,13 +56,13 @@ class RepositoryTest(AsyncTestCase):
     @patch.object(repository.Repository, 'log', Mock())
     @gen_test
     def test_create(self):
-        slave = yield from build.Slave.create(name='name', host='bla.com',
-                                              port=1234)
+        slave_inst = yield from slave.Slave.create(name='name', host='bla.com',
+                                                   port=1234)
         repo = yield from repository.Repository.create(
-            'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave])
+            'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave_inst])
 
         self.assertTrue(repo.id)
-        self.assertEqual(repo.slaves[0], slave)
+        self.assertEqual(repo.slaves[0], slave_inst)
 
     @patch.object(repository, 'shutil', Mock())
     @patch.object(repository.Repository, 'log', Mock())
@@ -86,14 +86,14 @@ class RepositoryTest(AsyncTestCase):
     @patch.object(repository.Repository, 'log', Mock())
     @gen_test
     def test_get(self):
-        slave = yield from build.Slave.create(name='name', host='bla.com',
-                                              port=1234)
+        slave_inst = yield from slave.Slave.create(name='name', host='bla.com',
+                                                   port=1234)
         old_repo = yield from repository.Repository.create(
-            'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave])
+            'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave_inst])
         new_repo = yield from repository.Repository.get(url=old_repo.url)
 
         self.assertEqual(old_repo, new_repo)
-        self.assertEqual(new_repo.slaves[0], slave)
+        self.assertEqual(new_repo.slaves[0], slave_inst)
 
     @gen_test
     def test_update_code_with_clone_exception(self):
@@ -266,7 +266,7 @@ class RepositoryTest(AsyncTestCase):
         now = datetime.datetime.now()
         self.builder = yield from build.Builder.create(name='builder0',
                                                        repository=self.repo)
-        self.slave = yield from build.Slave.create(name='slave',
+        self.slave = yield from slave.Slave.create(name='slave',
                                                    host='localhost',
                                                    port=1234)
 

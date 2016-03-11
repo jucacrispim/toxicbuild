@@ -28,9 +28,10 @@ from mongomotor.fields import (StringField, IntField, ReferenceField,
 from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core import utils
 from toxicbuild.master.scheduler import scheduler
-from toxicbuild.master.build import Slave, Build, Builder, BuildManager
+from toxicbuild.master.build import Build, Builder, BuildManager
 from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.pollers import Poller
+from toxicbuild.master.slave import Slave
 
 
 # The thing here is: When a repository poller is scheduled, I need to
@@ -40,7 +41,7 @@ from toxicbuild.master.pollers import Poller
 _scheduler_hashes = {}
 
 
-class Repository(Document):
+class Repository(Document, utils.LoggerMixin):
     name = StringField(required=True, unique=True)
     url = StringField(required=True, unique=True)
     update_seconds = IntField(default=300, required=True)
@@ -236,10 +237,6 @@ class Repository(Document):
     @asyncio.coroutine
     def add_build(self, **kwargs):
         yield from self.build_manager.add_build(**kwargs)
-
-    def log(self, msg):
-        msg = '[{}] - {}'.format(type(self).__name__, msg)
-        utils.log(msg)
 
 
 class RepositoryRevision(Document):
