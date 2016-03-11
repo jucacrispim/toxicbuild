@@ -24,7 +24,7 @@ import tornado
 from tornado.testing import AsyncTestCase, gen_test
 import toxicbuild
 from toxicbuild.core.utils import datetime2string, now
-from toxicbuild.master import build, repositories
+from toxicbuild.master import build, repository
 
 
 class BuildStepTest(AsyncTestCase):
@@ -50,8 +50,8 @@ class BuildTest(AsyncTestCase):
         build.Build.drop_collection()
         build.Builder.drop_collection()
         build.Slave.drop_collection()
-        repositories.RepositoryRevision.drop_collection()
-        repositories.Repository.drop_collection()
+        repository.RepositoryRevision.drop_collection()
+        repository.Repository.drop_collection()
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
@@ -79,13 +79,13 @@ class BuildTest(AsyncTestCase):
         self.slave = yield from build.Slave.create(name='slave',
                                                    host='localhost',
                                                    port=7777)
-        self.repo = repositories.Repository(
+        self.repo = repository.Repository(
             name='reponame', url='git@somewhere', update_seconds=300,
             vcs_type='git', slaves=[self.slave])
 
         yield self.repo.save()
 
-        self.revision = repositories.RepositoryRevision(
+        self.revision = repository.RepositoryRevision(
             repository=self.repo, branch='master', commit='bgcdf3123',
             commit_date=datetime.datetime.now()
         )
@@ -129,8 +129,8 @@ class SlaveTest(AsyncTestCase):
         build.Slave.drop_collection()
         build.Build.drop_collection()
         build.Builder.drop_collection()
-        repositories.RepositoryRevision.drop_collection()
-        repositories.Repository.drop_collection()
+        repository.RepositoryRevision.drop_collection()
+        repository.Repository.drop_collection()
         super().tearDown()
 
     def get_new_ioloop(self):
@@ -302,13 +302,13 @@ class SlaveTest(AsyncTestCase):
     @asyncio.coroutine
     def _create_test_data(self):
         yield self.slave.save()
-        self.repo = repositories.Repository(
+        self.repo = repository.Repository(
             name='reponame', url='git@somewhere', update_seconds=300,
             vcs_type='git', slaves=[self.slave])
 
         yield self.repo.save()
 
-        self.revision = repositories.RepositoryRevision(
+        self.revision = repository.RepositoryRevision(
             repository=self.repo, branch='master', commit='bgcdf3123',
             commit_date=datetime.datetime.now()
         )
@@ -344,8 +344,8 @@ class BuildManagerTest(AsyncTestCase):
         yield build.Slave.drop_collection()
         yield build.Build.drop_collection()
         yield build.Builder.drop_collection()
-        yield repositories.RepositoryRevision.drop_collection()
-        yield repositories.Repository.drop_collection()
+        yield repository.RepositoryRevision.drop_collection()
+        yield repository.Repository.drop_collection()
         super().tearDown()
 
     def get_new_ioloop(self):
@@ -454,13 +454,13 @@ class BuildManagerTest(AsyncTestCase):
         self.slave = build.Slave(host='127.0.0.1', port=7777, name='slave')
         self.slave.build = asyncio.coroutine(lambda x: None)
         yield self.slave.save()
-        self.repo = repositories.Repository(
+        self.repo = repository.Repository(
             name='reponame', url='git@somewhere', update_seconds=300,
             vcs_type='git', slaves=[self.slave])
 
         yield self.repo.save()
 
-        self.revision = repositories.RepositoryRevision(
+        self.revision = repository.RepositoryRevision(
             repository=self.repo, branch='master', commit='bgcdf3123',
             commit_date=datetime.datetime.now()
         )
@@ -486,15 +486,15 @@ class BuilderTest(AsyncTestCase):
     @gen_test
     def tearDown(self):
         yield build.Builder.drop_collection()
-        yield repositories.Repository.drop_collection()
+        yield repository.Repository.drop_collection()
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
     @gen_test
     def test_create(self):
-        repo = repositories.Repository(name='bla', url='git@bla.com',
-                                       update_seconds=300, vcs_type='git')
+        repo = repository.Repository(name='bla', url='git@bla.com',
+                                     update_seconds=300, vcs_type='git')
         yield repo.save()
 
         builder = yield from build.Builder.create(repository=repo, name='b1')
@@ -502,8 +502,8 @@ class BuilderTest(AsyncTestCase):
 
     @gen_test
     def test_get(self):
-        repo = repositories.Repository(name='bla', url='git@bla.com',
-                                       update_seconds=300, vcs_type='git')
+        repo = repository.Repository(name='bla', url='git@bla.com',
+                                     update_seconds=300, vcs_type='git')
         yield repo.save()
         builder = yield from build.Builder.create(repository=repo, name='b1')
 
@@ -522,8 +522,8 @@ class BuilderTest(AsyncTestCase):
     @mock.patch.object(build.Builder, 'create', mock.MagicMock())
     @gen_test
     def test_get_or_create_with_get(self):
-        repo = repositories.Repository(name='bla', url='git@bla.com',
-                                       update_seconds=300, vcs_type='git')
+        repo = repository.Repository(name='bla', url='git@bla.com',
+                                     update_seconds=300, vcs_type='git')
         yield repo.save()
         builder = yield from build.Builder.create(repository=repo, name='b1')
 
@@ -534,8 +534,8 @@ class BuilderTest(AsyncTestCase):
 
     @gen_test
     def test_get_status_without_build(self):
-        repo = repositories.Repository(name='bla', url='git@bla.com',
-                                       update_seconds=300, vcs_type='git')
+        repo = repository.Repository(name='bla', url='git@bla.com',
+                                     update_seconds=300, vcs_type='git')
         yield repo.save()
         builder = yield from build.Builder.create(repository=repo, name='b1')
         status = yield from builder.get_status()
@@ -544,8 +544,8 @@ class BuilderTest(AsyncTestCase):
 
     @gen_test
     def test_get_status(self):
-        repo = repositories.Repository(name='bla', url='git@bla.com',
-                                       update_seconds=300, vcs_type='git')
+        repo = repository.Repository(name='bla', url='git@bla.com',
+                                     update_seconds=300, vcs_type='git')
         yield repo.save()
         slave = build.Slave(name='bla', host='localhost', port=1234)
         yield slave.save()

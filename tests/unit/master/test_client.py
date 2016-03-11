@@ -21,7 +21,7 @@ import asyncio
 from unittest import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.master import client, build, repositories
+from toxicbuild.master import client, build, repository
 
 
 class BuildClientTest(AsyncTestCase):
@@ -35,7 +35,7 @@ class BuildClientTest(AsyncTestCase):
 
     def tearDown(self):
         build.Build.drop_collection()
-        repositories.Repository.drop_collection()
+        repository.Repository.drop_collection()
         build.Slave.drop_collection()
         build.Builder.drop_collection()
 
@@ -125,9 +125,9 @@ class BuildClientTest(AsyncTestCase):
         self.client.slave._process_build_info = asyncio.coroutine(
             lambda build, build_info: process())
 
-        repo = repositories.Repository(name='repo', url='git@somewhere.com',
-                                       slaves=[slave], update_seconds=300,
-                                       vcs_type='git')
+        repo = repository.Repository(name='repo', url='git@somewhere.com',
+                                     slaves=[slave], update_seconds=300,
+                                     vcs_type='git')
         yield repo.save()
         builder = build.Builder(repository=repo, name='b1')
         yield builder.save()

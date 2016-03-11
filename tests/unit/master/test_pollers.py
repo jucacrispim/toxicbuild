@@ -22,7 +22,7 @@ import datetime
 from unittest import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.master import pollers, repositories
+from toxicbuild.master import pollers, repository
 from toxicbuild.master.exceptions import CloneException
 
 
@@ -31,7 +31,7 @@ class GitPollerTest(AsyncTestCase):
     @mock.patch.object(pollers, 'get_vcs', mock.MagicMock())
     def setUp(self):
         super(GitPollerTest, self).setUp()
-        self.repo = repositories.Repository(
+        self.repo = repository.Repository(
             name='reponame', url='git@somewhere.org/project.git')
 
         self.poller = pollers.Poller(
@@ -39,8 +39,8 @@ class GitPollerTest(AsyncTestCase):
             notify_only_latest=True)
 
     def tearDown(self):
-        repositories.RepositoryRevision.drop_collection()
-        repositories.Repository.drop_collection()
+        repository.RepositoryRevision.drop_collection()
+        repository.Repository.drop_collection()
         super(GitPollerTest, self).tearDown()
 
     def get_new_ioloop(self):
@@ -200,13 +200,13 @@ class GitPollerTest(AsyncTestCase):
         now = datetime.datetime.now()
 
         for r in range(2):
-            rev = repositories.RepositoryRevision(
+            rev = repository.RepositoryRevision(
                 repository=rep, commit='123asdf', branch='master',
                 commit_date=now)
 
             yield rev.save()
 
-            rev = repositories.RepositoryRevision(
+            rev = repository.RepositoryRevision(
                 repository=rep, commit='123asef', branch='other',
                 commit_date=now)
 
