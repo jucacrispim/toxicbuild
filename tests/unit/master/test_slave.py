@@ -37,12 +37,13 @@ class SlaveTest(AsyncTestCase):
         super().setUp()
         self.slave = slave.Slave(name='slave', host='127.0.0.1', port=7777)
 
+    @gen_test
     def tearDown(self):
-        slave.Slave.drop_collection()
-        build.Build.drop_collection()
-        build.Builder.drop_collection()
-        repository.RepositoryRevision.drop_collection()
-        repository.Repository.drop_collection()
+        yield slave.Slave.drop_collection()
+        yield build.Build.drop_collection()
+        yield build.Builder.drop_collection()
+        yield repository.RepositoryRevision.drop_collection()
+        yield repository.Repository.drop_collection()
         super().tearDown()
 
     def get_new_ioloop(self):
@@ -139,9 +140,27 @@ class SlaveTest(AsyncTestCase):
             return client
 
         self.slave.get_client = gc
-        future = yield from self.slave.build(self.build)
-        yield from future
+        yield from self.slave.build(self.build)
         self.assertTrue(client.build.called)
+
+    @gen_test
+    def test_build_with_exception(self):
+        yield from self._create_test_data()
+        client = MagicMock()
+
+        @asyncio.coroutine
+        def gc():
+
+            @asyncio.coroutine
+            def b(build):
+                raise Exception
+
+            client.__enter__.return_value.build = b
+            return client
+
+        self.slave.get_client = gc
+        yield from self.slave.build(self.build)
+        self.assertEqual(self.build.status, 'exception')
 
     @patch.object(slave, 'build_started', Mock())
     @gen_test

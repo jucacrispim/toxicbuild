@@ -21,7 +21,7 @@ import asyncio
 from mongomotor import Document
 from mongomotor.fields import (StringField, IntField, BooleanField)
 from tornado.platform.asyncio import to_asyncio_future
-from toxicbuild.core.utils import string2datetime, LoggerMixin
+from toxicbuild.core.utils import string2datetime, LoggerMixin, now
 from toxicbuild.master.build import BuildStep, Builder
 from toxicbuild.master.client import get_build_client
 from toxicbuild.master.signals import (build_started, build_finished,
@@ -80,7 +80,7 @@ class Slave(Document, LoggerMixin):
         """ List builder available in for a given revision
 
         :param revision: An instance of
-          :class:`toxicbuild.master.repositories.RepositoryRevision`
+          :class:`toxicbuild.master.repository.RepositoryRevision`
         """
         repository = yield from to_asyncio_future(revision.repository)
         repo_url = repository.url
@@ -107,7 +107,18 @@ class Slave(Document, LoggerMixin):
         """
 
         with (yield from self.get_client()) as client:
-            build_info = yield from client.build(build)
+            try:
+                build_info = yield from client.build(build)
+            except Exception as e:
+                build.status = 'exception'
+                build.started = build.started or now()
+                exception_step = BuildStep(output=str(e), started=now(),
+                                           finished=now(), status='exception',
+                                           command='', name='exception')
+                build.steps = build.steps + [exception_step]
+                yield from to_asyncio_future(build.save())
+                build_info = build.to_dict()
+
         return build_info
 
     @asyncio.coroutine
