@@ -186,7 +186,7 @@ var RepositoryManager = function(){
     },
 
     getStartBuildInfo: function(){
-      var repo_name = $('#repo-start-build-name').val()
+      var repo_name = $('#start_build_name').val()
       var branch = $('#branch').val();
       var builder_name = $('#builder_name').val();
       var named_tree = $('#named_tree').val();
@@ -275,6 +275,12 @@ var RepositoryManager = function(){
     }
 
   });
+
+  // setting repo name for start build
+  $('.start-build-btn').on('click', function(event){
+    $('#start_build_name').val($(this).data('start-build-name'));
+  });
+
 
   // connecting to start build modal submit
   jQuery('#startBuildModal').on('submit', function(event){
