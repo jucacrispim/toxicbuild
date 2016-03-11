@@ -168,7 +168,9 @@ class BuildManager:
                 name, self.repo_url, self.branch)
             raise BuilderNotFound(msg)
 
-        builder = Builder(self, bdict['name'], self.workdir)
+        # this envvars are used in all steps in this builder
+        builder_envvars = bdict.get('envvars', {})
+        builder = Builder(self, bdict['name'], self.workdir, **builder_envvars)
         plugins_conf = bdict.get('plugins')
         if plugins_conf:
             builder.plugins = self._load_plugins(plugins_conf)

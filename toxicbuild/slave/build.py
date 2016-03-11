@@ -18,27 +18,30 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from copy import copy
 from toxicbuild.core.exceptions import ExecCmdError
-from toxicbuild.core.utils import(exec_cmd, log, datetime2string, now)
+from toxicbuild.core.utils import(exec_cmd, LoggerMixin, datetime2string, now)
 from toxicbuild.slave.contextmanagers import change_dir
 
 
-class Builder:
+class Builder(LoggerMixin):
 
     """ A builder executes build steps. Builders are configured in
     the toxicbuild.conf file
     """
 
-    def __init__(self, manager, name, workdir):
+    def __init__(self, manager, name, workdir, **envvars):
         """:param manager: instance of :class:`toxicbuild.slave.BuildManager`.
         :param name: name for this builder.
-        :param workdir: directory where the steps will be executed
+        :param workdir: directory where the steps will be executed.
+        :param envvars: Environment variables to be used on the steps.
         """
         self.manager = manager
         self.name = name
         self.workdir = workdir
         self.steps = []
         self.plugins = []
+        self.envvars = envvars
 
     @asyncio.coroutine
     def build(self):
@@ -88,13 +91,10 @@ class Builder:
         return build_info
 
     def _get_env_vars(self):
-        envvars = {}
+        envvars = copy(self.envvars)
         for plugin in self.plugins:
             envvars.update(plugin.get_env_vars())
         return envvars
-
-    def log(self, msg, level='info'):
-        log('[{}] {} '.format(type(self).__name__, msg), level)
 
 
 class BuildStep:

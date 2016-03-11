@@ -224,7 +224,7 @@ class BuilderManagerTest(AsyncTestCase):
             self.manager.vcs.checkout = old_co
 
     def test_list_builders(self):
-        expected = ['builder1', 'builder2', 'builder3']
+        expected = ['builder1', 'builder2', 'builder3', 'builder4']
         returned = self.manager.list_builders()
 
         self.assertEqual(returned, expected)
@@ -246,6 +246,10 @@ class BuilderManagerTest(AsyncTestCase):
         with self.assertRaises(managers.BuilderNotFound):
             builder = self.manager.load_builder('builder300')
             del builder
+
+    def test_load_builder_with_envvars(self):
+        builder = self.manager.load_builder('builder4')
+        self.assertTrue(builder.envvars)
 
     def test_load_plugins(self):
         plugins_conf = [{'name': 'python-venv',

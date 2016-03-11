@@ -19,7 +19,7 @@
 
 import asyncio
 import os
-import mock
+from unittest import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core.utils import load_module_from_file
@@ -77,6 +77,14 @@ class BuilderTest(AsyncTestCase):
         expected = {'PATH': 'PATH:venv/bin'}
         returned = self.builder._get_env_vars()
 
+        self.assertEqual(expected, returned)
+
+    def test_get_envvar_with_builder_envvars(self):
+        pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
+        self.builder.plugins = self.builder.manager._load_plugins(pconfig)
+        self.builder.envvars = {'VAR1': 'someval'}
+        expected = {'PATH': 'PATH:venv/bin', 'VAR1': 'someval'}
+        returned = self.builder._get_env_vars()
         self.assertEqual(expected, returned)
 
 

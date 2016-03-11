@@ -21,6 +21,7 @@ import asyncio
 from mongomotor import Document
 from mongomotor.fields import (StringField, IntField, BooleanField)
 from tornado.platform.asyncio import to_asyncio_future
+from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.core.utils import string2datetime, LoggerMixin, now
 from toxicbuild.master.build import BuildStep, Builder
 from toxicbuild.master.client import get_build_client
@@ -109,9 +110,10 @@ class Slave(Document, LoggerMixin):
         with (yield from self.get_client()) as client:
             try:
                 build_info = yield from client.build(build)
-            except Exception as e:
+            except ToxicClientException as e:
                 build.status = 'exception'
                 build.started = build.started or now()
+                build.finished = build.finished or now()
                 exception_step = BuildStep(output=str(e), started=now(),
                                            finished=now(), status='exception',
                                            command='', name='exception')

@@ -153,7 +153,7 @@ class SlaveTest(AsyncTestCase):
 
             @asyncio.coroutine
             def b(build):
-                raise Exception
+                raise slave.ToxicClientException
 
             client.__enter__.return_value.build = b
             return client
@@ -161,6 +161,7 @@ class SlaveTest(AsyncTestCase):
         self.slave.get_client = gc
         yield from self.slave.build(self.build)
         self.assertEqual(self.build.status, 'exception')
+        self.assertTrue(self.build.finished)
 
     @patch.object(slave, 'build_started', Mock())
     @gen_test
