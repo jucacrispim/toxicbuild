@@ -23,7 +23,7 @@ from toxicbuild.core import utils
 from toxicbuild.core.exceptions import ToxicClientException
 
 
-class BaseToxicClient:
+class BaseToxicClient(utils.LoggerMixin):
 
     """ Base client for access toxicbuild servers. """
 
@@ -52,6 +52,7 @@ class BaseToxicClient:
         self._connected = True
 
     def disconnect(self):
+        self.log('disconecting...', level='debug')
         self.writer.close()
         self._connected = False
 
