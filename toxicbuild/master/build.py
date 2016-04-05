@@ -117,8 +117,8 @@ class Build(Document):
     """ A set of steps for a repository
     """
 
-    STATUSES = BuildStep.STATUSES + ['pending']
     PENDING = 'pending'
+    STATUSES = BuildStep.STATUSES + [PENDING]
 
     repository = ReferenceField('toxicbuild.master.Repository', required=True)
     slave = ReferenceField('Slave', required=True)
@@ -156,7 +156,7 @@ class Build(Document):
 
         parallels = type(self).objects.filter(
             id__ne=self.id, branch=self.branch, named_tree=self.named_tree,
-            builder__ne=self.builder, slave=self.slave)
+            builder__ne=self.builder, slave=self.slave, status=self.PENDING)
         parallels = yield from to_asyncio_future(parallels.to_list())
         msg = 'There are {} parallels for {}'.format(len(parallels), self.id)
         self.log(msg, level='debug')
@@ -164,6 +164,15 @@ class Build(Document):
 
     def log(self, msg, level='info'):
         log('[{}] {} '.format(type(self).__name__, msg), level)
+
+
+class BuildSet(Document):
+
+    """A list of builds associated with a revision."""
+
+    revision = ReferenceField('toxicbuild.master.RepositoryRevision')
+    builds = ListField(ReferenceField(Build))
+    status = StringField(default=Build.PENDING, choices=Build.STATUSES)
 
 
 class BuildManager:
@@ -228,6 +237,10 @@ class BuildManager:
         :param revision: A
           :class:`toxicbuild.master.repository.RepositoryRevision`.
         """
+
+        while self.repository.poller.is_polling():
+            yield from asyncio.sleep(1)
+
         self.log('checkout on {} to {}'.format(
             self.repository.url, revision.commit), level='debug')
         yield from self.repository.poller.vcs.checkout(revision.commit)
@@ -271,8 +284,6 @@ class BuildManager:
             while True:
                 try:
                     build = self._build_queues[slave.name].popleft()
-                    # the build could be executed in parallel with some
-                    # other preceding build
                     while build.status != build.PENDING:
                         build = self._build_queues[slave.name].popleft()
                 except IndexError:

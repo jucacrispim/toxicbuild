@@ -41,7 +41,10 @@ class Poller:
         self.repository = repository
         self.vcs = get_vcs(vcs_type)(workdir)
         self.notify_only_latest = notify_only_latest
-        self._is_processing_changes = False
+        self._is_polling = False
+
+    def is_polling(self):
+        return self._is_polling
 
     @asyncio.coroutine
     def poll(self):
@@ -49,39 +52,42 @@ class Poller:
         about it.
         """
 
-        self.log('Polling changes for {}'.format(self.repository.url))
-
-        if not self.vcs.workdir_exists():
-            self.log('clonning repo {}'.format(self.repository.url))
-            try:
-                yield from self.vcs.clone(self.repository.url)
-            except Exception as e:
-                self.log(str(e), level='error')
-                raise CloneException(str(e))
-
-        # for git.
-        # remove no branch when hg is implemented
-        if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
-            self.log('updating submodule', level='debug')
-            yield from self.vcs.update_submodule()
-
         try:
-            yield from self.process_changes()
-        except Exception as e:
-            # shit happends
-            log(str(e), level='error')
-            # but the show must go on
-            self._is_processing_changes = False
+            if self.is_polling():
+                self.log('alreay polling for {}. leaving...'.format(
+                    self.repository.url), level='debug')
+                return
+
+            self._is_polling = True
+            self.log('Polling changes for {}'.format(self.repository.url))
+
+            if not self.vcs.workdir_exists():
+                self.log('clonning repo {}'.format(self.repository.url))
+                try:
+                    yield from self.vcs.clone(self.repository.url)
+                except Exception as e:
+                    self.log(str(e), level='error')
+                    raise CloneException(str(e))
+
+            # for git.
+            # remove no branch when hg is implemented
+            if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
+                self.log('updating submodule', level='debug')
+                yield from self.vcs.update_submodule()
+
+            try:
+                yield from self.process_changes()
+            except Exception as e:
+                # shit happends
+                log(str(e), level='error')
+                # but the show must go on
+        finally:
+            self._is_polling = False
 
     @asyncio.coroutine
     def process_changes(self):
         """ Process all changes since the last revision in db
         """
-        if self._is_processing_changes:
-            self.log('alreay processing for {}. leaving'.format(
-                self.repository.url), level='debug')
-            return
-        self._is_processing_changes = True
         self.log('processing changes for {}'.format(self.repository.url),
                  level='debug')
 
@@ -131,7 +137,6 @@ class Poller:
                                     branch))
 
         self.notify_change(*revisions)
-        self._is_processing_changes = False
 
     def notify_change(self, *revisions):
         """ Notify about incoming changes. """

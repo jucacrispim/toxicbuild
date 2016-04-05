@@ -171,6 +171,37 @@ class BuildManagerTest(AsyncTestCase):
 
     @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
     @mock.patch.object(build, 'list_builders_from_config',
+                       mock.Mock(return_value=['builder-0', 'builder-1']))
+    @mock.patch.object(build.asyncio, 'sleep', mock.MagicMock)
+    @gen_test
+    def test_get_builders_polling(self):
+
+        sleep_mock = mock.Mock()
+
+        @asyncio.coroutine
+        def sleep(n):
+            sleep_mock()
+
+        build.asyncio.sleep = sleep
+        yield from self._create_test_data()
+        self.manager.repository = self.repo
+
+        self.manager.repository.poller.is_polling = mock.Mock(
+            side_effect=[True, False])
+
+        self.manager.repository.poller.vcs.checkout = mock.MagicMock()
+
+        builders = yield from self.manager.get_builders(self.slave,
+                                                        self.revision)
+
+        for b in builders:
+            self.assertTrue(isinstance(b, build.Document))
+
+        self.assertEqual(len(builders), 2)
+        self.assertTrue(sleep_mock.called)
+
+    @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
+    @mock.patch.object(build, 'list_builders_from_config',
                        mock.Mock(side_effect=AttributeError))
     @mock.patch.object(build, 'log', mock.Mock())
     @gen_test

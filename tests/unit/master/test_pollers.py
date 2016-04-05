@@ -79,15 +79,6 @@ class GitPollerTest(AsyncTestCase):
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @gen_test
-    def test_process_changes_locked(self):
-        # now in the future, of course!
-        self.poller._is_processing_changes = True
-        yield from self.poller.process_changes()
-
-        self.assertFalse(pollers.revision_added.send.called)
-
-    @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
-    @gen_test
     def test_poll(self):
         yield from self._create_db_revisions()
 
@@ -192,6 +183,16 @@ class GitPollerTest(AsyncTestCase):
         yield from self.poller.poll()
 
         self.assertTrue(self.poller.vcs.update_submodule.called)
+
+    @gen_test
+    def test_poll_already_polling(self):
+        self.poller.process_changes = mock.MagicMock()
+        self.poller.vcs.workdir_exists = lambda: True
+        self.poller.vcs.update_submodule = mock.MagicMock()
+        self.poller._is_polling = True
+        yield from self.poller.poll()
+
+        self.assertFalse(self.poller.process_changes.called)
 
     @asyncio.coroutine
     def _create_db_revisions(self):
