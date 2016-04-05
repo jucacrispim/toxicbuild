@@ -23,10 +23,10 @@ import os
 from toxicbuild.core.exceptions import VCSError
 from toxicbuild.core.utils import(exec_cmd, inherit_docs, string2datetime,
                                   datetime2string, utc2localtime,
-                                  localtime2utc)
+                                  localtime2utc, LoggerMixin)
 
 
-class VCS(metaclass=ABCMeta):
+class VCS(LoggerMixin, metaclass=ABCMeta):
 
     """ Generic inteface to a vcs (clone, fetch, get revisions etc...).
     """
@@ -193,6 +193,9 @@ class Git(VCS):
             # utc time in git commits unless we are using git 2.7+
             localtime = utc2localtime(since)
             date = datetime2string(localtime, self.date_format)
+            self.log('get revisions for branch {} since {}'.format(branch,
+                                                                   date),
+                     level='debug')
             cmd += '--since="%s" ' % date
 
         cmd += '--date=local'
