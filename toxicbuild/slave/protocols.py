@@ -63,7 +63,8 @@ class BuildServerProtocol(BaseToxicProtocol):
             self.log(e.args[0], level='error')
             yield from self.send_response(code=1, body=e.args[0])
 
-        self.close_connection()
+        finally:
+            self.close_connection()
 
     @asyncio.coroutine
     def healthcheck(self):
