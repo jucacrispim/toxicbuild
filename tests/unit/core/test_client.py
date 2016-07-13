@@ -132,7 +132,7 @@ class BuildClientTest(AsyncTestCase):
         @asyncio.coroutine
         def read():
             return {'code': 1,
-                    'body': 'wrong thing!'}
+                    'body': {'error': 'wrong thing!'}}
 
         self.client.read = read
 
