@@ -79,5 +79,5 @@ class BaseToxicClient(utils.LoggerMixin):
         response = yield from self.read()
 
         if 'code' in response and int(response['code']) != 0:
-            raise ToxicClientException(response['body'])
+            raise ToxicClientException(response['body']['error'])
         return response
