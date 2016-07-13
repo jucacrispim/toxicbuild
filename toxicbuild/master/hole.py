@@ -25,11 +25,12 @@
 import asyncio
 import inspect
 import json
+import traceback
 from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import log
-from toxicbuild.master import (Slave, Repository, Build, Builder,
-                               RepositoryRevision)
+from toxicbuild.master import (Slave, Repository, Builder,
+                               BuildSet, RepositoryRevision)
 from toxicbuild.master.exceptions import UIFunctionNotFound
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished)
@@ -47,8 +48,8 @@ class UIHole(BaseToxicProtocol):
 
         try:
             yield from handler.handle()
-        except Exception as e:
-            msg = str(e)
+        except Exception:
+            msg = traceback.format_exc()
             yield from self.send_response(code=1, body={'error': msg})
             self.close_connection()
 
@@ -206,13 +207,14 @@ class HoleHandler:
                          named_tree=None, slaves=[]):
         """ Starts a(some) build(s) in a given repository. """
 
-        # Mutable stuff on method declaration Sin!!! Take that, PyLint!
+        # Mutable stuff on method declaration. Sin!!! Take that, PyLint!
 
         repo = yield from Repository.get(name=repo_name)
 
         slaves = yield from [(yield from Slave.get(name=name))
                              for name in slaves]
-        slaves = slaves or repo.slaves
+        if not slaves:
+            slaves = yield from to_asyncio_future(repo.slaves)
 
         if not named_tree:
             rev = yield from repo.get_latest_revision_for_branch(branch)
@@ -233,12 +235,11 @@ class HoleHandler:
 
         builds_count = 0
 
+        buildset = BuildSet(repository=repo, revision=rev)
+        yield from to_asyncio_future(buildset.save())
         for slave in slaves:
-            for builder in builders[slave]:
-                builds_count += 1
-                yield from repo.add_build(builder=builder, branch=branch,
-                                          slave=slave,
-                                          named_tree=named_tree)
+            yield from repo.add_builds_for_slave(buildset, slave,
+                                                 builders[slave])
 
         return {'repo-start-build': '{} builds added'.format(builds_count)}
 
@@ -285,48 +286,65 @@ class HoleHandler:
         return {'slave-list': slave_list}
 
     @asyncio.coroutine
-    def builder_list(self, repo_name=None, builds_skip=0, builds_offset=None):
-        """ Lists all builders.
+    def buildset_list(self, repo_name=None, skip=0, offset=None):
+        """ Lists all buildsets.
 
         If ``repo_name``, only builders from this repository will be listed.
         :param repo_name: Repository's name.
-        :param builds_skip: skip for builds list.
-        :param builds_offset: offset for builds list.
+        :param skip: skip for buildset list.
+        :param offset: offset for buildset list.
         """
 
-        builders = Builder.objects
+        buildsets = BuildSet.objects
         if repo_name:
             repository = yield from Repository.get(name=repo_name)
-            builders = builders.filter(repository=repository)
+            buildsets = buildsets.filter(repository=repository)
 
-        builders = yield from to_asyncio_future(builders.to_list())
+        count = yield from to_asyncio_future(buildsets.count())
 
-        builder_list = []
+        stop = count if not offset else skip + offset
 
-        for builder in builders:
-            builder_dict = json.loads(builder.to_json())
-            builder_dict['id'] = str(builder.id)
-            builder_dict['builds'] = yield from self._get_builds(
-                builder, builds_skip, builds_offset)
-            builder_dict['status'] = yield from builder.get_status()
+        buildsets = yield from to_asyncio_future(buildsets[skip:stop])
+        buildsets = yield from to_asyncio_future(buildsets.to_list())
+        buildset_list = []
+        for b in buildsets:
+            bdict = yield from b.to_dict(id_as_str=True)
+            buildset_list.append(bdict)
 
-            builder_list.append(builder_dict)
-
-        return {'builder-list': builder_list}
+        return {'buildset-list': buildset_list}
 
     @asyncio.coroutine
-    def builder_show(self, repo_name, builder_name):
-        """ Returns information about one specific builder. """
+    def builder_show(self, repo_name, builder_name, skip=0, offset=None):
+        """ Returns information about one specific builder.
+
+        :param repo_name: The builder's repository name.
+        :param builder_name. The bulider's name.
+        :param skip: How many elements we should skip in the result.
+        :param offset: How many results we should return."""
 
         kwargs = {'name': builder_name}
         repo = yield from Repository.get(name=repo_name)
         kwargs.update({'repository': repo})
 
         builder = yield from Builder.get(**kwargs)
-        builder_dict = json.loads(builder.to_json())
-        builder_dict['id'] = str(builder.id)
-        builds = yield from self._get_builds(builder)
-        builder_dict.update({'builds': builds})
+        buildsets = BuildSet.objects(builds__builder=builder)
+        count = yield from to_asyncio_future(buildsets.count())
+        stop = count if not offset else skip + offset
+        buildsets = yield from to_asyncio_future(buildsets[skip:stop])
+        buildsets = yield from to_asyncio_future(buildsets.to_list())
+        buildsets_list = []
+        for buildset in buildsets:
+            bdict = yield from buildset.to_dict()
+            bdict['builds'] = []
+            for b in (yield from buildset.get_builds_for(builder=builder)):
+                build_dict = yield from b.to_dict()
+                bdict['builds'].append(build_dict)
+
+            buildsets_list.append(bdict)
+
+        builder_dict = builder.to_dict()
+        builder_dict['status'] = yield from builder.get_status()
+        builder_dict['buildsets'] = buildsets_list
         return {'builder-show': builder_dict}
 
     def list_funcs(self):
@@ -338,29 +356,6 @@ class HoleHandler:
                  for n, m in funcs.items()}
 
         return {'list-funcs': funcs}
-
-    @asyncio.coroutine
-    def _get_builds(self, builder, skip=0, offset=None):
-        """Returns builds for a given builder."""
-
-        build_list = []
-        builds = Build.objects.filter(builder=builder).order_by('-number')
-
-        total = yield from to_asyncio_future(builds.count())
-
-        if offset is None:
-            offset = total
-        else:
-            offset = skip + offset
-
-        builds = yield from to_asyncio_future(builds[skip:offset])
-        builds = yield from to_asyncio_future(builds.to_list())
-
-        for build in builds:
-            build_dict = json.loads(build.to_json())
-            build_dict['id'] = str(build.id)
-            build_list.append(build_dict)
-        return build_list
 
     def _get_action_methods(self):
         """ Returns the methods that are avaliable as actions for users. """
@@ -378,7 +373,8 @@ class HoleHandler:
         repo_dict = json.loads(repo.to_json())
         repo_dict['id'] = str(repo.id)
         repo_dict['status'] = yield from repo.get_status()
-        repo_dict['slaves'] = [self._get_slave_dict(s) for s in repo.slaves]
+        slaves = yield from to_asyncio_future(repo.slaves)
+        repo_dict['slaves'] = [self._get_slave_dict(s) for s in slaves]
         return repo_dict
 
     def _get_slave_dict(self, slave):
@@ -446,16 +442,13 @@ class UIStreamHandler:
 
     @asyncio.coroutine
     def send_info(self, info_type, build=None, step=None):
-        builder = yield from to_asyncio_future(build.builder)
         repo = yield from to_asyncio_future(build.repository)
         slave = yield from to_asyncio_future(build.slave)
 
-        build = json.loads(build.to_json())
-        builder = json.loads(builder.to_json())
+        build = yield from build.to_dict()
         slave = json.loads(slave.to_json())
         repo = json.loads(repo.to_json())
 
-        build['builder'] = builder
         build['slave'] = slave
         build['repository'] = repo
 

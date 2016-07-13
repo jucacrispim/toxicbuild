@@ -92,6 +92,7 @@ def get_build_client(slave, addr, port):
     """ Instanciate :class:`toxicbuild.master.client.BuildClient` and
     connects it to a build server
     """
+
     client = BuildClient(slave, addr, port)
     yield from client.connect()
     return client

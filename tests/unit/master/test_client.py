@@ -21,6 +21,7 @@ import asyncio
 from unittest import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
+from toxicbuild.core.utils import now
 from toxicbuild.master import client, build, repository, slave
 
 
@@ -34,7 +35,7 @@ class BuildClientTest(AsyncTestCase):
         self.client = client.BuildClient(slave, addr, port)
 
     def tearDown(self):
-        build.Build.drop_collection()
+        build.BuildSet.drop_collection()
         repository.Repository.drop_collection()
         slave.Slave.drop_collection()
         build.Builder.drop_collection()
@@ -112,7 +113,7 @@ class BuildClientTest(AsyncTestCase):
             # I need this sleep here so I can test the exact
             # behavior of the get_response method. No, it does not
             # sleep, but pass the control to the select thing.
-            yield from asyncio.sleep(0.1)
+            yield from asyncio.sleep(0.001)
             self.GR_COUNT += 1
             return self.GR_RETURNS[self.GR_COUNT]
 
@@ -129,13 +130,18 @@ class BuildClientTest(AsyncTestCase):
                                      slaves=[slave_inst], update_seconds=300,
                                      vcs_type='git')
         yield repo.save()
+        revision = repository.RepositoryRevision(
+            commit='sdafj', repository=repo, branch='master', commit_date=now)
+
+        yield revision.save()
         builder = build.Builder(repository=repo, name='b1')
         yield builder.save()
 
         buildinstance = build.Build(repository=repo, slave=slave_inst,
                                     builder=builder, branch='master',
-                                    named_tree='123sdf09', number=0)
-        yield buildinstance.save()
+                                    named_tree='123sdf09')
+        buildset = build.BuildSet(repository=repo, revision=revision)
+        yield buildset.save()
 
         yield from self.client.build(buildinstance)
         self.assertEqual(len(process.call_args_list), 3)

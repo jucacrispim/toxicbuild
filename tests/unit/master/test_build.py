@@ -45,73 +45,188 @@ class BuildStepTest(AsyncTestCase):
 
 class BuildTest(AsyncTestCase):
 
+    @gen_test
     def tearDown(self):
-        build.Build.drop_collection()
-        build.Builder.drop_collection()
-        slave.Slave.drop_collection()
-        repository.RepositoryRevision.drop_collection()
-        repository.Repository.drop_collection()
+        yield build.BuildSet.drop_collection()
+        yield build.Builder.drop_collection()
+        yield slave.Slave.drop_collection()
+        yield repository.RepositoryRevision.drop_collection()
+        yield repository.Repository.drop_collection()
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
+    @gen_test
     def test_to_json(self):
+        yield self._create_test_data()
         bs = build.BuildStep(name='bla',
                              command='ls',
                              status='pending')
-        b = build.Build()
-        b.steps.append(bs)
-        bd = build.json.loads(b.to_json())
+        self.buildset.builds[0].steps.append(bs)
+        bd = build.json.loads((yield from self.buildset.builds[0].to_json()))
         self.assertIn('finished', bd['steps'][0].keys())
+        self.assertTrue(bd['builder']['id'])
 
     @gen_test
-    def test_get_parallels(self):
-        yield from self._create_test_data()
+    def test_update(self):
+        yield self._create_test_data()
+        b = self.buildset.builds[0]
+        b.status = 'fail'
+        yield from b.update()
 
-        build = self.builds[0]
-        parallels = yield from build.get_parallels()
+        buildset = yield build.BuildSet.objects.get(id=self.buildset.id)
+        self.assertEqual(buildset.builds[0].status, 'fail')
 
-        self.assertEqual(len(parallels), 1)
+    @gen_test
+    def test_update_without_save(self):
+        yield self._create_test_data()
 
-    @asyncio.coroutine
+        b = build.Build(branch='master', builder=self.builder,
+                        repository=self.repo, slave=self.slave,
+                        named_tree='v0.1')
+
+        with self.assertRaises(build.DBError):
+            yield from b.update()
+
+    @tornado.gen.coroutine
     def _create_test_data(self):
-        self.slave = yield from slave.Slave.create(name='slave',
-                                                   host='localhost',
-                                                   port=7777)
-        self.repo = repository.Repository(
-            name='reponame', url='git@somewhere', update_seconds=300,
-            vcs_type='git', slaves=[self.slave])
-
+        self.repo = repository.Repository(name='bla', url='git@bla.com')
         yield self.repo.save()
+        self.slave = slave.Slave(name='sla', host='localhost', port=1234)
+        yield self.slave.save()
+        self.builder = build.Builder(repository=self.repo, name='builder-bla')
+        yield self.builder.save()
+        b = build.Build(branch='master', builder=self.builder,
+                        repository=self.repo, slave=self.slave,
+                        named_tree='v0.1')
+        self.buildset = build.BuildSet(repository=self.repo,
+                                       builds=[b])
+        yield self.buildset.save()
 
-        self.revision = repository.RepositoryRevision(
-            repository=self.repo, branch='master', commit='bgcdf3123',
-            commit_date=datetime.datetime.now()
-        )
 
-        yield self.revision.save()
+class BuildSetTest(AsyncTestCase):
 
-        self.builders = []
-        for i in range(2):
-            builder = build.Builder(repository=self.repo,
-                                    name='builder-%s' % i)
-            yield builder.save()
-            self.builders.append(builder)
+    @gen_test
+    def tearDown(self):
+        yield repository.Repository.drop_collection()
+        yield slave.Slave.drop_collection()
+        yield build.BuildSet.drop_collection()
 
-        self.builds = []
-        for i in range(3):
-            try:
-                builder = self.builders[i]
-            except IndexError:
-                builder = self.builders[0]
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
 
-            binst = build.Build(repository=self.repo, slave=self.slave,
-                                branch='master', named_tree='v0.1',
-                                builder=builder, number=i)
+    @gen_test
+    def test_to_dict(self):
+        yield self._create_test_data()
+        objdict = yield from self.buildset.to_dict()
+        self.assertEqual(len(objdict['builds']), 1)
 
-            yield binst.save()
+    @gen_test
+    def test_to_json(self):
+        yield self._create_test_data()
 
-            self.builds.append(binst)
+        objdict = build.json.loads((yield from self.buildset.to_json()))
+        self.assertTrue(objdict['id'])
+
+    @gen_test
+    def test_status_running(self):
+        buildset = build.BuildSet()
+        statuses = ['running', 'exception', 'fail',
+                    'warning', 'success', 'pending']
+        for i in range(5):
+            build_inst = build.Build(status=statuses[i])
+            buildset.builds.append(build_inst)
+
+        status = buildset.get_status()
+        self.assertEqual(status, 'running')
+
+    @gen_test
+    def test_status_exception(self):
+        buildset = build.BuildSet()
+        statuses = ['running', 'exception', 'fail',
+                    'warning', 'success', 'pending']
+
+        for i in range(5):
+            if i > 0:
+                build_inst = build.Build(status=statuses[i])
+                buildset.builds.append(build_inst)
+
+        status = buildset.get_status()
+        self.assertEqual(status, 'exception')
+
+    @gen_test
+    def test_status_fail(self):
+        buildset = build.BuildSet()
+        statuses = ['running', 'exception', 'fail',
+                    'warning', 'success', 'pending']
+        for i in range(5):
+            if i > 1:
+                build_inst = build.Build(status=statuses[i])
+                buildset.builds.append(build_inst)
+
+        status = buildset.get_status()
+        self.assertEqual(status, 'fail')
+
+    def test_get_pending_builds(self):
+        buildset = build.BuildSet()
+        statuses = ['running', 'exception', 'fail',
+                    'warning', 'success', 'pending']
+
+        for i in range(6):
+            build_inst = build.Build(status=statuses[i])
+            buildset.builds.append(build_inst)
+
+        pending = buildset.get_pending_builds()
+        self.assertEqual(len(pending), 1)
+
+    @gen_test
+    def test_get_builds_for_branch(self):
+        yield self._create_test_data()
+        b = build.Build(branch='other', builder=self.builder,
+                        repository=self.repo, slave=self.slave,
+                        named_tree='v0.1')
+        self.buildset.builds.append(b)
+
+        builds = yield from self.buildset.get_builds_for(branch='other')
+        self.assertEqual(len(builds), 1)
+
+    @gen_test
+    def test_get_builds_for_builder(self):
+        yield self._create_test_data()
+        b = build.Build(branch='other', builder=self.builder,
+                        repository=self.repo, slave=self.slave,
+                        named_tree='v0.1')
+        self.buildset.builds.append(b)
+
+        builds = yield from self.buildset.get_builds_for(builder=self.builder)
+        self.assertEqual(len(builds), 2)
+
+    @gen_test
+    def test_get_builds_for_builder_and_branch(self):
+        yield self._create_test_data()
+        b = build.Build(branch='other', builder=self.builder,
+                        repository=self.repo, slave=self.slave,
+                        named_tree='v0.1')
+        self.buildset.builds.append(b)
+
+        builds = yield from self.buildset.get_builds_for(builder=self.builder,
+                                                         branch='master')
+        self.assertEqual(len(builds), 1)
+
+    @tornado.gen.coroutine
+    def _create_test_data(self):
+        self.repo = repository.Repository(name='bla', url='git@bla.com')
+        yield self.repo.save()
+        self.slave = slave.Slave(name='sla', host='localhost', port=1234)
+        yield self.slave.save()
+        self.builder = build.Builder(repository=self.repo, name='builder-bla')
+        yield self.builder.save()
+        self.build = build.Build(branch='master', builder=self.builder,
+                                 repository=self.repo, slave=self.slave,
+                                 named_tree='v0.1')
+        self.buildset = build.BuildSet(repository=self.repo,
+                                       builds=[self.build])
+        yield self.buildset.save()
 
 
 class BuildManagerTest(AsyncTestCase):
@@ -127,14 +242,33 @@ class BuildManagerTest(AsyncTestCase):
     @gen_test
     def tearDown(self):
         yield slave.Slave.drop_collection()
-        yield build.Build.drop_collection()
+        yield build.BuildSet.drop_collection()
         yield build.Builder.drop_collection()
         yield repository.RepositoryRevision.drop_collection()
         yield repository.Repository.drop_collection()
+        yield repository.Slave.drop_collection()
         super().tearDown()
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
+
+    @gen_test
+    def test_add_builds_for_slave(self):
+        yield from self._create_test_data()
+        b = build.Builder()
+        b.repository = self.repo
+        b.name = 'blabla'
+        yield b.save()
+        self.manager.repository = self.repo
+        self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
+
+        yield from self.manager.add_builds_for_slave(self.buildset, self.slave,
+                                                     [b, self.builder])
+        self.assertEqual(len(self.manager._build_queues[self.slave.name]), 1)
+        buildset = self.manager._build_queues[self.slave.name][0]
+        # It already has two builds from _create_test_data and more two
+        # from .add_builds_for_slave
+        self.assertEqual(len(buildset.builds), 4)
 
     @gen_test
     def test_add_builds(self):
@@ -143,10 +277,10 @@ class BuildManagerTest(AsyncTestCase):
         self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
 
         @asyncio.coroutine
-        def lb(branch, slave):
+        def gb(branch, slave):
             return [self.builder]
 
-        self.manager.get_builders = lb
+        self.manager.get_builders = gb
 
         yield from self.manager.add_builds([self.revision])
 
@@ -221,7 +355,7 @@ class BuildManagerTest(AsyncTestCase):
 
         self.manager._execute_in_parallel = mock.MagicMock()
         self.manager._build_queues[self.slave.name].extend(
-            [self.build, self.consumed_build])
+            [self.buildset])
         yield from self.manager._execute_builds(self.slave)
         called_args = self.manager._execute_in_parallel.call_args[0]
 
@@ -241,24 +375,10 @@ class BuildManagerTest(AsyncTestCase):
             self.assertTrue(f.done())
 
     @gen_test
-    def test_get_next_build_number_without_build(self):
-        yield from self._create_test_data()
-        yield from build.to_asyncio_future(build.Build.drop_collection())
-        number = yield from self.manager._get_next_build_number(self.builder)
-        self.assertEqual(number, 0)
-
-    @gen_test
-    def test_get_next_build_number_with_build(self):
-        yield from self._create_test_data()
-        number = yield from self.manager._get_next_build_number(self.builder)
-        self.assertEqual(number, 2)
-
-    @gen_test
     def test_add_builds_from_signal(self):
         # ensures that builds are added when revision_added signal is sent.
 
         yield from self._create_test_data()
-        yield build.Build.drop_collection()
         self.repo.build_manager.add_builds = mock.MagicMock()
         ret = self.repo.poller.notify_change(*[self.revision])
         futures = [r[1] for r in ret]
@@ -285,16 +405,20 @@ class BuildManagerTest(AsyncTestCase):
 
         self.builder = build.Builder(repository=self.repo, name='builder-1')
         yield self.builder.save()
+        self.buildset = build.BuildSet(repository=self.repo,
+                                       revision=self.revision)
         self.build = build.Build(repository=self.repo, slave=self.slave,
                                  branch='master', named_tree='v0.1',
-                                 builder=self.builder, number=0)
-        yield self.build.save()
+                                 builder=self.builder)
+        self.buildset.builds.append(self.build)
         self.consumed_build = build.Build(repository=self.repo,
                                           slave=self.slave, branch='master',
                                           named_tree='v0.1',
                                           builder=self.builder,
-                                          status='running', number=1)
-        yield self.consumed_build.save()
+                                          status='running')
+        self.buildset.builds.append(self.consumed_build)
+
+        yield self.buildset.save()
 
 
 class BuilderTest(AsyncTestCase):
@@ -303,6 +427,8 @@ class BuilderTest(AsyncTestCase):
     def tearDown(self):
         yield build.Builder.drop_collection()
         yield repository.Repository.drop_collection()
+        yield build.BuildSet.drop_collection()
+        yield repository.Slave.drop_collection()
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
@@ -368,9 +494,33 @@ class BuilderTest(AsyncTestCase):
         builder = yield from build.Builder.create(repository=repo, name='b1')
         buildinst = build.Build(repository=repo, slave=slave_inst,
                                 branch='master', named_tree='v0.1',
-                                builder=builder, number=0,
+                                builder=builder,
                                 status='success', started=now())
-        yield buildinst.save()
+        buildset = build.BuildSet(repository=repo)
+        buildset.builds.append(buildinst)
+        yield buildset.save()
         status = yield from builder.get_status()
 
         self.assertEqual(status, 'success')
+
+    @gen_test
+    def test_to_dict(self):
+        repo = repository.Repository(name='bla', url='git@bla.com',
+                                     update_seconds=300, vcs_type='git')
+        yield repo.save()
+        slave_inst = slave.Slave(name='bla', host='localhost', port=1234)
+        yield slave_inst.save()
+        builder = yield from build.Builder.create(repository=repo, name='b1')
+        objdict = builder.to_dict()
+        self.assertEqual(objdict['id'], builder.id)
+
+    @gen_test
+    def test_to_json(self):
+        repo = repository.Repository(name='bla', url='git@bla.com',
+                                     update_seconds=300, vcs_type='git')
+        yield repo.save()
+        slave_inst = slave.Slave(name='bla', host='localhost', port=1234)
+        yield slave_inst.save()
+        builder = yield from build.Builder.create(repository=repo, name='b1')
+        objdict = build.json.loads(builder.to_json())
+        self.assertTrue(isinstance(objdict['id'], str))

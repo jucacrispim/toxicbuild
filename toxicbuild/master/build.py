@@ -21,17 +21,47 @@
 import asyncio
 from collections import defaultdict, deque
 import json
+from uuid import uuid4
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
-                               ReferenceField, DateTimeField, IntField)
+                               ReferenceField, DateTimeField, UUIDField)
 from tornado.platform.asyncio import to_asyncio_future
-from toxicbuild.core.utils import (log, get_toxicbuildconf,
+from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
-                                   utc2localtime)
+                                   utc2localtime, LoggerMixin)
+from toxicbuild.master.exceptions import DBError
 from toxicbuild.master.signals import revision_added
 
+# The statuses used in builds  ordered by priority.
+ORDERED_STATUSES = ['running', 'exception', 'fail',
+                    'warning', 'success', 'pending']
 
-class Builder(Document):
+
+class SerializeMixin:
+
+    """Simple mixin to serialization relatad stuff."""
+
+    def to_dict(self, id_as_str=False):
+        """ Transforms a Document into a dictionary."""
+
+        objdict = json.loads(super().to_json())
+        objdict['id'] = str(self.id) if id_as_str else self.id
+        return objdict
+
+    def to_json(self):
+        """Returns a json for a Document"""
+        objdict = self.to_dict(id_as_str=True)
+        return json.dumps(objdict)
+
+    @asyncio.coroutine
+    def async_to_json(self):
+        """Async version of to_json. Expects a to_dict coroutine."""
+
+        objdict = yield from self.to_dict(id_as_str=True)
+        return json.dumps(objdict)
+
+
+class Builder(SerializeMixin, Document):
 
     """ The entity responsible for execute the build steps
     """
@@ -66,12 +96,25 @@ class Builder(Document):
     def get_status(self):
 
         try:
-            qs = Build.objects.filter(builder=self).order_by('-started')
-            last = (yield from to_asyncio_future(qs.to_list()))[0]
+            qs = BuildSet.objects(builds__builder=self).order_by('-started')
+            last_buildset = (yield from to_asyncio_future(qs.to_list()))[0]
         except (IndexError, AttributeError):
             status = 'idle'
         else:
-            status = last.status
+            # why this does not work with a listcomp?
+            statuses = []
+            for build in last_buildset.builds:
+                builder = yield from to_asyncio_future(build.builder)
+                if builder == self:
+                    statuses.append(build.status)
+
+            # statuses = [b.status for b in last_buildset.builds
+            #             if (yield from to_asyncio_future(b.builder)) == self]
+
+            ordered_statuses = sorted(statuses,
+                                      key=lambda i: ORDERED_STATUSES.index(i))
+            status = ordered_statuses[0]
+
         return status
 
 
@@ -91,8 +134,7 @@ class BuildStep(EmbeddedDocument):
     finished = DateTimeField(default=None)
 
     def to_dict(self):
-        objson = super().to_json()
-        objdict = json.loads(objson)
+        objdict = json.loads(super().to_json())
         keys = objdict.keys()
         if 'started' not in keys:
             objdict['started'] = None
@@ -112,7 +154,7 @@ class BuildStep(EmbeddedDocument):
         return json.dumps(self.to_dict())
 
 
-class Build(Document):
+class Build(EmbeddedDocument):
 
     """ A set of steps for a repository
     """
@@ -120,6 +162,7 @@ class Build(Document):
     PENDING = 'pending'
     STATUSES = BuildStep.STATUSES + [PENDING]
 
+    uuid = UUIDField(required=True, default=lambda: uuid4())
     repository = ReferenceField('toxicbuild.master.Repository', required=True)
     slave = ReferenceField('Slave', required=True)
     branch = StringField(required=True)
@@ -127,55 +170,94 @@ class Build(Document):
     started = DateTimeField()
     finished = DateTimeField()
     builder = ReferenceField(Builder, required=True)
-    # A build number is considered by the number of builds
-    # of a builder.
-    number = IntField(required=True)
     status = StringField(default=PENDING, choices=STATUSES)
     steps = ListField(EmbeddedDocumentField(BuildStep))
 
-    def to_dict(self):
+    @asyncio.coroutine
+    def to_dict(self, id_as_str=False):
         steps = [s.to_dict() for s in self.steps]
-        objson = super().to_json()
-        objdict = json.loads(objson)
+        objdict = json.loads(super().to_json())
+        objdict['builder'] = (yield from to_asyncio_future(self.builder))\
+            .to_dict(id_as_str=id_as_str)
         objdict['steps'] = steps
         return objdict
 
+    @asyncio.coroutine
     def to_json(self):
-        return json.dumps(self.to_dict())
+        objdict = yield from self.to_dict(id_as_str=True)
+        return json.dumps(objdict)
 
     @asyncio.coroutine
-    def get_parallels(self):
-        """ Returns builds that can be executed in parallel.
+    def update(self):
+        """Does an atomic update on this embedded document."""
 
-        Builds that can be executed in parallel are those that have the
-        same branch and named_tree, but different builders.
+        result = yield from to_asyncio_future(BuildSet.objects(
+            builds__uuid=self.uuid).update_one(
+                set__builds__S=self))
 
-        This method returns the parallels builds for the same slave and
-        repository of this build.
-        """
+        if not result:
+            msg = 'This EmbeddedDocument was not save to database.'
+            msg += ' You can\'t update it.'
+            raise DBError(msg)
 
-        parallels = type(self).objects.filter(
-            id__ne=self.id, branch=self.branch, named_tree=self.named_tree,
-            builder__ne=self.builder, slave=self.slave, status=self.PENDING)
-        parallels = yield from to_asyncio_future(parallels.to_list())
-        msg = 'There are {} parallels for {}'.format(len(parallels), self.id)
-        self.log(msg, level='debug')
-        return parallels
-
-    def log(self, msg, level='info'):
-        log('[{}] {} '.format(type(self).__name__, msg), level)
+        return result
 
 
-class BuildSet(Document):
+class BuildSet(SerializeMixin, Document):
 
     """A list of builds associated with a revision."""
 
+    PENDING = Build.PENDING
+
+    repository = ReferenceField('toxicbuild.master.Repository')
     revision = ReferenceField('toxicbuild.master.RepositoryRevision')
-    builds = ListField(ReferenceField(Build))
-    status = StringField(default=Build.PENDING, choices=Build.STATUSES)
+    builds = ListField(EmbeddedDocumentField(Build))
+    # when this buildset was first created.
+    created = DateTimeField(default=now)
+
+    @asyncio.coroutine
+    def to_dict(self, id_as_str=False):
+        objdict = super().to_dict(id_as_str=id_as_str)
+        objdict['builds'] = []
+        for b in self.builds:
+            bdict = yield from b.to_dict(id_as_str=id_as_str)
+            objdict['builds'].append(bdict)
+        return objdict
+
+    @asyncio.coroutine
+    def to_json(self):
+        return (yield from self.async_to_json())
+
+    def get_status(self):
+        build_statuses = set([b.status for b in self.builds])
+        ordered_statuses = sorted(build_statuses,
+                                  key=lambda i: ORDERED_STATUSES.index(i))
+        return ordered_statuses[0]
+
+    def get_pending_builds(self):
+        return [b for b in self.builds if b.status == Build.PENDING]
+
+    @asyncio.coroutine
+    def get_builds_for(self, builder=None, branch=None):
+
+        @asyncio.coroutine
+        def match_builder(b):
+            if not builder or (
+                    yield from to_asyncio_future(b.builder)) == builder:
+                return True
+            return False
+
+        def match_branch(b):
+            if not branch or b.branch == branch:
+                return True
+            return False
+
+        builds = [b for b in self.builds if (yield from match_builder(b)) and
+                  match_branch(b)]
+        return builds
 
 
-class BuildManager:
+class BuildManager(LoggerMixin):
 
     """ Controls which builds should be executed sequentially or
     in parallel.
@@ -189,6 +271,7 @@ class BuildManager:
         # to keep track of which slave is already working
         # on consume its queue
         self._is_building = defaultdict(lambda: False)
+        self._is_getting_builders = False
 
         self.connect2signals()
 
@@ -197,35 +280,43 @@ class BuildManager:
         """ Adds the builds for a given revision in the build queue.
 
         :param revision: A list of
-          :class:`toxicbuild.master.repository.RepositoryRevision`
+          :class:`toxicbuild.master.RepositoryRevision`
           instances for the build."""
 
         for revision in revisions:
-            for slave in self.repository.slaves:
-                builders = yield from self.get_builders(slave, revision)
-                for builder in builders:
-                    yield from self.add_build(builder, revision.branch,
-                                              revision.commit, slave)
+            buildset = BuildSet(repository=self.repository,
+                                revision=revision)
+
+            slaves = yield from to_asyncio_future(self.repository.slaves)
+            for slave in slaves:
+                yield from self.add_builds_for_slave(buildset, slave)
 
     @asyncio.coroutine
-    def add_build(self, builder, branch, named_tree, slave):
-        """Adds a new buld to the queue.
+    def add_builds_for_slave(self, buildset, slave, builders=[]):
+        """Adds builds for a given slave on a given buildset.
 
-        :param builder: A :class:`toxicbuild.master.build.Builder` instance.
-        :param branch: Branch name.
-        :named_tree: Named tree for the build.
-        :param slave: A :class:`toxicbuild.master.slave.Slave` instance."""
+        :param buildset: An instance of :class:`toxicbuild.master.BuildSet`.
+        :param slaves: An instance of :class:`toxicbuild.master.Slave`.
+        :param builders: A list of :class:`toxicbuild.master.Builder`. If
+          not builders all builders for this slave and revision.
+        """
 
-        number = yield from self._get_next_build_number(builder)
-        build = Build(repository=self.repository, branch=branch,
-                      named_tree=named_tree, slave=slave,
-                      builder=builder, number=number)
+        revision = yield from to_asyncio_future(buildset.revision)
+        if not builders:
+            builders = yield from self.get_builders(slave, revision)
 
-        yield from to_asyncio_future(build.save())
-        self.log('build added for named_tree {} on branch {}'.format(
-            named_tree, branch))
-        self._build_queues[slave.name].append(build)
+        for builder in builders:
+            build = Build(repository=self.repository, branch=revision.branch,
+                          named_tree=revision.commit, slave=slave,
+                          builder=builder)
 
+            buildset.builds.append(build)
+            yield from to_asyncio_future(buildset.save())
+
+            self.log('build added for named_tree {} on branch {}'.format(
+                revision.commit, revision.branch), level='debug')
+
+        self._build_queues[slave.name].append(buildset)
         if not self._is_building[slave.name]:  # pragma: no branch
             asyncio.async(self._execute_builds(slave))
 
@@ -238,26 +329,30 @@ class BuildManager:
           :class:`toxicbuild.master.repository.RepositoryRevision`.
         """
 
-        while self.repository.poller.is_polling():
+        while self.repository.poller.is_polling() or self._is_getting_builders:
             yield from asyncio.sleep(1)
 
-        self.log('checkout on {} to {}'.format(
+        self._is_getting_builders = True
+        log('checkout on {} to {}'.format(
             self.repository.url, revision.commit), level='debug')
-        yield from self.repository.poller.vcs.checkout(revision.commit)
         try:
-            conf = get_toxicbuildconf(self.repository.poller.vcs.workdir)
-            names = list_builders_from_config(conf, revision.branch, slave)
-        except Exception as e:
-            msg = 'Something wrong with your toxicbuild.conf. Original '
-            msg += 'exception was:\n {}'.format(str(e))
-            self.log(msg, level='warning')
-            return []
+            yield from self.repository.poller.vcs.checkout(revision.commit)
+            try:
+                conf = get_toxicbuildconf(self.repository.poller.vcs.workdir)
+                names = list_builders_from_config(conf, revision.branch, slave)
+            except Exception as e:
+                msg = 'Something wrong with your toxicbuild.conf. Original '
+                msg += 'exception was:\n {}'.format(str(e))
+                log(msg, level='warning')
+                return []
 
-        builders = []
-        for name in names:
-            builder = yield from Builder.get_or_create(
-                name=name, repository=self.repository)
-            builders.append(builder)
+            builders = []
+            for name in names:
+                builder = yield from Builder.get_or_create(
+                    name=name, repository=self.repository)
+                builders.append(builder)
+        finally:
+            self._is_getting_builders = False
 
         return builders
 
@@ -283,14 +378,12 @@ class BuildManager:
         try:
             while True:
                 try:
-                    build = self._build_queues[slave.name].popleft()
-                    while build.status != build.PENDING:
-                        build = self._build_queues[slave.name].popleft()
+                    buildset = self._build_queues[slave.name].popleft()
                 except IndexError:
                     break
 
-                parallels = [build] + (yield from build.get_parallels())
-                yield from self._execute_in_parallel(slave, parallels)
+                builds = [b for b in buildset.builds if b.slave == slave]
+                yield from self._execute_in_parallel(slave, builds)
         finally:
             self._is_building[slave.name] = False
 
@@ -309,23 +402,3 @@ class BuildManager:
 
         yield from asyncio.wait(fs)
         return fs
-
-    @asyncio.coroutine
-    def _get_next_build_number(self, builder):
-        """Returns the next build number for a given build.
-
-        :param builder: A :class:`toxicbuild.master.build.Builder`
-          instance."""
-
-        qs = Build.objects.filter(builder=builder).order_by('-number')
-        try:
-            build = (yield from to_asyncio_future(qs.to_list()))[0]
-        except IndexError:
-            number = 0
-        else:
-            number = build.number + 1
-
-        return number
-
-    def log(self, msg, level='info'):
-        log('[{}] {} '.format(type(self).__name__, msg), level)

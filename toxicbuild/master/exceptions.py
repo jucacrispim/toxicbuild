@@ -7,3 +7,7 @@ class UIFunctionNotFound(Exception):
 
 class CloneException(Exception):
     pass
+
+
+class DBError(Exception):
+    pass

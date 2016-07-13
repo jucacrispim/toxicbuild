@@ -117,9 +117,9 @@ class Slave(Document, LoggerMixin):
                 exception_step = BuildStep(output=str(e), started=now(),
                                            finished=now(), status='exception',
                                            command='', name='exception')
-                build.steps = build.steps + [exception_step]
-                yield from to_asyncio_future(build.save())
-                build_info = build.to_dict()
+                build.steps = build.steps.append(exception_step)
+                yield from build.update()
+                build_info = yield from build.to_dict()
 
         return build_info
 
@@ -128,8 +128,8 @@ class Slave(Document, LoggerMixin):
         """ This method is called by the client when some information about
         the build is sent by the build server.
         """
-        # when there's the steps key it's a build info
 
+        # when there's the steps key it's a build info
         if 'steps' in build_info:
             repo = yield from to_asyncio_future(build.repository)
             build.status = build_info['status']
@@ -138,7 +138,7 @@ class Slave(Document, LoggerMixin):
             if finished:
                 build.finished = string2datetime(finished)
 
-            yield from to_asyncio_future(build.save())
+            yield from build.update()
             if not build.finished:
                 msg = 'build started at {}'.format(build_info['started'])
                 self.log(msg)
@@ -185,4 +185,4 @@ class Slave(Document, LoggerMixin):
             step_started.send(repo, build=build, step=requested_step)
             build.steps.append(requested_step)
 
-        yield from to_asyncio_future(build.save())
+        yield from build.update()

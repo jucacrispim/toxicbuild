@@ -40,7 +40,7 @@ class SlaveTest(AsyncTestCase):
     @gen_test
     def tearDown(self):
         yield slave.Slave.drop_collection()
-        yield build.Build.drop_collection()
+        yield build.BuildSet.drop_collection()
         yield build.Builder.drop_collection()
         yield repository.RepositoryRevision.drop_collection()
         yield repository.Repository.drop_collection()
@@ -250,6 +250,10 @@ class SlaveTest(AsyncTestCase):
 
         yield self.revision.save()
 
+        self.buildset = build.BuildSet(
+            repository=self.repo, revision=self.revision)
+        yield self.buildset.save()
+
         self.builder = build.Builder(repository=self.repo, name='builder-1')
         yield self.builder.save()
         self.other_builder = build.Builder(repository=self.repo,
@@ -259,6 +263,7 @@ class SlaveTest(AsyncTestCase):
 
         self.build = build.Build(repository=self.repo, slave=self.slave,
                                  branch='master', named_tree='v0.1',
-                                 builder=self.builder, number=0)
+                                 builder=self.builder)
 
-        self.build.save()
+        self.buildset.builds.append(self.build)
+        yield self.buildset.save()

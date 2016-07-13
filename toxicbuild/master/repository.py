@@ -28,7 +28,7 @@ from mongomotor.fields import (StringField, IntField, ReferenceField,
 from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core import utils
 from toxicbuild.master.scheduler import scheduler
-from toxicbuild.master.build import Build, Builder, BuildManager
+from toxicbuild.master.build import BuildSet, Builder, BuildManager
 from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.pollers import Poller
 from toxicbuild.master.slave import Slave
@@ -79,27 +79,44 @@ class Repository(Document, utils.LoggerMixin):
 
     @asyncio.coroutine
     def get_status(self):
-        is_running = (yield from to_asyncio_future(Build.objects.filter(
-            repository=self, status='running').count())) > 0
+        """Returns the status for the repository. The status is the
+        status of the last buildset created for this repository that is
+        not pending."""
 
-        if self.clone_status in ['cloning', 'clone-exception']:
+        last_buildset = yield from to_asyncio_future(BuildSet.objects(
+            repository=self).order_by(
+                '-created').first())
+
+        clone_statuses = ['cloning', 'clone-exception']
+        if not last_buildset and self.clone_status in clone_statuses:
             status = self.clone_status
-        elif is_running:
-            status = 'running'
+        elif not last_buildset:
+            status = 'idle'
         else:
-            try:
-                status = (yield from to_asyncio_future(Build.objects.filter(
-                    repository=self).order_by('-started').first())).status
-            except AttributeError:
-                # ugly mongomotor error for no first thing
-                status = ''
+            status = last_buildset.get_status()
+            i = 1
+            while status == BuildSet.PENDING:
+                start = i
+                stop = start + 1
+                last_buildset = yield from to_asyncio_future(
+                    BuildSet.objects(repository=self).order_by(
+                        '-created')[start:stop])
+                last_buildset = yield from to_asyncio_future(
+                    last_buildset.first())
 
+                if not last_buildset:
+                    status = 'idle'
+                    break
+
+                status = last_buildset.get_status()
+                i += 1
         return status
 
     @classmethod
     @asyncio.coroutine
     def create(cls, name, url, update_seconds, vcs_type, slaves=None):
         """ Creates a new repository and schedule it. """
+
         slaves = slaves or []
 
         repo = cls(url=url, update_seconds=update_seconds, vcs_type=vcs_type,
@@ -115,7 +132,7 @@ class Repository(Document, utils.LoggerMixin):
         source code from the file system and then removes the repository.
         """
 
-        builds = Build.objects.filter(repository=self)
+        builds = BuildSet.objects.filter(repository=self)
         yield from to_asyncio_future(builds.delete())
 
         builders = Builder.objects.filter(repository=self)
@@ -173,14 +190,17 @@ class Repository(Document, utils.LoggerMixin):
 
     @asyncio.coroutine
     def add_slave(self, slave):
-        self.slaves.append(slave)
+        slaves = yield from to_asyncio_future(self.slaves)
+        slaves.append(slave)
+        self.slaves = slaves
         yield from to_asyncio_future(self.save())
         return slave
 
     @asyncio.coroutine
     def remove_slave(self, slave):
-        self.slaves.pop(self.slaves.index(slave))
-        yield from to_asyncio_future(self.save())
+        slaves = yield from to_asyncio_future(self.slaves)
+        slaves.pop(slaves.index(slave))
+        yield from to_asyncio_future(self.update(set__slaves=slaves))
         return slave
 
     @asyncio.coroutine
@@ -191,11 +211,7 @@ class Repository(Document, utils.LoggerMixin):
         latest = RepositoryRevision.objects.filter(
             repository=self, branch=branch).order_by('-commit_date')
 
-        try:
-            latest = yield from to_asyncio_future(latest.first())
-        except AttributeError:
-            # when first is None
-            latest = None
+        latest = yield from to_asyncio_future(latest.first())
 
         return latest
 
@@ -235,8 +251,8 @@ class Repository(Document, utils.LoggerMixin):
         return revision
 
     @asyncio.coroutine
-    def add_build(self, **kwargs):
-        yield from self.build_manager.add_build(**kwargs)
+    def add_builds_for_slave(self, **kwargs):
+        yield from self.build_manager.add_builds_for_slave(**kwargs)
 
 
 class RepositoryRevision(Document):

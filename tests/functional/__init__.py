@@ -2,6 +2,7 @@
 
 import os
 import time
+import tornado
 from tornado.testing import AsyncTestCase
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
@@ -68,10 +69,13 @@ class BaseFunctionalTest(AsyncTestCase):
         super().setUpClass()
         cls.start_slave()
         cls.start_master()
-        time.sleep(1)
+        time.sleep(0.1)
 
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
         cls.stop_master()
         cls.stop_slave()
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
