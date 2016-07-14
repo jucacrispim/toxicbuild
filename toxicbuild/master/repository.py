@@ -190,6 +190,7 @@ class Repository(Document, utils.LoggerMixin):
 
     @asyncio.coroutine
     def add_slave(self, slave):
+        self.slaves
         slaves = yield from to_asyncio_future(self.slaves)
         slaves.append(slave)
         self.slaves = slaves

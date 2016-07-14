@@ -152,7 +152,7 @@ class RepositoryTest(AsyncTestCase):
         yield from self.repo.add_slave(slave)
         yield from self.repo.remove_slave(slave)
 
-        self.assertEqual(len(self.repo.slaves), 0)
+        self.assertEqual(len((yield self.repo.slaves)), 0)
 
     @gen_test
     def test_get_latest_revision_for_branch(self):

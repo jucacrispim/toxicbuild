@@ -234,7 +234,7 @@ class HoleHandlerTest(AsyncTestCase):
 
         repo = yield from hole.Repository.get(url=self.repo.url)
 
-        self.assertEqual(len(repo.slaves), 0)
+        self.assertEqual(len((yield repo.slaves)), 0)
 
     @patch.object(repository, 'BuildManager', MagicMock(
         spec=repository.BuildManager))

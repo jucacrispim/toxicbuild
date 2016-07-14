@@ -15,7 +15,7 @@ flake8==2.4.1
 greenlet==0.4.6
 ipdb==0.8
 ipython==3.0.0
-jedi==0.8.1
+jedi==0.8.2
 Jinja2==2.7.3
 logilab-common==0.63.2
 mando==0.3.2
