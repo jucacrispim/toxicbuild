@@ -235,8 +235,7 @@ class HoleHandler:
 
         builds_count = 0
 
-        buildset = BuildSet(repository=repo, revision=rev)
-        yield from to_asyncio_future(buildset.save())
+        buildset = yield from BuildSet.create(repository=repo, revision=rev)
         for slave in slaves:
             yield from repo.add_builds_for_slave(buildset, slave,
                                                  builders[slave])

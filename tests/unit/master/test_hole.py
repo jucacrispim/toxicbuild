@@ -278,6 +278,15 @@ class HoleHandlerTest(AsyncTestCase):
     @patch.object(hole.HoleHandler, '_get_builders', MagicMock())
     @gen_test
     def test_repo_start_build_with_named_tree(self):
+
+        get_mock = MagicMock()
+
+        @asyncio.coroutine
+        def get(*a, **kw):
+            get_mock()
+            return self.revision
+
+        hole.RepositoryRevision.get = get
         yield from self._create_test_data()
 
         hole.HoleHandler._get_builders = asyncio.coroutine(
@@ -289,8 +298,7 @@ class HoleHandlerTest(AsyncTestCase):
         yield from handler.repo_start_build(self.repo.name, 'master',
                                             named_tree='123qewad')
 
-        self.assertTrue(hole.RepositoryRevision.get.called)
-        self.assertEqual(len(self.repo.add_builds_for_slave.call_args_list), 1)
+        self.assertTrue(get_mock.called)
 
     @patch.object(repository, 'BuildManager', MagicMock())
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
@@ -504,7 +512,9 @@ class HoleHandlerTest(AsyncTestCase):
                 commit_date=now)
             yield self.revision.save()
             self.buildset = build.BuildSet(repository=self.repo,
-                                           revision=self.revision)
+                                           revision=self.revision,
+                                           commit='asda',
+                                           commit_date=now)
             yield self.buildset.save(revision=self.revision)
             builds = []
             self.builders = []

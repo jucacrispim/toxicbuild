@@ -209,11 +209,30 @@ class BuildSet(SerializeMixin, Document):
 
     PENDING = Build.PENDING
 
-    repository = ReferenceField('toxicbuild.master.Repository')
-    revision = ReferenceField('toxicbuild.master.RepositoryRevision')
+    repository = ReferenceField('toxicbuild.master.Repository',
+                                required=True)
+    revision = ReferenceField('toxicbuild.master.RepositoryRevision',
+                              required=True)
+    commit = StringField(required=True)
+    commit_date = DateTimeField(required=True)
     builds = ListField(EmbeddedDocumentField(Build))
     # when this buildset was first created.
     created = DateTimeField(default=now)
+
+    @classmethod
+    @asyncio.coroutine
+    def create(cls, repository, revision):
+        """Creates a new buildset.
+
+        :param repository: An instance of `toxicbuild.master.Repository`.
+        :param revision: An instance of `toxicbuild.master.RepositoryRevision`.
+        """
+
+        buildset = cls(repository=repository, revision=revision,
+                       commit=revision.commit,
+                       commit_date=revision.commit_date)
+        yield from to_asyncio_future(buildset.save())
+        return buildset
 
     @asyncio.coroutine
     def to_dict(self, id_as_str=False):
@@ -284,8 +303,8 @@ class BuildManager(LoggerMixin):
           instances for the build."""
 
         for revision in revisions:
-            buildset = BuildSet(repository=self.repository,
-                                revision=revision)
+            buildset = yield from BuildSet.create(repository=self.repository,
+                                                  revision=revision)
 
             slaves = yield from to_asyncio_future(self.repository.slaves)
             for slave in slaves:

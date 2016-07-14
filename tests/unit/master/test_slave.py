@@ -23,7 +23,7 @@ from unittest.mock import Mock, MagicMock, patch
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 import toxicbuild
-from toxicbuild.core.utils import datetime2string
+from toxicbuild.core.utils import datetime2string, now
 from toxicbuild.master import slave, build, repository
 
 
@@ -251,7 +251,9 @@ class SlaveTest(AsyncTestCase):
         yield self.revision.save()
 
         self.buildset = build.BuildSet(
-            repository=self.repo, revision=self.revision)
+            repository=self.repo, revision=self.revision,
+            commit='asda',
+            commit_date=now)
         yield self.buildset.save()
 
         self.builder = build.Builder(repository=self.repo, name='builder-1')
