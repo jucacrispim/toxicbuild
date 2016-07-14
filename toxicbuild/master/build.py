@@ -221,17 +221,19 @@ class BuildSet(SerializeMixin, Document):
 
     @classmethod
     @asyncio.coroutine
-    def create(cls, repository, revision):
+    def create(cls, repository, revision, save=True):
         """Creates a new buildset.
 
         :param repository: An instance of `toxicbuild.master.Repository`.
         :param revision: An instance of `toxicbuild.master.RepositoryRevision`.
+        :param save: Indicates if the instance should be saved to database.
         """
 
         buildset = cls(repository=repository, revision=revision,
                        commit=revision.commit,
                        commit_date=revision.commit_date)
-        yield from to_asyncio_future(buildset.save())
+        if save:
+            yield from to_asyncio_future(buildset.save())
         return buildset
 
     @asyncio.coroutine
@@ -304,7 +306,8 @@ class BuildManager(LoggerMixin):
 
         for revision in revisions:
             buildset = yield from BuildSet.create(repository=self.repository,
-                                                  revision=revision)
+                                                  revision=revision,
+                                                  save=False)
 
             slaves = yield from to_asyncio_future(self.repository.slaves)
             for slave in slaves:

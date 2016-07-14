@@ -129,6 +129,14 @@ class BuildSetTest(AsyncTestCase):
         yield self._create_test_data()
         buildset = yield from build.BuildSet.create(self.repo, self.rev)
         self.assertTrue(buildset.commit)
+        self.assertTrue(buildset.id)
+
+    @gen_test
+    def test_create_without_save(self):
+        yield self._create_test_data()
+        buildset = yield from build.BuildSet.create(self.repo, self.rev,
+                                                    save=False)
+        self.assertFalse(buildset.id)
 
     @gen_test
     def test_to_dict(self):

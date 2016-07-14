@@ -235,7 +235,8 @@ class HoleHandler:
 
         builds_count = 0
 
-        buildset = yield from BuildSet.create(repository=repo, revision=rev)
+        buildset = yield from BuildSet.create(repository=repo, revision=rev,
+                                              save=False)
         for slave in slaves:
             yield from repo.add_builds_for_slave(buildset, slave,
                                                  builders[slave])
