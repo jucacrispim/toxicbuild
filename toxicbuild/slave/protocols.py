@@ -53,12 +53,12 @@ class BuildServerProtocol(BaseToxicProtocol):
             else:
                 msg = 'Action {} does not exist'.format(self.action)
                 self.log(msg, level='error')
-                yield from self.send_response(code=1, body={'eror': msg})
+                yield from self.send_response(code=1, body={'error': msg})
 
         except BadData:
             msg = 'Something wrong with your data {}'.format(self.raw_data)
             self.log('bad data', level='error')
-            yield from self.send_response(code=1, body=msg)
+            yield from self.send_response(code=1, body={'error': msg})
         except Exception as e:
             self.log(e.args[0], level='error')
             yield from self.send_response(code=1, body=e.args[0])
