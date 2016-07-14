@@ -401,8 +401,13 @@ class BuildManager(LoggerMixin):
                 except IndexError:
                     break
 
-                builds = [b for b in buildset.builds if b.slave == slave]
-                yield from self._execute_in_parallel(slave, builds)
+                builds = []
+                for build in buildset.builds:
+                    build_slave = yield from to_asyncio_future(build.slave)
+                    if slave == build_slave:
+                        builds.append(build)
+                if builds:
+                    yield from self._execute_in_parallel(slave, builds)
         finally:
             self._is_building[slave.name] = False
 

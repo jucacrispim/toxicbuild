@@ -373,6 +373,18 @@ class BuildManagerTest(AsyncTestCase):
         self.assertTrue(build.log.called)
 
     @gen_test
+    def test_execute_build_without_build(self):
+        yield from self._create_test_data()
+
+        self.manager._execute_in_parallel = mock.MagicMock()
+        self.manager._build_queues[self.slave.name].extend(
+            [self.buildset])
+        slave = mock.Mock()
+        slave.name = self.slave.name
+        yield from self.manager._execute_builds(slave)
+        self.assertFalse(self.manager._execute_in_parallel.called)
+
+    @gen_test
     def test_execute_build(self):
         yield from self._create_test_data()
 
@@ -380,9 +392,7 @@ class BuildManagerTest(AsyncTestCase):
         self.manager._build_queues[self.slave.name].extend(
             [self.buildset])
         yield from self.manager._execute_builds(self.slave)
-        called_args = self.manager._execute_in_parallel.call_args[0]
-
-        self.assertEqual(len(called_args), 2)
+        self.assertTrue(self.manager._execute_in_parallel.called)
 
     @gen_test
     def test_execute_in_parallel(self):
