@@ -560,8 +560,9 @@ class BuilderTest(AsyncTestCase):
         slave_inst = slave.Slave(name='bla', host='localhost', port=1234)
         yield slave_inst.save()
         builder = yield from build.Builder.create(repository=repo, name='b1')
-        objdict = builder.to_dict()
+        objdict = yield from builder.to_dict()
         self.assertEqual(objdict['id'], builder.id)
+        self.assertTrue(objdict['status'])
 
     @gen_test
     def test_to_json(self):
@@ -571,5 +572,5 @@ class BuilderTest(AsyncTestCase):
         slave_inst = slave.Slave(name='bla', host='localhost', port=1234)
         yield slave_inst.save()
         builder = yield from build.Builder.create(repository=repo, name='b1')
-        objdict = build.json.loads(builder.to_json())
+        objdict = build.json.loads((yield from builder.to_json()))
         self.assertTrue(isinstance(objdict['id'], str))

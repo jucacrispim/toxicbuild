@@ -117,6 +117,16 @@ class Builder(SerializeMixin, Document):
 
         return status
 
+    @asyncio.coroutine
+    def to_dict(self, id_as_str=False):
+        objdict = super().to_dict(id_as_str=id_as_str)
+        objdict['status'] = yield from self.get_status()
+        return objdict
+
+    @asyncio.coroutine
+    def to_json(self):
+        return (yield from self.async_to_json())
+
 
 class BuildStep(EmbeddedDocument):
 
@@ -175,10 +185,10 @@ class Build(EmbeddedDocument):
 
     @asyncio.coroutine
     def to_dict(self, id_as_str=False):
+        builder = yield from to_asyncio_future(self.builder)
         steps = [s.to_dict() for s in self.steps]
         objdict = json.loads(super().to_json())
-        objdict['builder'] = (yield from to_asyncio_future(self.builder))\
-            .to_dict(id_as_str=id_as_str)
+        objdict['builder'] = yield from builder.to_dict(id_as_str=id_as_str)
         objdict['steps'] = steps
         return objdict
 

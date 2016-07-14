@@ -342,8 +342,7 @@ class HoleHandler:
 
             buildsets_list.append(bdict)
 
-        builder_dict = builder.to_dict()
-        builder_dict['status'] = yield from builder.get_status()
+        builder_dict = yield from builder.to_dict()
         builder_dict['buildsets'] = buildsets_list
         return {'builder-show': builder_dict}
 
