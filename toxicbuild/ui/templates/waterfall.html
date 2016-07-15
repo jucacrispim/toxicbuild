@@ -32,8 +32,11 @@
 	  </li>
 	</ul>
       </td>
-      {% for build in buildset.builds %}
+      {% for i, build in enumerate(ordered_builds(buildset.builds)) %}
       <td class="builder-column">
+	{% for ending in get_ending(build, i, builders)%}
+   	  {{ending}}
+	{% end %}
 	<ul>
 	  <li class="step step-{{build.status}}">
 	    Build - {{build.status}}

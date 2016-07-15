@@ -301,22 +301,43 @@ class WaterfallHandlerTest(AsyncTestCase):
         self.handler.render_template = MagicMock()
         self.handler.prepare()
 
-        expected_context = {'buildsets': None, 'builders': set()}
+        expected_context = {'buildsets': None, 'builders': [],
+                            'ordered_builds': self.handler._ordered_builds,
+                            'get_ending': self.handler._get_ending}
         yield self.handler.get('some-repo')
         context = self.handler.render_template.call_args[0][1]
         self.assertEqual(expected_context, context)
 
     def test_get_builders_for_buildset(self):
         self._create_test_data()
-        expected = set(self.builders)
+        expected = sorted(self.builders, key=lambda b: b.name)
 
         returned = self.handler._get_builders_for_buildsets(self.buildsets)
+        self.assertEqual(expected, returned)
+
+    def test_ordered_builds(self):
+        bd0 = models.Builder(name='z')
+        bd1 = models.Builder(name='a')
+        builds = [models.Build(name='z', builder=bd0),
+                  models.Build(name='a', builder=bd1)]
+        ordered = self.handler._ordered_builds(builds)
+        self.assertTrue(ordered[0].builder.name < ordered[1].builder.name)
+
+    def test_get_ending(self):
+        builders = [models.Builder(id=1), models.Builder(id=2)]
+        build = models.Build(builder=builders[1])
+        expected = '</td><td>'
+        returned = ''
+
+        for end in self.handler._get_ending(build, 0, builders):
+            returned += end
+
         self.assertEqual(expected, returned)
 
     def _create_test_data(self):
         builders = []
         for i in range(3):
-            builders.append(models.Builder(id=i))
+            builders.append(models.Builder(id=i, name='bla{}'.format(i)))
 
         buildsets = []
 

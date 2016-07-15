@@ -166,7 +166,9 @@ class WaterfallHandler(TemplateHandler):
     def get(self, repo_name):
         buildsets = yield from BuildSet.list(repo_name=repo_name)
         builders = self._get_builders_for_buildsets(buildsets)
-        context = {'buildsets': buildsets, 'builders': builders}
+        context = {'buildsets': buildsets, 'builders': builders,
+                   'ordered_builds': self._ordered_builds,
+                   'get_ending': self._get_ending}
         self.render_template(self.template, context)
 
     def _get_builders_for_buildsets(self, buildsets):
@@ -176,7 +178,17 @@ class WaterfallHandler(TemplateHandler):
             for build in buildset.builds:
                 builders.add(build.builder)
 
-        return builders
+        return sorted(builders, key=lambda b: b.name)
+
+    def _ordered_builds(self, builds):
+        return sorted(builds, key=lambda b: b.builder.name)
+
+    def _get_ending(self, build, build_index, builders):
+        i = build_index
+        while build.builder != builders[i] and len(builders) > i:
+            yield '</td><td>'
+            i += 1
+        yield ''
 
 
 url = URLSpec('/$', MainHandler)
