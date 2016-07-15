@@ -300,6 +300,7 @@ class HoleHandler:
             repository = yield from Repository.get(name=repo_name)
             buildsets = buildsets.filter(repository=repository)
 
+        buildsets = buildsets.order_by('-created')
         count = yield from to_asyncio_future(buildsets.count())
 
         stop = count if not offset else skip + offset
