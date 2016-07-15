@@ -19,7 +19,7 @@
 
 
 import unittest
-import mock
+from unittest import mock
 from toxicbuild.core import conf
 from tests.unit.core import TEST_DATA_DIR
 

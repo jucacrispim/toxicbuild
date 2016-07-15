@@ -3,6 +3,9 @@ coverage==3.7.1
 docutils==0.12
 sphinx-rtd-theme==0.1.7
 mongomotor==0.8.2
+motor==0.6.2
+mongoengine==0.10.6
 asyncblink==0.1.1
 mando==0.3.2
 pyrocumulus==0.7.1
+urwid==1.3.0

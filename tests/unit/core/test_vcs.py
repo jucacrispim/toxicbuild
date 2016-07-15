@@ -21,7 +21,7 @@
 import asyncio
 import datetime
 import os
-import mock
+from unittest import mock
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core import vcs, utils
 

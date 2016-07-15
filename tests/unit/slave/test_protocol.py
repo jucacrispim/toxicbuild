@@ -18,7 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import mock
+from unittest import mock
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.slave import protocols
 

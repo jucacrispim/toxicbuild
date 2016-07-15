@@ -48,11 +48,6 @@ class SerializeMixin:
         objdict['id'] = str(self.id) if id_as_str else self.id
         return objdict
 
-    def to_json(self):
-        """Returns a json for a Document"""
-        objdict = self.to_dict(id_as_str=True)
-        return json.dumps(objdict)
-
     @asyncio.coroutine
     def async_to_json(self):
         """Async version of to_json. Expects a to_dict coroutine."""
