@@ -249,6 +249,7 @@ class BuildSet(SerializeMixin, Document):
     @asyncio.coroutine
     def to_dict(self, id_as_str=False):
         objdict = super().to_dict(id_as_str=id_as_str)
+        objdict['commit_date'] = datetime2string(self.commit_date)
         objdict['builds'] = []
         for b in self.builds:
             bdict = yield from b.to_dict(id_as_str=id_as_str)

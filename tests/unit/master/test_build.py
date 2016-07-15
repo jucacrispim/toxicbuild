@@ -22,7 +22,7 @@ import datetime
 from unittest import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.core.utils import now
+from toxicbuild.core.utils import now, string2datetime
 from toxicbuild.master import build, repository, slave
 
 
@@ -143,6 +143,7 @@ class BuildSetTest(AsyncTestCase):
         yield self._create_test_data()
         objdict = yield from self.buildset.to_dict()
         self.assertEqual(len(objdict['builds']), 1)
+        self.assertTrue(objdict['commit_date'])
 
     @gen_test
     def test_to_json(self):
@@ -255,7 +256,7 @@ class BuildSetTest(AsyncTestCase):
         self.buildset = build.BuildSet(repository=self.repo,
                                        revision=self.rev,
                                        commit='alsdfjçasdfj',
-                                       commit_date=now,
+                                       commit_date=now(),
                                        builds=[self.build])
         yield self.buildset.save()
 
