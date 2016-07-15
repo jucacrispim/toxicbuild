@@ -23,7 +23,7 @@ from unittest.mock import MagicMock, patch
 import tornado
 from tornado import gen
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.ui import web
+from toxicbuild.ui import web, models
 
 
 class BaseModelHandlerTest(AsyncTestCase):
@@ -282,6 +282,52 @@ class MainHandlerTest(AsyncTestCase):
         returned = self.handler._get_btn_class(status)
 
         self.assertEqual(returned, 'danger')
+
+
+class WaterfallHandlerTest(AsyncTestCase):
+
+    def setUp(self):
+        super().setUp()
+        request = MagicMock()
+        application = MagicMock()
+        self.handler = web.WaterfallHandler(application, request=request)
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
+
+    @patch.object(web, 'BuildSet', MagicMock())
+    @gen_test
+    def test_get(self):
+        self.handler.render_template = MagicMock()
+        self.handler.prepare()
+
+        expected_context = {'buildsets': None, 'builders': set()}
+        yield self.handler.get('some-repo')
+        context = self.handler.render_template.call_args[0][1]
+        self.assertEqual(expected_context, context)
+
+    def test_get_builders_for_buildset(self):
+        self._create_test_data()
+        expected = set(self.builders)
+
+        returned = self.handler._get_builders_for_buildsets(self.buildsets)
+        self.assertEqual(expected, returned)
+
+    def _create_test_data(self):
+        builders = []
+        for i in range(3):
+            builders.append(models.Builder(id=i))
+
+        buildsets = []
+
+        for i in range(5):
+
+            builds = [models.Build(id=j, builder=builders[j])
+                      for j in range(3)]
+            buildsets.append(models.BuildSet(id=i, builds=builds))
+
+        self.builders = builders
+        self.buildsets = buildsets
 
 
 class ApplicationTest(unittest.TestCase):

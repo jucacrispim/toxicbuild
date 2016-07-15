@@ -37,6 +37,11 @@ tr:nth-child(even) {
     background-color: #696565;
 }
 
+.main-row{
+    margin-left: 0;
+    margin-right: 0;
+}
+
 .modal-content{
     background-color: #4c4a49;
 }
@@ -131,6 +136,7 @@ tr:nth-child(even) {
     background-color: #5cb85c;
 }
 
+.btn-pending,
 .builder-pending,
 .step-pending{
     background-color: #B7B206;
@@ -173,4 +179,12 @@ tr:nth-child(even) {
 
 .modal-dialog-step{
     width:90%;
+}
+
+.waterfall-table tr:nth-child(even) {
+    background-color: #4c4a49;
+}
+
+.buildset{
+    list-style: none;
 }

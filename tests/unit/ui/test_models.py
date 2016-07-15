@@ -36,6 +36,41 @@ class BaseModelTest(AsyncTestCase):
         expected = json.dumps({'name': 'bla', 'other': 'ble'})
         self.assertEqual(expected, instance_json)
 
+    def test_equal(self):
+        class T(models.BaseModel):
+
+            def __init__(self, id=None):
+                self.id = id
+
+        a = T(id='some-id')
+        b = T(id='some-id')
+        self.assertEqual(a, b)
+
+    def test_unequal_id(self):
+        class T(models.BaseModel):
+
+            def __init__(self, id=None):
+                self.id = id
+
+        a = T(id='some-id')
+        b = T(id='Other-id')
+        self.assertNotEqual(a, b)
+
+    def test_unequal_type(self):
+        class T(models.BaseModel):
+
+            def __init__(self, id=None):
+                self.id = id
+
+        class TT(models.BaseModel):
+
+            def __init__(self, id=None):
+                self.id = id
+
+        a = T(id='some-id')
+        b = TT(id='some-id')
+        self.assertNotEqual(a, b)
+
 
 @asyncio.coroutine
 def get_client_mock(r2s_return_value=None):
@@ -53,6 +88,7 @@ def get_client_mock(r2s_return_value=None):
 
     cl.request2server = r2s
     cl._connected = True
+    cl.writer = MagicMock()
     return cl
 
 
@@ -176,17 +212,17 @@ class SlaveTest(AsyncTestCase):
         self.assertEqual(resp, 'ok')
 
 
-class BuilderTest(AsyncTestCase):
+class BuildSetTest(AsyncTestCase):
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
-    @patch.object(models.Builder, 'get_client', lambda: get_client_mock(
-        [{'name': 'b0', 'builds': [{'steps': [{'name': 'unit'}]}]},
-         {'name': 'b1', 'builds': [{}]},
-         {'name': 'b2'}]))
+    @patch.object(models.BuildSet, 'get_client', lambda: get_client_mock(
+        [{'id': 'sasdfasf', 'builds': [{'steps': [{'name': 'unit'}]}]},
+         {'id': 'paopofe', 'builds': [{}]}]))
     @gen_test
     def test_list(self):
-        builders = yield from models.Builder.list()
-        self.assertEqual(len(builders), 3)
+
+        builders = yield from models.BuildSet.list()
+        self.assertEqual(len(builders), 2)
         self.assertTrue(len(builders[0].builds[0].steps), 1)

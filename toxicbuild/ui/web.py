@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,10 +19,10 @@
 
 import asyncio
 from tornado import gen
-from pyrocumulus.web.applications import Application, StaticApplication
-from pyrocumulus.web.handlers import TemplateHandler
+from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
+from pyrocumulus.web.handlers import TemplateHandler, PyroRequest
 from pyrocumulus.web.urlmappers import URLSpec
-from toxicbuild.ui.models import Repository, Slave, Builder
+from toxicbuild.ui.models import Repository, Slave, BuildSet
 
 
 class BaseModelHandler(TemplateHandler):
@@ -152,26 +152,36 @@ class MainHandler(TemplateHandler):
 
     def _get_btn_class(self, status):
         return {'success': 'success', 'fail': 'danger',
-                'running': 'info', 'exception': 'exception'}.get(status)
+                'running': 'info', 'exception': 'exception',
+                'cloning': 'pending'}.get(status)
 
 
-class WaterfallHandler(TemplateHandler):  # pragma no cover
+class WaterfallHandler(TemplateHandler):
     template = 'waterfall.html'
 
+    def prepare(self):
+        self.params = PyroRequest(self.request.arguments)
+
     @gen.coroutine
-    def get(self):
-        try:
-            repo_name = self.request.arguments.get('repo', [])[0].decode()
-        except IndexError:
-            repo_name = None
-        builders = yield from Builder.list(repo_name=repo_name)
-        context = {'builders': builders}
+    def get(self, repo_name):
+        buildsets = yield from BuildSet.list(repo_name=repo_name)
+        builders = self._get_builders_for_buildsets(buildsets)
+        context = {'buildsets': buildsets, 'builders': builders}
         self.render_template(self.template, context)
+
+    def _get_builders_for_buildsets(self, buildsets):
+        builders = set()
+        buildsets = buildsets or []
+        for buildset in buildsets:
+            for build in buildset.builds:
+                builders.add(build.builder)
+
+        return builders
 
 
 url = URLSpec('/$', MainHandler)
-waterfall = URLSpec('/waterfall$', WaterfallHandler)
-app = Application(url_prefix='', extra_urls=[url, waterfall])
+waterfall = URLSpec('/waterfall/(.*)', WaterfallHandler)
+app = PyroApplication([url, waterfall])
 static_app = StaticApplication()
 
 repo_kwargs = {'model': Repository}
@@ -180,4 +190,4 @@ repo_api_url = URLSpec('/api/repo/(.*)', RepositoryHandler, repo_kwargs)
 slave_kwargs = {'model': Slave}
 slave_api_url = URLSpec('/api/slave/(.*)', SlaveHandler, slave_kwargs)
 
-api_app = Application(url_prefix='', extra_urls=[repo_api_url, slave_api_url])
+api_app = PyroApplication([repo_api_url, slave_api_url])

@@ -149,14 +149,12 @@ class BuildStep(EmbeddedDocument):
         if 'started' not in keys:
             objdict['started'] = None
         else:
-            objdict['started'] = datetime2string(
-                utc2localtime(self.started))
+            objdict['started'] = datetime2string(self.started)
 
         if 'finished' not in keys:
             objdict['finished'] = None
         else:
-            objdict['finished'] = datetime2string(
-                utc2localtime(self.finished))
+            objdict['finished'] = datetime2string(self.finished)
 
         return objdict
 

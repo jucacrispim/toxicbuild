@@ -15,7 +15,7 @@
 
 {% include "start_build_modal.html" %}
 
-<div class="row">
+<div class="row main-row">
   <table class="table">
     <thead>
       <th>Name</th>
@@ -26,7 +26,7 @@
       {% for repo in repos %}
       <tr id="repo-row-{{repo.name}}">
 	<td>
-	  <button type="button" class="btn btn-toxicbuild-default btn-xs"
+	  <button type="button" class="btn btn-primary btn-xs"
 		  data-toggle="modal" data-target="#repoModal"
 		  data-repo-name="{{repo.name}}" data-repo-url="{{repo.url}}"
 		  data-repo-update-seconds="{{repo.update_seconds}}"
@@ -36,17 +36,11 @@
 	</td>
 	<td>{{repo.url}}</td>
 	<td>
-	  <form action="/waterfall">
-	    <input type="hidden" name="repo" value="{{repo.name}}">
+	  <form action="/waterfall/{{repo.name}}">
 	    <button type="submit" class="btn btn-xs btn-{{get_btn_class(repo.status)}} btn-status">{{repo.status}}
 	    </button>
 	  </form>
 	</td>
-	<td><button type="button"  class="btn btn-xs btn-toxicbuild-default start-build-btn"
-		    data-toggle="modal" data-target="#startBuildModal"
-		    data-start-build-name="{{repo.name}}">
-	    start build</button></td>
-      </tr>
       {% end %}
     </tbody>
   </table>
@@ -62,7 +56,7 @@
 
 {% include "slave_modal.html" %}
 
-<div class="row">
+<div class="row main-row">
   <table class="table">
     <thead>
       <th>Name</th>
@@ -73,7 +67,7 @@
       {% for slave in slaves %}
       <tr id="slave-row-{{slave.name}}">
 	<td>
-	  <button type="button" class="btn btn-toxicbuild-default btn-xs"
+	  <button type="button" class="btn btn-primary btn-xs"
 		  data-toggle="modal"
 		  data-target="#slaveModal"
 		  data-slave-name="{{slave.name}}"

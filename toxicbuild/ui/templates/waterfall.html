@@ -3,19 +3,40 @@
 {% block main_area %}
 {% include "step_details_modal.html" %}
 <table>
-  <tbody>
-    <tr>
+  <tbody class="waterfall-table">
+    <tr class="waterfall-row">
+      <td class="buildsets-column placeholder">
+	<ul>
+	  <li class="buildset buildset-placeholder">
+	    buildsets
+	  </li>
+	</ul>
+      </td>
       {% for builder in builders %}
-      <td class="builder-column">
+      <td class="builders-column">
 	<ul class="">
-	  <li class="builder builder-{{builder.status}}">
+	  <li class="builder builder-{{builder.status}}" id="{{builder.id}}">
 	    {{builder.name}}
 	  </li>
 	</ul>
-	{% for build in builder.builds %}
+      </td>
+      {% end %}
+    </tr>
+    {% for buildset in buildsets %}
+    <tr class="waterfall-row">
+      <td class="buildsets-column">
+	<ul class="">
+	  <li class="buildset" id="buildset-{{buildset.id}}">
+	    commit: {{buildset.commit[:8]}}<br/>
+	    commit date:{{buildset.commit_date}}<br/>
+	  </li>
+	</ul>
+      </td>
+      {% for build in buildset.builds %}
+      <td class="builder-column">
 	<ul>
 	  <li class="step step-{{build.status}}">
-	    Build {{build.number}} - {{build.status}}
+	    Build - {{build.status}}
 	  </li>
 	  {% for step in build.steps %}
 	  <li class="step step-{{step.status}}">
@@ -35,10 +56,10 @@
 	  </li>
 	  {% end %}
 	</ul>
-	{% end %}
       </td>
       {% end %}
     </tr>
+    {% end %}
   </tbody>
 </table>
 {% end %}

@@ -19,7 +19,7 @@
 var SLAVE_ROW_TEMPLATE = [
   '<tr id="slave-row-{{slave.name}}">',
     '<td>',
-      '<button type="button" class="btn btn-toxicbuild-default btn-xs"',
+      '<button type="button" class="btn btn-primary btn-xs"',
               'data-toggle="modal"',
               'data-target="#slaveModal"',
               'data-slave-name="{{slave.name}}"',
@@ -90,10 +90,13 @@ var SlaveManager = function(){
       slave_row = slave_row.replace(/{{slave.host}}/g, host);
       slave_row = slave_row.replace(/{{slave.port}}/g, port);
       $('#tbody-slaves').append(slave_row);
+      var repo_slaves = jQuery('#repo_slaves');
+      var option = jQuery('<option value="'+ name + '">' + name + '</option>');
+      repo_slaves.append(option);
     },
 
     removeSlaveRow: function(name){
-      jQuery('#slave-row' + name).remove();
+      jQuery('#slave-row-' + name).remove();
     },
 
     create: function(){
