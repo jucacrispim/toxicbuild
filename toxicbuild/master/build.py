@@ -28,7 +28,7 @@ from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
 from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
-                                   utc2localtime, LoggerMixin)
+                                   LoggerMixin)
 from toxicbuild.master.exceptions import DBError
 from toxicbuild.master.signals import revision_added
 
@@ -91,7 +91,7 @@ class Builder(SerializeMixin, Document):
     def get_status(self):
 
         try:
-            qs = BuildSet.objects(builds__builder=self).order_by('-started')
+            qs = BuildSet.objects(builds__builder=self).order_by('-created')
             last_buildset = (yield from to_asyncio_future(qs.to_list()))[0]
         except (IndexError, AttributeError):
             status = 'idle'
