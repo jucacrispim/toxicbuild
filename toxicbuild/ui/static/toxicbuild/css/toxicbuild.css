@@ -101,8 +101,19 @@ tr:nth-child(even) {
 .step a{
     color: #05335A;
 }
+
 .toxic-ul{
     list-style: none;
+}
+
+.builder-stick{
+    position: fixed;
+    top: 0;
+    z-index:999;
+}
+
+.buildsets-column{
+    max-width: 160px;
 }
 
 .builder-column{

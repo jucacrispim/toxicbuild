@@ -27,8 +27,8 @@
       <td class="buildsets-column">
 	<ul class="">
 	  <li class="buildset" id="buildset-{{buildset.id}}">
-	    commit: {{buildset.commit[:8]}}<br/>
-	    commit date:{{buildset.commit_date}}<br/>
+	    {{buildset.commit[:8]}}<br/>
+	    my-branch<br/>
 	  </li>
 	</ul>
       </td>
@@ -72,5 +72,5 @@
 <script src="{{static_url}}toxicbuild/js/jquery.min.js"></script>
 <!-- Include all compiled plugins (below), or include individual files as needed -->
 <script src="{{static_url}}toxicbuild/js/bootstrap.min.js"></script>
-<script src="{{static_url}}toxicbuild/js/toxicbuild.js"></script>
+<script src="{{static_url}}toxicbuild/js/waterfall.js"></script>
 {% end %}
