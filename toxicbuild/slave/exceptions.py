@@ -15,3 +15,7 @@ class PluginNotFound(Exception):
 
 class BadBuilderConfig(Exception):
     pass
+
+
+class BusyRepository(Exception):
+    pass

@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-VERSION = '0.3-a0'
+VERSION = '0.3a0'
 DESCRIPTION = """
 Easy and flexible continuous integration.
 """

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,7 +20,8 @@
 import asyncio
 from toxicbuild.core.protocol import BaseToxicProtocol
 from toxicbuild.slave import BuildManager
-from toxicbuild.slave.exceptions import BadData, BadBuilderConfig
+from toxicbuild.slave.exceptions import (BadData, BadBuilderConfig,
+                                         BusyRepository)
 from toxicbuild.core.utils import log, datetime2string, now
 
 
@@ -89,9 +90,10 @@ class BuildServerProtocol(BaseToxicProtocol):
         try:
             builder_name = self.data['body']['builder_name']
         except KeyError:
-            raise BadData
+            raise BadData("No builder name for build.")
 
         try:
+            manager.current_build = manager.named_tree
             builder = manager.load_builder(builder_name)
         except BadBuilderConfig:
             build_info = {'steps': [], 'status': 'exception',
@@ -101,6 +103,8 @@ class BuildServerProtocol(BaseToxicProtocol):
                           'named_tree': manager.named_tree}
         else:
             build_info = yield from builder.build()
+        finally:
+            manager.current_build = None
 
         return build_info
 
@@ -117,7 +121,14 @@ class BuildServerProtocol(BaseToxicProtocol):
             raise BadData('Bad data!')
 
         manager = BuildManager(self, repo_url, vcs_type, branch, named_tree)
-        yield from manager.update_and_checkout()
+
+        if manager.current_build and manager.current_build != named_tree:
+            raise BusyRepository('{} is busy. Can\'t work at {}'.format(
+                repo_url, named_tree))
+
+        elif not manager.current_build:
+            yield from manager.update_and_checkout()
+
         return manager
 
     def log(self, msg, level='info'):

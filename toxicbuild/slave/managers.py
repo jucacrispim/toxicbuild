@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from collections import defaultdict
 import os
 from toxicbuild.core import get_vcs
 from toxicbuild.core.utils import get_toxicbuildconf
@@ -35,6 +36,9 @@ class BuildManager:
     cloning_repos = set()
     # repositories that are being updated
     updating_repos = set()
+    # repositories that are building something.
+    # key is repo_url and value is named_tree
+    building_repos = defaultdict(lambda: None)  # pragma no branch WTF??
 
     def __init__(self, protocol, repo_url, vcs_type, branch, named_tree):
         self.protocol = protocol
@@ -58,6 +62,14 @@ class BuildManager:
         workdir = self.repo_url.replace('/', '-').replace('@', '').replace(
             ':', '')
         return os.path.join('src', workdir)
+
+    @property
+    def current_build(self):
+        return type(self).building_repos.get(self.repo_url)
+
+    @current_build.setter
+    def current_build(self, value):
+        type(self).building_repos[self.repo_url] = value
 
     @property
     def is_cloning(self):

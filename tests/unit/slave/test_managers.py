@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -118,6 +118,22 @@ class BuilderManagerTest(AsyncTestCase):
         manager.is_cloning = False
 
         self.assertFalse(self.manager.is_working)
+
+    def test_current_build(self):
+        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+                                        'master', 'v0.1')
+        try:
+            manager.current_build = 'v0.1'
+            self.assertEqual(
+                managers.BuildManager.building_repos[manager.repo_url], 'v0.1')
+            self.assertTrue(manager.current_build)
+        finally:
+            manager.current_build = None
+
+    def test_current_build_without_build(self):
+        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+                                        'master', 'v0.1')
+        self.assertIsNone(manager.current_build)
 
     @gen_test
     def test_wait_clone(self):

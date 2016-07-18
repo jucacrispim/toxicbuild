@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -86,6 +86,7 @@ class ProtocolTest(AsyncTestCase):
     @gen_test
     def test_get_buildmanager(self):
         self.protocol.data = yield from self.protocol.get_json_data()
+        protocols.BuildManager.return_value.current_build = None
 
         builder = yield from self.protocol.get_buildmanager()
         self.assertTrue(builder.update_and_checkout.called)
@@ -96,14 +97,33 @@ class ProtocolTest(AsyncTestCase):
         del self.protocol.data['body']
 
         with self.assertRaises(protocols.BadData):
-            builder = yield from self.protocol.get_buildmanager()
-            del builder
+            yield from self.protocol.get_buildmanager()
+
+    @mock.patch.object(protocols, 'BuildManager',
+                       mock.MagicMock(spec=protocols.BuildManager))
+    @gen_test
+    def test_get_buildmanager_already_building(self):
+        self.protocol.data = yield from self.protocol.get_json_data()
+        protocols.BuildManager.return_value.current_build = 'bla'
+
+        with self.assertRaises(protocols.BusyRepository):
+            yield from self.protocol.get_buildmanager()
+
+    @mock.patch.object(protocols, 'BuildManager',
+                       mock.MagicMock(spec=protocols.BuildManager))
+    @gen_test
+    def test_get_buildmanager_already_building_same_named_tree(self):
+        self.protocol.data = yield from self.protocol.get_json_data()
+        protocols.BuildManager.return_value.current_build = 'v0.1'
+        manager = yield from self.protocol.get_buildmanager()
+        self.assertFalse(manager.update_and_checkout.called)
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @gen_test
     def test_build(self):
         self.protocol.data = yield from self.protocol.get_json_data()
+        protocols.BuildManager.return_value.current_build = None
 
         yield from self.protocol.build()
 
@@ -116,6 +136,7 @@ class ProtocolTest(AsyncTestCase):
     def test_build_with_bad_data(self):
         self.protocol.data = yield from self.protocol.get_json_data()
         del self.protocol.data['body']['builder_name']
+        protocols.BuildManager.return_value.current_build = None
 
         with self.assertRaises(protocols.BadData):
             yield from self.protocol.build()
@@ -126,6 +147,7 @@ class ProtocolTest(AsyncTestCase):
     def test_build_with_bad_builder_config(self):
         protocols.BuildManager.return_value.load_builder = mock.Mock(
             side_effect=protocols.BadBuilderConfig)
+        protocols.BuildManager.return_value.current_build = None
         self.protocol.data = yield from self.protocol.get_json_data()
 
         build_info = yield from self.protocol.build()
@@ -139,6 +161,7 @@ class ProtocolTest(AsyncTestCase):
                     'body': {'builders': ['b1', 'b2']}}
 
         self.protocol.data = yield from self.protocol.get_json_data()
+        protocols.BuildManager.return_value.current_build = None
 
         manager = protocols.BuildManager.return_value
 
@@ -182,6 +205,7 @@ class ProtocolTest(AsyncTestCase):
     def test_client_connected_list_builders(self):
 
         manager = protocols.BuildManager.return_value
+        protocols.BuildManager.return_value.current_build = None
 
         manager.list_builders.return_value = ['b1', 'b2']
 
@@ -210,13 +234,12 @@ class ProtocolTest(AsyncTestCase):
                             'named_tree': 'v0.1',
                             'vcs_type': 'git',
                             'builder_name': 'bla'}}
-
+        protocols.BuildManager.return_value.current_build = None
         self.protocol.connection_made(self.transport)
 
         self._wait_futures()
 
         manager = protocols.BuildManager.return_value
-
         builder = manager.load_builder.return_value
 
         self.assertTrue(builder.build.called)
