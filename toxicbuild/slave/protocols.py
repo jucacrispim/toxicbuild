@@ -21,8 +21,7 @@ import asyncio
 import traceback
 from toxicbuild.core.protocol import BaseToxicProtocol
 from toxicbuild.slave import BuildManager
-from toxicbuild.slave.exceptions import (BadData, BadBuilderConfig,
-                                         BusyRepository)
+from toxicbuild.slave.exceptions import (BadData, BadBuilderConfig)
 from toxicbuild.core.utils import log, datetime2string, now
 
 
