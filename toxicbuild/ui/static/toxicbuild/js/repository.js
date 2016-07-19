@@ -36,11 +36,11 @@ var REPO_ROW_TEMPLATE = [
         '</button>',
       '</form>',
     '</td>',
-    '<td>',
-      '<button type="button" class="btn btn-xs btn-toxicbuild-default"',
-              'data-toggle="modal" data-repo-name="{{repo.name}}"',
-              'data-target="#startBuildModal">start build</button>',
-    '</td>',
+    // '<td>',
+    //   '<button type="button" class="btn btn-xs btn-toxicbuild-default"',
+    //           'data-toggle="modal" data-repo-name="{{repo.name}}"',
+    //           'data-target="#startBuildModal">start build</button>',
+    // '</td>',
   '</tr>',
 ];
 
