@@ -21,6 +21,7 @@ import asyncio
 import tornado
 from tornado.testing import gen_test
 from toxicbuild.core import BaseToxicClient
+from toxicbuild.slave import settings
 from tests.functional import REPO_DIR, BaseFunctionalTest
 
 
@@ -81,7 +82,7 @@ class DummyBuildClient(BaseToxicClient):
 
 @asyncio.coroutine
 def get_dummy_client():
-    dc = DummyBuildClient('localhost', 2222)
+    dc = DummyBuildClient(settings.ADDR, settings.PORT)
     yield from dc.connect()
     return dc
 

@@ -18,7 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
-from tests.functional import BaseFunctionalTest, REPO_DIR
+from tests.functional import BaseFunctionalTest
 from tornado.testing import gen_test
 from toxicbuild.master.scheduler import scheduler
 from toxicbuild.ui.models import Slave, Repository, BuildSet

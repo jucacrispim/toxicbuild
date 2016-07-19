@@ -18,10 +18,10 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import tornado
 from tornado.testing import gen_test
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.master.scheduler import scheduler
+from toxicbuild.master import settings
 from tests.functional import BaseFunctionalTest, REPO_DIR
 
 
@@ -83,7 +83,7 @@ class DummyUIClient(BaseToxicClient):
 
 @asyncio.coroutine
 def get_dummy_client():
-    dc = DummyUIClient('localhost', 1111)
+    dc = DummyUIClient(settings.HOLE_ADDR, settings.HOLE_PORT)
     yield from dc.connect()
     return dc
 
