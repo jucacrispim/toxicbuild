@@ -144,6 +144,8 @@ class BuildManager(LoggerMixin):
 
         if self.is_working:
             yield from self.wait_all()
+            if not work_after_wait:
+                return
 
         try:
             self.is_updating = True

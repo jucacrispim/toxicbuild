@@ -234,6 +234,16 @@ class BuilderManagerTest(AsyncTestCase):
         self.assertFalse(self.manager.vcs.clone.called)
         self.assertTrue(self.manager.vcs.checkout.called)
 
+    @patch.object(managers.BuildManager, 'is_working', MagicMock())
+    @patch.object(managers.BuildManager, 'wait_all', MagicMock())
+    @gen_test
+    def test_update_and_checkout_working_not_wait(self):
+        self.manager.vcs.checkout = Mock()
+        yield from self.manager.update_and_checkout(work_after_wait=False)
+
+        self.assertTrue(self.manager.wait_all.called)
+        self.assertFalse(self.manager.vcs.checkout.called)
+
     def test_list_builders(self):
         expected = ['builder1', 'builder2', 'builder3', 'builder4']
         returned = self.manager.list_builders()
