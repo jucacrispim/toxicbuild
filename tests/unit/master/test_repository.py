@@ -199,13 +199,15 @@ class RepositoryTest(AsyncTestCase):
         self.repo.build_manager.add_builds_for_slave = MagicMock(
             spec=build.BuildManager.add_builds_for_slave)
 
-        kw = {'buildset': Mock(), 'slave': Mock()}
+        buildset = MagicMock()
+        slave = MagicMock()
+        args = (buildset, slave)
 
-        yield from self.repo.add_builds_for_slave(**kw)
+        yield from self.repo.add_builds_for_slave(*args)
 
-        called_kw = self.repo.build_manager.add_builds_for_slave.call_args[1]
+        called_kw = self.repo.build_manager.add_builds_for_slave.call_args[0]
 
-        self.assertEqual(called_kw, kw)
+        self.assertEqual(called_kw, args)
 
     @gen_test
     def test_get_status_with_running_build(self):
