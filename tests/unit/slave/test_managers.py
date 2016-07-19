@@ -135,6 +135,27 @@ class BuilderManagerTest(AsyncTestCase):
                                         'master', 'v0.1')
         self.assertIsNone(manager.current_build)
 
+    def test_enter_with_other_current_build(self):
+        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+                                        'master', 'v0.1')
+        manager.current_build = 'v0.1.1'
+        with self.assertRaises(managers.BusyRepository):
+            with manager as m:
+                del m
+
+    def test_enter_with_same_current_build(self):
+        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+                                        'master', 'v0.1')
+        manager.current_build = 'v0.1'
+        with manager as m:
+            self.assertEqual(m.current_build, 'v0.1')
+
+    def test_enter_without_current_build(self):
+        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+                                        'master', 'v0.1')
+        with manager as m:
+            self.assertEqual(m.current_build, 'v0.1')
+
     @gen_test
     def test_wait_clone(self):
         class TBM(managers.BuildManager):
@@ -212,32 +233,6 @@ class BuilderManagerTest(AsyncTestCase):
 
         self.assertFalse(self.manager.vcs.clone.called)
         self.assertTrue(self.manager.vcs.checkout.called)
-
-    @gen_test
-    def test_update_and_checkout_with_checkout_exception(self):
-        self.manager.vcs.workdir_exists.return_value = True
-
-        self.CO_CALL_COUNT = 0
-        co_mock = MagicMock()
-
-        @asyncio.coroutine
-        def co(*a, **kw):
-            co_mock()
-
-            if self.CO_CALL_COUNT == 0:
-                self.CO_CALL_COUNT += 1
-                raise Exception
-
-        try:
-            old_co = self.manager.vcs.checkout
-            self.manager.vcs.checkout = co
-            yield from self.manager.update_and_checkout()
-
-            self.assertFalse(self.manager.vcs.clone.called)
-            self.assertTrue(self.manager.vcs.pull.called)
-            self.assertTrue(co_mock.called)
-        finally:
-            self.manager.vcs.checkout = old_co
 
     def test_list_builders(self):
         expected = ['builder1', 'builder2', 'builder3', 'builder4']

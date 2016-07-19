@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import traceback
 from toxicbuild.core.protocol import BaseToxicProtocol
 from toxicbuild.slave import BuildManager
 from toxicbuild.slave.exceptions import (BadData, BadBuilderConfig,
@@ -62,7 +63,8 @@ class BuildServerProtocol(BaseToxicProtocol):
             yield from self.send_response(code=1, body={'error': msg})
         except Exception as e:
             self.log(e.args[0], level='error')
-            yield from self.send_response(code=1, body=e.args[0])
+            msg = traceback.format_exc()
+            yield from self.send_response(code=1, body={'error': msg})
 
         finally:
             self.close_connection()
@@ -77,8 +79,12 @@ class BuildServerProtocol(BaseToxicProtocol):
     def list_builders(self):
         """ Informs all builders' names for this repo/branch/named_tree
         """
-        manager = yield from self.get_buildmanager()
-        builder_names = manager.list_builders()
+        with (yield from self.get_buildmanager()) as manager:
+            # We do not work after wait because if we wait for it
+            # the other instance working is in the same named_tree
+            yield from manager.update_and_checkout(work_after_wait=False)
+
+            builder_names = manager.list_builders()
         yield from self.send_response(code=0, body={'builders': builder_names})
 
     @asyncio.coroutine
@@ -86,25 +92,24 @@ class BuildServerProtocol(BaseToxicProtocol):
         """ Performs a build requested by the client using the params sent
         in the request data
         """
-        manager = yield from self.get_buildmanager()
-        try:
-            builder_name = self.data['body']['builder_name']
-        except KeyError:
-            raise BadData("No builder name for build.")
+        with (yield from self.get_buildmanager()) as manager:
+            yield from manager.update_and_checkout(work_after_wait=False)
 
-        try:
-            manager.current_build = manager.named_tree
-            builder = manager.load_builder(builder_name)
-        except BadBuilderConfig:
-            build_info = {'steps': [], 'status': 'exception',
-                          'started': datetime2string(now()),
-                          'finished': datetime2string(now()),
-                          'branch': manager.branch,
-                          'named_tree': manager.named_tree}
-        else:
-            build_info = yield from builder.build()
-        finally:
-            manager.current_build = None
+            try:
+                builder_name = self.data['body']['builder_name']
+            except KeyError:
+                raise BadData("No builder name for build.")
+
+            try:
+                builder = manager.load_builder(builder_name)
+            except BadBuilderConfig:
+                build_info = {'steps': [], 'status': 'exception',
+                              'started': datetime2string(now()),
+                              'finished': datetime2string(now()),
+                              'branch': manager.branch,
+                              'named_tree': manager.named_tree}
+            else:
+                build_info = yield from builder.build()
 
         return build_info
 
@@ -121,13 +126,6 @@ class BuildServerProtocol(BaseToxicProtocol):
             raise BadData('Bad data!')
 
         manager = BuildManager(self, repo_url, vcs_type, branch, named_tree)
-
-        if manager.current_build and manager.current_build != named_tree:
-            raise BusyRepository('{} is busy. Can\'t work at {}'.format(
-                repo_url, named_tree))
-
-        elif not manager.current_build:
-            yield from manager.update_and_checkout()
 
         return manager
 

@@ -136,25 +136,30 @@ class BuildManager(LoggerMixin):
             yield from asyncio.sleep(1)
 
     @asyncio.coroutine
-    def update_and_checkout(self):
-        """ Tries to checkout to ``self.named_tree``, if it does not
-        exisit, fetches changes from the repository.
-        If the repository was not cloned before, clones it first
+    def update_and_checkout(self, work_after_wait=True):
+        """ Updates ``self.branch`` and checkout to ``self.named_tree``.
+        :param work_after_wait: Indicates if we should update and checkout
+          after waiting for other instance finishes its job.
         """
 
         if self.is_working:
             yield from self.wait_all()
 
-        if not self.vcs.workdir_exists():
-            yield from self.vcs.clone(self.repo_url)
+        try:
+            self.is_updating = True
+            if not self.vcs.workdir_exists():
+                yield from self.vcs.clone(self.repo_url)
 
-        self.log('checking out to branch {}'.format(self.branch),
-                 level='debug')
-        yield from self.vcs.checkout(self.branch)
-        yield from self.vcs.pull(self.branch)
-        self.log('checking out to named_tree {}'.format(self.named_tree),
-                 level='debug')
-        yield from self.vcs.checkout(self.named_tree)
+            self.log('checking out to branch {}'.format(self.branch),
+                     level='debug')
+            yield from self.vcs.checkout(self.branch)
+            yield from self.vcs.pull(self.branch)
+            self.log('checking out to named_tree {}'.format(self.named_tree),
+                     level='debug')
+            yield from self.vcs.checkout(self.named_tree)
+
+        finally:
+            self.is_updating = False
 
     # the whole purpose of toxicbuild is this!
     # see the git history and look for the first versions.
@@ -214,6 +219,10 @@ class BuildManager(LoggerMixin):
     @asyncio.coroutine
     def send_info(self, info):
         yield from self.protocol.send_response(code=0, body=info)
+
+    def log(self, msg, level='info'):
+        msg = '[{}]{}'.format(self.repo_url, msg)
+        super().log(msg, level=level)
 
     def _load_plugins(self, plugins_config):
         """ Returns a list of :class:`toxicbuild.slave.plugins.Plugin`

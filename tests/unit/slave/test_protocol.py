@@ -86,10 +86,8 @@ class ProtocolTest(AsyncTestCase):
     @gen_test
     def test_get_buildmanager(self):
         self.protocol.data = yield from self.protocol.get_json_data()
-        protocols.BuildManager.return_value.current_build = None
-
         builder = yield from self.protocol.get_buildmanager()
-        self.assertTrue(builder.update_and_checkout.called)
+        self.assertTrue(builder)
 
     @gen_test
     def test_get_buildmanager_with_bad_data(self):
@@ -102,32 +100,13 @@ class ProtocolTest(AsyncTestCase):
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @gen_test
-    def test_get_buildmanager_already_building(self):
-        self.protocol.data = yield from self.protocol.get_json_data()
-        protocols.BuildManager.return_value.current_build = 'bla'
-
-        with self.assertRaises(protocols.BusyRepository):
-            yield from self.protocol.get_buildmanager()
-
-    @mock.patch.object(protocols, 'BuildManager',
-                       mock.MagicMock(spec=protocols.BuildManager))
-    @gen_test
-    def test_get_buildmanager_already_building_same_named_tree(self):
-        self.protocol.data = yield from self.protocol.get_json_data()
-        protocols.BuildManager.return_value.current_build = 'v0.1'
-        manager = yield from self.protocol.get_buildmanager()
-        self.assertFalse(manager.update_and_checkout.called)
-
-    @mock.patch.object(protocols, 'BuildManager',
-                       mock.MagicMock(spec=protocols.BuildManager))
-    @gen_test
     def test_build(self):
         self.protocol.data = yield from self.protocol.get_json_data()
         protocols.BuildManager.return_value.current_build = None
 
         yield from self.protocol.build()
 
-        manager = protocols.BuildManager.return_value
+        manager = protocols.BuildManager.return_value.__enter__.return_value
         self.assertTrue(manager.load_builder.called)
 
     @mock.patch.object(protocols, 'BuildManager',
@@ -145,8 +124,8 @@ class ProtocolTest(AsyncTestCase):
                        mock.MagicMock(spec=protocols.BuildManager))
     @gen_test
     def test_build_with_bad_builder_config(self):
-        protocols.BuildManager.return_value.load_builder = mock.Mock(
-            side_effect=protocols.BadBuilderConfig)
+        protocols.BuildManager.return_value.__enter__.return_value.\
+            load_builder = mock.Mock(side_effect=protocols.BadBuilderConfig)
         protocols.BuildManager.return_value.current_build = None
         self.protocol.data = yield from self.protocol.get_json_data()
 
@@ -161,9 +140,10 @@ class ProtocolTest(AsyncTestCase):
                     'body': {'builders': ['b1', 'b2']}}
 
         self.protocol.data = yield from self.protocol.get_json_data()
-        protocols.BuildManager.return_value.current_build = None
+        protocols.BuildManager.return_value.__enter__.return_value.\
+            current_build = None
 
-        manager = protocols.BuildManager.return_value
+        manager = protocols.BuildManager.return_value.__enter__.return_value
 
         manager.list_builders.return_value = ['b1', 'b2']
 
@@ -204,7 +184,7 @@ class ProtocolTest(AsyncTestCase):
     @gen_test
     def test_client_connected_list_builders(self):
 
-        manager = protocols.BuildManager.return_value
+        manager = protocols.BuildManager.return_value.__enter__.return_value
         protocols.BuildManager.return_value.current_build = None
 
         manager.list_builders.return_value = ['b1', 'b2']
@@ -239,7 +219,7 @@ class ProtocolTest(AsyncTestCase):
 
         self._wait_futures()
 
-        manager = protocols.BuildManager.return_value
+        manager = protocols.BuildManager.return_value.__enter__.return_value
         builder = manager.load_builder.return_value
 
         self.assertTrue(builder.build.called)
