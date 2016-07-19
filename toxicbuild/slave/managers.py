@@ -21,13 +21,14 @@ import asyncio
 from collections import defaultdict
 import os
 from toxicbuild.core import get_vcs
-from toxicbuild.core.utils import get_toxicbuildconf
+from toxicbuild.core.utils import get_toxicbuildconf, LoggerMixin
 from toxicbuild.slave.build import Builder, BuildStep
-from toxicbuild.slave.exceptions import BuilderNotFound, BadBuilderConfig
+from toxicbuild.slave.exceptions import (BuilderNotFound, BadBuilderConfig,
+                                         BusyRepository)
 from toxicbuild.slave.plugins import Plugin
 
 
-class BuildManager:
+class BuildManager(LoggerMixin):
 
     """ A manager for remote build requests
     """
@@ -47,6 +48,18 @@ class BuildManager:
         self.branch = branch
         self.named_tree = named_tree
         self._configmodule = None
+
+    def __enter__(self):
+        if self.current_build and self.current_build != self.named_tree:
+            msg = '{} is busy at {}. Can\'t work at {}'.format(
+                self.repo_url, self.current_build, self.named_tree)
+            raise BusyRepository(msg)
+
+        self.current_build = self.named_tree
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.current_build = None
 
     @property
     def configmodule(self):
@@ -135,15 +148,13 @@ class BuildManager:
         if not self.vcs.workdir_exists():
             yield from self.vcs.clone(self.repo_url)
 
-        # Now we first try to checkout to named_tree
-        try:
-            yield from self.vcs.checkout(self.named_tree)
-        except:
-            # If it does not exist here, we fetch changes from
-            # remote repo
-            yield from self.vcs.checkout(self.branch)
-            yield from self.vcs.pull(self.branch)
-            yield from self.vcs.checkout(self.named_tree)
+        self.log('checking out to branch {}'.format(self.branch),
+                 level='debug')
+        yield from self.vcs.checkout(self.branch)
+        yield from self.vcs.pull(self.branch)
+        self.log('checking out to named_tree {}'.format(self.named_tree),
+                 level='debug')
+        yield from self.vcs.checkout(self.named_tree)
 
     # the whole purpose of toxicbuild is this!
     # see the git history and look for the first versions.
