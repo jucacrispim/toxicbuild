@@ -34,6 +34,7 @@ class BuildServerProtocol(BaseToxicProtocol):
     def client_connected(self):
         try:
             self.log('executing {} for {}'.format(self.action, self.peername))
+            status = 0
             if self.action == 'healthcheck':
                 yield from self.healthcheck()
 
@@ -60,13 +61,17 @@ class BuildServerProtocol(BaseToxicProtocol):
             msg = 'Something wrong with your data {}'.format(self.raw_data)
             self.log('bad data', level='error')
             yield from self.send_response(code=1, body={'error': msg})
+            status = 1
         except Exception as e:
             self.log(e.args[0], level='error')
             msg = traceback.format_exc()
+            status = 1
             yield from self.send_response(code=1, body={'error': msg})
 
         finally:
             self.close_connection()
+
+        return status
 
     @asyncio.coroutine
     def healthcheck(self):

@@ -25,10 +25,11 @@
 import asyncio
 import inspect
 import json
+import time
 import traceback
 from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core import BaseToxicProtocol
-from toxicbuild.core.utils import log
+from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import (Slave, Repository, Builder,
                                BuildSet, RepositoryRevision)
 from toxicbuild.master.exceptions import UIFunctionNotFound
@@ -36,7 +37,7 @@ from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished)
 
 
-class UIHole(BaseToxicProtocol):
+class UIHole(BaseToxicProtocol, LoggerMixin):
 
     @asyncio.coroutine
     def client_connected(self):
@@ -48,10 +49,14 @@ class UIHole(BaseToxicProtocol):
 
         try:
             yield from handler.handle()
+            status = 0
         except Exception:
             msg = traceback.format_exc()
+            status = 1
             yield from self.send_response(code=1, body={'error': msg})
             self.close_connection()
+
+        return status
 
 
 class HoleHandler:
@@ -71,7 +76,7 @@ class HoleHandler:
     * `slave-get`
     * `slave-list`
     * `slave-remove`
-    * `builder-list`
+    * `buildset-list`
     * `builder-show`
     * `list-funcs`
     """
@@ -83,7 +88,6 @@ class HoleHandler:
 
     @asyncio.coroutine
     def handle(self):
-        self.log('Executing {}'.format(self.action))
 
         attrname = self.action.replace('-', '_')
         if attrname not in self._get_action_methods():
@@ -391,10 +395,6 @@ class HoleHandler:
                 slave, revision)
 
         return builders
-
-    def log(self, msg):
-        msg = '[{}] {}'.format(type(self).__name__, msg)
-        log(msg)
 
 
 class UIStreamHandler:

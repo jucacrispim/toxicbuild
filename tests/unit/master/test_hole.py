@@ -71,7 +71,6 @@ class UIHoleTest(AsyncTestCase):
         self.assertEqual(response_code, 1, response)
 
 
-@patch.object(hole, 'log', Mock())
 @patch.object(repository.utils, 'log', Mock())
 class HoleHandlerTest(AsyncTestCase):
 

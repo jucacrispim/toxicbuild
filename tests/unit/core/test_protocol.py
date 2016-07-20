@@ -106,6 +106,7 @@ class BaseToxicProtocolTest(AsyncTestCase):
         self.assertTrue(self.protocol._stream_writer.close.called)
         self.assertTrue(self.protocol.connection_lost_cb.called)
 
+    @mock.patch.object(protocol.utils, 'log', mock.Mock())
     @gen_test
     def test_check_data_without_data(self):
         self.full_message = b''

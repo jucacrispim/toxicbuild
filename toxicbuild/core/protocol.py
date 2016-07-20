@@ -19,10 +19,12 @@
 
 import asyncio
 import json
+import time
+import traceback
 from toxicbuild.core import utils
 
 
-class BaseToxicProtocol(asyncio.StreamReaderProtocol):
+class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
 
     """ Base protocol for toxicbulid servers
     """
@@ -133,7 +135,9 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
 
         try:
             data = json.loads(data)
-        except Exception:  # pragma: no cover
+        except Exception:
+            msg = '{}\n{}'.format(traceback.format_exc(), data)
+            self.log(msg, level='error')
             data = None
 
         return data
@@ -144,4 +148,12 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol):
         if not self._connected:  # pragma no cover
             return
 
-        self._client_connected_future = asyncio.async(self.client_connected())
+        # wrapping it to log it.
+        @asyncio.coroutine
+        def logged_cb():
+            init = (time.time() * 1e3)
+            status = yield from self.client_connected()
+            end = (time.time() * 1e3)
+            self.log('{}: {} {}'.format(self.action, status, (end - init)))
+
+        self._client_connected_future = asyncio.async(logged_cb())
