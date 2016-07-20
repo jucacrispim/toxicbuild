@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -22,7 +22,7 @@ import datetime
 from unittest import mock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.core.utils import now, string2datetime
+from toxicbuild.core.utils import now
 from toxicbuild.master import build, repository, slave
 
 
@@ -221,6 +221,10 @@ class BuildSetTest(AsyncTestCase):
                         repository=self.repo, slave=self.slave,
                         named_tree='v0.1')
         self.buildset.builds.append(b)
+        b = build.Build(branch='other', builder=self.other_builder,
+                        repository=self.repo, slave=self.slave,
+                        named_tree='v0.1')
+        self.buildset.builds.append(b)
 
         builds = yield from self.buildset.get_builds_for(builder=self.builder)
         self.assertEqual(len(builds), 2)
@@ -244,6 +248,8 @@ class BuildSetTest(AsyncTestCase):
         self.slave = slave.Slave(name='sla', host='localhost', port=1234)
         yield self.slave.save()
         self.builder = build.Builder(repository=self.repo, name='builder-bla')
+        self.other_builder = build.Builder(
+            repository=self.repo, name='builder-ble')
         yield self.builder.save()
         self.build = build.Build(branch='master', builder=self.builder,
                                  repository=self.repo, slave=self.slave,

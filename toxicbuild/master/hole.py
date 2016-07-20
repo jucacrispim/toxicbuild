@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -25,7 +25,6 @@
 import asyncio
 import inspect
 import json
-import time
 import traceback
 from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core import BaseToxicProtocol
@@ -317,6 +316,21 @@ class HoleHandler:
             buildset_list.append(bdict)
 
         return {'buildset-list': buildset_list}
+
+    @asyncio.coroutine
+    def builder_list(self, **kwargs):
+        """List builders.
+
+        :param kwargs: Arguments to filter the list."""
+
+        queryset = Builder.objects.filter(**kwargs)
+        builders = yield from to_asyncio_future(queryset.to_list())
+        blist = []
+
+        for b in builders:
+            blist.append((yield from b.to_dict(id_as_str=True)))
+
+        return {'builder-list': blist}
 
     @asyncio.coroutine
     def builder_show(self, repo_name, builder_name, skip=0, offset=None):

@@ -226,3 +226,20 @@ class BuildSetTest(AsyncTestCase):
         builders = yield from models.BuildSet.list()
         self.assertEqual(len(builders), 2)
         self.assertTrue(len(builders[0].builds[0].steps), 1)
+
+
+class BuilderTest(AsyncTestCase):
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
+
+    @patch.object(models.Builder, 'get_client', lambda: get_client_mock(
+        [{'id': 'sasdfasf', 'name': 'b0', 'status': 'running'},
+         {'id': 'paopofe', 'name': 'b1', 'status': 'success'}]))
+    @gen_test
+    def test_list(self):
+        builders = yield from models.Builder.list(id__in=['sasdfasf',
+                                                          'paopofe'])
+
+        self.assertEqual(len(builders), 2)
+        self.assertEqual(builders[0].name, 'b0')

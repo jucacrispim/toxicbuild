@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -178,10 +178,9 @@ class Build(EmbeddedDocument):
 
     @asyncio.coroutine
     def to_dict(self, id_as_str=False):
-        builder = yield from to_asyncio_future(self.builder)
         steps = [s.to_dict() for s in self.steps]
         objdict = json.loads(super().to_json())
-        objdict['builder'] = yield from builder.to_dict(id_as_str=id_as_str)
+        objdict['builder']['id'] = objdict['builder']['$oid']
         objdict['steps'] = steps
         return objdict
 

@@ -368,7 +368,7 @@ class HoleHandlerTest(AsyncTestCase):
         self.assertEqual(len(buildsets[0]['builds']), 5)
 
     @gen_test
-    def test_builder_list_without_repo_name(self):
+    def test_buildset_list_without_repo_name(self):
 
         yield from self._create_test_data()
         handler = hole.HoleHandler({}, 'buildset-list', MagicMock())
@@ -376,6 +376,15 @@ class HoleHandlerTest(AsyncTestCase):
         builders = yield from handler.buildset_list()
         builders = builders['buildset-list']
         self.assertEqual(len(builders), 3)
+
+    @gen_test
+    def test_builder_list(self):
+        yield from self._create_test_data()
+        handler = hole.HoleHandler({}, 'builder-list', MagicMock())
+
+        builders = (yield from handler.builder_list(
+            id__in=[self.builders[0].id]))['builder-list']
+        self.assertEqual(builders[0]['id'], str(self.builders[0].id))
 
     @gen_test
     def test_builder_show(self):
@@ -462,6 +471,7 @@ class HoleHandlerTest(AsyncTestCase):
                     'slave_list': handler.slave_list,
                     'slave_remove': handler.slave_remove,
                     'buildset_list': handler.buildset_list,
+                    'builder_list': handler.builder_list,
                     'builder_show': handler.builder_show}
 
         action_methods = handler._get_action_methods()

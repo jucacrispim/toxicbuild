@@ -296,31 +296,58 @@ class WaterfallHandlerTest(AsyncTestCase):
         return tornado.ioloop.IOLoop.instance()
 
     @patch.object(web, 'BuildSet', MagicMock())
+    @patch.object(web, 'Builder', MagicMock())
     @gen_test
     def test_get(self):
+        web.Builder.list = asyncio.coroutine(lambda *a, **kw: [])
+
         self.handler.render_template = MagicMock()
         self.handler.prepare()
 
         expected_context = {'buildsets': None, 'builders': [],
                             'ordered_builds': self.handler._ordered_builds,
-                            'get_ending': self.handler._get_ending}
+                            'get_ending': self.handler._get_ending}.keys()
         yield self.handler.get('some-repo')
         context = self.handler.render_template.call_args[0][1]
-        self.assertEqual(expected_context, context)
+        self.assertEqual(expected_context, context.keys())
 
+    @patch.object(web, 'Builder', MagicMock())
+    @gen_test
     def test_get_builders_for_buildset(self):
         self._create_test_data()
+
+        list_mock = MagicMock(return_value=self.builders)
+        web.Builder.list = asyncio.coroutine(lambda *a, **kw: list_mock(**kw))
+
         expected = sorted(self.builders, key=lambda b: b.name)
 
-        returned = self.handler._get_builders_for_buildsets(self.buildsets)
+        returned = yield from self.handler._get_builders_for_buildsets(
+            self.buildsets)
         self.assertEqual(expected, returned)
+        called_args = list_mock.call_args[1]
 
+        expected = {'id__in': [b.id for b in self.builders]}
+        self.assertEqual(expected, called_args)
+
+    @patch.object(web, 'BuildSet', MagicMock())
+    @patch.object(web, 'Builder', MagicMock())
+    @gen_test
     def test_ordered_builds(self):
-        bd0 = models.Builder(name='z')
-        bd1 = models.Builder(name='a')
+        bd0 = models.Builder(name='z', id=0)
+        bd1 = models.Builder(name='a', id=1)
         builds = [models.Build(name='z', builder=bd0),
                   models.Build(name='a', builder=bd1)]
-        ordered = self.handler._ordered_builds(builds)
+
+        list_mock = MagicMock(return_value=[bd0, bd1])
+        web.Builder.list = asyncio.coroutine(lambda *a, **kw: list_mock(**kw))
+
+        self.handler._get_builders_for_buildsets = asyncio.coroutine(
+            lambda b: [bd0, bd1])
+        self.handler.render_template = MagicMock()
+        ordered = yield self.handler.get('some-repo')
+        order_func = self.handler.render_template.call_args[0][1][
+            'ordered_builds']
+        ordered = order_func(builds)
         self.assertTrue(ordered[0].builder.name < ordered[1].builder.name)
 
     def test_get_ending(self):

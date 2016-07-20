@@ -22,7 +22,7 @@ from tornado import gen
 from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
 from pyrocumulus.web.handlers import TemplateHandler, PyroRequest
 from pyrocumulus.web.urlmappers import URLSpec
-from toxicbuild.ui.models import Repository, Slave, BuildSet
+from toxicbuild.ui.models import Repository, Slave, BuildSet, Builder
 
 
 class BaseModelHandler(TemplateHandler):
@@ -165,12 +165,18 @@ class WaterfallHandler(TemplateHandler):
     @gen.coroutine
     def get(self, repo_name):
         buildsets = yield from BuildSet.list(repo_name=repo_name)
-        builders = self._get_builders_for_buildsets(buildsets)
+        builders = yield from self._get_builders_for_buildsets(buildsets)
+
+        def _ordered_builds(builds):
+            return sorted(
+                builds, key=lambda b: builders[builders.index(b.builder)].name)
+
         context = {'buildsets': buildsets, 'builders': builders,
-                   'ordered_builds': self._ordered_builds,
+                   'ordered_builds': _ordered_builds,
                    'get_ending': self._get_ending}
         self.render_template(self.template, context)
 
+    @asyncio.coroutine
     def _get_builders_for_buildsets(self, buildsets):
         builders = set()
         buildsets = buildsets or []
@@ -178,6 +184,12 @@ class WaterfallHandler(TemplateHandler):
             for build in buildset.builds:
                 builders.add(build.builder)
 
+        # Now the thing here is: the builders here are made
+        # from the response of buildset-list. It returns only
+        # the builder id for builds, so now I retrieve the
+        # 'full' builder using builder-list
+        ids = [b.id for b in builders]
+        builders = yield from Builder.list(id__in=ids)
         return sorted(builders, key=lambda b: b.name)
 
     def _ordered_builds(self, builds):

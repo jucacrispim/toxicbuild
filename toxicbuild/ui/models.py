@@ -223,7 +223,17 @@ class Repository(BaseModel):
 
 
 class Builder(BaseModel):
-    pass
+
+    @classmethod
+    @asyncio.coroutine
+    def list(cls, **kwargs):
+        """Lists builders already used."""
+
+        with (yield from cls.get_client()) as client:
+            builders = yield from client.builder_list(**kwargs)
+
+        builders_list = [cls(**builder) for builder in builders]
+        return builders_list
 
 
 class Step(BaseModel):
@@ -251,7 +261,7 @@ class BuildSet(BaseModel):
         :param repo_name: Name of a repository."""
 
         with (yield from cls.get_client()) as client:
-            builders = yield from client.buildset_list(repo_name=repo_name,
-                                                       offset=20)
-        builders_list = [cls(**builder) for builder in builders]
-        return builders_list
+            buildsets = yield from client.buildset_list(repo_name=repo_name,
+                                                        offset=20)
+        buildset_list = [cls(**buildset) for buildset in buildsets]
+        return buildset_list
