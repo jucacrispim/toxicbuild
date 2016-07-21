@@ -99,19 +99,17 @@ class BuildTest(AsyncTestCase):
         b = build.Build(branch='master', builder=self.builder,
                         repository=self.repo, slave=self.slave,
                         named_tree='v0.1')
-        rev = repository.RepositoryRevision(commit='saçfijf',
-                                            commit_date=now(),
-                                            repository=self.repo,
-                                            branch='master',
-                                            author='tião',
-                                            title='blabla')
-        yield rev.save()
+        self.rev = repository.RepositoryRevision(commit='saçfijf',
+                                                 commit_date=now(),
+                                                 repository=self.repo,
+                                                 branch='master',
+                                                 author='tião',
+                                                 title='blabla')
+        yield self.rev.save()
 
-        self.buildset = build.BuildSet(repository=self.repo,
-                                       revision=rev,
-                                       commit='dsasdfdas',
-                                       commit_date=now,
-                                       builds=[b])
+        self.buildset = yield from build.BuildSet.create(repository=self.repo,
+                                                         revision=self.rev)
+        self.buildset.builds.append(b)
         yield self.buildset.save()
 
 
@@ -132,6 +130,7 @@ class BuildSetTest(AsyncTestCase):
         buildset = yield from build.BuildSet.create(self.repo, self.rev)
         self.assertTrue(buildset.commit)
         self.assertTrue(buildset.id)
+        self.assertTrue(buildset.author)
 
     @gen_test
     def test_create_without_save(self):
@@ -267,6 +266,9 @@ class BuildSetTest(AsyncTestCase):
                                        revision=self.rev,
                                        commit='alsdfjçasdfj',
                                        commit_date=now(),
+                                       branch=self.rev.branch,
+                                       author=self.rev.author,
+                                       title=self.rev.title,
                                        builds=[self.build])
         yield self.buildset.save()
 
@@ -458,10 +460,9 @@ class BuildManagerTest(AsyncTestCase):
 
         self.builder = build.Builder(repository=self.repo, name='builder-1')
         yield self.builder.save()
-        self.buildset = build.BuildSet(repository=self.repo,
-                                       revision=self.revision,
-                                       commit='sdasf',
-                                       commit_date=now)
+        self.buildset = yield from build.BuildSet.create(repository=self.repo,
+                                                         revision=self.revision)
+
         self.build = build.Build(repository=self.repo, slave=self.slave,
                                  branch='master', named_tree='v0.1',
                                  builder=self.builder)
@@ -558,8 +559,9 @@ class BuilderTest(AsyncTestCase):
                                             author='bla',
                                             title='some title')
         yield rev.save()
-        buildset = build.BuildSet(repository=repo, revision=rev,
-                                  commit='asdasf', commit_date=now)
+        buildset = yield from build.BuildSet.create(repository=repo,
+                                                    revision=rev)
+
         buildset.builds.append(buildinst)
         yield buildset.save()
         status = yield from builder.get_status()

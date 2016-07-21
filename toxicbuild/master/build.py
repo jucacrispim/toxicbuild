@@ -217,6 +217,9 @@ class BuildSet(SerializeMixin, Document):
                               required=True)
     commit = StringField(required=True)
     commit_date = DateTimeField(required=True)
+    branch = StringField(required=True)
+    author = StringField()
+    title = StringField()
     builds = ListField(EmbeddedDocumentField(Build))
     # when this buildset was first created.
     created = DateTimeField(default=now)
@@ -233,7 +236,9 @@ class BuildSet(SerializeMixin, Document):
 
         buildset = cls(repository=repository, revision=revision,
                        commit=revision.commit,
-                       commit_date=revision.commit_date)
+                       commit_date=revision.commit_date,
+                       branch=revision.branch, author=revision.author,
+                       title=revision.title)
         if save:
             yield from to_asyncio_future(buildset.save())
         return buildset

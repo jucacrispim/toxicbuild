@@ -141,9 +141,9 @@ class BuildClientTest(AsyncTestCase):
         buildinstance = build.Build(repository=repo, slave=slave_inst,
                                     builder=builder, branch='master',
                                     named_tree='123sdf09')
-        buildset = build.BuildSet(repository=repo, revision=revision,
-                                  commit='asda',
-                                  commit_date=now)
+        buildset = yield from build.BuildSet.create(repository=repo,
+                                                    revision=revision)
+
         yield buildset.save()
 
         yield from self.client.build(buildinstance)

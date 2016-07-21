@@ -220,9 +220,9 @@ class RepositoryTest(AsyncTestCase):
                                     branch='master', named_tree='master',
                                     started=datetime.datetime.now(),
                                     status='running', builder=self.builder)
-        buildset = build.BuildSet(repository=self.repo, revision=self.revs[0],
-                                  commit='asda',
-                                  commit_date=utils.now)
+        buildset = yield from build.BuildSet.create(repository=self.repo,
+                                                    revision=self.revs[0])
+
         buildset.builds.append(running_build)
         yield buildset.save()
         self.assertEqual((yield from self.repo.get_status()), 'running')
@@ -241,10 +241,8 @@ class RepositoryTest(AsyncTestCase):
                                     builder=self.builder)
         builds = [success_build, pending_build]
         for i, b in enumerate(builds):
-            buildset = build.BuildSet(repository=self.repo,
-                                      revision=self.revs[i],
-                                      commit='asda',
-                                      commit_date=utils.now)
+            buildset = yield from build.BuildSet.create(repository=self.repo,
+                                                        revision=self.revs[i])
             buildset.builds.append(b)
             yield buildset.save()
 
@@ -258,8 +256,9 @@ class RepositoryTest(AsyncTestCase):
                                  branch='master', named_tree='master',
                                  started=datetime.datetime.now(),
                                  status='fail', builder=self.builder)
-        buildset = build.BuildSet(repository=self.repo, revision=self.revs[0],
-                                  commit='asda', commit_date=utils.now)
+        buildset = yield from build.BuildSet.create(repository=self.repo,
+                                                    revision=self.revs[0])
+
         buildset.builds.append(fail_build)
         yield buildset.save()
         self.assertEqual((yield from self.repo.get_status()), 'fail')
@@ -298,10 +297,9 @@ class RepositoryTest(AsyncTestCase):
                                builder=self.builder)
         builds = [p_build, p1_build]
         for i, b in enumerate(builds):
-            buildset = build.BuildSet(repository=self.repo,
-                                      revision=self.revs[i],
-                                      commit='asda',
-                                      commit_date=utils.now)
+            buildset = yield from build.BuildSet.create(repository=self.repo,
+                                                        revision=self.revs[i])
+
             buildset.builds.append(b)
             yield buildset.save()
 

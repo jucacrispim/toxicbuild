@@ -520,10 +520,9 @@ class HoleHandlerTest(AsyncTestCase):
                 branch='master',
                 commit_date=now, author='zé', title='boa!')
             yield self.revision.save()
-            self.buildset = build.BuildSet(repository=self.repo,
-                                           revision=self.revision,
-                                           commit='asda',
-                                           commit_date=now)
+            self.buildset = yield from build.BuildSet.create(
+                repository=self.repo, revision=self.revision)
+
             yield self.buildset.save(revision=self.revision)
             builds = []
             self.builders = []

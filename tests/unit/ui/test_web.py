@@ -305,7 +305,7 @@ class WaterfallHandlerTest(AsyncTestCase):
         self.handler.prepare()
 
         expected_context = {'buildsets': None, 'builders': [],
-                            'ordered_builds': self.handler._ordered_builds,
+                            'ordered_builds': None,
                             'get_ending': self.handler._get_ending}.keys()
         yield self.handler.get('some-repo')
         context = self.handler.render_template.call_args[0][1]

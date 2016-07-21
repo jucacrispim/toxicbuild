@@ -251,10 +251,9 @@ class SlaveTest(AsyncTestCase):
 
         yield self.revision.save()
 
-        self.buildset = build.BuildSet(
-            repository=self.repo, revision=self.revision,
-            commit='asda',
-            commit_date=now)
+        self.buildset = yield from build.BuildSet.create(
+            repository=self.repo, revision=self.revision)
+
         yield self.buildset.save()
 
         self.builder = build.Builder(repository=self.repo, name='builder-1')
