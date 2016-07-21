@@ -187,7 +187,9 @@ class Git(VCS):
     @asyncio.coroutine
     def get_revisions_for_branch(self, branch, since=None):
 
-        cmd = '{} log --pretty=format:"%H | %ad" '.format(self.vcsbin)
+        # hash | commit date | author | title
+        cmd = '{} log --pretty=format:"%H | %ad | %an | %s" '.format(
+            self.vcsbin)
         if since:
             # Here we change the time to localtime since we can't get
             # utc time in git commits unless we are using git 2.7+
@@ -206,12 +208,13 @@ class Git(VCS):
         revisions = []
 
         for rev in last_revs:
-            rev_uuid, date = rev.split('|')
+            rev_uuid, date, author, title = rev.split(' | ')
             date = string2datetime(date.strip(), dtformat=self.date_format)
             # Here we change the date from git, that is in localtime to
             # utc before saving to database.
             date = localtime2utc(date)
-            revisions.append({'commit': rev_uuid.strip(), 'commit_date': date})
+            revisions.append({'commit': rev_uuid.strip(), 'commit_date': date,
+                              'author': author, 'title': title})
 
         # The thing here is that the first revision in the list
         # is the last one consumed on last time

@@ -190,36 +190,48 @@ class GitTest(AsyncTestCase):
     def test_get_revisions_for_branch(self):
         now = utils.now()
         local = utils.utc2localtime(now)
-        expected_cmd = '{} log --pretty=format:"%H | %ad" '.format('git')
+        expected_cmd = '{} log --pretty=format:"%H | %ad | %an | %s" '.format(
+            'git')
         expected_cmd += '--since="{}" --date=local'.format(
             datetime.datetime.strftime(local, self.vcs.date_format))
 
         @asyncio.coroutine
         def e(*a, **kw):
             assert a[0] == expected_cmd, a[0]
-            log = '0sdflf093 | Thu Oct 20 16:30:23 2014\n'
-            log += '0sdflf095 | Thu Oct 20 16:20:23 2014\n'
+            log = '0sdflf093 | Thu Oct 20 16:30:23 2014 '
+            log += '| zezinha do butiá | some good commit\n'
+            log += '0sdflf095 | Thu Oct 20 16:20:23 2014 '
+            log += '| seu fadu | Other good commit.\n'
+            log += '09s80f9asdf | Thu Oct 20 16:10:23 2014 '
+            log += '| capitão natário | I was the last consumed\n'
             return log
 
         vcs.exec_cmd = e
         revisions = yield from self.vcs.get_revisions_for_branch('master',
                                                                  since=now)
-        self.assertEqual(revisions[0]['commit'], '0sdflf093')
+        # The first revision is the older one
+        self.assertEqual(revisions[0]['author'], 'seu fadu')
+        self.assertEqual(revisions[1]['commit'], '0sdflf093')
 
     @gen_test
     def test_get_revisions_for_branch_without_since(self):
-        expected_cmd = 'git log --pretty=format:"%H | %ad" --date=local'
+        expected_cmd = '{} log --pretty=format:"%H | %ad | %an | %s" {}'.\
+                       format('git', '--date=local')
 
         @asyncio.coroutine
         def e(*a, **kw):
             assert a[0] == expected_cmd, a[0]
-            log = '0sdflf093 | Thu Oct 20 16:30:23 2014\n'
-            log += '0sdflf095 | Thu Oct 20 16:20:23 2014\n'
+            log = '0sdflf093 | Thu Oct 20 16:30:23 2014 '
+            log += '| zezinha do butiá | some good commit\n'
+            log += '0sdflf095 | Thu Oct 20 16:20:23 2014 '
+            log += '| seu fadu | Other good commit.\n'
+            log += '09s80f9asdf | Thu Oct 20 16:10:23 2014 '
+            log += '| capitão natário | I was the last consumed\n'
             return log
 
         vcs.exec_cmd = e
         revisions = yield from self.vcs.get_revisions_for_branch('master')
-        self.assertEqual(revisions[0]['commit'], '0sdflf093')
+        self.assertEqual(revisions[0]['commit'], '0sdflf095')
 
     @gen_test
     def test_get_revision(self):
