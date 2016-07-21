@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -74,7 +74,7 @@ class BuilderTest(AsyncTestCase):
     def test_get_env_vars(self):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
         self.builder.plugins = self.builder.manager._load_plugins(pconfig)
-        expected = {'PATH': 'PATH:venv/bin'}
+        expected = {'PATH': 'PATH:venv-usrbinpython3.4/bin'}
         returned = self.builder._get_env_vars()
 
         self.assertEqual(expected, returned)
@@ -83,7 +83,7 @@ class BuilderTest(AsyncTestCase):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
         self.builder.plugins = self.builder.manager._load_plugins(pconfig)
         self.builder.envvars = {'VAR1': 'someval'}
-        expected = {'PATH': 'PATH:venv/bin', 'VAR1': 'someval'}
+        expected = {'PATH': 'PATH:venv-usrbinpython3.4/bin', 'VAR1': 'someval'}
         returned = self.builder._get_env_vars()
         self.assertEqual(expected, returned)
 
