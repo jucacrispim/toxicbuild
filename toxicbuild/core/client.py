@@ -19,8 +19,9 @@
 
 import asyncio
 import json
+import traceback
 from toxicbuild.core import utils
-from toxicbuild.core.exceptions import ToxicClientException
+from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
 
 
 class BaseToxicClient(utils.LoggerMixin):
@@ -72,7 +73,14 @@ class BaseToxicClient(utils.LoggerMixin):
         # context we can consider it as being a False json
         data = yield from utils.read_stream(self.reader)
         data = data.decode() or '{}'
-        return json.loads(data)
+        try:
+            json_data = json.loads(data)
+        except Exception:
+            msg = traceback.format_exc()
+            self.log(msg, level='error')
+            raise BadJsonData(data)
+
+        return json_data
 
     @asyncio.coroutine
     def get_response(self):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -111,6 +111,26 @@ class BuildClientTest(AsyncTestCase):
         returned = yield from self.client.read()
 
         self.assertEqual(expected, returned)
+
+    @mock.patch.object(client.BaseToxicClient, 'log', mock.Mock())
+    @gen_test
+    def test_read_with_bad_json(self):
+
+        msg = '19\n{"some": "json"}{sd'.encode('utf-8')
+
+        self._rlimit = 0
+
+        @asyncio.coroutine
+        def read(nbytes):
+            part = msg[self._rlimit: self._rlimit + nbytes]
+            self._rlimit += nbytes
+            return part
+
+        self.client.reader = mock.Mock()
+        self.client.reader.read = read
+
+        with self.assertRaises(client.BadJsonData):
+            yield from self.client.read()
 
     @gen_test
     def test_get_response(self):
