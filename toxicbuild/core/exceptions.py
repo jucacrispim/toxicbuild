@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -35,4 +35,8 @@ class ConfigError(Exception):
 
 
 class ToxicClientException(Exception):
+    pass
+
+
+class BadJsonData(Exception):
     pass
