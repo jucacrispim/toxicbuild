@@ -131,7 +131,8 @@ class BuildClientTest(AsyncTestCase):
                                      vcs_type='git')
         yield repo.save()
         revision = repository.RepositoryRevision(
-            commit='sdafj', repository=repo, branch='master', commit_date=now)
+            commit='sdafj', repository=repo, branch='master', commit_date=now,
+            author='ze', title='huehue')
 
         yield revision.save()
         builder = build.Builder(repository=repo, name='b1')

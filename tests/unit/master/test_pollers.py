@@ -62,10 +62,14 @@ class GitPollerTest(AsyncTestCase):
 
         @asyncio.coroutine
         def gr(*a, **kw):
-            return {'master': [{'commit': '123sdf', 'commit_date': now},
-                               {'commit': 'asdf213', 'commit_date': now}],
-                    'dev': [{'commit': 'sdfljfew', 'commit_date': now},
-                            {'commit': 'sdlfjslfer3', 'commit_date': now}],
+            return {'master': [{'commit': '123sdf', 'commit_date': now,
+                                'author': 'zé', 'title': 'sometitle'},
+                               {'commit': 'asdf213', 'commit_date': now,
+                                'author': 'tião', 'title': 'other'}],
+                    'dev': [{'commit': 'sdfljfew', 'commit_date': now,
+                             'author': 'mariazinha', 'title': 'bla'},
+                            {'commit': 'sdlfjslfer3', 'commit_date': now,
+                             'author': 'jc', 'title': 'Our lord John Cleese'}],
                     'other': []}
 
         self.poller.vcs.get_revisions = gr
@@ -100,8 +104,10 @@ class GitPollerTest(AsyncTestCase):
 
         @asyncio.coroutine
         def gr(*a, **kw):
-            return {'master': [{'commit': '123sdf', 'commit_date': now},
-                               {'commit': 'asdf213', 'commit_date': now}]}
+            return {'master': [{'commit': '123sdf', 'commit_date': now,
+                                'author': 'eu', 'title': 'something'},
+                               {'commit': 'asdf213', 'commit_date': now,
+                                'author': 'eu', 'title': 'otherthing'}]}
 
         self.poller.vcs.get_revisions = gr
         self.poller.vcs.workdir_exists = workdir_exists
@@ -113,7 +119,6 @@ class GitPollerTest(AsyncTestCase):
         self.assertTrue(self.CLONE_CALLED)
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
-    @mock.patch.object(pollers, 'log', mock.Mock())
     @gen_test
     def test_poll_with_clone_exception(self):
 
@@ -125,6 +130,7 @@ class GitPollerTest(AsyncTestCase):
             raise CloneException
 
         self.poller.vcs.workdir_exists = workdir_exists
+        self.poller.log = mock.Mock()
         self.poller.vcs.clone = clone
 
         with self.assertRaises(CloneException):
@@ -153,8 +159,10 @@ class GitPollerTest(AsyncTestCase):
 
         @asyncio.coroutine
         def gr(*a, **kw):
-            return {'master': [{'commit': '123sdf', 'commit_date': now},
-                               {'commit': 'asdf213', 'commit_date': now}]}
+            return {'master': [{'commit': '123sdf', 'commit_date': now,
+                                'author': 'eu', 'title': 'something'},
+                               {'commit': 'asdf213', 'commit_date': now,
+                                'author': 'eu', 'title': 'bla'}]}
 
         self.poller.vcs.get_revisions = gr
         self.poller.vcs.workdir_exists = workdir_exists
@@ -165,14 +173,15 @@ class GitPollerTest(AsyncTestCase):
 
         self.assertFalse(self.CLONE_CALLED)
 
-    @mock.patch.object(pollers, 'log', mock.Mock())
+    @mock.patch.object(pollers, 'LoggerMixin', mock.Mock())
     @gen_test
     def test_poll_with_exception_processing_changes(self):
         self.poller.vcs.workdir_exists = mock.Mock(return_value=True)
         self.poller.vcs.update_submodule = mock.MagicMock()
+        self.poller.log = mock.Mock()
         self.poller.vcs.process_changes = mock.Mock(side_effect=Exception)
         yield from self.poller.poll()
-        log_level = pollers.log.call_args[1]['level']
+        log_level = self.poller.log.call_args[1]['level']
         self.assertEqual(log_level, 'error')
 
     @gen_test
@@ -203,12 +212,12 @@ class GitPollerTest(AsyncTestCase):
         for r in range(2):
             rev = repository.RepositoryRevision(
                 repository=rep, commit='123asdf', branch='master',
-                commit_date=now)
+                commit_date=now, author='zé', title='algo')
 
             yield rev.save()
 
             rev = repository.RepositoryRevision(
                 repository=rep, commit='123asef', branch='other',
-                commit_date=now)
+                commit_date=now, author='tião', title='outro')
 
             yield rev.save()

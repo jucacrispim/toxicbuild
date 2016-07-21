@@ -102,7 +102,9 @@ class BuildTest(AsyncTestCase):
         rev = repository.RepositoryRevision(commit='saçfijf',
                                             commit_date=now(),
                                             repository=self.repo,
-                                            branch='master')
+                                            branch='master',
+                                            author='tião',
+                                            title='blabla')
         yield rev.save()
 
         self.buildset = build.BuildSet(repository=self.repo,
@@ -257,7 +259,9 @@ class BuildSetTest(AsyncTestCase):
         self.rev = repository.RepositoryRevision(commit='saçfijf',
                                                  commit_date=now(),
                                                  repository=self.repo,
-                                                 branch='master')
+                                                 branch='master',
+                                                 author='ze',
+                                                 title='fixes #3')
         yield self.rev.save()
         self.buildset = build.BuildSet(repository=self.repo,
                                        revision=self.rev,
@@ -446,7 +450,8 @@ class BuildManagerTest(AsyncTestCase):
 
         self.revision = repository.RepositoryRevision(
             repository=self.repo, branch='master', commit='bgcdf3123',
-            commit_date=datetime.datetime.now()
+            commit_date=datetime.datetime.now(),
+            author='ze', title='fixes nothing'
         )
 
         yield self.revision.save()
@@ -549,7 +554,9 @@ class BuilderTest(AsyncTestCase):
         rev = repository.RepositoryRevision(commit='saçfijf',
                                             commit_date=now(),
                                             repository=repo,
-                                            branch='master')
+                                            branch='master',
+                                            author='bla',
+                                            title='some title')
         yield rev.save()
         buildset = build.BuildSet(repository=repo, revision=rev,
                                   commit='asdasf', commit_date=now)

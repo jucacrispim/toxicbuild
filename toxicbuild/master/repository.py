@@ -240,14 +240,15 @@ class Repository(Document, utils.LoggerMixin):
         return branches
 
     @asyncio.coroutine
-    def add_revision(self, branch, commit, commit_date):
+    def add_revision(self, branch, commit, commit_date, author, title):
         """ Adds a revision to the repository.
         :param commit: commit uuid
         :param branch: branch name
         :param commit_date: commit's date (on authors time)
         """
         revision = RepositoryRevision(repository=self, commit=commit,
-                                      branch=branch, commit_date=commit_date)
+                                      branch=branch, commit_date=commit_date,
+                                      author=author, title=title)
         yield from to_asyncio_future(revision.save())
         return revision
 
@@ -261,6 +262,8 @@ class RepositoryRevision(Document):
     repository = ReferenceField(Repository, required=True)
     commit = StringField(required=True)
     branch = StringField(required=True)
+    author = StringField(required=True)
+    title = StringField(required=True)
     commit_date = DateTimeField(required=True)
 
     @classmethod

@@ -245,7 +245,8 @@ class SlaveTest(AsyncTestCase):
 
         self.revision = repository.RepositoryRevision(
             repository=self.repo, branch='master', commit='bgcdf3123',
-            commit_date=datetime.datetime.now()
+            commit_date=datetime.datetime.now(),
+            author='tião', title='something'
         )
 
         yield self.revision.save()

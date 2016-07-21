@@ -19,12 +19,12 @@
 
 import asyncio
 from toxicbuild.core.vcs import get_vcs
-from toxicbuild.core.utils import log
+from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.signals import revision_added
 
 
-class Poller:
+class Poller(LoggerMixin):
 
     """ Class to poll changes from a vcs, process them and notificate about
     incoming changes
@@ -79,7 +79,7 @@ class Poller:
                 yield from self.process_changes()
             except Exception as e:
                 # shit happends
-                log(str(e), level='error')
+                self.log(str(e), level='error')
                 # but the show must go on
         finally:
             self._is_polling = False
@@ -143,6 +143,3 @@ class Poller:
 
         # returning for testing purposes
         return revision_added.send(self.repository, revisions=revisions)
-
-    def log(self, msg, level='info'):
-        log('[{}] {} '.format(type(self).__name__, msg), level)

@@ -518,7 +518,7 @@ class HoleHandlerTest(AsyncTestCase):
                 repository=self.repo,
                 commit='123qewad{}'.format(k),
                 branch='master',
-                commit_date=now)
+                commit_date=now, author='zé', title='boa!')
             yield self.revision.save()
             self.buildset = build.BuildSet(repository=self.repo,
                                            revision=self.revision,

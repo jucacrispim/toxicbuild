@@ -190,8 +190,11 @@ class RepositoryTest(AsyncTestCase):
         branch = 'master'
         commit = 'asdf213'
         commit_date = datetime.datetime.now()
-        rev = yield from self.repo.add_revision(branch, commit, commit_date)
+        kw = {'commit': commit, 'commit_date': commit_date,
+              'author': 'someone', 'title': 'uhuuu!!'}
+        rev = yield from self.repo.add_revision(branch, **kw)
         self.assertTrue(rev.id)
+        self.assertEqual('uhuuu!!', rev.title)
 
     @gen_test
     def test_add_builds_for_slave(self):
@@ -321,6 +324,8 @@ class RepositoryTest(AsyncTestCase):
                 rev = repository.RepositoryRevision(
                     repository=rep, commit='123asdf{}'.format(str(r)),
                     branch=branch,
+                    author='ze',
+                    title='commit {}'.format(r),
                     commit_date=now + datetime.timedelta(r))
 
                 yield rev.save()
@@ -335,6 +340,8 @@ class RepositoryTest(AsyncTestCase):
         for r in range(2):
             for branch in ['b1', 'b2']:
                 rev = repository.RepositoryRevision(
+                    author='ze',
+                    title='commit {}'.format(r),
                     repository=self.other_repo,
                     commit='123asdf{}'.format(str(r)),
                     branch=branch,
@@ -360,6 +367,8 @@ class RepositoryRevisionTest(AsyncTestCase):
         rev = repository.RepositoryRevision(repository=repo,
                                             commit='asdfasf',
                                             branch='master',
+                                            author='ze',
+                                            title='bla',
                                             commit_date=utils.now())
         yield rev.save()
         r = yield from repository.RepositoryRevision.get(
