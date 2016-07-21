@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import traceback
 from mongomotor import Document
 from mongomotor.fields import (StringField, IntField, BooleanField)
 from tornado.platform.asyncio import to_asyncio_future
@@ -110,14 +111,16 @@ class Slave(Document, LoggerMixin):
         with (yield from self.get_client()) as client:
             try:
                 build_info = yield from client.build(build)
-            except ToxicClientException as e:
+            except ToxicClientException:
+                output = traceback.format_exc()
                 build.status = 'exception'
                 build.started = build.started or now()
                 build.finished = build.finished or now()
-                exception_step = BuildStep(output=str(e), started=now(),
+                exception_step = BuildStep(output=output, started=now(),
                                            finished=now(), status='exception',
                                            command='', name='exception')
-                build.steps = build.steps.append(exception_step)
+                build.steps.append(exception_step)
+
                 yield from build.update()
                 build_info = yield from build.to_dict()
 

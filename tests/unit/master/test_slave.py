@@ -159,9 +159,10 @@ class SlaveTest(AsyncTestCase):
             return client
 
         self.slave.get_client = gc
-        yield from self.slave.build(self.build)
+        build_info = yield from self.slave.build(self.build)
         self.assertEqual(self.build.status, 'exception')
         self.assertTrue(self.build.finished)
+        self.assertEqual(len(build_info['steps']), 1)
 
     @patch.object(slave, 'build_started', Mock())
     @gen_test
