@@ -202,6 +202,7 @@ class StreamUtilsTest(AsyncTestCase):
         giant = {'action': 'bla' * 1000}
         self.giant = str(giant).encode('utf-8')
         self.giant_data = b'3014\n' + self.giant
+        self.giant_data_with_more = self.giant_data + self.good_data
         self.data = b'{"action": "bla"}'
 
     def get_new_ioloop(self):
@@ -247,6 +248,25 @@ class StreamUtilsTest(AsyncTestCase):
         @asyncio.coroutine
         def read(limit):
             part = self.giant_data[self._rlimit: limit + self._rlimit]
+            self._rlimit += limit
+            return part
+
+        reader.read = read
+
+        ret = yield from utils.read_stream(reader)
+
+        self.assertEqual(ret, self.giant)
+
+    @gen_test
+    def test_read_stream_with_giant_data_with_more(self):
+        reader = Mock()
+
+        self._rlimit = 0
+
+        @asyncio.coroutine
+        def read(limit):
+            part = self.giant_data_with_more[
+                self._rlimit: limit + self._rlimit]
             self._rlimit += limit
             return part
 
