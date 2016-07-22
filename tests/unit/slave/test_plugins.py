@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,7 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
 import unittest
+from unittest.mock import Mock, patch
+from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.slave import plugins
 
 
@@ -47,6 +50,31 @@ class PluginTest(unittest.TestCase):
 
     def test_get_env_vars(self):
         self.assertEqual({}, self.plugin.get_env_vars())
+
+
+class PythonCreateVenvStepTest(AsyncTestCase):
+
+    def setUp(self):
+        super().setUp()
+
+        self.step = plugins.PythonCreateVenvStep(venv_dir='bla/venv',
+                                                 pyversion='python3.4')
+
+    @patch.object(plugins.os.path, 'exists', Mock())
+    @gen_test
+    def test_execute_with_existing_venv(self):
+        step_info = yield from self.step.execute('.')
+        self.assertIn('venv exists', step_info['output'])
+
+    @patch.object(plugins.BuildStep, 'execute', Mock())
+    @gen_test
+    def test_execute_with_new_venv(self):
+        execute_mock = Mock(spec=plugins.BuildStep.execute)
+        plugins.BuildStep.execute = asyncio.coroutine(
+            lambda *a, **kw: execute_mock(*a, **kw))
+
+        yield from self.step.execute('.')
+        self.assertTrue(execute_mock.called)
 
 
 class PythonVenvPluginTest(unittest.TestCase):

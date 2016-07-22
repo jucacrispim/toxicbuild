@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
 import os
 from toxicbuild.slave.exceptions import PluginNotFound
 from toxicbuild.slave.build import BuildStep
@@ -58,6 +59,30 @@ class Plugin:
         return {}
 
 
+class PythonCreateVenvStep(BuildStep):
+
+    """Step that checks if the venv already exists before
+    executing the command."""
+
+    def __init__(self, venv_dir, pyversion):
+        self.venv_dir = venv_dir
+        self.pyversion = pyversion
+        self.name = 'Create virtualenv'
+        self.command = 'virtualenv {} -p {}'.format(self.venv_dir,
+                                                    self.pyversion)
+
+    @asyncio.coroutine
+    def execute(self, cwd, **envvars):
+        pyexec = os.path.join(self.venv_dir, os.path.join('bin', 'python'))
+        if os.path.exists(pyexec):
+            step_info = {'status': 'success',
+                         'output': 'venv exists. Skipping...'}
+        else:
+            step_info = yield from super().execute(cwd, **envvars)
+
+        return step_info
+
+
 class PythonVenvPlugin(Plugin):
     name = 'python-venv'
 
@@ -69,9 +94,7 @@ class PythonVenvPlugin(Plugin):
         self.venv_dir = 'venv-{}'.format(self.pyversion.replace(os.sep, ''))
 
     def get_steps_before(self):
-        create_env = BuildStep('create venv',
-                               'virtualenv {} -p {}'.format(
-                                   self.venv_dir, self.pyversion))
+        create_env = PythonCreateVenvStep(self.venv_dir, self.pyversion)
 
         install_deps = BuildStep('install dependencies using pip',
                                  'pip install -r {}'.format(
