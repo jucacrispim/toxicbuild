@@ -23,3 +23,4 @@ tests/functional/data/slave/src/
 /htmlcov/
 /.eggs/
 /tests/functional/data/master/src/
+/tests/functional/data/slave/venv-usrbinpython3.4/

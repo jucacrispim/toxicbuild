@@ -124,7 +124,7 @@ class BuildStep:
 
         step_status = {}
         try:
-            output = yield from exec_cmd(self.command, cwd='.',
+            output = yield from exec_cmd(self.command, cwd=cwd,
                                          timeout=self.timeout, **envvars)
             status = 'success'
         except ExecCmdError as e:
