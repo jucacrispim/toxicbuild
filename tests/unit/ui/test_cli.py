@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import concurrent
 import builtins
 import unittest
 from unittest.mock import MagicMock, Mock, patch
@@ -497,7 +498,8 @@ class ToxicCliTest(unittest.TestCase):
         try:
             loop.run_until_complete(
                 asyncio.gather(*asyncio.Task.all_tasks()))
-        except asyncio.concurrent.futures._base.CancelledError:
+
+        except concurrent.futures._base.CancelledError:
             pass
 
         self.assertEqual(self.cmdline, 'repo-list')
@@ -519,7 +521,7 @@ class ToxicCliTest(unittest.TestCase):
         try:
             loop.run_until_complete(
                 asyncio.gather(*asyncio.Task.all_tasks()))
-        except asyncio.concurrent.futures._base.CancelledError:
+        except concurrent.futures._base.CancelledError:
             pass
 
         self.assertEqual(self.cmdline, None)
@@ -540,7 +542,7 @@ class ToxicCliTest(unittest.TestCase):
         try:
             self.loop.run_until_complete(
                 asyncio.gather(*asyncio.Task.all_tasks()))
-        except asyncio.concurrent.futures._base.CancelledError:
+        except concurrent.futures._base.CancelledError:
             pass
 
         self.assertEqual(self.cmdline, None)
