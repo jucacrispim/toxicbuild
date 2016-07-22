@@ -74,7 +74,7 @@ class BuilderTest(AsyncTestCase):
     def test_get_env_vars(self):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
         self.builder.plugins = self.builder.manager._load_plugins(pconfig)
-        expected = {'PATH': 'PATH:venv-usrbinpython3.4/bin'}
+        expected = {'PATH': 'venv-usrbinpython3.4/bin:PATH'}
         returned = self.builder._get_env_vars()
 
         self.assertEqual(expected, returned)
@@ -83,7 +83,8 @@ class BuilderTest(AsyncTestCase):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
         self.builder.plugins = self.builder.manager._load_plugins(pconfig)
         self.builder.envvars = {'VAR1': 'someval'}
-        expected = {'PATH': 'PATH:venv-usrbinpython3.4/bin', 'VAR1': 'someval'}
+        expected = {'PATH': 'venv-usrbinpython3.4/bin:PATH',
+                    'VAR1': 'someval'}
         returned = self.builder._get_env_vars()
         self.assertEqual(expected, returned)
 

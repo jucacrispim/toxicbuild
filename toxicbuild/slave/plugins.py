@@ -87,4 +87,4 @@ class PythonVenvPlugin(Plugin):
         return steps
 
     def get_env_vars(self):
-        return {'PATH': 'PATH:{}/bin'.format(self.venv_dir)}
+        return {'PATH': '{}/bin:PATH'.format(self.venv_dir)}

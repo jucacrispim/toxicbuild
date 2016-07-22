@@ -85,7 +85,7 @@ class PythonVenvPluginTest(unittest.TestCase):
         self.assertEqual(expected, steps_after)
 
     def test_get_env_vars(self):
-        expected = {'PATH': 'PATH:venv-usrbinpython3.4/bin'}
+        expected = {'PATH': 'venv-usrbinpython3.4/bin:PATH'}
         env_vars = self.plugin.get_env_vars()
 
         self.assertEqual(expected, env_vars)
