@@ -150,6 +150,7 @@ class BuildManager(LoggerMixin):
         try:
             self.is_updating = True
             if not self.vcs.workdir_exists():
+                self.log('cloning {}'.format(self.repo_url))
                 yield from self.vcs.clone(self.repo_url)
 
             self.log('checking out to branch {}'.format(self.branch),
