@@ -97,20 +97,20 @@ class BuildStepTest(AsyncTestCase):
     @gen_test
     def test_step_success(self):
         step = build.BuildStep(name='test', command='ls')
-        status = yield from step.execute()
+        status = yield from step.execute(cwd='.')
         self.assertEqual(status['status'], 'success')
 
     @gen_test
     def test_step_fail(self):
         step = build.BuildStep(name='test', command='lsz')
-        status = yield from step.execute()
+        status = yield from step.execute(cwd='.')
         self.assertEqual(status['status'], 'fail')
 
     @gen_test
     def test_step_warning_on_fail(self):
         step = build.BuildStep(
             name='test', command='lsz', warning_on_fail=True)
-        status = yield from step.execute()
+        status = yield from step.execute(cwd='.')
         self.assertEqual(status['status'], 'warning')
 
     def test_equal_with_other_object(self):
@@ -122,5 +122,5 @@ class BuildStepTest(AsyncTestCase):
     @gen_test
     def test_step_timeout(self):
         step = build.BuildStep(name='test', command='sleep 3', timeout=1)
-        status = yield from step.execute()
+        status = yield from step.execute(cwd='.')
         self.assertEqual(status['status'], 'exception')

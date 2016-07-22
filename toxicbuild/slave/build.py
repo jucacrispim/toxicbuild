@@ -21,7 +21,6 @@ import asyncio
 from copy import copy
 from toxicbuild.core.exceptions import ExecCmdError
 from toxicbuild.core.utils import(exec_cmd, LoggerMixin, datetime2string, now)
-from toxicbuild.slave.contextmanagers import change_dir
 
 
 class Builder(LoggerMixin):
@@ -52,38 +51,38 @@ class Builder(LoggerMixin):
                       'finished': None}
         yield from self.manager.send_info(build_info)
 
-        with change_dir(self.workdir):
-            self.manager.send_info(build_info)
+        self.manager.send_info(build_info)
 
-            for step in self.steps:
-                msg = 'Executing %s' % step.command
-                self.log(msg, level='debug')
-                step_info = {'status': 'running',
-                             'cmd': step.command,
-                             'name': step.name,
-                             'started': datetime2string(now()),
-                             'finished': None,
-                             'output': ''}
+        for step in self.steps:
+            msg = 'Executing %s' % step.command
+            self.log(msg, level='debug')
+            step_info = {'status': 'running',
+                         'cmd': step.command,
+                         'name': step.name,
+                         'started': datetime2string(now()),
+                         'finished': None,
+                         'output': ''}
 
-                yield from self.manager.send_info(step_info)
+            yield from self.manager.send_info(step_info)
 
-                envvars = self._get_env_vars()
-                step_info.update((yield from step.execute(**envvars)))
+            envvars = self._get_env_vars()
+            step_info.update((yield from step.execute(cwd=self.workdir,
+                                                      **envvars)))
 
-                msg = 'Finished {} with status {}'.format(step.command,
-                                                          step_info['status'])
-                self.log(msg, level='debug')
+            msg = 'Finished {} with status {}'.format(step.command,
+                                                      step_info['status'])
+            self.log(msg, level='debug')
 
-                step_info.update({'finished': datetime2string(now())})
-                yield from self.manager.send_info(step_info)
+            step_info.update({'finished': datetime2string(now())})
+            yield from self.manager.send_info(step_info)
 
-                # here is: if build_status is something other than None
-                # or success (ie failed) we don't change it anymore, the build
-                # is failed anyway.
-                if build_status is None or build_status == 'success':
-                    build_status = step_info['status']
+            # here is: if build_status is something other than None
+            # or success (ie failed) we don't change it anymore, the build
+            # is failed anyway.
+            if build_status is None or build_status == 'success':
+                build_status = step_info['status']
 
-                build_info['steps'].append(step_info)
+            build_info['steps'].append(step_info)
 
         build_info['status'] = build_status
         build_info['total_steps'] = len(self.steps)
@@ -118,7 +117,11 @@ class BuildStep:
         return self.command == other.command
 
     @asyncio.coroutine
-    def execute(self, **envvars):
+    def execute(self, cwd,  **envvars):
+        """Executes the step command.
+        :param cwd: Directory where the command will be executed.
+        :param envvars: Environment variables to be used on execution."""
+
         step_status = {}
         try:
             output = yield from exec_cmd(self.command, cwd='.',
