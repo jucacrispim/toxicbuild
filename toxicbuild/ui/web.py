@@ -192,9 +192,6 @@ class WaterfallHandler(TemplateHandler):
         builders = yield from Builder.list(id__in=ids)
         return sorted(builders, key=lambda b: b.name)
 
-    def _ordered_builds(self, builds):
-        return sorted(builds, key=lambda b: b.builder.name)
-
     def _get_ending(self, build, build_index, builders):
         i = build_index
         while build.builder != builders[i] and len(builders) > i:
