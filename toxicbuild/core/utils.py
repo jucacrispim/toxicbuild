@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -30,10 +30,13 @@ from toxicbuild.core.exceptions import ExecCmdError, ConfigError
 
 
 @asyncio.coroutine
-def exec_cmd(cmd, cwd, **envvars):
+def exec_cmd(cmd, cwd, timeout=3600, **envvars):
     """ Executes a shell command. Raises with stderr if return code > 0
     :param cmd: command to run.
     :param cwd: Directory to execute the command.
+    :param timeout: How long we should wait for a command complete. Default
+      is 3600.
+    :param envvars: Environment variables to be used in the command.
     """
 
     envvars = _get_envvars(envvars)
@@ -41,7 +44,7 @@ def exec_cmd(cmd, cwd, **envvars):
     ret = yield from asyncio.create_subprocess_shell(
         cmd, stdout=PIPE, stderr=PIPE, cwd=cwd, env=envvars)
 
-    stdout, stderr = yield from ret.communicate()
+    stdout, stderr = yield from asyncio.wait_for(ret.communicate(), timeout)
     if int(ret.returncode) > 0:
         output = stderr.decode().strip()
         if not output:

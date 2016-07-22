@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -99,13 +99,17 @@ class Builder(LoggerMixin):
 
 class BuildStep:
 
-    def __init__(self, name, command, warning_on_fail=False):
-        """:param name: name for the command
-        :param cmd: a string the be executed in a shell
+    def __init__(self, name, command, warning_on_fail=False, timeout=3600):
+        """:param name: name for the command.
+        :param cmd: a string the be executed in a shell.
+        :param warning_on_fail: Indicates if should have warning status if
+          the command fails.
+        :param timeout: How long we wait for the command to complete.
         """
         self.name = name
         self.command = command
         self.warning_on_fail = warning_on_fail
+        self.timeout = timeout
 
     def __eq__(self, other):
         if not hasattr(other, 'command'):
@@ -117,7 +121,8 @@ class BuildStep:
     def execute(self, **envvars):
         step_status = {}
         try:
-            output = yield from exec_cmd(self.command, cwd='.', **envvars)
+            output = yield from exec_cmd(self.command, cwd='.',
+                                         timeout=self.timeout, **envvars)
             status = 'success'
         except ExecCmdError as e:
             output = e.args[0]
@@ -125,6 +130,10 @@ class BuildStep:
                 status = 'warning'
             else:
                 status = 'fail'
+        except asyncio.TimeoutError:
+            status = 'exception'
+            output = '{} has timed out in {} seconds'.format(self.command,
+                                                             self.timeout)
 
         step_status['status'] = status
         step_status['output'] = output

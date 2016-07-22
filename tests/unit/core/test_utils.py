@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -46,6 +46,11 @@ class UtilsTest(AsyncTestCase):
         with self.assertRaises(utils.ExecCmdError):
             # please, don't tell me you have a lsz command on your system.
             yield from utils.exec_cmd('lsz', cwd='.')
+
+    @gen_test
+    def test_exec_cmd_with_timeout(self, *args, **kwargs):
+        with self.assertRaises(asyncio.TimeoutError):
+            yield from utils.exec_cmd('sleep 3', cwd='.', timeout=1)
 
     @gen_test
     def test_exec_cmd_with_envvars(self):

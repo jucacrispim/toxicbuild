@@ -106,12 +106,13 @@ class SlaveTest(BaseFunctionalTest):
             is_alive = yield from client.is_server_alive()
             self.assertTrue(is_alive)
 
-    @gen_test(timeout=10)
-    def test_list_builders(self, timeout=10):
+    @gen_test
+    def test_list_builders(self):
         with (yield from get_dummy_client()) as client:
             builders = (yield from client.list_builders())['body']['builders']
 
-        self.assertEqual(builders, ['builder-1', 'builder-2'], builders)
+        self.assertEqual(builders, ['builder-1', 'builder-2', 'builder-3'],
+                         builders)
 
     @gen_test
     def test_build(self):
@@ -131,3 +132,10 @@ class SlaveTest(BaseFunctionalTest):
         self.assertEqual(build_status['body']['total_steps'], 3)
         self.assertEqual(build_status['body']['status'], 'success')
         self.assertIn('3.4', build_status['body']['steps'][-1]['output'])
+
+    @gen_test
+    def test_buid_with_timeout_step(self):
+        with (yield from get_dummy_client()) as client:
+            step_info, build_status = yield from client.build('builder-3')
+
+        self.assertEqual(build_status['body']['status'], 'exception')

@@ -117,3 +117,9 @@ class BuildStepTest(AsyncTestCase):
 
         step = build.BuildStep(name='test', command='lsz')
         self.assertNotEqual(step, {})
+
+    @gen_test
+    def test_step_timeout(self):
+        step = build.BuildStep(name='test', command='sleep 3', timeout=1)
+        status = yield from step.execute()
+        self.assertEqual(status['status'], 'exception')
