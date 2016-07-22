@@ -23,7 +23,7 @@ from unittest.mock import Mock, MagicMock, patch
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 import toxicbuild
-from toxicbuild.core.utils import datetime2string, now
+from toxicbuild.core.utils import datetime2string
 from toxicbuild.master import slave, build, repository
 
 

@@ -50,6 +50,7 @@ def run(loglevel):  # pragma no cover
     loop.run_forever()
 
 
-make_pyflakes_happy = [Slave, Build, Builder, RepositoryRevision]
+make_pyflakes_happy = [Slave, Build, Builder, RepositoryRevision,
+                       BuildSet]
 
 del make_pyflakes_happy

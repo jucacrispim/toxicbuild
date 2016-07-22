@@ -460,8 +460,8 @@ class BuildManagerTest(AsyncTestCase):
 
         self.builder = build.Builder(repository=self.repo, name='builder-1')
         yield self.builder.save()
-        self.buildset = yield from build.BuildSet.create(repository=self.repo,
-                                                         revision=self.revision)
+        self.buildset = yield from build.BuildSet.create(
+            repository=self.repo, revision=self.revision)
 
         self.build = build.Build(repository=self.repo, slave=self.slave,
                                  branch='master', named_tree='v0.1',
