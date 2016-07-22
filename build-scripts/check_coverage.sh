@@ -1,26 +1,24 @@
 #!/bin/sh
 
-ERRORFILE="errors.txt"
+
 echo "\nChecking coverage for Python code\n"
-coverage run --source=$1 --branch setup.py test --test-suite=tests.unit -q 1>/dev/null 2>$ERRORFILE;
-haserr=`grep FAILED $ERRORFILE`;
-err=`cat $ERRORFILE`
-rm $ERRORFILE;
+OUT=`coverage run --source=$1 --branch setup.py test --test-suite=tests.unit -q 2>&1 > /dev/null`;
+ERROR=`echo $OUT | grep FAIL`;
 coverage html;
 coverage=`coverage report -m | grep TOTAL | sed 's/TOTAL\s*\w*\s*\w*\s*\w*\s*\w*//g' | cut -d'%' -f1`
 
 echo 'coverage was:' $coverage'%'
 
-if [ "$haserr" != "" ]
+if [ "$ERROR" != "" ]
 then
     if [ $coverage -eq $2 ]
     then
 	echo "But something went wrong";
-	echo "$err";
+	echo "$OUT";
 	exit 1
     else
 	echo "And something went wrong"
-	echo "$err";
+	echo "$OUT";
 	exit 1
     fi
 fi
