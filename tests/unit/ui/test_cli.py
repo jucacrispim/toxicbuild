@@ -494,7 +494,11 @@ class ToxicCliTest(unittest.TestCase):
         self.cli.keypress((10, 10), 'enter')
 
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks()))
+        try:
+            loop.run_until_complete(
+                asyncio.gather(*asyncio.Task.all_tasks()))
+        except asyncio.concurrent.futures._base.CancelledError:
+            pass
 
         self.assertEqual(self.cmdline, 'repo-list')
 
@@ -512,7 +516,11 @@ class ToxicCliTest(unittest.TestCase):
         self.cli.keypress((10, 10), 'enter')
 
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks()))
+        try:
+            loop.run_until_complete(
+                asyncio.gather(*asyncio.Task.all_tasks()))
+        except asyncio.concurrent.futures._base.CancelledError:
+            pass
 
         self.assertEqual(self.cmdline, None)
 
@@ -529,7 +537,11 @@ class ToxicCliTest(unittest.TestCase):
 
         self.cli.keypress((10, 10), ' ')
 
-        self.loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks()))
+        try:
+            self.loop.run_until_complete(
+                asyncio.gather(*asyncio.Task.all_tasks()))
+        except asyncio.concurrent.futures._base.CancelledError:
+            pass
 
         self.assertEqual(self.cmdline, None)
 
