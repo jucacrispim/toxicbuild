@@ -67,14 +67,15 @@ class PythonCreateVenvStep(BuildStep):
     def __init__(self, venv_dir, pyversion):
         self.venv_dir = venv_dir
         self.pyversion = pyversion
-        self.name = 'Create virtualenv'
-        self.command = 'virtualenv {} -p {}'.format(self.venv_dir,
-                                                    self.pyversion)
+        name = 'Create virtualenv'
+        command = 'virtualenv {} -p {}'.format(self.venv_dir,
+                                               self.pyversion)
+        super().__init__(name, command)
 
     @asyncio.coroutine
     def execute(self, cwd, **envvars):
         pyexec = os.path.join(self.venv_dir, os.path.join('bin', 'python'))
-        if os.path.exists(pyexec):
+        if os.path.exists(os.path.join(cwd, pyexec)):
             step_info = {'status': 'success',
                          'output': 'venv exists. Skipping...'}
         else:

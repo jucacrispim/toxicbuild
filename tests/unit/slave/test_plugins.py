@@ -19,9 +19,9 @@
 
 import asyncio
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.slave import plugins
+from toxicbuild.slave import plugins, build
 
 
 class MyPlugin(plugins.Plugin):
@@ -63,14 +63,16 @@ class PythonCreateVenvStepTest(AsyncTestCase):
     @patch.object(plugins.os.path, 'exists', Mock())
     @gen_test
     def test_execute_with_existing_venv(self):
-        step_info = yield from self.step.execute('.')
+        step_info = yield from self.step.execute('some/dir')
         self.assertIn('venv exists', step_info['output'])
+        self.assertEqual(plugins.os.path.exists.call_args[0][0],
+                         'some/dir/bla/venv/bin/python')
 
-    @patch.object(plugins.BuildStep, 'execute', Mock())
+    @patch.object(build, 'exec_cmd', MagicMock())
     @gen_test
     def test_execute_with_new_venv(self):
         execute_mock = Mock(spec=plugins.BuildStep.execute)
-        plugins.BuildStep.execute = asyncio.coroutine(
+        build.exec_cmd = asyncio.coroutine(
             lambda *a, **kw: execute_mock(*a, **kw))
 
         yield from self.step.execute('.')
