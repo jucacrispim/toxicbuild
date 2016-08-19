@@ -25,7 +25,6 @@ from uuid import uuid4
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                ReferenceField, DateTimeField, UUIDField)
-from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
                                    LoggerMixin)
@@ -68,13 +67,13 @@ class Builder(SerializeMixin, Document):
     @asyncio.coroutine
     def create(cls, **kwargs):
         repo = cls(**kwargs)
-        yield from to_asyncio_future(repo.save())
+        yield from repo.save()
         return repo
 
     @classmethod
     @asyncio.coroutine
     def get(cls, **kwargs):
-        builder = yield from to_asyncio_future(cls.objects.get(**kwargs))
+        builder = yield from cls.objects.get(**kwargs)
         return builder
 
     @classmethod
@@ -92,14 +91,14 @@ class Builder(SerializeMixin, Document):
 
         try:
             qs = BuildSet.objects(builds__builder=self).order_by('-created')
-            last_buildset = (yield from to_asyncio_future(qs.to_list()))[0]
+            last_buildset = yield from qs[0]
         except (IndexError, AttributeError):
             status = 'idle'
         else:
             # why this does not work with a listcomp?
             statuses = []
             for build in last_buildset.builds:
-                builder = yield from to_asyncio_future(build.builder)
+                builder = yield from build.builder
                 if builder == self:
                     statuses.append(build.status)
 
@@ -193,9 +192,8 @@ class Build(EmbeddedDocument):
     def update(self):
         """Does an atomic update on this embedded document."""
 
-        result = yield from to_asyncio_future(BuildSet.objects(
-            builds__uuid=self.uuid).update_one(
-                set__builds__S=self))
+        result = yield from BuildSet.objects(
+            builds__uuid=self.uuid).update_one(set__builds__S=self)
 
         if not result:
             msg = 'This EmbeddedDocument was not save to database.'
@@ -240,7 +238,7 @@ class BuildSet(SerializeMixin, Document):
                        branch=revision.branch, author=revision.author,
                        title=revision.title)
         if save:
-            yield from to_asyncio_future(buildset.save())
+            yield from buildset.save()
         return buildset
 
     @asyncio.coroutine
@@ -272,7 +270,7 @@ class BuildSet(SerializeMixin, Document):
         @asyncio.coroutine
         def match_builder(b):
             if not builder or (
-                    yield from to_asyncio_future(b.builder)) == builder:
+                    yield from b.builder) == builder:
                 return True
             return False
 
@@ -317,7 +315,7 @@ class BuildManager(LoggerMixin):
                                                   revision=revision,
                                                   save=False)
 
-            slaves = yield from to_asyncio_future(self.repository.slaves)
+            slaves = yield from self.repository.slaves
             for slave in slaves:
                 yield from self.add_builds_for_slave(buildset, slave)
 
@@ -331,7 +329,7 @@ class BuildManager(LoggerMixin):
           not builders all builders for this slave and revision.
         """
 
-        revision = yield from to_asyncio_future(buildset.revision)
+        revision = yield from buildset.revision
         if not builders:
             builders = yield from self.get_builders(slave, revision)
 
@@ -341,7 +339,7 @@ class BuildManager(LoggerMixin):
                           builder=builder)
 
             buildset.builds.append(build)
-            yield from to_asyncio_future(buildset.save())
+            yield from buildset.save()
 
             self.log('build added for named_tree {} on branch {}'.format(
                 revision.commit, revision.branch), level='debug')
@@ -414,7 +412,7 @@ class BuildManager(LoggerMixin):
 
                 builds = []
                 for build in buildset.builds:
-                    build_slave = yield from to_asyncio_future(build.slave)
+                    build_slave = yield from build.slave
                     if slave == build_slave:
                         builds.append(build)
                 if builds:
