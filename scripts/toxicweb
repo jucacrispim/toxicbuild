@@ -24,7 +24,12 @@ import pkg_resources
 import shutil
 import sys
 from mando import command, main
+from tornado.platform.asyncio import AsyncIOMainLoop
 from pyrocumulus.commands.base import get_command
+
+# we install the asyncio loop for tornado so we can
+# use it inside tornado handlers with @gen.coroutine
+AsyncIOMainLoop().install()
 
 
 @command
