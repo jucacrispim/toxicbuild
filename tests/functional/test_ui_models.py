@@ -19,34 +19,34 @@
 
 
 from tests.functional import BaseFunctionalTest
-from tornado.testing import gen_test
 from toxicbuild.master.scheduler import scheduler
 from toxicbuild.ui.models import Slave, Repository, BuildSet
+from tests import async_test
 
 scheduler.stop()
 
 
 class SlaveTest(BaseFunctionalTest):
 
-    @gen_test
+    @async_test
     def tearDown(self):
         slave = yield from Slave.get(slave_name='test-slave')
         yield from slave.delete()
 
         super().tearDown()
 
-    @gen_test
+    @async_test
     def test_add(self):
         slave = yield from Slave.add('test-slave', '192.168.0.1', 1234)
         self.assertTrue(slave.id)
 
-    @gen_test
+    @async_test
     def test_get(self):
         slave = yield from Slave.add('test-slave', '192.168.0.1', 1234)
         get_slave = yield from Slave.get(slave_name='test-slave')
         self.assertEqual(slave.id, get_slave.id)
 
-    @gen_test
+    @async_test
     def test_list(self):
         yield from Slave.add('test-slave', '192.168.0.1', 1234)
         slave_list = yield from Slave.list()
@@ -55,7 +55,7 @@ class SlaveTest(BaseFunctionalTest):
 
 class RepositoryTest(BaseFunctionalTest):
 
-    @gen_test
+    @async_test
     def tearDown(self):
         if hasattr(self, 'repo'):
             yield from self.repo.delete()
@@ -65,7 +65,7 @@ class RepositoryTest(BaseFunctionalTest):
 
         super().tearDown()
 
-    @gen_test
+    @async_test
     def test_add(self):
         self.slave = yield from Slave.add('test-slave', 'localhost', 1234)
         self.repo = yield from Repository.add(name='some-repo',
@@ -75,7 +75,7 @@ class RepositoryTest(BaseFunctionalTest):
                                               slaves=[self.slave.name])
         self.assertTrue(self.repo.id)
 
-    @gen_test
+    @async_test
     def test_get(self):
         self.repo = yield from Repository.add(
             name='some-repo', url='bla@gla.com', vcs_type='git',
@@ -83,7 +83,7 @@ class RepositoryTest(BaseFunctionalTest):
         get_repo = yield from Repository.get(repo_name='some-repo')
         self.assertEqual(self.repo.id, get_repo.id)
 
-    @gen_test
+    @async_test
     def test_list(self):
         self.repo = yield from Repository.add(
             name='some-repo', url='bla@gla.com', vcs_type='git',
@@ -92,7 +92,7 @@ class RepositoryTest(BaseFunctionalTest):
         repo_list = yield from Repository.list()
         self.assertEqual(len(repo_list), 1)
 
-    @gen_test
+    @async_test
     def test_add_slave(self):
         self.slave = yield from Slave.add('test-slave', 'localhost', 1234)
         self.repo = yield from Repository.add(name='some-repo',
@@ -103,7 +103,7 @@ class RepositoryTest(BaseFunctionalTest):
         repo = yield from Repository.get(repo_name=self.repo.name)
         self.assertEqual(len(repo.slaves), 1)
 
-    @gen_test
+    @async_test
     def test_remove_slave(self):
         self.slave = yield from Slave.add('test-slave', 'localhost', 1234)
         self.repo = yield from Repository.add(name='some-repo',
@@ -118,7 +118,7 @@ class RepositoryTest(BaseFunctionalTest):
 
 class BuildsetTest(BaseFunctionalTest):
 
-    @gen_test
+    @async_test
     def tearDown(self):
         if hasattr(self, 'repo'):
             yield from self.repo.delete()
@@ -126,7 +126,7 @@ class BuildsetTest(BaseFunctionalTest):
         if hasattr(self, 'slave'):
             yield from self.slave.delete()
 
-    @gen_test
+    @async_test
     def test_list(self):
         self.slave = yield from Slave.add('test-slave', 'localhost', 1234)
         self.repo = yield from Repository.add(name='some-repo',

@@ -19,12 +19,13 @@
 
 import asyncio
 import os
+from unittest import TestCase
 from unittest.mock import patch, MagicMock, Mock
 import tornado
-from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core.utils import load_module_from_file
 from toxicbuild.slave import plugins, managers
 from tests.unit.slave import TEST_DATA_DIR
+from tests import async_test
 
 TOXICCONF = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
 TOXICCONF = load_module_from_file(TOXICCONF)
@@ -35,7 +36,7 @@ BADTOXICCONF = load_module_from_file(BADTOXICCONF)
 
 @patch.object(managers, 'get_toxicbuildconf',
               Mock(return_value=TOXICCONF))
-class BuilderManagerTest(AsyncTestCase):
+class BuilderManagerTest(TestCase):
 
     @patch.object(managers, 'get_vcs', MagicMock())
     def setUp(self):
@@ -156,7 +157,7 @@ class BuilderManagerTest(AsyncTestCase):
         with manager as m:
             self.assertEqual(m.current_build, 'v0.1')
 
-    @gen_test
+    @async_test
     def test_wait_clone(self):
         class TBM(managers.BuildManager):
             clone_called = False
@@ -173,7 +174,7 @@ class BuilderManagerTest(AsyncTestCase):
 
         self.assertTrue(manager.clone_called)
 
-    @gen_test
+    @async_test
     def test_wait_update(self):
         class TBM(managers.BuildManager):
             update_called = False
@@ -190,7 +191,7 @@ class BuilderManagerTest(AsyncTestCase):
 
         self.assertTrue(manager.update_called)
 
-    @gen_test
+    @async_test
     def test_wait_all(self):
         class TBM(managers.BuildManager):
             working_called = False
@@ -207,7 +208,7 @@ class BuilderManagerTest(AsyncTestCase):
 
         self.assertTrue(manager.working_called)
 
-    @gen_test
+    @async_test
     def test_update_and_checkout_with_clone(self):
         self.manager.vcs.workdir_exists.return_value = False
 
@@ -218,13 +219,13 @@ class BuilderManagerTest(AsyncTestCase):
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
     @patch.object(managers.BuildManager, 'wait_all', MagicMock())
-    @gen_test
+    @async_test
     def test_update_and_checkout_working(self):
         yield from self.manager.update_and_checkout()
 
         self.assertTrue(self.manager.wait_all.called)
 
-    @gen_test
+    @async_test
     def test_update_and_checkout_without_clone(self):
         self.manager.vcs.clone = MagicMock()
         self.manager.vcs.workdir_exists.return_value = True
@@ -236,7 +237,7 @@ class BuilderManagerTest(AsyncTestCase):
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
     @patch.object(managers.BuildManager, 'wait_all', MagicMock())
-    @gen_test
+    @async_test
     def test_update_and_checkout_working_not_wait(self):
         self.manager.vcs.checkout = Mock()
         yield from self.manager.update_and_checkout(work_after_wait=False)

@@ -19,15 +19,15 @@
 
 import asyncio
 import os
-from unittest import mock
+from unittest import mock, TestCase
 import tornado
-from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core.utils import load_module_from_file
 from toxicbuild.slave import build, managers
 from tests.unit.slave import TEST_DATA_DIR
+from tests import async_test
 
 
-class BuilderTest(AsyncTestCase):
+class BuilderTest(TestCase):
 
     @mock.patch.object(managers, 'get_toxicbuildconf', mock.MagicMock())
     def setUp(self):
@@ -52,7 +52,7 @@ class BuilderTest(AsyncTestCase):
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
-    @gen_test
+    @async_test
     def test_build_success(self):
         s1 = build.BuildStep(name='s1', command='ls')
         s2 = build.BuildStep(name='s2', command='echo "uhu!"')
@@ -61,7 +61,7 @@ class BuilderTest(AsyncTestCase):
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'success')
 
-    @gen_test
+    @async_test
     def test_build_fail(self):
         s1 = build.BuildStep(name='s1', command='ls')
         s2 = build.BuildStep(name='s2', command='exit 1')
@@ -89,24 +89,24 @@ class BuilderTest(AsyncTestCase):
         self.assertEqual(expected, returned)
 
 
-class BuildStepTest(AsyncTestCase):
+class BuildStepTest(TestCase):
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
-    @gen_test
+    @async_test
     def test_step_success(self):
         step = build.BuildStep(name='test', command='ls')
         status = yield from step.execute(cwd='.')
         self.assertEqual(status['status'], 'success')
 
-    @gen_test
+    @async_test
     def test_step_fail(self):
         step = build.BuildStep(name='test', command='lsz')
         status = yield from step.execute(cwd='.')
         self.assertEqual(status['status'], 'fail')
 
-    @gen_test
+    @async_test
     def test_step_warning_on_fail(self):
         step = build.BuildStep(
             name='test', command='lsz', warning_on_fail=True)
@@ -119,7 +119,7 @@ class BuildStepTest(AsyncTestCase):
         step = build.BuildStep(name='test', command='lsz')
         self.assertNotEqual(step, {})
 
-    @gen_test
+    @async_test
     def test_step_timeout(self):
         step = build.BuildStep(name='test', command='sleep 3', timeout=1)
         status = yield from step.execute(cwd='.')

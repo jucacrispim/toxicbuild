@@ -18,14 +18,14 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-from unittest import mock
-from tornado.testing import AsyncTestCase, gen_test
+from unittest import mock, TestCase
 from toxicbuild.slave import protocols
+from tests import async_test
 
 
 @mock.patch.object(asyncio, 'StreamReader', mock.Mock())
 @mock.patch.object(asyncio, 'StreamWriter', mock.MagicMock())
-class ProtocolTest(AsyncTestCase):
+class ProtocolTest(TestCase):
 
     @mock.patch.object(protocols.BaseToxicProtocol, 'send_response',
                        mock.MagicMock())
@@ -69,7 +69,7 @@ class ProtocolTest(AsyncTestCase):
     def test_call(self):
         self.assertEqual(self.protocol(), self.protocol)
 
-    @gen_test
+    @async_test
     def test_healthcheck(self):
         expected = {'code': 0,
                     'body': 'I\'m alive!'}
@@ -77,19 +77,19 @@ class ProtocolTest(AsyncTestCase):
         self.message = {'action': 'healthcheck'}
 
         self.protocol.connection_made(self.transport)
-        self._wait_futures()
+        yield from self._wait_futures()
 
         self.assertEqual(expected, self.response)
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
-    @gen_test
+    @async_test
     def test_get_buildmanager(self):
         self.protocol.data = yield from self.protocol.get_json_data()
         builder = yield from self.protocol.get_buildmanager()
         self.assertTrue(builder)
 
-    @gen_test
+    @async_test
     def test_get_buildmanager_with_bad_data(self):
         self.protocol.data = yield from self.protocol.get_json_data()
         del self.protocol.data['body']
@@ -99,7 +99,7 @@ class ProtocolTest(AsyncTestCase):
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
-    @gen_test
+    @async_test
     def test_build(self):
         self.protocol.data = yield from self.protocol.get_json_data()
         protocols.BuildManager.return_value.current_build = None
@@ -111,7 +111,7 @@ class ProtocolTest(AsyncTestCase):
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
-    @gen_test
+    @async_test
     def test_build_with_bad_data(self):
         self.protocol.data = yield from self.protocol.get_json_data()
         del self.protocol.data['body']['builder_name']
@@ -122,7 +122,7 @@ class ProtocolTest(AsyncTestCase):
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
-    @gen_test
+    @async_test
     def test_build_with_bad_builder_config(self):
         protocols.BuildManager.return_value.__enter__.return_value.\
             load_builder = mock.Mock(side_effect=protocols.BadBuilderConfig)
@@ -134,7 +134,7 @@ class ProtocolTest(AsyncTestCase):
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
-    @gen_test
+    @async_test
     def test_list_builders(self):
         expected = {'code': 0,
                     'body': {'builders': ['b1', 'b2']}}
@@ -152,17 +152,17 @@ class ProtocolTest(AsyncTestCase):
         self.assertEqual(self.response, expected)
 
     @mock.patch.object(protocols, 'log', mock.Mock())
-    @gen_test
+    @async_test
     def test_client_connected_with_bad_data(self):
         self.message = {"action": "build"}
 
         self.protocol.connection_made(self.transport)
-        self._wait_futures()
+        yield from self._wait_futures()
 
         self.assertEqual(self.response['code'], 1)
 
     @mock.patch.object(protocols, 'log', mock.Mock())
-    @gen_test
+    @async_test
     def test_client_connected_with_exception(self):
         self.message = {"action": "build"}
 
@@ -173,7 +173,7 @@ class ProtocolTest(AsyncTestCase):
         self.protocol.build = build
 
         self.protocol.connection_made(self.transport)
-        self._wait_futures()
+        yield from self._wait_futures()
 
         yield from self.protocol.client_connected()
 
@@ -181,7 +181,7 @@ class ProtocolTest(AsyncTestCase):
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
-    @gen_test
+    @async_test
     def test_client_connected_list_builders(self):
 
         manager = protocols.BuildManager.return_value.__enter__.return_value
@@ -190,22 +190,22 @@ class ProtocolTest(AsyncTestCase):
         manager.list_builders.return_value = ['b1', 'b2']
 
         self.protocol.connection_made(self.transport)
-        self._wait_futures()
+        yield from self._wait_futures()
 
         self.assertEqual(self.response['body']['builders'], ['b1', 'b2'])
 
-    @gen_test
+    @async_test
     def test_client_connected_heathcheck(self):
         self.message = {'action': 'healthcheck'}
 
         self.protocol.connection_made(self.transport)
-        self._wait_futures()
+        yield from self._wait_futures()
 
         self.assertEqual(self.response['body'], 'I\'m alive!')
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
-    @gen_test
+    @async_test
     def test_client_connected_build(self):
         self.message = {'action': 'build',
                         'body': {
@@ -217,7 +217,7 @@ class ProtocolTest(AsyncTestCase):
         protocols.BuildManager.return_value.current_build = None
         self.protocol.connection_made(self.transport)
 
-        self._wait_futures()
+        yield from self._wait_futures()
 
         manager = protocols.BuildManager.return_value.__enter__.return_value
         builder = manager.load_builder.return_value
@@ -225,18 +225,17 @@ class ProtocolTest(AsyncTestCase):
         self.assertTrue(builder.build.called)
 
     @mock.patch.object(protocols, 'log', mock.Mock())
-    @gen_test
+    @async_test
     def test_client_connected_with_wrong_action(self):
         self.message = {'action': 'bla'}
 
         self.protocol.connection_made(self.transport)
 
-        self._wait_futures()
+        yield from self._wait_futures()
 
         self.assertTrue(self.response['code'], 1)
 
+    @asyncio.coroutine
     def _wait_futures(self):
-        loop = asyncio.get_event_loop()
-
-        loop.run_until_complete(self.protocol._check_data_future)
-        loop.run_until_complete(self.protocol._client_connected_future)
+        yield from self.protocol._check_data_future
+        yield from self.protocol._client_connected_future

@@ -18,10 +18,10 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-from tornado.testing import gen_test
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.master.scheduler import scheduler
 from toxicbuild.master import settings
+from tests import async_test
 from tests.functional import BaseFunctionalTest, REPO_DIR
 
 
@@ -99,28 +99,28 @@ class ToxicMasterTest(BaseFunctionalTest):
 
         super().tearDownClass()
 
-    @gen_test
+    @async_test
     def test_01_create_slave(self):
 
         with (yield from get_dummy_client()) as client:
             response = yield from client.create_slave()
         self.assertTrue(response)
 
-    @gen_test
+    @async_test
     def test_02_list_slaves(self):
         with (yield from get_dummy_client()) as client:
             slaves = yield from client.request2server('slave-list', {})
 
         self.assertEqual(len(slaves), 1)
 
-    @gen_test
+    @async_test
     def test_03_create_repo(self):
         with (yield from get_dummy_client()) as client:
             response = yield from client.create_repo()
 
         self.assertTrue(response)
 
-    @gen_test
+    @async_test
     def test_04_list_repos(self):
         with (yield from get_dummy_client()) as client:
             repos = yield from client.request2server('repo-list', {})
@@ -128,7 +128,7 @@ class ToxicMasterTest(BaseFunctionalTest):
         self.assertEqual(len(repos), 1)
         self.assertEqual(len(repos[0]['slaves']), 1)
 
-    @gen_test
+    @async_test
     def test_05_repo_add_slave(self):
         with (yield from get_dummy_client()) as client:
             yield from client.request2server('slave-add',
@@ -141,7 +141,7 @@ class ToxicMasterTest(BaseFunctionalTest):
                 {'repo_name': 'test-repo', 'slave_name': 'test-slave2'})
         self.assertTrue(resp)
 
-    @gen_test
+    @async_test
     def test_06_repo_remove_slave(self):
         with (yield from get_dummy_client()) as client:
             resp = yield from client.request2server(
@@ -149,11 +149,11 @@ class ToxicMasterTest(BaseFunctionalTest):
                 {'repo_name': 'test-repo', 'slave_name': 'test-slave'})
         self.assertTrue(resp)
 
-    # @gen_test
+    # @async_test
     # def test_8_start_build(self):
     #     pass
 
-    @gen_test
+    @async_test
     def test_07_slave_get(self):
         with (yield from get_dummy_client()) as client:
             resp = yield from client.request2server('slave-get',
@@ -161,7 +161,7 @@ class ToxicMasterTest(BaseFunctionalTest):
                                                      'test-slave2'})
         self.assertTrue(resp)
 
-    @gen_test
+    @async_test
     def test_08_repo_get(self):
         with (yield from get_dummy_client()) as client:
             resp = yield from client.request2server('repo-get',
@@ -169,7 +169,7 @@ class ToxicMasterTest(BaseFunctionalTest):
                                                      'test-repo'})
         self.assertTrue(resp)
 
-    @gen_test
+    @async_test
     def test_09_slave_remove(self):
         with (yield from get_dummy_client()) as client:
             resp = yield from client.request2server('slave-remove',
@@ -177,9 +177,9 @@ class ToxicMasterTest(BaseFunctionalTest):
                                                      'test-slave2'})
         self.assertTrue(resp)
 
-    @gen_test
-    def test_10_repo_start_build(self):
-        pass
+    # @async_test
+    # def test_10_repo_start_build(self):
+    #     pass
 
     @classmethod
     def _delete_test_data(cls):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,16 +18,17 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from unittest import TestCase
 from unittest.mock import MagicMock, patch
-from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.ui.client import UIHoleClient, get_hole_client
+from tests import async_test
 
 
-class UIHoleClientTest(AsyncTestCase):
+class UIHoleClientTest(TestCase):
 
     @patch.object(UIHoleClient, 'get_response', MagicMock())
     @patch.object(UIHoleClient, 'write', MagicMock())
-    @gen_test
+    @async_test
     def test_request2server(self):
         client = UIHoleClient('localhost', 7777)
         client.get_response = asyncio.coroutine(
@@ -37,7 +38,7 @@ class UIHoleClientTest(AsyncTestCase):
         self.assertEqual(response, 'uhu!')
 
     @patch.object(UIHoleClient, 'request2server', MagicMock())
-    @gen_test
+    @async_test
     def test_getattr(self):
         client = UIHoleClient('localhost', 7777)
         yield from client.test()
@@ -45,7 +46,7 @@ class UIHoleClientTest(AsyncTestCase):
         self.assertTrue(client.request2server.called)
 
     @patch.object(UIHoleClient, 'connect', MagicMock())
-    @gen_test
+    @async_test
     def test_get_hole_client(self):
         client = yield from get_hole_client('localhost', 7777)
         self.assertTrue(client.connect.called)

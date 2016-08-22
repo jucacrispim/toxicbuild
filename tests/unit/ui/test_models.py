@@ -2,20 +2,22 @@
 
 import asyncio
 import json
+from unittest import TestCase
 from unittest.mock import MagicMock, patch
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.ui import models, client
+from tests import async_test
 
 
-class BaseModelTest(AsyncTestCase):
+class BaseModelTest(TestCase):
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
     @patch.object(models, 'get_hole_client', MagicMock(
         spec=models.get_hole_client))
-    @gen_test
+    @async_test
     def test_get_client(self):
         yield from models.BaseModel.get_client()
         self.assertTrue(models.get_hole_client.called)
@@ -92,7 +94,7 @@ def get_client_mock(r2s_return_value=None):
     return cl
 
 
-class RepositoryTest(AsyncTestCase):
+class RepositoryTest(TestCase):
 
     def setUp(self):
         super().setUp()
@@ -106,41 +108,41 @@ class RepositoryTest(AsyncTestCase):
         return tornado.ioloop.IOLoop.instance()
 
     @patch.object(models.Repository, 'get_client', get_client_mock)
-    @gen_test
+    @async_test
     def test_add(self):
         repo = yield from models.Repository.add('some-repo',
                                                 'git@somewhere.com', 'git')
         self.assertTrue(repo.id)
 
     @patch.object(models.Repository, 'get_client', get_client_mock)
-    @gen_test
+    @async_test
     def test_get(self):
 
         repo = yield from models.Repository.get(name='some-repo')
         self.assertTrue(repo.id)
 
     @patch.object(models.Repository, 'get_client', get_client_mock)
-    @gen_test
+    @async_test
     def test_repo_slaves(self):
         repo = yield from models.Repository.get(name='some-repo')
         self.assertEqual(type(repo.slaves[0]), models.Slave)
 
     @patch.object(models.Repository, 'get_client', lambda:
                   get_client_mock([{'name': 'repo0'}, {'name': 'repo1'}]))
-    @gen_test
+    @async_test
     def test_list(self):
 
         repos = yield from models.Repository.list()
         self.assertEqual(len(repos), 2)
 
-    @gen_test
+    @async_test
     def test_delete(self):
         self.repository.get_client = lambda: get_client_mock('ok')
 
         resp = yield from self.repository.delete()
         self.assertEqual(resp, 'ok')
 
-    @gen_test
+    @async_test
     def test_add_slave(self):
         self.repository.get_client = lambda: get_client_mock('add slave ok')
 
@@ -149,7 +151,7 @@ class RepositoryTest(AsyncTestCase):
 
         self.assertEqual(resp, 'add slave ok')
 
-    @gen_test
+    @async_test
     def test_remove_slave(self):
         self.repository.get_client = lambda: get_client_mock('remove slave ok')
 
@@ -158,7 +160,7 @@ class RepositoryTest(AsyncTestCase):
 
         self.assertEqual(resp, 'remove slave ok')
 
-    @gen_test
+    @async_test
     def test_start_build(self):
         self.repository.get_client = lambda: get_client_mock('start build ok')
 
@@ -174,14 +176,14 @@ class RepositoryTest(AsyncTestCase):
         self.assertTrue(isinstance(repo_dict['slaves'][0], dict))
 
 
-class SlaveTest(AsyncTestCase):
+class SlaveTest(TestCase):
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
     @patch.object(models.Slave, 'get_client', lambda: get_client_mock(
         {'host': 'localhost'}))
-    @gen_test
+    @async_test
     def test_add(self):
 
         slave = yield from models.Slave.add('localslave', 'localhost', 8888)
@@ -189,7 +191,7 @@ class SlaveTest(AsyncTestCase):
 
     @patch.object(models.Slave, 'get_client', lambda: get_client_mock(
         {'host': 'localhost', 'name': 'slave'}))
-    @gen_test
+    @async_test
     def test_get(self):
 
         slave = yield from models.Slave.get(name='slave')
@@ -197,13 +199,13 @@ class SlaveTest(AsyncTestCase):
 
     @patch.object(models.Slave, 'get_client', lambda: get_client_mock(
         [{'name': 'slave0'}, {'name': 'slave1'}]))
-    @gen_test
+    @async_test
     def test_list(self):
 
         slaves = yield from models.Slave.list()
         self.assertEqual(len(slaves), 2)
 
-    @gen_test
+    @async_test
     def test_delete(self):
         slave = models.Slave(name='slave', host='localhost', port=1234)
         slave.get_client = lambda: get_client_mock('ok')
@@ -212,7 +214,7 @@ class SlaveTest(AsyncTestCase):
         self.assertEqual(resp, 'ok')
 
 
-class BuildSetTest(AsyncTestCase):
+class BuildSetTest(TestCase):
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
@@ -220,7 +222,7 @@ class BuildSetTest(AsyncTestCase):
     @patch.object(models.BuildSet, 'get_client', lambda: get_client_mock(
         [{'id': 'sasdfasf', 'builds': [{'steps': [{'name': 'unit'}]}]},
          {'id': 'paopofe', 'builds': [{}]}]))
-    @gen_test
+    @async_test
     def test_list(self):
 
         builders = yield from models.BuildSet.list()
@@ -228,7 +230,7 @@ class BuildSetTest(AsyncTestCase):
         self.assertTrue(len(builders[0].builds[0].steps), 1)
 
 
-class BuilderTest(AsyncTestCase):
+class BuilderTest(TestCase):
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
@@ -236,7 +238,7 @@ class BuilderTest(AsyncTestCase):
     @patch.object(models.Builder, 'get_client', lambda: get_client_mock(
         [{'id': 'sasdfasf', 'name': 'b0', 'status': 'running'},
          {'id': 'paopofe', 'name': 'b1', 'status': 'success'}]))
-    @gen_test
+    @async_test
     def test_list(self):
         builders = yield from models.Builder.list(id__in=['sasdfasf',
                                                           'paopofe'])

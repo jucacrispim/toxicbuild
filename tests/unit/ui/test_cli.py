@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -23,8 +23,8 @@ import builtins
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 import tornado
-from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.ui import cli
+from tests import async_test
 
 
 # urwid changes the locale and this makes a test on vcs fail
@@ -332,7 +332,7 @@ ACTIONS = {'builder-show':
             'doc': 'Peeks throught the master\'s hole'}}
 
 
-class ToxicCliActionsTest(AsyncTestCase):
+class ToxicCliActionsTest(unittest.TestCase):
 
     @patch.object(cli.ToxicCliActions, 'get_actions', Mock())
     def setUp(self):
@@ -345,7 +345,7 @@ class ToxicCliActionsTest(AsyncTestCase):
         return tornado.ioloop.IOLoop.instance()
 
     @patch.object(cli, 'get_hole_client', MagicMock())
-    @gen_test
+    @async_test
     def test_get_client(self):
         client = MagicMock()
 
@@ -410,7 +410,7 @@ class ToxicCliActionsTest(AsyncTestCase):
         with self.assertRaises(cli.ToxicShellError):
             self.cli_actions.get_action_help('i-dont-exist')
 
-    @gen_test
+    @async_test
     def test_execute_action(self):
         client = MagicMock()
         request2server = MagicMock()

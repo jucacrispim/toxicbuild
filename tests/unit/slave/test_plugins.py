@@ -18,17 +18,17 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import unittest
+from unittest import TestCase
 from unittest.mock import MagicMock, Mock, patch
-from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.slave import plugins, build
+from tests import async_test
 
 
 class MyPlugin(plugins.Plugin):
     name = 'my-plugin'
 
 
-class PluginTest(unittest.TestCase):
+class PluginTest(TestCase):
 
     def setUp(self):
         self.plugin = MyPlugin()
@@ -52,7 +52,7 @@ class PluginTest(unittest.TestCase):
         self.assertEqual({}, self.plugin.get_env_vars())
 
 
-class PythonCreateVenvStepTest(AsyncTestCase):
+class PythonCreateVenvStepTest(TestCase):
 
     def setUp(self):
         super().setUp()
@@ -61,7 +61,7 @@ class PythonCreateVenvStepTest(AsyncTestCase):
                                                  pyversion='python3.4')
 
     @patch.object(plugins.os.path, 'exists', Mock())
-    @gen_test
+    @async_test
     def test_execute_with_existing_venv(self):
         step_info = yield from self.step.execute('some/dir')
         self.assertIn('venv exists', step_info['output'])
@@ -69,7 +69,7 @@ class PythonCreateVenvStepTest(AsyncTestCase):
                          'some/dir/bla/venv/bin/python')
 
     @patch.object(build, 'exec_cmd', MagicMock())
-    @gen_test
+    @async_test
     def test_execute_with_new_venv(self):
         execute_mock = Mock(spec=plugins.BuildStep.execute)
         build.exec_cmd = asyncio.coroutine(
@@ -79,7 +79,7 @@ class PythonCreateVenvStepTest(AsyncTestCase):
         self.assertTrue(execute_mock.called)
 
 
-class PythonVenvPluginTest(unittest.TestCase):
+class PythonVenvPluginTest(TestCase):
 
     def setUp(self):
         self.plugin = plugins.PythonVenvPlugin(pyversion='/usr/bin/python3.4')
