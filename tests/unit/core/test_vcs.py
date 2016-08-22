@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -21,13 +21,13 @@
 import asyncio
 import datetime
 import os
-from unittest import mock
-from tornado.testing import AsyncTestCase, gen_test
+from unittest import mock, TestCase
 from toxicbuild.core import vcs, utils
+from tests import async_test
 
 
 @mock.patch.object(vcs, 'exec_cmd', mock.MagicMock())
-class VCSTest(AsyncTestCase):
+class VCSTest(TestCase):
 
     def setUp(self):
         class DummyVcs(vcs.VCS):
@@ -59,14 +59,14 @@ class VCSTest(AsyncTestCase):
         super(VCSTest, self).setUp()
         self.vcs = DummyVcs('/some/workdir')
 
-    @gen_test
+    @async_test
     def test_exec_cmd(self):
         yield from self.vcs.exec_cmd('ls')
 
         call_args = vcs.exec_cmd.call_args[0]
         self.assertEqual(call_args, ('ls', self.vcs.workdir))
 
-    @gen_test
+    @async_test
     def test_workdir_exists(self):
         # sure this exists
         self.vcs.workdir = os.path.expanduser('~')
@@ -89,13 +89,13 @@ class VCSTest(AsyncTestCase):
 
 
 @mock.patch.object(vcs, 'exec_cmd', mock.MagicMock())
-class GitTest(AsyncTestCase):
+class GitTest(TestCase):
 
     def setUp(self):
         super(GitTest, self).setUp()
         self.vcs = vcs.Git('/some/workdir')
 
-    @gen_test
+    @async_test
     def test_clone(self):
         url = 'git@somewhere.org/myproject.git'
         yield from self.vcs.clone(url)
@@ -104,7 +104,7 @@ class GitTest(AsyncTestCase):
         self.assertEqual(called_cmd, 'git clone %s %s --recursive' % (
             url, self.vcs.workdir))
 
-    @gen_test
+    @async_test
     def test_fetch(self):
         expected_cmd = 'git fetch 2>&1'
 
@@ -117,7 +117,7 @@ class GitTest(AsyncTestCase):
         cmd = yield from self.vcs.fetch()
         self.assertEqual(cmd, expected_cmd)
 
-    @gen_test
+    @async_test
     def test_checkout(self):
         expected_cmd = 'git checkout master'
 
@@ -129,7 +129,7 @@ class GitTest(AsyncTestCase):
 
         yield from self.vcs.checkout('master')
 
-    @gen_test
+    @async_test
     def test_pull(self):
         expected_cmd = 'git pull --no-edit origin master'
 
@@ -141,7 +141,7 @@ class GitTest(AsyncTestCase):
 
         yield from self.vcs.pull('master')
 
-    @gen_test
+    @async_test
     def test_has_changes(self):
         @asyncio.coroutine
         def e(cmd, cwd):
@@ -153,7 +153,7 @@ class GitTest(AsyncTestCase):
 
         self.assertTrue(has_changes)
 
-    @gen_test
+    @async_test
     def test_update_submodule(self):
         expected_cmd = ['git submodule init',
                         'git submodule update']
@@ -168,7 +168,7 @@ class GitTest(AsyncTestCase):
 
         yield from self.vcs.update_submodule()
 
-    @gen_test
+    @async_test
     def test_get_remote_branches(self):
         expected = 'git branch -r'
 
@@ -186,7 +186,7 @@ class GitTest(AsyncTestCase):
         self.assertEqual(expected, called_cmd)
         self.assertEqual(expected_branches, branches)
 
-    @gen_test
+    @async_test
     def test_get_revisions_for_branch(self):
         now = utils.now()
         local = utils.utc2localtime(now)
@@ -213,7 +213,7 @@ class GitTest(AsyncTestCase):
         self.assertEqual(revisions[0]['author'], 'seu fadu')
         self.assertEqual(revisions[1]['commit'], '0sdflf093')
 
-    @gen_test
+    @async_test
     def test_get_revisions_for_branch_without_since(self):
         expected_cmd = '{} log --pretty=format:"%H | %ad | %an | %s" {}'.\
                        format('git', '--date=local')
@@ -233,7 +233,7 @@ class GitTest(AsyncTestCase):
         revisions = yield from self.vcs.get_revisions_for_branch('master')
         self.assertEqual(revisions[0]['commit'], '0sdflf095')
 
-    @gen_test
+    @async_test
     def test_get_revision(self):
         now = datetime.datetime.now()
         since = {'master': now,

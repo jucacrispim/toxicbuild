@@ -19,12 +19,12 @@
 
 import asyncio
 import json
-from unittest import mock
-from tornado.testing import AsyncTestCase, gen_test
+from unittest import mock, TestCase
 from toxicbuild.core import protocol
+from tests import async_test
 
 
-class BaseToxicProtocolTest(AsyncTestCase):
+class BaseToxicProtocolTest(TestCase):
 
     def setUp(self):
         super().setUp()
@@ -73,8 +73,11 @@ class BaseToxicProtocolTest(AsyncTestCase):
 
     @mock.patch.object(protocol.asyncio, 'StreamReader', mock.Mock())
     @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
-    @gen_test
+    @async_test
     def test_connection_made(self):
+        # what it does is to ensure that the client_connected method,
+        # that is the callback called when a connection is made, is
+        # calle correctly
         loop = mock.Mock()
         prot = protocol.BaseToxicProtocol(loop)
         prot._stream_reader = mock.MagicMock()
@@ -90,8 +93,8 @@ class BaseToxicProtocolTest(AsyncTestCase):
         prot.client_connected = cc
 
         prot.connection_made(transport)
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks()))
+        yield from prot._check_data_future
+        yield from prot._client_connected_future
         self.assertTrue(cc_mock.called)
 
     @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
@@ -107,7 +110,7 @@ class BaseToxicProtocolTest(AsyncTestCase):
         self.assertTrue(self.protocol.connection_lost_cb.called)
 
     @mock.patch.object(protocol.utils, 'log', mock.Mock())
-    @gen_test
+    @async_test
     def test_check_data_without_data(self):
         self.full_message = b''
 
@@ -115,7 +118,7 @@ class BaseToxicProtocolTest(AsyncTestCase):
 
         self.assertEqual(self.response['code'], 1)
 
-    @gen_test
+    @async_test
     def test_check_data_without_action(self):
         message = '{"salci": "fufu"}'
         self.full_message = '{}\n'.format(len(message)) + message
@@ -124,7 +127,7 @@ class BaseToxicProtocolTest(AsyncTestCase):
         yield from self.protocol.check_data()
         self.assertEqual(self.response['code'], 1)
 
-    @gen_test
+    @async_test
     def test_check_data(self):
         message = '{"action": "hack!"}'
         self.full_message = '{}\n'.format(len(message)) + message
@@ -134,7 +137,7 @@ class BaseToxicProtocolTest(AsyncTestCase):
 
         self.assertEqual(self.protocol.action, 'hack!')
 
-    @gen_test
+    @async_test
     def test_send_response(self):
         expected = {'code': 0,
                     'body': 'something!'}
@@ -143,12 +146,12 @@ class BaseToxicProtocolTest(AsyncTestCase):
 
         self.assertEqual(expected, self.response)
 
-    @gen_test
+    @async_test
     def test_get_raw_data(self):
         raw = yield from self.protocol.get_raw_data()
         self.assertEqual(raw, self.message)
 
-    @gen_test
+    @async_test
     def test_get_json_data(self):
         json_data = yield from self.protocol.get_json_data()
 

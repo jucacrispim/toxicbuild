@@ -18,12 +18,12 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-from unittest import mock
-from tornado.testing import AsyncTestCase, gen_test
+from unittest import mock, TestCase
 from toxicbuild.core import client
+from tests import async_test
 
 
-class BuildClientTest(AsyncTestCase):
+class BuildClientTest(TestCase):
 
     def setUp(self):
         super().setUp()
@@ -38,7 +38,7 @@ class BuildClientTest(AsyncTestCase):
                 del make_pyflakes_happy
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
-    @gen_test
+    @async_test
     def test_enter(self):
 
         @asyncio.coroutine
@@ -52,7 +52,7 @@ class BuildClientTest(AsyncTestCase):
             self.assertTrue(client_inst._connected)
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
-    @gen_test
+    @async_test
     def test_connect(self):
 
         @asyncio.coroutine
@@ -65,7 +65,7 @@ class BuildClientTest(AsyncTestCase):
         self.assertTrue(self.client._connected)
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
-    @gen_test
+    @async_test
     def test_disconnect(self):
 
         @asyncio.coroutine
@@ -78,7 +78,7 @@ class BuildClientTest(AsyncTestCase):
         self.client.disconnect()
         self.assertFalse(self.client._connected)
 
-    @gen_test
+    @async_test
     def test_write(self):
         self.client.writer = mock.MagicMock()
 
@@ -91,7 +91,7 @@ class BuildClientTest(AsyncTestCase):
 
         self.assertEqual(called_arg, msg.decode())
 
-    @gen_test
+    @async_test
     def test_read(self):
 
         msg = '16\n{"some": "json"}'.encode('utf-8')
@@ -113,7 +113,7 @@ class BuildClientTest(AsyncTestCase):
         self.assertEqual(expected, returned)
 
     @mock.patch.object(client.BaseToxicClient, 'log', mock.Mock())
-    @gen_test
+    @async_test
     def test_read_with_bad_json(self):
 
         msg = '19\n{"some": "json"}{sd'.encode('utf-8')
@@ -132,7 +132,7 @@ class BuildClientTest(AsyncTestCase):
         with self.assertRaises(client.BadJsonData):
             yield from self.client.read()
 
-    @gen_test
+    @async_test
     def test_get_response(self):
         expected = {'code': 0}
 
@@ -146,7 +146,7 @@ class BuildClientTest(AsyncTestCase):
 
         self.assertEqual(response, expected)
 
-    @gen_test
+    @async_test
     def test_get_response_with_error(self):
 
         @asyncio.coroutine

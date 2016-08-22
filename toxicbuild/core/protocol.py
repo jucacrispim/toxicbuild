@@ -63,7 +63,6 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         self._connected = True
 
         self.peername = self._transport.get_extra_info('peername')
-
         self._check_data_future = asyncio.async(self.check_data())
         self._check_data_future.add_done_callback(self._check_data_cb)
 
@@ -156,4 +155,6 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
             end = (time.time() * 1e3)
             self.log('{}: {} {}'.format(self.action, status, (end - init)))
 
-        self._client_connected_future = asyncio.async(logged_cb())
+        self._client_connected_future = logged_cb()
+        self._client_connected_future = asyncio.async(
+            self._client_connected_future)

@@ -21,8 +21,3 @@
 #              ''/''  ''/
 #                ''/''/''
 #                  '/'/'
-
-from tornado.platform.asyncio import AsyncIOMainLoop
-
-
-AsyncIOMainLoop().install()

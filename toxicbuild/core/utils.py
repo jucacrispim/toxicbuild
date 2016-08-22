@@ -41,11 +41,13 @@ def exec_cmd(cmd, cwd, timeout=3600, **envvars):
 
     envvars = _get_envvars(envvars)
 
-    ret = yield from asyncio.create_subprocess_shell(
+    proc = yield from asyncio.create_subprocess_shell(
         cmd, stdout=PIPE, stderr=PIPE, cwd=cwd, env=envvars)
 
-    stdout, stderr = yield from asyncio.wait_for(ret.communicate(), timeout)
-    if int(ret.returncode) > 0:
+    stdout, stderr = yield from asyncio.wait_for(
+        proc.communicate(), timeout)
+
+    if int(proc.returncode) > 0:
         output = stderr.decode().strip()
         if not output:
             output = stdout.decode().strip()

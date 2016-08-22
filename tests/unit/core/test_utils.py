@@ -22,37 +22,32 @@ import asyncio
 import datetime
 import os
 import time
+from unittest import TestCase
 from unittest.mock import patch, Mock, MagicMock
-import tornado
-from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.core import utils
 from tests.unit.core import TEST_DATA_DIR
+from tests import async_test
 
 
-class UtilsTest(AsyncTestCase):
+class UtilsTest(TestCase):
 
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
-
-    @gen_test
+    @async_test
     def test_exec_cmd(self):
-
         # no assertions here because if no exceptions, it's ok.
         yield from utils.exec_cmd('ls', cwd='.')
 
-    @gen_test
+    @async_test
     def test_exec_cmd_with_error(self):
-
         with self.assertRaises(utils.ExecCmdError):
             # please, don't tell me you have a lsz command on your system.
             yield from utils.exec_cmd('lsz', cwd='.')
 
-    @gen_test
+    @async_test
     def test_exec_cmd_with_timeout(self, *args, **kwargs):
         with self.assertRaises(asyncio.TimeoutError):
             yield from utils.exec_cmd('sleep 3', cwd='.', timeout=1)
 
-    @gen_test
+    @async_test
     def test_exec_cmd_with_envvars(self):
         envvars = {'PATH': 'PATH:venv/bin',
                    'MYPROGRAMVAR': 'something'}
@@ -193,7 +188,7 @@ class UtilsTest(AsyncTestCase):
         self.assertEqual(len(builders), 2)
 
 
-class StreamUtilsTest(AsyncTestCase):
+class StreamUtilsTest(TestCase):
 
     def setUp(self):
         super().setUp()
@@ -205,10 +200,7 @@ class StreamUtilsTest(AsyncTestCase):
         self.giant_data_with_more = self.giant_data + self.good_data
         self.data = b'{"action": "bla"}'
 
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
-
-    @gen_test
+    @async_test
     def test_read_stream_without_data(self):
         reader = Mock()
 
@@ -221,7 +213,7 @@ class StreamUtilsTest(AsyncTestCase):
 
         self.assertFalse(ret)
 
-    @gen_test
+    @async_test
     def test_read_stream_good_data(self):
         reader = Mock()
 
@@ -239,7 +231,7 @@ class StreamUtilsTest(AsyncTestCase):
 
         self.assertEqual(ret, self.data)
 
-    @gen_test
+    @async_test
     def test_read_stream_with_giant_data(self):
         reader = Mock()
 
@@ -257,7 +249,7 @@ class StreamUtilsTest(AsyncTestCase):
 
         self.assertEqual(ret, self.giant)
 
-    @gen_test
+    @async_test
     def test_read_stream_with_giant_data_with_more(self):
         reader = Mock()
 
@@ -276,7 +268,7 @@ class StreamUtilsTest(AsyncTestCase):
 
         self.assertEqual(ret, self.giant)
 
-    @gen_test
+    @async_test
     def test_write_stream(self):
         writer = MagicMock()
         yield from utils.write_stream(writer, self.data.decode())
