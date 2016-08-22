@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,14 +18,13 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-from unittest import mock
-import tornado
-from tornado.testing import AsyncTestCase, gen_test
+from unittest import mock, TestCase
 from toxicbuild.core.utils import now
 from toxicbuild.master import client, build, repository, slave
+from tests import async_test
 
 
-class BuildClientTest(AsyncTestCase):
+class BuildClientTest(TestCase):
 
     def setUp(self):
         super().setUp()
@@ -34,16 +33,14 @@ class BuildClientTest(AsyncTestCase):
         slave = mock.Mock()
         self.client = client.BuildClient(slave, addr, port)
 
+    @async_test
     def tearDown(self):
-        build.BuildSet.drop_collection()
-        repository.Repository.drop_collection()
-        slave.Slave.drop_collection()
-        build.Builder.drop_collection()
+        yield from build.BuildSet.drop_collection()
+        yield from repository.Repository.drop_collection()
+        yield from slave.Slave.drop_collection()
+        yield from build.Builder.drop_collection()
 
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
-
-    @gen_test
+    @async_test
     def test_healthcheck_not_alive(self):
         self.client.write = mock.MagicMock(side_effect=Exception)
 
@@ -51,7 +48,7 @@ class BuildClientTest(AsyncTestCase):
 
         self.assertFalse(isalive)
 
-    @gen_test
+    @async_test
     def test_healthcheck_alive(self):
         self.client.write = mock.MagicMock()
 
@@ -65,7 +62,7 @@ class BuildClientTest(AsyncTestCase):
 
         self.assertTrue(isalive)
 
-    @gen_test
+    @async_test
     def test_list_builders(self):
         self.client.write = mock.MagicMock()
 
@@ -83,7 +80,7 @@ class BuildClientTest(AsyncTestCase):
 
         self.assertEqual(expected, builders)
 
-    @gen_test
+    @async_test
     def test_build(self):
         self.client.write = mock.MagicMock()
 
@@ -120,7 +117,7 @@ class BuildClientTest(AsyncTestCase):
         self.client.get_response = gr
 
         slave_inst = slave.Slave(name='slv', host='localhost', port=1234)
-        yield slave_inst.save()
+        yield from slave_inst.save()
         process = mock.Mock()
 
         self.client.slave._process_build_info = asyncio.coroutine(
@@ -129,14 +126,14 @@ class BuildClientTest(AsyncTestCase):
         repo = repository.Repository(name='repo', url='git@somewhere.com',
                                      slaves=[slave_inst], update_seconds=300,
                                      vcs_type='git')
-        yield repo.save()
+        yield from repo.save()
         revision = repository.RepositoryRevision(
             commit='sdafj', repository=repo, branch='master', commit_date=now,
             author='ze', title='huehue')
 
-        yield revision.save()
+        yield from revision.save()
         builder = build.Builder(repository=repo, name='b1')
-        yield builder.save()
+        yield from builder.save()
 
         buildinstance = build.Build(repository=repo, slave=slave_inst,
                                     builder=builder, branch='master',
@@ -144,13 +141,13 @@ class BuildClientTest(AsyncTestCase):
         buildset = yield from build.BuildSet.create(repository=repo,
                                                     revision=revision)
 
-        yield buildset.save()
+        yield from buildset.save()
 
         yield from self.client.build(buildinstance)
         self.assertEqual(len(process.call_args_list), 3)
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
-    @gen_test
+    @async_test
     def test_get_build_client(self):
 
         @asyncio.coroutine

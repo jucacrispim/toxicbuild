@@ -1,21 +1,36 @@
 # -*- coding: utf-8 -*-
 
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+
+# This file is part of toxicbuild.
+
+# toxicbuild is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# toxicbuild is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
+
+
 import asyncio
-import tornado
-from tornado.testing import AsyncTestCase, gen_test
+from unittest import TestCase
 from toxicbuild.master.scheduler import TaskScheduler, scheduler
+from tests import async_test
 
 
-class SchedulerTest(AsyncTestCase):
+class SchedulerTest(TestCase):
 
     def setUp(self):
         scheduler.stop()
         super(SchedulerTest, self).setUp()
         self.scheduler = TaskScheduler()
         asyncio.async(self.scheduler.start())
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
 
     def tearDown(self):
         self.scheduler.stop()
@@ -61,7 +76,7 @@ class SchedulerTest(AsyncTestCase):
 
         self.assertFalse(self.scheduler.tasks.get(call))
 
-    @gen_test
+    @async_test
     def test_consume_tasks(self):
         self.TASK_CORO_CONSUMED = False
         self.TASK_CALL_CONSUMED = False

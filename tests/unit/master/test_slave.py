@@ -19,44 +19,41 @@
 
 import asyncio
 import datetime
+from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch
-import tornado
-from tornado.testing import AsyncTestCase, gen_test
 import toxicbuild
 from toxicbuild.core.utils import datetime2string
 from toxicbuild.master import slave, build, repository
+from tests import async_test
 
 
 @patch.object(slave, 'build_started', Mock())
 @patch.object(slave, 'build_finished', Mock())
 @patch.object(slave, 'step_started', Mock())
 @patch.object(slave, 'step_finished', Mock())
-class SlaveTest(AsyncTestCase):
+class SlaveTest(TestCase):
 
     def setUp(self):
         super().setUp()
         self.slave = slave.Slave(name='slave', host='127.0.0.1', port=7777)
 
-    @gen_test
+    @async_test
     def tearDown(self):
-        yield slave.Slave.drop_collection()
-        yield build.BuildSet.drop_collection()
-        yield build.Builder.drop_collection()
-        yield repository.RepositoryRevision.drop_collection()
-        yield repository.Repository.drop_collection()
+        yield from slave.Slave.drop_collection()
+        yield from build.BuildSet.drop_collection()
+        yield from build.Builder.drop_collection()
+        yield from repository.RepositoryRevision.drop_collection()
+        yield from repository.Repository.drop_collection()
         super().tearDown()
 
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
-
-    @gen_test
+    @async_test
     def test_create(self):
         slave_inst = yield from slave.Slave.create(name='name',
                                                    host='somewhere.net',
                                                    port=7777)
         self.assertTrue(slave_inst.id)
 
-    @gen_test
+    @async_test
     def test_get(self):
         slave_inst = yield from slave.Slave.create(name='name',
                                                    host='somewhere.net',
@@ -71,7 +68,7 @@ class SlaveTest(AsyncTestCase):
 
     @patch.object(toxicbuild.master.client.asyncio, 'open_connection',
                   Mock())
-    @gen_test
+    @async_test
     def test_get_client(self):
 
         @asyncio.coroutine
@@ -82,7 +79,7 @@ class SlaveTest(AsyncTestCase):
         client = yield from self.slave.get_client()
         self.assertTrue(client._connected)
 
-    @gen_test
+    @async_test
     def test_healthcheck(self):
 
         @asyncio.coroutine
@@ -102,7 +99,7 @@ class SlaveTest(AsyncTestCase):
 
         self.assertTrue(self.slave.is_alive)
 
-    @gen_test
+    @async_test
     def test_list_builders(self):
         yield from self._create_test_data()
 
@@ -123,7 +120,7 @@ class SlaveTest(AsyncTestCase):
 
         self.assertEqual(builders, [self.builder, self.other_builder])
 
-    @gen_test
+    @async_test
     def test_build(self):
         yield from self._create_test_data()
         client = MagicMock()
@@ -143,7 +140,7 @@ class SlaveTest(AsyncTestCase):
         yield from self.slave.build(self.build)
         self.assertTrue(client.build.called)
 
-    @gen_test
+    @async_test
     def test_build_with_exception(self):
         yield from self._create_test_data()
         client = MagicMock()
@@ -165,7 +162,7 @@ class SlaveTest(AsyncTestCase):
         self.assertEqual(len(build_info['steps']), 1)
 
     @patch.object(slave, 'build_started', Mock())
-    @gen_test
+    @async_test
     def test_process_build_info_with_build_started(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
@@ -178,7 +175,7 @@ class SlaveTest(AsyncTestCase):
         self.assertTrue(slave.build_started.send.called)
 
     @patch.object(slave, 'build_finished', Mock())
-    @gen_test
+    @async_test
     def test_process_build_info_with_build_finished(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
@@ -190,7 +187,7 @@ class SlaveTest(AsyncTestCase):
         yield from self.slave._process_build_info(self.build, build_info)
         self.assertTrue(slave.build_finished.send.called)
 
-    @gen_test
+    @async_test
     def test_process_build_info_with_step(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
@@ -204,7 +201,7 @@ class SlaveTest(AsyncTestCase):
         yield from self.slave._process_build_info(self.build, build_info)
         self.assertTrue(self.slave._set_step_info.called)
 
-    @gen_test
+    @async_test
     def test_set_step_info_new(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
@@ -216,7 +213,7 @@ class SlaveTest(AsyncTestCase):
                                              'running', '', started, finished)
         self.assertEqual(len(self.build.steps), 1)
 
-    @gen_test
+    @async_test
     def test_set_step_info(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
@@ -237,12 +234,12 @@ class SlaveTest(AsyncTestCase):
 
     @asyncio.coroutine
     def _create_test_data(self):
-        yield self.slave.save()
+        yield from self.slave.save()
         self.repo = repository.Repository(
             name='reponame', url='git@somewhere', update_seconds=300,
             vcs_type='git', slaves=[self.slave])
 
-        yield self.repo.save()
+        yield from self.repo.save()
 
         self.revision = repository.RepositoryRevision(
             repository=self.repo, branch='master', commit='bgcdf3123',
@@ -250,23 +247,23 @@ class SlaveTest(AsyncTestCase):
             author='tião', title='something'
         )
 
-        yield self.revision.save()
+        yield from self.revision.save()
 
         self.buildset = yield from build.BuildSet.create(
             repository=self.repo, revision=self.revision)
 
-        yield self.buildset.save()
+        yield from self.buildset.save()
 
         self.builder = build.Builder(repository=self.repo, name='builder-1')
-        yield self.builder.save()
+        yield from self.builder.save()
         self.other_builder = build.Builder(repository=self.repo,
                                            name='builder-2')
-        yield self.other_builder.save()
-        yield self.builder.save()
+        yield from self.other_builder.save()
+        yield from self.builder.save()
 
         self.build = build.Build(repository=self.repo, slave=self.slave,
                                  branch='master', named_tree='v0.1',
                                  builder=self.builder)
 
         self.buildset.builds.append(self.build)
-        yield self.buildset.save()
+        yield from self.buildset.save()

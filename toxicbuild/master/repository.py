@@ -25,7 +25,6 @@ from threading import Thread
 from mongomotor import Document
 from mongomotor.fields import (StringField, IntField, ReferenceField,
                                DateTimeField, ListField, BooleanField)
-from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core import utils
 from toxicbuild.master.scheduler import scheduler
 from toxicbuild.master.build import BuildSet, Builder, BuildManager
@@ -83,9 +82,9 @@ class Repository(Document, utils.LoggerMixin):
         status of the last buildset created for this repository that is
         not pending."""
 
-        last_buildset = yield from to_asyncio_future(BuildSet.objects(
+        last_buildset = yield from BuildSet.objects(
             repository=self).order_by(
-                '-created').first())
+                '-created').first()
 
         clone_statuses = ['cloning', 'clone-exception']
         if not last_buildset and self.clone_status in clone_statuses:
@@ -98,11 +97,9 @@ class Repository(Document, utils.LoggerMixin):
             while status == BuildSet.PENDING:
                 start = i
                 stop = start + 1
-                last_buildset = yield from to_asyncio_future(
-                    BuildSet.objects(repository=self).order_by(
-                        '-created')[start:stop])
-                last_buildset = yield from to_asyncio_future(
-                    last_buildset.first())
+                last_buildset = BuildSet.objects(repository=self).order_by(
+                    '-created')[start:stop]
+                last_buildset = yield from last_buildset.first()
 
                 if not last_buildset:
                     status = 'idle'
@@ -121,7 +118,7 @@ class Repository(Document, utils.LoggerMixin):
 
         repo = cls(url=url, update_seconds=update_seconds, vcs_type=vcs_type,
                    slaves=slaves, name=name)
-        yield from to_asyncio_future(repo.save())
+        yield from repo.save()
         repo.schedule()
         return repo
 
@@ -133,13 +130,13 @@ class Repository(Document, utils.LoggerMixin):
         """
 
         builds = BuildSet.objects.filter(repository=self)
-        yield from to_asyncio_future(builds.delete())
+        yield from builds.delete()
 
         builders = Builder.objects.filter(repository=self)
-        yield from to_asyncio_future(builders.delete())
+        yield from builders.delete()
 
         revisions = RepositoryRevision.objects.filter(repository=self)
-        yield from to_asyncio_future(revisions.delete())
+        yield from revisions.delete()
 
         try:
             sched_hash = _scheduler_hashes[self.url]
@@ -150,12 +147,12 @@ class Repository(Document, utils.LoggerMixin):
 
         Thread(target=shutil.rmtree, args=[self.workdir]).start()
 
-        yield from to_asyncio_future(self.delete())
+        yield from self.delete()
 
     @classmethod
     @asyncio.coroutine
     def get(cls, **kwargs):
-        repo = yield from to_asyncio_future(cls.objects.get(**kwargs))
+        repo = yield from cls.objects.get(**kwargs)
         return repo
 
     @asyncio.coroutine
@@ -170,7 +167,7 @@ class Repository(Document, utils.LoggerMixin):
             clone_status = 'clone-exception'
 
         self.clone_status = clone_status
-        yield from to_asyncio_future(self.save())
+        yield from self.save()
 
     def schedule(self):
         """ Adds self.poller.poll() to the scheduler. """
@@ -184,24 +181,24 @@ class Repository(Document, utils.LoggerMixin):
     def schedule_all(cls):
         """ Schedule all repositories. """
 
-        repos = yield from to_asyncio_future(cls.objects.all().to_list())
+        repos = yield from cls.objects.all().to_list()
         for repo in repos:
             repo.schedule()
 
     @asyncio.coroutine
     def add_slave(self, slave):
         self.slaves
-        slaves = yield from to_asyncio_future(self.slaves)
+        slaves = yield from self.slaves
         slaves.append(slave)
         self.slaves = slaves
-        yield from to_asyncio_future(self.save())
+        yield from self.save()
         return slave
 
     @asyncio.coroutine
     def remove_slave(self, slave):
-        slaves = yield from to_asyncio_future(self.slaves)
+        slaves = yield from self.slaves
         slaves.pop(slaves.index(slave))
-        yield from to_asyncio_future(self.update(set__slaves=slaves))
+        yield from self.update(set__slaves=slaves)
         return slave
 
     @asyncio.coroutine
@@ -212,7 +209,7 @@ class Repository(Document, utils.LoggerMixin):
         latest = RepositoryRevision.objects.filter(
             repository=self, branch=branch).order_by('-commit_date')
 
-        latest = yield from to_asyncio_future(latest.first())
+        latest = yield from latest.first()
 
         return latest
 
@@ -233,9 +230,8 @@ class Repository(Document, utils.LoggerMixin):
         """ Returns the names for the branches that already have some
         revision here.
         """
-        branches = yield from to_asyncio_future(
-            RepositoryRevision.objects.filter(
-                repository=self).distinct('branch'))
+        branches = yield from RepositoryRevision.objects.filter(
+            repository=self).distinct('branch')
 
         return branches
 
@@ -249,7 +245,7 @@ class Repository(Document, utils.LoggerMixin):
         revision = RepositoryRevision(repository=self, commit=commit,
                                       branch=branch, commit_date=commit_date,
                                       author=author, title=title)
-        yield from to_asyncio_future(revision.save())
+        yield from revision.save()
         return revision
 
     @asyncio.coroutine
@@ -269,5 +265,5 @@ class RepositoryRevision(Document):
     @classmethod
     @asyncio.coroutine
     def get(cls, **kwargs):
-        ret = yield from to_asyncio_future(cls.objects.get(**kwargs))
+        ret = yield from cls.objects.get(**kwargs)
         return ret

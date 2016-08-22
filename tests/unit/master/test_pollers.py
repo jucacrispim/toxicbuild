@@ -19,14 +19,13 @@
 
 import asyncio
 import datetime
-from unittest import mock
-import tornado
-from tornado.testing import AsyncTestCase, gen_test
+from unittest import mock, TestCase
 from toxicbuild.master import pollers, repository
 from toxicbuild.master.exceptions import CloneException
+from tests import async_test
 
 
-class GitPollerTest(AsyncTestCase):
+class GitPollerTest(TestCase):
 
     @mock.patch.object(pollers, 'get_vcs', mock.MagicMock())
     def setUp(self):
@@ -38,13 +37,11 @@ class GitPollerTest(AsyncTestCase):
             self.repo, vcs_type='git', workdir='workdir',
             notify_only_latest=True)
 
+    @async_test
     def tearDown(self):
-        repository.RepositoryRevision.drop_collection()
-        repository.Repository.drop_collection()
+        yield from repository.RepositoryRevision.drop_collection()
+        yield from repository.Repository.drop_collection()
         super(GitPollerTest, self).tearDown()
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     def test_notify_changes(self):
@@ -53,7 +50,7 @@ class GitPollerTest(AsyncTestCase):
         self.assertTrue(pollers.revision_added.send.called)
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
-    @gen_test
+    @async_test
     def test_process_changes(self):
         # now in the future, of course!
         now = datetime.datetime.now() + datetime.timedelta(100)
@@ -82,7 +79,7 @@ class GitPollerTest(AsyncTestCase):
         self.assertEqual(len(called_revs), 2)
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
-    @gen_test
+    @async_test
     def test_poll(self):
         yield from self._create_db_revisions()
 
@@ -119,7 +116,7 @@ class GitPollerTest(AsyncTestCase):
         self.assertTrue(self.CLONE_CALLED)
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
-    @gen_test
+    @async_test
     def test_poll_with_clone_exception(self):
 
         def workdir_exists():
@@ -137,7 +134,7 @@ class GitPollerTest(AsyncTestCase):
             yield from self.poller.poll()
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
-    @gen_test
+    @async_test
     def test_poll_without_clone(self):
         yield from self._create_db_revisions()
 
@@ -174,7 +171,7 @@ class GitPollerTest(AsyncTestCase):
         self.assertFalse(self.CLONE_CALLED)
 
     @mock.patch.object(pollers, 'LoggerMixin', mock.Mock())
-    @gen_test
+    @async_test
     def test_poll_with_exception_processing_changes(self):
         self.poller.vcs.workdir_exists = mock.Mock(return_value=True)
         self.poller.vcs.update_submodule = mock.MagicMock()
@@ -184,7 +181,7 @@ class GitPollerTest(AsyncTestCase):
         log_level = self.poller.log.call_args[1]['level']
         self.assertEqual(log_level, 'error')
 
-    @gen_test
+    @async_test
     def test_poll_with_submodule(self):
         self.poller.process_changes = mock.MagicMock()
         self.poller.vcs.workdir_exists = lambda: True
@@ -193,7 +190,7 @@ class GitPollerTest(AsyncTestCase):
 
         self.assertTrue(self.poller.vcs.update_submodule.called)
 
-    @gen_test
+    @async_test
     def test_poll_already_polling(self):
         self.poller.process_changes = mock.MagicMock()
         self.poller.vcs.workdir_exists = lambda: True
@@ -205,7 +202,7 @@ class GitPollerTest(AsyncTestCase):
 
     @asyncio.coroutine
     def _create_db_revisions(self):
-        yield self.repo.save()
+        yield from self.repo.save()
         rep = self.repo
         now = datetime.datetime.now()
 
@@ -214,10 +211,10 @@ class GitPollerTest(AsyncTestCase):
                 repository=rep, commit='123asdf', branch='master',
                 commit_date=now, author='zé', title='algo')
 
-            yield rev.save()
+            yield from rev.save()
 
             rev = repository.RepositoryRevision(
                 repository=rep, commit='123asef', branch='other',
                 commit_date=now, author='tião', title='outro')
 
-            yield rev.save()
+            yield from rev.save()

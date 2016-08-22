@@ -26,7 +26,6 @@ import asyncio
 import inspect
 import json
 import traceback
-from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import (Slave, Repository, Builder,
@@ -166,8 +165,7 @@ class HoleHandler:
     def repo_list(self):
         """ Lists all repositories. """
 
-        repos = yield from to_asyncio_future(
-            Repository.objects.all().to_list())
+        repos = yield from Repository.objects.all().to_list()
         repo_list = []
         for repo in repos:
 
@@ -183,7 +181,7 @@ class HoleHandler:
         repo = yield from Repository.get(name=repo_name)
         [setattr(repo, k, v) for k, v in kwargs.items()]
 
-        yield from to_asyncio_future(repo.save())
+        yield from repo.save()
         return {'repo-update': 'ok'}
 
     @asyncio.coroutine
@@ -217,7 +215,7 @@ class HoleHandler:
         slaves = yield from [(yield from Slave.get(name=name))
                              for name in slaves]
         if not slaves:
-            slaves = yield from to_asyncio_future(repo.slaves)
+            slaves = yield from repo.slaves
 
         if not named_tree:
             rev = yield from repo.get_latest_revision_for_branch(branch)
@@ -270,7 +268,7 @@ class HoleHandler:
 
         slave = yield from Slave.get(name=slave_name)
 
-        yield from to_asyncio_future(slave.delete())
+        yield from slave.delete()
 
         return {'slave-remove': 'ok'}
 
@@ -278,8 +276,7 @@ class HoleHandler:
     def slave_list(self):
         """ Lists all slaves. """
 
-        slaves = yield from to_asyncio_future(
-            Slave.objects.all().to_list())
+        slaves = yield from Slave.objects.all().to_list()
         slave_list = []
 
         for slave in slaves:
@@ -304,12 +301,12 @@ class HoleHandler:
             buildsets = buildsets.filter(repository=repository)
 
         buildsets = buildsets.order_by('-created')
-        count = yield from to_asyncio_future(buildsets.count())
+        count = yield from buildsets.count()
 
         stop = count if not offset else skip + offset
 
-        buildsets = yield from to_asyncio_future(buildsets[skip:stop])
-        buildsets = yield from to_asyncio_future(buildsets.to_list())
+        buildsets = buildsets[skip:stop]
+        buildsets = yield from buildsets.to_list()
         buildset_list = []
         for b in buildsets:
             bdict = yield from b.to_dict(id_as_str=True)
@@ -324,7 +321,7 @@ class HoleHandler:
         :param kwargs: Arguments to filter the list."""
 
         queryset = Builder.objects.filter(**kwargs)
-        builders = yield from to_asyncio_future(queryset.to_list())
+        builders = yield from queryset.to_list()
         blist = []
 
         for b in builders:
@@ -347,10 +344,10 @@ class HoleHandler:
 
         builder = yield from Builder.get(**kwargs)
         buildsets = BuildSet.objects(builds__builder=builder)
-        count = yield from to_asyncio_future(buildsets.count())
+        count = yield from buildsets.count()
         stop = count if not offset else skip + offset
-        buildsets = yield from to_asyncio_future(buildsets[skip:stop])
-        buildsets = yield from to_asyncio_future(buildsets.to_list())
+        buildsets = buildsets[skip:stop]
+        buildsets = yield from buildsets.to_list()
         buildsets_list = []
         for buildset in buildsets:
             bdict = yield from buildset.to_dict()
@@ -391,7 +388,7 @@ class HoleHandler:
         repo_dict = json.loads(repo.to_json())
         repo_dict['id'] = str(repo.id)
         repo_dict['status'] = yield from repo.get_status()
-        slaves = yield from to_asyncio_future(repo.slaves)
+        slaves = yield from repo.slaves
         repo_dict['slaves'] = [self._get_slave_dict(s) for s in slaves]
         return repo_dict
 
@@ -402,7 +399,7 @@ class HoleHandler:
 
     @asyncio.coroutine
     def _get_builders(self, slaves, revision):
-        repo = yield from to_asyncio_future(revision.repository)
+        repo = yield from revision.repository
         builders = {}
         for slave in slaves:
             builders[slave] = yield from repo.build_manager.get_builders(
@@ -456,8 +453,8 @@ class UIStreamHandler:
 
     @asyncio.coroutine
     def send_info(self, info_type, build=None, step=None):
-        repo = yield from to_asyncio_future(build.repository)
-        slave = yield from to_asyncio_future(build.slave)
+        repo = yield from build.repository
+        slave = yield from build.slave
 
         build = yield from build.to_dict()
         slave = json.loads(slave.to_json())
