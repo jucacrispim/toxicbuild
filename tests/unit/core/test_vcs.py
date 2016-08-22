@@ -254,3 +254,30 @@ class GitTest(TestCase):
 
         self.assertEqual(len(revisions['origin/master']), 2)
         self.assertEqual(len(revisions['origin/dev']), 2)
+
+    @async_test
+    def test_get_revision_with_branches(self):
+        now = datetime.datetime.now()
+        since = {'master': now,
+                 'dev': now}
+
+        rb_mock = mock.Mock()
+
+        @asyncio.coroutine
+        def remote_branches(*a, **kw):
+            rb_mock()
+
+        @asyncio.coroutine
+        def branch_revisions(*a, **kw):
+            return [{'123adsf': now}, {'asdf123': now}]
+
+        self.vcs.get_remote_branches = remote_branches
+        self.vcs.get_revisions_for_branch = branch_revisions
+
+        branches = ['master', 'some-feature']
+        revisions = yield from self.vcs.get_revisions(since=since,
+                                                      branches=branches)
+
+        self.assertEqual(len(revisions['origin/master']), 2)
+        self.assertEqual(len(revisions['origin/some-feature']), 2)
+        self.assertFalse(rb_mock.called)

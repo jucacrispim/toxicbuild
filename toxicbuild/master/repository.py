@@ -45,6 +45,7 @@ class Repository(Document, utils.LoggerMixin):
     url = StringField(required=True, unique=True)
     update_seconds = IntField(default=300, required=True)
     vcs_type = StringField(required=True, default='git')
+    branches = ListField(StringField())
     slaves = ListField(ReferenceField(Slave))
     notify_only_latest = BooleanField(default=False)
     clone_status = StringField(choices=('cloning', 'done', 'clone-exception'),

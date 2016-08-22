@@ -92,10 +92,12 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
 
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
-    def get_revisions(self, since={}):
-        """ Returns the revisions for all branches since ``since``.
+    def get_revisions(self, since={}, branches=None):
+        """ Returns the revisions for ``branches`` since ``since``.
         :param since: dictionary in the format: {branch_name: since_date}.
           ``since`` is a datetime object.
+        :param branches: A list of branches to look for new revisions. If
+          ``branches`` is None all remote branches will be used.
         """
 
     @abstractmethod  # pragma no branch
@@ -170,11 +172,13 @@ class Git(VCS):
         return ret
 
     @asyncio.coroutine
-    def get_revisions(self, since={}):
+    def get_revisions(self, since={}, branches=None):
 
-        remote_branches = yield from self.get_remote_branches()
+        remote_branches = branches or (yield from self.get_remote_branches())
         revisions = {}
         for branch in remote_branches:
+            if not branch.startswith('origin/'):
+                branch = 'origin/{}'.format(branch)
             yield from self.checkout(branch)
             yield from self.pull(branch)
             since_date = since.get(branch)
