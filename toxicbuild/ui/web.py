@@ -68,9 +68,18 @@ class RepositoryHandler(BaseModelHandler):
 
     @gen.coroutine
     def post(self, *args):
-        if'start-build' not in args:
-            ret = yield super().post(*args)
+        if 'add-branch' in args:
+            yield from self.add_branch()
             return
+
+        elif 'remove-branch' in args:
+            yield from self.remove_branch()
+            return
+
+        elif'start-build' not in args:
+            yield super().post(*args)
+            return
+
         ret = yield from self.start_build()
         self.write(ret)
 
@@ -80,6 +89,20 @@ class RepositoryHandler(BaseModelHandler):
         del self.params['name']
         ret = yield from item.start_build(**self.params)
         return ret
+
+    @asyncio.coroutine
+    def add_branch(self):
+        item = yield from self.get_item(repo_name=self.params.get('name'))
+        del self.params['name']
+        r = yield from item.add_branch(**self.params)
+        return r
+
+    @asyncio.coroutine
+    def remove_branch(self):
+        item = yield from self.get_item(repo_name=self.params.get('name'))
+        del self.params['name']
+        r = yield from item.remove_branch(**self.params)
+        return r
 
     def prepare(self):
         super().prepare()

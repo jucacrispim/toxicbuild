@@ -196,6 +196,45 @@ class RepositoryHandlerTest(AsyncTestCase):
         self.assertTrue(get_item_mock.called)
 
     @gen_test
+    def test_add_branch(self):
+        kwargs = {'branch_name': [b'master'],
+                  'notify_only_latest': [b'1'],
+                  'name': [b'test']}
+
+        get_item_mock = MagicMock(return_value='ok')
+        get_item_mock.add_branch = asyncio.coroutine(
+            lambda *a, **kw: get_item_mock())
+
+        @asyncio.coroutine
+        def gi(**kw):
+            return get_item_mock
+
+        self.handler.get_item = gi
+        self.handler.request.arguments = kwargs
+        self.handler.prepare()
+        yield from self.handler.add_branch()
+        self.assertTrue(get_item_mock.called)
+
+    @gen_test
+    def test_remove_branch(self):
+        kwargs = {'branch_name': [b'master'],
+                  'name': [b'test']}
+
+        get_item_mock = MagicMock(return_value='ok')
+        get_item_mock.remove_branch = asyncio.coroutine(
+            lambda *a, **kw: get_item_mock())
+
+        @asyncio.coroutine
+        def gi(**kw):
+            return get_item_mock
+
+        self.handler.get_item = gi
+        self.handler.request.arguments = kwargs
+        self.handler.prepare()
+        yield from self.handler.remove_branch()
+        self.assertTrue(get_item_mock.called)
+
+    @gen_test
     def test_start_build(self):
         sb_mock = MagicMock()
 
@@ -225,6 +264,27 @@ class RepositoryHandlerTest(AsyncTestCase):
         post_mock = MagicMock()
         web.BaseModelHandler.post = gen.coroutine(lambda *args: post_mock())
         yield self.handler.post()
+
+        self.assertTrue(post_mock.called)
+
+    @gen_test
+    def test_post_with_add_branch(self):
+        post_mock = MagicMock()
+        self.handler.add_branch = asyncio.coroutine(lambda *args: post_mock())
+        self.handler.request.uri = 'http://localhost:1235/add-branch'
+        self.handler.prepare()
+        yield self.handler.post('add-branch')
+
+        self.assertTrue(post_mock.called)
+
+    @gen_test
+    def test_post_with_remove_branch(self):
+        post_mock = MagicMock()
+        self.handler.remove_branch = asyncio.coroutine(
+            lambda *args: post_mock())
+        self.handler.request.uri = 'http://localhost:1235/add-branch'
+        self.handler.prepare()
+        yield self.handler.post('remove-branch')
 
         self.assertTrue(post_mock.called)
 
