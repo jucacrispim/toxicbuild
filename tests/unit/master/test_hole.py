@@ -353,6 +353,18 @@ class HoleHandlerTest(TestCase):
         self.assertEqual(len(slaves), 1)
 
     @async_test
+    def test_slave_update(self):
+        yield from self._create_test_data()
+
+        data = {'host': '10.0.0.1', 'slave_name': self.slave.name}
+        action = 'slave-update'
+        handler = hole.HoleHandler(data, action, MagicMock())
+        yield from handler.slave_update(slave_name=self.slave.name,
+                                        host='10.0.0.1')
+        slave = yield from hole.Slave.get(name=self.slave.name)
+        self.assertEqual(slave.host, '10.0.0.1')
+
+    @async_test
     def test_buildset_list(self):
         yield from self._create_test_data()
         handler = hole.HoleHandler({}, 'buildset-list', MagicMock())

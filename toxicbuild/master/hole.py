@@ -286,6 +286,16 @@ class HoleHandler:
         return {'slave-list': slave_list}
 
     @asyncio.coroutine
+    def slave_update(self, slave_name, **kwargs):
+        """Updates infomation of a slave."""
+
+        slave = yield from Slave.get(name=slave_name)
+        [setattr(slave, k, v) for k, v in kwargs.items()]
+
+        yield from slave.save()
+        return {'slave-update': 'ok'}
+
+    @asyncio.coroutine
     def buildset_list(self, repo_name=None, skip=0, offset=None):
         """ Lists all buildsets.
 
