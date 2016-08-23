@@ -204,7 +204,6 @@ class BuildSetTest(TestCase):
                         repository=self.repo, slave=self.slave,
                         named_tree='v0.1')
         self.buildset.builds.append(b)
-
         builds = yield from self.buildset.get_builds_for(branch='other')
         self.assertEqual(len(builds), 1)
 
@@ -428,6 +427,21 @@ class BuildManagerTest(TestCase):
         futures = [r[1] for r in ret]
         yield from asyncio.gather(*futures)
         self.assertTrue(self.repo.build_manager.add_builds.called)
+
+    @mock.patch.object(build.asyncio, 'async', mock.Mock)
+    @async_test
+    def test_start_pending(self):
+        yield from self._create_test_data()
+
+        _eb_mock = mock.Mock()
+
+        @asyncio.coroutine
+        def _eb(slave):
+            _eb_mock()
+
+        self.repo.build_manager._execute_builds = _eb
+        yield from self.repo.build_manager.start_pending()
+        self.assertTrue(build.asyncio.async.called)
 
     @asyncio.coroutine
     def _create_test_data(self):
