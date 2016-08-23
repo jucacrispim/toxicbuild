@@ -142,6 +142,12 @@ class Repository(Document, utils.LoggerMixin):
         try:
             sched_hash = _scheduler_hashes[self.url]
             scheduler.remove_by_hash(sched_hash)
+            del _scheduler_hashes[self.url]
+
+            pending_hash = _scheduler_hashes['{}-start-pending'.format(
+                self.url)]
+            scheduler.remove_by_hash(pending_hash)
+            del _scheduler_hashes['{}-start-pending'.format(self.url)]
         except KeyError:  # pragma no cover
             # means the repository was not scheduled
             pass
@@ -158,8 +164,8 @@ class Repository(Document, utils.LoggerMixin):
 
     @asyncio.coroutine
     def update_code(self):
-        """Updates the repositoy's code. It is just a wrapper for
-        self.poller.poll, so I can handle exceptions there."""
+        """Updates the repository's code. It is just a wrapper for
+        self.poller.poll, so I can handle exceptions here."""
 
         try:
             yield from self.poller.poll()
@@ -171,11 +177,21 @@ class Repository(Document, utils.LoggerMixin):
         yield from self.save()
 
     def schedule(self):
-        """ Adds self.poller.poll() to the scheduler. """
+        """Schedules all needed actions for a repository. The actions are:
+
+        * Update source code using ``self.update_code``
+        * Starts builds that are pending using
+          ``self.build_manager.start_pending``."""
 
         self.log('Scheduling {url}'.format(url=self.url))
+        # we store this hashes so we can remove it from the scheduler when
+        # we remove the repository.
         sched_hash = scheduler.add(self.update_code, self.update_seconds)
         _scheduler_hashes[self.url] = sched_hash
+        start_pending_hash = scheduler.add(
+            self.build_manager.start_pending, 120)
+        _scheduler_hashes['{}-start-pending'.format(
+            self.url)] = start_pending_hash
 
     @classmethod
     @asyncio.coroutine

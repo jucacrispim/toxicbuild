@@ -81,6 +81,10 @@ class RepositoryTest(TestCase):
         with self.assertRaises(repository.Repository.DoesNotExist):
             yield from repository.Repository.get(url=repo.url)
 
+        self.assertIsNone(repository._scheduler_hashes.get(repo.url))
+        self.assertIsNone(repository._scheduler_hashes.get(
+            '{}-start-pending'.format(repo.url)))
+
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
     def test_get(self):

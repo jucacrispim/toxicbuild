@@ -22,6 +22,7 @@ import asyncio
 from collections import defaultdict, deque
 import json
 from uuid import uuid4
+from mongoengine.queryset import queryset_manager
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                ReferenceField, DateTimeField, UUIDField)
@@ -222,6 +223,10 @@ class BuildSet(SerializeMixin, Document):
     # when this buildset was first created.
     created = DateTimeField(default=now)
 
+    @queryset_manager
+    def objects(doc_cls, queryset):
+        return queryset.order_by('created')
+
     @classmethod
     @asyncio.coroutine
     def create(cls, repository, revision, save=True):
@@ -269,8 +274,8 @@ class BuildSet(SerializeMixin, Document):
 
         @asyncio.coroutine
         def match_builder(b):
-            if not builder or (
-                    yield from b.builder) == builder:
+            if not builder or (  # pragma no branch
+                    builder and (yield from b.builder) == builder):
                 return True
             return False
 
@@ -292,14 +297,13 @@ class BuildManager(LoggerMixin):
 
     def __init__(self, repository):
         self.repository = repository
+        self._is_getting_builders = False
+
         # each slave has its own queue
         self._build_queues = defaultdict(deque)
-
         # to keep track of which slave is already working
         # on consume its queue
         self._is_building = defaultdict(lambda: False)
-        self._is_getting_builders = False
-
         self.connect2signals()
 
     @asyncio.coroutine
@@ -383,6 +387,29 @@ class BuildManager(LoggerMixin):
             self._is_getting_builders = False
 
         return builders
+
+    @asyncio.coroutine
+    def start_pending(self):
+        """Starts all pending buildsets that are not already scheduled for
+        ``self.repo``."""
+
+        self.log('scheduling penging builds', level='debug')
+        buildsets = BuildSet.objects(builds__status=BuildSet.PENDING)
+        buildsets = yield from buildsets.to_list()
+        for buildset in buildsets:
+            slaves = set()
+            for b in buildset.builds:
+                slave = yield from b.slave
+                slaves.add(slave)
+
+            for slave in slaves:
+                if buildset not in self._build_queues[  # pragma no branch
+                        slave.name]:
+                    self._build_queues[slave.name].append(buildset)
+                    self.log('schedule pending buildset {}'.format(str(
+                        buildset.id)), level='debug')
+                    if not self._is_building[slave.name]:  # pragma no branch
+                        asyncio.async(self._execute_builds(slave))
 
     def connect2signals(self):
         """ Connects the BuildManager to the revision_added signal."""
