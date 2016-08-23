@@ -28,8 +28,8 @@ import json
 import traceback
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import LoggerMixin
-from toxicbuild.master import (Slave, Repository, Builder,
-                               BuildSet, RepositoryRevision)
+from toxicbuild.master import (Slave, Repository, Builder, BuildSet,
+                               RepositoryRevision, RepositoryBranch)
 from toxicbuild.master.exceptions import UIFunctionNotFound
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished)
@@ -69,6 +69,8 @@ class HoleHandler:
     * `repo-update`
     * `repo-add-slave`
     * `repo-remove-slave`
+    * `repo-add-branch`
+    * `repo-remove-branch`
     * `repo-start-build`
     * `slave-add`
     * `slave-get`
@@ -208,6 +210,21 @@ class HoleHandler:
         slave = yield from Slave.get(name=slave_name)
         yield from repo.remove_slave(slave)
         return {'repo-remove-slave': 'ok'}
+
+    @asyncio.coroutine
+    def repo_add_branch(self, repo_name, branch_name,
+                        notify_only_latest=False):
+        branch = RepositoryBranch(
+            name=branch_name, notify_only_latest=notify_only_latest)
+        repo = yield from Repository.get(name=repo_name)
+        repo.branches.append(branch)
+        yield from repo.save()
+        return {'repo-add-branch': 'ok'}
+
+    @asyncio.coroutine
+    def repo_remove_branch(self, repo_name, branch_name):
+        repo = yield from Repository.get(name=repo_name)
+        yield from repo.update(pull__branches__name=branch_name)
 
     @asyncio.coroutine
     def repo_start_build(self, repo_name, branch, builder_name=None,

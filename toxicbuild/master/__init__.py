@@ -7,7 +7,8 @@ from toxicbuild.core.utils import log
 from toxicbuild.core.conf import Settings
 
 # the api
-from toxicbuild.master.repository import Repository, RepositoryRevision
+from toxicbuild.master.repository import (Repository, RepositoryRevision,
+                                          RepositoryBranch)
 from toxicbuild.master.build import Build, Builder, BuildSet
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.hole import HoleServer
@@ -51,6 +52,6 @@ def run(loglevel):  # pragma no cover
 
 
 make_pyflakes_happy = [Slave, Build, Builder, RepositoryRevision,
-                       BuildSet]
+                       BuildSet, RepositoryBranch]
 
 del make_pyflakes_happy

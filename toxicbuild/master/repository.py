@@ -43,7 +43,7 @@ _scheduler_hashes = {}
 
 
 class RepositoryBranch(EmbeddedDocument):
-    name = StringField(required=True)
+    name = StringField(required=True, unique=True)
     notify_only_latest = BooleanField(default=False)
 
 

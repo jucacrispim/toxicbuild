@@ -245,6 +245,38 @@ class HoleHandlerTest(TestCase):
 
         self.assertEqual(len((yield from repo.slaves)), 0)
 
+    @async_test
+    def test_repo_add_branch(self):
+        yield from self._create_test_data()
+        action = 'repo-add-branch'
+
+        handler = hole.HoleHandler({}, action, MagicMock())
+
+        yield from handler.repo_add_branch(repo_name=self.repo.name,
+                                           branch_name='release',
+                                           notify_only_latest=True)
+
+        repo = yield from hole.Repository.get(url=self.repo.url)
+
+        self.assertEqual(len(repo.branches), 1)
+
+    @async_test
+    def test_repo_remove_branch(self):
+        yield from self._create_test_data()
+        action = 'repo-add-branch'
+
+        handler = hole.HoleHandler({}, action, MagicMock())
+
+        yield from handler.repo_add_branch(repo_name=self.repo.name,
+                                           branch_name='release',
+                                           notify_only_latest=True)
+        yield from handler.repo_remove_branch(repo_name=self.repo.name,
+                                              branch_name='release')
+
+        repo = yield from hole.Repository.get(url=self.repo.url)
+
+        self.assertEqual(len(repo.branches), 0)
+
     @patch.object(repository, 'BuildManager', MagicMock(
         spec=repository.BuildManager))
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
@@ -487,6 +519,8 @@ class HoleHandlerTest(TestCase):
                     'repo_update': handler.repo_update,
                     'repo_add_slave': handler.repo_add_slave,
                     'repo_remove_slave': handler.repo_remove_slave,
+                    'repo_add_branch': handler.repo_add_branch,
+                    'repo_remove_branch': handler.repo_remove_branch,
                     'repo_start_build': handler.repo_start_build,
                     'slave_add': handler.slave_add,
                     'slave_get': handler.slave_get,
