@@ -52,6 +52,14 @@ class SlaveTest(BaseFunctionalTest):
         slave_list = yield from Slave.list()
         self.assertEqual(len(slave_list), 1)
 
+    @async_test
+    def test_update(self):
+        slave = yield from Slave.add('test-slave', '192.168.0.1', 1234)
+        yield from slave.update(host='localhost')
+        get_slave = yield from Slave.get(slave_name='test-slave')
+        self.assertEqual(slave.id, get_slave.id)
+        self.assertEqual(get_slave.host, 'localhost')
+
 
 class RepositoryTest(BaseFunctionalTest):
 
@@ -91,6 +99,16 @@ class RepositoryTest(BaseFunctionalTest):
 
         repo_list = yield from Repository.list()
         self.assertEqual(len(repo_list), 1)
+
+    @async_test
+    def test_update(self):
+        self.repo = yield from Repository.add(
+            name='some-repo', url='bla@gla.com', vcs_type='git',
+            update_seconds=200)
+        yield from self.repo.update(update_seconds=100)
+        get_repo = yield from Repository.get(repo_name=self.repo.name)
+        self.assertEqual(self.repo.id, get_repo.id)
+        self.assertEqual(get_repo.update_seconds, 100)
 
     @async_test
     def test_add_slave(self):

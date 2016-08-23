@@ -174,11 +174,14 @@ class RepositoryTest(TestCase):
         repo_dict = self.repository.to_dict()
         self.assertTrue(isinstance(repo_dict['slaves'][0], dict))
 
+    @async_test
+    def test_update(self):
+        self.repository.get_client = lambda: get_client_mock('ok')
+        resp = yield from self.repository.update(update_seconds=1000)
+        self.assertEqual(resp, 'ok')
+
 
 class SlaveTest(TestCase):
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
 
     @patch.object(models.Slave, 'get_client', lambda: get_client_mock(
         {'host': 'localhost'}))
@@ -212,11 +215,16 @@ class SlaveTest(TestCase):
         resp = yield from slave.delete()
         self.assertEqual(resp, 'ok')
 
+    @async_test
+    def test_update(self):
+        slave = models.Slave(name='slave', host='localhost', port=1234)
+        slave.get_client = lambda: get_client_mock('ok')
+
+        resp = yield from slave.update(port=4321)
+        self.assertEqual(resp, 'ok')
+
 
 class BuildSetTest(TestCase):
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
 
     @patch.object(models.BuildSet, 'get_client', lambda: get_client_mock(
         [{'id': 'sasdfasf', 'builds': [{'steps': [{'name': 'unit'}]}]},

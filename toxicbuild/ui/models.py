@@ -126,6 +126,14 @@ class Slave(BaseModel):
             resp = yield from client.slave_remove(slave_name=self.name)
         return resp
 
+    @asyncio.coroutine
+    def update(self, **kwargs):
+        """Updates a slave"""
+        with (yield from self.get_client()) as client:
+            resp = yield from client.slave_update(slave_name=self.name,
+                                                  **kwargs)
+        return resp
+
 
 class Repository(BaseModel):
 
@@ -192,6 +200,14 @@ class Repository(BaseModel):
         client = yield from self.get_client()
         resp = yield from client.repo_add_slave(repo_name=self.name,
                                                 slave_name=slave.name)
+        return resp
+
+    @asyncio.coroutine
+    def update(self, **kwargs):
+        """Updates a slave"""
+        with (yield from self.get_client()) as client:
+            resp = yield from client.repo_update(repo_name=self.name,
+                                                 **kwargs)
         return resp
 
     @asyncio.coroutine
