@@ -181,7 +181,9 @@ class RepositoryHandlerTest(AsyncTestCase):
         kwargs = {'update_seconds': [b'bla@bla.com'],
                   'name': [b'test']}
 
-        get_item_mock = MagicMock()
+        get_item_mock = MagicMock(return_value='ok')
+        get_item_mock.update = asyncio.coroutine(
+            lambda *a, **kw: get_item_mock())
 
         @asyncio.coroutine
         def gi(**kw):
@@ -191,7 +193,7 @@ class RepositoryHandlerTest(AsyncTestCase):
         self.handler.request.arguments = kwargs
         self.handler.prepare()
         yield self.handler.put()
-        self.assertTrue(get_item_mock.update.called)
+        self.assertTrue(get_item_mock.called)
 
     @gen_test
     def test_start_build(self):

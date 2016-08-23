@@ -492,6 +492,7 @@ class HoleHandlerTest(TestCase):
                     'slave_get': handler.slave_get,
                     'slave_list': handler.slave_list,
                     'slave_remove': handler.slave_remove,
+                    'slave_update': handler.slave_update,
                     'buildset_list': handler.buildset_list,
                     'builder_list': handler.builder_list,
                     'builder_show': handler.builder_show}
