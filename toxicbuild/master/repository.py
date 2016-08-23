@@ -22,9 +22,10 @@ import os
 import re
 import shutil
 from threading import Thread
-from mongomotor import Document
+from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, IntField, ReferenceField,
-                               DateTimeField, ListField, BooleanField)
+                               DateTimeField, ListField, BooleanField,
+                               EmbeddedDocumentField)
 from toxicbuild.core import utils
 from toxicbuild.master.scheduler import scheduler
 from toxicbuild.master.build import BuildSet, Builder, BuildManager
@@ -36,8 +37,14 @@ from toxicbuild.master.slave import Slave
 # The thing here is: When a repository poller is scheduled, I need to
 # keep track of the hashes so I can remove it from the scheduler
 # when needed.
-# The format is {repourl: hash}
+# The format is {repourl: hash} for update_code
+# and {repourl-start-pending: hash} for starting pending builds
 _scheduler_hashes = {}
+
+
+class RepositoryBranch(EmbeddedDocument):
+    name = StringField(required=True)
+    notify_only_latest = BooleanField(default=False)
 
 
 class Repository(Document, utils.LoggerMixin):
@@ -45,9 +52,8 @@ class Repository(Document, utils.LoggerMixin):
     url = StringField(required=True, unique=True)
     update_seconds = IntField(default=300, required=True)
     vcs_type = StringField(required=True, default='git')
-    branches = ListField(StringField())
+    branches = ListField(EmbeddedDocumentField(RepositoryBranch))
     slaves = ListField(ReferenceField(Slave))
-    notify_only_latest = BooleanField(default=False)
     clone_status = StringField(choices=('cloning', 'done', 'clone-exception'),
                                default='cloning')
 
@@ -71,9 +77,7 @@ class Repository(Document, utils.LoggerMixin):
     def poller(self):
         if self._poller_instance is None:
             vcs_type = self.vcs_type
-            self._poller_instance = Poller(
-                self, vcs_type, self.workdir,
-                notify_only_latest=self.notify_only_latest)
+            self._poller_instance = Poller(self, vcs_type, self.workdir)
 
         return self._poller_instance
 
@@ -96,6 +100,7 @@ class Repository(Document, utils.LoggerMixin):
             status = last_buildset.get_status()
             i = 1
             while status == BuildSet.PENDING:
+                # we do not consider pending builds for the repo status
                 start = i
                 stop = start + 1
                 last_buildset = BuildSet.objects(repository=self).order_by(
@@ -112,13 +117,15 @@ class Repository(Document, utils.LoggerMixin):
 
     @classmethod
     @asyncio.coroutine
-    def create(cls, name, url, update_seconds, vcs_type, slaves=None):
+    def create(cls, name, url, update_seconds, vcs_type, slaves=None,
+               branches=None):
         """ Creates a new repository and schedule it. """
 
         slaves = slaves or []
+        branches = branches or []
 
         repo = cls(url=url, update_seconds=update_seconds, vcs_type=vcs_type,
-                   slaves=slaves, name=name)
+                   slaves=slaves, name=name, branches=branches)
         yield from repo.save()
         repo.schedule()
         return repo

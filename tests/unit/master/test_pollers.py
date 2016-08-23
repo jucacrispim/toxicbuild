@@ -34,8 +34,7 @@ class GitPollerTest(TestCase):
             name='reponame', url='git@somewhere.org/project.git')
 
         self.poller = pollers.Poller(
-            self.repo, vcs_type='git', workdir='workdir',
-            notify_only_latest=True)
+            self.repo, vcs_type='git', workdir='workdir')
 
     @async_test
     def tearDown(self):
@@ -54,7 +53,13 @@ class GitPollerTest(TestCase):
     def test_process_changes(self):
         # now in the future, of course!
         now = datetime.datetime.now() + datetime.timedelta(100)
-
+        branches = [
+            repository.RepositoryBranch(name='master',
+                                        notify_only_latest=True),
+            repository.RepositoryBranch(name='dev',
+                                        notify_only_latest=False)]
+        self.repo.branches = branches
+        yield from self.repo.save()
         yield from self._create_db_revisions()
 
         @asyncio.coroutine

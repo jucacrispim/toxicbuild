@@ -62,6 +62,22 @@ class RepositoryTest(TestCase):
         slaves = yield from repo.slaves
         self.assertEqual(slaves[0], slave_inst)
 
+    @patch.object(repository.Repository, 'log', Mock())
+    @async_test
+    def test_create_with_branches(self):
+        slave_inst = yield from slave.Slave.create(name='name', host='bla.com',
+                                                   port=1234)
+        branches = [repository.RepositoryBranch(name='branch{}'.format(str(i)),
+                                                notify_only_latest=bool(i))
+                    for i in range(3)]
+
+        repo = yield from repository.Repository.create(
+            'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave_inst],
+            branches=branches)
+
+        self.assertTrue(repo.id)
+        self.assertEqual(len(repo.branches), 3)
+
     @patch.object(repository, 'shutil', Mock())
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
