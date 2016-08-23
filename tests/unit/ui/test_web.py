@@ -64,13 +64,14 @@ class BaseModelHandlerTest(AsyncTestCase):
 
         self.handler.get_item = gi
 
-        self.handler.request.arguments = {'url': 'bla@bla.com'}
+        self.handler.request.arguments = {'url': [b'bla@bla.com']}
+        self.handler.prepare()
 
         yield self.handler.get()
 
         called_args = gi_mock.call_args[1]
 
-        self.assertEqual(called_args, {'url': 'bla@bla.com'})
+        self.assertEqual(called_args, {'url': ['bla@bla.com']})
 
     @gen_test
     def test_add(self):
@@ -91,7 +92,8 @@ class BaseModelHandlerTest(AsyncTestCase):
     @patch.object(web.BaseModelHandler, 'write', MagicMock())
     @gen_test
     def test_post(self):
-        kwargs = {'url': 'bla@bla.com', 'name': 'test'}
+        kwargs = {'url': [b'bla@bla.com'], 'name': [b'test']}
+        expected = {k: [p.decode() for p in v] for k, v in kwargs.items()}
         self.handler.request.arguments = kwargs
 
         add_mock = MagicMock()
@@ -101,12 +103,12 @@ class BaseModelHandlerTest(AsyncTestCase):
             return add_mock(**kw)
 
         self.handler.model.add = add
-
+        self.handler.prepare()
         yield self.handler.post()
 
         called_args = add_mock.call_args[1]
 
-        self.assertEqual(called_args, kwargs)
+        self.assertEqual(called_args, expected)
 
     @gen_test
     def test_delete(self):
@@ -117,8 +119,9 @@ class BaseModelHandlerTest(AsyncTestCase):
             return item
 
         self.handler.get_item = get_item
-        kwargs = {'name': 'some-repo'}
+        kwargs = {'name': [b'some-repo']}
         self.handler.request.arguments = kwargs
+        self.handler.prepare()
         yield self.handler.delete()
 
         self.assertTrue(item.delete.called)
@@ -149,7 +152,7 @@ class RepositoryHandlerTest(AsyncTestCase):
 
         handler.prepare()
 
-        self.assertEqual(handler.request.arguments, expected)
+        self.assertEqual(handler.params, expected)
 
     def test_prepare_start_build(self):
         request = MagicMock()
@@ -169,8 +172,26 @@ class RepositoryHandlerTest(AsyncTestCase):
                   gen.coroutine(lambda x: None))
     @gen_test
     def test_delete(self, *args):
+        self.handler.prepare()
         yield self.handler.delete()
-        self.assertIn('repo_name', self.handler.request.arguments)
+        self.assertIn('repo_name', self.handler.params)
+
+    @gen_test
+    def test_put(self):
+        kwargs = {'update_seconds': [b'bla@bla.com'],
+                  'name': [b'test']}
+
+        get_item_mock = MagicMock()
+
+        @asyncio.coroutine
+        def gi(**kw):
+            return get_item_mock
+
+        self.handler.get_item = gi
+        self.handler.request.arguments = kwargs
+        self.handler.prepare()
+        yield self.handler.put()
+        self.assertTrue(get_item_mock.update.called)
 
     @gen_test
     def test_start_build(self):
@@ -189,8 +210,10 @@ class RepositoryHandlerTest(AsyncTestCase):
 
         self.handler.get_item = gi
 
-        self.handler.request.arguments = {'name': 'myrepo',
-                                          'branch': 'master'}
+        self.handler.request.arguments = {'name': [b'myrepo'],
+                                          'branch': [b'master']}
+        self.handler.request.uri = 'http://bla.com/start-build'
+        self.handler.prepare()
         yield from self.handler.start_build()
         self.assertTrue(sb_mock.called)
 
@@ -245,14 +268,32 @@ class SlaveHandlerTest(AsyncTestCase):
 
         self.handler.prepare()
 
-        self.assertEqual(expected, self.handler.request.arguments)
+        self.assertEqual(expected, self.handler.params)
 
     @patch.object(web.BaseModelHandler, 'delete',
                   gen.coroutine(lambda x: None))
     @gen_test
     def test_delete(self, *args):
+        self.handler.prepare()
         yield self.handler.delete()
-        self.assertIn('slave_name', self.handler.request.arguments)
+        self.assertIn('slave_name', self.handler.params)
+
+    @gen_test
+    def test_put(self):
+        kwargs = {'host': [b'localhost'],
+                  'name': [b'name']}
+
+        get_item_mock = MagicMock()
+
+        @asyncio.coroutine
+        def gi(**kw):
+            return get_item_mock
+
+        self.handler.get_item = gi
+        self.handler.request.arguments = kwargs
+        self.handler.prepare()
+        yield self.handler.put()
+        self.assertTrue(get_item_mock.update.called)
 
 
 class MainHandlerTest(AsyncTestCase):

@@ -32,7 +32,6 @@ class BaseModelHandler(TemplateHandler):
     def initialize(self, *args, **kwargs):
         self.model = kwargs['model']
         del kwargs['model']
-
         super().initialize(*args, **kwargs)
 
     @asyncio.coroutine
@@ -49,20 +48,18 @@ class BaseModelHandler(TemplateHandler):
 
     @gen.coroutine
     def get(self, *args):
-        kwargs = self.request.arguments
-        resp = yield from self.get_item(**kwargs)
+        resp = yield from self.get_item(**self.params)
         json_resp = resp.to_json()
         return json_resp
 
     @gen.coroutine
     def post(self, *args):
-        kwargs = self.request.arguments
-        resp = yield from self.add(**kwargs)
+        resp = yield from self.add(**self.params)
         self.write(resp)
 
     @gen.coroutine
     def delete(self, *args):
-        item = yield from self.get_item(**self.request.arguments)
+        item = yield from self.get_item(**self.params)
         resp = yield from item.delete()
         return resp
 
@@ -79,63 +76,66 @@ class RepositoryHandler(BaseModelHandler):
 
     @asyncio.coroutine
     def start_build(self):
-        item = yield from self.get_item(repo_name=self.request.arguments[
-            'name'])
-        del self.request.arguments['name']
-        ret = yield from item.start_build(**self.request.arguments)
+        item = yield from self.get_item(repo_name=self.params.get('name'))
+        del self.params['name']
+        ret = yield from item.start_build(**self.params)
         return ret
 
     def prepare(self):
+        super().prepare()
         if 'start-build' in self.request.uri:
             self._prepare_start_build()
         else:
             kw = {}
-            kw['name'] = self.request.arguments.get('name', [b''])[0].decode()
-            kw['url'] = self.request.arguments.get('url', [b''])[0].decode()
-            kw['vcs_type'] = self.request.arguments.get('vcs_type',
-                                                        [b''])[0].decode()
-            kw['update_seconds'] = self.request.arguments.get(
-                'update_seconds', [b''])[0].decode()
-            kw['slaves'] = [s.decode() for s in
-                            self.request.arguments.get('slaves', [])]
-            self.request.arguments = kw
-
-    def _prepare_start_build(self):
-        kw = {}
-        kw['name'] = self.request.arguments.get('name', [b''])[0].decode()
-        kw['builder_name'] = self.request.arguments.get(
-            'builder_name', [b''])[0].decode()
-        kw['branch'] = self.request.arguments.get('branch', [b''])[0].decode()
-        kw['slaves'] = [s.decode() for s in
-                        self.request.arguments.get('slaves', [])]
-
-        self.request.arguments = kw
+            kw['name'] = self.params.get('name')
+            kw['url'] = self.params.get('url')
+            kw['vcs_type'] = self.params.get('vcs_type')
+            kw['update_seconds'] = self.params.get('update_seconds')
+            kw['slaves'] = self.params.getlist('slaves')
+            self.params = kw
 
     @gen.coroutine
     def delete(self, *args):
-        name = self.request.arguments['name']
-        del self.request.arguments['name']
-        self.request.arguments = {'repo_name': name}
-
+        self.params = {'repo_name': self.params.get('name')}
         yield super().delete(*args)
+
+    @gen.coroutine
+    def put(self, *args):
+        item = yield from self.get_item(repo_name=self.params['name'])
+        del self.params['name']
+        r = yield from item.update(**self.params)
+        self.write(r)
+
+    def _prepare_start_build(self):
+        kw = {}
+        kw['name'] = self.params.get('name')
+        kw['builder_name'] = self.params.get('builder_name')
+        kw['branch'] = self.params.get('branch')
+        kw['slaves'] = self.params.getlist('slaves')
+
+        self.request.arguments = kw
 
 
 class SlaveHandler(BaseModelHandler):
 
     def prepare(self):
+        super().prepare()
         kw = {}
-        kw['name'] = self.request.arguments.get('name', [b''])[0].decode()
-        kw['host'] = self.request.arguments.get('host', [b''])[0].decode()
-        kw['port'] = self.request.arguments.get('port', [b''])[0].decode()
-        self.request.arguments = kw
+        kw['name'] = self.params.get('name')
+        kw['host'] = self.params.get('host')
+        kw['port'] = self.params.get('port')
+        self.params = kw
 
     @gen.coroutine
     def delete(self, *args):
-        name = self.request.arguments['name']
-        del self.request.arguments['name']
-        self.request.arguments = {'slave_name': name}
-
+        self.params = {'slave_name': self.params.get('name')}
         yield super().delete(*args)
+
+    @gen.coroutine
+    def put(self, *args):
+        item = yield from self.get_item(slave_name=self.params['name'])
+        r = yield from item.update(**self.params)
+        return r
 
 
 class MainHandler(TemplateHandler):
