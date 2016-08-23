@@ -74,6 +74,7 @@ class HoleHandler:
     * `slave-get`
     * `slave-list`
     * `slave-remove`
+    * `slave-update`
     * `buildset-list`
     * `builder-show`
     * `list-funcs`
