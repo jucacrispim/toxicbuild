@@ -179,6 +179,11 @@ class HoleHandler:
     def repo_update(self, repo_name, **kwargs):
         """ Updates repository information. """
 
+        if kwargs.get('slaves'):
+            qs = Slave.objects(name__in=kwargs.get('slaves'))
+            slaves_instances = yield from qs.to_list()
+            kwargs['slaves'] = slaves_instances
+
         repo = yield from Repository.get(name=repo_name)
         [setattr(repo, k, v) for k, v in kwargs.items()]
 

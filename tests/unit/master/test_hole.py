@@ -196,6 +196,21 @@ class HoleHandlerTest(TestCase):
         self.assertEqual(repo.update_seconds, 60)
 
     @async_test
+    def test_repo_update_with_slaves(self):
+        yield from self._create_test_data()
+
+        data = {'url': 'git@somewhere.com',
+                'update_seconds': 60}
+        action = 'repo-update'
+        handler = hole.HoleHandler(data, action, MagicMock())
+        slaves = ['name']
+        yield from handler.repo_update(repo_name=self.repo.name,
+                                       update_seconds=60, slaves=slaves)
+        repo = yield from hole.Repository.get(name=self.repo.name)
+
+        self.assertEqual(repo.update_seconds, 60)
+
+    @async_test
     def test_repo_add_slave(self):
         yield from self._create_test_data()
 
