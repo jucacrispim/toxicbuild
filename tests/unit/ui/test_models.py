@@ -160,6 +160,23 @@ class RepositoryTest(TestCase):
         self.assertEqual(resp, 'remove slave ok')
 
     @async_test
+    def test_add_branch(self):
+        self.repository.get_client = lambda: get_client_mock('add branch ok')
+
+        resp = yield from self.repository.add_branch('master', False)
+
+        self.assertEqual(resp, 'add branch ok')
+
+    @async_test
+    def test_remove_branch(self):
+        self.repository.get_client = lambda: get_client_mock(
+            'remove branch ok')
+
+        resp = yield from self.repository.remove_branch('master')
+
+        self.assertEqual(resp, 'remove branch ok')
+
+    @async_test
     def test_start_build(self):
         self.repository.get_client = lambda: get_client_mock('start build ok')
 

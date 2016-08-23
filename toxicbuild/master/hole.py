@@ -225,6 +225,7 @@ class HoleHandler:
     def repo_remove_branch(self, repo_name, branch_name):
         repo = yield from Repository.get(name=repo_name)
         yield from repo.update(pull__branches__name=branch_name)
+        return {'repo-remove-branch': 'ok'}
 
     @asyncio.coroutine
     def repo_start_build(self, repo_name, branch, builder_name=None,

@@ -203,23 +203,49 @@ class Repository(BaseModel):
         return resp
 
     @asyncio.coroutine
-    def update(self, **kwargs):
-        """Updates a slave"""
-        with (yield from self.get_client()) as client:
-            resp = yield from client.repo_update(repo_name=self.name,
-                                                 **kwargs)
-        return resp
-
-    @asyncio.coroutine
     def remove_slave(self, slave):
         """Removes a slave from the repository.
 
         :param slave: A Slave instance.
         """
 
-        client = yield from self.get_client()
-        resp = yield from client.repo_remove_slave(repo_name=self.name,
-                                                   slave_name=slave.name)
+        with (yield from self.get_client()) as client:
+            resp = yield from client.repo_remove_slave(repo_name=self.name,
+                                                       slave_name=slave.name)
+        return resp
+
+    @asyncio.coroutine
+    def add_branch(self, branch_name, notify_only_latest):
+        """Adds a branch config to a repositoiry.
+
+        :param branch_name: The name of the branch.
+        :param notify_only_latest: If we should create builds for all
+          revisions or only for the lastest one."""
+
+        with (yield from self.get_client()) as client:
+            resp = yield from client.repo_add_branch(
+                repo_name=self.name, branch_name=branch_name,
+                notify_only_latest=notify_only_latest)
+
+        return resp
+
+    @asyncio.coroutine
+    def remove_branch(self, branch_name):
+        """Removes a branch config from a repository.
+
+        :param branch_name: The name of the branch."""
+        with (yield from self.get_client()) as client:
+            resp = yield from client.repo_remove_branch(
+                repo_name=self.name, branch_name=branch_name)
+
+        return resp
+
+    @asyncio.coroutine
+    def update(self, **kwargs):
+        """Updates a slave"""
+        with (yield from self.get_client()) as client:
+            resp = yield from client.repo_update(repo_name=self.name,
+                                                 **kwargs)
         return resp
 
     @asyncio.coroutine

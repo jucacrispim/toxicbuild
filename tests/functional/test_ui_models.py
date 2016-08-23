@@ -133,6 +133,27 @@ class RepositoryTest(BaseFunctionalTest):
         repo = yield from Repository.get(repo_name=self.repo.name)
         self.assertEqual(len(repo.slaves), 0)
 
+    @async_test
+    def test_add_branch(self):
+        self.repo = yield from Repository.add(name='some-repo',
+                                              url='bla@gla.com',
+                                              vcs_type='git',
+                                              update_seconds=200)
+        yield from self.repo.add_branch('master', True)
+        repo = yield from Repository.get(repo_name=self.repo.name)
+        self.assertEqual(len(repo.branches), 1)
+
+    @async_test
+    def test_remove_branch(self):
+        self.repo = yield from Repository.add(name='some-repo',
+                                              url='bla@gla.com',
+                                              vcs_type='git',
+                                              update_seconds=200)
+        yield from self.repo.add_branch('master', True)
+        yield from self.repo.remove_branch('master')
+        repo = yield from Repository.get(repo_name=self.repo.name)
+        self.assertEqual(len(repo.branches), 0)
+
 
 class BuildsetTest(BaseFunctionalTest):
 
