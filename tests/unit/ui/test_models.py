@@ -5,7 +5,6 @@ import json
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 import tornado
-from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.ui import models, client
 from tests import async_test
 
