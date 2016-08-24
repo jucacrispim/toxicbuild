@@ -187,6 +187,18 @@ class UtilsTest(TestCase):
         builders = utils.list_builders_from_config(confmodule, 'master', slave)
         self.assertEqual(len(builders), 2)
 
+    def test_bcript_with_str_salt(self):
+        salt = utils.bcrypt.gensalt(7).decode()
+        passwd = 'somepasswd'
+        encrypted = utils.bcrypt_string(passwd, salt)
+        self.assertIsInstance(encrypted, str)
+
+    def test_bcript_with_bytes_salt(self):
+        salt = utils.bcrypt.gensalt(7)
+        passwd = 'somepasswd'
+        encrypted = utils.bcrypt_string(passwd, salt)
+        self.assertIsInstance(encrypted, str)
+
 
 class StreamUtilsTest(TestCase):
 

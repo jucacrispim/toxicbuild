@@ -26,6 +26,7 @@ import os
 from subprocess import PIPE
 import sys
 import time
+import bcrypt
 from toxicbuild.core.exceptions import ExecCmdError, ConfigError
 
 
@@ -250,6 +251,14 @@ def write_stream(writer, data):
     data = '{}\n'.format(len(data)).encode('utf-8') + data
     writer.write(data)
     yield from writer.drain()
+
+
+def bcrypt_string(string, salt):
+    encoding = sys.getdefaultencoding()
+    if isinstance(salt, str):
+        salt = salt.encode(encoding)
+    encrypted = bcrypt.hashpw(string.encode(encoding), salt)
+    return encrypted.decode()
 
 
 # Sorry, but not willing to test  a daemonizer.
