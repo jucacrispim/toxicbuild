@@ -23,16 +23,23 @@
 	    <input type="text" name="repo_url" id="repo_url" class="form-control" required /><br/>
 	  </div>
 
-	  <div class="form-group">
-	    <label for="repo_vcs_type" class="control-label">VCS Type:</label>
-	    <select class="form-control" id="repo_vcs_type">
-	      <option value="git">Git</option>
-	    </select><br/>
+	  <div class="form-group form-group-vcs-type-update">
+	    <div class="left-container">
+	      <label for="repo_update_seconds" class="control-label">Update Seconds:</label>
+	      <input type="text" name="repo_update_seconds" id="repo_update_seconds" class="form-control" required /><br/>
+	    </div>
+	    <div class="right-container">
+	      <label for="repo_vcs_type" class="control-label">VCS Type:</label>
+	      <select class="form-control" id="repo_vcs_type">
+		<option value="git">Git</option>
+	      </select>
+	    </div>
 	  </div>
 
+
 	  <div class="form-group">
-	    <label for="repo_update_seconds" class="control-label">Update Seconds:</label>
-	    <input type="text" name="repo_update_seconds" id="repo_update_seconds" class="form-control" required /><br/>
+	    <label for="repo_branches" class="control-label">Branches: <span class="glyphicon glyphicon-plus add-branch-icon"></span></label>
+	    <div id="branches-container"></div>
 	  </div>
 
 	  <div class="form-group">

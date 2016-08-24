@@ -45,6 +45,44 @@ tr:nth-child(even) {
 .modal-content{
     background-color: #4c4a49;
 }
+
+.form-group-vcs-type-update{
+    min-height: 80px;
+}
+
+.form-group-vcs-type-update .left-container{
+    float:left;
+    width: 65%;
+    margin-right: 5%;;
+}
+
+.form-group-vcs-type-update .right-container{
+    width: 30%;
+    float: left;
+}
+
+.add-branch-icon{
+    color: #49b149;
+    font-weight: bolder;
+    cursor: pointer;
+}
+
+#branches-container{
+    padding: 10px;
+}
+
+.branch-name-input{
+    float: left;
+    width: 69%;
+    margin-right: 4%;
+}
+
+.remove-branch{
+    color: #da4242;
+    margin-left: 80%;
+    cursor: pointer;
+}
+
 .page-header{
     border: 0;
 }

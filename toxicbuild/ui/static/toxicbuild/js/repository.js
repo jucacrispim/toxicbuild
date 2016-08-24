@@ -43,6 +43,16 @@ var REPO_ROW_TEMPLATE = [
   '</tr>',
 ];
 
+var BRANCH_FORM_TEMPLATE = [
+  '<div class="form-group">',
+    '<h6><label for="repo_branch_name" class="control-label">Branch name: </label>',
+      '<span class="glyphicon glyphicon-remove remove-branch"></span>',
+    '</h6>',
+    '<input type="text" name="branch_name" id="branch_name" class="form-control branch-name-input" required />',
+    '<input type="checkbox" aria-label="..."> <span>Only latest commit </span>',
+  '</div>'
+];
+
 
 var RepositoryManager = function(){
   // the main repository manager object
@@ -227,6 +237,15 @@ var RepositoryManager = function(){
 
       utils.sendAjax(type, url, data, success_cb, error_cb);
     },
+
+    addBranchForm: function(){
+      var branch_template = BRANCH_FORM_TEMPLATE.join('');
+      jQuery('#branches-container').append(branch_template);
+    },
+
+    removeBranchForm: function(branch_form){
+      branch_form.remove();
+    }
   };
 
   // validator plugin
@@ -254,7 +273,25 @@ var RepositoryManager = function(){
     $('#repo-req-type').val('delete');
   });
 
-  // connecting to submit of the repository modal
+
+  // adding branch form
+  jQuery('.add-branch-icon').on('click', function(){
+    obj.addBranchForm();
+
+    // we need to set it here so remove works with branch forms
+    // inserted via js
+    jQuery('.remove-branch').on('click', function (){
+      obj.removeBranchForm(jQuery(this).parent().parent());
+    });
+
+  });
+
+  // remove branch
+  jQuery('.remove-branch').on('click', function (){
+    obj.removeBranchForm(jQuery(this).parent().parent());
+  });
+
+  // connecting to submit of the removeBranchFormpository modal
   obj.modal.on('submit', function(event){
     // event prevented here means that the form is not valid.
     if (event.isDefaultPrevented()){
