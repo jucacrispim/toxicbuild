@@ -52,15 +52,15 @@ class Poller(LoggerMixin):
 
         try:
             if self.is_polling():
-                self.log('alreay polling for {}. leaving...'.format(
+                self.log('alreay polling. leaving...'.format(
                     self.repository.url), level='debug')
                 return
 
             self._is_polling = True
-            self.log('Polling changes for {}'.format(self.repository.url))
+            self.log('Polling changes')
 
             if not self.vcs.workdir_exists():
-                self.log('clonning repo {}'.format(self.repository.url))
+                self.log('clonning repo')
                 try:
                     yield from self.vcs.clone(self.repository.url)
                 except Exception as e:
@@ -86,8 +86,7 @@ class Poller(LoggerMixin):
     def process_changes(self):
         """ Process all changes since the last revision in db
         """
-        self.log('processing changes for {}'.format(self.repository.url),
-                 level='debug')
+        self.log('processing changes', level='debug')
 
         dbrevisions = yield from self.repository.get_latest_revisions()
 
@@ -114,9 +113,8 @@ class Poller(LoggerMixin):
                 rev = revs[-1]
                 revision = yield from self.repository.add_revision(branch,
                                                                    **rev)
-                msg = 'Last revision for {} on branch {} added'
-                self.log(msg.format(self.repository.url, branch),
-                         level='debug')
+                msg = 'Last revision added for branch {} '
+                self.log(msg.format(branch), level='debug')
                 revisions.append(revision)
                 continue
 
@@ -146,3 +144,7 @@ class Poller(LoggerMixin):
 
         # returning for testing purposes
         return revision_added.send(self.repository, revisions=revisions)
+
+    def log(self, msg, level='info'):
+        msg = '[{}] {}'.format(self.repository.name, msg)
+        super().log(msg, level)
