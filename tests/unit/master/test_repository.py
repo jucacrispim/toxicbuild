@@ -117,7 +117,7 @@ class RepositoryTest(TestCase):
     @async_test
     def test_update_code_with_clone_exception(self):
         self.repo._poller_instance = MagicMock()
-
+        yield from self.repo.save()
         self.repo._poller_instance.poll.side_effect = CloneException
         yield from self.repo.update_code()
         self.assertEqual(self.repo.clone_status, 'clone-exception')

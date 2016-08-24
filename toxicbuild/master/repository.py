@@ -176,6 +176,8 @@ class Repository(Document, utils.LoggerMixin):
         """Updates the repository's code. It is just a wrapper for
         self.poller.poll, so I can handle exceptions here."""
 
+        # reloading so we detect changes in config
+        yield from self.reload('branches')
         try:
             yield from self.poller.poll()
             clone_status = 'done'
