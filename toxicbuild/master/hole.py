@@ -29,7 +29,7 @@ import traceback
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import (Slave, Repository, Builder, BuildSet,
-                               RepositoryRevision, RepositoryBranch)
+                               RepositoryRevision)
 from toxicbuild.master.exceptions import UIFunctionNotFound
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished)
