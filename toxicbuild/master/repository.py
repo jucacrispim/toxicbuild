@@ -43,6 +43,8 @@ _scheduler_hashes = {}
 
 
 class RepositoryBranch(EmbeddedDocument):
+    # this unique does not work, you must ensure it by yourself.
+    # it here just to remember that this should be unique.
     name = StringField(required=True, unique=True)
     notify_only_latest = BooleanField(default=False)
 
@@ -224,6 +226,34 @@ class Repository(Document, utils.LoggerMixin):
         slaves.pop(slaves.index(slave))
         yield from self.update(set__slaves=slaves)
         return slave
+
+    @asyncio.coroutine
+    def add_or_update_branch(self, branch_name, notify_only_latest=False):
+        """Adds a new branch to this repository. If the branch
+        already exists updates it with a new value."""
+
+        # this is a shitty way of doing this. What is the
+        # better way?
+        def get_branch(branch_name):
+            for b in self.branches:
+                if b.name == branch_name:
+                    return b
+
+        branch = get_branch(branch_name)
+        if branch:
+            branch.notify_only_latest = notify_only_latest
+        else:
+            branch = RepositoryBranch(name=branch_name,
+                                      notify_only_latest=notify_only_latest)
+            self.branches.append(branch)
+
+        yield from self.save()
+
+    @asyncio.coroutine
+    def remove_branch(self, branch_name):
+        """Removes a branch from this repository."""
+
+        yield from self.update(pull__branches__name=branch_name)
 
     @asyncio.coroutine
     def get_latest_revision_for_branch(self, branch):

@@ -214,17 +214,14 @@ class HoleHandler:
     @asyncio.coroutine
     def repo_add_branch(self, repo_name, branch_name,
                         notify_only_latest=False):
-        branch = RepositoryBranch(
-            name=branch_name, notify_only_latest=notify_only_latest)
         repo = yield from Repository.get(name=repo_name)
-        repo.branches.append(branch)
-        yield from repo.save()
+        yield from repo.add_or_update_branch(branch_name, notify_only_latest)
         return {'repo-add-branch': 'ok'}
 
     @asyncio.coroutine
     def repo_remove_branch(self, repo_name, branch_name):
         repo = yield from Repository.get(name=repo_name)
-        yield from repo.update(pull__branches__name=branch_name)
+        yield from repo.remove_branch(branch_name)
         return {'repo-remove-branch': 'ok'}
 
     @asyncio.coroutine

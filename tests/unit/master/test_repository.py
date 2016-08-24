@@ -172,6 +172,26 @@ class RepositoryTest(TestCase):
         self.assertEqual(len((yield from self.repo.slaves)), 0)
 
     @async_test
+    def test_add_branch(self):
+        yield from self.repo.add_or_update_branch('master')
+        self.assertEqual(len(self.repo.branches), 1)
+
+    @async_test
+    def test_update_branch(self):
+        yield from self.repo.add_or_update_branch('master')
+        yield from self.repo.add_or_update_branch('other-branch')
+        yield from self.repo.add_or_update_branch('master', True)
+        repo = yield from repository.Repository.get(id=self.repo.id)
+        self.assertTrue(repo.branches[0].notify_only_latest)
+        self.assertEqual(len(repo.branches), 2)
+
+    @async_test
+    def test_remove_branch(self):
+        yield from self.repo.add_or_update_branch('master')
+        yield from self.repo.remove_branch('master')
+        self.assertTrue(len(self.repo.branches), 0)
+
+    @async_test
     def test_get_latest_revision_for_branch(self):
         yield from self._create_db_revisions()
         expected = '123asdf1'
