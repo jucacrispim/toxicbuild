@@ -177,12 +177,17 @@ class Git(VCS):
         remote_branches = branches or (yield from self.get_remote_branches())
         revisions = {}
         for branch in remote_branches:
-            yield from self.checkout(branch)
-            yield from self.pull(branch)
-            since_date = since.get(branch)
+            try:
+                yield from self.checkout(branch)
+                yield from self.pull(branch)
+                since_date = since.get(branch)
 
-            revs = yield from self.get_revisions_for_branch(branch, since_date)
-            revisions[branch] = revs
+                revs = yield from self.get_revisions_for_branch(branch,
+                                                                since_date)
+                revisions[branch] = revs
+            except Exception as e:
+                msg = 'Error fetching changes. {}'.format(str(e))
+                self.log(msg)
 
         return revisions
 
