@@ -278,6 +278,6 @@ class GitTest(TestCase):
         revisions = yield from self.vcs.get_revisions(since=since,
                                                       branches=branches)
 
-        self.assertEqual(len(revisions['origin/master']), 2)
-        self.assertEqual(len(revisions['origin/some-feature']), 2)
+        self.assertEqual(len(revisions['master']), 2)
+        self.assertEqual(len(revisions['some-feature']), 2)
         self.assertFalse(rb_mock.called)

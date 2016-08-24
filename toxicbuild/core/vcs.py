@@ -177,8 +177,6 @@ class Git(VCS):
         remote_branches = branches or (yield from self.get_remote_branches())
         revisions = {}
         for branch in remote_branches:
-            if not branch.startswith('origin/'):
-                branch = 'origin/{}'.format(branch)
             yield from self.checkout(branch)
             yield from self.pull(branch)
             since_date = since.get(branch)
