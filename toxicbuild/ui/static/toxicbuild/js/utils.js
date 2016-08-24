@@ -60,4 +60,10 @@ var utils = {
       error: error_cb,
     });
   },
+
+  log: function(msg){
+    if (TOXICDEBUG){
+      console.log(msg);
+    }
+  },
 };

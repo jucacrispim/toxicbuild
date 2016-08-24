@@ -30,7 +30,8 @@
 		  data-toggle="modal" data-target="#repoModal"
 		  data-repo-name="{{repo.name}}" data-repo-url="{{repo.url}}"
 		  data-repo-update-seconds="{{repo.update_seconds}}"
-		  data-repo-vcs-type="{{repo.vcs_type}}">
+		  data-repo-vcs-type="{{repo.vcs_type}}"
+		  data-repo-id="{{repo.id}}">
 	    {{repo.name}}
 	  </button>
 	</td>
@@ -41,15 +42,6 @@
 	    </button>
 	  </form>
 	</td>
-	<!-- <td> -->
-	<!--   <button -->
-	<!--        type="button" -->
-	<!--        class="btn btn-xs btn-toxicbuild-default start-build-btn" -->
-	<!--        data-toggle="modal" data-target="#startBuildModal" -->
-	<!--        data-start-build-name="{{repo.name}}"> -->
-	<!--     start build</button> -->
-	<!-- </td> -->
-
       {% end %}
     </tbody>
   </table>
@@ -105,4 +97,10 @@
 <script src="{{static_url}}toxicbuild/js/repository.js"></script>
 <script src="{{static_url}}toxicbuild/js/slave.js"></script>
 <script src="{{static_url}}toxicbuild/js/main.js"></script>
+
+<script>
+  {% autoescape None %}
+  RepositoryManager.init({{[r.to_dict() for r in repos]}})
+</script>
+
 {% end %}

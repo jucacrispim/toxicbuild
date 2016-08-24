@@ -15,5 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-var repo_manager = RepositoryManager();
+TOXICDEBUG = true;
+
 var slave_manager = SlaveManager();
