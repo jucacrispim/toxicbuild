@@ -201,6 +201,7 @@ class RepositoryHandlerTest(AsyncTestCase):
                   'notify_only_latest': [b'1'],
                   'name': [b'test']}
 
+        self.handler.request.uri = 'http://bla.com/add-branch'
         get_item_mock = MagicMock(return_value='ok')
         get_item_mock.add_branch = asyncio.coroutine(
             lambda *a, **kw: get_item_mock())
@@ -211,6 +212,7 @@ class RepositoryHandlerTest(AsyncTestCase):
 
         self.handler.get_item = gi
         self.handler.request.arguments = kwargs
+
         self.handler.prepare()
         yield from self.handler.add_branch()
         self.assertTrue(get_item_mock.called)
@@ -229,6 +231,7 @@ class RepositoryHandlerTest(AsyncTestCase):
             return get_item_mock
 
         self.handler.get_item = gi
+        self.handler.request.uri = 'http://bla.com/remove-branch'
         self.handler.request.arguments = kwargs
         self.handler.prepare()
         yield from self.handler.remove_branch()

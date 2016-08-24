@@ -30,12 +30,12 @@ class SchedulerTest(TestCase):
         scheduler.stop()
         super(SchedulerTest, self).setUp()
         self.scheduler = TaskScheduler()
-        asyncio.async(self.scheduler.start())
+        self.future = asyncio.async(self.scheduler.start())
 
     def tearDown(self):
         self.scheduler.stop()
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks()))
+        loop.run_until_complete(asyncio.gather(self.future))
         super(SchedulerTest, self).tearDown()
 
     def test_add_with_call(self):
