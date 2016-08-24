@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 import time
 import tornado
 from tornado.testing import AsyncTestCase
@@ -11,6 +12,7 @@ SCRIPTS_DIR = os.path.join(SOURCE_DIR, 'scripts')
 REPO_DIR = os.path.join(DATA_DIR, 'repo')
 SLAVE_ROOT_DIR = os.path.join(DATA_DIR, 'slave')
 MASTER_ROOT_DIR = os.path.join(DATA_DIR, 'master')
+PYVERSION = ''.join([str(n) for n in sys.version_info[:2]])
 
 
 class BaseFunctionalTest(AsyncTestCase):
@@ -23,9 +25,11 @@ class BaseFunctionalTest(AsyncTestCase):
         """Starts a slave in a new process."""
 
         toxicslave_conf = os.environ.get('TOXICSLAVE_SETTINGS')
+        pidfile = 'toxicslave{}.pid'.format(PYVERSION)
         toxicslave_cmd = os.path.join(SCRIPTS_DIR, 'toxicslave')
         cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
-               toxicslave_cmd, 'start', SLAVE_ROOT_DIR, '--daemonize']
+               toxicslave_cmd, 'start', SLAVE_ROOT_DIR, '--daemonize',
+               '--pidfile', pidfile]
 
         if toxicslave_conf:
             cmd += ['-c', toxicslave_conf]
@@ -35,8 +39,10 @@ class BaseFunctionalTest(AsyncTestCase):
     @classmethod
     def stop_slave(cls):
         toxicslave_cmd = os.path.join(SCRIPTS_DIR, 'toxicslave')
+        pidfile = 'toxicslave{}.pid'.format(PYVERSION)
         cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
-               'python', toxicslave_cmd, 'stop', SLAVE_ROOT_DIR]
+               'python', toxicslave_cmd, 'stop', SLAVE_ROOT_DIR,
+               '--pidfile', pidfile]
 
         os.system(' '.join(cmd))
 
@@ -44,8 +50,10 @@ class BaseFunctionalTest(AsyncTestCase):
     def start_master(cls):
         toxicmaster_conf = os.environ.get('TOXICMASTER_SETTINGS')
         toxicmaster_cmd = os.path.join(SCRIPTS_DIR, 'toxicmaster')
+        pidfile = 'toxicmaster{}.pid'.format(PYVERSION)
         cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
-               toxicmaster_cmd, 'start', MASTER_ROOT_DIR, '--daemonize']
+               toxicmaster_cmd, 'start', MASTER_ROOT_DIR, '--daemonize',
+               '--pidfile', pidfile]
 
         if toxicmaster_conf:
             cmd += ['-c', toxicmaster_conf]
@@ -55,9 +63,11 @@ class BaseFunctionalTest(AsyncTestCase):
     @classmethod
     def stop_master(cls):
         toxicmaster_cmd = os.path.join(SCRIPTS_DIR, 'toxicmaster')
+        pidfile = 'toxicmaster{}.pid'.format(PYVERSION)
 
         cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
-               'python', toxicmaster_cmd, 'stop', MASTER_ROOT_DIR]
+               'python', toxicmaster_cmd, 'stop', MASTER_ROOT_DIR,
+               '--pidfile', pidfile]
 
         os.system(' '.join(cmd))
 

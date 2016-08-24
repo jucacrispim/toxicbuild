@@ -30,7 +30,7 @@ PIDFILE = 'toxicslave.pid'
 
 @command
 def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
-          conffile=None, loglevel='info'):
+          conffile=None, loglevel='info', pidfile=PIDFILE):
     """ Starts the build server.
 
     Starts the build server to listen on the specified port for
@@ -45,6 +45,8 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
       If not conffile, will look for a file called ``toxicslave.conf``
       inside ``workdir``
     :param --loglevel: Level for logging messages. Defaults to `info`.
+    :param pidfile: Name of the file to use as pidfile.  Defaults to
+      ``toxicslave.pid``
     """
 
     if conffile:
@@ -62,7 +64,7 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
 
     if daemonize:
         daemon(call=server.run_server, cargs=(addr, port), ckwargs={},
-               stdout=stdout, stderr=stderr, workdir=workdir, pidfile=PIDFILE)
+               stdout=stdout, stderr=stderr, workdir=workdir, pidfile=pidfile)
     else:
         loglevel = getattr(logging, loglevel.upper())
         logging.basicConfig(level=loglevel)
@@ -72,19 +74,20 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
 
 
 @command
-def stop(workdir):
+def stop(workdir, pidfile=PIDFILE):
     """ Stops a buid server instance.
 
-    :param workdir: Workdir for master to be killed. Looks for a file
-      ``toxicslave.pid`` inside ``workdir``.
+    :param workdir: Workdir for master to be killed.
+    :param pidfile: Name of the file to use as pidfile.  Defaults to
+      ``toxicslave.pid``
     """
 
     os.chdir(workdir)
-    with open(PIDFILE) as fd:
+    with open(pidfile) as fd:
         pid = int(fd.read())
 
     os.kill(pid, 9)
-    os.remove(PIDFILE)
+    os.remove(pidfile)
 
 
 @command
