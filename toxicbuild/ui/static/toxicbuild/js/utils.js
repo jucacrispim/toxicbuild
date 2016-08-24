@@ -48,13 +48,17 @@ var utils = {
 	       3000);
   },
 
-  sendAjax: function(type, url, data, success_cb, error_cb){
+  sendAjax: function(type, url, data, success_cb, error_cb, async){
     var self = this;
+    if (async == undefined){
+      async = true;
+    }
 
     $.ajax({
       type: type,
       url: url,
       data: data,
+      async: async,
       traditional: true,
       success: success_cb,
       error: error_cb,

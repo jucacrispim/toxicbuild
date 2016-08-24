@@ -100,7 +100,7 @@
 
 <script>
   {% autoescape None %}
-  RepositoryManager.init({{[r.to_dict() for r in repos]}})
+  RepositoryManager.init({{[r.to_json() for r in repos]}})
 </script>
 
 {% end %}

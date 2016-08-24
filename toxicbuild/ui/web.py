@@ -94,6 +94,9 @@ class RepositoryHandler(BaseModelHandler):
     def add_branch(self):
         item = yield from self.get_item(repo_name=self.params.get('name'))
         del self.params['name']
+        notify = self.params['notify_only_latest']
+        notify = True if notify == 'true' else False
+        self.params['notify_only_latest'] = notify
         r = yield from item.add_branch(**self.params)
         return r
 
@@ -108,6 +111,17 @@ class RepositoryHandler(BaseModelHandler):
         super().prepare()
         if 'start-build' in self.request.uri:
             self._prepare_start_build()
+        elif 'add-branch' in self.request.uri:
+            kw = {'name': self.params.get('name'),
+                  'branch_name': self.params.get('branch_name'),
+                  'notify_only_latest': self.params.get('notify_only_latest')}
+            self.params = kw
+
+        elif 'remove-branch' in self.request.uri:
+            kw = {'name': self.params.get('name'),
+                  'branch_name': self.params.get('branch_name')}
+            self.params = kw
+
         else:
             kw = {}
             kw['name'] = self.params.get('name')

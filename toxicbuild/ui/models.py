@@ -261,11 +261,6 @@ class Repository(BaseModel):
     def to_dict(self):
         d = super().to_dict()
         d['slaves'] = [s.to_dict() for s in d['slaves']]
-        for s in d['slaves']:
-            try:
-                del s['is_alive']
-            except KeyError:
-                pass
         return d
 
 

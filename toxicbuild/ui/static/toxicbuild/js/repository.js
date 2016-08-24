@@ -39,12 +39,12 @@ var REPO_ROW_TEMPLATE = `
   `
 
 var BRANCH_TEMPLATE = `
-<div class="form-group">
+<div class="form-group repo-branch">
   <h6><label for="repo_branch_name" class="control-label">Branch name: </label>
     <span class="glyphicon glyphicon-remove remove-branch"></span>
   </h6>
-  <input type="text" name="branch_name" id="branch_name" class="form-control branch-name-input" required />
-  <input type="checkbox" aria-label="..."> <span>Only latest commit </span>
+  <input type="text" name="branch_name" class="form-control branch-name-input" value="{{repo_branch_name}}"required />
+  <input type="checkbox" name="only-latest" class="branch-notify-input" {{checked}}> <span>Only latest commit </span>
 </div>
   `
 
@@ -92,6 +92,48 @@ var RepositoryModel = function(attrs){
 	error_cb(respose);
       };
 
+      utils.sendAjax(type, url, data, my_success_cb, my_error_cb);
+    },
+
+    addBranch: function(data, success_cb, error_cb){
+
+      success_cb = success_cb || function(response){return false};
+      error_cb = error_cb || function(response){return false};
+
+      var type = 'post';
+      var url = '/api/repo/add-branch';
+
+      var my_success_cb = function(response){
+	utils.log(response);
+	success_cb(response);
+      }
+
+      var my_error_cb = function(response){
+	utils.log(response);
+	error_cb(response);
+      }
+
+      // false means this will be a sync request.
+      utils.sendAjax(type, url, data, my_success_cb, my_error_cb, false);
+    },
+
+    removeBranch: function(data, success_cb, error_cb){
+
+      success_cb = success_cb || function(response){return false};
+      error_cb = error_cb || function(response){return false};
+
+      var type = 'post';
+      var url  = '/api/repo/remove-branch';
+
+      var my_success_cb = function(response){
+	utils.log(response);
+	success_cb(response);
+      }
+
+      var my_error_cb = function(response){
+	utils.log(response);
+	error_cb(response);
+      }
       utils.sendAjax(type, url, data, my_success_cb, my_error_cb);
     },
 
@@ -162,6 +204,7 @@ var RepositoryView = function (model){
       self.modal.find('#repo_vcs_type').val('');
       self.modal.find("#btn-delete-repo").hide();
       jQuery('#repo-req-type').val('post');
+      jQuery('#branches-container').html('');
     },
 
     renderModal: function(){
@@ -174,11 +217,21 @@ var RepositoryView = function (model){
 	self.modal.find('#repo_url').val(self.model.url);
 	self.modal.find('#repo_update_seconds').val(self.model.update_seconds);
 	self.modal.find('#btn-delete-repo').show();
+
+	for (i in self.model.branches){
+	  var branch = self.model.branches[i];
+	  var template = BRANCH_TEMPLATE.replace('{{repo_branch_name}}',
+						 branch.name);
+	  var checked = branch.notify_only_latest ? "checked" : "";
+	  template = template.replace('{{checked}}', checked);
+	  jQuery('#branches-container').append(template);
+	}
       }
     },
 
     addBranchInModal: function(){
-      jQuery('#branches-container').append(BRANCH_TEMPLATE);
+      var template = BRANCH_TEMPLATE.replace('{{repo_branch_name}}', '');
+      jQuery('#branches-container').append(template);
     },
 
     removeBranchFromModal: function(branch_form){
@@ -208,7 +261,7 @@ var RepositoryManager = {
     // {repo.id: view, other_repo.id: other_view, ...}
     self.views = {};
     for (i = 0; i < repositories.length; i++){
-      var repo_params = repositories[i];
+      var repo_params = jQuery.parseJSON(repositories[i]);
       var repo = RepositoryModel(repo_params);
       var view = RepositoryView(repo);
       self.views[repo.id] = view;
@@ -249,6 +302,14 @@ var RepositoryManager = {
       }
       self._current_model = self._current_view.model;
       self._current_view.renderModal();
+
+      // event that triggers the remove of the branch
+      jQuery('.remove-branch').on('click', function (){
+	var branch_name = jQuery('.branch-name-input',
+				 jQuery(this).parent().parent()).val();
+	self.removeBranch(branch_name);
+      });
+
     });
 
     // cleaning the modal fields after we close it.
@@ -265,15 +326,13 @@ var RepositoryManager = {
     jQuery('.add-branch-icon').on('click', function(){
       self._current_view.addBranchInModal();
       // we need to set it here so remove works with branch forms
-      // inserted via js
+      // inserted now.
       jQuery('.remove-branch').on('click', function (){
-	self._current_view.removeBranchFromModal(jQuery(this).parent().parent());
-      });
-    });
+	var branch_name = jQuery('.branch-name-input',
+				 jQuery(this).parent().parent()).val();
 
-    // remove branch
-    jQuery('.remove-branch').on('click', function (){
-      self._current_view.removeBranchFromModal(jQuery(this).parent().parent());
+	self.removeBranch(branch_name);
+      });
     });
 
     // changing req-type for delete a repo
@@ -300,25 +359,33 @@ var RepositoryManager = {
 	    'vcs_type': vcs_type, 'slaves': slaves}
   },
 
-  _insertRepoRow: function(repo){
-    // inserts a row in the main page for a recently created repo.
-
-    var repo_row = REPO_ROW_TEMPLATE.replace(/{{repo.name}}/g, repo.name);
-    repo_row = repo_row.replace(/{{repo.url}}/g, repo.url);
-    repo_row = repo_row.replace(/{{repo.vcs_type}}/g, repo.vcs_type);
-    repo_row = repo_row.replace(/{{repo.update_seconds}}/g, repo.update_seconds);
-    $('#tbody-repos').append(repo_row);
-  },
-
   createOrUpdate: function(){
     var self = this;
     var data = self.getDataFromModal();
 
+    if (self._current_model.id){
+      var success_msg = 'Repository updated.'
+      var add_row = false;
+    }else{
+      var success_msg = 'Repository is being created. Please wait.';
+      var add_row = true;
+    };
+
     var success_cb = function(response){
-      utils.showSuccessMessage(
-	'Repository is being created. Please wait.');
+      // here we add the branches for the repo.
+      jQuery('.repo-branch').each(function(){
+	var branch_name = jQuery('.branch-name-input', this).val();
+	var notify_only_latest = jQuery('.branch-notify-input', this)[0].checked;
+	var branch_data = {branch_name: branch_name,
+			   notify_only_latest: notify_only_latest,
+			   name: self._current_model.name};
+	var cb = function(response){utils.log(response)}
+	self._current_model.addBranch(branch_data, cb, cb);
+      });
+
+      utils.showSuccessMessage(success_msg);
       self.modal.modal('hide');
-      self._insertRepoRow(data);
+      if(add_row){self._insertRepoRow(data)};
     };
     var error_cb = function(response){
       utils.showErrorMessage(response)
@@ -326,10 +393,6 @@ var RepositoryManager = {
     };
 
     self._current_model.createOrUpdate(data, success_cb, error_cb);
-  },
-
-  _removeRepoRow: function(repo_name){
-    jQuery('#repo-row-' + repo_name).remove();
   },
 
   delete: function(){
@@ -348,142 +411,33 @@ var RepositoryManager = {
 
     self._current_model.delete(success_cb, error_cb);
   },
+
+  removeBranch: function(branch_name){
+    var self = this;
+
+    var type = 'post';
+    var url = '/api/repo/remove-branch';
+    var data = {name: self._current_model.name,
+		branch_name: branch_name};
+    success_cb = function(response){
+      self._current_view.removeBranchFromModal(branch_name)};
+
+    self._current_model.removeBranch(data, success_cb);
+  },
+
+  _insertRepoRow: function(repo){
+    // inserts a row in the main page for a recently created repo.
+
+    var repo_row = REPO_ROW_TEMPLATE.replace(/{{repo.name}}/g, repo.name);
+    repo_row = repo_row.replace(/{{repo.url}}/g, repo.url);
+    repo_row = repo_row.replace(/{{repo.vcs_type}}/g, repo.vcs_type);
+    repo_row = repo_row.replace(/{{repo.update_seconds}}/g, repo.update_seconds);
+    $('#tbody-repos').append(repo_row);
+  },
+
+
+  _removeRepoRow: function(repo_name){
+    jQuery('#repo-row-' + repo_name).remove();
+  },
+
 }
-
-//     getStartBuildInfo: function(){
-//       var repo_name = $('#start_build_name').val()
-//       var branch = $('#branch').val();
-//       var builder_name = $('#builder_name').val();
-//       var named_tree = $('#named_tree').val();
-//       var slaves = new Array();
-//       jQuery('#repo_slaves option:selected').each(function(){
-// 	slaves.push(this.value);
-//       });
-
-//       var kwargs = {'branch': branch, 'name': repo_name};
-//       if (builder_name){
-// 	kwargs['builder_name'] = builder_name;
-//       }
-//       if(named_tree){
-// 	kwargs['named_tree'] = named_tree;
-//       }
-//       if (slaves){
-// 	kwargs['slaves'] = slaves;
-//       }
-//       return kwargs;
-//     },
-
-//     startBuild: function(){
-//       // Starts build(s) based on the info of the start build modal.
-//       var self = this;
-
-//       var data = self.getStartBuildInfo();
-//       var type = 'post';
-//       var url = '/api/repo/start-build';
-
-//       var success_cb = function(response){
-// 	utils.showSuccessMessage(response);
-// 	self.start_build_modal.modal('hide');
-//       };
-
-//       var error_cb = function(response){
-// 	utils.showErrorMessage(response);
-// 	self.start_build_modal.modal('hide');
-//       };
-
-//       utils.sendAjax(type, url, data, success_cb, error_cb);
-//     },
-
-//     addBranchForm: function(){
-//       var branch_template = BRANCH_FORM_TEMPLATE.join('');
-//       jQuery('#branches-container').append(branch_template);
-//     },
-
-//     removeBranchForm: function(branch_form){
-//       branch_form.remove();
-//     }
-//   };
-
-//   // validator plugin
-//   $('#repo-form').validator();
-
-//   // cleaning the modal fields after we close it.
-//   obj.modal.on('hidden.bs.modal', function (event) {
-//     obj.cleanModal();
-//   });
-
-//   //setting repository modal info
-//   obj.modal.on('show.bs.modal', function(event){
-//     var btn = jQuery(event.relatedTarget);
-//     obj.setRepoInfo(btn);
-//   });
-
-//   // setting repo name for start build
-//   obj.start_build_modal.on('show.bs.modal', function(event){
-//     var btn = jQuery(event.relatedTarget);
-//     $('#repo-start-build-name').val($(this).data('repo-name'));
-//   });
-
-//   // changing req-type for delete a repo
-//   jQuery('#btn-delete-repo').on('click', function(){
-//     $('#repo-req-type').val('delete');
-//   });
-
-
-//   // adding branch form
-//   jQuery('.add-branch-icon').on('click', function(){
-//     obj.addBranchForm();
-
-//     // we need to set it here so remove works with branch forms
-//     // inserted via js
-//     jQuery('.remove-branch').on('click', function (){
-//       obj.removeBranchForm(jQuery(this).parent().parent());
-//     });
-
-//   });
-
-//   // remove branch
-//   jQuery('.remove-branch').on('click', function (){
-//     obj.removeBranchForm(jQuery(this).parent().parent());
-//   });
-
-//   // connecting to submit of the removeBranchFormpository modal
-//   obj.modal.on('submit', function(event){
-//     // event prevented here means that the form is not valid.
-//     if (event.isDefaultPrevented()){
-//       return false;
-//     }
-
-//     event.preventDefault();
-//     var type = jQuery('#repo-req-type').val();
-//     if (type == 'delete'){
-//       obj.delete();
-//     }
-//     else if (type == 'post'){
-//       obj.create();
-//     }
-//     else{
-//       obj.update();
-//     }
-
-//   });
-
-//   // setting repo name for start build
-//   $('.start-build-btn').on('click', function(event){
-//     $('#start_build_name').val($(this).data('start-build-name'));
-//   });
-
-
-//   // connecting to start build modal submit
-//   jQuery('#startBuildModal').on('submit', function(event){
-//     // event prevented here means that the form is not valid.
-//     if (event.isDefaultPrevented()){
-//       return false;
-//     }
-
-//     event.preventDefault();
-//     obj.startBuild();
-//   });
-
-//   return obj;
-// };
