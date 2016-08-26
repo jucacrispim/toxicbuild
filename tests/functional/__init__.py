@@ -38,6 +38,7 @@ class BaseFunctionalTest(AsyncTestCase):
 
     @classmethod
     def stop_slave(cls):
+
         toxicslave_cmd = os.path.join(SCRIPTS_DIR, 'toxicslave')
         pidfile = 'toxicslave{}.pid'.format(PYVERSION)
         cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
