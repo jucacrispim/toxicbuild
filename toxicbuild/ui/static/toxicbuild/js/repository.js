@@ -17,25 +17,27 @@
 
 
 var REPO_ROW_TEMPLATE = `
-<tr id="row-{{repo.name}}">
-  <td>
-    <button type="button" class="btn btn-toxicbuild-default btn-xs"
-            data-toggle="modal" data-target="#repoModal"
-            data-repo-name="{{repo.name}}" data-repo-url="{{repo.url}}"
-            data-repo-update-seconds="{{repo.update_seconds}}"
-            data-repo-vcs-type="{{repo.vcs_type}}">
-      {{repo.name}}
-    </button>
-  </td>
-  <td>{{repo.url}}</td>
-  <td>
-    <form action="/waterfall/{{repo.name}}">
-      <button type="submit" class="btn btn-xs btn-pending btn-status">
-        cloning
-      </button>
-    </form>
-  </td>
-</tr>
+<tr id="repo-row-{{repo.name}}">
+    <td>
+	  {{repo.name}}
+	  <button type="button" class="btn btn-default btn-xs btn-main-edit"
+		  data-toggle="modal" data-target="#repoModal"
+		  data-repo-name="{{repo.name}}" data-repo-url="{{repo.url}}"
+		  data-repo-update-seconds="{{repo.update_seconds}}"
+		  data-repo-vcs-type="{{repo.vcs_type}}"
+		  data-repo-id="{{repo.id}}">
+	    <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+	  </button>
+	</td>
+	<td>{{repo.url}}</td>
+	<td>
+	  <form action="/waterfall/{{repo.name}}">
+	    <button type="submit" class="btn btn-xs btn-{{get_btn_class(repo.status)}} btn-status">{{repo.status}}
+	    </button>
+	  </form>
+	</td>
+      </tr>
+
   `
 
 var BRANCH_TEMPLATE = `
@@ -202,6 +204,7 @@ var RepositoryView = function (model){
       self.modal.find('#repo_url').val('');
       self.modal.find('#repo_update_seconds').val(300);
       self.modal.find('#repo_vcs_type').val('');
+      self.modal.find("#repo_slaves").html('');
       self.modal.find("#btn-delete-repo").hide();
       jQuery('#repo-req-type').val('post');
       jQuery('#branches-container').html('');
@@ -226,6 +229,24 @@ var RepositoryView = function (model){
 	  template = template.replace('{{checked}}', checked);
 	  jQuery('#branches-container').append(template);
 	}
+      };
+
+      var repo_slaves = [];
+      for (i in self.model.slaves){
+	slave = self.model.slaves[i].name;
+	repo_slaves.push(slave);
+      };
+
+      for (i in SLAVES){
+	var slave = SLAVES[i];
+	if (repo_slaves.indexOf(slave) == -1){
+	  var selected = "";
+	}else{
+	  var selected = 'selected';
+	};
+
+	var opt = '<option value="' + slave + '"' + selected + '>' + slave + '</option>';
+	jQuery(opt).appendTo('#repo_slaves');
       }
     },
 

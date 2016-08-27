@@ -147,7 +147,7 @@ var _SlaveManager = function (){
       }
 
       super_instance.createOrUpdate(update_success_msg, create_success_msg,
-				   success_cb);
+				    success_cb);
 
     },
   };
