@@ -92,6 +92,17 @@ tr:nth-child(even) {
     cursor: pointer;
 }
 
+.form-group-slave-host-port .left-container{
+    float:left;
+    width: 65%;
+    margin-right: 5%;;
+}
+
+.form-group-slave-host-port .right-container{
+    width: 30%;
+    float: left;
+}
+
 .page-header{
     border: 0;
 }

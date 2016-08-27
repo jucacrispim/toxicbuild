@@ -60,8 +60,8 @@ var RepositoryModel = function(attrs){
     slaves: null,
   }
 
-  var instance_attrs = {}
-  jQuery.extend(instance_attrs, default_attrs, attrs)
+  var instance_attrs = {};
+  jQuery.extend(instance_attrs, default_attrs, attrs);
 
   // An instance of RepositoryModel
   var instance = {
@@ -74,9 +74,9 @@ var RepositoryModel = function(attrs){
       error_cb = error_cb || function(response){return false};
 
       if (self.id){
-	var type = 'put'
+	var type = 'put';
       }else{
-	var type = 'post'
+	var type = 'post';
       }
 
       var url = '/api/repo/';

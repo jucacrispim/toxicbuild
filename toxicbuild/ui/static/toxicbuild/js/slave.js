@@ -16,191 +16,144 @@
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
-var SLAVE_ROW_TEMPLATE = [
-  '<tr id="slave-row-{{slave.name}}">',
-    '<td>',
-      '<button type="button" class="btn btn-primary btn-xs"',
-              'data-toggle="modal"',
-              'data-target="#slaveModal"',
-              'data-slave-name="{{slave.name}}"',
-              'data-slave-host="{{slave.host}}"',
-              'data-slave-port="{{slave.port}}">',
-        '{{slave.name}}',
-      '</button>',
-    '</td>',
-    '<td>{{slave.host}}</td>',
-    '<td>{{slave.port}}</td>',
-  '</tr>',
-];
+var SLAVE_ROW_TEMPLATE = `
+<tr id="obj-row-{{slave.id}}">
+  <td>
+    {{slave.name}}
+    <button type="button" class="btn btn-default btn-xs btn-main-edit"
+	    data-toggle="modal"
+	    data-target="#slaveModal"
+	    data-obj-id="{{slave.id}}"
+	    data-slave-name="{{slave.name}}"
+	    data-slave-host="{{slave.host}}"
+	    data-slave-port="{{slave.port}}">
+      <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+    </button>
+  </td>
+  <td>{{slave.host}}</td>
+  <td>{{slave.port}}</td>
+</tr>
+
+`
 
 
-var SlaveManager = function(){
-  // the main repository manager object
-  var obj = {
+var SlaveModel = function (attrs){
+
+  var default_attrs = {
+    id: null,
+    name: null,
+    host: null,
+    port: null,
+    token: null,
+    api_url: '/api/slave/',
+  };
+
+  return BaseModel(default_attrs, attrs);
+};
+
+
+var SlaveView = function (model){
+
+  var super_instance = BaseView(model);
+
+  var instance = {
     modal: jQuery('#slaveModal'),
 
     cleanModal: function(){
-      // cleans the slave modal.
       var self = this;
-      var modal = self.modal;
-      modal.find('.modal-title').text('Add slave')
-      modal.find('#slave_name').val('');
-      modal.find('#slave_host').val('');
-      modal.find('#slave_port').val('');
-      modal.find("#btn-delete-slave").hide();
+      self.modal.find('.modal-title').text('Add repository');
+      self.modal.find('#slave_name').val('');
+      self.modal.find('#slave_host').val('');
+      self.modal.find('#slave_port').val('');
+      self.modal.find("#btn-delete-slave").hide();
+      self.modal.find('.req-type').val('post');
     },
 
-    setSlaveInfo: function(btn){
-      // sets the slave info in the modal.
+    renderModal: function(){
       var self = this;
-
-      var name = btn.data('slave-name');
-      var host = btn.data('slave-host');
-      var port = btn.data('slave-port');
-
-      if (host){
-	self.modal.find('#slave-req-type').val('put');
+      if (self.model.id){
+	self.modal.find('.req-type').val('put');
+	self.modal.find('.modal-title').text(self.model.name);
+	self.modal.find('#slave_name').val(self.model.name);
+	self.modal.find('#slave_host').val(self.model.host);
+	self.modal.find('#slave_port').val(self.model.port);
+	self.modal.find('#slave_token').val(self.model.token);
 	self.modal.find('#btn-delete-slave').show();
       }
-      else{
-	self.modal.find('#slave-req-type').val('post');
-	self.modal.find('#btn-delete-slave').hide();
-      }
-
-      self.modal.find('.modal-title').text(name);
-      self.modal.find('#slave_name').val(name);
-      self.modal.find('#slave_host').val(host);
-      self.modal.find('#slave_port').val(port);
-
     },
 
-    getSlaveInfo: function(){
-      // returns the data of the repository modal
-      var self = this;
-      var modal = self.modal;
-      var name = modal.find('#slave_name').val();
-      var host = modal.find('#slave_host').val();
-      var port = modal.find('#slave_port').val();
-      return {'name': name, 'host': host, 'port': port}
-    },
-
-    insertSlaveRow: function(name, host, port){
-      var slave_row = SLAVE_ROW_TEMPLATE.join('').replace(
-	  /{{slave.name}}/g, name);
-      slave_row = slave_row.replace(/{{slave.host}}/g, host);
-      slave_row = slave_row.replace(/{{slave.port}}/g, port);
-      $('#tbody-slaves').append(slave_row);
-      var repo_slaves = jQuery('#repo_slaves');
-      var option = jQuery('<option value="'+ name + '">' + name + '</option>');
-      repo_slaves.append(option);
-    },
-
-    removeSlaveRow: function(name){
-      jQuery('#slave-row-' + name).remove();
-    },
-
-    create: function(){
-      // creates a new repo using data from modal
+    getData: function (){
       var self = this;
 
-      var type = 'post';
-      var url = '/api/slave/';
-      var data = self.getSlaveInfo();
-
-      var success_cb = function(response){
-	utils.showSuccessMessage('Slave created');
-	self.modal.modal('hide');
-	self.insertSlaveRow(data.name, data.host, data.port);
-      };
-      var error_cb = function(response){
-	utils.showErrorMessage(response)
-	self.modal.modal('hide');
-      };
-
-      utils.sendAjax(type, url, data, success_cb, error_cb)
+      var name = self.modal.find('#slave_name').val();
+      var host = self.modal.find('#slave_host').val();
+      var port = self.modal.find('#slave_port').val();
+      var token = self.modal.find('#slave_token').val();
+      return {name: name, port: port, host: host,
+	      token: token};
     },
 
-    delete: function(){
-      // deletes a repo using data from modal
+    insertObjRow: function(){
       var self = this;
 
-      var type = 'delete';
-      var url = '/api/slave/';
-      var data = self.getSlaveInfo();
-
-      var success_cb = function(response){
-	utils.showSuccessMessage('Slave removed.');
-	self.modal.modal('hide');
-	self.removeSlaveRow(data.name);
-      };
-      var error_cb = function(response){
-	utils.showErrorMessage(response)
-	self.modal.modal('hide');
-      };
-
-      utils.sendAjax(type, url, data, success_cb, error_cb)
-    },
-
-    update: function(){
-      // updates a repo using data from modal
-      var self = this;
-
-      var type = 'put';
-      var url = '/api/slave/';
-      var data = self.getRepoInfo();
-
-      var success_cb = function(response){
-	utils.showSuccessMessage('Slave updated');
-	self.modal.modal('hide');
-      };
-      var error_cb = function(response){
-	utils.showErrorMessage(response)
-	self.modal.modal('hide');
-      };
-
-      utils.sendAjax(type, url, data, success_cb, error_cb)
+      var obj_row = SLAVE_ROW_TEMPLATE.replace(
+	  /{{slave.name}}/g, self.model.name);
+      obj_row = obj_row.replace(/{{slave.host}}/g, self.model.host);
+      obj_row = obj_row.replace(/{{slave.port}}/g, self.model.port);
+      obj_row = obj_row.replace(/{{slave.token}}/g, self.model.token);
+      $('#tbody-slaves').append(obj_row);
     },
   };
 
-  // validator plugin
-  $('#slave-form').validator();
-
-  // cleaning the modal fields after we close it.
-  obj.modal.on('hidden.bs.modal', function (event) {
-    obj.cleanModal();
-  });
-
-  //setting repository modal info
-  obj.modal.on('show.bs.modal', function(event){
-    var btn = jQuery(event.relatedTarget);
-    obj.setSlaveInfo(btn);
-  });
-
-  // changing req-type for delete a slave
-  jQuery('#btn-delete-slave').on('click', function(){
-    $('#slave-req-type').val('delete');
-  });
-
-  // connecting to submit of the repository modal
-  obj.modal.on('submit', function(event){
-    // event prevented here means that the form is not valid.
-    if (event.isDefaultPrevented()){
-      return false;
-    }
-
-    event.preventDefault();
-    var type = jQuery('#slave-req-type').val();
-    if (type == 'delete'){
-      obj.delete();
-    }
-    else if (type == 'post'){
-      obj.create();
-    }
-    else{
-      obj.update();
-    }
-
-  });
-
-  return obj
+  var inherited = {};
+  jQuery.extend(inherited, super_instance, instance);
+  return inherited;
 };
+
+
+var _SlaveManager = function (){
+  var super_instance =  BaseManager(SlaveModel, SlaveView);
+  var inherited = {};
+
+  var instance = {
+    init: function(model_confs){
+      var self = inherited;
+      super_instance.init(self, model_confs);
+      super_instance.modal = self.modal;
+    },
+
+    delete: function(){
+      var self = inherited;
+      success_msg = 'Slave removed';
+      super_instance._current_view = self._current_view;
+      super_instance._current_model = self._current_model;
+
+      success_cb = function(response){
+	SLAVES.splice(SLAVES.indexOf(self._current_model.name), 1);
+      }
+      super_instance.delete(success_msg, success_cb);
+    },
+
+    createOrUpdate: function(){
+      var self = inherited;
+      update_success_msg = 'Slave updated';
+      create_success_msg = 'Slave created';
+
+      super_instance._current_view = self._current_view;
+      super_instance._current_model = self._current_model;
+
+      success_cb = function(response){
+	SLAVES.push(self._current_model.name);
+      }
+
+      super_instance.createOrUpdate(update_success_msg, create_success_msg,
+				   success_cb);
+
+    },
+  };
+
+  jQuery.extend(inherited, super_instance, instance);
+  return inherited;
+};
+
+var SlaveManager = _SlaveManager();

@@ -7,22 +7,28 @@
       </div>
 
       <!-- modal body -->
-      <form role="form" id="slave-form">
+      <form role="form" id="slave-form" class="obj-form">
 	<div class="modal-body">
-	  <input type="hidden" id="slave-req-type" value="post"/>
+	  <input type="hidden" class="req-type" value="post"/>
 	  <div class="form-group">
 	    <label for="name" class="control-label">Name:</label>
 	    <input type="text" name="slave_name" id="slave_name" class="form-control" required /><br/>
 	  </div>
 
-	  <div class="form-group">
-	    <label for="builder_name" class="control-label">Host:</label>
-	    <input type="text" name="slave_host" id="slave_host" class="form-control" /><br/>
+	  <div class="form-group form-group-slave-host-port">
+	    <div class="left-container">
+	      <label for="builder_name" class="control-label">Host:</label>
+	      <input type="text" name="slave_host" id="slave_host" class="form-control" />
+	    </div>
+	    <div class="right-container">
+	      <label for="named_tree" class="control-label">Port:</label>
+	      <input type="text" name="slave_port" id="slave_port" class="form-control" /><br/>
+	    </div>
 	  </div>
 
 	  <div class="form-group">
-	    <label for="named_tree" class="control-label">Port:</label>
-	    <input type="text" name="slave_port" id="slave_port" class="form-control" /><br/>
+	    <label for="name" class="control-label">Token:</label>
+	    <input type="text" name="slave_token" id="slave_token" class="form-control" required /><br/>
 	  </div>
 
 
@@ -32,7 +38,7 @@
 	<div class="modal-footer">
 	  <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
           <button type="submit" class="btn btn-primary">Save</button>
-	  <button type="submit" class="btn btn-primary btn-danger" id="btn-delete-slave">Delete</button>
+	  <button type="submit" class="btn btn-primary btn-danger" id="btn-delete-slave" class="btn-delete-obj">Delete</button>
 	</div>
       </form>
     </div>
