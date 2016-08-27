@@ -29,7 +29,7 @@ import traceback
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import (Slave, Repository, Builder, BuildSet,
-                               RepositoryRevision)
+                               RepositoryRevision, settings)
 from toxicbuild.master.exceptions import UIFunctionNotFound
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished)
@@ -37,8 +37,12 @@ from toxicbuild.master.signals import (step_started, step_finished,
 
 class UIHole(BaseToxicProtocol, LoggerMixin):
 
+    salt = settings.BCRYPT_SALT
+    encrypted_token = settings.ACCESS_TOKEN
+
     @asyncio.coroutine
     def client_connected(self):
+
         data = self.data.get('body') or {}
         if self.action == 'stream':
             handler = UIStreamHandler(self)
@@ -230,11 +234,11 @@ class HoleHandler:
         """ Starts a(some) build(s) in a given repository. """
 
         # Mutable stuff on method declaration. Sin!!! Take that, PyLint!
-
         repo = yield from Repository.get(name=repo_name)
 
         slaves = yield from [(yield from Slave.get(name=name))
                              for name in slaves]
+
         if not slaves:
             slaves = yield from repo.slaves
 
@@ -266,11 +270,11 @@ class HoleHandler:
         return {'repo-start-build': '{} builds added'.format(builds_count)}
 
     @asyncio.coroutine
-    def slave_add(self, slave_name, slave_host, slave_port):
+    def slave_add(self, slave_name, slave_host, slave_port, slave_token):
         """ Adds a new slave to toxicbuild. """
 
         slave = yield from Slave.create(name=slave_name, host=slave_host,
-                                        port=slave_port)
+                                        port=slave_port, token=slave_token)
 
         slave_dict = self._get_slave_dict(slave)
         return {'slave-add': slave_dict}

@@ -215,7 +215,8 @@ class HoleHandlerTest(TestCase):
         yield from self._create_test_data()
 
         slave = yield from hole.Slave.create(name='name2',
-                                             host='127.0.0.1', port=1234)
+                                             host='127.0.0.1', port=1234,
+                                             token='asdf')
 
         repo_name = self.repo.name
         action = 'repo-add-slave'
@@ -234,7 +235,7 @@ class HoleHandlerTest(TestCase):
         yield from self._create_test_data()
 
         slave = yield from hole.Slave.create(name='name2', host='127.0.0.1',
-                                             port=1234)
+                                             port=1234, token='123')
         yield from self.repo.add_slave(slave)
 
         handler = hole.HoleHandler({}, 'repo-remove-slave', MagicMock())
@@ -365,7 +366,8 @@ class HoleHandlerTest(TestCase):
         handler = hole.HoleHandler(data, 'slave-add', MagicMock())
         slave = yield from handler.slave_add(slave_name='slave',
                                              slave_host='locahost',
-                                             slave_port=1234)
+                                             slave_port=1234,
+                                             slave_token='1234')
         slave = slave['slave-add']
 
         self.assertTrue(slave['id'])
@@ -388,7 +390,7 @@ class HoleHandlerTest(TestCase):
         data = {'host': '127.0.0.1', 'port': 7777}
         handler = hole.HoleHandler(data, 'slave-remove', MagicMock())
         yield from handler.slave_remove(slave_name='name')
-
+        yield from asyncio.sleep(0.01)
         self.assertEqual((yield from hole.Slave.objects.count()), 0)
 
     @async_test
@@ -560,7 +562,8 @@ class HoleHandlerTest(TestCase):
     @patch.object(repository.utils, 'log', Mock())
     @asyncio.coroutine
     def _create_test_data(self):
-        self.slave = hole.Slave(name='name', host='127.0.0.1', port=7777)
+        self.slave = hole.Slave(name='name', host='127.0.0.1', port=7777,
+                                token='123')
         yield from self.slave.save()
         self.repo = yield from hole.Repository.create(
             'reponame', 'git@somewhere.com', 300, 'git')
@@ -670,7 +673,7 @@ class UIStreamHandlerTest(TestCase):
                                                            300, 'git')
         testslave = yield from slave.Slave.create(name='name',
                                                   host='localhost',
-                                                  port=1234)
+                                                  port=1234, token='123')
 
         testbuilder = yield from build.Builder.create(name='b1',
                                                       repository=testrepo)
@@ -708,7 +711,8 @@ class UIStreamHandlerTest(TestCase):
                                                            300, 'git')
         testslave = yield from slave.Slave.create(name='name',
                                                   host='localhost',
-                                                  port=1234)
+                                                  port=1234,
+                                                  token='123')
         testbuilder = yield from build.Builder.create(name='b1',
                                                       repository=testrepo)
         testbuild = build.Build(repository=testrepo, slave=testslave,

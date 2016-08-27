@@ -22,6 +22,7 @@ import os
 import re
 import shutil
 from threading import Thread
+from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, IntField, ReferenceField,
                                DateTimeField, ListField, BooleanField,
@@ -55,7 +56,7 @@ class Repository(Document, utils.LoggerMixin):
     update_seconds = IntField(default=300, required=True)
     vcs_type = StringField(required=True, default='git')
     branches = ListField(EmbeddedDocumentField(RepositoryBranch))
-    slaves = ListField(ReferenceField(Slave))
+    slaves = ListField(ReferenceField(Slave, reverse_delete_rule=PULL))
     clone_status = StringField(choices=('cloning', 'done', 'clone-exception'),
                                default='cloning')
 

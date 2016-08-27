@@ -35,7 +35,8 @@ class SlaveTest(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.slave = slave.Slave(name='slave', host='127.0.0.1', port=7777)
+        self.slave = slave.Slave(name='slave', host='127.0.0.1', port=7777,
+                                 token='asdf')
 
     @async_test
     def tearDown(self):
@@ -50,14 +51,16 @@ class SlaveTest(TestCase):
     def test_create(self):
         slave_inst = yield from slave.Slave.create(name='name',
                                                    host='somewhere.net',
-                                                   port=7777)
+                                                   port=7777,
+                                                   token='asdf')
         self.assertTrue(slave_inst.id)
 
     @async_test
     def test_get(self):
         slave_inst = yield from slave.Slave.create(name='name',
                                                    host='somewhere.net',
-                                                   port=7777)
+                                                   port=7777,
+                                                   token='asdf')
         slave_id = slave_inst.id
 
         slave_inst = yield from slave.Slave.get(name='name',

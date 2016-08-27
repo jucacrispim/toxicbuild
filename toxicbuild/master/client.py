@@ -19,7 +19,6 @@
 
 import asyncio
 from toxicbuild.core import BaseToxicClient
-from tornado.platform.asyncio import to_asyncio_future
 
 
 class BuildClient(BaseToxicClient):
@@ -63,9 +62,11 @@ class BuildClient(BaseToxicClient):
     @asyncio.coroutine
     def build(self, build):
 
-        repository = yield from to_asyncio_future(build.repository)
-        builder_name = (yield from to_asyncio_future(build.builder)).name
+        repository = yield from build.repository
+        builder_name = (yield from build.builder).name
+        slave = yield from build.slave
         data = {'action': 'build',
+                'token': slave.token,
                 'body': {'repo_url': repository.url,
                          'vcs_type': repository.vcs_type,
                          'branch': build.branch,

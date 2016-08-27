@@ -88,7 +88,8 @@ class BuildTest(TestCase):
     def _create_test_data(self):
         self.repo = repository.Repository(name='bla', url='git@bla.com')
         yield from self.repo.save()
-        self.slave = slave.Slave(name='sla', host='localhost', port=1234)
+        self.slave = slave.Slave(name='sla', host='localhost', port=1234,
+                                 token='123')
         yield from self.slave.save()
         self.builder = build.Builder(repository=self.repo, name='builder-bla')
         yield from self.builder.save()
@@ -238,7 +239,8 @@ class BuildSetTest(TestCase):
     def _create_test_data(self):
         self.repo = repository.Repository(name='bla', url='git@bla.com')
         yield from self.repo.save()
-        self.slave = slave.Slave(name='sla', host='localhost', port=1234)
+        self.slave = slave.Slave(name='sla', host='localhost', port=1234,
+                                 token='123')
         yield from self.slave.save()
         self.builder = build.Builder(repository=self.repo, name='builder-bla')
         self.other_builder = build.Builder(
@@ -445,7 +447,8 @@ class BuildManagerTest(TestCase):
 
     @asyncio.coroutine
     def _create_test_data(self):
-        self.slave = slave.Slave(host='127.0.0.1', port=7777, name='slave')
+        self.slave = slave.Slave(host='127.0.0.1', port=7777, name='slave',
+                                 token='123')
         self.slave.build = asyncio.coroutine(lambda x: None)
         yield from self.slave.save()
         self.repo = repository.Repository(
@@ -546,7 +549,8 @@ class BuilderTest(TestCase):
         repo = repository.Repository(name='bla', url='git@bla.com',
                                      update_seconds=300, vcs_type='git')
         yield from repo.save()
-        slave_inst = slave.Slave(name='bla', host='localhost', port=1234)
+        slave_inst = slave.Slave(name='bla', host='localhost', port=1234,
+                                 token='123')
         yield from slave_inst.save()
         builder = yield from build.Builder.create(repository=repo, name='b1')
         buildinst = build.Build(repository=repo, slave=slave_inst,
@@ -574,7 +578,8 @@ class BuilderTest(TestCase):
         repo = repository.Repository(name='bla', url='git@bla.com',
                                      update_seconds=300, vcs_type='git')
         yield from repo.save()
-        slave_inst = slave.Slave(name='bla', host='localhost', port=1234)
+        slave_inst = slave.Slave(name='bla', host='localhost', port=1234,
+                                 token='123')
         yield from slave_inst.save()
         builder = yield from build.Builder.create(repository=repo, name='b1')
         objdict = yield from builder.to_dict()
@@ -586,7 +591,8 @@ class BuilderTest(TestCase):
         repo = repository.Repository(name='bla', url='git@bla.com',
                                      update_seconds=300, vcs_type='git')
         yield from repo.save()
-        slave_inst = slave.Slave(name='bla', host='localhost', port=1234)
+        slave_inst = slave.Slave(name='bla', host='localhost', port=1234,
+                                 token='123')
         yield from slave_inst.save()
         builder = yield from build.Builder.create(repository=repo, name='b1')
         objdict = build.json.loads((yield from builder.to_json()))

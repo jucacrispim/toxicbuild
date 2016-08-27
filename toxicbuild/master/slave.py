@@ -40,6 +40,7 @@ class Slave(Document, LoggerMixin):
     name = StringField(required=True, unique=True)
     host = StringField(required=True)
     port = IntField(required=True)
+    token = StringField(required=True)
     is_alive = BooleanField(default=False)
 
     @classmethod
@@ -109,6 +110,7 @@ class Slave(Document, LoggerMixin):
         """
 
         with (yield from self.get_client()) as client:
+
             try:
                 build_info = yield from client.build(build)
             except (ToxicClientException, BadJsonData):
@@ -131,7 +133,6 @@ class Slave(Document, LoggerMixin):
         """ This method is called by the client when some information about
         the build is sent by the build server.
         """
-
         # when there's the steps key it's a build info
         if 'steps' in build_info:
             repo = yield from to_asyncio_future(build.repository)

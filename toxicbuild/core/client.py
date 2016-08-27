@@ -61,8 +61,8 @@ class BaseToxicClient(utils.LoggerMixin):
     def write(self, data):
         """ Writes ``data`` to the server.
 
-        :param data: Data to be sent to the server. Will be
-          converted to json and enconded using utf-8.
+        :param data: Data to be sent to the server. Will be converted to
+          json and enconded using utf-8.
         """
         data = json.dumps(data)
         yield from utils.write_stream(self.writer, data)

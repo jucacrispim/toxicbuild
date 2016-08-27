@@ -116,7 +116,8 @@ class BuildClientTest(TestCase):
 
         self.client.get_response = gr
 
-        slave_inst = slave.Slave(name='slv', host='localhost', port=1234)
+        slave_inst = slave.Slave(name='slv', host='localhost', port=1234,
+                                 token='123')
         yield from slave_inst.save()
         process = mock.Mock()
 

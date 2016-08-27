@@ -54,7 +54,7 @@ class RepositoryTest(TestCase):
     @async_test
     def test_create(self):
         slave_inst = yield from slave.Slave.create(name='name', host='bla.com',
-                                                   port=1234)
+                                                   port=1234, token='123')
         repo = yield from repository.Repository.create(
             'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave_inst])
 
@@ -66,7 +66,7 @@ class RepositoryTest(TestCase):
     @async_test
     def test_create_with_branches(self):
         slave_inst = yield from slave.Slave.create(name='name', host='bla.com',
-                                                   port=1234)
+                                                   port=1234, token='123;_')
         branches = [repository.RepositoryBranch(name='branch{}'.format(str(i)),
                                                 notify_only_latest=bool(i))
                     for i in range(3)]
@@ -105,7 +105,7 @@ class RepositoryTest(TestCase):
     @async_test
     def test_get(self):
         slave_inst = yield from slave.Slave.create(name='name', host='bla.com',
-                                                   port=1234)
+                                                   port=1234, token='123')
         old_repo = yield from repository.Repository.create(
             'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave_inst])
         new_repo = yield from repository.Repository.get(url=old_repo.url)
@@ -154,7 +154,8 @@ class RepositoryTest(TestCase):
         yield from self._create_db_revisions()
         slave = yield from repository.Slave.create(name='name',
                                                    host='127.0.0.1',
-                                                   port=7777)
+                                                   port=7777,
+                                                   token='123')
 
         yield from self.repo.add_slave(slave)
         slaves = yield from self.repo.slaves
@@ -165,7 +166,8 @@ class RepositoryTest(TestCase):
         yield from self._create_db_revisions()
         slave = yield from repository.Slave.create(name='name',
                                                    host='127.0.0.1',
-                                                   port=7777)
+                                                   port=7777,
+                                                   token='123')
         yield from self.repo.add_slave(slave)
         yield from self.repo.remove_slave(slave)
 
@@ -351,7 +353,8 @@ class RepositoryTest(TestCase):
                                                        repository=self.repo)
         self.slave = yield from slave.Slave.create(name='slave',
                                                    host='localhost',
-                                                   port=1234)
+                                                   port=1234,
+                                                   token='asdf')
         self.revs = []
 
         for r in range(2):
