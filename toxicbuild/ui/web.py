@@ -161,6 +161,7 @@ class SlaveHandler(BaseModelHandler):
         kw['name'] = self.params.get('name')
         kw['host'] = self.params.get('host')
         kw['port'] = self.params.get('port')
+        kw['token'] = self.params.get('token')
         self.params = kw
 
     @gen.coroutine
@@ -171,8 +172,7 @@ class SlaveHandler(BaseModelHandler):
     @gen.coroutine
     def put(self, *args):
         item = yield from self.get_item(slave_name=self.params['name'])
-        r = yield from item.update(**self.params)
-        return r
+        yield from item.update(**self.params)
 
 
 class MainHandler(TemplateHandler):
