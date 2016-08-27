@@ -329,7 +329,8 @@ class SlaveHandlerTest(AsyncTestCase):
                                         model=web.Repository)
 
     def test_prepare(self):
-        expected = {'name': 'myrepo', 'host': 'bla.com', 'port': '1234'}
+        expected = {'name': 'myrepo', 'host': 'bla.com', 'port': '1234',
+                    'token': None}
 
         self.handler.prepare()
 
