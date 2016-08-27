@@ -187,7 +187,6 @@ class ToxicMasterTest(BaseFunctionalTest):
             yield from client.write({'action': 'stream', 'token': '123',
                                      'body': {}})
 
-
             while True:
                 response = yield from client.get_response()
                 body = response['body'] if response else {}
