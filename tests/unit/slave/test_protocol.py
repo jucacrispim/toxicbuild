@@ -74,7 +74,7 @@ class ProtocolTest(TestCase):
         expected = {'code': 0,
                     'body': 'I\'m alive!'}
 
-        self.message = {'action': 'healthcheck'}
+        self.message = {'action': 'healthcheck', 'token': '123'}
 
         self.protocol.connection_made(self.transport)
         yield from self._wait_futures()
@@ -154,7 +154,7 @@ class ProtocolTest(TestCase):
     @mock.patch.object(protocols, 'log', mock.Mock())
     @async_test
     def test_client_connected_with_bad_data(self):
-        self.message = {"action": "build"}
+        self.message = {"action": "build", 'token': '123'}
 
         self.protocol.connection_made(self.transport)
         yield from self._wait_futures()
@@ -164,7 +164,7 @@ class ProtocolTest(TestCase):
     @mock.patch.object(protocols, 'log', mock.Mock())
     @async_test
     def test_client_connected_with_exception(self):
-        self.message = {"action": "build"}
+        self.message = {"action": "build", 'token': '123'}
 
         @asyncio.coroutine
         def build(*a, **kw):
@@ -183,7 +183,7 @@ class ProtocolTest(TestCase):
                        mock.MagicMock(spec=protocols.BuildManager))
     @async_test
     def test_client_connected_list_builders(self):
-
+        self.message.update({'token': '123'})
         manager = protocols.BuildManager.return_value.__enter__.return_value
         protocols.BuildManager.return_value.current_build = None
 
@@ -196,7 +196,7 @@ class ProtocolTest(TestCase):
 
     @async_test
     def test_client_connected_heathcheck(self):
-        self.message = {'action': 'healthcheck'}
+        self.message = {'action': 'healthcheck', 'token': '123'}
 
         self.protocol.connection_made(self.transport)
         yield from self._wait_futures()
@@ -208,6 +208,7 @@ class ProtocolTest(TestCase):
     @async_test
     def test_client_connected_build(self):
         self.message = {'action': 'build',
+                        'token': '123',
                         'body': {
                             'repo_url': 'git@bla.com',
                             'branch': 'master',
@@ -216,7 +217,6 @@ class ProtocolTest(TestCase):
                             'builder_name': 'bla'}}
         protocols.BuildManager.return_value.current_build = None
         self.protocol.connection_made(self.transport)
-
         yield from self._wait_futures()
 
         manager = protocols.BuildManager.return_value.__enter__.return_value
@@ -227,7 +227,7 @@ class ProtocolTest(TestCase):
     @mock.patch.object(protocols, 'log', mock.Mock())
     @async_test
     def test_client_connected_with_wrong_action(self):
-        self.message = {'action': 'bla'}
+        self.message = {'action': 'bla', 'token': '123'}
 
         self.protocol.connection_made(self.transport)
 

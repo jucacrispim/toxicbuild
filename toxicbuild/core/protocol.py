@@ -29,6 +29,11 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
     """ Base protocol for toxicbulid servers
     """
 
+    # Salt used to encrypt incomming token.
+    salt = None
+    # This is the token used to authenticate incomming requests.
+    encrypted_token = None
+
     def __init__(self, loop, connection_lost_cb=None):
         """:param loop: An asyncio loop.
         :param connection_lost_cb: Callable to be executed when connection
@@ -81,7 +86,19 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
 
         if not self.data:
             msg = 'Something wrong with your data {!r}'.format(self.raw_data)
-            yield from self.send_response(code=1, body=msg)
+            yield from self.send_response(code=1, body={'error': msg})
+            return self.close_connection()
+
+        token = self.data.get('token')
+        if not token:
+            msg = 'No auth token'
+            yield from self.send_response(code=2, body={'error': msg})
+            return self.close_connection()
+
+        incomming_token = utils.bcrypt_string(token, self.salt)
+        if incomming_token != self.encrypted_token:
+            msg = 'Bad auth token'
+            yield from self.send_response(code=3, body={'error': msg})
             return self.close_connection()
 
         self.action = self.data.get('action')

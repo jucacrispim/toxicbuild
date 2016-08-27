@@ -20,15 +20,17 @@
 import asyncio
 import traceback
 from toxicbuild.core.protocol import BaseToxicProtocol
-from toxicbuild.slave import BuildManager
-from toxicbuild.slave.exceptions import (BadData, BadBuilderConfig)
 from toxicbuild.core.utils import log, datetime2string, now
+from toxicbuild.slave import BuildManager, settings
+from toxicbuild.slave.exceptions import (BadData, BadBuilderConfig)
 
 
 class BuildServerProtocol(BaseToxicProtocol):
 
     """ A simple server for build requests.
     """
+    salt = settings.BCRYPT_SALT
+    encrypted_token = settings.ACCESS_TOKEN
 
     @asyncio.coroutine
     def client_connected(self):

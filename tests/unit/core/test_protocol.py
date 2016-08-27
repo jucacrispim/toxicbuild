@@ -32,6 +32,9 @@ class BaseToxicProtocolTest(TestCase):
         self.protocol = protocol.BaseToxicProtocol(loop)
         self.protocol._stream_reader = mock.MagicMock()
         self.protocol._stream_writer = mock.MagicMock()
+        self.protocol.salt = protocol.utils.bcrypt.gensalt(4)
+        self.protocol.encrypted_token = protocol.utils.bcrypt_string(
+            '123sd', self.protocol.salt)
 
         self.response = None
 
@@ -52,7 +55,7 @@ class BaseToxicProtocolTest(TestCase):
 
         # the return of _stream_reader.read()
         self.message = json.dumps(
-            {'action': 'thing'}).encode('utf-8')
+            {'action': 'thing', 'token': '123sd'}).encode('utf-8')
 
         self.full_message = '{}\n'.format(len(self.message)).encode(
             'utf-8') + self.message
@@ -91,7 +94,8 @@ class BaseToxicProtocolTest(TestCase):
             cc_mock()
 
         prot.client_connected = cc
-
+        prot.salt = self.protocol.salt
+        prot.encrypted_token = self.protocol.encrypted_token
         prot.connection_made(transport)
         yield from prot._check_data_future
         yield from prot._client_connected_future
@@ -118,9 +122,32 @@ class BaseToxicProtocolTest(TestCase):
 
         self.assertEqual(self.response['code'], 1)
 
+    @mock.patch.object(protocol.utils, 'log', mock.Mock())
+    @async_test
+    def test_check_data_without_token(self):
+        message = '{"salci": "fufu"}'
+        self.full_message = '{}\n'.format(len(message)) + message
+        self.full_message = self.full_message.encode('utf-8')
+
+        yield from self.protocol.check_data()
+        self.assertEqual(self.response['code'], 2)
+
+    @mock.patch.object(protocol.utils, 'log', mock.Mock())
+    @async_test
+    def test_check_data_with_bad_token(self):
+        message = '{"salci": "fufu", "token": "123sdf"}'
+        self.protocol.salt = protocol.utils.bcrypt.gensalt(4)
+        self.protocol.encrypted_token = protocol.utils.bcrypt_string(
+            '123sd', self.protocol.salt)
+        self.full_message = '{}\n'.format(len(message)) + message
+        self.full_message = self.full_message.encode('utf-8')
+
+        yield from self.protocol.check_data()
+        self.assertEqual(self.response['code'], 3)
+
     @async_test
     def test_check_data_without_action(self):
-        message = '{"salci": "fufu"}'
+        message = '{"salci": "fufu", "token": "123sd"}'
         self.full_message = '{}\n'.format(len(message)) + message
         self.full_message = self.full_message.encode('utf-8')
 
@@ -129,7 +156,7 @@ class BaseToxicProtocolTest(TestCase):
 
     @async_test
     def test_check_data(self):
-        message = '{"action": "hack!"}'
+        message = '{"action": "hack!", "token": "123sd"}'
         self.full_message = '{}\n'.format(len(message)) + message
         self.full_message = self.full_message.encode('utf-8')
 
