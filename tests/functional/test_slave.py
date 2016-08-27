@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,7 +18,6 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import tornado
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.slave import settings
 from tests import async_test
@@ -34,7 +33,8 @@ class DummyBuildClient(BaseToxicClient):
     @asyncio.coroutine
     def request2server(self, action, body):
 
-        data = {'action': action, 'body': body}
+        data = {'action': action, 'body': body,
+                'token': '123'}
         yield from self.write(data)
 
         response = yield from self.get_response()
@@ -43,7 +43,7 @@ class DummyBuildClient(BaseToxicClient):
     @asyncio.coroutine
     def is_server_alive(self):
 
-        resp = yield from self.request2server('healthcheck', {})
+        resp = yield from self.request2server('healthcheck', {'bla': 1})
         code = int(resp['code'])
         return code == 0
 
@@ -88,9 +88,6 @@ def get_dummy_client():
 
 
 class SlaveTest(BaseFunctionalTest):
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
 
     @classmethod
     def setUpClass(cls):

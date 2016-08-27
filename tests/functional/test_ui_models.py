@@ -37,24 +37,25 @@ class SlaveTest(BaseFunctionalTest):
 
     @async_test
     def test_add(self):
-        slave = yield from Slave.add('test-slave', '192.168.0.1', 1234)
+        slave = yield from Slave.add('test-slave', '192.168.0.1', 1234,
+                                     '2123')
         self.assertTrue(slave.id)
 
     @async_test
     def test_get(self):
-        slave = yield from Slave.add('test-slave', '192.168.0.1', 1234)
+        slave = yield from Slave.add('test-slave', '192.168.0.1', 1234, '123')
         get_slave = yield from Slave.get(slave_name='test-slave')
         self.assertEqual(slave.id, get_slave.id)
 
     @async_test
     def test_list(self):
-        yield from Slave.add('test-slave', '192.168.0.1', 1234)
+        yield from Slave.add('test-slave', '192.168.0.1', 1234, '12313')
         slave_list = yield from Slave.list()
         self.assertEqual(len(slave_list), 1)
 
     @async_test
     def test_update(self):
-        slave = yield from Slave.add('test-slave', '192.168.0.1', 1234)
+        slave = yield from Slave.add('test-slave', '192.168.0.1', 1234, '123')
         yield from slave.update(host='localhost')
         get_slave = yield from Slave.get(slave_name='test-slave')
         self.assertEqual(slave.id, get_slave.id)
@@ -75,7 +76,8 @@ class RepositoryTest(BaseFunctionalTest):
 
     @async_test
     def test_add(self):
-        self.slave = yield from Slave.add('test-slave', 'localhost', 1234)
+        self.slave = yield from Slave.add('test-slave', 'localhost', 1234,
+                                          '23')
         self.repo = yield from Repository.add(name='some-repo',
                                               url='bla@gla.com',
                                               vcs_type='git',
@@ -112,7 +114,8 @@ class RepositoryTest(BaseFunctionalTest):
 
     @async_test
     def test_add_slave(self):
-        self.slave = yield from Slave.add('test-slave', 'localhost', 1234)
+        self.slave = yield from Slave.add('test-slave', 'localhost', 1234,
+                                          '123')
         self.repo = yield from Repository.add(name='some-repo',
                                               url='bla@gla.com',
                                               vcs_type='git',
@@ -123,7 +126,8 @@ class RepositoryTest(BaseFunctionalTest):
 
     @async_test
     def test_remove_slave(self):
-        self.slave = yield from Slave.add('test-slave', 'localhost', 1234)
+        self.slave = yield from Slave.add('test-slave', 'localhost', 1234,
+                                          '2123')
         self.repo = yield from Repository.add(name='some-repo',
                                               url='bla@gla.com',
                                               vcs_type='git',
@@ -167,7 +171,8 @@ class BuildsetTest(BaseFunctionalTest):
 
     @async_test
     def test_list(self):
-        self.slave = yield from Slave.add('test-slave', 'localhost', 1234)
+        self.slave = yield from Slave.add('test-slave', 'localhost', 1234,
+                                          '1234')
         self.repo = yield from Repository.add(name='some-repo',
                                               url='bla@gla.com',
                                               vcs_type='git',

@@ -11,7 +11,6 @@ from toxicbuild.master.repository import (Repository, RepositoryRevision,
                                           RepositoryBranch)
 from toxicbuild.master.build import Build, Builder, BuildSet
 from toxicbuild.master.slave import Slave
-from toxicbuild.master.hole import HoleServer
 
 
 ENVVAR = 'TOXICMASTER_SETTINGS'
@@ -27,6 +26,9 @@ dbconn = connect(**dbsettings)
 @asyncio.coroutine
 def toxicinit():  # pragma no cover
     """ Initialize services. """
+
+    # importing here to avoid circular imports.
+    from toxicbuild.master.hole import HoleServer
 
     log('[init] Scheduling all')
     yield from Repository.schedule_all()

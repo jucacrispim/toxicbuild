@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -33,7 +33,8 @@ class DummyUIClient(BaseToxicClient):
     @asyncio.coroutine
     def request2server(self, action, body):
 
-        data = {'action': action, 'body': body}
+        data = {'action': action, 'body': body,
+                'token': '123'}
         yield from self.write(data)
         response = yield from self.get_response()
         return response['body'][action]
@@ -43,7 +44,8 @@ class DummyUIClient(BaseToxicClient):
         action = 'slave-add'
         body = {'slave_name': 'test-slave',
                 'slave_host': 'localhost',
-                'slave_port': 7777}
+                'slave_port': settings.SLAVE_PORT,
+                'slave_token': '123'}
 
         resp = yield from self.request2server(action, body)
         return resp
@@ -52,7 +54,7 @@ class DummyUIClient(BaseToxicClient):
     def create_repo(self):
         action = 'repo-add'
         body = {'repo_name': 'test-repo', 'repo_url': REPO_DIR,
-                'vcs_type': 'git', 'update_seconds': 300,
+                'vcs_type': 'git', 'update_seconds': 1,
                 'slaves': ['test-slave']}
 
         resp = yield from self.request2server(action, body)
@@ -64,7 +66,7 @@ class DummyUIClient(BaseToxicClient):
 
         action = 'repo-start-build'
         body = {'repo_name': 'test-repo',
-                'builder_name': 'test-builder',
+                # 'builder_name': 'test-builder',
                 'branch': 'master'}
         resp = yield from self.request2server(action, body)
 
@@ -134,7 +136,8 @@ class ToxicMasterTest(BaseFunctionalTest):
             yield from client.request2server('slave-add',
                                              {'slave_name': 'test-slave2',
                                               'slave_host': 'localhost',
-                                              'slave_port': 1234})
+                                              'slave_port': 1234,
+                                              'slave_token': '123'})
         with (yield from get_dummy_client()) as client:
             resp = yield from client.request2server(
                 'repo-add-slave',
@@ -148,10 +151,6 @@ class ToxicMasterTest(BaseFunctionalTest):
                 'repo-remove-slave',
                 {'repo_name': 'test-repo', 'slave_name': 'test-slave'})
         self.assertTrue(resp)
-
-    # @async_test
-    # def test_8_start_build(self):
-    #     pass
 
     @async_test
     def test_07_slave_get(self):
@@ -177,9 +176,25 @@ class ToxicMasterTest(BaseFunctionalTest):
                                                      'test-slave2'})
         self.assertTrue(resp)
 
-    # @async_test
-    # def test_10_repo_start_build(self):
-    #     pass
+    @async_test
+    def test_10_repo_start_build(self):
+        # we need to wait so we have time to clone and create revs
+        yield from asyncio.sleep(1)
+        with (yield from get_dummy_client()) as client:
+            yield from client.start_build()
+
+        with (yield from get_dummy_client()) as client:
+            yield from client.write({'action': 'stream', 'token': '123',
+                                     'body': {}})
+
+
+            while True:
+                response = yield from client.get_response()
+                body = response['body'] if response else {}
+                if 'steps' not in body and body.get('finished'):
+                    break
+
+        self.assertEqual(response['body']['status'], 'success')
 
     @classmethod
     def _delete_test_data(cls):
