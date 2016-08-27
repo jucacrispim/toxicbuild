@@ -30,7 +30,8 @@ import random
 import re
 import urwid
 from toxicbuild.core.exceptions import ToxicClientException
-from toxicbuild.ui import get_hole_client, inutils
+from toxicbuild.ui import inutils
+from toxicbuild.ui.client import get_hole_client
 
 
 class ToxicShellError(Exception):

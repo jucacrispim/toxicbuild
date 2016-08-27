@@ -145,7 +145,8 @@ class RepositoryTest(TestCase):
     def test_add_slave(self):
         self.repository.get_client = lambda: get_client_mock('add slave ok')
 
-        slave = models.Slave(name='localslave', host='localhost', port=7777)
+        slave = models.Slave(name='localslave', host='localhost', port=7777,
+                             token='123')
         resp = yield from self.repository.add_slave(slave)
 
         self.assertEqual(resp, 'add slave ok')
@@ -205,7 +206,8 @@ class SlaveTest(TestCase):
     @async_test
     def test_add(self):
 
-        slave = yield from models.Slave.add('localslave', 'localhost', 8888)
+        slave = yield from models.Slave.add('localslave', 'localhost', 8888,
+                                            '1233')
         self.assertEqual(slave.host, 'localhost')
 
     @patch.object(models.Slave, 'get_client', lambda: get_client_mock(

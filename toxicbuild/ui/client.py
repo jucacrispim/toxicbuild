@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,6 +19,7 @@
 
 import asyncio
 from toxicbuild.core import BaseToxicClient
+from toxicbuild.ui import settings
 
 
 class UIHoleClient(BaseToxicClient):
@@ -35,7 +36,9 @@ class UIHoleClient(BaseToxicClient):
     @asyncio.coroutine
     def request2server(self, action, body):
 
-        data = {'action': action, 'body': body}
+        data = {'action': action, 'body': body,
+                'token': settings.HOLE_TOKEN}
+
         yield from self.write(data)
         response = yield from self.get_response()
         return response['body'][action]

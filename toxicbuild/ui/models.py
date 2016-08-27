@@ -80,16 +80,17 @@ class Slave(BaseModel):
 
     @classmethod
     @asyncio.coroutine
-    def add(cls, name, host, port):
+    def add(cls, name, host, port, token):
         """Adds a new slave.
 
         :param name: Slave name.
         :param host: Slave host.
         :param port: Slave port.
+        :param token: Authentication token.
         """
 
         kw = {'slave_name': name, 'slave_host': host,
-              'slave_port': port}
+              'slave_port': port, 'slave_token': token}
 
         with (yield from cls.get_client()) as client:
             slave_dict = yield from client.slave_add(**kw)
