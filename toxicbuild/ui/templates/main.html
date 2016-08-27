@@ -3,11 +3,11 @@
 {% block main_area %}
 
 <div class="page-header">
-  <h4>Repositories</h4>
-
+  <h4 class="main-section-title">Repositories</h4>
   <!-- Button trigger modal add repository -->
-  <button type="button" class="btn btn-primary btn-xs" data-toggle="modal" data-target="#repoModal">
-    Add repo
+  <button type="button" class="btn btn-primary btn-xs btn-main-add"
+	  data-toggle="modal" data-target="#repoModal">
+    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
   </button>
 </div>
 
@@ -26,13 +26,14 @@
       {% for repo in repos %}
       <tr id="repo-row-{{repo.name}}">
 	<td>
-	  <button type="button" class="btn btn-primary btn-xs"
+	  {{repo.name}}
+	  <button type="button" class="btn btn-default btn-xs btn-main-edit"
 		  data-toggle="modal" data-target="#repoModal"
 		  data-repo-name="{{repo.name}}" data-repo-url="{{repo.url}}"
 		  data-repo-update-seconds="{{repo.update_seconds}}"
 		  data-repo-vcs-type="{{repo.vcs_type}}"
 		  data-repo-id="{{repo.id}}">
-	    {{repo.name}}
+	    <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
 	  </button>
 	</td>
 	<td>{{repo.url}}</td>
@@ -49,9 +50,10 @@
 
 
 <div class="page-header">
-  <h4>Slaves</h4>
-  <button type="button" class="btn btn-primary btn-xs" data-toggle="modal" data-target="#slaveModal">
-    Add slave
+  <h4 class="main-section-title">Slaves</h4>
+  <button type="button" class="btn btn-primary btn-xs btn-main-add"
+	  data-toggle="modal" data-target="#slaveModal">
+    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
   </button>
 </div>
 
@@ -68,13 +70,14 @@
       {% for slave in slaves %}
       <tr id="slave-row-{{slave.name}}">
 	<td>
-	  <button type="button" class="btn btn-primary btn-xs"
+	  {{slave.name}}
+	  <button type="button" class="btn btn-default btn-xs btn-main-edit"
 		  data-toggle="modal"
 		  data-target="#slaveModal"
 		  data-slave-name="{{slave.name}}"
 		  data-slave-host="{{slave.host}}"
 		  data-slave-port="{{slave.port}}">
-	    {{slave.name}}
+	    <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
 	  </button>
 	</td>
 	<td>{{slave.host}}</td>

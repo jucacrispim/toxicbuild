@@ -22,6 +22,11 @@ body{
     background-color: #4c4a49;
     color: #D0D0D0;
 }
+
+.page-header{
+    margin-top: 20px;
+}
+
 a:hover,
 a {
     color: #1A8FF5;
@@ -40,6 +45,10 @@ tr:nth-child(even) {
 .main-row{
     margin-left: 0;
     margin-right: 0;
+}
+
+.main-section-title{
+    float:left;
 }
 
 .modal-content{
@@ -103,6 +112,40 @@ tr:nth-child(even) {
 .master-msg{
     color: #fff;
     margin-top:9%;
+}
+
+.btn-main-edit:focus,
+.btn-main-edit:hover,
+.btn-main-edit:active,
+.btn-main-edit:visited,
+.btn-main-edit.active:focus,
+.btn-main-edit:active:focus,
+.btn-main-edit{
+    background-color: transparent;
+    border-color: transparent;
+    outline: none;
+}
+
+.btn-main-edit:hover,
+.btn-main-edit.active:focus,
+.btn-main-edit:active:focus,
+.btn-main-edit:active{
+    color: #b5a5a5;
+}
+
+.btn-main-add:focus,
+.btn-main-add:hover,
+.btn-main-add:active,
+.btn-main-add:visited,
+.btn-main-add.active:focus,
+.btn-main-add:active:focus,
+.btn-main-add{
+    background-color: transparent;
+    border-color: transparent;
+    outline: none;
+    color: #49b149;
+    margin-top: 8px;
+    margin-left: 4px;
 }
 
 .btn-status{
