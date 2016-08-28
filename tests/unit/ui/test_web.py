@@ -534,6 +534,7 @@ class LoginHandlerTest(unittest.TestCase):
     @patch.object(web.TemplateHandler, 'render_template', MagicMock(
         spec=web.TemplateHandler.render_template))
     def test_get_without_cookie(self):
+        self.handler.prepare()
         self.handler.get('login')
         self.assertTrue(self.handler.render_template.called)
         template = self.handler.render_template.call_args[0][0]
@@ -555,7 +556,7 @@ class LoginHandlerTest(unittest.TestCase):
     def test_post_with_bad_username(self):
         self.handler.prepare()
         self.handler.params['username'] = ['mané']
-        self.handler.post()
+        self.handler.post('login')
         url = self.handler.redirect.call_args[0][0]
         self.assertEqual(url, '/login?error=1')
 
@@ -565,17 +566,19 @@ class LoginHandlerTest(unittest.TestCase):
         self.handler.prepare()
         self.handler.params['username'] = ['someguy']
         self.handler.params['password'] = ['wrong']
-        self.handler.post()
+        self.handler.post('login')
         url = self.handler.redirect.call_args[0][0]
         self.assertEqual(url, '/login?error=1')
 
+    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
+        spec=web.TemplateHandler.redirect))
     @patch.object(web.TemplateHandler, 'set_secure_cookie', MagicMock(
         spec=web.TemplateHandler.set_secure_cookie))
     def test_post_ok(self):
         self.handler.prepare()
         self.handler.params['username'] = ['someguy']
         self.handler.params['password'] = ['123']
-        self.handler.post()
+        self.handler.post('login')
         self.assertTrue(self.handler.set_secure_cookie.called)
 
 
