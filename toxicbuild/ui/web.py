@@ -230,6 +230,8 @@ class MainHandler(LoggedTemplateHandler):
     def _get_btn_class(self, status):
         return {'success': 'success', 'fail': 'danger',
                 'running': 'info', 'exception': 'exception',
+                'clone-exception': 'exception',
+                'warning': 'warning',
                 'cloning': 'pending'}.get(status)
 
 
