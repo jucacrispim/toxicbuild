@@ -70,7 +70,7 @@ class PythonCreateVenvStep(BuildStep):
         name = 'Create virtualenv'
         command = 'virtualenv {} -p {}'.format(self.venv_dir,
                                                self.pyversion)
-        super().__init__(name, command)
+        super().__init__(name, command, stop_on_fail=True)
 
     @asyncio.coroutine
     def execute(self, cwd, **envvars):
@@ -99,7 +99,8 @@ class PythonVenvPlugin(Plugin):
 
         install_deps = BuildStep('install dependencies using pip',
                                  'pip install -r {}'.format(
-                                     self.requirements_file))
+                                     self.requirements_file),
+                                 stop_on_fail=True)
 
         return [create_env, install_deps]
 
