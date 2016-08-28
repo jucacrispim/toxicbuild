@@ -23,7 +23,7 @@ from unittest.mock import MagicMock, patch
 import tornado
 from tornado import gen
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.ui import web, models, settings
+from toxicbuild.ui import web, models
 
 
 @patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
