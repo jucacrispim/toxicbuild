@@ -23,9 +23,10 @@ from unittest.mock import MagicMock, patch
 import tornado
 from tornado import gen
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.ui import web, models
+from toxicbuild.ui import web, models, settings
 
 
+@patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
 class BaseModelHandlerTest(AsyncTestCase):
 
     def setUp(self):
@@ -127,6 +128,7 @@ class BaseModelHandlerTest(AsyncTestCase):
         self.assertTrue(item.delete.called)
 
 
+@patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
 class RepositoryHandlerTest(AsyncTestCase):
 
     def setUp(self):
@@ -317,6 +319,7 @@ class RepositoryHandlerTest(AsyncTestCase):
         self.assertTrue(item.start_build.called)
 
 
+@patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
 class SlaveHandlerTest(AsyncTestCase):
 
     def setUp(self):
@@ -391,6 +394,7 @@ class MainHandlerTest(AsyncTestCase):
         self.assertEqual(returned, 'danger')
 
 
+@patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
 class WaterfallHandlerTest(AsyncTestCase):
 
     def setUp(self):
@@ -496,3 +500,115 @@ class ApplicationTest(unittest.TestCase):
             self.assertIn(pat, expected)
 
         self.assertEqual(len(web.api_app.urls), 2)
+
+
+class LoginHandlerTest(unittest.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        request = MagicMock()
+        request.cookies = {}
+        application = MagicMock()
+        application.settings = {'cookie_secret': 'bladjfçajf'}
+
+        class TestRepo(web.Repository):
+            pass
+
+        self.mock_model = TestRepo
+        self.mock_model.get = MagicMock(spec=web.Repository.get)
+        self.mock_model.add = MagicMock(spec=web.Repository.add)
+
+        self.handler = web.LoginHandler(application, request=request)
+
+    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
+        spec=web.TemplateHandler.redirect))
+    def test_get_with_cookie(self):
+        self.handler.set_secure_cookie(web.COOKIE_NAME, 'bla')
+        self.handler.request.cookies[
+            web.COOKIE_NAME] = self.handler._new_cookie[web.COOKIE_NAME]
+        self.handler.get('login')
+        self.assertTrue(self.handler.redirect.called)
+        url = self.handler.redirect.call_args[0][0]
+        self.assertEqual(url, '/')
+
+    @patch.object(web.TemplateHandler, 'render_template', MagicMock(
+        spec=web.TemplateHandler.render_template))
+    def test_get_without_cookie(self):
+        self.handler.get('login')
+        self.assertTrue(self.handler.render_template.called)
+        template = self.handler.render_template.call_args[0][0]
+        self.assertEqual(template, 'login.html')
+
+    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
+        spec=web.TemplateHandler.redirect))
+    @patch.object(web.TemplateHandler, 'clear_cookie', MagicMock(
+        spec=web.TemplateHandler.clear_cookie))
+    def test_get_logout(self):
+        self.handler.get('logout')
+        self.assertTrue(self.handler.clear_cookie.called)
+        self.assertTrue(self.handler.redirect.called)
+        url = self.handler.redirect.call_args[0][0]
+        self.assertEqual(url, '/')
+
+    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
+        spec=web.TemplateHandler.redirect))
+    def test_post_with_bad_username(self):
+        self.handler.prepare()
+        self.handler.params['username'] = ['mané']
+        self.handler.post()
+        url = self.handler.redirect.call_args[0][0]
+        self.assertEqual(url, '/login?error=1')
+
+    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
+        spec=web.TemplateHandler.redirect))
+    def test_post_with_bad_password(self):
+        self.handler.prepare()
+        self.handler.params['username'] = ['someguy']
+        self.handler.params['password'] = ['wrong']
+        self.handler.post()
+        url = self.handler.redirect.call_args[0][0]
+        self.assertEqual(url, '/login?error=1')
+
+    @patch.object(web.TemplateHandler, 'set_secure_cookie', MagicMock(
+        spec=web.TemplateHandler.set_secure_cookie))
+    def test_post_ok(self):
+        self.handler.prepare()
+        self.handler.params['username'] = ['someguy']
+        self.handler.params['password'] = ['123']
+        self.handler.post()
+        self.assertTrue(self.handler.set_secure_cookie.called)
+
+
+class LoggedTemplateHandler(unittest.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        request = MagicMock()
+        request.cookies = {}
+        application = MagicMock()
+        application.settings = {'cookie_secret': 'bladjfçajf'}
+
+        class TestRepo(web.Repository):
+            pass
+
+        self.mock_model = TestRepo
+        self.mock_model.get = MagicMock(spec=web.Repository.get)
+        self.mock_model.add = MagicMock(spec=web.Repository.add)
+
+        self.handler = web.LoggedTemplateHandler(application, request=request)
+
+    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
+        spec=web.TemplateHandler.redirect))
+    def test_prepare_without_cookie(self):
+        self.handler.prepare()
+        url = self.handler.redirect.call_args[0][0]
+        self.assertEqual(url, '/login')
+
+    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
+        spec=web.TemplateHandler.redirect))
+    def test_prepare_with_cookie(self):
+        self.handler.set_secure_cookie(web.COOKIE_NAME, 'bla')
+        self.handler.request.cookies[
+            web.COOKIE_NAME] = self.handler._new_cookie[web.COOKIE_NAME]
+        self.handler.prepare()
+        self.assertFalse(self.handler.redirect.called)

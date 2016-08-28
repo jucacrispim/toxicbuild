@@ -22,10 +22,50 @@ from tornado import gen
 from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
 from pyrocumulus.web.handlers import TemplateHandler, PyroRequest
 from pyrocumulus.web.urlmappers import URLSpec
+from toxicbuild.core.utils import bcrypt_string
+from toxicbuild.ui import settings
 from toxicbuild.ui.models import Repository, Slave, BuildSet, Builder
 
 
-class BaseModelHandler(TemplateHandler):
+COOKIE_NAME = 'toxicui'
+
+
+class LoginHandler(TemplateHandler):
+
+    def get(self, action):
+        if action == 'logout':
+            self.clear_cookie(COOKIE_NAME)
+            return self.redirect('/')
+
+        if self.get_secure_cookie(COOKIE_NAME):
+            return self.redirect('/')
+
+        error = bool(self.params.get('error'))
+        self.render_template('login.html', {'error': error})
+
+    def post(self, action):
+        if not self.params.get('username') == settings.USERNAME:
+            return self.redirect('/login?error=1')
+
+        salt = settings.BCRYPT_SALT
+        passwd = settings.PASSWORD
+        if not bcrypt_string(self.params.get('password'), salt) == passwd:
+            return self.redirect('/login?error=1')
+
+        self.set_secure_cookie(COOKIE_NAME, 'SAUCIFUFU!')
+        self.redirect('/')
+
+
+class LoggedTemplateHandler(TemplateHandler):
+
+    def prepare(self):
+        super().prepare()
+        cookie = self.get_secure_cookie(COOKIE_NAME)
+        if not cookie:
+            self.redirect('/login')
+
+
+class BaseModelHandler(LoggedTemplateHandler):
     item_template = 'item.html'
     list_template = 'list.html'
 
@@ -175,7 +215,7 @@ class SlaveHandler(BaseModelHandler):
         yield from item.update(**self.params)
 
 
-class MainHandler(TemplateHandler):
+class MainHandler(LoggedTemplateHandler):
     main_template = 'main.html'
 
     @gen.coroutine
@@ -193,10 +233,11 @@ class MainHandler(TemplateHandler):
                 'cloning': 'pending'}.get(status)
 
 
-class WaterfallHandler(TemplateHandler):
+class WaterfallHandler(LoggedTemplateHandler):
     template = 'waterfall.html'
 
     def prepare(self):
+        super().prepare()
         self.params = PyroRequest(self.request.arguments)
 
     @gen.coroutine
@@ -239,7 +280,8 @@ class WaterfallHandler(TemplateHandler):
 
 url = URLSpec('/$', MainHandler)
 waterfall = URLSpec('/waterfall/(.*)', WaterfallHandler)
-app = PyroApplication([url, waterfall])
+login = URLSpec('/(login|logout)', LoginHandler)
+app = PyroApplication([url, waterfall, login])
 static_app = StaticApplication()
 
 repo_kwargs = {'model': Repository}
