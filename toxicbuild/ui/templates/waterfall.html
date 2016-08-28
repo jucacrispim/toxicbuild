@@ -2,6 +2,7 @@
 
 {% block main_area %}
 {% include "step_details_modal.html" %}
+{% include "buildset_details_modal.html" %}
 <table>
   <tbody class="waterfall-table">
     <tr class="waterfall-row">
@@ -29,6 +30,18 @@
 	  <li class="buildset" id="buildset-{{buildset.id}}">
 	    commit: {{buildset.commit[:8]}}<br/>
 	    branch: {{buildset.branch}}<br/>
+	    <button type="button" class="btn btn-step-details btn-buildset-details btn-sm"
+		    data-toggle="modal"
+		    data-target="#buildsetDetailsModal"
+		    data-dismiss="modal"
+		    data-buildset-commit="{{buildset.commit}}"
+		    data-buildset-branch="{{buildset.branch}}"
+		    data-buildset-commit-author="{{buildset.author}}"
+		    data-buildset-commit-title="{{buildset.title}}"
+		    data-buildset-created="{{buildset.created}}">
+	      details
+	    </button>
+
 	  </li>
 	</ul>
       </td>

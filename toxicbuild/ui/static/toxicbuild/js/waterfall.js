@@ -14,6 +14,22 @@ jQuery('#stepDetailsModal').on('show.bs.modal', function (event) {
   modal.find('#step-end').text(end);
 });
 
+jQuery('#buildsetDetailsModal').on('show.bs.modal', function (event) {
+  var button = jQuery(event.relatedTarget);
+  var commit = button.data('buildset-commit');
+  var author = button.data('buildset-commit-author');
+  var title = button.data('buildset-commit-title');
+  var created = button.data('buildset-created');
+  var branch = button.data('buildset-branch');
+
+  var modal = jQuery(this)
+  modal.find('#buildset-commit').text(commit);
+  modal.find('#buildset-commit-author').text(author);
+  modal.find('#buildset-commit-title').text(title);
+  modal.find('#buildset-created').text(created);
+  modal.find('#buildset-branch').text(branch);
+});
+
 var BUILDER_SIZE = null;
 
 function sticky_relocate() {
