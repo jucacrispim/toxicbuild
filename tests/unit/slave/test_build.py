@@ -71,6 +71,17 @@ class BuilderTest(TestCase):
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'fail')
 
+    @async_test
+    def test_build_fail_stop_on_fail(self):
+        s1 = build.BuildStep(name='s1', command='ls')
+        s2 = build.BuildStep(name='s2', command='exit 1', stop_on_fail=True)
+        s3 = build.BuildStep(name='s3', command='echo "oi"')
+        self.builder.steps = [s1, s2, s3]
+
+        build_info = yield from self.builder.build()
+        self.assertEqual(build_info['status'], 'fail')
+        self.assertEqual(len(build_info['steps']), 2)
+
     def test_get_env_vars(self):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
         self.builder.plugins = self.builder.manager._load_plugins(pconfig)

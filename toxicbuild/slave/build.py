@@ -69,8 +69,9 @@ class Builder(LoggerMixin):
             step_info.update((yield from step.execute(cwd=self.workdir,
                                                       **envvars)))
 
-            msg = 'Finished {} with status {}'.format(step.command,
-                                                      step_info['status'])
+            status = step_info['status']
+            msg = 'Finished {} with status {}'.format(step.command, status)
+
             self.log(msg, level='debug')
 
             step_info.update({'finished': datetime2string(now())})
@@ -80,9 +81,12 @@ class Builder(LoggerMixin):
             # or success (ie failed) we don't change it anymore, the build
             # is failed anyway.
             if build_status is None or build_status == 'success':
-                build_status = step_info['status']
+                build_status = status
 
             build_info['steps'].append(step_info)
+
+            if status == 'fail' and step.stop_on_fail:
+                break
 
         build_info['status'] = build_status
         build_info['total_steps'] = len(self.steps)
@@ -98,17 +102,20 @@ class Builder(LoggerMixin):
 
 class BuildStep:
 
-    def __init__(self, name, command, warning_on_fail=False, timeout=3600):
+    def __init__(self, name, command, warning_on_fail=False, timeout=3600,
+                 stop_on_fail=False):
         """:param name: name for the command.
         :param cmd: a string the be executed in a shell.
         :param warning_on_fail: Indicates if should have warning status if
           the command fails.
         :param timeout: How long we wait for the command to complete.
+        :param stop_on_fail: If True and the step fails the build will stop.
         """
         self.name = name
         self.command = command
         self.warning_on_fail = warning_on_fail
         self.timeout = timeout
+        self.stop_on_fail = stop_on_fail
 
     def __eq__(self, other):
         if not hasattr(other, 'command'):
