@@ -91,11 +91,11 @@ var BaseView = function(model){
 };
 
 
-var BaseManager = function(model_type, view_type){
+var BaseManager = function(model_type, view_type, modal){
   var instance = {
 
     views: null,
-    modal: null,
+    modal: modal,
     model_type: model_type,
     view_type: view_type,
     _current_view: null,
@@ -118,7 +118,6 @@ var BaseManager = function(model_type, view_type){
 	var model = model_type(model_params);
 	var view = view_type(model);
 	self.views[model.id] = view;
-	self.modal = view.modal;
       }
       self.connect2events();
     },

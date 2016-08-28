@@ -112,7 +112,8 @@ var SlaveView = function (model){
 
 
 var _SlaveManager = function (){
-  var super_instance =  BaseManager(SlaveModel, SlaveView);
+  var modal = jQuery('#slaveModal')
+  var super_instance =  BaseManager(SlaveModel, SlaveView, modal);
   var inherited = {};
 
   var instance = {
