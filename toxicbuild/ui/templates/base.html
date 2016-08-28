@@ -29,12 +29,19 @@
         </div>
         <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
-            <li class="master-msg">Connected to master at {{master_location}}</li>
+            {% block master_msg %}
+	    <li class="master-msg">Connected to master at {{master_location}}</li>
+	    {% end %}
             <!-- <li><a href="#about">About</a></li> -->
             <!-- <li><a href="#contact">Contact</a></li> -->
           </ul>
         </div><!--/.nav-collapse -->
       </div>
+      {% block logout_link %}
+      <div class="logout-link-container">
+	<a href="/logout">Logout</a>
+      </div>
+      {% end %}
     </nav>
 
     <div class="container-fluid">

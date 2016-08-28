@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block master_msg %}{% end %}
+{% block logout_link %}{% end %}
+{% block main_area %}
+<div class="login-container">
+  <form class="form-signin" method="post" action="">
+    {% if error %}
+    <div class="alert alert-danger alert-invalid-credentials" role="alert">
+      <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+      <span class="sr-only">Error:</span>
+      Invalid crendentials
+    </div>
+    {% end %}
+    <div class="login-input-container">
+      <label for="inputUsername" class="sr-only">Username</label>
+      <input type="text" id="inputUsername" name="username" class="form-control" placeholder="Username" required autofocus>
+      <label for="inputPassword" class="sr-only">Password</label>
+      <input type="password" id="inputPassword" name="password" class="form-control" placeholder="Password" required>
+    </div>
+    <button class="btn btn-lg btn-primary btn-block" type="submit">Login</button>
+  </form>
+
+</div>
+{% end %}

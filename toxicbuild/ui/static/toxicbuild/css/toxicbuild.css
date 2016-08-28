@@ -108,6 +108,11 @@ tr:nth-child(even) {
 }
 .toxicweb-container{
     margin-left: 0;
+    float:left;
+}
+
+.logout-link-container{
+    padding-top: 22px;
 }
 
 .alert{
@@ -290,4 +295,51 @@ tr:nth-child(even) {
 
 .buildset{
     list-style: none;
+}
+
+/* login and logout form */
+
+.form-signin {
+  max-width: 330px;
+  padding: 15px;
+  margin: 0 auto;
+  margin-top: 25px;
+}
+.login-input-container{
+    margin-top: 20px;
+}
+
+.form-signin .form-signin-heading,
+.form-signin .checkbox {
+  margin-bottom: 10px;
+}
+.form-signin .checkbox {
+  font-weight: normal;
+}
+.form-signin .form-control {
+  position: relative;
+  height: auto;
+  -webkit-box-sizing: border-box;
+     -moz-box-sizing: border-box;
+          box-sizing: border-box;
+  padding: 10px;
+  font-size: 16px;
+}
+.form-signin .form-control:focus {
+  z-index: 2;
+}
+.form-signin input[type="email"] {
+  margin-bottom: -1px;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.form-signin input[type="password"] {
+  margin-bottom: 10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.alert-invalid-credentials{
+    display: block;
+    width: 23%;
 }
