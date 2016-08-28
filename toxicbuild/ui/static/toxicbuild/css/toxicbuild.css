@@ -285,7 +285,7 @@ tr:nth-child(even) {
     margin-left: 15px;
 }
 
-.btn-step-details:focus,
+.btn-buildset-details:focus,
 .btn-buildset-details,
 .btn-buildset-details:hover{
     margin: 0;
