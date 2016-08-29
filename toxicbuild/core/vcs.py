@@ -136,10 +136,7 @@ class Git(VCS):
 
     @asyncio.coroutine
     def fetch(self):
-        # HACK!
-        # fucking git fetch send its response to stderr even
-        # if everything was ok
-        cmd = '%s %s 2>&1' % (self.vcsbin, 'fetch')
+        cmd = '%s %s' % (self.vcsbin, 'fetch')
 
         fetched = yield from self.exec_cmd(cmd)
         return fetched

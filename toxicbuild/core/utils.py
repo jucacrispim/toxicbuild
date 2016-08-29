@@ -42,19 +42,23 @@ def exec_cmd(cmd, cwd, timeout=3600, **envvars):
 
     envvars = _get_envvars(envvars)
 
+    # the thing here is that in not win operating systems
+    # we redirect stderr to stdout so we can see the whole
+    # output of the command.
+    if not sys.platform.startswith('win32'):
+        cmd = ' '.join([cmd, '2>&1'])
+
     proc = yield from asyncio.create_subprocess_shell(
         cmd, stdout=PIPE, stderr=PIPE, cwd=cwd, env=envvars)
 
     stdout, stderr = yield from asyncio.wait_for(
         proc.communicate(), timeout)
 
+    output = stdout.decode().strip()
     if int(proc.returncode) > 0:
-        output = stderr.decode().strip()
-        if not output:
-            output = stdout.decode().strip()
         raise ExecCmdError(output)
 
-    return stdout.decode().strip()
+    return output
 
 
 def _get_envvars(envvars):
