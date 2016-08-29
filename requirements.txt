@@ -9,3 +9,4 @@ asyncblink==0.1.1
 mando==0.3.2
 pyrocumulus==0.8b0
 urwid==1.3.0
+flake8==2.4.1
