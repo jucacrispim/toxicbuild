@@ -43,6 +43,10 @@ class Slave(Document, LoggerMixin):
     token = StringField(required=True)
     is_alive = BooleanField(default=False)
 
+    meta = {
+        'ordering': ['name']
+    }
+
     @classmethod
     @asyncio.coroutine
     def create(cls, **kwargs):

@@ -60,6 +60,10 @@ class Repository(Document, utils.LoggerMixin):
     clone_status = StringField(choices=('cloning', 'done', 'clone-exception'),
                                default='cloning')
 
+    meta = {
+        'ordering': ['name']
+    }
+
     def __init__(self, *args, **kwargs):
         super(Repository, self).__init__(*args, **kwargs)
         self._poller_instance = None
