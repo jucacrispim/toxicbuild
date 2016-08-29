@@ -3,6 +3,7 @@
 {% block main_area %}
 {% include "step_details_modal.html" %}
 {% include "buildset_details_modal.html" %}
+<input type="hidden" id="waterfall-repo-name" value="{{repo_name}}"/>
 <table>
   <tbody class="waterfall-table">
     <tr class="waterfall-row">
@@ -63,7 +64,7 @@
 	    <button type="button" class="btn btn-default btn-rebuild btn-rebuild-build btn-sm"
 		    data-buildset-commit="{{buildset.commit}}"
 		    data-buildset-branch="{{buildset.branch}}"
-		    data-builder-name="{{ _get_builder(builders, i).name}}">
+		    data-builder-name="{{ get_builder(builders, i).name}}">
 
 	      <span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>
 	  </li>
@@ -100,4 +101,5 @@
 <script src="{{static_url}}toxicbuild/js/bootstrap.min.js"></script>
 <script src="{{static_url}}toxicbuild/js/utils.js"></script>
 <script src="{{static_url}}toxicbuild/js/waterfall.js"></script>
+<script>TOXICDEBUG = true;</script>
 {% end %}

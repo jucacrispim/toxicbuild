@@ -16,6 +16,8 @@
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
+TOXICDEBUG = false;
+
 var utils = {
   success_message: jQuery('.alert-success'),
   error_message: jQuery('.alert-danger'),

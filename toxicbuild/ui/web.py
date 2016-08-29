@@ -256,7 +256,8 @@ class WaterfallHandler(LoggedTemplateHandler):
         context = {'buildsets': buildsets, 'builders': builders,
                    'ordered_builds': _ordered_builds,
                    'get_ending': self._get_ending,
-                   'get_builder': get_builder}
+                   'get_builder': get_builder,
+                   'repo_name': repo_name}
         self.render_template(self.template, context)
 
     @asyncio.coroutine

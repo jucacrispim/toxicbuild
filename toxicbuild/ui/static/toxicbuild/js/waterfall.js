@@ -35,7 +35,8 @@ jQuery('.btn-rebuild-buildset').on('click', function(event){
   var named_tree = button.data('buildset-commit');
   var branch = button.data('buildset-branch');
   var url = '/api/repo/start-build';
-  var data = {name: 'ToxicBuild', named_tree: named_tree, branch: branch};
+  var repo_name = jQuery('#waterfall-repo-name').val();
+  var data = {name: repo_name, named_tree: named_tree, branch: branch};
   var success_cb = function(response){
     utils.showSuccessMessage('Buildset re-scheduled.');
   };
@@ -53,7 +54,9 @@ jQuery('.btn-rebuild-build').on('click', function(event){
   var branch = button.data('buildset-branch');
   var builder_name = button.data('builder-name');
   var url = '/api/repo/start-build';
-  var data = {name: 'ToxicBuild', named_tree: named_tree, branch: branch,
+  var repo_name = jQuery('#waterfall-repo-name').val();
+  utils.log('rebuild build for ' + repo_name);
+  var data = {name: repo_name, named_tree: named_tree, branch: branch,
 	      builder_name: builder_name};
   var success_cb = function(response){
     utils.showSuccessMessage('Build re-scheduled.')
@@ -72,7 +75,6 @@ function sticky_relocate() {
   jQuery('.builder').each(function(){
     var window_top = jQuery(window).scrollTop();
     var div_top = jQuery(this).offset().top;
-    console.log(div_top, window_top);
     if (window_top >= div_top && window_top > 52){
       jQuery(this).outerWidth(BUILDER_SIZE);
       jQuery(this).addClass('builder-stick');
