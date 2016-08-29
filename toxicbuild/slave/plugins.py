@@ -131,7 +131,7 @@ class AptitudeInstallStep(BuildStep):
         status = step_info['status']
         output = step_info['output']
         busy_apt = (status == 'fail' and
-                    'is another process using it?' in output)
+                    '(11: Resource temporarily unavailable)' in output)
 
         while busy_apt:
             yield from asyncio.sleep(1)
@@ -139,7 +139,7 @@ class AptitudeInstallStep(BuildStep):
             status = step_info['status']
             output = step_info['output']
             busy_apt = (status == 'fail' and
-                        'another process using it?' in output)
+                        '(11: Resource temporarily unavailable)' in output)
 
         return step_info
 
@@ -159,3 +159,6 @@ class AptitudeInstallPlugin(Plugin):
     def get_steps_before(self):
         step = AptitudeInstallStep(self.packages)
         return [step]
+
+    def get_env_vars(self):
+        return {'DEBIAN_FRONTEND': 'noninteractive'}

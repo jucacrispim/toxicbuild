@@ -137,7 +137,7 @@ class AptitudeInstallStep(TestCase):
             self.COUNT += 1
             if self.COUNT == 0:
                 return {'status': 'fail',
-                        'output': 'E: is another process using it?'}
+                        'output': '(11: Resource temporarily unavailable)'}
             else:
                 return {'status': 'success',
                         'output': 'foi!'}
@@ -157,6 +157,10 @@ class AptitudeInstallPluginTest(TestCase):
 
     def test_name(self):
         self.assertEqual(self.plugin.name, 'aptitude-install')
+
+    def test_env_vars(self):
+        self.assertEqual(self.plugin.get_env_vars()['DEBIAN_FRONTEND'],
+                         'noninteractive')
 
     def test_get_steps_before(self):
         expected = [
