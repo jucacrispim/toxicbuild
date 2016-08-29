@@ -115,12 +115,40 @@ class PythonVenvPlugin(Plugin):
         return {'PATH': '{}/bin:PATH'.format(self.venv_dir)}
 
 
+class AptitudeInstallStep(BuildStep):
+
+    def __init__(self, packages):
+        packages = ' '.join(packages)
+        cmd = ' '.join(['aptitude install -y', packages])
+        name = 'Installing packages with aptitude'
+        super().__init__(name, cmd, stop_on_fail=True)
+
+    @asyncio.coroutine
+    def execute(self, cwd, **envvars):
+        # here is a hack to avoid break the build when another process
+        # is using apt.
+        step_info = yield from super().execute(cwd, **envvars)
+        status = step_info['status']
+        output = step_info['output']
+        busy_apt = (status == 'fail' and
+                    'is another process using it?' in output)
+
+        while busy_apt:
+            yield from asyncio.sleep(1)
+            step_info = yield from super().execute(cwd, **envvars)
+            status = step_info['status']
+            output = step_info['output']
+            busy_apt = (status == 'fail' and
+                        'another process using it?' in output)
+
+        return step_info
+
+
 class AptitudeInstallPlugin(Plugin):
 
     """Installs packages using aptitude."""
 
     name = 'aptitude-install'
-    aptitude_install_command = 'sudo aptitude install -y'
 
     def __init__(self, packages):
         """Initializes the plugin.
@@ -129,8 +157,5 @@ class AptitudeInstallPlugin(Plugin):
         self.packages = packages
 
     def get_steps_before(self):
-        packages = ' '.join(self.packages)
-        cmd = ' '.join([self.aptitude_install_command, packages])
-        step = BuildStep('Installing packages with aptitude', cmd,
-                         stop_on_fail=True)
+        step = AptitudeInstallStep(self.packages)
         return [step]

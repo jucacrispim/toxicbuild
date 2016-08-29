@@ -121,6 +121,34 @@ class PythonVenvPluginTest(TestCase):
         self.assertEqual(expected, env_vars)
 
 
+class AptitudeInstallStep(TestCase):
+
+    @patch.object(plugins.BuildStep, 'execute', MagicMock())
+    @async_test
+    def test_execute_with_busy_apt(self):
+
+        packages = ['libawesome', 'libawesome-dev']
+        step = plugins.AptitudeInstallStep(packages)
+
+        self.COUNT = -1
+
+        @asyncio.coroutine
+        def execute(*a, **kw):
+            self.COUNT += 1
+            if self.COUNT == 0:
+                return {'status': 'fail',
+                        'output': 'E: is another process using it?'}
+            else:
+                return {'status': 'success',
+                        'output': 'foi!'}
+
+        plugins.BuildStep.execute = execute
+
+        step_info = yield from step.execute('.')
+        self.assertEqual(step_info['output'], 'foi!')
+        self.assertEqual(self.COUNT, 1)
+
+
 class AptitudeInstallPluginTest(TestCase):
 
     def setUp(self):
@@ -132,9 +160,7 @@ class AptitudeInstallPluginTest(TestCase):
 
     def test_get_steps_before(self):
         expected = [
-            plugins.BuildStep(
-                'Installing packages with aptitude',
-                'sudo aptitude install -y libawesome libawesome-dev'),
+            plugins.AptitudeInstallStep(self.plugin.packages)
         ]
 
         steps_before = self.plugin.get_steps_before()
