@@ -55,11 +55,17 @@
       {% for i, build in enumerate(ordered_builds(buildset.builds)) %}
       <td class="builder-column">
 	{% for ending in get_ending(build, i, builders)%}
-   	  {{ending}}
+   	  {% raw ending %}
 	{% end %}
 	<ul>
 	  <li class="step step-{{build.status}}">
 	    Build - {{build.status}}
+	    <button type="button" class="btn btn-default btn-rebuild btn-rebuild-build btn-sm"
+		    data-buildset-commit="{{buildset.commit}}"
+		    data-buildset-branch="{{buildset.branch}}"
+		    data-builder-name="{{ _get_builder(builders, i).name}}">
+
+	      <span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>
 	  </li>
 	  {% for step in build.steps %}
 	  <li class="step step-{{step.status}}">

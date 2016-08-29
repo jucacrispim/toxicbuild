@@ -36,7 +36,34 @@ jQuery('.btn-rebuild-buildset').on('click', function(event){
   var branch = button.data('buildset-branch');
   var url = '/api/repo/start-build';
   var data = {name: 'ToxicBuild', named_tree: named_tree, branch: branch};
-  utils.sendAjax('post', url, data);
+  var success_cb = function(response){
+    utils.showSuccessMessage('Buildset re-scheduled.');
+  };
+
+  var error_cb = function(response){
+    utils.showErrorMessage('Error re-scheduling buildset!');
+  };
+
+  utils.sendAjax('post', url, data, success_cb, error_cb);
+});
+
+jQuery('.btn-rebuild-build').on('click', function(event){
+  var button = jQuery(this);
+  var named_tree = button.data('buildset-commit');
+  var branch = button.data('buildset-branch');
+  var builder_name = button.data('builder-name');
+  var url = '/api/repo/start-build';
+  var data = {name: 'ToxicBuild', named_tree: named_tree, branch: branch,
+	      builder_name: builder_name};
+  var success_cb = function(response){
+    utils.showSuccessMessage('Build re-scheduled.')
+  };
+
+  var error_cb = function(response){
+    utils.showErrorMessage('Error re-scheduling build!')
+  };
+
+  utils.sendAjax('post', url, data, success_cb, error_cb);
 });
 
 var BUILDER_SIZE = null;
