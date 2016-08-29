@@ -308,7 +308,7 @@ class Repository(Document, utils.LoggerMixin):
     @asyncio.coroutine
     def add_builds_for_slave(self, buildset, slave, builders=[]):
         yield from self.build_manager.add_builds_for_slave(
-            buildset, slave, builders=[])
+            buildset, slave, builders=builders)
 
 
 class RepositoryRevision(Document):
