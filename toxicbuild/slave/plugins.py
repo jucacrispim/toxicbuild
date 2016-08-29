@@ -119,7 +119,7 @@ class AptitudeInstallStep(BuildStep):
 
     def __init__(self, packages, timeout=600):
         packages = ' '.join(packages)
-        cmd = ' '.join(['aptitude install -y', packages])
+        cmd = ' '.join(['sudo aptitude install -y', packages])
         name = 'Installing packages with aptitude'
         super().__init__(name, cmd, stop_on_fail=True, timeout=timeout)
 

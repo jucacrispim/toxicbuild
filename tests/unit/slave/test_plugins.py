@@ -166,3 +166,4 @@ class AptitudeInstallPluginTest(TestCase):
         steps_before = self.plugin.get_steps_before()
 
         self.assertEqual(expected, steps_before)
+        self.assertTrue(expected[0].command.startswith('sudo'))
