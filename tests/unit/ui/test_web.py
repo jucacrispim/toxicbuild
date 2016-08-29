@@ -162,13 +162,14 @@ class RepositoryHandlerTest(AsyncTestCase):
                              'builder_name': [b'bla'],
                              'slaves': [b'slave1', b'slave2'], }
         expected = {'name': 'myrepo', 'branch': 'master',
-                    'builder_name': 'bla', 'slaves': ['slave1', 'slave2']}
+                    'builder_name': 'bla', 'slaves': ['slave1', 'slave2'],
+                    'named_tree': None}
         application = MagicMock()
         handler = web.RepositoryHandler(application, request=request,
                                         model=web.Repository)
         handler.request.uri = 'localhost:8000/start-build'
         handler.prepare()
-        self.assertEqual(handler.request.arguments, expected)
+        self.assertEqual(handler.params, expected)
 
     @patch.object(web.BaseModelHandler, 'delete',
                   gen.coroutine(lambda x: None))
