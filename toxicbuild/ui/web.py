@@ -252,13 +252,11 @@ class WaterfallHandler(LoggedTemplateHandler):
             return sorted(
                 builds, key=lambda b: builders[builders.index(b.builder)].name)
 
-        def _get_builder(builders, i):
-            return builders[i]
-
+        get_builder = lambda builders, i: builders[i]  # pragma no branch
         context = {'buildsets': buildsets, 'builders': builders,
                    'ordered_builds': _ordered_builds,
                    'get_ending': self._get_ending,
-                   '_get_builder': _get_builder}
+                   'get_builder': get_builder}
         self.render_template(self.template, context)
 
     @asyncio.coroutine
