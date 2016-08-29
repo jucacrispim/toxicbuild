@@ -189,8 +189,9 @@ class RepositoryHandler(BaseModelHandler):
         kw['builder_name'] = self.params.get('builder_name')
         kw['branch'] = self.params.get('branch')
         kw['slaves'] = self.params.getlist('slaves')
+        kw['named_tree'] = self.params.get('named_tree')
 
-        self.request.arguments = kw
+        self.params = kw
 
 
 class SlaveHandler(BaseModelHandler):

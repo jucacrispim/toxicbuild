@@ -30,6 +30,15 @@ jQuery('#buildsetDetailsModal').on('show.bs.modal', function (event) {
   modal.find('#buildset-branch').text(branch);
 });
 
+jQuery('.btn-rebuild-buildset').on('click', function(event){
+  var button = jQuery(this);
+  var named_tree = button.data('buildset-commit');
+  var branch = button.data('buildset-branch');
+  var url = '/api/repo/start-build';
+  var data = {name: 'ToxicBuild', named_tree: named_tree, branch: branch};
+  utils.sendAjax('post', url, data);
+});
+
 var BUILDER_SIZE = null;
 
 function sticky_relocate() {

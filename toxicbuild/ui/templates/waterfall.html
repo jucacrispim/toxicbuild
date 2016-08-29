@@ -42,6 +42,13 @@
 	      details
 	    </button>
 
+	    <button type="button" class="btn btn-default btn-rebuild btn-rebuild-buildset btn-sm"
+		    data-buildset-commit="{{buildset.commit}}"
+		    data-buildset-branch="{{buildset.branch}}">
+
+	      <span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>
+	    </button>
+
 	  </li>
 	</ul>
       </td>
@@ -85,5 +92,6 @@
 <script src="{{static_url}}toxicbuild/js/jquery.min.js"></script>
 <!-- Include all compiled plugins (below), or include individual files as needed -->
 <script src="{{static_url}}toxicbuild/js/bootstrap.min.js"></script>
+<script src="{{static_url}}toxicbuild/js/utils.js"></script>
 <script src="{{static_url}}toxicbuild/js/waterfall.js"></script>
 {% end %}

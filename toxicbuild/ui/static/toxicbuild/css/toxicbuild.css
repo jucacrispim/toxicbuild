@@ -130,8 +130,17 @@ tr:nth-child(even) {
     margin-top:9%;
 }
 
+.btn-rebuild,
+.btn-rebuild:focus,
+.btn-rebuild:hover,
+.btn-rebuild:active,
+.btn-rebuild.active:focus,
+.btn-rebuild:visited,
+.btn-rebuild.active:focus,
+.btn-rebuild:active:focus,
 .btn-main-edit:focus,
 .btn-main-edit:hover,
+.btn-main-edit.active:focus,
 .btn-main-edit:active,
 .btn-main-edit:visited,
 .btn-main-edit.active:focus,
@@ -142,9 +151,10 @@ tr:nth-child(even) {
     outline: none;
 }
 
+.btn-rebuild:hover,
+.btn-rebuild.active:focus,
 .btn-main-edit:hover,
 .btn-main-edit.active:focus,
-.btn-main-edit:active:focus,
 .btn-main-edit:active{
     color: #b5a5a5;
 }
@@ -241,7 +251,7 @@ tr:nth-child(even) {
 
 .builder-success,
 .step-success{
-    background-color: #5cb85c;
+    background-color: #3caf3c;
 }
 
 .btn-pending,
