@@ -252,7 +252,9 @@ class WaterfallHandler(LoggedTemplateHandler):
             return sorted(
                 builds, key=lambda b: builders[builders.index(b.builder)].name)
 
-        get_builder = lambda builders, i: builders[i]  # pragma no branch
+        def get_builder(builders, i):  # pragma no cover
+            return builders[i]
+
         context = {'buildsets': buildsets, 'builders': builders,
                    'ordered_builds': _ordered_builds,
                    'get_ending': self._get_ending,
