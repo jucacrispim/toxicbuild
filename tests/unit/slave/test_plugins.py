@@ -119,3 +119,24 @@ class PythonVenvPluginTest(TestCase):
         env_vars = self.plugin.get_env_vars()
 
         self.assertEqual(expected, env_vars)
+
+
+class AptitudeInstallPluginTest(TestCase):
+
+    def setUp(self):
+        packages = ['libawesome', 'libawesome-dev']
+        self.plugin = plugins.AptitudeInstallPlugin(packages=packages)
+
+    def test_name(self):
+        self.assertEqual(self.plugin.name, 'aptitude-install')
+
+    def test_get_steps_before(self):
+        expected = [
+            plugins.BuildStep(
+                'Installing packages with aptitude',
+                'sudo aptitude install -y libawesome libawesome-dev'),
+        ]
+
+        steps_before = self.plugin.get_steps_before()
+
+        self.assertEqual(expected, steps_before)

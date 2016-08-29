@@ -113,3 +113,24 @@ class PythonVenvPlugin(Plugin):
 
     def get_env_vars(self):
         return {'PATH': '{}/bin:PATH'.format(self.venv_dir)}
+
+
+class AptitudeInstallPlugin(Plugin):
+
+    """Installs packages using aptitude."""
+
+    name = 'aptitude-install'
+    aptitude_install_command = 'sudo aptitude install -y'
+
+    def __init__(self, packages):
+        """Initializes the plugin.
+        :param packages: A list of packages names to be installed."""
+
+        self.packages = packages
+
+    def get_steps_before(self):
+        packages = ' '.join(self.packages)
+        cmd = ' '.join([self.aptitude_install_command, packages])
+        step = BuildStep('Installing packages with aptitude', cmd,
+                         stop_on_fail=True)
+        return [step]
