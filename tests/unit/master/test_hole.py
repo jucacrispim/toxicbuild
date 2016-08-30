@@ -390,7 +390,7 @@ class HoleHandlerTest(TestCase):
         data = {'host': '127.0.0.1', 'port': 7777}
         handler = hole.HoleHandler(data, 'slave-remove', MagicMock())
         yield from handler.slave_remove(slave_name='name')
-        yield from asyncio.sleep(0.01)
+        yield from asyncio.sleep(0.1)
         self.assertEqual((yield from hole.Slave.objects.count()), 0)
 
     @async_test
