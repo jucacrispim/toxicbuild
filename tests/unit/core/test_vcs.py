@@ -106,7 +106,7 @@ class GitTest(TestCase):
 
     @async_test
     def test_fetch(self):
-        expected_cmd = 'git fetch 2>&1'
+        expected_cmd = 'git fetch'
 
         @asyncio.coroutine
         def e(cmd, cwd):

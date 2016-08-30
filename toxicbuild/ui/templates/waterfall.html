@@ -66,7 +66,7 @@
 	<ul>
 	  <li class="step step-{{build.status}}">
 	    Build - {{build.status}}
-	    <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" {% if build.status in ['idle', 'running'] %} style="display:none" {% end %}>
+	    <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" {% if build.status in ['pending', 'running'] %} style="display:none" {% end %}>
 	      <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-build btn-sm"
 		      data-buildset-commit="{{buildset.commit}}"
 		      data-buildset-branch="{{buildset.branch}}"
