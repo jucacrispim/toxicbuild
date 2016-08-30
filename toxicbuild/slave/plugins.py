@@ -123,26 +123,6 @@ class AptitudeInstallStep(BuildStep):
         name = 'Installing packages with aptitude'
         super().__init__(name, cmd, stop_on_fail=True, timeout=timeout)
 
-    @asyncio.coroutine
-    def execute(self, cwd, **envvars):
-        # here is a hack to avoid break the build when another process
-        # is using apt.
-        step_info = yield from super().execute(cwd, **envvars)
-        status = step_info['status']
-        output = step_info['output']
-        busy_apt = (status == 'fail' and
-                    '(11: Resource temporarily unavailable)' in output)
-
-        while busy_apt:
-            yield from asyncio.sleep(1)
-            step_info = yield from super().execute(cwd, **envvars)
-            status = step_info['status']
-            output = step_info['output']
-            busy_apt = (status == 'fail' and
-                        '(11: Resource temporarily unavailable)' in output)
-
-        return step_info
-
 
 class AptitudeInstallPlugin(Plugin):
 
