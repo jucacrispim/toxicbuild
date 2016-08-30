@@ -43,7 +43,7 @@
 	      details
 	    </button>
 
-	    <button type="button" class="btn btn-default btn-rebuild btn-rebuild-buildset btn-sm"
+	    <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-buildset btn-sm"
 		    data-buildset-commit="{{buildset.commit}}"
 		    data-buildset-branch="{{buildset.branch}}">
 
@@ -61,7 +61,7 @@
 	<ul>
 	  <li class="step step-{{build.status}}">
 	    Build - {{build.status}}
-	    <button type="button" class="btn btn-default btn-rebuild btn-rebuild-build btn-sm"
+	    <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-build btn-sm"
 		    data-buildset-commit="{{buildset.commit}}"
 		    data-buildset-branch="{{buildset.branch}}"
 		    data-builder-name="{{ get_builder(builders, i).name}}">

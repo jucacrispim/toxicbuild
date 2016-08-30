@@ -130,6 +130,15 @@ tr:nth-child(even) {
     margin-top:9%;
 }
 
+
+.btn-transparent,
+.btn-transparent:focus,
+.btn-transparent:hover,
+.btn-transparent:active,
+.btn-transparent.active:focus,
+.btn-transparent:visited,
+.btn-transparent.active:focus,
+.btn-tranparent:active:focus,
 .btn-rebuild,
 .btn-rebuild:focus,
 .btn-rebuild:hover,
@@ -151,6 +160,12 @@ tr:nth-child(even) {
     outline: none;
 }
 
+.btn-transparent{
+    color: #000;
+}
+
+.btn-tranparent:hover,
+.btn-tranparent.active:focus,
 .btn-rebuild:hover,
 .btn-rebuild.active:focus,
 .btn-main-edit:hover,
