@@ -739,6 +739,7 @@ class UIStreamHandlerTest(TestCase):
         self.assertEqual(self.CODE, 0)
         self.assertIn('steps', self.BODY.keys())
 
+    @async_test
     def test_send_repo_status_info(self):
         testrepo = yield from repository.Repository.create('name',
                                                            'git@git.nada',

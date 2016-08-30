@@ -24,9 +24,9 @@
 
 import asyncio
 try:
-    from asyncio import async as ensure_future
-except ImportError:
     from asyncio import ensure_future
+except ImportError:
+    from asyncio import async as ensure_future
 
 import inspect
 import json
@@ -520,6 +520,7 @@ class UIStreamHandler:
 
         return f
 
+    @asyncio.coroutine
     def send_repo_status_info(self, repo, old_status, new_status):
         """Called by the signal ``repo_status_changed``"""
 

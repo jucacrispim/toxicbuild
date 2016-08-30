@@ -431,6 +431,14 @@ class RepositoryTest(TestCase):
                 yield from rev.save()
 
 
+class RepositoryBranchTest(TestCase):
+
+    def test_to_dict(self):
+        branch = repository.RepositoryBranch(name='master')
+        branch_dict = branch.to_dict()
+        self.assertTrue(branch_dict['name'])
+
+
 class RepositoryRevisionTest(TestCase):
 
     @async_test
