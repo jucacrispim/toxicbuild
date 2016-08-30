@@ -139,11 +139,6 @@ class BuildStep(EmbeddedDocument):
     started = DateTimeField(default=None)
     finished = DateTimeField(default=None)
 
-    def __eq__(self, other):
-        if hasattr(other, 'uuid'):
-            return self.uuid == other.uuid
-        return False
-
     def to_dict(self):
         objdict = json.loads(super().to_json())
         keys = objdict.keys()
@@ -161,29 +156,6 @@ class BuildStep(EmbeddedDocument):
 
     def to_json(self):
         return json.dumps(self.to_dict())
-
-    @asyncio.coroutine
-    def update(self):
-        """Does an atomic update on this embedded document."""
-
-        try:
-            buildset = yield from BuildSet.objects.get(
-                builds__steps__uuid=self.uuid)
-        except BuildSet.DoesNotExist:
-            msg = 'This Step was not saved to database.'
-            msg += ' You can\'t update it.\n'
-            msg += 'command: {}'.format(self.command)
-            raise DBError(msg)
-
-        build = [b for b in buildset.builds if self in b.steps][0]
-        build_index = buildset.builds.index(build)
-        step_index = build.steps.index(self)
-
-        kw = {'set__builds__{}__steps__{}'.format(
-            build_index, step_index): self}
-        result = yield from BuildSet.objects(
-            builds__steps__uuid=self.uuid).update_one(**kw)
-        return result
 
 
 class Build(EmbeddedDocument):
