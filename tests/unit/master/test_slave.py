@@ -65,6 +65,15 @@ class SlaveTest(TestCase):
         self.assertTrue(slave_dict['id'])
 
     @async_test
+    def test_to_dict_id_as_str(self):
+        slave_inst = yield from slave.Slave.create(name='name',
+                                                   host='somewhere.net',
+                                                   port=7777,
+                                                   token='asdf')
+        slave_dict = slave_inst.to_dict(id_as_str=True)
+        self.assertIsInstance(slave_dict['id'], str)
+
+    @async_test
     def test_get(self):
         slave_inst = yield from slave.Slave.create(name='name',
                                                    host='somewhere.net',
