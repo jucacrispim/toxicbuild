@@ -54,6 +54,12 @@ class Slave(Document, LoggerMixin):
         yield from to_asyncio_future(slave.save())
         return slave
 
+    def to_dict(self):
+        my_dict = {'name': self.name, 'host': self.host,
+                   'port': self.port, 'token': self.token,
+                   'is_alive': self.is_alive, 'id': self.id}
+        return my_dict
+
     @classmethod
     @asyncio.coroutine
     def get(cls, **kwargs):
