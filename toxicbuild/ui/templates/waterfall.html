@@ -70,19 +70,20 @@
 	  </li>
 	  {% for step in build.steps %}
 	  <li class="step step-{{step.status}}">
-	    {{step.name}} - {{step.status}}
-	    <button type="button" class="btn btn-step-details btn-sm"
-		    data-toggle="modal"
-		    data-target="#stepDetailsModal"
-		    data-dismiss="modal"
-		    data-step-command="{{step.command}}"
-		    data-step-output="{{step.output}}"
-		    data-step-status="{{step.status}}"
-		    data-step-start="{{step.started}}"
-		    data-step-end="{{step.finished}}">
-	      details
-	    </button>
-
+	    <div class="build-step-info-container">
+	      {{step.name}} - {{step.status}}
+	      <button type="button" class="btn btn-step-details btn-sm"
+		      data-toggle="modal"
+		      data-target="#stepDetailsModal"
+		      data-dismiss="modal"
+		      data-step-command="{{step.command}}"
+		      data-step-output="{{step.output}}"
+		      data-step-status="{{step.status}}"
+		      data-step-start="{{step.started}}"
+		      data-step-end="{{step.finished}}">
+		details
+	      </button>
+	    </div>
 	  </li>
 	  {% end %}
 	</ul>

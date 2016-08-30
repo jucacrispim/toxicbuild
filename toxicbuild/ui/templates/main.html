@@ -5,10 +5,12 @@
 <div class="page-header">
   <h4 class="main-section-title">Repositories</h4>
   <!-- Button trigger modal add repository -->
-  <button type="button" class="btn btn-primary btn-xs btn-main-add"
+  <span data-toggle="tooltip" title="Add new repository" data-placement="right">
+    <button type="button" class="btn btn-primary btn-xs btn-main-add"
 	  data-toggle="modal" data-target="#repoModal">
-    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-  </button>
+      <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+    </button>
+  </span>
 </div>
 
 {% include "repository_modal.html" %}
@@ -27,20 +29,24 @@
       <tr id="repo-row-{{repo.name}}">
 	<td>
 	  {{repo.name}}
-	  <button type="button" class="btn btn-default btn-xs btn-main-edit"
-		  data-toggle="modal" data-target="#repoModal"
-		  data-repo-name="{{repo.name}}" data-repo-url="{{repo.url}}"
-		  data-repo-update-seconds="{{repo.update_seconds}}"
-		  data-repo-vcs-type="{{repo.vcs_type}}"
-		  data-repo-id="{{repo.id}}">
-	    <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
-	  </button>
+	  <span data-toggle="tooltip" title="Edit repository" data-placement="right">
+	    <button type="button" class="btn btn-default btn-xs btn-main-edit"
+		    data-toggle="modal" data-target="#repoModal"
+		    data-repo-name="{{repo.name}}" data-repo-url="{{repo.url}}"
+		    data-repo-update-seconds="{{repo.update_seconds}}"
+		    data-repo-vcs-type="{{repo.vcs_type}}"
+		    data-repo-id="{{repo.id}}">
+	      <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+	    </button>
+	  </span>
 	</td>
 	<td>{{repo.url}}</td>
 	<td>
 	  <form action="/waterfall/{{repo.name}}">
-	    <button type="submit" class="btn btn-xs btn-{{get_btn_class(repo.status)}} btn-status">{{repo.status}}
-	    </button>
+	    <span data-toggle="tooltip" title="Go to waterfall" data-placement="right">
+	      <button type="submit" class="btn btn-xs btn-{{get_btn_class(repo.status)}} btn-status">{{repo.status}}
+	      </button>
+	    </span>
 	  </form>
 	</td>
       </tr>
@@ -52,10 +58,12 @@
 
 <div class="page-header">
   <h4 class="main-section-title">Slaves</h4>
-  <button type="button" class="btn btn-primary btn-xs btn-main-add"
-	  data-toggle="modal" data-target="#slaveModal">
-    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-  </button>
+  <span data-toggle="tooltip" title="Add new slave">
+    <button type="button" class="btn btn-primary btn-xs btn-main-add"
+	    data-toggle="modal" data-target="#slaveModal">
+      <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+    </button>
+  </span>
 </div>
 
 {% include "slave_modal.html" %}
@@ -72,15 +80,17 @@
       <tr id="obj-row-{{slave.id}}">
 	<td>
 	  {{slave.name}}
-	  <button type="button" class="btn btn-default btn-xs btn-main-edit"
-		  data-toggle="modal"
-		  data-target="#slaveModal"
-		  data-obj-id="{{slave.id}}"
-		  data-slave-name="{{slave.name}}"
-		  data-slave-host="{{slave.host}}"
-		  data-slave-port="{{slave.port}}">
-	    <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
-	  </button>
+	  <span data-toggle="tooltip" title="Edit slave" data-placement="right">
+	    <button type="button" class="btn btn-default btn-xs btn-main-edit"
+		    data-toggle="modal"
+		    data-target="#slaveModal"
+		    data-obj-id="{{slave.id}}"
+		    data-slave-name="{{slave.name}}"
+		    data-slave-host="{{slave.host}}"
+		    data-slave-port="{{slave.port}}">
+	      <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+	    </button>
+	  </span>
 	</td>
 	<td>{{slave.host}}</td>
 	<td>{{slave.port}}</td>
@@ -109,6 +119,10 @@
   var SLAVES = {{[s.name for s in slaves]}};
   RepositoryManager.init({{[r.to_json() for r in repos]}});
   SlaveManager.init({{[s.to_json() for s in slaves]}});
+
+  jQuery(function () {
+    jQuery('[data-toggle="tooltip"]').tooltip()
+  });
 </script>
 
 {% end %}
