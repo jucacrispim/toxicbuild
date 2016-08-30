@@ -41,6 +41,52 @@ class BuildStepTest(TestCase):
         bsd = build.json.loads(bs.to_json())
         self.assertIn('finished', bsd.keys())
 
+    @async_test
+    def test_update(self):
+        yield from self._create_test_data()
+        s = self.buildset.builds[0].steps[0]
+        s.status = 'fail'
+        yield from s.update()
+
+        buildset = yield from build.BuildSet.objects.get(id=self.buildset.id)
+        self.assertEqual(buildset.builds[0].steps[0].status, 'fail')
+
+    @async_test
+    def test_update_without_save(self):
+        yield from self._create_test_data()
+
+        s = build.BuildStep(name='test-step', command='ls')
+
+        with self.assertRaises(build.DBError):
+            yield from s.update()
+
+    @asyncio.coroutine
+    def _create_test_data(self):
+        self.repo = repository.Repository(name='bla', url='git@bla.com')
+        yield from self.repo.save()
+        self.slave = slave.Slave(name='sla', host='localhost', port=1234,
+                                 token='123')
+        yield from self.slave.save()
+        self.builder = build.Builder(repository=self.repo, name='builder-bla')
+        yield from self.builder.save()
+        step = build.BuildStep(name='test-step', command='ls',
+                               status='running')
+        b = build.Build(branch='master', builder=self.builder,
+                        repository=self.repo, slave=self.slave,
+                        named_tree='v0.1', steps=[step])
+        self.rev = repository.RepositoryRevision(commit='saçfijf',
+                                                 commit_date=now(),
+                                                 repository=self.repo,
+                                                 branch='master',
+                                                 author='tião',
+                                                 title='blabla')
+        yield from self.rev.save()
+
+        self.buildset = yield from build.BuildSet.create(repository=self.repo,
+                                                         revision=self.rev)
+        self.buildset.builds.append(b)
+        yield from self.buildset.save()
+
 
 class BuildTest(TestCase):
 
@@ -59,7 +105,7 @@ class BuildTest(TestCase):
                              command='ls',
                              status='pending')
         self.buildset.builds[0].steps.append(bs)
-        bd = build.json.loads((yield from self.buildset.builds[0].to_json()))
+        bd = build.json.loads(self.buildset.builds[0].to_json())
         self.assertIn('finished', bd['steps'][0].keys())
         self.assertTrue(bd['builder']['id'])
 
@@ -136,7 +182,7 @@ class BuildSetTest(TestCase):
     @async_test
     def test_to_dict(self):
         yield from self._create_test_data()
-        objdict = yield from self.buildset.to_dict()
+        objdict = self.buildset.to_dict()
         self.assertEqual(len(objdict['builds']), 1)
         self.assertTrue(objdict['commit_date'])
 
@@ -144,7 +190,7 @@ class BuildSetTest(TestCase):
     def test_to_json(self):
         yield from self._create_test_data()
 
-        objdict = build.json.loads((yield from self.buildset.to_json()))
+        objdict = build.json.loads(self.buildset.to_json())
         self.assertTrue(objdict['id'])
 
     @async_test

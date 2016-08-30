@@ -344,7 +344,7 @@ class HoleHandler:
         buildsets = yield from buildsets.to_list()
         buildset_list = []
         for b in buildsets:
-            bdict = yield from b.to_dict(id_as_str=True)
+            bdict = b.to_dict(id_as_str=True)
             buildset_list.append(bdict)
 
         return {'buildset-list': buildset_list}
@@ -385,10 +385,10 @@ class HoleHandler:
         buildsets = yield from buildsets.to_list()
         buildsets_list = []
         for buildset in buildsets:
-            bdict = yield from buildset.to_dict()
+            bdict = buildset.to_dict()
             bdict['builds'] = []
             for b in (yield from buildset.get_builds_for(builder=builder)):
-                build_dict = yield from b.to_dict()
+                build_dict = b.to_dict()
                 bdict['builds'].append(build_dict)
 
             buildsets_list.append(bdict)
@@ -491,7 +491,7 @@ class UIStreamHandler:
         repo = yield from build.repository
         slave = yield from build.slave
 
-        build = yield from build.to_dict()
+        build = build.to_dict()
         slave = json.loads(slave.to_json())
         repo = json.loads(repo.to_json())
 

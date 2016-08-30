@@ -22,6 +22,9 @@ settings = Settings(ENVVAR, DEFAULT_SETTINGS)
 dbsettings = settings.DATABASE
 dbconn = connect(**dbsettings)
 
+# creating indexes
+BuildSet.ensure_indexes()
+
 
 @asyncio.coroutine
 def toxicinit():  # pragma no cover

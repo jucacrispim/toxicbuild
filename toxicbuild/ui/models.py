@@ -305,6 +305,6 @@ class BuildSet(BaseModel):
 
         with (yield from cls.get_client()) as client:
             buildsets = yield from client.buildset_list(repo_name=repo_name,
-                                                        offset=20)
+                                                        offset=10)
         buildset_list = [cls(**buildset) for buildset in buildsets]
         return buildset_list

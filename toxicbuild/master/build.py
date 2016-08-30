@@ -131,12 +131,18 @@ class BuildStep(EmbeddedDocument):
     STATUSES = ['running', 'fail', 'success', 'exception',
                 'warning']
 
+    uuid = UUIDField(required=True, default=lambda: uuid4())
     name = StringField(required=True)
     command = StringField(required=True)
     status = StringField(choices=STATUSES)
     output = StringField()
     started = DateTimeField(default=None)
     finished = DateTimeField(default=None)
+
+    def __eq__(self, other):
+        if hasattr(other, 'uuid'):
+            return self.uuid == other.uuid
+        return False
 
     def to_dict(self):
         objdict = json.loads(super().to_json())
@@ -155,6 +161,29 @@ class BuildStep(EmbeddedDocument):
 
     def to_json(self):
         return json.dumps(self.to_dict())
+
+    @asyncio.coroutine
+    def update(self):
+        """Does an atomic update on this embedded document."""
+
+        try:
+            buildset = yield from BuildSet.objects.get(
+                builds__steps__uuid=self.uuid)
+        except BuildSet.DoesNotExist:
+            msg = 'This Step was not saved to database.'
+            msg += ' You can\'t update it.\n'
+            msg += 'command: {}'.format(self.command)
+            raise DBError(msg)
+
+        build = [b for b in buildset.builds if self in b.steps][0]
+        build_index = buildset.builds.index(build)
+        step_index = build.steps.index(self)
+
+        kw = {'set__builds__{}__steps__{}'.format(
+            build_index, step_index): self}
+        result = yield from BuildSet.objects(
+            builds__steps__uuid=self.uuid).update_one(**kw)
+        return result
 
 
 class Build(EmbeddedDocument):
@@ -176,7 +205,6 @@ class Build(EmbeddedDocument):
     status = StringField(default=PENDING, choices=STATUSES)
     steps = ListField(EmbeddedDocumentField(BuildStep))
 
-    @asyncio.coroutine
     def to_dict(self, id_as_str=False):
         steps = [s.to_dict() for s in self.steps]
         objdict = json.loads(super().to_json())
@@ -184,9 +212,8 @@ class Build(EmbeddedDocument):
         objdict['steps'] = steps
         return objdict
 
-    @asyncio.coroutine
     def to_json(self):
-        objdict = yield from self.to_dict(id_as_str=True)
+        objdict = self.to_dict(id_as_str=True)
         return json.dumps(objdict)
 
     @asyncio.coroutine
@@ -223,6 +250,12 @@ class BuildSet(SerializeMixin, Document):
     # when this buildset was first created.
     created = DateTimeField(default=now)
 
+    meta = {
+        'indexes': [
+            'repository'
+        ]
+    }
+
     @queryset_manager
     def objects(doc_cls, queryset):
         return queryset.order_by('created')
@@ -246,19 +279,18 @@ class BuildSet(SerializeMixin, Document):
             yield from buildset.save()
         return buildset
 
-    @asyncio.coroutine
     def to_dict(self, id_as_str=False):
         objdict = super().to_dict(id_as_str=id_as_str)
         objdict['commit_date'] = datetime2string(self.commit_date)
         objdict['builds'] = []
         for b in self.builds:
-            bdict = yield from b.to_dict(id_as_str=id_as_str)
+            bdict = b.to_dict(id_as_str=id_as_str)
             objdict['builds'].append(bdict)
         return objdict
 
-    @asyncio.coroutine
     def to_json(self):
-        return (yield from self.async_to_json())
+        objdict = self.to_dict(id_as_str=True)
+        return json.dumps(objdict)
 
     def get_status(self):
         build_statuses = set([b.status for b in self.builds])

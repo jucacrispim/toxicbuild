@@ -128,7 +128,7 @@ class Slave(Document, LoggerMixin):
                 build.steps.append(exception_step)
 
                 yield from build.update()
-                build_info = yield from build.to_dict()
+                build_info = build.to_dict()
 
         return build_info
 
@@ -147,12 +147,14 @@ class Slave(Document, LoggerMixin):
                 build.finished = string2datetime(finished)
 
             yield from build.update()
+
             if not build.finished:
                 msg = 'build started at {}'.format(build_info['started'])
                 self.log(msg)
                 build_started.send(repo, build=build)
             else:
-                msg = 'build finished at {}'.format(build_info['finished'])
+                msg = 'build finished at {} with status {}'.format(
+                    build_info['finished'], build.status)
                 self.log(msg)
                 build_finished.send(repo, build=build)
 
@@ -178,7 +180,7 @@ class Slave(Document, LoggerMixin):
                 step.output = output
                 step.finished = string2datetime(finished)
                 requested_step = step
-                msg = 'step {} finished at {} with status'.format(
+                msg = 'step {} finished at {} with status {}'.format(
                     step.command, finished, step.status)
                 self.log(msg, level='debug')
                 step_finished.send(repo, build=build, step=requested_step)
@@ -193,4 +195,7 @@ class Slave(Document, LoggerMixin):
             step_started.send(repo, build=build, step=requested_step)
             build.steps.append(requested_step)
 
-        yield from build.update()
+            yield from build.update()
+        else:
+            # yield from step.update()
+            pass
