@@ -627,25 +627,29 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'step_finished', Mock())
     @patch.object(hole, 'build_started', Mock())
     @patch.object(hole, 'build_finished', Mock())
+    @patch.object(hole, 'repo_status_changed', Mock())
     def test_disconnectfromsignals(self):
 
         self.handler._disconnectfromsignals()
         self.assertTrue(all([hole.step_started.disconnect.called,
                              hole.step_finished.disconnect.called,
                              hole.build_started.disconnect.called,
-                             hole.build_finished.disconnect.called]))
+                             hole.build_finished.disconnect.called,
+                             hole.repo_status_changed.disconnect.called]))
 
     @patch.object(hole, 'step_started', Mock())
     @patch.object(hole, 'step_finished', Mock())
     @patch.object(hole, 'build_started', Mock())
     @patch.object(hole, 'build_finished', Mock())
+    @patch.object(hole, 'repo_status_changed', Mock())
     def test_connect2signals(self):
 
         self.handler._connect2signals()
         self.assertTrue(all([hole.step_started.connect.called,
                              hole.step_finished.connect.called,
                              hole.build_started.connect.called,
-                             hole.build_finished.connect.called]))
+                             hole.build_finished.connect.called,
+                             hole.repo_status_changed.connect.called]))
 
     def test_getattr(self):
         self.assertTrue(self.handler.step_started())
@@ -735,6 +739,27 @@ class UIStreamHandlerTest(TestCase):
         self.assertEqual(self.CODE, 0)
         self.assertIn('steps', self.BODY.keys())
 
+    def test_send_repo_status_info(self):
+        testrepo = yield from repository.Repository.create('name',
+                                                           'git@git.nada',
+                                                           300, 'git')
+        self.CODE = None
+        self.BODY = None
+
+        @asyncio.coroutine
+        def sr(code, body):
+            self.CODE = code
+            self.BODY = body
+
+        self.handler.protocol.send_response = sr
+
+        f = yield from self.handler.send_repo_status_info(repo=testrepo,
+                                                          old_status='running',
+                                                          new_status='fail')
+        yield from f
+
+        self.assertEqual(self.BODY['status'], 'fail')
+
 
 class HoleServerTest(TestCase):
 
@@ -748,8 +773,8 @@ class HoleServerTest(TestCase):
         self.assertEqual(hole.UIHole, type(prot))
 
     @patch.object(hole.asyncio, 'get_event_loop', Mock())
-    @patch.object(hole.asyncio, 'async', Mock())
+    @patch.object(hole, 'ensure_future', Mock())
     def test_serve(self):
         self.server.serve()
 
-        self.assertTrue(hole.asyncio.async.called)
+        self.assertTrue(hole.ensure_future.called)

@@ -43,6 +43,18 @@ class RepositoryTest(TestCase):
         yield from build.Builder.drop_collection()
         super(RepositoryTest, self).tearDown()
 
+    @async_test
+    def test_to_dict(self):
+        yield from self._create_db_revisions()
+        d = yield from self.repo.to_dict()
+        self.assertTrue(d['id'])
+
+    @async_test
+    def test_to_dict_id_as_str(self):
+        yield from self._create_db_revisions()
+        d = yield from self.repo.to_dict(True)
+        self.assertIsInstance(d['id'], str)
+
     def test_workdir(self):
         expected = 'src/git-somewhere.com-project.git'
         self.assertEqual(self.repo.workdir, expected)
@@ -346,6 +358,34 @@ class RepositoryTest(TestCase):
             yield from buildset.save()
 
         self.assertEqual((yield from self.repo.get_status()), 'idle')
+
+    @patch.object(repository, 'repo_status_changed', Mock())
+    @async_test
+    def test_check_for_status_change_not_changing(self):
+        self.repo._old_status = 'running'
+
+        @asyncio.coroutine
+        def get_status():
+            return 'running'
+
+        self.repo.get_status = get_status
+
+        yield from self.repo._check_for_status_change(Mock())
+        self.assertFalse(repository.repo_status_changed.send.called)
+
+    @patch.object(repository, 'repo_status_changed', Mock())
+    @async_test
+    def test_check_for_status_change_changing(self):
+        self.repo._old_status = 'running'
+
+        @asyncio.coroutine
+        def get_status():
+            return 'success'
+
+        self.repo.get_status = get_status
+
+        yield from self.repo._check_for_status_change(Mock())
+        self.assertTrue(repository.repo_status_changed.send.called)
 
     @asyncio.coroutine
     def _create_db_revisions(self):

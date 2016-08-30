@@ -23,6 +23,11 @@
 # In fact, boring module!
 
 import asyncio
+try:
+    from asyncio import async as ensure_future
+except ImportError:
+    from asyncio import ensure_future
+
 import inspect
 import json
 import traceback
@@ -32,7 +37,8 @@ from toxicbuild.master import (Slave, Repository, Builder, BuildSet,
                                RepositoryRevision, settings)
 from toxicbuild.master.exceptions import UIFunctionNotFound
 from toxicbuild.master.signals import (step_started, step_finished,
-                                       build_started, build_finished)
+                                       build_started, build_finished,
+                                       repo_status_changed)
 
 
 class UIHole(BaseToxicProtocol, LoggerMixin):
@@ -474,12 +480,14 @@ class UIStreamHandler:
         step_finished.connect(self.step_finished, weak=False)
         build_started.connect(self.build_started, weak=False)
         build_finished.connect(self.build_finished, weak=False)
+        repo_status_changed.connect(self.send_repo_status_info, weak=False)
 
     def _disconnectfromsignals(self):
         step_started.disconnect(self.step_started)
         step_finished.disconnect(self.step_finished)
         build_started.disconnect(self.build_started)
         build_finished.disconnect(self.build_finished)
+        repo_status_changed.disconnect(self.send_repo_status_info)
 
     @asyncio.coroutine
     def handle(self):
@@ -492,24 +500,34 @@ class UIStreamHandler:
         slave = yield from build.slave
 
         build = build.to_dict()
-        slave = json.loads(slave.to_json())
-        repo = json.loads(repo.to_json())
+        slave = slave.to_dict()
+        repo = repo.to_dict()
 
         build['slave'] = slave
         build['repository'] = repo
 
         if step:
-            step = json.loads(step.to_json())
+            step = step.to_dict()
             step['build'] = build
             info = step
         else:
             info = build
 
-        final_info = {'type': info_type}
+        final_info = {'event_type': info_type}
         final_info.update(info)
 
-        f = asyncio.async(self.protocol.send_response(code=0, body=final_info))
+        f = ensure_future(self.protocol.send_response(code=0, body=final_info))
 
+        return f
+
+    def send_repo_status_info(self, repo, old_status, new_status):
+        """Called by the signal ``repo_status_changed``"""
+
+        rdict = yield from repo.to_dict()
+        rdict['status'] = new_status
+        rdict['old_status'] = old_status
+        rdict['event_type'] = 'repo-status-changed'
+        f = ensure_future(self.protocol.send_response(code=0, body=rdict))
         return f
 
 
@@ -526,7 +544,7 @@ class HoleServer:
         coro = self.loop.create_server(
             self.get_protocol_instance, self.addr,  self.port)
 
-        asyncio.async(coro)
+        ensure_future(coro)
 
     def get_protocol_instance(self):
         return self.protocol(self.loop)

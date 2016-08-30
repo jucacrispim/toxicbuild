@@ -32,6 +32,8 @@ from toxicbuild.master.scheduler import scheduler
 from toxicbuild.master.build import BuildSet, Builder, BuildManager
 from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.pollers import Poller
+from toxicbuild.master.signals import (build_started, build_finished,
+                                       repo_status_changed)
 from toxicbuild.master.slave import Slave
 
 
@@ -48,6 +50,10 @@ class RepositoryBranch(EmbeddedDocument):
     # it here just to remember that this should be unique.
     name = StringField(required=True, unique=True)
     notify_only_latest = BooleanField(default=False)
+
+    def to_dict(self):
+        return {'name': self.name,
+                'notify_only_latest': self.notify_only_latest}
 
 
 class Repository(Document, utils.LoggerMixin):
@@ -68,6 +74,21 @@ class Repository(Document, utils.LoggerMixin):
         super(Repository, self).__init__(*args, **kwargs)
         self._poller_instance = None
         self.build_manager = BuildManager(self)
+        self._old_status = None
+
+    @asyncio.coroutine
+    def to_dict(self, id_as_str=False):
+        my_dict = {'id': self.id, 'name': self.name, 'ur': self.url,
+                   'update_seconds': self.update_seconds,
+                   'vcs_type': self.vcs_type,
+                   'branches': [b.to_dict() for b in self.branches],
+                   'slaves': [s.to_dict(id_as_str)
+                              for s in (yield from self.slaves)],
+                   'clone_status': self.clone_status}
+        if id_as_str:
+            my_dict['id'] = str(self.id)
+
+        return my_dict
 
     @property
     def workdir(self):
@@ -197,17 +218,27 @@ class Repository(Document, utils.LoggerMixin):
 
         * Update source code using ``self.update_code``
         * Starts builds that are pending using
-          ``self.build_manager.start_pending``."""
+          ``self.build_manager.start_pending``.
+        * Connects to ``build_started`` and ``build_finished`` signals
+          to handle changing of status."""
 
         self.log('Scheduling {url}'.format(url=self.url))
         # we store this hashes so we can remove it from the scheduler when
         # we remove the repository.
+
+        # adding update_code
         sched_hash = scheduler.add(self.update_code, self.update_seconds)
         _scheduler_hashes[self.url] = sched_hash
+
+        # adding start_pending
         start_pending_hash = scheduler.add(
             self.build_manager.start_pending, 120)
         _scheduler_hashes['{}-start-pending'.format(
             self.url)] = start_pending_hash
+
+        # connecting to build signals
+        build_started.connect(self._check_for_status_change)
+        build_finished.connect(self._check_for_status_change)
 
     @classmethod
     @asyncio.coroutine
@@ -313,6 +344,20 @@ class Repository(Document, utils.LoggerMixin):
     def add_builds_for_slave(self, buildset, slave, builders=[]):
         yield from self.build_manager.add_builds_for_slave(
             buildset, slave, builders=builders)
+
+    @asyncio.coroutine
+    def _check_for_status_change(self, build):
+        """Called when a build is started or finished. If this event
+        makes the repository change its status triggers a
+        ``repo_status_changed`` signal.
+
+        :param build: The build that was started or finished"""
+
+        status = yield from self.get_status()
+        if status != self._old_status:
+            repo_status_changed.send(repo=self, old_status=self._old_status,
+                                     new_status=status)
+            self._old_status = status
 
 
 class RepositoryRevision(Document):
