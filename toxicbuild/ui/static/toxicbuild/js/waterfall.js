@@ -69,14 +69,15 @@ jQuery('.btn-rebuild-build').on('click', function(event){
   utils.sendAjax('post', url, data, success_cb, error_cb);
 });
 
-var BUILDER_SIZE = null;
+var BUILDER_SIZE = [];
 
 function sticky_relocate() {
+  var i = 0
   jQuery('.builder').each(function(){
     var window_top = jQuery(window).scrollTop();
     var div_top = jQuery(this).offset().top;
     if (window_top >= div_top && window_top > 52){
-      jQuery(this).outerWidth(BUILDER_SIZE);
+      jQuery(this).outerWidth(BUILDER_SIZE[i]);
       jQuery(this).addClass('builder-stick');
     }
     else{
@@ -85,10 +86,13 @@ function sticky_relocate() {
       });
 
     }
+    i += 1;
   });
 }
 
 jQuery(function(){
-  BUILDER_SIZE = jQuery(jQuery('.builder')[0]).outerWidth();
+  jQuery('.builder').each(function (){
+    BUILDER_SIZE.push(jQuery(this).outerWidth());
+  });
   $(window).scroll(sticky_relocate);
 });

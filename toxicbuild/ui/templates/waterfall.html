@@ -31,7 +31,7 @@
 	  <li class="buildset" id="buildset-{{buildset.id}}">
 	    commit: {{buildset.commit[:8]}}<br/>
 	    branch: {{buildset.branch}}<br/>
-	    <button type="button" class="btn btn-step-details btn-buildset-details btn-sm"
+	    <button type="button" class=" btn btn-default btn-rebuild btn-transparent btn-buildset-details btn-sm"
 		    data-toggle="modal"
 		    data-target="#buildsetDetailsModal"
 		    data-dismiss="modal"
@@ -40,15 +40,20 @@
 		    data-buildset-commit-author="{{buildset.author}}"
 		    data-buildset-commit-title="{{buildset.title}}"
 		    data-buildset-created="{{buildset.created}}">
-	      details
+	      <span data-toggle="tooltip" title="Buildset details" data-placement="right">
+
+		<span class="glyphicon glyphicon-modal-window" aria-hidden="true"></span>
+	      </span>
 	    </button>
 
-	    <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-buildset btn-sm"
-		    data-buildset-commit="{{buildset.commit}}"
-		    data-buildset-branch="{{buildset.branch}}">
+	    <span data-toggle="tooltip" title="Re-schedule buildset" data-placement="right">
+	      <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-buildset btn-sm"
+		      data-buildset-commit="{{buildset.commit}}"
+		      data-buildset-branch="{{buildset.branch}}">
 
-	      <span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>
-	    </button>
+		<span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>
+	      </button>
+	     </span>
 
 	  </li>
 	</ul>
@@ -61,18 +66,20 @@
 	<ul>
 	  <li class="step step-{{build.status}}">
 	    Build - {{build.status}}
-	    <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-build btn-sm"
-		    data-buildset-commit="{{buildset.commit}}"
-		    data-buildset-branch="{{buildset.branch}}"
-		    data-builder-name="{{ get_builder(builders, i).name}}">
-
-	      <span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>
+	    <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" {% if build.status in ['idle', 'running'] %} style="display:none" {% end %}>
+	      <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-build btn-sm"
+		      data-buildset-commit="{{buildset.commit}}"
+		      data-buildset-branch="{{buildset.branch}}"
+		      data-builder-name="{{ get_builder(builders, i).name}}">
+		<span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>
+	      </button>
+	    </span>
 	  </li>
 	  {% for step in build.steps %}
 	  <li class="step step-{{step.status}}">
 	    <div class="build-step-info-container">
 	      {{step.name}} - {{step.status}}
-	      <button type="button" class="btn btn-step-details btn-sm"
+	      <button type="button" class="btn btn-default btn-step-details btn-transparent btn-sm"
 		      data-toggle="modal"
 		      data-target="#stepDetailsModal"
 		      data-dismiss="modal"
@@ -81,7 +88,10 @@
 		      data-step-status="{{step.status}}"
 		      data-step-start="{{step.started}}"
 		      data-step-end="{{step.finished}}">
-		details
+		<span data-toggle="tooltip" title="Step details" data-placement="right">
+		  <span class="glyphicon glyphicon-modal-window" aria-hidden="true"></span>
+		</span>
+
 	      </button>
 	    </div>
 	  </li>
@@ -102,5 +112,11 @@
 <script src="{{static_url}}toxicbuild/js/bootstrap.min.js"></script>
 <script src="{{static_url}}toxicbuild/js/utils.js"></script>
 <script src="{{static_url}}toxicbuild/js/waterfall.js"></script>
-<script>TOXICDEBUG = true;</script>
+<script>
+  TOXICDEBUG = true;
+
+  jQuery(function () {
+    jQuery('[data-toggle="tooltip"]').tooltip()
+  });
+</script>
 {% end %}

@@ -138,7 +138,7 @@ tr:nth-child(even) {
 .btn-transparent.active:focus,
 .btn-transparent:visited,
 .btn-transparent.active:focus,
-.btn-tranparent:active:focus,
+.btn-transparent:active:focus,
 .btn-rebuild,
 .btn-rebuild:focus,
 .btn-rebuild:hover,
@@ -164,8 +164,8 @@ tr:nth-child(even) {
     color: #000;
 }
 
-.btn-tranparent:hover,
-.btn-tranparent.active:focus,
+.btn-transparent:hover,
+.btn-transparent.active:focus,
 .btn-rebuild:hover,
 .btn-rebuild.active:focus,
 .btn-main-edit:hover,
@@ -293,18 +293,12 @@ tr:nth-child(even) {
 
 .btn-step-details:focus,
 .btn-step-details{
-    color: #B5A8A8;
-    background-color: #1F1D1D;
-    border-color: #191818;
     padding: 1px 6px;
     float: right;
     margin-left: 15px;
 }
 
 .btn-step-details:hover{
-    color: #fff;
-    background-color: #1F1D1D;
-    border-color: #191818;
     padding: 1px 6px;
     float: right;
     margin-left: 15px;
