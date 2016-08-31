@@ -226,7 +226,7 @@ class SlaveHandler(BaseModelHandler):
 class StreamHandler(LoggerMixin, WebSocketHandler):
 
     def open(self, action):
-        if action == 'repo-status': # pragma no branch
+        if action == 'repo-status':  # pragma no branch
             ensure_future(self.check_repo_status())
 
     @asyncio.coroutine
@@ -258,7 +258,7 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
                              level='debug')
                     client.disconnect()
 
-            elif not body: # pragma no branch
+            elif not body:  # pragma no branch
                 self.log('Bad response. Disconnecting from stream.',
                          level='debug')
                 client.disconnect()
