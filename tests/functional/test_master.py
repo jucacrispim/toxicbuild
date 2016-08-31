@@ -193,7 +193,8 @@ class ToxicMasterTest(BaseFunctionalTest):
                 if 'steps' not in body and body.get('finished'):
                     break
 
-        self.assertEqual(response['body']['status'], 'success')
+        self.assertEqual(response['body']['status'], 'success',
+                         response['body'])
 
     @classmethod
     def _delete_test_data(cls):

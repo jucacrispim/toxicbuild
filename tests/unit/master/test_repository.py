@@ -370,7 +370,7 @@ class RepositoryTest(TestCase):
 
         self.repo.get_status = get_status
 
-        yield from self.repo._check_for_status_change(Mock())
+        yield from self.repo._check_for_status_change(Mock(), Mock())
         self.assertFalse(repository.repo_status_changed.send.called)
 
     @patch.object(repository, 'repo_status_changed', Mock())
@@ -384,7 +384,7 @@ class RepositoryTest(TestCase):
 
         self.repo.get_status = get_status
 
-        yield from self.repo._check_for_status_change(Mock())
+        yield from self.repo._check_for_status_change(Mock(), Mock())
         self.assertTrue(repository.repo_status_changed.send.called)
 
     @asyncio.coroutine

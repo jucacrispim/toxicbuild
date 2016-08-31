@@ -499,9 +499,9 @@ class UIStreamHandler:
         repo = yield from build.repository
         slave = yield from build.slave
 
-        build = build.to_dict()
-        slave = slave.to_dict()
-        repo = repo.to_dict()
+        build = build.to_dict(id_as_str=True)
+        slave = slave.to_dict(id_as_str=True)
+        repo = yield from repo.to_dict(id_as_str=True)
 
         build['slave'] = slave
         build['repository'] = repo
@@ -524,7 +524,7 @@ class UIStreamHandler:
     def send_repo_status_info(self, repo, old_status, new_status):
         """Called by the signal ``repo_status_changed``"""
 
-        rdict = yield from repo.to_dict()
+        rdict = yield from repo.to_dict(id_as_str=True)
         rdict['status'] = new_status
         rdict['old_status'] = old_status
         rdict['event_type'] = 'repo-status-changed'

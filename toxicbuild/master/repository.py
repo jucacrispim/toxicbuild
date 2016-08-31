@@ -346,7 +346,7 @@ class Repository(Document, utils.LoggerMixin):
             buildset, slave, builders=builders)
 
     @asyncio.coroutine
-    def _check_for_status_change(self, build):
+    def _check_for_status_change(self, sender, build):
         """Called when a build is started or finished. If this event
         makes the repository change its status triggers a
         ``repo_status_changed`` signal.
@@ -355,7 +355,7 @@ class Repository(Document, utils.LoggerMixin):
 
         status = yield from self.get_status()
         if status != self._old_status:
-            repo_status_changed.send(repo=self, old_status=self._old_status,
+            repo_status_changed.send(self, old_status=self._old_status,
                                      new_status=status)
             self._old_status = status
 

@@ -739,11 +739,20 @@ class UIStreamHandlerTest(TestCase):
         self.assertEqual(self.CODE, 0)
         self.assertIn('steps', self.BODY.keys())
 
+        self.assertIsInstance(self.BODY['slave']['id'], str)
+        self.assertIsInstance(self.BODY['repository']['id'], str)
+
     @async_test
     def test_send_repo_status_info(self):
+        testslave = yield from slave.Slave.create(name='name',
+                                                  host='localhost',
+                                                  port=1234,
+                                                  token='123')
+
         testrepo = yield from repository.Repository.create('name',
                                                            'git@git.nada',
-                                                           300, 'git')
+                                                           300, 'git',
+                                                           slaves=[testslave])
         self.CODE = None
         self.BODY = None
 
@@ -753,13 +762,13 @@ class UIStreamHandlerTest(TestCase):
             self.BODY = body
 
         self.handler.protocol.send_response = sr
-
         f = yield from self.handler.send_repo_status_info(repo=testrepo,
                                                           old_status='running',
                                                           new_status='fail')
         yield from f
 
         self.assertEqual(self.BODY['status'], 'fail')
+        self.assertIsInstance(self.BODY['id'], str)
 
 
 class HoleServerTest(TestCase):
