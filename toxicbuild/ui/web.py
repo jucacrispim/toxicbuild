@@ -18,12 +18,19 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+try:
+    from asyncio import ensure_future
+except ImportError:
+    from asyncio import async as ensure_future
+
 from tornado import gen
+from tornado.websocket import WebSocketHandler, WebSocketError
 from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
 from pyrocumulus.web.handlers import TemplateHandler, PyroRequest
 from pyrocumulus.web.urlmappers import URLSpec
-from toxicbuild.core.utils import bcrypt_string
+from toxicbuild.core.utils import bcrypt_string, LoggerMixin
 from toxicbuild.ui import settings
+from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui.models import Repository, Slave, BuildSet, Builder
 
 
@@ -216,6 +223,47 @@ class SlaveHandler(BaseModelHandler):
         yield from item.update(**self.params)
 
 
+class StreamHandler(LoggerMixin, WebSocketHandler):
+
+    def open(self, action):
+        if action == 'repo-status': # pragma no branch
+            ensure_future(self.check_repo_status())
+
+    @asyncio.coroutine
+    def get_stream_client(self):
+        """Return a client already connected to the master and
+        listening the stream."""
+
+        host = settings.HOLE_HOST
+        port = settings.HOLE_PORT
+        client = yield from get_hole_client(host, port)
+        yield from client.connect2stream()
+        return client
+
+    @asyncio.coroutine
+    def check_repo_status(self):
+        """Sends a message when a repository change it's status."""
+
+        client = yield from self.get_stream_client()
+        while client._connected:
+            response = yield from client.get_response()
+            body = response.get('body', {})
+            event_type = body.get('event_type')
+
+            if event_type == 'repo-status-changed':
+                try:
+                    self.write_message(body)
+                except WebSocketError:
+                    self.log('WebSocketError: closing connection',
+                             level='debug')
+                    client.disconnect()
+
+            elif not body: # pragma no branch
+                self.log('Bad response. Disconnecting from stream.',
+                         level='debug')
+                client.disconnect()
+
+
 class MainHandler(LoggedTemplateHandler):
     main_template = 'main.html'
 
@@ -288,8 +336,11 @@ class WaterfallHandler(LoggedTemplateHandler):
 
 url = URLSpec('/$', MainHandler)
 waterfall = URLSpec('/waterfall/(.*)', WaterfallHandler)
+websocket = URLSpec('/api/socks/(.*)', StreamHandler)
 login = URLSpec('/(login|logout)', LoginHandler)
-app = PyroApplication([url, waterfall, login])
+
+app = PyroApplication([url, waterfall, login, websocket])
+
 static_app = StaticApplication()
 
 repo_kwargs = {'model': Repository}

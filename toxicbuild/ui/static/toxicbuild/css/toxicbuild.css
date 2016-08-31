@@ -193,6 +193,14 @@ tr:nth-child(even) {
     width: 80px;
 }
 
+.toxic-spinner-main{
+    font-size: 1.11em;
+}
+
+.repo-status-form{
+    float: left;
+}
+
 .btn-toxicbuild-default {
   color: #fff;
   background-color: #868B90;

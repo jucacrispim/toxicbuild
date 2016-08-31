@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -364,6 +364,93 @@ class SlaveHandlerTest(AsyncTestCase):
         self.handler.prepare()
         yield self.handler.put()
         self.assertTrue(get_item_mock.update.called)
+
+
+class StreamHandlerTest(AsyncTestCase):
+
+    def setUp(self):
+        super().setUp()
+        request = MagicMock()
+        request.arguments = {}
+        application = MagicMock()
+        self.handler = web.StreamHandler(application, request=request)
+
+    @patch.object(web, 'ensure_future', MagicMock())
+    @patch.object(web.StreamHandler, 'check_repo_status', MagicMock())
+    def test_open_repo_status(self):
+        self.handler.open('repo-status')
+        self.assertTrue(self.handler.check_repo_status.called)
+
+    @patch.object(web, 'get_hole_client', MagicMock())
+    @gen_test
+    def test_get_stream_client(self):
+
+        client_mock = MagicMock()
+
+        @asyncio.coroutine
+        def get_client(*a, **kw):
+            return client_mock
+
+        web.get_hole_client = get_client
+        yield from self.handler.get_stream_client()
+        self.assertTrue(client_mock.connect2stream.called)
+
+    @patch.object(web, 'get_hole_client', MagicMock())
+    @patch.object(web.StreamHandler, 'log', MagicMock())
+    @gen_test
+    def test_check_repo_status_with_bad_response(self):
+        client_mock = MagicMock()
+        client_mock._connected = True
+
+        def disconnect():
+            client_mock._connected = False
+
+        client_mock.disconnect = disconnect
+
+        @asyncio.coroutine
+        def get_response():
+            return {}
+
+        client_mock.get_response = get_response
+
+        @asyncio.coroutine
+        def get_client(*a, **kw):
+            return client_mock
+
+        web.get_hole_client = get_client
+
+        yield from self.handler.check_repo_status()
+        called = self.handler.log.call_args[0][0]
+        self.assertIn('Bad response', called)
+
+    @patch.object(web, 'get_hole_client', MagicMock())
+    @patch.object(web.StreamHandler, 'log', MagicMock())
+    @gen_test
+    def test_check_repo_status_with_connection_closed(self):
+        client_mock = MagicMock()
+        client_mock._connected = True
+
+        def disconnect():
+            client_mock._connected = False
+
+        client_mock.disconnect = disconnect
+
+        @asyncio.coroutine
+        def get_response():
+            return {'body': {'event_type': 'repo-status-changed'}}
+
+        client_mock.get_response = get_response
+
+        @asyncio.coroutine
+        def get_client(*a, **kw):
+            return client_mock
+
+        web.get_hole_client = get_client
+
+        self.handler.write_message = MagicMock(side_effect=web.WebSocketError)
+        yield from self.handler.check_repo_status()
+        called = self.handler.log.call_args[0][0]
+        self.assertIn('WebSocketError', called)
 
 
 class MainHandlerTest(AsyncTestCase):

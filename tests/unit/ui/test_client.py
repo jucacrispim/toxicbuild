@@ -39,6 +39,15 @@ class UIHoleClientTest(TestCase):
 
     @patch.object(UIHoleClient, 'request2server', MagicMock())
     @async_test
+    def test_connect2stream(self):
+        client = UIHoleClient('localhost', 7777)
+        yield from client.connect2stream()
+        called = client.request2server.call_args[0]
+        expected = ('stream', {})
+        self.assertEqual(called, expected)
+
+    @patch.object(UIHoleClient, 'request2server', MagicMock())
+    @async_test
     def test_getattr(self):
         client = UIHoleClient('localhost', 7777)
         yield from client.test()

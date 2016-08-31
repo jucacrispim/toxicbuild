@@ -42,12 +42,20 @@
 	</td>
 	<td>{{repo.url}}</td>
 	<td>
-	  <form action="/waterfall/{{repo.name}}">
+	  <form action="/waterfall/{{repo.name}}" class="repo-status-form">
 	    <span data-toggle="tooltip" title="Go to waterfall" data-placement="right">
-	      <button type="submit" class="btn btn-xs btn-{{get_btn_class(repo.status)}} btn-status">{{repo.status}}
+	      <button type="submit"
+		      class="btn btn-xs btn-{{get_btn_class(repo.status)}} btn-status"
+		      id="btn-status-{{repo.id}}">
+		{{repo.status}}
 	      </button>
 	    </span>
 	  </form>
+	  <div class="spinner-placeholder" id="spinner-placeholder-{{repo.id}}">
+	    <i class="fa fa-cog fa-spin fa-3x fa-fw toxic-spinner-main" id="spinner-repo-{{repo.id}}"
+	       {% if repo.status != 'running' %} style="display:none" {% end %}></i>
+	  </div>
+
 	</td>
       </tr>
       {% end %}
@@ -112,6 +120,7 @@
 <script src="{{static_url}}toxicbuild/js/base.js"></script>
 <script src="{{static_url}}toxicbuild/js/repository.js"></script>
 <script src="{{static_url}}toxicbuild/js/slave.js"></script>
+<script src="{{static_url}}toxicbuild/js/main.js"></script>
 
 <script>
   TOXICDEBUG = true;
