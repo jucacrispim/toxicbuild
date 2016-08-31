@@ -190,7 +190,7 @@ class ToxicMasterTest(BaseFunctionalTest):
             while True:
                 response = yield from client.get_response()
                 body = response['body'] if response else {}
-                if 'steps' not in body and body.get('finished'):
+                if body.get('event_type') == 'build_finished':
                     break
 
         self.assertEqual(response['body']['status'], 'success',
