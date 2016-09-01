@@ -211,7 +211,7 @@ class BuilderManagerTest(TestCase):
     @async_test
     def test_update_and_checkout_with_clone(self):
         self.manager.vcs.workdir_exists.return_value = False
-
+        self.manager.vcs.checkout = MagicMock()
         yield from self.manager.update_and_checkout()
 
         self.assertTrue(self.manager.vcs.clone.called)
@@ -228,6 +228,7 @@ class BuilderManagerTest(TestCase):
     @async_test
     def test_update_and_checkout_without_clone(self):
         self.manager.vcs.clone = MagicMock()
+        self.manager.vcs.checkout = MagicMock()
         self.manager.vcs.workdir_exists.return_value = True
 
         yield from self.manager.update_and_checkout()
