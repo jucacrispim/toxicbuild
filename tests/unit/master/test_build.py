@@ -286,8 +286,8 @@ class BuildManagerTest(TestCase):
         yield from repository.RepositoryRevision.drop_collection()
         yield from repository.Repository.drop_collection()
         yield from repository.Slave.drop_collection()
-        build.BuildManager._build_queues = _build_queues = defaultdict(deque)
-        _is_building = defaultdict(lambda: False)
+        build.BuildManager._build_queues = defaultdict(deque)
+        build.BuildManager._is_building = defaultdict(lambda: False)
         super().tearDown()
 
     @async_test
