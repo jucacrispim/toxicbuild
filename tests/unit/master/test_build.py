@@ -288,6 +288,13 @@ class BuildManagerTest(TestCase):
         super().tearDown()
 
     @async_test
+    def test_class_attributes(self):
+        # the build queues must be class attributes or builds will not
+        # respect the queue
+        self.assertTrue(hasattr(build.BuildManager, '_build_queues'))
+        self.assertTrue(hasattr(build.BuildManager, '_is_building'))
+
+    @async_test
     def test_add_builds_for_slave(self):
         yield from self._create_test_data()
         b = build.Builder()
@@ -430,7 +437,7 @@ class BuildManagerTest(TestCase):
         yield from asyncio.gather(*futures)
         self.assertTrue(self.repo.build_manager.add_builds.called)
 
-    @mock.patch.object(build.asyncio, 'async', mock.Mock)
+    @mock.patch.object(build, 'ensure_future', mock.Mock)
     @async_test
     def test_start_pending(self):
         yield from self._create_test_data()
@@ -441,9 +448,10 @@ class BuildManagerTest(TestCase):
         def _eb(slave):
             _eb_mock()
 
+        self.buildset == self.buildset
         self.repo.build_manager._execute_builds = _eb
         yield from self.repo.build_manager.start_pending()
-        self.assertTrue(build.asyncio.async.called)
+        self.assertTrue(build.ensure_future.called)
 
     @asyncio.coroutine
     def _create_test_data(self):

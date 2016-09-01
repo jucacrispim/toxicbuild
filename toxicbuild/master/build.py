@@ -19,6 +19,11 @@
 
 
 import asyncio
+try:
+    from asyncio import ensure_future
+except ImportError:  # pragma no cover
+    from asyncio import async as ensure_future
+
 from collections import defaultdict, deque
 import json
 from uuid import uuid4
@@ -299,15 +304,15 @@ class BuildManager(LoggerMixin):
     in parallel.
     """
 
+    # each slave has its own queue
+    _build_queues = defaultdict(deque)
+    # to keep track of which slave is already working
+    # on consume its queue
+    _is_building = defaultdict(lambda: False)
+
     def __init__(self, repository):
         self.repository = repository
         self._is_getting_builders = False
-
-        # each slave has its own queue
-        self._build_queues = defaultdict(deque)
-        # to keep track of which slave is already working
-        # on consume its queue
-        self._is_building = defaultdict(lambda: False)
         self.connect2signals()
 
     @asyncio.coroutine
@@ -334,7 +339,7 @@ class BuildManager(LoggerMixin):
         :param buildset: An instance of :class:`toxicbuild.master.BuildSet`.
         :param slaves: An instance of :class:`toxicbuild.master.Slave`.
         :param builders: A list of :class:`toxicbuild.master.Builder`. If
-          not builders all builders for this slave and revision.
+          not builders all builders for this slave and revision will be used.
         """
 
         revision = yield from buildset.revision
@@ -354,7 +359,7 @@ class BuildManager(LoggerMixin):
 
         self._build_queues[slave.name].append(buildset)
         if not self._is_building[slave.name]:  # pragma: no branch
-            asyncio.async(self._execute_builds(slave))
+            ensure_future(self._execute_builds(slave))
 
     @asyncio.coroutine
     def get_builders(self, slave, revision):
@@ -413,7 +418,7 @@ class BuildManager(LoggerMixin):
                     self.log('schedule pending buildset {}'.format(str(
                         buildset.id)), level='debug')
                     if not self._is_building[slave.name]:  # pragma no branch
-                        asyncio.async(self._execute_builds(slave))
+                        ensure_future(self._execute_builds(slave))
 
     def connect2signals(self):
         """ Connects the BuildManager to the revision_added signal."""
@@ -434,6 +439,7 @@ class BuildManager(LoggerMixin):
         :param slave: A :class:`toxicbuild.master.slave.Slave` instance."""
 
         self._is_building[slave.name] = True
+        self.log('executing builds for {}'.format(slave.name), level='debug')
         try:
             while True:
                 try:
@@ -448,6 +454,8 @@ class BuildManager(LoggerMixin):
                         builds.append(build)
                 if builds:
                     yield from self._execute_in_parallel(slave, builds)
+                    self.log('builds for {} finished'.format(slave.name),
+                             level='debug')
         finally:
             self._is_building[slave.name] = False
 
@@ -461,7 +469,7 @@ class BuildManager(LoggerMixin):
 
         fs = []
         for build in builds:
-            f = asyncio.async(slave.build(build))
+            f = ensure_future(slave.build(build))
             fs.append(f)
 
         yield from asyncio.wait(fs)
