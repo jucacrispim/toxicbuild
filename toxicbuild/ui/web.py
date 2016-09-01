@@ -250,7 +250,7 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
             body = response.get('body', {})
             event_type = body.get('event_type')
 
-            if event_type == 'repo-status-changed':
+            if event_type == 'repo-status-changed':  # pragma no branch
                 try:
                     self.write_message(body)
                 except WebSocketError:
