@@ -245,6 +245,25 @@ class BuilderManagerTest(TestCase):
         self.assertTrue(self.manager.wait_all.called)
         self.assertFalse(self.manager.vcs.checkout.called)
 
+    @patch.object(managers.BuildManager, 'is_working', MagicMock())
+    @patch.object(managers.BuildManager, 'wait_all', MagicMock())
+    @async_test
+    def test_update_and_checkout_new_named_tree(self):
+        self.manager.vcs.checkout = MagicMock(side_effect=[
+            managers.ExecCmdError, MagicMock(), MagicMock()])
+        yield from self.manager.update_and_checkout()
+
+        self.assertEqual(len(self.manager.vcs.checkout.call_args_list), 3)
+
+    @patch.object(managers.BuildManager, 'is_working', MagicMock())
+    @patch.object(managers.BuildManager, 'wait_all', MagicMock())
+    @async_test
+    def test_update_and_checkout_known_named_tree(self):
+        self.manager.vcs.checkout = MagicMock()
+        yield from self.manager.update_and_checkout()
+
+        self.assertEqual(len(self.manager.vcs.checkout.call_args_list), 1)
+
     def test_list_builders(self):
         expected = ['builder1', 'builder2', 'builder3', 'builder4']
         returned = self.manager.list_builders()

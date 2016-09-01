@@ -21,7 +21,7 @@ import asyncio
 from collections import defaultdict
 import os
 from toxicbuild.core import get_vcs
-from toxicbuild.core.utils import get_toxicbuildconf, LoggerMixin
+from toxicbuild.core.utils import get_toxicbuildconf, LoggerMixin, ExecCmdError
 from toxicbuild.slave.build import Builder, BuildStep
 from toxicbuild.slave.exceptions import (BuilderNotFound, BadBuilderConfig,
                                          BusyRepository)
@@ -153,13 +153,23 @@ class BuildManager(LoggerMixin):
                 self.log('cloning {}'.format(self.repo_url))
                 yield from self.vcs.clone(self.repo_url)
 
-            self.log('checking out to branch {}'.format(self.branch),
-                     level='debug')
-            yield from self.vcs.checkout(self.branch)
-            yield from self.vcs.pull(self.branch)
-            self.log('checking out to named_tree {}'.format(self.named_tree),
-                     level='debug')
-            yield from self.vcs.checkout(self.named_tree)
+            # first we try to checkout to the named_tree because if if
+            # already exists here we don't need to update the code.
+            try:
+                self.log('checking out to named_tree {}'.format(
+                    self.named_tree), level='debug')
+                yield from self.vcs.checkout(self.named_tree)
+            except ExecCmdError:
+                # this is executed when the named_tree does not  exist
+                # so we upate the code and then checkout again.
+                self.log('named_tree does not exist. updating...')
+                self.log('checking out to branch {}'.format(self.branch),
+                         level='debug')
+                yield from self.vcs.checkout(self.branch)
+                yield from self.vcs.pull(self.branch)
+                self.log('checking out to named_tree {}'.format(
+                    self.named_tree), level='debug')
+                yield from self.vcs.checkout(self.named_tree)
 
         finally:
             self.is_updating = False
