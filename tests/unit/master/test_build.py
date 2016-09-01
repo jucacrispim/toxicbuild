@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from collections import defaultdict, deque
 import datetime
 from unittest import TestCase, mock
 from toxicbuild.core.utils import now
@@ -285,6 +286,8 @@ class BuildManagerTest(TestCase):
         yield from repository.RepositoryRevision.drop_collection()
         yield from repository.Repository.drop_collection()
         yield from repository.Slave.drop_collection()
+        build.BuildManager._build_queues = _build_queues = defaultdict(deque)
+        _is_building = defaultdict(lambda: False)
         super().tearDown()
 
     @async_test
