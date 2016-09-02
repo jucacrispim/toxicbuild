@@ -272,7 +272,6 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
                 client.disconnect()
 
 
-
 class MainHandler(LoggedTemplateHandler):
     main_template = 'main.html'
 
@@ -308,7 +307,6 @@ class WaterfallHandler(LoggedTemplateHandler):
         def _ordered_builds(builds):
             return sorted(
                 builds, key=lambda b: builders[builders.index(b.builder)].name)
-
 
         context = {'buildsets': buildsets, 'builders': builders,
                    'ordered_builds': _ordered_builds,
