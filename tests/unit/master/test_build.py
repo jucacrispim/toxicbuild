@@ -85,6 +85,13 @@ class BuildTest(TestCase):
         with self.assertRaises(build.DBError):
             yield from b.update()
 
+    @async_test
+    def test_get_buildset(self):
+        yield from self._create_test_data()
+        b = self.buildset.builds[0]
+        buildset = yield from b.get_buildset()
+        self.assertEqual(buildset, self.buildset)
+
     @asyncio.coroutine
     def _create_test_data(self):
         self.repo = repository.Repository(name='bla', url='git@bla.com')

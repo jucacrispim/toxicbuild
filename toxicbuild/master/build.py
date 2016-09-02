@@ -35,7 +35,7 @@ from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
                                    LoggerMixin)
 from toxicbuild.master.exceptions import DBError
-from toxicbuild.master.signals import revision_added
+from toxicbuild.master.signals import revision_added, build_added
 
 # The statuses used in builds  ordered by priority.
 ORDERED_STATUSES = ['running', 'exception', 'fail',
@@ -146,6 +146,7 @@ class BuildStep(EmbeddedDocument):
 
     def to_dict(self):
         objdict = json.loads(super().to_json())
+        objdict['uuid'] = str(self.uuid)
         keys = objdict.keys()
         if 'started' not in keys:
             objdict['started'] = None
@@ -186,6 +187,7 @@ class Build(EmbeddedDocument):
         steps = [s.to_dict() for s in self.steps]
         objdict = json.loads(super().to_json())
         objdict['builder']['id'] = objdict['builder']['$oid']
+        objdict['uuid'] = str(self.uuid)
         objdict['steps'] = steps
         return objdict
 
@@ -206,6 +208,11 @@ class Build(EmbeddedDocument):
             raise DBError(msg)
 
         return result
+
+    @asyncio.coroutine
+    def get_buildset(self):
+        buildset = yield from BuildSet.objects.get(builds__uuid=self.uuid)
+        return buildset
 
 
 class BuildSet(SerializeMixin, Document):
@@ -353,6 +360,7 @@ class BuildManager(LoggerMixin):
 
             buildset.builds.append(build)
             yield from buildset.save()
+            build_added.send(self, build=build)
 
             self.log('build added for named_tree {} on branch {}'.format(
                 revision.commit, revision.branch), level='debug')

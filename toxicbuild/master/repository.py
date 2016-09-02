@@ -78,7 +78,7 @@ class Repository(Document, utils.LoggerMixin):
 
     @asyncio.coroutine
     def to_dict(self, id_as_str=False):
-        my_dict = {'id': self.id, 'name': self.name, 'ur': self.url,
+        my_dict = {'id': self.id, 'name': self.name, 'url': self.url,
                    'update_seconds': self.update_seconds,
                    'vcs_type': self.vcs_type,
                    'branches': [b.to_dict() for b in self.branches],

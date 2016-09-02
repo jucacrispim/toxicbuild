@@ -38,7 +38,7 @@ from toxicbuild.master import (Slave, Repository, Builder, BuildSet,
 from toxicbuild.master.exceptions import UIFunctionNotFound
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,
-                                       repo_status_changed)
+                                       repo_status_changed, build_added)
 
 
 class UIHole(BaseToxicProtocol, LoggerMixin):
@@ -449,7 +449,7 @@ class HoleHandler:
         return builders
 
 
-class UIStreamHandler:
+class UIStreamHandler(LoggerMixin):
 
     """ Handler that keeps the connection open and messages when
     builds and steps are stated or finished.
@@ -463,17 +463,25 @@ class UIStreamHandler:
 
         self.protocol.connection_lost_cb = connection_lost_cb
 
-    def __getattr__(self, attrname):
-        _signals = ['step_started', 'step_finished',
-                    'build_started', 'build_finished']
+    @asyncio.coroutine
+    def step_started(self, reciever, **kw):
+        yield from self.send_info('step_started', **kw)
 
-        if attrname in _signals:
-            def wrapper(*args, **kw):
-                return self.send_info(attrname, **kw)
+    @asyncio.coroutine
+    def step_finished(self, reciever, **kw):
+        yield from self.send_info('step_finished', **kw)
 
-            return wrapper
+    @asyncio.coroutine
+    def build_started(self, reciever, **kw):
+        yield from self.send_info('build_started', **kw)
 
-        raise AttributeError
+    @asyncio.coroutine
+    def build_finished(self, reciever, **kw):
+        yield from self.send_info('build_finished', **kw)
+
+    @asyncio.coroutine
+    def build_added(self, reciever, **kw):
+        yield from self.send_info('build_added', **kw)
 
     def _connect2signals(self):
         step_started.connect(self.step_started, weak=False)
@@ -481,13 +489,16 @@ class UIStreamHandler:
         build_started.connect(self.build_started, weak=False)
         build_finished.connect(self.build_finished, weak=False)
         repo_status_changed.connect(self.send_repo_status_info, weak=False)
+        build_added.connect(self.build_added, weak=False)
 
     def _disconnectfromsignals(self):
+
         step_started.disconnect(self.step_started)
         step_finished.disconnect(self.step_finished)
         build_started.disconnect(self.build_started)
         build_finished.disconnect(self.build_finished)
         repo_status_changed.disconnect(self.send_repo_status_info)
+        build_added.disconnect(self.build_added)
 
     @asyncio.coroutine
     def handle(self):
@@ -499,19 +510,21 @@ class UIStreamHandler:
         repo = yield from build.repository
         slave = yield from build.slave
 
-        build = build.to_dict(id_as_str=True)
+        build_dict = build.to_dict(id_as_str=True)
         slave = slave.to_dict(id_as_str=True)
         repo = yield from repo.to_dict(id_as_str=True)
+        buildset = yield from build.get_buildset()
 
-        build['slave'] = slave
-        build['repository'] = repo
+        build_dict['slave'] = slave
+        build_dict['repository'] = repo
+        build_dict['buildset'] = buildset.to_dict(id_as_str=True)
 
         if step:
             step = step.to_dict()
-            step['build'] = build
+            step['build'] = build_dict
             info = step
         else:
-            info = build
+            info = build_dict
 
         final_info = {'event_type': info_type}
         final_info.update(info)
@@ -527,7 +540,7 @@ class UIStreamHandler:
         rdict = yield from repo.to_dict(id_as_str=True)
         rdict['status'] = new_status
         rdict['old_status'] = old_status
-        rdict['event_type'] = 'repo-status-changed'
+        rdict['event_type'] = 'repo_status_changed'
         f = ensure_future(self.protocol.send_response(code=0, body=rdict))
         return f
 

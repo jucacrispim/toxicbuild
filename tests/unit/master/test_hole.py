@@ -609,6 +609,7 @@ class HoleHandlerTest(TestCase):
             yield from self.buildset.save()
 
 
+@patch.object(hole.UIStreamHandler, 'log', Mock())
 class UIStreamHandlerTest(TestCase):
 
     def setUp(self):
@@ -628,6 +629,7 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'build_started', Mock())
     @patch.object(hole, 'build_finished', Mock())
     @patch.object(hole, 'repo_status_changed', Mock())
+    @patch.object(hole, 'build_added', Mock())
     def test_disconnectfromsignals(self):
 
         self.handler._disconnectfromsignals()
@@ -635,13 +637,15 @@ class UIStreamHandlerTest(TestCase):
                              hole.step_finished.disconnect.called,
                              hole.build_started.disconnect.called,
                              hole.build_finished.disconnect.called,
-                             hole.repo_status_changed.disconnect.called]))
+                             hole.repo_status_changed.disconnect.called,
+                             hole.build_added.disconnect.called]))
 
     @patch.object(hole, 'step_started', Mock())
     @patch.object(hole, 'step_finished', Mock())
     @patch.object(hole, 'build_started', Mock())
     @patch.object(hole, 'build_finished', Mock())
     @patch.object(hole, 'repo_status_changed', Mock())
+    @patch.object(hole, 'build_added', Mock())
     def test_connect2signals(self):
 
         self.handler._connect2signals()
@@ -649,7 +653,8 @@ class UIStreamHandlerTest(TestCase):
                              hole.step_finished.connect.called,
                              hole.build_started.connect.called,
                              hole.build_finished.connect.called,
-                             hole.repo_status_changed.connect.called]))
+                             hole.repo_status_changed.connect.called,
+                             hole.build_added.connect.called]))
 
     def test_getattr(self):
         self.assertTrue(self.handler.step_started())
@@ -689,6 +694,17 @@ class UIStreamHandlerTest(TestCase):
                                    output='')
         testbuild.steps.append(teststep)
 
+        rev = repository.RepositoryRevision(repository=testrepo,
+                                            commit='açsdlfj',
+                                            branch='master',
+                                            author='eu',
+                                            title='some',
+                                            commit_date=datetime.now())
+        yield from rev.save()
+        buildset = yield from build.BuildSet.create(testrepo, rev)
+        buildset.builds.append(testbuild)
+        yield from buildset.save()
+
         self.CODE = None
         self.BODY = None
 
@@ -699,7 +715,7 @@ class UIStreamHandlerTest(TestCase):
 
         self.handler.protocol.send_response = sr
 
-        f = yield from self.handler.send_info('step-started',
+        f = yield from self.handler.send_info('step_started',
                                               build=testbuild, step=teststep)
         yield from f
 
@@ -722,6 +738,16 @@ class UIStreamHandlerTest(TestCase):
         testbuild = build.Build(repository=testrepo, slave=testslave,
                                 branch='master', named_tree='master',
                                 builder=testbuilder, status='running')
+        rev = repository.RepositoryRevision(repository=testrepo,
+                                            commit='açsdlfj',
+                                            branch='master',
+                                            author='eu',
+                                            title='some',
+                                            commit_date=datetime.now())
+        yield from rev.save()
+        buildset = yield from build.BuildSet.create(testrepo, rev)
+        buildset.builds.append(testbuild)
+        yield from buildset.save()
 
         self.CODE = None
         self.BODY = None
@@ -732,12 +758,12 @@ class UIStreamHandlerTest(TestCase):
             self.BODY = body
 
         self.handler.protocol.send_response = sr
-
         f = yield from self.handler.send_info('step-started', build=testbuild)
         yield from f
 
         self.assertEqual(self.CODE, 0)
         self.assertIn('steps', self.BODY.keys())
+        self.assertIn('buildset', self.BODY.keys())
 
         self.assertIsInstance(self.BODY['slave']['id'], str)
         self.assertIsInstance(self.BODY['repository']['id'], str)
