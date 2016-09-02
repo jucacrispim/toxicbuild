@@ -84,6 +84,12 @@ def stop(workdir, pidfile=None):
     os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir,
                                                   'toxicui.conf')
     os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicui'
+
+    # need to import this or we can't stop using the runtornado command
+    from toxicbuild.ui import settings
+
+    sys.argv = ['pyromanager.py', 'web']
+
     command = get_command('runtornado')()
     command.pidfile = pidfile
     command.kill = True
