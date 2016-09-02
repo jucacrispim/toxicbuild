@@ -226,8 +226,12 @@ class SlaveHandler(BaseModelHandler):
 class StreamHandler(LoggerMixin, WebSocketHandler):
 
     def open(self, action):
-        if action == 'repo-status':  # pragma no branch
-            ensure_future(self.check_repo_status())
+        if action == 'repo-status':
+            ensure_future(self.listen2event('repo_status_changed'))
+        elif action == 'builds':
+            events = ['build_started', 'build_finished', 'build_added',
+                      'step_started', 'step_finished']
+            ensure_future(self.listen2event(*events))
 
     @asyncio.coroutine
     def get_stream_client(self):
@@ -241,22 +245,32 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
         return client
 
     @asyncio.coroutine
-    def check_repo_status(self):
-        """Sends a message when a repository change it's status."""
+    def listen2event(self, *event_types):
+        """Creates a connection to the master and sends a messge to
+        the ws client when an event of event_type is sent by the mater.
+
+        :param event_types: A list of the events that will be handled by
+        this connection."""
 
         client = yield from self.get_stream_client()
         while client._connected:
             response = yield from client.get_response()
             body = response.get('body', {})
-            event_type = body.get('event_type')
+            master_event_type = body.get('event_type')
 
-            if event_type == 'repo-status-changed':  # pragma no branch
+            if master_event_type in event_types:  # pragma no branch
                 try:
                     self.write_message(body)
                 except WebSocketError:
                     self.log('WebSocketError: closing connection',
                              level='debug')
                     client.disconnect()
+
+            elif not body:  # pragma no branch
+                self.log('Bad response. Disconnecting from stream.',
+                         level='debug')
+                client.disconnect()
+
 
 
 class MainHandler(LoggedTemplateHandler):
@@ -295,13 +309,10 @@ class WaterfallHandler(LoggedTemplateHandler):
             return sorted(
                 builds, key=lambda b: builders[builders.index(b.builder)].name)
 
-        def get_builder(builders, i):  # pragma no cover
-            return builders[i]
 
         context = {'buildsets': buildsets, 'builders': builders,
                    'ordered_builds': _ordered_builds,
                    'get_ending': self._get_ending,
-                   'get_builder': get_builder,
                    'repo_name': repo_name}
         self.render_template(self.template, context)
 
@@ -319,12 +330,19 @@ class WaterfallHandler(LoggedTemplateHandler):
         # 'full' builder using builder-list
         ids = [b.id for b in builders]
         builders = yield from Builder.list(id__in=ids)
+        builders_dict = {b.id: b for b in builders}
+        for buildset in buildsets:
+            for build in buildset.builds:
+                build.builder = builders_dict[build.builder.id]
+
         return sorted(builders, key=lambda b: b.name)
 
     def _get_ending(self, build, build_index, builders):
         i = build_index
         while build.builder != builders[i] and len(builders) > i:
-            yield '</td><td>'
+            tag = '</td><td class="builder-column builder-column-id-{}'
+            tag += 'builder-column-index-{}">'
+            yield tag.format(builders[i].id, i + 1)
             i += 1
         yield ''
 

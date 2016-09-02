@@ -82,8 +82,8 @@ def stop(workdir, pidfile=None):
     sys.path.append(workdir)
 
     os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir,
-                                                  'toxicweb_settings.py')
-    os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicweb_settings'
+                                                  'toxicui.conf')
+    os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicui'
     command = get_command('runtornado')()
     command.pidfile = pidfile
     command.kill = True

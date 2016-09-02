@@ -376,10 +376,20 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler = web.StreamHandler(application, request=request)
 
     @patch.object(web, 'ensure_future', MagicMock())
-    @patch.object(web.StreamHandler, 'check_repo_status', MagicMock())
+    @patch.object(web.StreamHandler, 'listen2event', MagicMock())
     def test_open_repo_status(self):
         self.handler.open('repo-status')
-        self.assertTrue(self.handler.check_repo_status.called)
+        event = self.handler.listen2event.call_args[0][0]
+        self.assertTrue(self.handler.listen2event.called)
+        self.assertEqual(event, 'repo-status-changed')
+
+    @patch.object(web, 'ensure_future', MagicMock())
+    @patch.object(web.StreamHandler, 'listen2event', MagicMock())
+    def test_open_builds(self):
+        self.handler.open('builds')
+        events = self.handler.listen2event.call_args[0]
+        self.assertTrue(self.handler.listen2event.called)
+        self.assertEqual(events, ('build-started', 'build-finished'))
 
     @patch.object(web, 'get_hole_client', MagicMock())
     @gen_test
@@ -398,7 +408,7 @@ class StreamHandlerTest(AsyncTestCase):
     @patch.object(web, 'get_hole_client', MagicMock())
     @patch.object(web.StreamHandler, 'log', MagicMock())
     @gen_test
-    def test_check_repo_status_with_connection_closed(self):
+    def test_listen2event_with_connection_closed(self):
         client_mock = MagicMock()
         client_mock._connected = True
 
@@ -420,9 +430,37 @@ class StreamHandlerTest(AsyncTestCase):
         web.get_hole_client = get_client
 
         self.handler.write_message = MagicMock(side_effect=web.WebSocketError)
-        yield from self.handler.check_repo_status()
+        yield from self.handler.listen2event('repo-status-changed')
         called = self.handler.log.call_args[0][0]
         self.assertIn('WebSocketError', called)
+
+    @patch.object(web, 'get_hole_client', MagicMock())
+    @patch.object(web.StreamHandler, 'log', MagicMock())
+    @gen_test
+    def test_listen2event_with_bad_response(self):
+        client_mock = MagicMock()
+        client_mock._connected = True
+
+        def disconnect():
+            client_mock._connected = False
+
+        client_mock.disconnect = disconnect
+
+        @asyncio.coroutine
+        def get_response():
+            return {}
+
+        client_mock.get_response = get_response
+
+        @asyncio.coroutine
+        def get_client(*a, **kw):
+            return client_mock
+
+        web.get_hole_client = get_client
+
+        yield from self.handler.listen2event()
+        called = self.handler.log.call_args[0][0]
+        self.assertIn('Bad response', called)
 
 
 class MainHandlerTest(AsyncTestCase):

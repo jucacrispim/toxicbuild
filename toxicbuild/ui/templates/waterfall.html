@@ -5,8 +5,8 @@
 {% include "buildset_details_modal.html" %}
 <input type="hidden" id="waterfall-repo-name" value="{{repo_name}}"/>
 <table>
-  <tbody class="waterfall-table">
-    <tr class="waterfall-row">
+  <tbody id="waterfall-table">
+    <tr class="waterfall-row" id="waterfall-first-row">
       <td class="buildsets-column placeholder">
 	<ul>
 	  <li class="buildset buildset-placeholder">
@@ -17,8 +17,9 @@
       {% for builder in builders %}
       <td class="builders-column">
 	<ul class="">
-	  <li class="builder builder-{{builder.status}}" id="{{builder.id}}">
+	  <li class="builder builder-{{builder.status}}">
 	    {{builder.name}}
+	    <input type="hidden" id="builder-{{builder.id}}" value="{{builder.status}}">
 	  </li>
 	</ul>
       </td>
@@ -59,24 +60,24 @@
 	</ul>
       </td>
       {% for i, build in enumerate(ordered_builds(buildset.builds)) %}
-      <td class="builder-column">
+      <td class="builder-column builder-column-id-{{build.builder.id}} builder-column-index-{{i}}">
 	{% for ending in get_ending(build, i, builders)%}
    	  {% raw ending %}
 	{% end %}
 	<ul>
-	  <li class="step step-{{build.status}}">
+	  <li class="step step-{{build.status}}" id="build-info-{{build.uuid}}">
 	    Build - {{build.status}}
 	    <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" {% if build.status in ['pending', 'running'] %} style="display:none" {% end %}>
 	      <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-build btn-sm"
 		      data-buildset-commit="{{buildset.commit}}"
 		      data-buildset-branch="{{buildset.branch}}"
-		      data-builder-name="{{ get_builder(builders, i).name}}">
+		      data-builder-name="{{ build.builder.name}}">
 		<span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>
 	      </button>
 	    </span>
 	  </li>
 	  {% for step in build.steps %}
-	  <li class="step step-{{step.status}}">
+	  <li class="step step-{{step.status}}" id="step-{{step.uuid}}">
 	    <div class="build-step-info-container">
 	      {{step.name}} - {{step.status}}
 	      <button type="button" class="btn btn-default btn-step-details btn-transparent btn-sm"
@@ -114,7 +115,7 @@
 <script src="{{static_url}}toxicbuild/js/waterfall.js"></script>
 <script>
   TOXICDEBUG = true;
-
+  BUILDERS = {% raw [b.to_json() for b in builders] %}
   jQuery(function () {
     jQuery('[data-toggle="tooltip"]').tooltip()
   });
