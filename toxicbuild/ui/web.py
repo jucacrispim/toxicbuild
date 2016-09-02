@@ -228,7 +228,7 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
     def open(self, action):
         if action == 'repo-status':
             ensure_future(self.listen2event('repo_status_changed'))
-        elif action == 'builds':
+        elif action == 'builds':  # pragma no branch
             events = ['build_started', 'build_finished', 'build_added',
                       'step_started', 'step_finished']
             ensure_future(self.listen2event(*events))

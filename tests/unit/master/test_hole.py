@@ -656,12 +656,40 @@ class UIStreamHandlerTest(TestCase):
                              hole.repo_status_changed.connect.called,
                              hole.build_added.connect.called]))
 
-    def test_getattr(self):
-        self.assertTrue(self.handler.step_started())
+    @async_test
+    def test_step_started(self):
+        self.handler.send_info = MagicMock()
+        yield from self.handler.step_started(Mock())
+        called = self.handler.send_info.call_args[0][0]
+        self.assertEqual(called, 'step_started')
 
-    def test_getattr_with_attribute_error(self):
-        with self.assertRaises(AttributeError):
-            self.handler.i_dont_exist()
+    @async_test
+    def test_step_finished(self):
+        self.handler.send_info = MagicMock()
+        yield from self.handler.step_finished(Mock())
+        called = self.handler.send_info.call_args[0][0]
+        self.assertEqual(called, 'step_finished')
+
+    @async_test
+    def test_build_started(self):
+        self.handler.send_info = MagicMock()
+        yield from self.handler.build_started(Mock())
+        called = self.handler.send_info.call_args[0][0]
+        self.assertEqual(called, 'build_started')
+
+    @async_test
+    def test_build_finished(self):
+        self.handler.send_info = MagicMock()
+        yield from self.handler.build_finished(Mock())
+        called = self.handler.send_info.call_args[0][0]
+        self.assertEqual(called, 'build_finished')
+
+    @async_test
+    def test_build_added(self):
+        self.handler.send_info = MagicMock()
+        yield from self.handler.build_added(Mock())
+        called = self.handler.send_info.call_args[0][0]
+        self.assertEqual(called, 'build_added')
 
     @async_test
     def test_handle(self):

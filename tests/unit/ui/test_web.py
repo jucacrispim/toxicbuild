@@ -381,7 +381,7 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler.open('repo-status')
         event = self.handler.listen2event.call_args[0][0]
         self.assertTrue(self.handler.listen2event.called)
-        self.assertEqual(event, 'repo-status-changed')
+        self.assertEqual(event, 'repo_status_changed')
 
     @patch.object(web, 'ensure_future', MagicMock())
     @patch.object(web.StreamHandler, 'listen2event', MagicMock())
@@ -389,7 +389,9 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler.open('builds')
         events = self.handler.listen2event.call_args[0]
         self.assertTrue(self.handler.listen2event.called)
-        self.assertEqual(events, ('build-started', 'build-finished'))
+        self.assertEqual(events, ('build_started', 'build_finished',
+                                  'build_added', 'step_started',
+                                  'step_finished'))
 
     @patch.object(web, 'get_hole_client', MagicMock())
     @gen_test
@@ -419,7 +421,7 @@ class StreamHandlerTest(AsyncTestCase):
 
         @asyncio.coroutine
         def get_response():
-            return {'body': {'event_type': 'repo-status-changed'}}
+            return {'body': {'event_type': 'repo_status_changed'}}
 
         client_mock.get_response = get_response
 
@@ -430,7 +432,7 @@ class StreamHandlerTest(AsyncTestCase):
         web.get_hole_client = get_client
 
         self.handler.write_message = MagicMock(side_effect=web.WebSocketError)
-        yield from self.handler.listen2event('repo-status-changed')
+        yield from self.handler.listen2event('repo_status_changed')
         called = self.handler.log.call_args[0][0]
         self.assertIn('WebSocketError', called)
 
@@ -515,7 +517,6 @@ class WaterfallHandlerTest(AsyncTestCase):
 
         expected_context = {'buildsets': None, 'builders': [],
                             'ordered_builds': None,
-                            'get_builder': None,
                             'repo_name': 'repo',
                             'get_ending': self.handler._get_ending}.keys()
         yield self.handler.get('some-repo')
@@ -564,7 +565,8 @@ class WaterfallHandlerTest(AsyncTestCase):
     def test_get_ending(self):
         builders = [models.Builder(id=1), models.Builder(id=2)]
         build = models.Build(builder=builders[1])
-        expected = '</td><td>'
+        expected = '</td><td class="builder-column builder-column-id-1'
+        expected += 'builder-column-index-1">'
         returned = ''
 
         for end in self.handler._get_ending(build, 0, builders):
