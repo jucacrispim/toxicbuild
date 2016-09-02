@@ -311,16 +311,25 @@ class BuildManager(LoggerMixin):
     in parallel.
     """
 
+    # each repository has its own key the default dict
     # each slave has its own queue
-    _build_queues = defaultdict(deque)
+    _build_queues = defaultdict(lambda: defaultdict(deque))
     # to keep track of which slave is already working
     # on consume its queue
-    _is_building = defaultdict(lambda: False)
+    _is_building = defaultdict(lambda: defaultdict(lambda: False))
 
     def __init__(self, repository):
         self.repository = repository
         self._is_getting_builders = False
         self.connect2signals()
+
+    @property
+    def build_queues(self):
+        return self._build_queues[self.repository.name]
+
+    @property
+    def is_building(self):
+        return self._is_building[self.repository.name]
 
     @asyncio.coroutine
     def add_builds(self, revisions):
@@ -365,8 +374,8 @@ class BuildManager(LoggerMixin):
             self.log('build added for named_tree {} on branch {}'.format(
                 revision.commit, revision.branch), level='debug')
 
-        self._build_queues[slave.name].append(buildset)
-        if not self._is_building[slave.name]:  # pragma: no branch
+        self.build_queues[slave.name].append(buildset)
+        if not self.is_building[slave.name]:  # pragma: no branch
             ensure_future(self._execute_builds(slave))
 
     @asyncio.coroutine
@@ -420,12 +429,12 @@ class BuildManager(LoggerMixin):
                 slaves.add(slave)
 
             for slave in slaves:
-                if buildset not in self._build_queues[  # pragma no branch
+                if buildset not in self.build_queues[  # pragma no branch
                         slave.name]:
-                    self._build_queues[slave.name].append(buildset)
+                    self.build_queues[slave.name].append(buildset)
                     self.log('schedule pending buildset {}'.format(str(
                         buildset.id)), level='debug')
-                    if not self._is_building[slave.name]:  # pragma no branch
+                    if not self.is_building[slave.name]:  # pragma no branch
                         ensure_future(self._execute_builds(slave))
 
     def connect2signals(self):
@@ -446,12 +455,12 @@ class BuildManager(LoggerMixin):
 
         :param slave: A :class:`toxicbuild.master.slave.Slave` instance."""
 
-        self._is_building[slave.name] = True
+        self.is_building[slave.name] = True
         self.log('executing builds for {}'.format(slave.name), level='debug')
         try:
             while True:
                 try:
-                    buildset = self._build_queues[slave.name].popleft()
+                    buildset = self.build_queues[slave.name].popleft()
                 except IndexError:
                     break
 
@@ -465,7 +474,7 @@ class BuildManager(LoggerMixin):
                     self.log('builds for {} finished'.format(slave.name),
                              level='debug')
         finally:
-            self._is_building[slave.name] = False
+            self.is_building[slave.name] = False
 
     @asyncio.coroutine
     def _execute_in_parallel(self, slave, builds):

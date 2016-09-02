@@ -293,8 +293,10 @@ class BuildManagerTest(TestCase):
         yield from repository.RepositoryRevision.drop_collection()
         yield from repository.Repository.drop_collection()
         yield from repository.Slave.drop_collection()
-        build.BuildManager._build_queues = defaultdict(deque)
-        build.BuildManager._is_building = defaultdict(lambda: False)
+        build.BuildManager._build_queues = defaultdict(
+            lambda: defaultdict(deque))
+        build.BuildManager._is_building = defaultdict(
+            lambda: defaultdict(lambda: False))
         super().tearDown()
 
     @async_test
@@ -316,8 +318,8 @@ class BuildManagerTest(TestCase):
 
         yield from self.manager.add_builds_for_slave(self.buildset, self.slave,
                                                      [b, self.builder])
-        self.assertEqual(len(self.manager._build_queues[self.slave.name]), 1)
-        buildset = self.manager._build_queues[self.slave.name][0]
+        self.assertEqual(len(self.manager.build_queues[self.slave.name]), 1)
+        buildset = self.manager.build_queues[self.slave.name][0]
         # It already has two builds from _create_test_data and more two
         # from .add_builds_for_slave
         self.assertEqual(len(buildset.builds), 4)
@@ -336,7 +338,7 @@ class BuildManagerTest(TestCase):
 
         yield from self.manager.add_builds([self.revision])
 
-        self.assertEqual(len(self.manager._build_queues[self.slave.name]), 1)
+        self.assertEqual(len(self.manager.build_queues[self.slave.name]), 1)
 
     @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
     @mock.patch.object(build, 'list_builders_from_config',
@@ -406,7 +408,7 @@ class BuildManagerTest(TestCase):
         yield from self._create_test_data()
 
         self.manager._execute_in_parallel = mock.MagicMock()
-        self.manager._build_queues[self.slave.name].extend(
+        self.manager.build_queues[self.slave.name].extend(
             [self.buildset])
         slave = mock.Mock()
         slave.name = self.slave.name
@@ -418,7 +420,7 @@ class BuildManagerTest(TestCase):
         yield from self._create_test_data()
 
         self.manager._execute_in_parallel = mock.MagicMock()
-        self.manager._build_queues[self.slave.name].extend(
+        self.manager.build_queues[self.slave.name].extend(
             [self.buildset])
         yield from self.manager._execute_builds(self.slave)
         self.assertTrue(self.manager._execute_in_parallel.called)
