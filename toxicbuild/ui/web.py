@@ -266,11 +266,6 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
                              level='debug')
                     client.disconnect()
 
-            elif not body:  # pragma no branch
-                self.log('Bad response. Disconnecting from stream.',
-                         level='debug')
-                client.disconnect()
-
 
 class MainHandler(LoggedTemplateHandler):
     main_template = 'main.html'

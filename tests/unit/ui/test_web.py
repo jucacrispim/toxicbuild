@@ -436,34 +436,6 @@ class StreamHandlerTest(AsyncTestCase):
         called = self.handler.log.call_args[0][0]
         self.assertIn('WebSocketError', called)
 
-    @patch.object(web, 'get_hole_client', MagicMock())
-    @patch.object(web.StreamHandler, 'log', MagicMock())
-    @gen_test
-    def test_listen2event_with_bad_response(self):
-        client_mock = MagicMock()
-        client_mock._connected = True
-
-        def disconnect():
-            client_mock._connected = False
-
-        client_mock.disconnect = disconnect
-
-        @asyncio.coroutine
-        def get_response():
-            return {}
-
-        client_mock.get_response = get_response
-
-        @asyncio.coroutine
-        def get_client(*a, **kw):
-            return client_mock
-
-        web.get_hole_client = get_client
-
-        yield from self.handler.listen2event()
-        called = self.handler.log.call_args[0][0]
-        self.assertIn('Bad response', called)
-
 
 class MainHandlerTest(AsyncTestCase):
 
