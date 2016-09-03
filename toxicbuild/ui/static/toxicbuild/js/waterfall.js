@@ -188,8 +188,11 @@ var STEP_TEMPLATE = `
 var BUILDERS = [];
 
 function WaterfallManager(){
+  var id = jQuery('#waterfall-repo-id').val();
+  var host = window.location.host;
+
   obj = {
-    url: 'ws://' + window.location.host + '/api/socks/builds',
+    url: 'ws://' + host + '/api/socks/builds?repository_id=' + id,
     ws: null,
 
     init: function(){
@@ -229,7 +232,11 @@ function WaterfallManager(){
 
       var build = step.build
       var build_el = jQuery('#build-info-' + build.uuid);
+      template = jQuery(template);
+      template.hide();
       build_el.parent().append(template);
+      //template.fadeIn();
+      template.slideDown('slow');
     },
 
     handleStepFinished: function(step){

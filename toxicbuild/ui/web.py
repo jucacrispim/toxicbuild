@@ -228,10 +228,16 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
     def open(self, action):
         if action == 'repo-status':
             ensure_future(self.listen2event('repo_status_changed'))
+
         elif action == 'builds':  # pragma no branch
+            repository_id = self.request.arguments[
+                'repository_id'][0].decode()
+
             events = ['build_started', 'build_finished', 'build_added',
                       'step_started', 'step_finished']
-            ensure_future(self.listen2event(*events))
+
+            ensure_future(self.listen2event(
+                *events, repository_id=repository_id))
 
     @asyncio.coroutine
     def get_stream_client(self):
@@ -245,18 +251,26 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
         return client
 
     @asyncio.coroutine
-    def listen2event(self, *event_types):
+    def listen2event(self, *event_types, repository_id=None):
         """Creates a connection to the master and sends a messge to
         the ws client when an event of event_type is sent by the mater.
 
         :param event_types: A list of the events that will be handled by
-        this connection."""
+          this connection.
+        :param repository_id: If present only events related to this repository
+          will be messaged to the client.
+        """
 
         client = yield from self.get_stream_client()
         while client._connected:
             response = yield from client.get_response()
             body = response.get('body', {})
             master_event_type = body.get('event_type')
+            repo = body.get('repository', {}) or body.get(
+                'build', {}).get('repository', {})
+
+            if repository_id and repo.get('id') != repository_id:
+                continue
 
             if master_event_type in event_types:  # pragma no branch
                 try:
@@ -298,6 +312,7 @@ class WaterfallHandler(LoggedTemplateHandler):
     def get(self, repo_name):
         buildsets = yield from BuildSet.list(repo_name=repo_name)
         builders = yield from self._get_builders_for_buildsets(buildsets)
+        repo = yield from Repository.get(repo_name=repo_name)
 
         def _ordered_builds(builds):
             return sorted(
@@ -306,7 +321,7 @@ class WaterfallHandler(LoggedTemplateHandler):
         context = {'buildsets': buildsets, 'builders': builders,
                    'ordered_builds': _ordered_builds,
                    'get_ending': self._get_ending,
-                   'repo_name': repo_name}
+                   'repository': repo}
         self.render_template(self.template, context)
 
     @asyncio.coroutine

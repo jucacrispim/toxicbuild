@@ -3,7 +3,8 @@
 {% block main_area %}
 {% include "step_details_modal.html" %}
 {% include "buildset_details_modal.html" %}
-<input type="hidden" id="waterfall-repo-name" value="{{repo_name}}"/>
+<input type="hidden" id="waterfall-repo-id" value="{{repository.id}}"/>
+<input type="hidden" id="waterfall-repo-name" value="{{repository.name}}"/>
 <table>
   <tbody id="waterfall-table">
     <tr class="waterfall-row" id="waterfall-first-row">

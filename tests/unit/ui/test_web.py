@@ -386,6 +386,7 @@ class StreamHandlerTest(AsyncTestCase):
     @patch.object(web, 'ensure_future', MagicMock())
     @patch.object(web.StreamHandler, 'listen2event', MagicMock())
     def test_open_builds(self):
+        self.handler.request.arguments = {'repository_id': [b'123']}
         self.handler.open('builds')
         events = self.handler.listen2event.call_args[0]
         self.assertTrue(self.handler.listen2event.called)
@@ -436,6 +437,37 @@ class StreamHandlerTest(AsyncTestCase):
         called = self.handler.log.call_args[0][0]
         self.assertIn('WebSocketError', called)
 
+    @patch.object(web, 'get_hole_client', MagicMock())
+    @patch.object(web.StreamHandler, 'write_message', MagicMock())
+    @gen_test
+    def test_listen2event_with_wrong_repo(self):
+
+        class client_mock(MagicMock):
+            COUNT = -1
+            @property
+            def _connected(self):
+                self.COUNT += 1
+                return not bool(self.COUNT)
+
+        client_mock = client_mock()
+
+        @asyncio.coroutine
+        def get_response():
+            return {'body': {'event_type': 'repo_status_changed',
+                             'repository': {'id': '1234'}}}
+
+        client_mock.get_response = get_response
+
+        @asyncio.coroutine
+        def get_client(*a, **kw):
+            return client_mock
+
+        web.get_hole_client = get_client
+        yield from self.handler.listen2event('repo_status_changed',
+                                             repository_id='123')
+        self.assertFalse(self.handler.write_message.called)
+
+
 
 class MainHandlerTest(AsyncTestCase):
 
@@ -480,6 +512,7 @@ class WaterfallHandlerTest(AsyncTestCase):
 
     @patch.object(web, 'BuildSet', MagicMock())
     @patch.object(web, 'Builder', MagicMock())
+    @patch.object(web, 'Repository', MagicMock())
     @gen_test
     def test_get(self):
         web.Builder.list = asyncio.coroutine(lambda *a, **kw: [])
@@ -489,7 +522,7 @@ class WaterfallHandlerTest(AsyncTestCase):
 
         expected_context = {'buildsets': None, 'builders': [],
                             'ordered_builds': None,
-                            'repo_name': 'repo',
+                            'repository': 'repo',
                             'get_ending': self.handler._get_ending}.keys()
         yield self.handler.get('some-repo')
         context = self.handler.render_template.call_args[0][1]
@@ -515,6 +548,7 @@ class WaterfallHandlerTest(AsyncTestCase):
 
     @patch.object(web, 'BuildSet', MagicMock())
     @patch.object(web, 'Builder', MagicMock())
+    @patch.object(web, 'Repository', MagicMock())
     @gen_test
     def test_ordered_builds(self):
         bd0 = models.Builder(name='z', id=0)
