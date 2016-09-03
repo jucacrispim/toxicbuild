@@ -444,6 +444,7 @@ class StreamHandlerTest(AsyncTestCase):
 
         class client_mock(MagicMock):
             COUNT = -1
+
             @property
             def _connected(self):
                 self.COUNT += 1
@@ -466,7 +467,6 @@ class StreamHandlerTest(AsyncTestCase):
         yield from self.handler.listen2event('repo_status_changed',
                                              repository_id='123')
         self.assertFalse(self.handler.write_message.called)
-
 
 
 class MainHandlerTest(AsyncTestCase):
