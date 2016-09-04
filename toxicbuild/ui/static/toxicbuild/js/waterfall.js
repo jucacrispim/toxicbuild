@@ -196,6 +196,7 @@ function WaterfallManager(){
   obj = {
     url: 'ws://' + host + '/api/socks/builds?repository_id=' + id,
     ws: null,
+    _build_last_step: {},
     _step_started_queue: [],
     _step_finished_queue: [],
     _build_started_queue: [],
@@ -225,15 +226,14 @@ function WaterfallManager(){
       }
     },
 
-    handleStepStarted: function(step){
+    handleStepStarted: function(step, from_queue){
       // insert the info about a step in the waterfall
       var self = this;
-
       var template = STEP_TEMPLATE.replace(/{{step.uuid}}/g, step.uuid);
       template = template.replace(/{{step.status}}/g, step.status);
       template = template.replace(/{{step.name}}/g, step.name);
       template = template.replace(/{{step.command}}/g, step.command);
-      template = template.replace(/{{step.output}}/g, step.output);
+      //template = template.replace(/{{step.output}}/g, "No output...");
       template = template.replace(/{{step.started}}/g, step.started);
       template = template.replace(/{{step.finished}}/g, 'Step still running');
 
@@ -242,16 +242,31 @@ function WaterfallManager(){
 
       // if there is no build_el we store the step in a query and after
       // the build is present we insert the build info.
-      if (build_el.length == 0){
+      if (!build_el.length){
 	self._step_started_queue.push(step);
 	return false;
+      };
+
+      // here we handle the case when the information about one step
+      // arrived before the information about an previous step.
+      if ((typeof self._build_last_step[build.uuid] != 'undefined' &&
+      	   self._build_last_step[build.uuid] < step.index -1) ||
+      	  (typeof self._build_last_step[build.uuid] == 'undefined' && step.index != 0)){
+
+      	if (self._step_started_queue.indexOf(step) < 0){
+      	  self._step_started_queue.push(step);
+      	};
+      	return false;
       };
 
       template = jQuery(template);
       template.hide();
       build_el.parent().append(template);
       template.slideDown('slow');
-
+      self._build_last_step[build.uuid] = step.index;
+      if (!from_queue){
+	self._handleStepQueue(build);
+      }
     },
 
     handleStepFinished: function(step){
@@ -265,9 +280,9 @@ function WaterfallManager(){
 
       var html = step_el.html();
       step_el.removeClass('step-running').addClass('step-' + step.status);
+      html = html.replace('Step still running', step.finished);
+      html = html.replace('{{step.output}}', step.output.replace(/"/g, "'"));
       html = html.replace(/running/g, step.status);
-      html = html.replace('Step still', '');
-      html = html.replace(step.output, step.output);
       step_el.html(html);
     },
 
@@ -323,6 +338,7 @@ function WaterfallManager(){
       var builder_input = jQuery('#builder-' + build.builder.id)
       var builder_status = builder_input.val();
       builder_input.parent().removeClass('builder-running');
+      builder_input.parent().removeClass('builder-pending');
       builder_input.parent().addClass('builder-' + build.status);
       builder_input.val(build.status);
     },
@@ -376,7 +392,7 @@ function WaterfallManager(){
       for (i in self._step_started_queue){
 	var step = self._step_started_queue[i];
 	if (step.build.id == build.id){
-	  self.handleStepStarted(step);
+	  self.handleStepStarted(step, true);
 	}else{
 	  new_steps_queue.push(step);
 	};
