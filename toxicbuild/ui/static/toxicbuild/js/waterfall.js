@@ -437,13 +437,8 @@ function WaterfallManager(){
       for (i = 0; i <= buildset.builds.length; i++){
 	var builder = BUILDERS[i];
 	if (!builder){return false}
-	try{
-	  var parsed_builder = jQuery.parseJSON(builder);
-	  builder = parsed_builder;
-	}catch (e){
-	  utils.log(e);
-	  utils.log(BUILDERS[i]);
-	};
+	var parsed_builder = jQuery.parseJSON(builder);
+	builder = parsed_builder;
 
 	buildset_el.append('<td class="builder-column" id="build-builder-'+ builder.id +'"></td>');
       };
