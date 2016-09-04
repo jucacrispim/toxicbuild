@@ -67,7 +67,8 @@
 	{% end %}
 	<ul>
 	  <li class="step step-{{build.status}}" id="build-info-{{build.uuid}}">
-	    Build - {{build.status}}
+	    Build - {{build.status}} <i class="fa fa-cog fa-spin fa-3x fa-fw toxic-spinner-main" id="spinner-build-{{build.uuid}}"
+					{% if build.status != 'running' %} style="display:none" {% end %}></i>
 	    <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" {% if build.status in ['pending', 'running'] %} style="display:none" {% end %}>
 	      <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-build btn-sm"
 		      data-buildset-commit="{{buildset.commit}}"

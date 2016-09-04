@@ -36,6 +36,7 @@ function rebuildBuildset(button){
   var url = '/api/repo/start-build';
   var repo_name = jQuery('#waterfall-repo-name').val();
   var data = {name: repo_name, named_tree: named_tree, branch: branch};
+  utils.log('rebuild buildset for ' + repo_name);
   var success_cb = function(response){
     utils.showSuccessMessage('Buildset re-scheduled.');
   };
@@ -150,6 +151,7 @@ var BUILD_TEMPLATE = `
 <ul>
   <li class="step step-{{build.status}}" id="build-info-{{build.id}}">
     Build - {{build.status}}
+    <i class="fa fa-cog fa-spin fa-3x fa-fw toxic-spinner-main" id="spinner-build-{{build.uuid}}" style="display:none"></i>
     <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" style="display:none" class="rebuild-icon">
       <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-build btn-sm"
         data-buildset-commit="{{buildset.commit}}"
@@ -194,6 +196,10 @@ function WaterfallManager(){
   obj = {
     url: 'ws://' + host + '/api/socks/builds?repository_id=' + id,
     ws: null,
+    _step_started_queue: [],
+    _step_finished_queue: [],
+    _build_started_queue: [],
+    _build_finished_queue: [],
 
     init: function(){
       var self = this;
@@ -220,6 +226,7 @@ function WaterfallManager(){
     },
 
     handleStepStarted: function(step){
+      // insert the info about a step in the waterfall
       var self = this;
 
       var template = STEP_TEMPLATE.replace(/{{step.uuid}}/g, step.uuid);
@@ -228,26 +235,39 @@ function WaterfallManager(){
       template = template.replace(/{{step.command}}/g, step.command);
       template = template.replace(/{{step.output}}/g, step.output);
       template = template.replace(/{{step.started}}/g, step.started);
-      template = template.replace(/{{step.finished}}/g, step.finished);
+      template = template.replace(/{{step.finished}}/g, 'Step still running');
 
       var build = step.build
       var build_el = jQuery('#build-info-' + build.uuid);
+
+      // if there is no build_el we store the step in a query and after
+      // the build is present we insert the build info.
+      if (build_el.length == 0){
+	self._step_started_queue.push(step);
+	return false;
+      };
+
       template = jQuery(template);
       template.hide();
       build_el.parent().append(template);
-      //template.fadeIn();
       template.slideDown('slow');
+
     },
 
     handleStepFinished: function(step){
       var self = this;
 
       var step_el = jQuery('#step-' + step.uuid);
+      if (!step_el.length){
+	self._step_finished_queue.push(step);
+	return false
+      };
+
       var html = step_el.html();
       step_el.removeClass('step-running').addClass('step-' + step.status);
-      html = html.replace(step.status, step.status);
+      html = html.replace(/running/g, step.status);
+      html = html.replace('Step still', '');
       html = html.replace(step.output, step.output);
-      html = html.replace(step.finished, step.finished);
       step_el.html(html);
     },
 
@@ -255,14 +275,26 @@ function WaterfallManager(){
       var self = this;
 
       var build_el = jQuery('#build-info-' + build.uuid);
-      build_el.html(build_el.html().replace(/pending/, 'running'));
+
+      if (build_el.length == 0){
+	self._build_started_queue.push(build);
+	return false;
+      };
+
+      var html = build_el.html().replace(/pending/, 'running');
+      html = html.replace(/{{build.uuid}}/g, build.uuid);
+      build_el.html(html);
       build_el.removeClass('step-pending').addClass('step-running');
+
+      var spinner = jQuery('#spinner-build-' + build.uuid);
+      spinner.show();
 
       var builder_input = jQuery('#builder-' + build.builder.id)
       var builder_status = builder_input.val();
       if (builder_status != 'running'){
 	builder_input.parent().removeClass('builder-' + builder_status);
 	builder_input.parent().addClass('builder-running');
+	builder_input.val('running');
       }
     },
 
@@ -270,6 +302,14 @@ function WaterfallManager(){
       var self = this;
 
       var build_el = jQuery('#build-info-' + build.uuid);
+      if (!build_el.length){
+	self._build_finished_queue.push(build);
+	return false;
+      }
+
+      var spinner = jQuery('#spinner-build-' + build.uuid);
+      spinner.hide();
+
       build_el.html(build_el.html().replace(/running/, build.status));
       jQuery('.rebuild-icon', build_el).show();
 
@@ -279,13 +319,12 @@ function WaterfallManager(){
       });
 
       build_el.removeClass('step-running').addClass('step-' + build.status);
+
       var builder_input = jQuery('#builder-' + build.builder.id)
       var builder_status = builder_input.val();
-      if (builder_status != 'running'){
-	builder_input.parent().removeClass('builder-running');
-	builder_input.parent().addClass('builder-' + builder_status);
-      }
-
+      builder_input.parent().removeClass('builder-running');
+      builder_input.parent().addClass('builder-' + build.status);
+      builder_input.val(build.status);
     },
 
     handleBuildAdded: function(build){
@@ -296,7 +335,67 @@ function WaterfallManager(){
 	self._addBuildSet(buildset);
       };
       self._addBuild(build);
+    },
 
+    _handleBuildQueue: function(build){
+      var self = this;
+      // here we handle the started builds in queue.
+      var new_builds_queue = [];
+      for (i in self._build_started_queue){
+	var enqueued_build = self._build_started_queue[i];
+	if (enqueued_build.id == build.id){
+	  self.handleBuildStarted(build);
+	  self._handleStepQueue(build);
+	}else{
+	  new_builds_queue.push(build);
+	};
+      };
+
+      // here we handle the finished builds in queue.
+      var new_builds_queue = [];
+      for (i in self._build_finished_queue){
+	var enqueued_build = self._build_finished_queue[i];
+	if (enqueued_build.id == build.id){
+	  self.handleBuildFinished(build);
+	  self._handleStepQueue(build);
+	}else{
+	  new_builds_queue.push(build);
+	};
+      };
+
+      self._build_finished_queue = new_builds_queue;
+    },
+
+    _handleStepQueue: function(build){
+      var self = this;
+
+      // here we handle the started steps in queue.
+      var new_steps_queue = [];
+      self._step_started_queue.sort(function(a, b){return a.index - b.index});
+
+      for (i in self._step_started_queue){
+	var step = self._step_started_queue[i];
+	if (step.build.id == build.id){
+	  self.handleStepStarted(step);
+	}else{
+	  new_steps_queue.push(step);
+	};
+      };
+      self._step_started_queue = new_steps_queue;
+
+      // here we handle the finished steps in queue.
+      var new_steps_queue = [];
+      self._step_finished_queue.sort(function(a, b){return a.index - b.index});
+
+      for (i in self._step_finished_queue){
+	var step = self._step_finished_queue[i];
+	if (step.build.id == build.id){
+	  self.handleStepFinished(step);
+	}else{
+	  new_steps_queue.push(step);
+	};
+      };
+      self._step_finished_queue = new_steps_queue;
     },
 
     _addBuildSet: function(buildset){
@@ -313,8 +412,15 @@ function WaterfallManager(){
       jQuery(template).insertAfter(first_row);
 
       var buildset_el = jQuery('#buildset-' + buildset.id).parent().parent().parent();
-      for (i = 0; i < buildset.builds.length; i++){
+
+      jQuery('.btn-rebuild-buildset', buildset_el).on('click', function(event){
+	var button = jQuery(this);
+	rebuildBuildset(button);
+      });
+
+      for (i = 0; i <= buildset.builds.length; i++){
 	var builder = BUILDERS[i];
+	if (!builder){return false}
 	try{
 	  var parsed_builder = jQuery.parseJSON(builder);
 	  builder = parsed_builder;
@@ -325,12 +431,6 @@ function WaterfallManager(){
 
 	buildset_el.append('<td class="builder-column" id="build-builder-'+ builder.id +'"></td>');
       };
-
-      jQuery('.btn-rebuild-buildset', buildset_el).on('click', function(event){
-	var button = jQuery(this);
-	rebuildBuildset(button);
-      });
-
 
     },
 
@@ -343,11 +443,10 @@ function WaterfallManager(){
       template = template.replace(/{{buildset.commit}}/g, buildset.commit);
       template = template.replace(/{{build.id}}/g, build.uuid);
       template = template.replace(/{{buildset.branch}}/g, buildset.branch);
-      utils.log(builder);
       template = template.replace(/{{build.builder.name}}/g, builder.name);
       jQuery(build_el).append(template);
-
-
+      self._handleBuildQueue(build);
+      self._handleStepQueue(build);
     },
 
     _getBuilder: function(builder_id){
