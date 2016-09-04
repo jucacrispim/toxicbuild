@@ -53,7 +53,7 @@ class Builder(LoggerMixin):
 
         self.manager.send_info(build_info)
 
-        for step in self.steps:
+        for index, step in enumerate(self.steps):
             msg = 'Executing %s' % step.command
             self.log(msg, level='debug')
             step_info = {'status': 'running',
@@ -61,6 +61,7 @@ class Builder(LoggerMixin):
                          'name': step.name,
                          'started': datetime2string(now()),
                          'finished': None,
+                         'index': index,
                          'output': ''}
 
             yield from self.manager.send_info(step_info)

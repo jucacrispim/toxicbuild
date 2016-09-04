@@ -215,7 +215,8 @@ class SlaveTest(TestCase):
         now = datetime.datetime.now(tz=tz)
 
         build_info = {'status': 'running', 'cmd': 'ls', 'name': 'ls',
-                      'started': now, 'finished': None, 'output': ''}
+                      'started': now, 'finished': None, 'output': '',
+                      'index': 0}
 
         self.slave._set_step_info = MagicMock(
             spec=self.slave._set_step_info)
@@ -231,7 +232,8 @@ class SlaveTest(TestCase):
         finished = now.strftime('%a %b %d %H:%M:%S %Y %z')
 
         yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
-                                             'running', '', started, finished)
+                                             'running', '', started, finished,
+                                             0)
         self.assertEqual(len(self.build.steps), 1)
 
     @async_test
@@ -243,12 +245,14 @@ class SlaveTest(TestCase):
         finished = now.strftime('%a %b %d %H:%M:%S %Y %z')
 
         yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
-                                             'running', '', started, finished)
+                                             'running', '', started, finished,
+                                             0)
         yield from self.slave._set_step_info(self.build, 'echo "oi"', 'echo',
-                                             'running', '', started, finished)
+                                             'running', '', started, finished,
+                                             1)
         yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
                                              'success', 'somefile.txt\n',
-                                             started, finished)
+                                             started, finished, 2)
 
         self.assertEqual(self.build.steps[0].status, 'success')
         self.assertEqual(len(self.build.steps), 2)

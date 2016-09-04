@@ -30,7 +30,8 @@ from uuid import uuid4
 from mongoengine.queryset import queryset_manager
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
-                               ReferenceField, DateTimeField, UUIDField)
+                               ReferenceField, DateTimeField, UUIDField,
+                               IntField)
 from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
                                    LoggerMixin)
@@ -143,6 +144,8 @@ class BuildStep(EmbeddedDocument):
     output = StringField()
     started = DateTimeField(default=None)
     finished = DateTimeField(default=None)
+    # the index of the step in the build.
+    index = IntField(requred=True)
 
     def to_dict(self):
         objdict = json.loads(super().to_json())

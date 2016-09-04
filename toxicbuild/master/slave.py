@@ -173,11 +173,12 @@ class Slave(Document, LoggerMixin):
                                            build_info['status'],
                                            build_info['output'],
                                            build_info['started'],
-                                           build_info['finished'])
+                                           build_info['finished'],
+                                           build_info['index'])
 
     @asyncio.coroutine
     def _set_step_info(self, build, cmd, name, status, output, started,
-                       finished):
+                       finished, index):
 
         repo = yield from to_asyncio_future(build.repository)
         requested_step = None
@@ -196,7 +197,8 @@ class Slave(Document, LoggerMixin):
         if not requested_step:
             requested_step = BuildStep(name=name, command=cmd,
                                        status=status, output=output,
-                                       started=string2datetime(started))
+                                       started=string2datetime(started),
+                                       index=index)
             msg = 'step {} started at {}'.format(requested_step.command,
                                                  started)
             self.log(msg, level='debug')
