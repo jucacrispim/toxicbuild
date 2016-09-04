@@ -22,7 +22,6 @@ function StreamConsumer(){
     ws: null,
 
     init: function(){
-      jQuery(jQuery('.spinner-placeholder')[0]).outerWidth(jQuery(jQuery('.fa-spin')[0]).outerWidth());
       var self = this;
       self.ws = new WebSocket(self.url);
       self.ws.onmessage = self.change_repo_status;
