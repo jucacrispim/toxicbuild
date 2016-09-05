@@ -26,7 +26,7 @@ def create_settings():
 
 @command
 def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
-          conffile=None, loglevel='info', pidfile=PIDFILE):
+          conffile=None, loglevel='info', pidfile=PIDFILE):  # pragma: no cover
     """ Starts the build server.
 
     Starts the build server to listen on the specified port for
@@ -71,7 +71,7 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
 
 
 @command
-def stop(workdir, pidfile=PIDFILE):
+def stop(workdir, pidfile=PIDFILE):  # pragma: no cover
     """ Stops a buid server instance.
 
     :param workdir: Workdir for master to be killed.
@@ -88,7 +88,7 @@ def stop(workdir, pidfile=PIDFILE):
 
 
 @command
-def create(root_dir):
+def create(root_dir):  # pragma: no cover
     """ Create a new toxicslave project.
 
     :param --root_dir: Root directory for toxicslave.
@@ -114,5 +114,5 @@ make_pyflakes_happy = [BuildManager]
 del make_pyflakes_happy
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':   # pragma: no cover
     main()

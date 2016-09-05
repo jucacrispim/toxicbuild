@@ -40,7 +40,7 @@ def create_settings_and_connect():
     dbconn = connect(**dbsettings)
 
 
-def ensure_indexex():
+def ensure_indexex():  # pragma: no cover
     BuildSet.ensure_indexes()
 
 
@@ -90,7 +90,7 @@ def run(loglevel):  # pragma no cover
 
 @command
 def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
-          conffile=None, loglevel='info', pidfile=PIDFILE):
+          conffile=None, loglevel='info', pidfile=PIDFILE):  # pragma: no cover
     """ Starts toxicmaster.
 
     :param workdir: Work directory for server.
@@ -119,7 +119,7 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
 
 
 @command
-def stop(workdir, pidfile=PIDFILE):
+def stop(workdir, pidfile=PIDFILE):  # pragma: no cover
     """ Kills toxicmaster.
 
     :param --workdir: Workdir for master to be killed. Looks for a file
@@ -137,7 +137,7 @@ def stop(workdir, pidfile=PIDFILE):
 
 
 @command
-def create(root_dir):
+def create(root_dir):  # pragma: no cover
     """ Creates a new toxicmaster environment.
 
     :param --root_dir: Root directory for toxicmaster.
@@ -168,5 +168,5 @@ make_pyflakes_happy = [Slave, Build, Builder, RepositoryRevision,
 del make_pyflakes_happy
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     main()
