@@ -223,6 +223,13 @@ class UtilsTest(TestCase):
         encrypted = utils.bcrypt_string(passwd, salt)
         self.assertIsInstance(encrypted, str)
 
+    @patch.object(utils.os, 'chdir', Mock())
+    def test_changedir(self):
+        with utils.changedir('bla'):
+            pass
+
+        self.assertEqual(len(utils.os.chdir.call_args_list), 2)
+
 
 class StreamUtilsTest(TestCase):
 

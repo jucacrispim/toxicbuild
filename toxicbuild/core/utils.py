@@ -265,6 +265,19 @@ def bcrypt_string(string, salt):
     return encrypted.decode()
 
 
+class changedir(object):
+
+    def __init__(self, path):
+        self.old_dir = os.getcwd()
+        self.current_dir = path
+
+    def __enter__(self):
+        os.chdir(self.current_dir)
+
+    def __exit__(self, *a, **kw):
+        os.chdir(self.old_dir)
+
+
 # Sorry, but not willing to test  a daemonizer.
 def daemonize(call, cargs, ckwargs, stdout, stderr,
               workdir, pidfile):  # pragma: no cover
