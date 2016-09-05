@@ -4,7 +4,6 @@ import gettext
 import os
 import pkg_resources
 import shutil
-from uuid import uuid4
 import sys
 from mando import command, main
 from tornado.platform.asyncio import AsyncIOMainLoop
