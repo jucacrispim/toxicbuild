@@ -9,5 +9,11 @@ DATABASE = {'host': 'localhost',
             'db': 'toxicmaster'}
 
 ENABLE_HOLE = True
+# From which addesses we should accept connections.
+# If 0.0.0.0, accepts connections from everyone.
 HOLE_ADDR = '127.0.0.1'
+# Port to the hole server listen
 HOLE_PORT = 6666
+# Auth settings.
+BCRYPT_SALT = '{{BCRYPT_SALT}}'
+ACCESS_TOKEN = '{{ACCESS_TOKEN}}'

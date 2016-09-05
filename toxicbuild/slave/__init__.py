@@ -4,9 +4,10 @@ import logging
 import os
 import pkg_resources
 import shutil
+from uuid import uuid4
 from mando import command, main
 from toxicbuild.core.conf import Settings
-from toxicbuild.core.utils import daemonize as daemon
+from toxicbuild.core.utils import daemonize as daemon, bcrypt_string, bcrypt
 from toxicbuild.slave.managers import BuildManager
 
 
@@ -93,22 +94,36 @@ def create(root_dir):  # pragma: no cover
 
     :param --root_dir: Root directory for toxicslave.
     """
-    print('Creating root_dir {}'.format(root_dir))
+    print('Creating root_dir `{}` for toxicslave'.format(root_dir))
 
+    # First we create the directory
     os.mkdir(root_dir)
 
-    fakesettings = os.path.join(root_dir, 'fakesettings.py')
-    with open(fakesettings, 'w') as f:
-        f.write('DATABASE = {}')
-    os.environ['TOXICSLAVE_SETTINGS'] = fakesettings
-
+    # after that we copy the config file to the root dir
     template_fname = 'toxicslave.conf.tmpl'
     template_dir = pkg_resources.resource_filename('toxicbuild.slave',
                                                    'templates')
     template_file = os.path.join(template_dir, template_fname)
     dest_file = os.path.join(root_dir, 'toxicslave.conf')
     shutil.copyfile(template_file, dest_file)
-    os.remove(fakesettings)
+
+    # here we create a bcrypt salt and a access token for authentication.
+    salt = bcrypt.gensalt(8)
+    access_token = str(uuid4())
+    encrypted_token = bcrypt_string(access_token, salt)
+
+    # and finally update the config file content with the new generated
+    # salt and access token
+    with open(dest_file, 'r+') as fd:
+        content = fd.read()
+        content = content.replace('{{BCRYPT_SALT}}', salt.decode())
+        content = content.replace('{{ACCESS_TOKEN}}', encrypted_token)
+        fd.seek(0)
+        fd.write(content)
+
+    print('Toxicslave environment created with access token: {}'.format(
+        access_token))
+    return access_token
 
 make_pyflakes_happy = [BuildManager]
 del make_pyflakes_happy

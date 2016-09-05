@@ -4,11 +4,14 @@ import gettext
 import os
 import pkg_resources
 import shutil
+from uuid import uuid4
 import sys
 from mando import command, main
 from tornado.platform.asyncio import AsyncIOMainLoop
 from pyrocumulus.commands.base import get_command
 from toxicbuild.core.conf import Settings
+from toxicbuild.core.utils import bcrypt, bcrypt_string
+
 
 here = os.path.dirname(os.path.abspath(__file__))
 translations = os.path.join(here, 'translations')
@@ -97,27 +100,60 @@ def stop(workdir, pidfile=None):  # pragma: no cover
 
 
 @command
-def create(root_dir):  # pragma: no cover
+def create(root_dir, access_token, username=None,
+           password=None):  # pragma: no cover
     """ Create a new toxicweb project.
 
     :param --root_dir: Root directory for toxicweb.
+    :param --access-token: Access token to master's hole.
+    :param --username: Username for web access
+    :param --password: Password for web access
     """
     print('Creating root_dir {}'.format(root_dir))
 
     os.mkdir(root_dir)
 
-    fakesettings = os.path.join(root_dir, 'fakesettings.py')
-    with open(fakesettings, 'w') as f:
-        f.write('DATABASE = {}')
-    os.environ['TOXICUI_SETTINGS'] = fakesettings
-
-    template_fname = 'toxicweb_settings.py.tmpl'
+    template_fname = 'toxicui.conf.tmpl'
     template_dir = pkg_resources.resource_filename('toxicbuild.ui',
                                                    'templates')
     template_file = os.path.join(template_dir, template_fname)
-    dest_file = os.path.join(root_dir, 'toxicweb_settings.py')
+    dest_file = os.path.join(root_dir, 'toxicui.conf')
     shutil.copyfile(template_file, dest_file)
-    os.remove(fakesettings)
+
+    if not username:
+        username = _ask_thing('Username for web access: ')
+
+    if not password:
+        password = _ask_thing('Password for web access: ')
+
+    # here we create a bcrypt salt and a access token for authentication.
+    salt = bcrypt.gensalt(8)
+    # cookie secret to tornado secure cookies
+    cookie_secret = bcrypt.gensalt(8).decode()
+    encrypted_password = bcrypt_string(password, salt)
+
+    # and finally update the config file content with the new generated
+    # salt and access token
+    with open(dest_file, 'r+') as fd:
+        content = fd.read()
+        content = content.replace('{{HOLE_TOKEN}}', access_token)
+        content = content.replace('{{BCRYPT_SALT}}', salt.decode())
+        content = content.replace('{{USERNAME}}', username)
+        content = content.replace('{{PASSWORD}}', encrypted_password)
+        content = content.replace('{{COOKIE_SECRET}}', cookie_secret)
+        fd.seek(0)
+        fd.write(content)
+
+    print('Toxicui environment created for web ')
+    return access_token
+
+
+def _ask_thing(thing):
+    response = input(thing)
+    while not response:
+        response = input(thing)
+
+    return response
 
 
 if __name__ == '__main__':  # pragma: no cover

@@ -10,10 +10,12 @@ import logging
 import os
 import pkg_resources
 import shutil
+from uuid import uuid4
 from mando import command, main
 from mongomotor import connect
 from toxicbuild.core.conf import Settings
-from toxicbuild.core.utils import log, daemonize as daemon
+from toxicbuild.core.utils import (log, daemonize as daemon,
+                                   bcrypt, bcrypt_string)
 from toxicbuild.master.scheduler import TaskScheduler
 # the api
 from toxicbuild.master.repository import (Repository, RepositoryRevision,
@@ -51,9 +53,6 @@ def create_scheduler():
     ensure_future(scheduler.start())
 
 
-# script
-
-
 @asyncio.coroutine
 def toxicinit():  # pragma no cover
     """ Initialize services. """
@@ -86,6 +85,9 @@ def run(loglevel):  # pragma no cover
     loop = asyncio.get_event_loop()
     loop.run_until_complete(toxicinit())
     loop.run_forever()
+
+
+# console commands
 
 
 @command
@@ -142,16 +144,9 @@ def create(root_dir):  # pragma: no cover
 
     :param --root_dir: Root directory for toxicmaster.
     """
-    print('Creating root_dir {}'.format(root_dir))
+    print('Creating root_dir `{}` for toxicmaster'.format(root_dir))
 
     os.mkdir(root_dir)
-
-    # :/
-    # need fake settings here or pkg_resources does not work.
-    fakesettings = os.path.join(root_dir, 'fakesettings.py')
-    with open(fakesettings, 'w') as f:
-        f.write('DATABASE = {}')
-    os.environ['TOXICMASTER_SETTINGS'] = fakesettings
 
     template_fname = 'toxicmaster.conf.tmpl'
     template_dir = pkg_resources.resource_filename('toxicbuild.master',
@@ -159,8 +154,24 @@ def create(root_dir):  # pragma: no cover
     template_file = os.path.join(template_dir, template_fname)
     dest_file = os.path.join(root_dir, 'toxicmaster.conf')
     shutil.copyfile(template_file, dest_file)
-    os.remove(fakesettings)
 
+    # here we create a bcrypt salt and a access token for authentication.
+    salt = bcrypt.gensalt(8)
+    access_token = str(uuid4())
+    encrypted_token = bcrypt_string(access_token, salt)
+
+    # and finally update the config file content with the new generated
+    # salt and access token
+    with open(dest_file, 'r+') as fd:
+        content = fd.read()
+        content = content.replace('{{BCRYPT_SALT}}', salt.decode())
+        content = content.replace('{{ACCESS_TOKEN}}', encrypted_token)
+        fd.seek(0)
+        fd.write(content)
+
+    print('Toxicmaster environment created with access token: {}'.format(
+        access_token))
+    return access_token
 
 make_pyflakes_happy = [Slave, Build, Builder, RepositoryRevision,
                        BuildSet, RepositoryBranch, Repository]

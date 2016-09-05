@@ -2,8 +2,18 @@
 
 import pkg_resources
 
+# toxicui settings
+HOLE_HOST = '127.0.0.1'
+HOLE_PORT = 6666
 
+HOLE_TOKEN = '{{HOLE_TOKEN}}'
+BCRYPT_SALT = '{{BCRYPT_SALT}}'
+USERNAME = '{{USERNAME}}'
+PASSWORD = '{{PASSWORD}}'
+
+# pyrocumulus/tornado settings
 TORNADO_PORT = 8888
+TORNADO_OPTS = {'cookie_secret': '{{COOKIE_SECRET}}'}
 STATIC_URL = '/static/'
 STATIC_DIRS = [pkg_resources.resource_filename('toxicbuild.ui', 'static')]
 TEMPLATE_DIRS = [pkg_resources.resource_filename('toxicbuild.ui', 'templates')]
