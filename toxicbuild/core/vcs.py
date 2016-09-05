@@ -21,9 +21,9 @@ from abc import ABCMeta, abstractmethod
 import asyncio
 import os
 from toxicbuild.core.exceptions import VCSError
-from toxicbuild.core.utils import(exec_cmd, inherit_docs, string2datetime,
-                                  datetime2string, utc2localtime,
-                                  localtime2utc, LoggerMixin)
+from toxicbuild.core.utils import (exec_cmd, inherit_docs, string2datetime,
+                                   datetime2string, utc2localtime,
+                                   localtime2utc, LoggerMixin)
 
 
 class VCS(LoggerMixin, metaclass=ABCMeta):

@@ -20,7 +20,7 @@
 import asyncio
 from copy import copy
 from toxicbuild.core.exceptions import ExecCmdError
-from toxicbuild.core.utils import(exec_cmd, LoggerMixin, datetime2string, now)
+from toxicbuild.core.utils import (exec_cmd, LoggerMixin, datetime2string, now)
 
 
 class Builder(LoggerMixin):
