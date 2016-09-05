@@ -2,7 +2,7 @@
 
 
 echo "\nChecking coverage for Python code\n"
-OUT=`coverage run --source=$1 --branch setup.py test --test-suite=tests.unit -q 2>&1 > /dev/null`;
+OUT=`coverage run --source=$1 --branch --omit=toxicbuild/script.py,toxicbuild/master/__init__.py,toxicbuild/slave/__init__.py,toxicbuild/ui/__init__.py setup.py test --test-suite=tests.unit -q 2>&1 > /dev/null`;
 ERROR=`echo $OUT | grep FAIL`;
 coverage html;
 coverage=`coverage report -m | grep TOTAL | sed 's/TOTAL\s*\w*\s*\w*\s*\w*\s*\w*//g' | cut -d'%' -f1`

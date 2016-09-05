@@ -37,7 +37,7 @@ AsyncIOMainLoop().install()
 
 @command
 def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
-          pidfile=None, loglevel='info'):  # pragma: no cover
+          pidfile=None, loglevel='info'):
     """ Starts the web interface.
 
     Starts the build server to listen on the specified port for
@@ -74,7 +74,7 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
 
 
 @command
-def stop(workdir, pidfile=None):  # pragma: no cover
+def stop(workdir, pidfile=None):
     """ Stops the web interface.
 
     :param workdir: Work directory for the ui to be killed.
@@ -100,8 +100,7 @@ def stop(workdir, pidfile=None):  # pragma: no cover
 
 
 @command
-def create(root_dir, access_token, username=None,
-           password=None):  # pragma: no cover
+def create(root_dir, access_token, username=None, password=None):
     """ Create a new toxicweb project.
 
     :param --root_dir: Root directory for toxicweb.
@@ -156,5 +155,5 @@ def _ask_thing(thing):
     return response
 
 
-if __name__ == '__main__':  # pragma: no cover
+if __name__ == '__main__':
     main()

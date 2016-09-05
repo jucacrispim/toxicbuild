@@ -3,7 +3,7 @@
 import asyncio
 try:
     from asyncio import ensure_future
-except ImportError:  # pragma no cover
+except ImportError:
     from asyncio import async as ensure_future
 
 import logging
@@ -42,7 +42,7 @@ def create_settings_and_connect():
     dbconn = connect(**dbsettings)
 
 
-def ensure_indexex():  # pragma: no cover
+def ensure_indexex():
     BuildSet.ensure_indexes()
 
 
@@ -54,7 +54,7 @@ def create_scheduler():
 
 
 @asyncio.coroutine
-def toxicinit():  # pragma no cover
+def toxicinit():
     """ Initialize services. """
 
     create_settings_and_connect()
@@ -76,7 +76,7 @@ def toxicinit():  # pragma no cover
     log('[init] Toxicbuild is running!')
 
 
-def run(loglevel):  # pragma no cover
+def run(loglevel):
     """ Runs Toxicbuild master """
 
     loglevel = getattr(logging, loglevel.upper())
@@ -92,7 +92,7 @@ def run(loglevel):  # pragma no cover
 
 @command
 def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
-          conffile=None, loglevel='info', pidfile=PIDFILE):  # pragma: no cover
+          conffile=None, loglevel='info', pidfile=PIDFILE):
     """ Starts toxicmaster.
 
     :param workdir: Work directory for server.
@@ -121,7 +121,7 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
 
 
 @command
-def stop(workdir, pidfile=PIDFILE):  # pragma: no cover
+def stop(workdir, pidfile=PIDFILE):
     """ Kills toxicmaster.
 
     :param --workdir: Workdir for master to be killed. Looks for a file
@@ -139,7 +139,7 @@ def stop(workdir, pidfile=PIDFILE):  # pragma: no cover
 
 
 @command
-def create(root_dir):  # pragma: no cover
+def create(root_dir):
     """ Creates a new toxicmaster environment.
 
     :param --root_dir: Root directory for toxicmaster.
@@ -171,6 +171,7 @@ def create(root_dir):  # pragma: no cover
 
     print('Toxicmaster environment created with access token: {}'.format(
         access_token))
+
     return access_token
 
 make_pyflakes_happy = [Slave, Build, Builder, RepositoryRevision,
@@ -179,5 +180,5 @@ make_pyflakes_happy = [Slave, Build, Builder, RepositoryRevision,
 del make_pyflakes_happy
 
 
-if __name__ == '__main__':  # pragma: no cover
+if __name__ == '__main__':
     main()

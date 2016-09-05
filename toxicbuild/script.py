@@ -22,6 +22,7 @@ import os
 import subprocess
 import sys
 from mando import command, main
+from toxicbuild.core.utils import changedir
 from toxicbuild.master import create as create_master
 from toxicbuild.master import create_settings_and_connect
 from toxicbuild.master import Slave
@@ -29,21 +30,8 @@ from toxicbuild.slave import create as create_slave
 from toxicbuild.ui import create as create_ui
 
 
-class changedir(object):
-
-    def __init__(self, path):
-        self.old_dir = os.getcwd()
-        self.current_dir = path
-
-    def __enter__(self):
-        os.chdir(self.current_dir)
-
-    def __exit__(self, *a, **kw):
-        os.chdir(self.old_dir)
-
-
 @command
-def create(root_dir):
+def create(root_dir):  # pragma no cover
     """ Creates a new toxicbuild environment.
 
     :param --root_dir: Root directory for toxicbuild.
@@ -71,7 +59,7 @@ def create(root_dir):
 
 
 @command
-def start(workdir, loglevel='error'):
+def start(workdir, loglevel='error'):  # pragma no cover
     """Starts toxicbuild.
 
     Logfiles for the process will be in the file toxic.log
@@ -83,11 +71,11 @@ def start(workdir, loglevel='error'):
 
 
 @command
-def stop(workdir):
+def stop(workdir):  # pragma no cover
     _call_processes(workdir, daemonize=False)
 
 
-def _call_processes(workdir, loglevel=None, daemonize=True):
+def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
 
     # just pretend you didnt' see this function
 
@@ -133,5 +121,5 @@ def _call_processes(workdir, loglevel=None, daemonize=True):
     subprocess.call(web_cmd_line)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma no cover
     main()
