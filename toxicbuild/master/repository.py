@@ -28,7 +28,6 @@ from mongomotor.fields import (StringField, IntField, ReferenceField,
                                DateTimeField, ListField, BooleanField,
                                EmbeddedDocumentField)
 from toxicbuild.core import utils
-from toxicbuild.master.scheduler import scheduler
 from toxicbuild.master.build import BuildSet, Builder, BuildManager
 from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.pollers import Poller
@@ -71,7 +70,10 @@ class Repository(Document, utils.LoggerMixin):
     }
 
     def __init__(self, *args, **kwargs):
+        from toxicbuild.master import scheduler
+
         super(Repository, self).__init__(*args, **kwargs)
+        self.scheduler = scheduler
         self._poller_instance = None
         self.build_manager = BuildManager(self)
         self._old_status = None
@@ -176,12 +178,12 @@ class Repository(Document, utils.LoggerMixin):
 
         try:
             sched_hash = _scheduler_hashes[self.url]
-            scheduler.remove_by_hash(sched_hash)
+            self.scheduler.remove_by_hash(sched_hash)
             del _scheduler_hashes[self.url]
 
             pending_hash = _scheduler_hashes['{}-start-pending'.format(
                 self.url)]
-            scheduler.remove_by_hash(pending_hash)
+            self.scheduler.remove_by_hash(pending_hash)
             del _scheduler_hashes['{}-start-pending'.format(self.url)]
         except KeyError:  # pragma no cover
             # means the repository was not scheduled
@@ -227,11 +229,11 @@ class Repository(Document, utils.LoggerMixin):
         # we remove the repository.
 
         # adding update_code
-        sched_hash = scheduler.add(self.update_code, self.update_seconds)
+        sched_hash = self.scheduler.add(self.update_code, self.update_seconds)
         _scheduler_hashes[self.url] = sched_hash
 
         # adding start_pending
-        start_pending_hash = scheduler.add(
+        start_pending_hash = self.scheduler.add(
             self.build_manager.start_pending, 120)
         _scheduler_hashes['{}-start-pending'.format(
             self.url)] = start_pending_hash

@@ -111,7 +111,3 @@ class TaskScheduler:
 
     def stop(self):
         self._stop = True
-
-
-scheduler = TaskScheduler()
-asyncio.async(scheduler.start())

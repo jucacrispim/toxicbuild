@@ -19,11 +19,8 @@
 
 
 from tests.functional import BaseFunctionalTest
-from toxicbuild.master.scheduler import scheduler
 from toxicbuild.ui.models import Slave, Repository, BuildSet
 from tests import async_test
-
-scheduler.stop()
 
 
 class SlaveTest(BaseFunctionalTest):

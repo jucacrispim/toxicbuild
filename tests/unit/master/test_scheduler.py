@@ -20,7 +20,8 @@
 
 import asyncio
 from unittest import TestCase
-from toxicbuild.master.scheduler import TaskScheduler, scheduler
+from toxicbuild.master import scheduler
+from toxicbuild.master.scheduler import TaskScheduler
 from tests import async_test
 
 

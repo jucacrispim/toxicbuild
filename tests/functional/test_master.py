@@ -19,13 +19,10 @@
 
 import asyncio
 from toxicbuild.core import BaseToxicClient
-from toxicbuild.master.scheduler import scheduler
+from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.master import settings
 from tests import async_test
 from tests.functional import BaseFunctionalTest, REPO_DIR
-
-
-scheduler.stop()
 
 
 class DummyUIClient(BaseToxicClient):
@@ -103,7 +100,6 @@ class ToxicMasterTest(BaseFunctionalTest):
 
     @async_test
     def test_01_create_slave(self):
-
         with (yield from get_dummy_client()) as client:
             response = yield from client.create_slave()
         self.assertTrue(response)
@@ -206,6 +202,9 @@ class ToxicMasterTest(BaseFunctionalTest):
 
             loop.run_until_complete(client.connect())
 
-            loop.run_until_complete(
-                client.request2server('repo-remove',
-                                      {'repo_name': 'test-repo'}))
+            try:
+                loop.run_until_complete(
+                    client.request2server('repo-remove',
+                                          {'repo_name': 'test-repo'}))
+            except ToxicClientException:
+                pass

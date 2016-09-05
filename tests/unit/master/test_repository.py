@@ -144,22 +144,21 @@ class RepositoryTest(TestCase):
         self.assertEqual(self.repo.clone_status, 'done')
 
     @patch.object(repository.utils, 'log', Mock())
-    @patch.object(repository, 'scheduler', Mock(
-        spec=repository.scheduler))
     def test_schedule(self):
+        self.repo.scheduler = Mock(spec=self.repo.scheduler)
         self.repo.schedule()
 
-        self.assertTrue(repository.scheduler.add.called)
+        self.assertTrue(self.repo.scheduler.add.called)
 
     @patch.object(repository.utils, 'log', Mock())
-    @patch.object(repository, 'scheduler', Mock(
-        spec=repository.scheduler))
+    @patch('toxicbuild.master.scheduler')
     @async_test
-    def test_schedule_all(self):
+    def test_schedule_all(self, *a, **kw):
         yield from self._create_db_revisions()
+        self.repo.scheduler = Mock(spec=self.repo.scheduler)
         yield from self.repo.schedule_all()
-
-        self.assertTrue(repository.scheduler.add.called)
+        from toxicbuild.master import scheduler
+        self.assertTrue(scheduler.add.called)
 
     @async_test
     def test_add_slave(self):

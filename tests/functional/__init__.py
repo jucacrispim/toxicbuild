@@ -5,6 +5,9 @@ import sys
 import time
 import tornado
 from tornado.testing import AsyncTestCase
+from toxicbuild.master import create_settings_and_connect
+from toxicbuild.slave import create_settings
+from toxicbuild.ui import create_settings as create_settings_ui
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 SOURCE_DIR = os.path.join(DATA_DIR, '..', '..', '..')
@@ -13,6 +16,11 @@ REPO_DIR = os.path.join(DATA_DIR, 'repo')
 SLAVE_ROOT_DIR = os.path.join(DATA_DIR, 'slave')
 MASTER_ROOT_DIR = os.path.join(DATA_DIR, 'master')
 PYVERSION = ''.join([str(n) for n in sys.version_info[:2]])
+
+
+create_settings()
+create_settings_ui()
+create_settings_and_connect()
 
 
 class BaseFunctionalTest(AsyncTestCase):
@@ -76,7 +84,6 @@ class BaseFunctionalTest(AsyncTestCase):
 
     @classmethod
     def setUpClass(cls):
-
         super().setUpClass()
         cls.start_slave()
         cls.start_master()
