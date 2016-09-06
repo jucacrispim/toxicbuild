@@ -42,7 +42,9 @@ def create_settings_and_connect():
     dbconn = connect(**dbsettings)
 
 
-def ensure_indexex():
+def ensure_indexes():
+    Repository.ensure_indexes()
+    Slave.ensure_indexes()
     BuildSet.ensure_indexes()
 
 
@@ -58,7 +60,7 @@ def toxicinit():
     """ Initialize services. """
 
     create_settings_and_connect()
-    ensure_indexex()
+    ensure_indexes()
     create_scheduler()
 
     # importing here to avoid circular imports
