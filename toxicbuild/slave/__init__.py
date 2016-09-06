@@ -97,7 +97,7 @@ def create(root_dir):
     print('Creating root_dir `{}` for toxicslave'.format(root_dir))
 
     # First we create the directory
-    os.mkdir(root_dir)
+    os.makedirs(root_dir)
 
     # after that we copy the config file to the root dir
     template_fname = 'toxicslave.conf.tmpl'

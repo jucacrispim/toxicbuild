@@ -148,7 +148,7 @@ def create(root_dir):
     """
     print('Creating root_dir `{}` for toxicmaster'.format(root_dir))
 
-    os.mkdir(root_dir)
+    os.makedirs(root_dir)
 
     template_fname = 'toxicmaster.conf.tmpl'
     template_dir = pkg_resources.resource_filename('toxicbuild.master',

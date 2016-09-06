@@ -109,7 +109,7 @@ def create(root_dir, access_token, username=None, password=None):
     """
     print('Creating root_dir {}'.format(root_dir))
 
-    os.mkdir(root_dir)
+    os.makedirs(root_dir)
 
     template_fname = 'toxicui.conf.tmpl'
     template_dir = pkg_resources.resource_filename('toxicbuild.ui',
