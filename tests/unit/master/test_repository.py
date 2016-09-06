@@ -33,7 +33,7 @@ class RepositoryTest(TestCase):
         super(RepositoryTest, self).setUp()
         self.repo = repository.Repository(
             name='reponame', url="git@somewhere.com/project.git",
-            vcs_type='git', update_seconds=100, clone_status='done')
+            vcs_type='git', update_seconds=100, clone_status='ready')
 
     @async_test
     def tearDown(self):
@@ -141,7 +141,7 @@ class RepositoryTest(TestCase):
         self.repo._poller_instance = MagicMock()
 
         yield from self.repo.update_code()
-        self.assertEqual(self.repo.clone_status, 'done')
+        self.assertEqual(self.repo.clone_status, 'ready')
 
     @patch.object(repository, 'repo_status_changed', Mock())
     @async_test
@@ -344,7 +344,7 @@ class RepositoryTest(TestCase):
     def test_get_status_without_build(self):
         yield from self._create_db_revisions()
 
-        self.assertEqual((yield from self.repo.get_status()), 'idle')
+        self.assertEqual((yield from self.repo.get_status()), 'ready')
 
     @async_test
     def test_get_status_only_pending(self):
@@ -366,7 +366,7 @@ class RepositoryTest(TestCase):
             buildset.builds.append(b)
             yield from buildset.save()
 
-        self.assertEqual((yield from self.repo.get_status()), 'idle')
+        self.assertEqual((yield from self.repo.get_status()), 'ready')
 
     @patch.object(repository, 'repo_status_changed', Mock())
     @async_test
