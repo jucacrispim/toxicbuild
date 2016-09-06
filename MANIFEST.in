@@ -1,0 +1,9 @@
+recursive-include toxicbuild/master/templates *
+recursive-include toxicbuild/slave/templates *
+recursive-include toxicbuild/ui/templates *
+recursive-include toxicbuild/ui/static *
+
+recursive-exclude toxicbuild/master/templates *~
+recursive-exclude toxicbuild/slave/templates *~
+recursive-exclude toxicbuild/ui/templates *~
+recursive-exclude toxicbuild/ui/static *~

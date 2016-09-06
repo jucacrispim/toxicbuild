@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 VERSION = '0.3a0'
 DESCRIPTION = """
-Easy and flexible continuous integration.
+Easy and flexible continuous integration tool.
 """
 LONG_DESCRIPTION = DESCRIPTION
 
@@ -31,7 +31,11 @@ setup(name='toxicbuild',
           'Topic :: Software Development :: Build Tools',
           'Topic :: Software Development :: Testing',
       ],
-      scripts=['scripts/toxicmaster', 'scripts/toxicslave',
-               'scripts/toxicweb'],
+      entry_points={
+          'console_scripts': ['toxicbuild=toxicbuild.script:main',
+                              'toxicmaster=toxicbuild.master:main',
+                              'toxicslave=toxicbuild.slave:main',
+                              'toxicweb=toxicbuild.ui:main']
+      },
       test_suite='tests',
       provides=['toxicbuild'],)
