@@ -42,7 +42,7 @@ var REPO_ROW_TEMPLATE = `
 	</td>
       </tr>
 
-  `
+`
 
 var BRANCH_TEMPLATE = `
 <div class="form-group repo-branch">
@@ -410,7 +410,10 @@ var RepositoryManager = {
 
       utils.showSuccessMessage(success_msg);
       self.modal.modal('hide');
-      if(add_row){self._insertRepoRow(data)};
+      if(add_row){
+	response = jQuery.parseJSON(response);
+	self._insertRepoRow(response)
+      };
     };
     var error_cb = function(response){
       utils.showErrorMessage(response)
@@ -451,8 +454,14 @@ var RepositoryManager = {
   },
 
   _insertRepoRow: function(repo){
-    // inserts a row in the main page for a recently created repo.
+    var self = this;
 
+    var repo_model = RepositoryModel(repo);
+    var view = RepositoryView(repo_model);
+
+    self.views[repo_model.id] = view;
+
+    // inserts a row in the main page for a recently created repo.
     var repo_row = REPO_ROW_TEMPLATE.replace(/{{repo.name}}/g, repo.name);
     repo_row = repo_row.replace(/{{repo.url}}/g, repo.url);
     repo_row = repo_row.replace(/{{repo.vcs_type}}/g, repo.vcs_type);
