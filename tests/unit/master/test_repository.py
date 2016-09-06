@@ -143,6 +143,16 @@ class RepositoryTest(TestCase):
         yield from self.repo.update_code()
         self.assertEqual(self.repo.clone_status, 'done')
 
+    @patch.object(repository, 'repo_status_changed', Mock())
+    @async_test
+    def test_update_with_clone_sending_signal(self):
+        self.repo.clone_status = 'cloning'
+        yield from self.repo.save()
+        self.repo._poller_instance = MagicMock()
+        self.repo._poller_instance.poll = asyncio.coroutine(lambda: True)
+        yield from self.repo.update_code()
+        self.assertTrue(repository.repo_status_changed.send.called)
+
     @patch.object(repository.utils, 'log', Mock())
     def test_schedule(self):
         self.repo.scheduler = Mock(spec=self.repo.scheduler)

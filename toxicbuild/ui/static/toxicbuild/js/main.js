@@ -36,6 +36,7 @@ function StreamConsumer(){
                       'cloning': 'pending'}
 
       var data = jQuery.parseJSON(event.data);
+      utils.log(data);
       var status = data.status;
       var new_class = 'btn-' + statuses[status];
       var btn = jQuery('#btn-status-' + data.id);
@@ -55,9 +56,9 @@ function StreamConsumer(){
 	btn.animate({opacity: 1}, transition_time)});
 
       if (status == 'running'){
-	jQuery('#spinner-repo-' + data.id).fadeIn();
+	jQuery('#spinner-repo-' + data.name).fadeIn();
       }else{
-	jQuery('#spinner-repo-' + data.id).fadeOut();
+	jQuery('#spinner-repo-' + data.name).fadeOut();
       }
     }
   };

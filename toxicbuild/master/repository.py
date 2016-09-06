@@ -206,14 +206,20 @@ class Repository(Document, utils.LoggerMixin):
 
         # reloading so we detect changes in config
         yield from self.reload('branches')
+        with_clone = False
         try:
-            yield from self.poller.poll()
+            with_clone = yield from self.poller.poll()
             clone_status = 'done'
         except CloneException:
+            with_clone = True
             clone_status = 'clone-exception'
 
         self.clone_status = clone_status
         yield from self.save()
+
+        if with_clone:
+            repo_status_changed.send(self, old_status='cloning',
+                                     new_status=self.clone_status)
 
     def schedule(self):
         """Schedules all needed actions for a repository. The actions are:

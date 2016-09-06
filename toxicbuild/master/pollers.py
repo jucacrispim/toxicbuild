@@ -50,6 +50,7 @@ class Poller(LoggerMixin):
         about it.
         """
 
+        with_clone = False
         try:
             if self.is_polling():
                 self.log('alreay polling. leaving...'.format(
@@ -63,6 +64,7 @@ class Poller(LoggerMixin):
                 self.log('clonning repo')
                 try:
                     yield from self.vcs.clone(self.repository.url)
+                    with_clone = True
                 except Exception as e:
                     self.log(str(e), level='error')
                     raise CloneException(str(e))
@@ -81,6 +83,8 @@ class Poller(LoggerMixin):
                 # but the show must go on
         finally:
             self._is_polling = False
+
+        return with_clone
 
     @asyncio.coroutine
     def process_changes(self):
