@@ -62,7 +62,7 @@ class Repository(Document, utils.LoggerMixin):
     vcs_type = StringField(required=True, default='git')
     branches = ListField(EmbeddedDocumentField(RepositoryBranch))
     slaves = ListField(ReferenceField(Slave, reverse_delete_rule=PULL))
-    clone_status = StringField(choices=('cloning', 'done', 'clone-exception'),
+    clone_status = StringField(choices=('cloning', 'ready', 'clone-exception'),
                                default='cloning')
 
     meta = {
@@ -125,7 +125,7 @@ class Repository(Document, utils.LoggerMixin):
         if not last_buildset and self.clone_status in clone_statuses:
             status = self.clone_status
         elif not last_buildset:
-            status = 'idle'
+            status = 'ready'
         else:
             status = last_buildset.get_status()
             i = 1
@@ -138,7 +138,7 @@ class Repository(Document, utils.LoggerMixin):
                 last_buildset = yield from last_buildset.first()
 
                 if not last_buildset:
-                    status = 'idle'
+                    status = 'ready'
                     break
 
                 status = last_buildset.get_status()
@@ -209,7 +209,7 @@ class Repository(Document, utils.LoggerMixin):
         with_clone = False
         try:
             with_clone = yield from self.poller.poll()
-            clone_status = 'done'
+            clone_status = 'ready'
         except CloneException:
             with_clone = True
             clone_status = 'clone-exception'

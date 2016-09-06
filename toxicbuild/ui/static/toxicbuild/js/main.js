@@ -32,6 +32,7 @@ function StreamConsumer(){
       var statuses = {'success': 'success', 'fail': 'danger',
                       'running': 'info', 'exception': 'exception',
                       'clone-exception': 'exception',
+		      'ready': 'success',
                       'warning': 'warning',
                       'cloning': 'pending'}
 
@@ -39,11 +40,11 @@ function StreamConsumer(){
       utils.log(data);
       var status = data.status;
       var new_class = 'btn-' + statuses[status];
-      var btn = jQuery('#btn-status-' + data.id);
+      var btn = jQuery('#btn-status-' + data.name);
       var old_status = data.old_status;
       var old_class = 'btn-' + statuses[old_status];
 
-
+      utils.log(btn);
       // animate class transition
       var transition_time = 200; // ms
       btn.animate({
@@ -51,6 +52,7 @@ function StreamConsumer(){
 
       }, transition_time, function(){
 	btn.removeClass(old_class);
+	btn.removeClass('btn-pending');
 	btn.addClass(new_class);
 	btn.text(status);
 	btn.animate({opacity: 1}, transition_time)});

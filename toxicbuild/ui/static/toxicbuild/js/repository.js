@@ -31,12 +31,12 @@ var REPO_ROW_TEMPLATE = `
 	</td>
 	<td>{{repo.url}}</td>
 	<td>
-	  <form action="/waterfall/{{repo.name}}">
-	    <button type="submit" class="btn btn-xs btn-pending btn-status">cloning
+	  <form action="/waterfall/{{repo.name}}" class="repo-status-form">
+	    <button type="submit" class="btn btn-xs btn-pending btn-status" id="btn-status-{{repo.name}}">cloning
 	    </button>
 	  </form>
-          <div class="spinner-placeholder" id="spinner-placeholder-{{repo.id}}">
-	    <i class="fa fa-cog fa-spin fa-3x fa-fw toxic-spinner-main" id="spinner-repo-{{repo.id}}"></i>
+          <div class="spinner-placeholder" id="spinner-placeholder-{{repo.name}}">
+	    <i class="fa fa-cog fa-spin fa-3x fa-fw toxic-spinner-main" id="spinner-repo-{{repo.name}}"></i>
 	  </div>
 
 	</td>
@@ -457,6 +457,7 @@ var RepositoryManager = {
     repo_row = repo_row.replace(/{{repo.url}}/g, repo.url);
     repo_row = repo_row.replace(/{{repo.vcs_type}}/g, repo.vcs_type);
     repo_row = repo_row.replace(/{{repo.update_seconds}}/g, repo.update_seconds);
+    repo_row = repo_row.replace(/{{repo.name}}/g, repo.name);
     repo_row = repo_row.replace(/{{repo.id}}/g, repo.id);
     $('#tbody-repos').append(repo_row);
   },
