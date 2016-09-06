@@ -225,6 +225,9 @@ class SlaveHandler(BaseModelHandler):
 
 class StreamHandler(LoggerMixin, WebSocketHandler):
 
+    def initialize(self):
+        self.client = None
+
     def open(self, action):
         if action == 'repo-status':
             ensure_future(self.listen2event('repo_status_changed'))
@@ -261,9 +264,9 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
           will be messaged to the client.
         """
 
-        client = yield from self.get_stream_client()
-        while client._connected:
-            response = yield from client.get_response()
+        self.client = yield from self.get_stream_client()
+        while self.client._connected:
+            response = yield from self.client.get_response()
             body = response.get('body', {})
             master_event_type = body.get('event_type')
             repo = body.get('repository', {}) or body.get(
@@ -278,7 +281,14 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
                 except WebSocketError:
                     self.log('WebSocketError: closing connection',
                              level='debug')
-                    client.disconnect()
+                    self.client.disconnect()
+
+            if not body:
+                self.log('Bad data: closing connection', leve='debug')
+                self.client.disconnect()
+
+    def on_close(self):
+        self.client.disconnect()
 
 
 class MainHandler(LoggedTemplateHandler):

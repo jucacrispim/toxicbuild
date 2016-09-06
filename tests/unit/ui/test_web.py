@@ -437,6 +437,34 @@ class StreamHandlerTest(AsyncTestCase):
         called = self.handler.log.call_args[0][0]
         self.assertIn('WebSocketError', called)
 
+    @patch.object(web.StreamHandler, 'log', MagicMock())
+    @gen_test
+    def test_listen2event_with_bad_data(self):
+        client_mock = MagicMock()
+        client_mock._connected = True
+
+        def disconnect():
+            client_mock._connected = False
+
+        client_mock.disconnect = disconnect
+
+        @asyncio.coroutine
+        def get_response():
+            return {}
+
+        client_mock.get_response = get_response
+
+        @asyncio.coroutine
+        def get_client(*a, **kw):
+            return client_mock
+
+        web.get_hole_client = get_client
+
+        self.handler.write_message = MagicMock(side_effect=web.WebSocketError)
+        yield from self.handler.listen2event('repo_status_changed')
+        called = self.handler.log.call_args[0][0]
+        self.assertIn('Bad data', called)
+
     @patch.object(web, 'get_hole_client', MagicMock())
     @patch.object(web.StreamHandler, 'write_message', MagicMock())
     @gen_test
@@ -467,6 +495,11 @@ class StreamHandlerTest(AsyncTestCase):
         yield from self.handler.listen2event('repo_status_changed',
                                              repository_id='123')
         self.assertFalse(self.handler.write_message.called)
+
+    def test_on_close(self):
+        self.handler.client = MagicMock()
+        self.handler.on_close()
+        self.assertTrue(self.handler.client.disconnect.called)
 
 
 class MainHandlerTest(AsyncTestCase):
