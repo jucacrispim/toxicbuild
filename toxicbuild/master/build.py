@@ -432,8 +432,7 @@ class BuildManager(LoggerMixin):
                 slaves.add(slave)
 
             for slave in slaves:
-                if buildset not in self.build_queues[  # pragma no branch
-                        slave.name]:
+                if not self.build_queues[slave.name]:
                     self.build_queues[slave.name].append(buildset)
                     self.log('schedule pending buildset {}'.format(str(
                         buildset.id)), level='debug')

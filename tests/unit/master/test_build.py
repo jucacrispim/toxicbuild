@@ -465,6 +465,24 @@ class BuildManagerTest(TestCase):
         yield from self.repo.build_manager.start_pending()
         self.assertTrue(build.ensure_future.called)
 
+    @mock.patch.object(build, 'ensure_future', mock.Mock)
+    @async_test
+    def test_start_pending_with_queue(self):
+        yield from self._create_test_data()
+
+        _eb_mock = mock.Mock()
+
+        @asyncio.coroutine
+        def _eb(slave):
+            _eb_mock()
+
+        self.repo.build_manager._execute_builds = _eb
+        self.repo.build_manager._build_queues[self.repo.name][
+            self.slave.name] = mock.Mock()
+        build.ensure_future = mock.Mock()
+        yield from self.repo.build_manager.start_pending()
+        self.assertFalse(build.ensure_future.called)
+
     @asyncio.coroutine
     def _create_test_data(self):
         self.slave = slave.Slave(host='127.0.0.1', port=7777, name='slave',
