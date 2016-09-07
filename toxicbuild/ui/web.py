@@ -284,7 +284,7 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
                     self.client.disconnect()
 
             if not body:
-                self.log('Bad data: closing connection', leve='debug')
+                self.log('Bad data: closing connection', level='debug')
                 self.client.disconnect()
 
     def on_close(self):

@@ -114,6 +114,8 @@ tr:nth-child(even) {
 
 .logout-link-container{
     padding-top: 22px;
+    float: right;
+    margin-right: 1%;
 }
 
 .alert{

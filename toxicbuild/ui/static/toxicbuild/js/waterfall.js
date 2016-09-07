@@ -213,6 +213,7 @@ function WaterfallManager(){
     handleEvent: function(self, event){
 
       var data = jQuery.parseJSON(event.data);
+      utils.log(data);
       if (data.event_type == 'build_added'){
 	self.handleBuildAdded(data);
       }else if (data.event_type == 'build_started'){
@@ -229,6 +230,7 @@ function WaterfallManager(){
     handleStepStarted: function(step, from_queue){
       // insert the info about a step in the waterfall
       var self = this;
+      utils.log(step);
       var template = STEP_TEMPLATE.replace(/{{step.uuid}}/g, step.uuid);
       template = template.replace(/{{step.status}}/g, step.status);
       template = template.replace(/{{step.name}}/g, step.name);
