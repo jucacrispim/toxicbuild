@@ -10,12 +10,13 @@ import logging
 import os
 import pkg_resources
 import shutil
+import sys
 from uuid import uuid4
 from mongomotor import connect
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.utils import (log, daemonize as daemon, bcrypt,
-                                   bcrypt_string)
+                                   bcrypt_string, changedir)
 from toxicbuild.master.scheduler import TaskScheduler
 # the api
 from toxicbuild.master.repository import (Repository, RepositoryRevision,
@@ -109,6 +110,11 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
       ``toxicslave.pid``
     """
 
+    print('Starting toxicmaster')
+    if not os.path.exists(workdir):
+        print('Workdir `{}` does not exist'.format(workdir))
+        sys.exit(1)
+
     if conffile:
         os.environ['TOXICMASTER_SETTINGS'] = conffile
     else:
@@ -118,8 +124,8 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
         daemon(call=run, cargs=(loglevel,), ckwargs={}, stdout=stdout,
                stderr=stderr, workdir=workdir, pidfile=pidfile)
     else:
-        os.chdir(workdir)
-        run(loglevel)
+        with changedir(workdir):
+            run(loglevel)
 
 
 @command
@@ -132,12 +138,27 @@ def stop(workdir, pidfile=PIDFILE):
       ``toxicslave.pid``
     """
 
-    os.chdir(workdir)
-    with open(pidfile) as fd:
-        pid = int(fd.read())
+    print('Stopping toxicmaster')
+    with changedir(workdir):
+        with open(pidfile) as fd:
+            pid = int(fd.read())
 
-    os.kill(pid, 9)
-    os.remove(pidfile)
+        os.kill(pid, 9)
+        os.remove(pidfile)
+
+
+@command
+def restart(workdir, pidfile=PIDFILE):
+    """Restarts toxicmaster
+
+    The instance of toxicmaster in ``workdir`` will be restarted.
+    :param workdir: Workdir for master to be killed.
+    :param --pidfile: Name of the file to use as pidfile.  Defaults to
+      ``toxicmaster.pid``
+    """
+
+    stop(workdir, pidfile=pidfile)
+    start(workdir, pidfile=pidfile, daemonize=True)
 
 
 @command

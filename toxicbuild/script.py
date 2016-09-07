@@ -84,6 +84,19 @@ def stop(workdir):  # pragma no cover
     _call_processes(workdir, daemonize=False)
 
 
+@command
+def restart(workdir):
+    """Restarts toxicbuild
+
+    The instances of master, slave and web ui in ``workdir`` will be restarted.
+
+    :param workdir: Workdir for master to be killed.
+    """
+
+    stop(workdir)
+    start(workdir)
+
+
 def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
 
     # just pretend you didnt' see this function

@@ -9,7 +9,7 @@ from tornado.platform.asyncio import AsyncIOMainLoop
 from pyrocumulus.commands.base import get_command
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
-from toxicbuild.core.utils import bcrypt, bcrypt_string
+from toxicbuild.core.utils import bcrypt, bcrypt_string, changedir
 
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +34,9 @@ def create_settings():
 AsyncIOMainLoop().install()
 
 
+pyrocommand = None
+
+
 @command
 def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
           pidfile=None, loglevel='info'):
@@ -51,25 +54,37 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
     :param --loglevel: Level for logging messages. Defaults to `info`.
     """
 
+    global pyrocommand
+
+    if not os.path.exists(workdir):
+        print('Workdir `{}` does not exist'.format(workdir))
+        sys.exit(1)
+
     workdir = os.path.abspath(workdir)
-    os.chdir(workdir)
-    sys.path.append(workdir)
+    with changedir(workdir):
+        sys.path.append(workdir)
 
-    os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir,
-                                                  'toxicui.conf')
-    os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicui'
+        os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir,
+                                                      'toxicui.conf')
+        os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicui'
 
-    create_settings()
+        create_settings()
 
-    sys.argv = ['pyromanager.py', 'web']
-    command = get_command('runtornado')()
-    command.kill = False
-    command.daemonize = daemonize
-    command.stderr = stderr
-    command.stdout = stdout
-    command.port = settings.TORNADO_PORT
-    command.pidfile = pidfile
-    command.run()
+        sys.argv = ['pyromanager.py', '']
+
+        if not pyrocommand:
+            pyrocommand = command = get_command('runtornado')()
+        else:
+            command = pyrocommand
+
+        command.kill = False
+        command.daemonize = daemonize
+        command.stderr = stderr
+        command.application = None
+        command.stdout = stdout
+        command.port = settings.TORNADO_PORT
+        command.pidfile = pidfile
+        command.run()
 
 
 @command
@@ -80,22 +95,45 @@ def stop(workdir, pidfile=None):
     :param --pidfile: pid file for the process.
     """
 
+    global pyrocommand
+
+    if not os.path.exists(workdir):
+        print('Workdir `{}` does not exist'.format(workdir))
+        sys.exit(1)
+
     workdir = os.path.abspath(workdir)
-    os.chdir(workdir)
-    sys.path.append(workdir)
+    with changedir(workdir):
+        sys.path.append(workdir)
 
-    os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir,
-                                                  'toxicui.conf')
-    os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicui'
+        os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir,
+                                                      'toxicui.conf')
+        os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicui'
 
-    create_settings()
+        create_settings()
 
-    sys.argv = ['pyromanager.py', 'web']
+        sys.argv = ['pyromanager.py', '']
 
-    command = get_command('runtornado')()
-    command.pidfile = pidfile
-    command.kill = True
-    command.run()
+        if not pyrocommand:
+            pyrocommand = command = get_command('runtornado')()
+        else:
+            command = pyrocommand
+
+        command.pidfile = pidfile
+        command.kill = True
+        command.run()
+
+
+@command
+def restart(workdir, pidfile=None):
+    """Restarts toxicslave
+
+    The instance of toxicweb in ``workdir`` will be restarted.
+    :param workdir: Workdir for master to be killed.
+    :param --pidfile: Name of the file to use as pidfile.
+    """
+
+    stop(workdir, pidfile=pidfile)
+    start(workdir, pidfile=pidfile, daemonize=True)
 
 
 @command

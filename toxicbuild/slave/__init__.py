@@ -4,10 +4,12 @@ import logging
 import os
 import pkg_resources
 import shutil
+import sys
 from uuid import uuid4
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
-from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string, bcrypt)
+from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string, bcrypt,
+                                   changedir)
 from toxicbuild.slave.managers import BuildManager
 
 
@@ -26,8 +28,9 @@ def create_settings():
 
 
 @command
-def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
-          conffile=None, loglevel='info', pidfile=PIDFILE):
+def start(workdir, daemonize=False, stdout='toxicslave.log',
+          stderr='toxicslave.log', conffile=None, loglevel='info',
+          pidfile=PIDFILE):
     """ Starts toxicslave.
 
     Starts the build server to listen on the specified port for
@@ -45,6 +48,11 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
       ``toxicslave.pid``
     """
+
+    print('Starting toxicslave')
+    if not os.path.exists(workdir):
+        print('Workdir `{}` does not exist'.format(workdir))
+        sys.exit(1)
 
     if conffile:
         os.environ['TOXICSLAVE_SETTINGS'] = conffile
@@ -67,27 +75,42 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
         loglevel = getattr(logging, loglevel.upper())
         logging.basicConfig(level=loglevel)
 
-        os.chdir(workdir)
-        server.run_server(addr, port)
+        with changedir(workdir):
+            server.run_server(addr, port)
 
 
 @command
 def stop(workdir, pidfile=PIDFILE):
     """ Stops toxicslave.
 
-    An instance for toxicslave working in ``workdir`` will be stopped.
+    The instance of toxicslave in ``workdir`` will be stopped.
 
     :param workdir: Workdir for master to be killed.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
       ``toxicslave.pid``
     """
 
-    os.chdir(workdir)
-    with open(pidfile) as fd:
-        pid = int(fd.read())
+    print('Stopping toxicslave')
+    with changedir(workdir):
+        with open(pidfile) as fd:
+            pid = int(fd.read())
 
-    os.kill(pid, 9)
-    os.remove(pidfile)
+        os.kill(pid, 9)
+        os.remove(pidfile)
+
+
+@command
+def restart(workdir, pidfile=PIDFILE):
+    """Restarts toxicslave
+
+    The instance of toxicslave in ``workdir`` will be restarted.
+    :param workdir: Workdir for master to be killed.
+    :param --pidfile: Name of the file to use as pidfile.  Defaults to
+      ``toxicslave.pid``
+    """
+
+    stop(workdir, pidfile=pidfile)
+    start(workdir, pidfile=pidfile, daemonize=True)
 
 
 @command

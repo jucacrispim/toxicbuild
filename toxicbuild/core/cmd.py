@@ -37,6 +37,13 @@ class ToxicProgram(Program):
         call = partial(super_gen, *args, **kwargs)
         self._generate_queue.append(call)
 
+        if len(args) == 1 and hasattr(args[0], '__call__'):
+            return args[0]
+        else:
+            def _command(func):
+                return func
+            return _command
+
     def execute(self, *args, **kwargs):
         [call() for call in self._generate_queue]
         super().execute(*args, **kwargs)
