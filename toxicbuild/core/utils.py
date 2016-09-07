@@ -27,6 +27,7 @@ from subprocess import PIPE
 import sys
 import time
 import bcrypt
+from mando import main
 from toxicbuild.core.exceptions import ExecCmdError, ConfigError
 
 

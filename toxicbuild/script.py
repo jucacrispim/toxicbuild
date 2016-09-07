@@ -21,7 +21,7 @@ import asyncio
 import os
 import subprocess
 import sys
-from mando import command, main
+from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import changedir
 from toxicbuild.master import create as create_master
 from toxicbuild.master import create_settings_and_connect
@@ -29,10 +29,14 @@ from toxicbuild.master import Slave
 from toxicbuild.slave import create as create_slave
 from toxicbuild.ui import create as create_ui
 
+main._generate_queue = []
+
 
 @command
 def create(root_dir):  # pragma no cover
     """ Creates a new toxicbuild environment.
+
+    Environments for master, slave and ui will be created.
 
     :param --root_dir: Root directory for toxicbuild.
     """
@@ -62,7 +66,7 @@ def create(root_dir):  # pragma no cover
 def start(workdir, loglevel='error'):  # pragma no cover
     """Starts toxicbuild.
 
-    Logfiles for the process will be in the file toxic.log
+    New instances for master, slave and web ui wil be started.
 
     :param workdir: Work directory for toxicbuild.
     :param --loglevel: Level for logging messages."""
@@ -72,6 +76,11 @@ def start(workdir, loglevel='error'):  # pragma no cover
 
 @command
 def stop(workdir):  # pragma no cover
+    """Stops toxicbuild
+
+    The master, slave and web ui instances will be stopped.
+    :param workdir: workdir for the instance to be stopped."""
+
     _call_processes(workdir, daemonize=False)
 
 

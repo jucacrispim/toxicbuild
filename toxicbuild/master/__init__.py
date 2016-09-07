@@ -11,11 +11,11 @@ import os
 import pkg_resources
 import shutil
 from uuid import uuid4
-from mando import command, main
 from mongomotor import connect
+from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
-from toxicbuild.core.utils import (log, daemonize as daemon,
-                                   bcrypt, bcrypt_string)
+from toxicbuild.core.utils import (log, daemonize as daemon, bcrypt,
+                                   bcrypt_string)
 from toxicbuild.master.scheduler import TaskScheduler
 # the api
 from toxicbuild.master.repository import (Repository, RepositoryRevision,

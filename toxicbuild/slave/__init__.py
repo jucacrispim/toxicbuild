@@ -5,9 +5,9 @@ import os
 import pkg_resources
 import shutil
 from uuid import uuid4
-from mando import command, main
 from toxicbuild.core.conf import Settings
-from toxicbuild.core.utils import daemonize as daemon, bcrypt_string, bcrypt
+from toxicbuild.core.cmd import command, main
+from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string, bcrypt)
 from toxicbuild.slave.managers import BuildManager
 
 
@@ -28,7 +28,7 @@ def create_settings():
 @command
 def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
           conffile=None, loglevel='info', pidfile=PIDFILE):
-    """ Starts the build server.
+    """ Starts toxicslave.
 
     Starts the build server to listen on the specified port for
     requests from addr (0.0.0.0 means everyone). Addr and port params
@@ -73,7 +73,9 @@ def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
 
 @command
 def stop(workdir, pidfile=PIDFILE):
-    """ Stops a buid server instance.
+    """ Stops toxicslave.
+
+    An instance for toxicslave working in ``workdir`` will be stopped.
 
     :param workdir: Workdir for master to be killed.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
@@ -90,7 +92,7 @@ def stop(workdir, pidfile=PIDFILE):
 
 @command
 def create(root_dir):
-    """ Create a new toxicslave project.
+    """ Create a new toxicslave environment.
 
     :param --root_dir: Root directory for toxicslave.
     """

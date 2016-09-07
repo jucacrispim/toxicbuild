@@ -5,9 +5,9 @@ import os
 import pkg_resources
 import shutil
 import sys
-from mando import command, main
 from tornado.platform.asyncio import AsyncIOMainLoop
 from pyrocumulus.commands.base import get_command
+from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.utils import bcrypt, bcrypt_string
 
