@@ -1,6 +1,9 @@
 Changelog
 =========
 
+* Re-wrote from scratch. It does not uses BuildBot as base. Now it is
+  written using python 3 and asyncio.
+
 * 0.2.1.1
 
   - MANIFEST.in corrected. Added waterfall.html
