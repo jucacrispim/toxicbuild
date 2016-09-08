@@ -27,7 +27,7 @@ need to have that installed too.
    These are the external programs used by ToxicBuild, but to install the
    code dependencies you may need a C compiler and the header files for your
    Python interpreter and for cffi. In a Debian system install the packages
-   ``build-essential``, ``libcffi-dev`` and ``python3.4-dev`` (or
+   ``build-essential``, ``libffi-dev`` and ``python3.4-dev`` (or
    ``python3.5-dev`` depending on your python version).
 
 After the installation of the external dependencies you can install toxicbuild
