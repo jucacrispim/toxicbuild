@@ -19,17 +19,15 @@ Install
 +++++++
 
 ToxicBuild is written in Python, and runs in Python3.4 and later. It uses
-mongodb to store data so you need an instance of mongodb running before
-installing toxicbuild. It uses (at the moment only) git as vcs, you
-need to have that installed too.
+mongodb to store data git as vcs. You must have these installed.
 
 .. note::
 
    These are the external programs used by ToxicBuild, but to install the
    code dependencies you may need a C compiler and the header files for your
    Python interpreter and for libffi. In a Debian system install the packages
-   ``build-essential``, ``libffi-dev`` and ``python3.4-dev`` (or
-   ``python3.5-dev`` depending on your python version).
+   ``build-essential``, ``libffi-dev`` and ``pythonX.Y-dev``, where X.Y is the
+   version of your interpreter.
 
 After the installation of the external dependencies you can install toxicbuild
 using pip:
@@ -183,7 +181,7 @@ Python virtualenv plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 A very common way of installing python packages is using a `vitualenv`.
-This plugin enables you test you python programs inside a virutalenv.
+This plugin enables you test your python programs inside a virutalenv.
 
 The basic configuration of this plugin is as follows:
 
