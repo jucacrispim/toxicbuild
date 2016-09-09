@@ -45,9 +45,7 @@ _scheduler_hashes = {}
 
 
 class RepositoryBranch(EmbeddedDocument):
-    # this unique does not work, you must ensure it by yourself.
-    # it here just to remember that this should be unique.
-    name = StringField(required=True, unique=True)
+    name = StringField(required=True)
     notify_only_latest = BooleanField(default=False)
 
     def to_dict(self):
