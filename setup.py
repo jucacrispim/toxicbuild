@@ -2,11 +2,35 @@
 
 from setuptools import setup, find_packages
 
-VERSION = '0.3'
+
+def get_version_from_file():
+    # get version number from __init__ file
+    # before module is installed
+
+    fname = 'toxicbuild/__init__.py'
+    with open(fname) as f:
+        fcontent = f.readlines()
+    version_line = [l for l in fcontent if 'VERSION' in l][0]
+    return version_line.split('=')[1].strip().strip("'").strip('"')
+
+
+def get_long_description_from_file():
+    # content of README will be the long description
+
+    fname = 'README'
+    with open(fname) as f:
+        fcontent = f.read()
+    return fcontent
+
+VERSION = get_version_from_file()
+
 DESCRIPTION = """
 Simple and flexible continuous integration tool.
 """
-LONG_DESCRIPTION = DESCRIPTION
+
+LONG_DESCRIPTION = get_version_from_file()
+
+
 
 setup(name='toxicbuild',
       version=VERSION,
