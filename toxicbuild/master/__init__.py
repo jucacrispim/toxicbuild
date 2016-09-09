@@ -25,6 +25,7 @@ from toxicbuild.master.build import Build, Builder, BuildSet
 from toxicbuild.master.slave import Slave
 
 PIDFILE = 'toxicmaster.pid'
+LOGFILE = 'toxicmaster.log'
 
 ENVVAR = 'TOXICMASTER_SETTINGS'
 DEFAULT_SETTINGS = 'toxicmaster.conf'
@@ -94,7 +95,7 @@ def run(loglevel):
 
 
 @command
-def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
+def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
           conffile=None, loglevel='info', pidfile=PIDFILE):
     """ Starts toxicmaster.
 

@@ -19,6 +19,7 @@ DEFAULT_SETTINGS = 'toxicslave.conf'
 settings = None
 
 PIDFILE = 'toxicslave.pid'
+LOGFILE = 'toxicslave.log'
 
 
 def create_settings():
@@ -28,8 +29,8 @@ def create_settings():
 
 
 @command
-def start(workdir, daemonize=False, stdout='toxicslave.log',
-          stderr='toxicslave.log', conffile=None, loglevel='info',
+def start(workdir, daemonize=False, stdout=LOGFILE,
+          stderr=LOGFILE, conffile=None, loglevel='info',
           pidfile=PIDFILE):
     """ Starts toxicslave.
 

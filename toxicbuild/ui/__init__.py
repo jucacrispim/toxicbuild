@@ -22,6 +22,8 @@ DEFAULT_SETTINGS = 'toxicui.conf'
 
 settings = None
 
+LOGFILE = 'toxicui.log'
+
 
 def create_settings():
     global settings
@@ -38,7 +40,7 @@ pyrocommand = None
 
 
 @command
-def start(workdir, daemonize=False, stdout='/dev/null', stderr='/dev/null',
+def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
           pidfile=None, loglevel='info'):
     """ Starts the web interface.
 
