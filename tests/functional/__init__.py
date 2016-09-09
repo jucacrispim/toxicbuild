@@ -4,7 +4,7 @@ import os
 import sys
 import time
 import tornado
-from tornado.testing import AsyncTestCase
+from unittest import TestCase
 from toxicbuild.master import create_settings_and_connect
 from toxicbuild.slave import create_settings
 from toxicbuild.ui import create_settings as create_settings_ui
@@ -23,7 +23,7 @@ create_settings_ui()
 create_settings_and_connect()
 
 
-class BaseFunctionalTest(AsyncTestCase):
+class BaseFunctionalTest(TestCase):
 
     """An AsyncTestCase that starts a master and a slave process on
     setUpClass and stops it on tearDownClass"""

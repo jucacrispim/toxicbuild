@@ -26,37 +26,45 @@ from tests import async_test
 class SlaveTest(BaseFunctionalTest):
 
     @async_test
-    def tearDown(self):
-        slave = yield from Slave.get(slave_name='test-slave')
-        yield from slave.delete()
-
-        super().tearDown()
-
-    @async_test
     def test_add(self):
-        slave = yield from Slave.add('test-slave', '192.168.0.1', 1234,
-                                     '2123')
-        self.assertTrue(slave.id)
+        try:
+            self.slave = yield from Slave.add('test-slave-add', 'localhost',
+                                              123, '123')
+            self.assertTrue(self.slave.id)
+        finally:
+            yield from self.slave.delete()
 
     @async_test
     def test_get(self):
-        slave = yield from Slave.add('test-slave', '192.168.0.1', 1234, '123')
-        get_slave = yield from Slave.get(slave_name='test-slave')
-        self.assertEqual(slave.id, get_slave.id)
+        try:
+            self.slave = yield from Slave.add('test-slave-get', 'localhost',
+                                              123, '123')
+            get_slave = yield from Slave.get(slave_name='test-slave-get')
+            self.assertEqual(self.slave.id, get_slave.id)
+        finally:
+            yield from self.slave.delete()
 
     @async_test
     def test_list(self):
-        yield from Slave.add('test-slave', '192.168.0.1', 1234, '12313')
-        slave_list = yield from Slave.list()
-        self.assertEqual(len(slave_list), 1)
+        try:
+            self.slave = yield from Slave.add('test-slave-list', 'localhost',
+                                              123, '123')
+            slave_list = yield from Slave.list()
+            self.assertEqual(len(slave_list), 1)
+        finally:
+            yield from self.slave.delete()
 
     @async_test
     def test_update(self):
-        slave = yield from Slave.add('test-slave', '192.168.0.1', 1234, '123')
-        yield from slave.update(host='localhost')
-        get_slave = yield from Slave.get(slave_name='test-slave')
-        self.assertEqual(slave.id, get_slave.id)
-        self.assertEqual(get_slave.host, 'localhost')
+        try:
+            self.slave = yield from Slave.add('test-slave-update', 'localhost',
+                                              123, '123')
+            yield from self.slave.update(host='192.168.0.1')
+            get_slave = yield from Slave.get(slave_name='test-slave-update')
+            self.assertEqual(self.slave.id, get_slave.id)
+            self.assertEqual(get_slave.host, '192.168.0.1')
+        finally:
+            yield from self.slave.delete()
 
 
 class RepositoryTest(BaseFunctionalTest):
