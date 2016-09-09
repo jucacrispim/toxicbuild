@@ -2,9 +2,9 @@
 
 from setuptools import setup, find_packages
 
-VERSION = '0.3a0'
+VERSION = '0.3'
 DESCRIPTION = """
-Easy and flexible continuous integration tool.
+Simple and flexible continuous integration tool.
 """
 LONG_DESCRIPTION = DESCRIPTION
 
@@ -12,7 +12,7 @@ setup(name='toxicbuild',
       version=VERSION,
       author='Juca Crispim',
       author_email='juca@poraodojuca.net',
-      url='http://toxicbuild.readthedocs.org/en/latest/',
+      url='http://toxicbuild.poraodojuca.net',
       description=DESCRIPTION,
       long_description=LONG_DESCRIPTION,
       packages=find_packages(exclude=['tests', 'tests.*']),

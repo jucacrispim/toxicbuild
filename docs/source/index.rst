@@ -4,15 +4,16 @@
    contain the root `toctree` directive.
 
 
-|toxicbuild-logo|
-=================
+ToxicBuild |toxicbuild-logo|
+============================
 
 .. |toxicbuild-logo| image:: ./_static/Logo.svg
     :alt: Simple and flexible continuous itegration tool.
 
-ToxicBuild is a simple but flexible continuous integration tool that enables
-you to configure your ci process using the power of the Python programming
-language.
+ToxicBuild is a simple but flexible distributed continuous integration tool
+that enables you to configure your ci process using the power of the Python
+programming language.
+
 
 Install
 +++++++
@@ -26,7 +27,7 @@ need to have that installed too.
 
    These are the external programs used by ToxicBuild, but to install the
    code dependencies you may need a C compiler and the header files for your
-   Python interpreter and for cffi. In a Debian system install the packages
+   Python interpreter and for libffi. In a Debian system install the packages
    ``build-essential``, ``libffi-dev`` and ``python3.4-dev`` (or
    ``python3.5-dev`` depending on your python version).
 
@@ -64,7 +65,7 @@ This is done using the command ``toxicbuild create``.
 
    This install process assumes you have the mongo instance running in
    localhost and listen the default port. If needed, change these configs
-   in the file ~/ci/master/toxicmaster.conf
+   in the file `~/ci/master/toxicmaster.conf`.
 
 After the environment is created, use the command ``toxicbuld start`` to
 start everything needed.
@@ -109,7 +110,7 @@ to add a new repository to ToxicBuild.
 
 
 After you project is cloned you should see the status of your project
-as ``ready``. The only thing missing now is to configure the build in
+as `ready`. The only thing missing now is to configure the build in
 your project.
 
 
@@ -239,6 +240,30 @@ Licence
 ToxicBuild is free software released under the GPLv3 or later.
 
 
+Known Bugs
+==========
+
+- In waterfall, the first build for a builder is not displaying the steps
+  correctly. After that it is ok.
+
+- The waterfall.js does not now how to include new builders that came via
+  websocket.
+
+
+Aditional notes
+===============
+
+- Slaves must to work in all platforms. Probably now they will not work, some
+  development towards this feature must be done. Master and ui would be nice to
+  work in as many platforms as possible.
+
+- ToxicBuild should have a build step that triggers another builder.
+
+- It needs other report methods other than the web ui.
+
+- Needs an install for master, slave and ui separately.
+
+
 Changelog
 =========
 
@@ -260,4 +285,4 @@ Changelog
 
 
 
-That's all! Thank you very much for using ToxicBuild.
+That's all. Thank you very much for using ToxicBuild!
