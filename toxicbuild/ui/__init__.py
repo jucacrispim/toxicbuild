@@ -22,7 +22,7 @@ DEFAULT_SETTINGS = 'toxicui.conf'
 
 settings = None
 
-LOGFILE = 'toxicui.log'
+LOGFILE = './toxicui.log'
 
 
 def create_settings():
