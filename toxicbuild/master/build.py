@@ -422,7 +422,6 @@ class BuildManager(LoggerMixin):
         """Starts all pending buildsets that are not already scheduled for
         ``self.repo``."""
 
-        self.log('scheduling penging builds', level='debug')
         buildsets = BuildSet.objects(builds__status=BuildSet.PENDING)
         buildsets = yield from buildsets.to_list()
         for buildset in buildsets:
@@ -433,6 +432,8 @@ class BuildManager(LoggerMixin):
 
             for slave in slaves:
                 if not self.build_queues[slave.name]:
+                    self.log('scheduling penging builds for {}'.format(
+                        slave.name), level='debug')
                     self.build_queues[slave.name].append(buildset)
                     self.log('schedule pending buildset {}'.format(str(
                         buildset.id)), level='debug')
