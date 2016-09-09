@@ -40,7 +40,7 @@ class ToxicProgram(Program):
         if len(args) == 1 and hasattr(args[0], '__call__'):
             return args[0]
         else:
-            def _command(func):
+            def _command(func):  # pragma no cover
                 return func
             return _command
 
