@@ -19,7 +19,7 @@ Install
 +++++++
 
 ToxicBuild is written in Python, and runs in Python3.4 and later. It uses
-mongodb to store data git as vcs. You must have these installed.
+mongodb to store data and git as vcs. You must have these installed.
 
 .. note::
 
@@ -241,11 +241,9 @@ ToxicBuild is free software released under the GPLv3 or later.
 Known Bugs
 ==========
 
-- In waterfall, the first build for a builder is not displaying the steps
-  correctly. After that it is ok.
-
 - The waterfall.js does not now how to include new builders that came via
-  websocket.
+  websocket and sometimes it places the build in a wired place. Must reload
+  the page.
 
 
 Aditional notes
