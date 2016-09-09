@@ -213,7 +213,7 @@ function WaterfallManager(){
     handleEvent: function(self, event){
 
       var data = jQuery.parseJSON(event.data);
-      utils.log(data);
+      utils.log(data.event_type);
       if (data.event_type == 'build_added'){
 	self.handleBuildAdded(data);
       }else if (data.event_type == 'build_started'){
@@ -230,7 +230,6 @@ function WaterfallManager(){
     handleStepStarted: function(step, from_queue){
       // insert the info about a step in the waterfall
       var self = this;
-      utils.log(step);
       var template = STEP_TEMPLATE.replace(/{{step.uuid}}/g, step.uuid);
       template = template.replace(/{{step.status}}/g, step.status);
       template = template.replace(/{{step.name}}/g, step.name);
@@ -241,26 +240,25 @@ function WaterfallManager(){
 
       var build = step.build
       var build_el = jQuery('#build-info-' + build.uuid);
-
       // if there is no build_el we store the step in a query and after
       // the build is present we insert the build info.
       if (!build_el.length){
 	self._step_started_queue.push(step);
 	return false;
       };
-
       // here we handle the case when the information about one step
       // arrived before the information about an previous step.
       if ((typeof self._build_last_step[build.uuid] != 'undefined' &&
       	   self._build_last_step[build.uuid] < step.index -1) ||
       	  (typeof self._build_last_step[build.uuid] == 'undefined' && step.index != 0)){
 
-      	if (self._step_started_queue.indexOf(step) < 0){
+	var steps_count = jQuery('.build-step-info-container', build_el.parent()).length;
+      	if (self._step_started_queue.indexOf(step) < 0 && steps_count - 1 > step.index){
+	  utils.log('step enqueued: ' + step.uuid);
       	  self._step_started_queue.push(step);
+      	  return false;
       	};
-      	return false;
       };
-
       template = jQuery(template);
       template.hide();
       build_el.parent().append(template);
@@ -452,11 +450,19 @@ function WaterfallManager(){
       var builder = self._getBuilder(build.builder.id);
       var buildset = build.buildset
       var build_el = jQuery('#build-builder-' + build.builder.id);
+
+      if (!build_el.length){
+	var buildset_el = jQuery('#buildset-' + buildset.id).parent().parent().parent();
+	buildset_el.append('<td class="builder-column" id="build-builder-'+ build.builder.id +'"></td>');
+	build_el = jQuery('#build-builder-' + build.builder.id);
+      };
+
       var template = BUILD_TEMPLATE.replace(/{{build.status}}/g, build.status);
       template = template.replace(/{{buildset.commit}}/g, buildset.commit);
       template = template.replace(/{{build.id}}/g, build.uuid);
       template = template.replace(/{{buildset.branch}}/g, buildset.branch);
-      template = template.replace(/{{build.builder.name}}/g, builder.name);
+      var builder_name = builder ? builder.name : 'new-builder';
+      template = template.replace(/{{build.builder.name}}/g, builder_name);
       jQuery(build_el).append(template);
       self._handleBuildQueue(build);
       self._handleStepQueue(build);

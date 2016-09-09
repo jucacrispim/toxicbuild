@@ -61,7 +61,7 @@
 	</ul>
       </td>
       {% for i, build in enumerate(ordered_builds(buildset.builds)) %}
-      <td class="builder-column builder-column-id-{{build.builder.id}} builder-column-index-{{i}}">
+      <td class="builder-column builder-column-id-{{build.builder.id}} builder-column-index-{{i}}" id="build-builder-{{build.builder.id}}">
 	{% for ending in get_ending(build, i, builders)%}
    	  {% raw ending %}
 	{% end %}
