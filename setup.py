@@ -31,7 +31,6 @@ Simple and flexible continuous integration tool.
 LONG_DESCRIPTION = get_version_from_file()
 
 
-
 setup(name='toxicbuild',
       version=VERSION,
       author='Juca Crispim',
