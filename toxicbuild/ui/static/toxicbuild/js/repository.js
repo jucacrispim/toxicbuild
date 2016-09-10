@@ -332,7 +332,9 @@ var RepositoryManager = {
       jQuery('.remove-branch').on('click', function (){
 	var branch_name = jQuery('.branch-name-input',
 				 jQuery(this).parent().parent()).val();
-	self.removeBranch(branch_name);
+	var branch_el = jQuery('.branch-name-input',
+			       jQuery(this).parent().parent()).parent();
+	self.removeBranch(branch_name, branch_el);
       });
 
     });
@@ -354,9 +356,11 @@ var RepositoryManager = {
       // inserted now.
       jQuery('.remove-branch').on('click', function (){
 	var branch_name = jQuery('.branch-name-input',
-				 jQuery(this).parent().parent()).val();
+			       jQuery(this).parent().parent()).val();
+	var branch_el = jQuery('.branch-name-input',
+			       jQuery(this).parent().parent()).parent();
 
-	self.removeBranch(branch_name);
+	self.removeBranch(branch_name, branch_el);
       });
     });
 
@@ -398,15 +402,19 @@ var RepositoryManager = {
 
     var success_cb = function(response){
       // here we add the branches for the repo.
+      var branches = [];
       jQuery('.repo-branch').each(function(){
 	var branch_name = jQuery('.branch-name-input', this).val();
 	var notify_only_latest = jQuery('.branch-notify-input', this)[0].checked;
 	var branch_data = {branch_name: branch_name,
 			   notify_only_latest: notify_only_latest,
 			   name: self._current_model.name};
+	var repo_branch = {name: branch_name, notify_only_latest: notify_only_latest};
 	var cb = function(response){utils.log(response)}
 	self._current_model.addBranch(branch_data, cb, cb);
+	branches.push(repo_branch);
       });
+      self._current_model.branches = branches;
 
       utils.showSuccessMessage(success_msg);
       self.modal.modal('hide');
@@ -440,7 +448,7 @@ var RepositoryManager = {
     self._current_model.delete(success_cb, error_cb);
   },
 
-  removeBranch: function(branch_name){
+  removeBranch: function(branch_name, branch_el){
     var self = this;
 
     var type = 'post';
@@ -448,7 +456,7 @@ var RepositoryManager = {
     var data = {name: self._current_model.name,
 		branch_name: branch_name};
     success_cb = function(response){
-      self._current_view.removeBranchFromModal(branch_name)};
+      self._current_view.removeBranchFromModal(branch_el)};
 
     self._current_model.removeBranch(data, success_cb);
   },
