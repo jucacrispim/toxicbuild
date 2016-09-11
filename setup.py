@@ -26,10 +26,9 @@ VERSION = get_version_from_file()
 
 DESCRIPTION = """
 Simple and flexible continuous integration tool.
-"""
+""".strip()
 
-LONG_DESCRIPTION = get_version_from_file()
-
+LONG_DESCRIPTION = get_long_description_from_file()
 
 setup(name='toxicbuild',
       version=VERSION,
@@ -39,6 +38,7 @@ setup(name='toxicbuild',
       description=DESCRIPTION,
       long_description=LONG_DESCRIPTION,
       packages=find_packages(exclude=['tests', 'tests.*']),
+      license='GPL',
       include_package_data=True,
       install_requires=['tornado>=4.1', 'mongomotor>=0.9b6',
                         'asyncblink>=0.1.1', 'mando>=0.3.2',

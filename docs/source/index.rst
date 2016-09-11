@@ -99,11 +99,6 @@ to add a new repository to ToxicBuild.
 
 .. note::
 
-   At this moment ToxicBuild only supports git vcs but there are plans to
-   add support for more vcs types.
-
-.. note::
-
    You need to choose at least one slave or no builds will be executed.
 
 
@@ -125,6 +120,13 @@ So, let's say you have build process consisting in two steps: ``make`` and
 ``make test``. To have this executed by ToxicBuild we create a builder
 with these two steps. This config must be in a file called `toxicbuild.conf`
 in the root dir of your code:
+
+
+.. note::
+
+   The `toxicbuild.conf` file is a Python file, do whatever you want, but
+   you must have a ``BUILDERS`` list.
+
 
 .. code-block:: python
 
@@ -197,17 +199,16 @@ using python3.5 and then will install the dependencies using pip.
    This plugin uses the external program ``virtualenv``. You must have this
    installed in the slave system.
 
-.. note::
 
-   The default file for the dependencies is `requirements.txt`. If you
-   use another file use the param `requirements_file` in the plugin
-   config.
+Python virtualenv params
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. note::
+The following params may be used with this plugin:
 
-   After the virtualenv is create no other atempt to create it will be done.
-   If you and a new virtualenv for everybuild use the param ``remove_env``, set
-   it to True, in the plugin config.
+* ``requirements_file``: File that contais a list of dependencies to install
+  with pip. The default is `requirements.txt`.
+* ``remove_env``: Indicates if the virtualenv will be removed after are
+  executed. Default is False.
 
 
 Aptitude install plugin
@@ -255,9 +256,14 @@ Aditional notes
 
 - ToxicBuild should have a build step that triggers another builder.
 
+- Should support more vcs, not only git.
+
 - It needs other report methods other than the web ui.
 
 - Needs an install for master, slave and ui separately.
+
+- Should support ssl.
+
 
 
 Changelog
