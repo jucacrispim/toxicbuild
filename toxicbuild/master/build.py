@@ -431,14 +431,17 @@ class BuildManager(LoggerMixin):
                 slaves.add(slave)
 
             for slave in slaves:
-                if not self.build_queues[slave.name]:
+                # we schedule pending builds only if the slave is idle.
+                if not self.build_queues[slave.name] and not \
+                   self.is_building[slave.name]:
+
                     self.log('scheduling penging builds for {}'.format(
                         slave.name), level='debug')
-                    self.build_queues[slave.name].append(buildset)
                     self.log('schedule pending buildset {}'.format(str(
                         buildset.id)), level='debug')
-                    if not self.is_building[slave.name]:  # pragma no branch
-                        ensure_future(self._execute_builds(slave))
+
+                    self.build_queues[slave.name].append(buildset)
+                    ensure_future(self._execute_builds(slave))
 
     def connect2signals(self):
         """ Connects the BuildManager to the revision_added signal."""
