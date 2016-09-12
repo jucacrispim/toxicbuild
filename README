@@ -1,6 +1,7 @@
 |toxicbuild-logo|
 
-.. |toxicbuild-logo| image:: .docs/source/_static/Logo.svg
+.. |toxicbuild-logo| image:: https://raw.githubusercontent.com/jucacrispim/toxicbuild/master/docs/source/_static/logo.jpg
+
     :alt: Simple and flexible continuous itegration tool.
 
 ToxicBuild is a simple but flexible distributed continuous integration tool
