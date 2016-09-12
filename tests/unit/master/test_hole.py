@@ -169,8 +169,10 @@ class HoleHandlerTest(TestCase):
         action = 'repo-remove'
         handler = hole.HoleHandler({}, action, MagicMock())
         yield from handler.repo_remove(repo_name='reponame')
-
-        self.assertEqual((yield from hole.Repository.objects.count()), 1)
+        allrepos = [r.name for r in (
+            yield from hole.Repository.objects.to_list())]
+        self.assertEqual((yield from hole.Repository.objects.count()),
+                         1, allrepos)
 
     @async_test
     def test_repo_list(self):
