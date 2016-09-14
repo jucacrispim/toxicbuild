@@ -280,7 +280,7 @@ class GitTest(TestCase):
 
         self.assertEqual(len(revisions['master']), 2)
         self.assertEqual(len(revisions['some-feature']), 2)
-        self.assertFalse(rb_mock.called)
+        self.assertTrue(rb_mock.called)
 
     @async_test
     def test_get_revisions_with_exception(self):
@@ -310,4 +310,3 @@ class GitTest(TestCase):
 
         self.assertEqual(len(revisions['master']), 2)
         self.assertFalse(revisions.get('some-feature'))
-        self.assertFalse(rb_mock.called)
