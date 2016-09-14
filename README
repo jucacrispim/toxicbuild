@@ -1,9 +1,3 @@
-|toxicbuild-logo|
-
-.. |toxicbuild-logo| image:: https://raw.githubusercontent.com/jucacrispim/toxicbuild/master/docs/source/_static/logo.jpg
-
-    :alt: Simple and flexible continuous itegration tool.
-
 ToxicBuild is a simple but flexible distributed continuous integration tool
 that enables you to configure your ci process using the power of the Python
 programming language.
