@@ -20,7 +20,7 @@
 import asyncio
 try:
     from asyncio import ensure_future
-except ImportError:
+except ImportError:  # pragma: no cover
     from asyncio import async as ensure_future
 
 from toxicbuild.core import BaseToxicClient
