@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
+import asyncio
 from tests.functional import BaseFunctionalTest
 from toxicbuild.ui.models import Slave, Repository, BuildSet
 from tests import async_test
@@ -69,13 +70,14 @@ class SlaveTest(BaseFunctionalTest):
 
 class RepositoryTest(BaseFunctionalTest):
 
-    @async_test
     def tearDown(self):
+        loop = asyncio.get_event_loop()
+
         if hasattr(self, 'repo'):
-            yield from self.repo.delete()
+            loop.run_until_complete(self.repo.delete())
 
         if hasattr(self, 'slave'):
-            yield from self.slave.delete()
+            loop.run_until_complete(self.slave.delete())
 
         super().tearDown()
 

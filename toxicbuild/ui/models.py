@@ -169,8 +169,8 @@ class Repository(BaseModel):
 
         :param kwargs: kwargs to get the repository."""
 
-        client = yield from cls.get_client()
-        repo_dict = yield from client.repo_get(**kwargs)
+        with (yield from cls.get_client()) as client:
+            repo_dict = yield from client.repo_get(**kwargs)
         repo = cls(**repo_dict)
         return repo
 
@@ -179,8 +179,8 @@ class Repository(BaseModel):
     def list(cls):
         """Lists all repositories."""
 
-        client = yield from cls.get_client()
-        repos = yield from client.repo_list()
+        with (yield from cls.get_client()) as client:
+            repos = yield from client.repo_list()
         repo_list = [cls(**repo) for repo in repos]
         return repo_list
 
@@ -199,8 +199,9 @@ class Repository(BaseModel):
         :param slave: A Slave instance."""
 
         client = yield from self.get_client()
-        resp = yield from client.repo_add_slave(repo_name=self.name,
-                                                slave_name=slave.name)
+        with (yield from self.get_client()) as client:
+            resp = yield from client.repo_add_slave(repo_name=self.name,
+                                                    slave_name=slave.name)
         return resp
 
     @asyncio.coroutine
@@ -253,10 +254,10 @@ class Repository(BaseModel):
     def start_build(self, branch, builder_name=None, named_tree=None,
                     slaves=[]):
 
-        client = yield from self.get_client()
-        resp = yield from client.repo_start_build(
-            repo_name=self.name, branch=branch, builder_name=builder_name,
-            named_tree=named_tree, slaves=slaves)
+        with (yield from self.get_client()) as client:
+            resp = yield from client.repo_start_build(
+                repo_name=self.name, branch=branch, builder_name=builder_name,
+                named_tree=named_tree, slaves=slaves)
         return resp
 
     def to_dict(self):
