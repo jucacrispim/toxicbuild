@@ -171,9 +171,9 @@ class Git(VCS):
     @asyncio.coroutine
     def get_revisions(self, since={}, branches=None):
 
-        # this must be called everytime even if we have branches
-        # configured for the repo otherwise we do not see any
-        # new branch created.
+        # this must be called everytime so we sync our repo
+        # with the remote repo and then we can see new branches
+        yield from self.fetch()
         remote_branches = yield from self.get_remote_branches()
         remote_branches = branches or remote_branches
         revisions = {}
