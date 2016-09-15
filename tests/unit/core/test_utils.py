@@ -34,7 +34,8 @@ class UtilsTest(TestCase):
     @async_test
     def test_exec_cmd(self):
         # no assertions here because if no exceptions, it's ok.
-        yield from utils.exec_cmd('ls', cwd='.')
+        out = yield from utils.exec_cmd('ls', cwd='.')
+        self.assertTrue(out)
 
     @async_test
     def test_exec_cmd_with_error(self):

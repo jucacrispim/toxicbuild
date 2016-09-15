@@ -18,6 +18,11 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+try:
+    from asyncio import ensure_future
+except ImportError:
+    from asyncio import async as ensure_future
+
 from toxicbuild.core import BaseToxicClient
 
 
@@ -81,7 +86,7 @@ class BuildClient(BaseToxicClient):
                 break
 
             build_info = r['body']
-            future = asyncio.async(self.slave._process_build_info(
+            future = ensure_future(self.slave._process_build_info(
                 build, build_info))
             futures.append(future)
 

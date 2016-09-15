@@ -19,6 +19,10 @@
 
 import time
 import asyncio
+try:
+    from asyncio import ensure_future
+except ImportError:
+    from asyncio import async as ensure_future
 
 
 __doc__ = """
@@ -94,7 +98,7 @@ class TaskScheduler:
             self.consumption_table[task] = now
             ret = task.call_or_coro()
             if asyncio.coroutines.iscoroutine(ret):
-                asyncio.async(ret)
+                ensure_future(ret)
 
     @asyncio.coroutine
     def start(self):

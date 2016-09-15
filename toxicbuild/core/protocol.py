@@ -18,6 +18,10 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+try:
+    from asyncio import ensure_future
+except ImportError:
+    from asyncio import async as ensure_future
 import json
 import time
 import traceback
@@ -68,7 +72,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         self._connected = True
 
         self.peername = self._transport.get_extra_info('peername')
-        self._check_data_future = asyncio.async(self.check_data())
+        self._check_data_future = ensure_future(self.check_data())
         self._check_data_future.add_done_callback(self._check_data_cb)
 
     def connection_lost(self, exc):
@@ -173,5 +177,5 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
             self.log('{}: {} {}'.format(self.action, status, (end - init)))
 
         self._client_connected_future = logged_cb()
-        self._client_connected_future = asyncio.async(
+        self._client_connected_future = asyncio.ensure_future(
             self._client_connected_future)
