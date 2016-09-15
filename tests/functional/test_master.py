@@ -189,8 +189,13 @@ class ToxicMasterTest(BaseFunctionalTest):
                 if body.get('event_type') == 'build_finished':
                     break
 
+        def get_bad_step(body):
+            for step in body['steps']:
+                if step['status'] == body['status']:
+                    return step
+
         self.assertEqual(response['body']['status'], 'success',
-                         response['body'])
+                         get_bad_step(response['body']))
 
     @classmethod
     def _delete_test_data(cls):
