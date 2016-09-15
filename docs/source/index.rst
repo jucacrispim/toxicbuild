@@ -269,6 +269,11 @@ Aditional notes
 Changelog
 =========
 
+* 0.3.1
+
+  - Corrected bug with new branches. Now it fetches the remote branches every
+    time it looks for incomming changes
+
 * 0.3
 
   - Re-wrote from scratch. It does not uses BuildBot as base anymore. Now it is
