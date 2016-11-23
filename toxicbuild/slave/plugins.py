@@ -24,6 +24,9 @@ from toxicbuild.slave.build import BuildStep
 
 
 class Plugin:
+    """This is a base slave plugin. Slave plugins may add steps to a build
+    before and/or after the used defined steps. It may also set enivronment
+    variables to be used in the tests."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
