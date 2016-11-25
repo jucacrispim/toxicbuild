@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,30 +17,24 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-
-class ExecCmdError(Exception):
-    pass
-
-
-class VCSError(Exception):
-    pass
+from unittest import TestCase
+from toxicbuild.core import plugins
 
 
-class ImpossibillityError(Exception):
-    pass
+class MyPlugin(plugins.Plugin):
+    name = 'my-plugin'
 
 
-class ConfigError(Exception):
-    pass
+class PluginTest(TestCase):
 
+    def setUp(self):
+        self.plugin = MyPlugin()
 
-class ToxicClientException(Exception):
-    pass
+    def test_get_plugin(self):
 
+        plugin = plugins.Plugin.get_plugin('my-plugin')
+        self.assertEqual(plugin, type(self.plugin))
 
-class BadJsonData(Exception):
-    pass
-
-
-class PluginNotFound(Exception):
-    pass
+    def test_get_without_a_plugin(self):
+        with self.assertRaises(plugins.PluginNotFound):
+            plugins.Plugin.get_plugin('i-dont-exist')

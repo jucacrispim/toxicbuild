@@ -25,7 +25,7 @@ from toxicbuild.core.utils import get_toxicbuildconf, LoggerMixin, ExecCmdError
 from toxicbuild.slave.build import Builder, BuildStep
 from toxicbuild.slave.exceptions import (BuilderNotFound, BadBuilderConfig,
                                          BusyRepository)
-from toxicbuild.slave.plugins import Plugin
+from toxicbuild.slave.plugins import SlavePlugin
 
 
 class BuildManager(LoggerMixin):
@@ -244,7 +244,7 @@ class BuildManager(LoggerMixin):
 
         plist = []
         for pdict in plugins_config:
-            plugin_class = Plugin.get(pdict['name'])
+            plugin_class = SlavePlugin.get_plugin(pdict['name'])
             del pdict['name']
             plugin = plugin_class(**pdict)
             plist.append(plugin)

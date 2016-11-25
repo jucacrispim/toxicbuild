@@ -24,7 +24,7 @@ from toxicbuild.slave import plugins, build
 from tests import async_test
 
 
-class MyPlugin(plugins.Plugin):
+class MyPlugin(plugins.SlavePlugin):
     name = 'my-plugin'
 
 
@@ -32,15 +32,6 @@ class PluginTest(TestCase):
 
     def setUp(self):
         self.plugin = MyPlugin()
-
-    def test_get(self):
-
-        plugin = plugins.Plugin.get('my-plugin')
-        self.assertEqual(plugin, type(self.plugin))
-
-    def test_get_without_a_plugin(self):
-        with self.assertRaises(plugins.PluginNotFound):
-            plugins.Plugin.get('i-dont-exist')
 
     def test_get_steps_before(self):
         self.assertEqual([], self.plugin.get_steps_before())
