@@ -25,10 +25,19 @@ class MyPlugin(plugins.Plugin):
     name = 'my-plugin'
 
 
+class MyOtherPlugin(plugins.Plugin):
+    name = 'other-plugin'
+    type = 'test'
+
+
 class PluginTest(TestCase):
 
     def setUp(self):
         self.plugin = MyPlugin()
+
+    def test_list_plugins(self):
+        plugins_list = plugins.Plugin.list_plugins()
+        self.assertEqual(len(plugins_list), 2)
 
     def test_get_plugin(self):
 

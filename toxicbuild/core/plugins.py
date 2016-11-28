@@ -31,6 +31,14 @@ class Plugin:
     name = 'BaseCorePlugin'
 
     @classmethod
+    def list_plugins(cls, plugin_type=None):
+        """Returns a list of Plugin subclasses.
+
+        :param plugin_type: the plugin's type."""
+
+        return cls.__subclasses__()
+
+    @classmethod
     def get_plugin(cls, name):
         """ Returns a Plugin subclass based on its name.
 
