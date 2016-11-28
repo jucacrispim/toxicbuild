@@ -52,6 +52,7 @@ class MyPlugin(MasterPlugin):
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import copy
 from mongomotor.document import Document
 from mongomotor.metaprogramming import AsyncDocumentMetaclass
 from mongomotor.fields import ReferenceField, StringField, URLField, ListField
@@ -114,6 +115,16 @@ class MasterPlugin(Plugin, Document, metaclass=MetaMasterPlugin):
 
         plugin = yield from cls.objects.get(**kwargs)
         return plugin
+
+    @classmethod
+    def get_schema(cls):
+        """Returns a dictionary with the schema of the plugin."""
+        fields = copy.copy(cls._fields)
+        fields['type'] = cls.type
+        fields['name'] = cls.name
+        del fields['_type']
+        del fields['_name']
+        return fields
 
     @asyncio.coroutine
     def run(self):

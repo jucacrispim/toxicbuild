@@ -36,6 +36,7 @@ from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import (Slave, Repository, Builder, BuildSet,
                                RepositoryRevision, settings)
 from toxicbuild.master.exceptions import UIFunctionNotFound
+from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,
                                        repo_status_changed, build_added)
@@ -369,6 +370,13 @@ class HoleHandler:
             blist.append((yield from b.to_dict(id_as_str=True)))
 
         return {'builder-list': blist}
+
+    def plugins_list(self):
+        """Lists all plugins available to the master."""
+
+        plugins = MasterPlugin.list_plugins()
+        plugins_schemas = [p.get_schema() for p in plugins]
+        return {'plugins-list': plugins_schemas}
 
     @asyncio.coroutine
     def builder_show(self, repo_name, builder_name, skip=0, offset=None):

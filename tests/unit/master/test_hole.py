@@ -444,6 +444,13 @@ class HoleHandlerTest(TestCase):
             id__in=[self.builders[0].id]))['builder-list']
         self.assertEqual(builders[0]['id'], str(self.builders[0].id))
 
+    def test_plugins_list(self):
+        handler = hole.HoleHandler({}, 'plugin-list', MagicMock())
+        plugins_count = len(hole.MasterPlugin.list_plugins())
+        plugins = handler.plugins_list()
+        self.assertEqual(len(plugins['plugins-list']), plugins_count)
+        self.assertIn('name', plugins['plugins-list'][0].keys())
+
     @async_test
     def test_builder_show(self):
         yield from self._create_test_data()
@@ -533,6 +540,7 @@ class HoleHandlerTest(TestCase):
                     'slave_update': handler.slave_update,
                     'buildset_list': handler.buildset_list,
                     'builder_list': handler.builder_list,
+                    'plugins_list': handler.plugins_list,
                     'builder_show': handler.builder_show}
 
         action_methods = handler._get_action_methods()

@@ -90,6 +90,10 @@ class SlackPluginTest(TestCase):
         yield from Repository.drop_collection()
         yield from plugins.MasterPlugin.drop_collection()
 
+    def test_get_schema(self):
+        schema = plugins.MasterPlugin.get_schema()
+        self.assertEqual(schema['name'], 'BaseMasterPlugin')
+
     @patch.object(plugins.build_started, 'connect', MagicMock())
     @patch.object(plugins.build_finished, 'connect', MagicMock())
     @async_test

@@ -21,6 +21,7 @@ import asyncio
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.master import settings
+from toxicbuild.master.plugins import MasterPlugin
 from tests import async_test
 from tests.functional import BaseFunctionalTest, REPO_DIR
 
@@ -196,6 +197,13 @@ class ToxicMasterTest(BaseFunctionalTest):
 
         self.assertEqual(response['body']['status'], 'success',
                          get_bad_step(response['body']))
+
+    def test_11_list_plugins(self):
+        plugins_count = len(MasterPlugin.list_plugins())
+        with (yield from get_dummy_client()) as client:
+            resp = yield from client.request2server('plugins-list', {})
+
+        self.assertEqual(len(resp), plugins_count)
 
     @classmethod
     def _delete_test_data(cls):
