@@ -53,17 +53,16 @@ class MyPlugin(MasterPlugin):
 
 import asyncio
 import copy
-from mongomotor.document import Document
-from mongomotor.metaprogramming import AsyncDocumentMetaclass
-from mongomotor.fields import ReferenceField, StringField, URLField, ListField
+from mongomotor import EmbeddedDocument
+from mongoengine.base.metaclasses import DocumentMetaclass
+from mongomotor.fields import StringField, URLField, ListField
 from toxicbuild.core import requests
 from toxicbuild.core.plugins import Plugin
 from toxicbuild.core.utils import datetime2string
-from toxicbuild.master import Repository
 from toxicbuild.master.signals import build_started, build_finished
 
 
-class MetaMasterPlugin(AsyncDocumentMetaclass):
+class MetaMasterPlugin(DocumentMetaclass):
     """Metaclass that sets name and type to the class definition as
     mongo fields while keeping the interface of setting your plugin's
     name and type as string in definition time."""
@@ -75,7 +74,7 @@ class MetaMasterPlugin(AsyncDocumentMetaclass):
         return new_cls
 
 
-class MasterPlugin(Plugin, Document, metaclass=MetaMasterPlugin):
+class MasterPlugin(Plugin, EmbeddedDocument, metaclass=MetaMasterPlugin):
     """Base plugin for master's plugins. Master's plugins usually
     react to signals sent by the master."""
 
@@ -83,38 +82,12 @@ class MasterPlugin(Plugin, Document, metaclass=MetaMasterPlugin):
     name = 'BaseMasterPlugin'
     type = None
 
-    repository = ReferenceField(Repository, required=True)
     branches = ListField(StringField())
     # statuses that trigger the plugin
     statuses = ListField(StringField())
 
-    meta = {'allow_inheritance': True,
-            'indexes': [
-                'repository',
-            ]}
+    meta = {'allow_inheritance': True}
 
-    @classmethod
-    @asyncio.coroutine
-    def get(cls, **kwargs):
-        """Returns an instance of a plugin configured to a repository.
-
-        :param kwargs: kwargs to match the object. Passed to mongomotor's
-          get() method.
-        """
-
-        # here we change the keys to match the fields in the database.
-        # The plugin's name is stored in the key _name and
-        # the plugin's type is stored in the key _type
-        db_fields = [('name', '_name'), ('type', '_type')]
-        for attr_name, field_name in db_fields:
-            try:
-                kwargs[field_name] = kwargs[attr_name]
-                del kwargs[attr_name]
-            except KeyError:
-                pass
-
-        plugin = yield from cls.objects.get(**kwargs)
-        return plugin
 
     @classmethod
     def get_schema(cls):
@@ -133,8 +106,12 @@ class MasterPlugin(Plugin, Document, metaclass=MetaMasterPlugin):
         msg = 'You must implement a run() method in your plugin'
         raise NotImplementedError(msg)
 
+    @asyncio.coroutine
+    def stop(self):
+        """Stops the plugin. Here is where you may disconnect from signals
+        or other stuff needed to stop your plugin."""
 
-MasterPlugin.ensure_indexes()
+        pass
 
 
 class SlackPlugin(MasterPlugin):
@@ -156,6 +133,11 @@ class SlackPlugin(MasterPlugin):
         build_finished.connect(self.send_finished_msg, weak=False)
 
     @asyncio.coroutine
+    def stop(self):
+        build_started.disconnect(self.send_started_msg)
+        build_finished.disconnect(self.send_finished_msg)
+
+    @asyncio.coroutine
     def _send_msg(self, message):
         """Sends a message as an incomming webhook to slack."""
 
@@ -171,7 +153,7 @@ class SlackPlugin(MasterPlugin):
 
         dt = datetime2string(build.started)
         build_state = 'Build *started* at *{datetime}*'.format(datetime=dt)
-        repo = yield from self.repository
+        repo = self._instance
         title = '[{}] {}'.format(repo.name, build_state)
         msg = {'text': title}
         yield from self._send_msg(msg)
@@ -187,7 +169,7 @@ class SlackPlugin(MasterPlugin):
 
         dt = datetime2string(build.finished)
         build_state = 'Build *finished* at *{datetime}*'.format(datetime=dt)
-        repo = yield from self.repository
+        repo = self._instance
         title = '[{}] {}'.format(repo.name, build_state)
 
         msg = {'text': title}

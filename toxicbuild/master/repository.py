@@ -18,6 +18,11 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+try:
+    from asyncio import ensure_future
+except ImportError:  # pragma no cover
+    from asyncio import async as ensure_future
+
 import os
 import re
 import shutil
@@ -30,6 +35,7 @@ from mongomotor.fields import (StringField, IntField, ReferenceField,
 from toxicbuild.core import utils
 from toxicbuild.master.build import BuildSet, Builder, BuildManager
 from toxicbuild.master.exceptions import CloneException
+from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.pollers import Poller
 from toxicbuild.master.signals import (build_started, build_finished,
                                        repo_status_changed)
@@ -62,6 +68,7 @@ class Repository(Document, utils.LoggerMixin):
     slaves = ListField(ReferenceField(Slave, reverse_delete_rule=PULL))
     clone_status = StringField(choices=('cloning', 'ready', 'clone-exception'),
                                default='cloning')
+    plugins = ListField(EmbeddedDocumentField(MasterPlugin))
 
     meta = {
         'ordering': ['name']
@@ -347,7 +354,28 @@ class Repository(Document, utils.LoggerMixin):
         return revision
 
     @asyncio.coroutine
+    def enable_plugin(self, plugin_name, **plugin_config):
+        """Enables a plugin to this repository.
+
+        :param plugin_name: The name of the plugin that is being enabled.
+        :param plugin_config: A dictionary containing the configuration
+          passed to the plugin."""
+
+        plugin_cls = MasterPlugin.get_plugin(name=plugin_name)
+        plugin = plugin_cls(**plugin_config)
+        self.plugins.append(plugin)
+        self.save()
+        ensure_future(plugin.run())
+
+    @asyncio.coroutine
     def add_builds_for_slave(self, buildset, slave, builders=[]):
+        """Adds a buildset to the build queue of a given slave
+        for this repository.
+
+        :param buildset: An instance of
+          :class:`toxicbuild.master.build.BuildSet`.
+        :param slave: An instance of :class:`toxicbuild.master.build.Slave`.
+        """
         yield from self.build_manager.add_builds_for_slave(
             buildset, slave, builders=builders)
 

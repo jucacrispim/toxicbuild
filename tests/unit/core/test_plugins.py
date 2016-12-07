@@ -21,11 +21,15 @@ from unittest import TestCase
 from toxicbuild.core import plugins
 
 
-class MyPlugin(plugins.Plugin):
+class BasePlugin(plugins.Plugin):
+    pass
+
+
+class MyPlugin(BasePlugin):
     name = 'my-plugin'
 
 
-class MyOtherPlugin(plugins.Plugin):
+class MyOtherPlugin(BasePlugin):
     name = 'other-plugin'
     type = 'test'
 
@@ -36,12 +40,12 @@ class PluginTest(TestCase):
         self.plugin = MyPlugin()
 
     def test_list_plugins(self):
-        plugins_list = plugins.Plugin.list_plugins()
+        plugins_list = BasePlugin.list_plugins()
         self.assertEqual(len(plugins_list), 2)
 
     def test_get_plugin(self):
 
-        plugin = plugins.Plugin.get_plugin('my-plugin')
+        plugin = BasePlugin.get_plugin('my-plugin')
         self.assertEqual(plugin, type(self.plugin))
 
     def test_get_without_a_plugin(self):

@@ -27,6 +27,15 @@ from toxicbuild.master.exceptions import CloneException
 from tests import async_test
 
 
+class RepoPlugin(repository.MasterPlugin):
+    name = 'repo-plugin'
+    type = 'test'
+
+    @asyncio.coroutine
+    def run(self):
+        pass
+
+
 class RepositoryTest(TestCase):
 
     def setUp(self):
@@ -255,6 +264,12 @@ class RepositoryTest(TestCase):
         rev = yield from self.repo.add_revision(branch, **kw)
         self.assertTrue(rev.id)
         self.assertEqual('uhuuu!!', rev.title)
+
+    @async_test
+    def test_enable_plugin(self):
+        yield from self.repo.save()
+        yield from self.repo.enable_plugin('repo-plugin')
+        self.assertEqual(len(self.repo.plugins), 1)
 
     @async_test
     def test_add_builds_for_slave(self):
