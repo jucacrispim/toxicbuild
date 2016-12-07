@@ -365,7 +365,7 @@ class Repository(Document, utils.LoggerMixin):
         plugin_cls = MasterPlugin.get_plugin(name=plugin_name)
         plugin = plugin_cls(**plugin_config)
         self.plugins.append(plugin)
-        self.save()
+        yield from self.save()
         ensure_future(plugin.run())
 
     @asyncio.coroutine

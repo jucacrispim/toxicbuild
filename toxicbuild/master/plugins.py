@@ -115,8 +115,6 @@ class MasterPlugin(Plugin, EmbeddedDocument, metaclass=MetaMasterPlugin):
         """Stops the plugin. Here is where you may disconnect from signals
         or other stuff needed to stop your plugin."""
 
-        pass
-
 
 class SlackPlugin(MasterPlugin):
     """Plugin that send notifications about builds to slack."""
