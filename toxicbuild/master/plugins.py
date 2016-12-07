@@ -88,7 +88,6 @@ class MasterPlugin(Plugin, EmbeddedDocument, metaclass=MetaMasterPlugin):
 
     meta = {'allow_inheritance': True}
 
-
     @classmethod
     def get_schema(cls):
         """Returns a dictionary with the schema of the plugin."""
@@ -98,6 +97,11 @@ class MasterPlugin(Plugin, EmbeddedDocument, metaclass=MetaMasterPlugin):
         del fields['_type']
         del fields['_name']
         return fields
+
+    def to_dict(self):
+        schema = type(self).get_schema()
+        objdict = {k: getattr(self, k) for k in schema.keys()}
+        return objdict
 
     @asyncio.coroutine
     def run(self):

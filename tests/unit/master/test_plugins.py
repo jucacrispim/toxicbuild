@@ -62,6 +62,12 @@ class MasterPluginTest(TestCase):
         self.assertEqual(schema['name'], 'BaseMasterPlugin')
 
     @async_test
+    def test_to_dict(self):
+        yield from self._create_test_data()
+        plugin_dict = self.plugin.to_dict()
+        self.assertEqual(plugin_dict['name'], 'test-plugin')
+
+    @async_test
     def test_run(self):
         yield from self._create_test_data()
         with self.assertRaises(NotImplementedError):
