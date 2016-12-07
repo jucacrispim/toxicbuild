@@ -399,7 +399,7 @@ class HoleHandler:
         """Lists all plugins available to the master."""
 
         plugins = MasterPlugin.list_plugins()
-        plugins_schemas = [p.get_schema() for p in plugins]
+        plugins_schemas = [p.get_schema(to_serialize=True) for p in plugins]
         return {'plugins-list': plugins_schemas}
 
     @asyncio.coroutine

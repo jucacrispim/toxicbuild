@@ -62,6 +62,11 @@ from toxicbuild.core.utils import datetime2string
 from toxicbuild.master.signals import build_started, build_finished
 
 
+_translate_table = {ListField: 'list',
+                    StringField: 'string',
+                    URLField: 'url'}
+
+
 class MetaMasterPlugin(DocumentMetaclass):
     """Metaclass that sets name and type to the class definition as
     mongo fields while keeping the interface of setting your plugin's
@@ -89,13 +94,28 @@ class MasterPlugin(Plugin, EmbeddedDocument, metaclass=MetaMasterPlugin):
     meta = {'allow_inheritance': True}
 
     @classmethod
-    def get_schema(cls):
+    def _translate_schema(cls, fields):
+        """Converts the db fields into strings that can be
+        serialized."""
+
+        good = copy.copy(fields)
+        del good['name']
+        del good['type']
+        translation = {k: _translate_table[type(v)] for k, v in good.items()}
+        translation['name'] = fields['name']
+        translation['type'] = fields['type']
+        return translation
+
+    @classmethod
+    def get_schema(cls, to_serialize=False):
         """Returns a dictionary with the schema of the plugin."""
         fields = copy.copy(cls._fields)
         fields['type'] = cls.type
         fields['name'] = cls.name
         del fields['_type']
         del fields['_name']
+        if to_serialize:
+            fields = cls._translate_schema(fields)
         return fields
 
     def to_dict(self):

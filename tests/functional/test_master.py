@@ -80,6 +80,15 @@ class DummyUIClient(BaseToxicClient):
             yield resp
             resp = yield from self.get_response()
 
+    def enable_plugin(self):
+        action = 'repo-enable-plugin'
+        body = {'repo_name': 'test-repo',
+                'plugin_name': 'slack-notification',
+                'webhook_url': 'https://some.slack.url'}
+
+        resp = yield from self.request2server(action, body)
+        return resp
+
 
 @asyncio.coroutine
 def get_dummy_client():
@@ -198,12 +207,23 @@ class ToxicMasterTest(BaseFunctionalTest):
         self.assertEqual(response['body']['status'], 'success',
                          get_bad_step(response['body']))
 
+    @async_test
     def test_11_list_plugins(self):
-        plugins_count = len(MasterPlugin.list_plugins())
+        plugins_count = len([p for p in MasterPlugin.list_plugins()
+                             if 'test' not in p.__module__])
+
         with (yield from get_dummy_client()) as client:
             resp = yield from client.request2server('plugins-list', {})
 
-        self.assertEqual(len(resp), plugins_count)
+        self.assertEqual(len(resp), plugins_count, MasterPlugin.list_plugins())
+
+    @async_test
+    def test_12_enable_plugin(self):
+
+        with (yield from get_dummy_client()) as client:
+            resp = yield from client.enable_plugin()
+
+        self.assertEqual(resp, 'ok', resp)
 
     @classmethod
     def _delete_test_data(cls):

@@ -57,9 +57,18 @@ class MasterPluginTest(TestCase):
     def tearDown(self):
         yield from Repository.drop_collection()
 
+    def test_translate_schema(self):
+        schema = plugins.MasterPlugin.get_schema()
+        translation = plugins.MasterPlugin._translate_schema(schema)
+        self.assertTrue(translation['branches'], 'list')
+
     def test_get_schema(self):
         schema = plugins.MasterPlugin.get_schema()
         self.assertEqual(schema['name'], 'BaseMasterPlugin')
+
+    def test_get_schema_to_serialize(self):
+        schema = plugins.MasterPlugin.get_schema(to_serialize=True)
+        self.assertEqual(schema['statuses'], 'list')
 
     @async_test
     def test_to_dict(self):

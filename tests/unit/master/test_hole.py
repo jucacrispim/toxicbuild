@@ -178,7 +178,7 @@ class HoleHandlerTest(TestCase):
     def test_repo_enable_plugin(self):
 
         class TestPlugin(plugins.MasterPlugin):
-            name = 'test-plugin'
+            name = 'test-hole-plugin'
             type = 'test'
 
             @asyncio.coroutine
@@ -188,7 +188,8 @@ class HoleHandlerTest(TestCase):
         yield from self._create_test_data()
         action = 'repo-enable-plugin'
         handler = hole.HoleHandler({}, action, MagicMock())
-        yield from handler.repo_enable_plugin(self.repo.name, 'test-plugin')
+        yield from handler.repo_enable_plugin(self.repo.name,
+                                              'test-hole-plugin')
         repo = yield from hole.Repository.get(id=self.repo.id)
         self.assertEqual(len(repo.plugins), 1)
 
@@ -468,6 +469,7 @@ class HoleHandlerTest(TestCase):
         plugins = handler.plugins_list()
         self.assertEqual(len(plugins['plugins-list']), plugins_count)
         self.assertIn('name', plugins['plugins-list'][0].keys())
+        self.assertEqual(plugins['plugins-list'][0]['statuses'], 'list')
 
     @async_test
     def test_builder_show(self):
