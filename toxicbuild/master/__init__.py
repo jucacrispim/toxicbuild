@@ -19,9 +19,10 @@ from toxicbuild.core.utils import (log, daemonize as daemon, bcrypt,
                                    bcrypt_string, changedir)
 from toxicbuild.master.scheduler import TaskScheduler
 # the api
+from toxicbuild.master.build import Build, Builder, BuildSet
+from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.repository import (Repository, RepositoryRevision,
                                           RepositoryBranch)
-from toxicbuild.master.build import Build, Builder, BuildSet
 from toxicbuild.master.slave import Slave
 
 PIDFILE = 'toxicmaster.pid'

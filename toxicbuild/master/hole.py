@@ -82,12 +82,14 @@ class HoleHandler:
     * `repo-remove-slave`
     * `repo-add-branch`
     * `repo-remove-branch`
+    * `repo-enable-plugin`
     * `repo-start-build`
     * `slave-add`
     * `slave-get`
     * `slave-list`
     * `slave-remove`
     * `slave-update`
+    * `plugins-list`
     * `buildset-list`
     * `builder-show`
     * `list-funcs`
@@ -225,15 +227,37 @@ class HoleHandler:
     @asyncio.coroutine
     def repo_add_branch(self, repo_name, branch_name,
                         notify_only_latest=False):
+        """Adds a branch to the list of branches of the repository.
+
+        :param repo_name: Reporitory name
+        :param branch_name: Branch's name
+        :notify_only_latest: If True only the latest commit in the
+          branch will trigger a build."""
         repo = yield from Repository.get(name=repo_name)
         yield from repo.add_or_update_branch(branch_name, notify_only_latest)
         return {'repo-add-branch': 'ok'}
 
     @asyncio.coroutine
     def repo_remove_branch(self, repo_name, branch_name):
+        """Removes a branch from the list of branches of a repository.
+        :param repo_name: Repository name
+        :param branch_name: Branch's name."""
+
         repo = yield from Repository.get(name=repo_name)
         yield from repo.remove_branch(branch_name)
         return {'repo-remove-branch': 'ok'}
+
+    @asyncio.coroutine
+    def repo_enable_plugin(self, repo_name, plugin_name, **kwargs):
+        """Enables a plugin to a repository.
+
+        :param repo_name: Repository name.
+        :param plugin_name: Plugin name
+        :param kwargs: kwargs passed to the plugin."""
+
+        repo = yield from Repository.get(name=repo_name)
+        yield from repo.enable_plugin(plugin_name, **kwargs)
+        return {'repo-enable-plugin': 'ok'}
 
     @asyncio.coroutine
     def repo_start_build(self, repo_name, branch, builder_name=None,

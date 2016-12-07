@@ -21,7 +21,7 @@ import asyncio
 from datetime import datetime
 from unittest import TestCase
 from unittest.mock import MagicMock, Mock, patch
-from toxicbuild.master import hole, build, repository, slave
+from toxicbuild.master import hole, build, repository, slave, plugins
 from tests import async_test
 
 
@@ -173,6 +173,24 @@ class HoleHandlerTest(TestCase):
             yield from hole.Repository.objects.to_list())]
         self.assertEqual((yield from hole.Repository.objects.count()),
                          1, allrepos)
+
+    @async_test
+    def test_repo_enable_plugin(self):
+
+        class TestPlugin(plugins.MasterPlugin):
+            name = 'test-plugin'
+            type = 'test'
+
+            @asyncio.coroutine
+            def run(self):
+                pass
+
+        yield from self._create_test_data()
+        action = 'repo-enable-plugin'
+        handler = hole.HoleHandler({}, action, MagicMock())
+        yield from handler.repo_enable_plugin(self.repo.name, 'test-plugin')
+        repo = yield from hole.Repository.get(id=self.repo.id)
+        self.assertEqual(len(repo.plugins), 1)
 
     @async_test
     def test_repo_list(self):
@@ -532,6 +550,7 @@ class HoleHandlerTest(TestCase):
                     'repo_remove_slave': handler.repo_remove_slave,
                     'repo_add_branch': handler.repo_add_branch,
                     'repo_remove_branch': handler.repo_remove_branch,
+                    'repo_enable_plugin': handler.repo_enable_plugin,
                     'repo_start_build': handler.repo_start_build,
                     'slave_add': handler.slave_add,
                     'slave_get': handler.slave_get,
