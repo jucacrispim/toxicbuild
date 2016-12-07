@@ -57,6 +57,7 @@ class RepositoryTest(TestCase):
         yield from self._create_db_revisions()
         d = yield from self.repo.to_dict()
         self.assertTrue(d['id'])
+        self.assertTrue('plugins' in d.keys())
 
     @async_test
     def test_to_dict_id_as_str(self):
