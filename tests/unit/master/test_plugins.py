@@ -30,7 +30,7 @@ class MetaMasterPluginTest(TestCase):
 
     def setUp(self):
 
-        class TestBasePlugin(plugins.Document,
+        class TestBasePlugin(plugins.EmbeddedDocument,
                              metaclass=plugins.MetaMasterPlugin):
 
             name = 'base-plugin'
@@ -56,17 +56,13 @@ class MasterPluginTest(TestCase):
     @async_test
     def tearDown(self):
         yield from Repository.drop_collection()
-        yield from plugins.MasterPlugin.drop_collection()
+
+    def test_get_schema(self):
+        schema = plugins.MasterPlugin.get_schema()
+        self.assertEqual(schema['name'], 'BaseMasterPlugin')
 
     @async_test
-    def test_get(self):
-        yield from self._create_test_data()
-        plugin = yield from plugins.MasterPlugin.get(repository=self.repo,
-                                                     name='test-plugin')
-        self.assertTrue(plugin.id)
-
-    @async_test
-    def test_long_name(self):
+    def test_run(self):
         yield from self._create_test_data()
         with self.assertRaises(NotImplementedError):
             yield from self.plugin.run()
@@ -78,9 +74,9 @@ class MasterPluginTest(TestCase):
                                update_seconds=300,
                                vcs_type='git')
         yield from self.repo.save()
-        self.plugin = self.plugin_class(repository=self.repo,
-                                        branches=['master'])
-        yield from self.plugin.save()
+        self.plugin = self.plugin_class(branches=['master'])
+        self.repo.plugins.append(self.plugin)
+        self.repo.save()
 
 
 class SlackPluginTest(TestCase):
@@ -88,11 +84,6 @@ class SlackPluginTest(TestCase):
     @async_test
     def tearDown(self):
         yield from Repository.drop_collection()
-        yield from plugins.MasterPlugin.drop_collection()
-
-    def test_get_schema(self):
-        schema = plugins.MasterPlugin.get_schema()
-        self.assertEqual(schema['name'], 'BaseMasterPlugin')
 
     @patch.object(plugins.build_started, 'connect', MagicMock())
     @patch.object(plugins.build_finished, 'connect', MagicMock())
@@ -116,6 +107,14 @@ class SlackPluginTest(TestCase):
         self.assertFalse(plugins.build_started.connect.called)
         self.assertTrue(plugins.build_finished.connect.called)
 
+    @patch.object(plugins.build_started, 'disconnect', MagicMock())
+    @patch.object(plugins.build_finished, 'disconnect', MagicMock())
+    @async_test
+    def test_stop(self):
+        yield from self._create_test_data()
+        yield from self.plugin.stop()
+        self.assertTrue(plugins.build_started.disconnect.called)
+        self.assertTrue(plugins.build_finished.disconnect.called)
 
     @patch.object(plugins.requests, 'post', MagicMock())
     @async_test
@@ -174,8 +173,8 @@ class SlackPluginTest(TestCase):
                                vcs_type='git')
         yield from self.repo.save()
         url = 'https://some-slack-url.bla/xxxx/yyyy'
-        self.plugin = plugins.SlackPlugin(repository=self.repo,
-                                          branches=['master'],
+        self.plugin = plugins.SlackPlugin(branches=['master'],
                                           webhook_url=url,
                                           statuses=['fail', 'success'])
-        yield from self.plugin.save()
+        self.repo.plugins.append(self.plugin)
+        self.repo.save()
