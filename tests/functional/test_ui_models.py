@@ -171,8 +171,9 @@ class RepositoryTest(BaseFunctionalTest):
                                               url='bla@gla.com',
                                               vcs_type='git',
                                               update_seconds=200)
-        yield from self.repo.enable_plugin('slack-notification',
-                                           webhook_url='https://some.url.slack')
+        yield from self.repo.enable_plugin(
+            'slack-notification',
+            webhook_url='https://some.url.slack')
         repo = yield from Repository.get(repo_name='some-repo')
         self.assertEqual(len(repo.plugins), 1)
 
@@ -182,8 +183,9 @@ class RepositoryTest(BaseFunctionalTest):
                                               url='bla@gla.com',
                                               vcs_type='git',
                                               update_seconds=200)
-        yield from self.repo.enable_plugin('slack-notification',
-                                           webhook_url='https://some.url.slack')
+        yield from self.repo.enable_plugin(
+            'slack-notification',
+            webhook_url='https://some.url.slack')
         kw = {'name': 'slack-notification'}
         yield from self.repo.disable_plugin(**kw)
         repo = yield from Repository.get(repo_name='some-repo')
