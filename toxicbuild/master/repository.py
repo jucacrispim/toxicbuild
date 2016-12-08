@@ -368,6 +368,34 @@ class Repository(Document, utils.LoggerMixin):
         yield from self.save()
         ensure_future(plugin.run())
 
+    def _match_kw(self, plugin, **kwargs):
+        """True if the plugin's attributes match the
+        kwargs.
+
+        :param plugin: A plugin instance.
+        :param kwargs: kwargs to match the plugin"""
+
+        for k, v in kwargs.items():
+            try:
+                attr = getattr(plugin, k)
+            except AttributeError:
+                return False
+            else:
+                if attr != v:
+                    return False
+
+        return True
+
+    @asyncio.coroutine
+    def disable_plugin(self, **kwargs):
+        """Disables a plugin to the repository.
+
+        :param kwargs: kwargs to match the plugin."""
+        matched = [p for p in self.plugins if self._match_kw(p, **kwargs)]
+        for p in matched:
+            self.plugins.remove(p)
+        self.save()
+
     @asyncio.coroutine
     def add_builds_for_slave(self, buildset, slave, builders=[]):
         """Adds a buildset to the build queue of a given slave

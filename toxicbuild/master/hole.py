@@ -260,6 +260,16 @@ class HoleHandler:
         return {'repo-enable-plugin': 'ok'}
 
     @asyncio.coroutine
+    def repo_disable_plugin(self, repo_name, **kwargs):
+        """Disables a plugin from a repository.
+
+        :param repo_name: Repository name.
+        :param kwargs: kwargs passed to the plugin"""
+
+        repo = yield from Repository.get(name=repo_name)
+        yield from repo.disable_plugin(**kwargs)
+
+    @asyncio.coroutine
     def repo_start_build(self, repo_name, branch, builder_name=None,
                          named_tree=None, slaves=[]):
         """ Starts a(some) build(s) in a given repository. """

@@ -194,6 +194,27 @@ class HoleHandlerTest(TestCase):
         self.assertEqual(len(repo.plugins), 1)
 
     @async_test
+    def test_repo_disable_plugin(self):
+
+        class TestPlugin(plugins.MasterPlugin):
+            name = 'test-hole-plugin'
+            type = 'test'
+
+            @asyncio.coroutine
+            def run(self):
+                pass
+
+        yield from self._create_test_data()
+        action = 'repo-enable-plugin'
+        handler = hole.HoleHandler({}, action, MagicMock())
+        yield from handler.repo_enable_plugin(self.repo.name,
+                                              'test-hole-plugin')
+        kw = {'name': 'test-hole-plugin'}
+        yield from handler.repo_disable_plugin(self.repo.name, **kw)
+        repo = yield from hole.Repository.get(id=self.repo.id)
+        self.assertEqual(len(repo.plugins), 0)
+
+    @async_test
     def test_repo_list(self):
         yield from self._create_test_data()
         handler = hole.HoleHandler({}, 'repo-list', MagicMock())
@@ -554,6 +575,8 @@ class HoleHandlerTest(TestCase):
                     'repo_remove_branch': handler.repo_remove_branch,
                     'repo_enable_plugin': handler.repo_enable_plugin,
                     'repo_start_build': handler.repo_start_build,
+                    'repo_enable_plugin': handler.repo_enable_plugin,
+                    'repo_disable_plugin': handler.repo_disable_plugin,
                     'slave_add': handler.slave_add,
                     'slave_get': handler.slave_get,
                     'slave_list': handler.slave_list,
