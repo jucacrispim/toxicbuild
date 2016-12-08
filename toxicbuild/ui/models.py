@@ -25,10 +25,15 @@ from toxicbuild.ui import settings
 
 
 class BaseModel:
-    # These references are fields refer to other objects.
+    # These references are fields that refer to other objects.
+    # Note that this references are not always references on
+    # database, they may be (and most are) embedded documents
+    # that are simply treated as other objects.
     references = {}
 
     def __init__(self, **kwargs):
+        # here is where we transform the dictonaries from the
+        # master's response into objects that are references.
         for name, cls in self.references.items():
             if not isinstance(kwargs.get(name), (dict, cls)):
                 kwargs[name] = [cls(**kw) if not isinstance(kw, cls) else kw
@@ -136,11 +141,25 @@ class Slave(BaseModel):
         return resp
 
 
+class Plugin(BaseModel):
+    """A repository plugin."""
+
+    @classmethod
+    def list(cls):
+        """Lists all plugins available in the master."""
+        with (yield from cls.get_client()) as client:
+            resp = yield from client.plugin_list()
+
+        plugins = [cls(**p) for p in resp]
+        return plugins
+
+
 class Repository(BaseModel):
 
     """Class representing a repository."""
 
-    references = {'slaves': Slave}
+    references = {'slaves': Slave,
+                  'plugins': Plugin}
 
     @classmethod
     @asyncio.coroutine
@@ -253,6 +272,15 @@ class Repository(BaseModel):
     @asyncio.coroutine
     def start_build(self, branch, builder_name=None, named_tree=None,
                     slaves=[]):
+        """Starts a (some) build(s) for a repository.
+
+        :param branch: The name of the branch.
+        :param builder_name: The name of the builder that will execute
+          the build
+        :param named_tree: The named_tree that will be builded. If no
+          named_tree the last one will be used.
+        :param slaves: A list with names of slaves that will execute
+          the builds. If no slave is supplied all will be used."""
 
         with (yield from self.get_client()) as client:
             resp = yield from client.repo_start_build(
@@ -261,9 +289,35 @@ class Repository(BaseModel):
         return resp
 
     def to_dict(self):
+        """Transforms a repository into a dictionary."""
+
         d = super().to_dict()
         d['slaves'] = [s.to_dict() for s in d['slaves']]
         return d
+
+    def enable_plugin(self, plugin_name, **kwargs):
+        """Enables a plugin to a repository.
+
+        :param plugin_name: The plugin's name.
+        :param kwargs: kwargs used to configure the plugin.
+        """
+
+        with (yield from self.get_client()) as client:
+            resp = yield from client.repo_enable_plugin(
+                repo_name=self.name, plugin_name=plugin_name, **kwargs)
+
+        return resp
+
+    def disable_plugin(self, **kwargs):
+        """Disables a plugin from a repository.
+
+        :param kwargs: kwargs to match the plugin."""
+
+        with (yield from self.get_client()) as client:
+            resp = yield from client.repo_disable_plugin(
+                repo_name=self.name, **kwargs)
+
+        return resp
 
 
 class Builder(BaseModel):

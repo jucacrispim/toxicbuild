@@ -394,7 +394,7 @@ class Repository(Document, utils.LoggerMixin):
         matched = [p for p in self.plugins if self._match_kw(p, **kwargs)]
         for p in matched:
             self.plugins.remove(p)
-        self.save()
+        yield from self.save()
 
     @asyncio.coroutine
     def add_builds_for_slave(self, buildset, slave, builders=[]):

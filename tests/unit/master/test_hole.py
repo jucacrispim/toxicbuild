@@ -575,7 +575,6 @@ class HoleHandlerTest(TestCase):
                     'repo_remove_branch': handler.repo_remove_branch,
                     'repo_enable_plugin': handler.repo_enable_plugin,
                     'repo_start_build': handler.repo_start_build,
-                    'repo_enable_plugin': handler.repo_enable_plugin,
                     'repo_disable_plugin': handler.repo_disable_plugin,
                     'slave_add': handler.slave_add,
                     'slave_get': handler.slave_get,
