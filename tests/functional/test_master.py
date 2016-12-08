@@ -193,10 +193,16 @@ class ToxicMasterTest(BaseFunctionalTest):
             yield from client.write({'action': 'stream', 'token': '123',
                                      'body': {}})
 
+            # this ugly part here it to wait for the right message
+            # If we don't use this we may read the wrong message and
+            # the test will fail.
+            has_stream = False
             while True:
                 response = yield from client.get_response()
                 body = response['body'] if response else {}
-                if body.get('event_type') == 'build_finished':
+                if 'stream' in body:
+                    has_stream = True
+                if body.get('event_type') == 'build_finished' and has_stream:
                     break
 
         def get_bad_step(body):
