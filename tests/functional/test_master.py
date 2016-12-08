@@ -70,6 +70,7 @@ class DummyUIClient(BaseToxicClient):
 
         return resp
 
+    @asyncio.coroutine
     def get_stream(self):
 
         action = 'stream'
@@ -80,11 +81,21 @@ class DummyUIClient(BaseToxicClient):
             yield resp
             resp = yield from self.get_response()
 
+    @asyncio.coroutine
     def enable_plugin(self):
         action = 'repo-enable-plugin'
         body = {'repo_name': 'test-repo',
                 'plugin_name': 'slack-notification',
                 'webhook_url': 'https://some.slack.url'}
+
+        resp = yield from self.request2server(action, body)
+        return resp
+
+    @asyncio.coroutine
+    def disable_plugin(self):
+        action = 'repo-disable-plugin'
+        body = {'repo_name': 'test-repo',
+                'plugin_name': 'slack-notification'}
 
         resp = yield from self.request2server(action, body)
         return resp
@@ -228,6 +239,14 @@ class ToxicMasterTest(BaseFunctionalTest):
 
         with (yield from get_dummy_client()) as client:
             resp = yield from client.enable_plugin()
+
+        self.assertEqual(resp, 'ok', resp)
+
+    @async_test
+    def test_13_disable_plugin(self):
+
+        with (yield from get_dummy_client()) as client:
+            resp = yield from client.disable_plugin()
 
         self.assertEqual(resp, 'ok', resp)
 
