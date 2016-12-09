@@ -64,7 +64,7 @@ class DummyUIClient(BaseToxicClient):
 
         action = 'repo-start-build'
         body = {'repo_name': 'test-repo',
-                'builder_name': 'builder-1',
+                #'builder_name': 'builder-1',
                 'branch': 'master'}
         resp = yield from self.request2server(action, body)
 
@@ -211,7 +211,13 @@ class ToxicMasterTest(BaseFunctionalTest):
                 response = yield from client.get_response()
                 body = response['body'] if response else {}
                 if body.get('event_type') == 'build_finished':
-                    break
+                    has_sleep = False
+                    for step in body['steps']:
+                        if step['command'] == 'sleep 3':
+                            has_sleep = True
+
+                    if not has_sleep:
+                        break
 
         def get_bad_step(body):
             for step in body['steps']:
