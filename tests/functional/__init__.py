@@ -15,6 +15,7 @@ SCRIPTS_DIR = os.path.join(SOURCE_DIR, 'scripts')
 REPO_DIR = os.path.join(DATA_DIR, 'repo')
 SLAVE_ROOT_DIR = os.path.join(DATA_DIR, 'slave')
 MASTER_ROOT_DIR = os.path.join(DATA_DIR, 'master')
+UI_ROOT_DIR = os.path.join(DATA_DIR, 'ui')
 PYVERSION = ''.join([str(n) for n in sys.version_info[:2]])
 
 
@@ -75,6 +76,35 @@ def stop_master():
 
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', toxicmaster_cmd, 'stop', MASTER_ROOT_DIR,
+           '--pidfile', pidfile]
+
+    os.system(' '.join(cmd))
+
+
+def start_webui():
+    """Start a web interface for tests """
+
+    toxicweb_conf = os.environ.get('TOXICUI_SETTINGS')
+    toxicweb_cmd = os.path.join(SCRIPTS_DIR, 'toxicweb')
+    pidfile = 'toxicui{}.pid'.format(PYVERSION)
+    cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
+           toxicweb_cmd, 'start', UI_ROOT_DIR, '--daemonize',
+           '--pidfile', pidfile]
+
+    if toxicweb_conf:
+        cmd += ['-c', toxicweb_conf]
+
+    os.system(' '.join(cmd))
+
+
+def stop_webui():
+    """Stops the test web interface"""
+
+    toxicweb_cmd = os.path.join(SCRIPTS_DIR, 'toxicweb')
+    pidfile = 'toxicui{}.pid'.format(PYVERSION)
+
+    cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
+           'python', toxicweb_cmd, 'stop', UI_ROOT_DIR,
            '--pidfile', pidfile]
 
     os.system(' '.join(cmd))
