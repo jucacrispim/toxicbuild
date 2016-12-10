@@ -74,7 +74,7 @@ def _get_envvars(envvars):
 
         newvars[var] = value
 
-    newvars['LANG'] = os.environ.get('LANG')
+    newvars['LANG'] = os.environ.get('LANG', '')
     return newvars
 
 
