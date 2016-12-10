@@ -89,7 +89,7 @@ class UtilsTest(TestCase):
 
         expected = {'PATH': '{}:venv/bin'.format(os.environ.get('PATH')),
                     'MYPROGRAMVAR': 'something',
-                    'LANG': os.environ.get('LANG')}
+                    'LANG': os.environ.get('LANG', '')}
 
         returned = utils._get_envvars(envvars)
 
