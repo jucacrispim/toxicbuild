@@ -20,7 +20,8 @@ var REPO_ROW_TEMPLATE = `
 <tr id="repo-row-{{repo.name}}">
     <td>
 	  {{repo.name}}
-	  <button type="button" class="btn btn-default btn-xs btn-main-edit"
+	  <button type="button" class="btn btn-default btn-xs btn-main-edit
+                                       btn-edit-repo"
 		  data-toggle="modal" data-target="#repoModal"
 		  data-repo-name="{{repo.name}}" data-repo-url="{{repo.url}}"
 		  data-repo-update-seconds="{{repo.update_seconds}}"

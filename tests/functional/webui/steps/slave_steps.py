@@ -116,4 +116,4 @@ def step_impl(context):
     finally:
         browser.implicitly_wait(10)
 
-    assert not rows
+    assert len(rows) == 1

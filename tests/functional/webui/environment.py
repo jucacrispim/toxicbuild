@@ -11,7 +11,7 @@ create_settings()
 create_settings_ui()
 create_settings_and_connect()
 
-from toxicbuild.ui.models import Slave  # noqa 402
+from toxicbuild.ui.models import Slave, Repository  # noqa 402
 from tests.functional import (start_slave, stop_slave,  # noqa 402
                               start_master,
                               stop_master, start_webui, stop_webui)
@@ -34,12 +34,29 @@ def quit_browser(context):
 
 
 @asyncio.coroutine
+def create_slave(context):
+    """Creates a slave to be used in repo tests"""
+
+    yield from Slave.add(name='repo-slave', host='localhost', port=1234,
+                         token='123sdf34adsf')
+
+
+@asyncio.coroutine
 def del_slave(context):
     """Deletes the slaves created in the tests"""
 
     slaves = yield from Slave.list()
     for slave in slaves:
         yield from slave.delete()
+
+
+@asyncio.coroutine
+def del_repo(context):
+    """Deletes the repositories created in tests."""
+
+    repos = yield from Repository.list()
+    for repo in repos:
+        yield from repo.delete()
 
 
 def before_feature(context, feature):
@@ -51,6 +68,8 @@ def before_feature(context, feature):
 
     start_slave()
     start_master()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(create_slave(context))
     start_webui()
     create_browser(context)
 
@@ -65,6 +84,7 @@ def after_feature(context, feature):
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(del_slave(context))
+    loop.run_until_complete(del_repo(context))
 
     quit_browser(context)
     stop_webui()

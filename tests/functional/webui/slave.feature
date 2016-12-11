@@ -16,7 +16,7 @@ Feature: A user inserts and removes a slave in the web interface
         And clicks in the save button
 	Then he sees the new slave in the slave list
 
-    Scenario: A user removes a slave
+    Scenario: An user removes a slave
         Given a user is logged in the system and has a slave
 	When he clicks in the edit slave button
         And sees the slave modal
