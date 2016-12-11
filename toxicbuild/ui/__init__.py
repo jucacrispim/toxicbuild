@@ -39,6 +39,15 @@ AsyncIOMainLoop().install()
 pyrocommand = None
 
 
+def _check_conffile(workdir, conffile):
+    """Checks if the conffile is inside workdir."""
+
+    absworkdir = os.path.abspath(workdir)
+    absconffile = os.path.abspath(conffile)
+
+    return absconffile.startswith(absworkdir)
+
+
 @command
 def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
           pidfile=None, loglevel='info', conffile=None):
@@ -70,8 +79,16 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         sys.path.append(workdir)
 
         if conffile:
+
+            is_in_workdir = _check_conffile(workdir, conffile)
+
+            if not is_in_workdir:
+                print('Config file must be inside workdir')
+                sys.exit(1)
+
             os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir, conffile)
-            module = conffile.replace('.conf', '').replace(os.sep, '.')
+            module = conffile.replace('.conf', '').replace(workdir, '').replace(
+                os.sep, '.')
             os.environ['PYROCUMULUS_SETTINGS_MODULE'] = module
         else:
             os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir,
