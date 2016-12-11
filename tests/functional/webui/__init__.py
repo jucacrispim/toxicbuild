@@ -26,7 +26,7 @@ class SeleniumBrowser(webdriver.Chrome):
         action = ActionChains(self).click(element)
         action.perform()
 
-    def wait_text_become_present(self, text, timeout=5):
+    def wait_text_become_present(self, text, timeout=10):
         """Waits until a text is present in the page source.
 
         :param text: The text that should be present in the page.
@@ -78,7 +78,7 @@ class SeleniumBrowser(webdriver.Chrome):
 
         return is_logged
 
-    def wait_element_become_visible(self, el, timeout=5):
+    def wait_element_become_visible(self, el, timeout=10):
         """Waits until an element become visible.
 
         :param el: A page element
