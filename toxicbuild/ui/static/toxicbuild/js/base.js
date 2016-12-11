@@ -181,7 +181,9 @@ var BaseManager = function(model_type, view_type, modal){
 	utils.showSuccessMessage(success_msg);
 	self.modal.modal('hide');
 	self._current_view.removeObjRow(self._current_model.id);
+	delete self.views[self._current_model.id]
       };
+
       var error_cb = function(response){
 	utils.showErrorMessage(response)
 	self.modal.modal('hide');
@@ -206,11 +208,13 @@ var BaseManager = function(model_type, view_type, modal){
       };
 
       var my_success_cb = function(response){
-	console.log(success_cb);
 	success_cb(response);
 	utils.showSuccessMessage(success_msg);
 	self.modal.modal('hide');
-	if(add_row){self._current_view.insertObjRow(data)};
+	self._current_model.id = JSON.parse(response).id;
+	self._current_view.model = self._current_model
+	self.views[self._current_model.id] = self._current_view
+	if(add_row){self._current_view.insertObjRow(self._current_model)};
       }
 
       var my_error_cb = function(response){
