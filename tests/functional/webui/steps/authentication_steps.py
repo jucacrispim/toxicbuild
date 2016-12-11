@@ -2,6 +2,8 @@
 
 from behave import when, then, given
 from toxicbuild.ui import settings
+from tests.functional.webui.steps.base_steps import (  # noqa f811
+    given_logged_in_webui)
 
 
 # Scenario: Someone try to access a page without being logged.
@@ -60,15 +62,6 @@ def step_impl(context):
 
 
 # Scenario: Do logout
-
-@given('the user is logged in the web interface')  # noqa f401
-def step_impl(context):
-    browser = context.browser
-    url = 'http://localhost:{}/login'.format(settings.TORNADO_PORT)
-
-    if not browser.is_logged:
-        browser.do_login(url, 'someguy', '123')
-
 
 @when('he clicks in the logout link')  # noqa f401
 def step_impl(context):

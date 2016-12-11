@@ -16,6 +16,7 @@ class SeleniumBrowser(webdriver.Chrome):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.maximize_window()
+        self.implicitly_wait(10)
 
     def click(self, element):
         """Clicks in a element using ActionChains.
@@ -67,10 +68,15 @@ class SeleniumBrowser(webdriver.Chrome):
         """True if the browser is already logged in the web interface."""
 
         try:
+            self.implicitly_wait(0)
             self.find_element_by_id('inputPassword')
-            return False
+            is_logged = False
         except NoSuchElementException:
-            return True
+            is_logged = True
+        finally:
+            self.implicitly_wait(10)
+
+        return is_logged
 
     def wait_element_become_visible(self, el, timeout=5):
         """Waits until an element become visible.

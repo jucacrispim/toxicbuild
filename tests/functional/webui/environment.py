@@ -1,10 +1,21 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-from toxicbuild.ui.models import Slave
-from tests.functional import (start_slave, stop_slave, start_master,
+from toxicbuild.master import create_settings_and_connect
+from toxicbuild.slave import create_settings
+from toxicbuild.ui import create_settings as create_settings_ui
+
+# settings needed to the test data. This needs to be before the
+# import from ui.models
+create_settings()
+create_settings_ui()
+create_settings_and_connect()
+
+from toxicbuild.ui.models import Slave  # noqa 402
+from tests.functional import (start_slave, stop_slave,  # noqa 402
+                              start_master,
                               stop_master, start_webui, stop_webui)
-from tests.functional.webui import SeleniumBrowser
+from tests.functional.webui import SeleniumBrowser  # noqa 402
 
 
 def create_browser(context):
@@ -24,13 +35,11 @@ def quit_browser(context):
 
 @asyncio.coroutine
 def del_slave(context):
-    """Deletes the slave created in the tests"""
+    """Deletes the slaves created in the tests"""
 
-    try:
-        slave = yield from Slave.get(slave_name='some-slave')
+    slaves = yield from Slave.list()
+    for slave in slaves:
         yield from slave.delete()
-    except:
-        pass
 
 
 def before_feature(context, feature):
@@ -48,7 +57,8 @@ def before_feature(context, feature):
 
 def after_feature(context, feature):
     """Executed after every feature. It stops the webui, the master,
-    the slave and quits the selenium browser.
+    the slave, quits the selenium browser and deletes data created in
+    tests.
 
     :param context: Behave's context.
     :param feature: The feature that was executed."""
