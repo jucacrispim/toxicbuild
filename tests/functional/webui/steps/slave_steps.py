@@ -109,7 +109,7 @@ def step_impl(context):
 def step_impl(context):
     browser = context.browser
     try:
-        old = browser.implicitly_wait(0)
+        browser.implicitly_wait(0)
         rows = browser.find_elements_by_class_name('slave-row')
     except NoSuchElementException:
         rows = []
