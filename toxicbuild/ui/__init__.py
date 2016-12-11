@@ -41,7 +41,7 @@ pyrocommand = None
 
 @command
 def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
-          pidfile=None, loglevel='info'):
+          pidfile=None, loglevel='info', conffile=None):
     """ Starts the web interface.
 
     Starts the build server to listen on the specified port for
@@ -54,6 +54,9 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
     :param --stderr: stderr path. Defaults to /dev/null
     :param --pidfile: pid file for the process.
     :param --loglevel: Level for logging messages. Defaults to `info`.
+    :param -c, --conffile: path to config file. It must be relative
+      to the workdir. Defaults to None. If not conffile, will look
+      for a file called ``toxicui.conf`` inside ``workdir``
     """
 
     global pyrocommand
@@ -66,9 +69,14 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
     with changedir(workdir):
         sys.path.append(workdir)
 
-        os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir,
-                                                      'toxicui.conf')
-        os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicui'
+        if conffile:
+            os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir, conffile)
+            module = conffile.replace('.conf', '').replace(os.sep, '.')
+            os.environ['PYROCUMULUS_SETTINGS_MODULE'] = module
+        else:
+            os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir,
+                                                          'toxicui.conf')
+            os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicui'
 
         create_settings()
 
