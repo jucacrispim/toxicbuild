@@ -87,8 +87,8 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
                 sys.exit(1)
 
             os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir, conffile)
-            module = conffile.replace('.conf', '').replace(workdir, '').replace(
-                os.sep, '.')
+            module = conffile.replace('.conf', '').replace(
+                workdir, '').strip('/').replace(os.sep, '.')
             os.environ['PYROCUMULUS_SETTINGS_MODULE'] = module
         else:
             os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir,
