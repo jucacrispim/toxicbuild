@@ -21,17 +21,20 @@ def step_impl(context):
     is_present = browser.wait_element_become_visible(el)
     assert is_present
 
+
 @when('fills the repo name field with "{repo_name}"')  # noqa f401
 def step_impl(context, repo_name):
     browser = context.browser
     input_element = browser.find_element_by_id('repo_name')
     input_element.send_keys(repo_name)
 
+
 @when('clicks in the save repo button')  # noqa f401
 def step_impl(context):
     browser = context.browser
     btn = browser.find_element_by_id('btn-save-repo')
     browser.click(btn)
+
 
 @then('he sees the required fields in red')  # noqa f401
 def step_impl(context):
