@@ -33,7 +33,6 @@ class UtilsTest(TestCase):
 
     @async_test
     def test_exec_cmd(self):
-        # no assertions here because if no exceptions, it's ok.
         out = yield from utils.exec_cmd('ls', cwd='.')
         self.assertTrue(out)
 
@@ -58,30 +57,6 @@ class UtilsTest(TestCase):
         returned = yield from utils.exec_cmd(cmd, cwd='.', **envvars)
 
         self.assertEqual(returned, 'something')
-
-    @patch.object(utils.sys, 'platform', 'linux')
-    @async_test
-    def test_exec_cmd_redirecting_stderr(self):
-        cmd = 'echo "bla";exit 1'
-
-        try:
-            yield from utils.exec_cmd(cmd, cwd='.')
-        except utils.ExecCmdError as e:
-            ret = str(e)
-
-        self.assertEqual(ret, 'bla')
-
-    @patch.object(utils.sys, 'platform', 'win32')
-    @async_test
-    def test_exec_cmd_not_redirecting_stderr(self):
-        cmd = 'echo "bla";exit 1'
-
-        try:
-            yield from utils.exec_cmd(cmd, cwd='.')
-        except utils.ExecCmdError as e:
-            ret = str(e)
-
-        self.assertEqual(ret, 'bla')
 
     def test_get_envvars(self):
         envvars = {'PATH': 'PATH:venv/bin',
