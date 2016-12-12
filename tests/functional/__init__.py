@@ -32,7 +32,7 @@ def start_slave():
     toxicslave_cmd = os.path.join(SCRIPTS_DIR, 'toxicslave')
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
            toxicslave_cmd, 'start', SLAVE_ROOT_DIR, '--daemonize',
-           '--pidfile', pidfile]
+           '--pidfile', pidfile, '--loglevel', 'debug']
 
     if toxicslave_conf:
         cmd += ['-c', toxicslave_conf]
@@ -60,7 +60,7 @@ def start_master():
     pidfile = 'toxicmaster{}.pid'.format(PYVERSION)
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
            toxicmaster_cmd, 'start', MASTER_ROOT_DIR, '--daemonize',
-           '--pidfile', pidfile]
+           '--pidfile', pidfile, '--loglevel', 'debug']
 
     if toxicmaster_conf:
         cmd += ['-c', toxicmaster_conf]

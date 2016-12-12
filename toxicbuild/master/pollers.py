@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import traceback
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.exceptions import CloneException
@@ -66,7 +67,8 @@ class Poller(LoggerMixin):
                     yield from self.vcs.clone(self.repository.url)
                     with_clone = True
                 except Exception as e:
-                    self.log(str(e), level='error')
+                    msg = traceback.format_exc()
+                    self.log(msg, level='error')
                     raise CloneException(str(e))
 
             # for git.
@@ -79,7 +81,8 @@ class Poller(LoggerMixin):
                 yield from self.process_changes()
             except Exception as e:
                 # shit happends
-                self.log(str(e), level='error')
+                msg = traceback.format_exc()
+                self.log(msg, level='error')
                 # but the show must go on
         finally:
             self._is_polling = False
