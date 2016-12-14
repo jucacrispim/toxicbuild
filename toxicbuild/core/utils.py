@@ -78,7 +78,7 @@ def exec_cmd(cmd, cwd, timeout=3600, **envvars):
     outline = yield from asyncio.wait_for(proc.stdout.read(), timeout)
     out = [outline.decode()]
 
-    while outline:
+    while proc.returncode is None:
         outline = yield from asyncio.wait_for(proc.stdout.read(), timeout)
         out.append(outline.decode())
 
