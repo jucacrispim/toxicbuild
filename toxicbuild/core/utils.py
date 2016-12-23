@@ -65,7 +65,7 @@ def _create_cmd_proc(cmd, cwd, **envvars):
 
 
 @asyncio.coroutine
-def exec_cmd(cmd, cwd, timeout=3600, out_fn=lambda l: None, **envvars):
+def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
     """ Executes a shell command. Raises with the command output
     if return code > 0.
     :param cmd: command to run.
