@@ -45,7 +45,11 @@ class UtilsTest(TestCase):
     @async_test
     def test_exec_cmd_with_timeout(self, *args, **kwargs):
         with self.assertRaises(asyncio.TimeoutError):
-            yield from utils.exec_cmd('sleep 3', cwd='.', timeout=1)
+            yield from utils.exec_cmd('sleep 2', cwd='.', timeout=1)
+
+        # wait here to avoid runtime error saying the loop is closed
+        # when the process try to send its message to the caller
+        time.sleep(1)
 
     @async_test
     def test_exec_cmd_with_envvars(self):
@@ -57,6 +61,20 @@ class UtilsTest(TestCase):
         returned = yield from utils.exec_cmd(cmd, cwd='.', **envvars)
 
         self.assertEqual(returned, 'something')
+
+    @async_test
+    def test_exec_cmd_with_send_fn(self):
+        envvars = {'PATH': 'PATH:venv/bin',
+                   'MYPROGRAMVAR': 'something'}
+
+        cmd = 'echo $MYPROGRAMVAR'
+
+        LINES = []
+
+        yield from utils.exec_cmd(cmd, cwd='.',
+                                  out_fn=lambda l: LINES.append(l),
+                                  **envvars)
+        self.assertTrue(LINES)
 
     def test_get_envvars(self):
         envvars = {'PATH': 'PATH:venv/bin',

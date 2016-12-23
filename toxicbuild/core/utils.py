@@ -65,21 +65,24 @@ def _create_cmd_proc(cmd, cwd, **envvars):
 
 
 @asyncio.coroutine
-def exec_cmd(cmd, cwd, timeout=3600, **envvars):
-    """ Executes a shell command. Raises with stderr if return code > 0
+def exec_cmd(cmd, cwd, timeout=3600, out_fn=lambda l: None, **envvars):
+    """ Executes a shell command. Raises with the command output
+    if return code > 0.
     :param cmd: command to run.
     :param cwd: Directory to execute the command.
     :param timeout: How long we should wait for a command complete. Default
       is 3600.
+    :param out_fn: A function that receives each line of the command output.
     :param envvars: Environment variables to be used in the command.
     """
 
     proc = yield from _create_cmd_proc(cmd, cwd, **envvars)
-    outline = yield from asyncio.wait_for(proc.stdout.read(), timeout)
-    out = [outline.decode()]
+    out = []
 
     while proc.returncode is None:
         outline = yield from asyncio.wait_for(proc.stdout.read(), timeout)
+        if out_fn:
+            out_fn(outline)
         out.append(outline.decode())
 
     output = ''.join(out).strip('\n')
