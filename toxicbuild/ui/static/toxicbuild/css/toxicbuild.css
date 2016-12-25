@@ -110,6 +110,7 @@ tr:nth-child(even) {
 .toxicweb-container{
     margin-left: 0;
     float:left;
+    width: 1000px;
 }
 
 .logout-link-container{
