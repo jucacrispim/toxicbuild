@@ -230,6 +230,7 @@ class Git(VCS):
 
     @asyncio.coroutine
     def get_remote_branches(self):
+        yield from self.fetch()
         cmd = '%s branch -r' % self.vcsbin
 
         out = yield from self.exec_cmd(cmd)

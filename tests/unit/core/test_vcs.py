@@ -179,12 +179,20 @@ class GitTest(TestCase):
             emock(a[0])
             return 'origin/HEAD  -> origin/master\norigin/dev\norigin/master'
 
+        fetch_mock = mock.Mock()
+
+        @asyncio.coroutine
+        def fetch():
+            fetch_mock()
+
         expected_branches = ['dev', 'master']
         vcs.exec_cmd = e
+        self.vcs.fetch = fetch
         branches = yield from self.vcs.get_remote_branches()
         called_cmd = emock.call_args[0][0]
         self.assertEqual(expected, called_cmd)
         self.assertEqual(expected_branches, branches)
+        self.assertTrue(fetch_mock.called)
 
     @async_test
     def test_get_revisions_for_branch(self):
