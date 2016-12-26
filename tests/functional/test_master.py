@@ -166,7 +166,7 @@ class ToxicMasterTest(BaseFunctionalTest):
         with (yield from get_dummy_client()) as client:
             resp = yield from client.request2server(
                 'repo-remove-slave',
-                {'repo_name': 'test-repo', 'slave_name': 'test-slave'})
+                {'repo_name': 'test-repo', 'slave_name': 'test-slave2'})
         self.assertTrue(resp)
 
     @async_test
