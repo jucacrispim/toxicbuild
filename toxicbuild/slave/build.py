@@ -19,6 +19,8 @@
 
 import asyncio
 from copy import copy
+import functools
+from uuid import uuid4
 from toxicbuild.core.exceptions import ExecCmdError
 from toxicbuild.core.utils import (exec_cmd, LoggerMixin, datetime2string, now)
 
@@ -45,10 +47,10 @@ class Builder(LoggerMixin):
     @asyncio.coroutine
     def build(self):
         build_status = None
-        build_info = {'steps': [],
-                      'status': 'running',
+        build_info = {'steps': [], 'status': 'running',
                       'started': datetime2string(now()),
-                      'finished': None}
+                      'finished': None, 'info_type': 'build_info'}
+
         yield from self.manager.send_info(build_info)
 
         self.manager.send_info(build_info)
@@ -56,27 +58,33 @@ class Builder(LoggerMixin):
         for index, step in enumerate(self.steps):
             msg = 'Executing %s' % step.command
             self.log(msg, level='debug')
-            step_info = {'status': 'running',
-                         'cmd': step.command,
-                         'name': step.name,
-                         'started': datetime2string(now()),
-                         'finished': None,
-                         'index': index,
-                         'output': ''}
+            step_info = {'status': 'running', 'cmd': step.command,
+                         'name': step.name, 'started': datetime2string(now()),
+                         'finished': None, 'index': index, 'output': '',
+                         'info_type': 'step_info', 'uuid': str(uuid4())}
 
             yield from self.manager.send_info(step_info)
 
+            self.log('sendind step info for {}'.format(step_info['uuid']),
+                     level='error')
+
             envvars = self._get_env_vars()
-            step_info.update((yield from step.execute(cwd=self.workdir,
-                                                      **envvars)))
+
+            out_fn = functools.partial(self._send_step_output_info, step_info)
+
+            step_exec_output = yield from step.execute(cwd=self.workdir,
+                                                       out_fn=out_fn,
+                                                       **envvars)
+            step_info.update(step_exec_output)
 
             status = step_info['status']
             msg = 'Finished {} with status {}'.format(step.command, status)
-
             self.log(msg, level='debug')
 
             step_info.update({'finished': datetime2string(now())})
             yield from self.manager.send_info(step_info)
+            self.log('sendind step info for {}'.format(step_info['uuid']),
+                     level='error')
 
             # here is: if build_status is something other than None
             # or success (ie failed) we don't change it anymore, the build
@@ -93,6 +101,16 @@ class Builder(LoggerMixin):
         build_info['total_steps'] = len(self.steps)
         build_info['finished'] = datetime2string(now())
         return build_info
+
+    @asyncio.coroutine
+    def _send_step_output_info(self, step_info, line_index, line):
+        self.log('sendind step output info for {}'.format(step_info['uuid']),
+                 level='error')
+        msg = {'info_type': 'step_output_info',
+               'uuid': step_info['uuid'], 'output_index': line_index,
+               'output': line}
+
+        yield from self.manager.send_info(msg)
 
     def _get_env_vars(self):
         envvars = copy(self.envvars)
@@ -125,15 +143,18 @@ class BuildStep:
         return self.command == other.command
 
     @asyncio.coroutine
-    def execute(self, cwd,  **envvars):
+    def execute(self, cwd,  out_fn=None, **envvars):
         """Executes the step command.
         :param cwd: Directory where the command will be executed.
+        :param out_fn: Function used to handle each line of the
+          command output.
         :param envvars: Environment variables to be used on execution."""
 
         step_status = {}
         try:
             output = yield from exec_cmd(self.command, cwd=cwd,
-                                         timeout=self.timeout, **envvars)
+                                         timeout=self.timeout,
+                                         out_fn=out_fn, **envvars)
             status = 'success'
         except ExecCmdError as e:
             output = e.args[0]
