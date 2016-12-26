@@ -465,7 +465,6 @@ class BuildManagerTest(TestCase):
         yield from self.repo.build_manager.start_pending()
         yield from self.other_repo.build_manager.start_pending()
         self.assertEqual(build.ensure_future.call_count, 1)
-        self.assertEqual(build.ensure_future.call_count, 1)
 
     @mock.patch.object(build, 'ensure_future', mock.Mock)
     @async_test

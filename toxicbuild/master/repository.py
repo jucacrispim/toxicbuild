@@ -211,7 +211,8 @@ class Repository(Document, utils.LoggerMixin):
         self.poller.poll, so I can handle exceptions here."""
 
         # reloading so we detect changes in config
-        yield from self.reload('branches')
+        yield from self.reload()
+
         with_clone = False
         try:
             with_clone = yield from self.poller.poll()
