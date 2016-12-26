@@ -63,7 +63,7 @@ class UtilsTest(TestCase):
         self.assertEqual(returned, 'something')
 
     @async_test
-    def test_exec_cmd_with_send_fn(self):
+    def test_exec_cmd_with_out_fn(self):
         envvars = {'PATH': 'PATH:venv/bin',
                    'MYPROGRAMVAR': 'something'}
 
@@ -71,10 +71,15 @@ class UtilsTest(TestCase):
 
         LINES = []
 
+        out_fn = asyncio.coroutine(lambda i, l: LINES.append((i, l)))
         yield from utils.exec_cmd(cmd, cwd='.',
-                                  out_fn=lambda l: LINES.append(l),
+                                  out_fn=out_fn,
                                   **envvars)
+        # lets give time to the scheduler...
+        yield
+        yield
         self.assertTrue(LINES)
+        self.assertTrue(isinstance(LINES[0][1], str))
 
     def test_get_envvars(self):
         envvars = {'PATH': 'PATH:venv/bin',

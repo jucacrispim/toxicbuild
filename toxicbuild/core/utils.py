@@ -19,6 +19,11 @@
 
 
 import asyncio
+try:
+    from asyncio import ensure_future
+except ImportError:  # pragma no cover
+    from asyncio import async as ensure_future
+
 from datetime import datetime, timezone, timedelta
 import importlib
 import logging
@@ -72,18 +77,24 @@ def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
     :param cwd: Directory to execute the command.
     :param timeout: How long we should wait for a command complete. Default
       is 3600.
-    :param out_fn: A function that receives each line of the command output.
+    :param out_fn: A coroutine that receives each line of the step
+      output. The coroutine signature must be in the form:
+      mycoro(line_index, line).
     :param envvars: Environment variables to be used in the command.
     """
 
     proc = yield from _create_cmd_proc(cmd, cwd, **envvars)
     out = []
 
+    line_index = 0
     while proc.returncode is None:
-        outline = yield from asyncio.wait_for(proc.stdout.read(), timeout)
+        outline = yield from asyncio.wait_for(proc.stdout.readline(), timeout)
+        outline = outline.decode()
         if out_fn:
-            out_fn(outline)
-        out.append(outline.decode())
+            ensure_future(out_fn(line_index, outline))
+
+        line_index += 1
+        out.append(outline)
 
     output = ''.join(out).strip('\n')
     if int(proc.returncode) > 0:
