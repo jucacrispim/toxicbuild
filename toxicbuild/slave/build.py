@@ -83,8 +83,6 @@ class Builder(LoggerMixin):
 
             step_info.update({'finished': datetime2string(now())})
             yield from self.manager.send_info(step_info)
-            self.log('sendind step info for {}'.format(step_info['uuid']),
-                     level='error')
 
             # here is: if build_status is something other than None
             # or success (ie failed) we don't change it anymore, the build
@@ -104,8 +102,6 @@ class Builder(LoggerMixin):
 
     @asyncio.coroutine
     def _send_step_output_info(self, step_info, line_index, line):
-        self.log('sendind step output info for {}'.format(step_info['uuid']),
-                 level='error')
         msg = {'info_type': 'step_output_info',
                'uuid': step_info['uuid'], 'output_index': line_index,
                'output': line}
