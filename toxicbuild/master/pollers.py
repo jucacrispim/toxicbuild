@@ -110,9 +110,6 @@ class Poller(LoggerMixin):
         for branch, revs in newer_revisions.items():
             self.log('processing changes for branch {}'.format(branch),
                      level='debug')
-
-            notify_only_latest = repo_branches.get(branch).notify_only_latest \
-                if repo_branches.get(branch) else False
             # the thing here is that if the branch is a new one
             # or is the first time its running, I don't what to get all
             # revisions, but the last one only.
@@ -125,24 +122,12 @@ class Poller(LoggerMixin):
                 revisions.append(revision)
                 continue
 
-            branch_revs = []
-            for rev in revs:
-                revision = yield from self.repository.add_revision(
-                    branch, **rev)
-                # the thing here is: if notify_only_latest, we only
-                # add the most recent revision, the last one of the revisions
-                # list to the revisionset
-                if (not revs[-1] == rev and notify_only_latest):
-                    continue
+            notify_only_latest = repo_branches.get(branch).notify_only_latest \
+                if repo_branches.get(branch) else False
 
-                revisions.append(revision)
-                # branch_revs just for logging
-                branch_revs.append(revision)
-
-            if branch_revs:
-                msg = '{} new revisions for {} on branch {} added'
-                self.log(msg.format(len(branch_revs), self.repository.url,
-                                    branch))
+            yield from self._process_branch_revisions(branch, revs,
+                                                      notify_only_latest,
+                                                      revisions)
 
         self.notify_change(*revisions)
 
@@ -155,3 +140,27 @@ class Poller(LoggerMixin):
     def log(self, msg, level='info'):
         msg = '[{}] {}'.format(self.repository.name, msg)
         super().log(msg, level)
+
+    @asyncio.coroutine
+    def _process_branch_revisions(self, branch, revisions, notify_only_latest,
+                                  to_notify):
+        """Processes the revisions for a branch"""
+
+        branch_revs = []
+        for rev in revisions:
+            revision = yield from self.repository.add_revision(
+                branch, **rev)
+            # the thing here is: if notify_only_latest, we only
+            # add the most recent revision, the last one of the revisions
+            # list to the revisionset
+            if (not revisions[-1] == rev and notify_only_latest):
+                continue
+
+            to_notify.append(revision)
+            # branch_revs just for logging
+            branch_revs.append(revision)
+
+        if branch_revs:
+            msg = '{} new revisions for {} on branch {} added'
+            self.log(msg.format(len(branch_revs), self.repository.url,
+                                branch))
