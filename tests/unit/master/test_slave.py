@@ -32,6 +32,7 @@ from tests import async_test
 @patch.object(slave, 'build_finished', Mock())
 @patch.object(slave, 'step_started', Mock())
 @patch.object(slave, 'step_finished', Mock())
+@patch.object(slave, 'step_output_arrived', Mock())
 class SlaveTest(TestCase):
 
     def setUp(self):
@@ -227,6 +228,17 @@ class SlaveTest(TestCase):
         self.assertTrue(self.slave._process_step_info.called)
 
     @async_test
+    def test_process_info_with_step_output(self):
+        yield from self._create_test_data()
+        info = {'info_type': 'step_output_info'}
+
+        self.slave._process_step_output_info = MagicMock(
+            spec=self.slave._process_step_output_info)
+
+        yield from self.slave._process_info(self.build, info)
+        self.assertTrue(self.slave._process_step_output_info.called)
+
+    @async_test
     def test_process_step_info_new(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
@@ -271,6 +283,26 @@ class SlaveTest(TestCase):
 
         self.assertEqual(self.build.steps[0].status, 'success')
         self.assertEqual(len(self.build.steps), 2)
+
+    @async_test
+    def test_process_step_output_info(self):
+        yield from self._create_test_data()
+
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+        started = now.strftime('%a %b %d %H:%M:%S %Y %z')
+        a_uuid = uuid4()
+
+        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
+                'output': '', 'started': started, 'finished': None,
+                'index': 0, 'uuid': a_uuid}
+
+        yield from self.slave._process_step_info(self.build, info)
+
+        info = {'uuid': a_uuid, 'output': 'somefile.txt\n'}
+        yield from self.slave._process_step_output_info(self.build, info)
+        step = self.slave._get_step(self.build, a_uuid)
+        self.assertTrue(step.output)
 
     @asyncio.coroutine
     def _create_test_data(self):

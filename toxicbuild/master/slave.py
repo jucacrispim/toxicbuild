@@ -26,7 +26,8 @@ from toxicbuild.core.utils import string2datetime, LoggerMixin, now
 from toxicbuild.master.build import BuildStep, Builder
 from toxicbuild.master.client import get_build_client
 from toxicbuild.master.signals import (build_started, build_finished,
-                                       step_started, step_finished)
+                                       step_started, step_finished,
+                                       step_output_arrived)
 
 
 class Slave(Document, LoggerMixin):
@@ -146,7 +147,7 @@ class Slave(Document, LoggerMixin):
         the build server about an in progress build.
 
         :param build: The build that is being executed
-        :param info: An dictionary. The information sent by the
+        :param info: A dictionary. The information sent by the
           slave that is executing the build.
         """
 
@@ -157,9 +158,9 @@ class Slave(Document, LoggerMixin):
 
         elif info['info_type'] == 'step_info':
             yield from self._process_step_info(build, info)
+
         else:
-            # here is the step output info
-            pass
+            yield from self._process_step_output_info(build, info)
 
     @asyncio.coroutine
     def _process_build_info(self, build, build_info):
@@ -218,6 +219,16 @@ class Slave(Document, LoggerMixin):
             build.steps.append(requested_step)
 
         yield from build.update()
+
+    @asyncio.coroutine
+    def _process_step_output_info(self, build, info):
+        uuid = info['uuid']
+        output = info['output']
+        repo = yield from build.repository
+        step = self._get_step(build, uuid)
+        step.output = ''.join([step.output or '', output])
+        yield from build.update()
+        step_output_arrived.send(repo, info=info)
 
     def _get_step(self, build, step_uuid):
         """Returns a step from ``build``. Returns None if the requested
