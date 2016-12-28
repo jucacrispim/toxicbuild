@@ -146,6 +146,70 @@ class BuildClientTest(TestCase):
         yield from self.client.build(buildinstance, process_coro=process_coro)
         self.assertEqual(len(process.call_args_list), 3)
 
+    @async_test
+    def test_build_without_out_fn(self):
+        self.client.write = mock.MagicMock()
+
+        self.GR_COUNT = -1
+
+        self.GR_RETURNS = [
+            {'code': 0,
+             'body': {'status': 'running',
+                      'cmd': 'ls', 'name': 'run ls',
+                      'output': ''}},
+
+            {'code': 0,
+             'body': {'status': 'success',
+                      'cmd': 'ls', 'name': 'run ls',
+                      'output': 'somefile.txt\n'}},
+
+            {'code': 0,
+             'body': {'status': 'success', 'total_steps': 1,
+                      'steps': {'cmd': 'ls', 'status': 'success',
+                                'name': 'run ls',
+                                'output': 'somefile.txt\n'}}},
+            {},
+        ]
+
+        @asyncio.coroutine
+        def gr():
+            # I need this sleep here so I can test the exact
+            # behavior of the get_response method. No, it does not
+            # sleep, but pass the control to the select thing.
+            yield from asyncio.sleep(0.001)
+            self.GR_COUNT += 1
+            return self.GR_RETURNS[self.GR_COUNT]
+
+        self.client.get_response = gr
+
+        slave_inst = slave.Slave(name='slv', host='localhost', port=1234,
+                                 token='123')
+        yield from slave_inst.save()
+        process = mock.Mock()
+
+        repo = repository.Repository(name='repo', url='git@somewhere.com',
+                                     slaves=[slave_inst], update_seconds=300,
+                                     vcs_type='git')
+        yield from repo.save()
+        revision = repository.RepositoryRevision(
+            commit='sdafj', repository=repo, branch='master', commit_date=now,
+            author='ze', title='huehue')
+
+        yield from revision.save()
+        builder = build.Builder(repository=repo, name='b1')
+        yield from builder.save()
+
+        buildinstance = build.Build(repository=repo, slave=slave_inst,
+                                    builder=builder, branch='master',
+                                    named_tree='123sdf09')
+        buildset = yield from build.BuildSet.create(repository=repo,
+                                                    revision=revision)
+
+        yield from buildset.save()
+
+        yield from self.client.build(buildinstance, process_coro=None)
+        self.assertEqual(len(process.call_args_list), 0)
+
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @async_test
     def test_get_build_client(self):

@@ -69,17 +69,17 @@ class UtilsTest(TestCase):
 
         cmd = 'echo $MYPROGRAMVAR'
 
-        LINES = []
+        lines = Mock()
 
-        out_fn = asyncio.coroutine(lambda i, l: LINES.append((i, l)))
+        out_fn = asyncio.coroutine(lambda i, l: lines((i, l)))
         yield from utils.exec_cmd(cmd, cwd='.',
                                   out_fn=out_fn,
                                   **envvars)
         # lets give time to the scheduler...
-        yield
-        yield
-        self.assertTrue(LINES)
-        self.assertTrue(isinstance(LINES[0][1], str))
+        yield from asyncio.sleep(0.1)
+        self.assertTrue(lines.called)
+        self.assertTrue(isinstance(
+            lines.call_args[0][0][1], str), lines.call_args)
 
     def test_get_envvars(self):
         envvars = {'PATH': 'PATH:venv/bin',
