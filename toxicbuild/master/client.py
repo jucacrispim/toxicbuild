@@ -65,7 +65,12 @@ class BuildClient(BaseToxicClient):
         return builders
 
     @asyncio.coroutine
-    def build(self, build):
+    def build(self, build, process_coro=None):
+        """Requests a build for the build server.
+
+        :param build: The build that will be executed.
+        :param process_coro: A coroutine to process the intermediate
+          build information sent by the build server."""
 
         repository = yield from build.repository
         builder_name = (yield from build.builder).name
@@ -86,9 +91,9 @@ class BuildClient(BaseToxicClient):
                 break
 
             build_info = r['body']
-            future = ensure_future(self.slave._process_build_info(
-                build, build_info))
-            futures.append(future)
+            if process_coro:
+                future = ensure_future(process_coro(build, build_info))
+                futures.append(future)
 
         return futures
 

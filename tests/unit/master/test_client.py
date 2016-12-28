@@ -121,8 +121,7 @@ class BuildClientTest(TestCase):
         yield from slave_inst.save()
         process = mock.Mock()
 
-        self.client.slave._process_build_info = asyncio.coroutine(
-            lambda build, build_info: process())
+        process_coro = asyncio.coroutine(lambda build, build_info: process())
 
         repo = repository.Repository(name='repo', url='git@somewhere.com',
                                      slaves=[slave_inst], update_seconds=300,
@@ -144,7 +143,7 @@ class BuildClientTest(TestCase):
 
         yield from buildset.save()
 
-        yield from self.client.build(buildinstance)
+        yield from self.client.build(buildinstance, process_coro=process_coro)
         self.assertEqual(len(process.call_args_list), 3)
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
