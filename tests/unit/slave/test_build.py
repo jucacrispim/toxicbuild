@@ -20,7 +20,6 @@
 import asyncio
 import os
 from unittest import mock, TestCase
-import tornado
 from toxicbuild.core.utils import load_module_from_file
 from toxicbuild.slave import build, managers
 from tests.unit.slave import TEST_DATA_DIR
