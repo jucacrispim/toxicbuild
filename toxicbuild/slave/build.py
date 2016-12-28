@@ -65,9 +65,6 @@ class Builder(LoggerMixin):
 
             yield from self.manager.send_info(step_info)
 
-            self.log('sendind step info for {}'.format(step_info['uuid']),
-                     level='error')
-
             envvars = self._get_env_vars()
 
             out_fn = functools.partial(self._send_step_output_info, step_info)
