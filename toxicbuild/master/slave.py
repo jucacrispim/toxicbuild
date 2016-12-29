@@ -228,7 +228,9 @@ class Slave(Document, LoggerMixin):
         step = self._get_step(build, uuid)
         step.output = ''.join([step.output or '', output])
         yield from build.update()
-        step_output_arrived.send(repo, info=info)
+        msg = 'step_output_arrived for {}'.format(uuid)
+        self.log(msg, level='debug')
+        step_output_arrived.send(repo, step_info=info)
 
     def _get_step(self, build, step_uuid):
         """Returns a step from ``build``. Returns None if the requested
