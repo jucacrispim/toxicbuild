@@ -80,7 +80,6 @@ class DummyBuildClient(BaseToxicClient):
                          'builder_name': builder_name}}
 
         r = yield from self.request2server(data['action'], data['body'])
-
         build_resp = []
         while r:
             if r.get('body').get('info_type') == 'step_output_info':
@@ -164,6 +163,6 @@ class SlaveTest(BaseFunctionalTest):
     @async_test
     def test_step_output_info(self):
         with (yield from get_dummy_client()) as client:
-            output_info = yield from client.build_output_info('builder-1')
+            output_info = yield from client.build_output_info('builder-2')
 
         self.assertTrue(output_info)
