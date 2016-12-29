@@ -313,12 +313,14 @@ class HoleHandlerTest(TestCase):
         yield from handler.repo_add_branch(repo_name=self.repo.name,
                                            branch_name='release',
                                            notify_only_latest=True)
+        repo = yield from hole.Repository.get(url=self.repo.url)
+        branch_count = len(repo.branches)
         yield from handler.repo_remove_branch(repo_name=self.repo.name,
                                               branch_name='release')
 
         repo = yield from hole.Repository.get(url=self.repo.url)
 
-        self.assertEqual(len(repo.branches), 0)
+        self.assertEqual(len(repo.branches), branch_count - 1)
 
     @patch.object(repository, 'BuildManager', MagicMock(
         spec=repository.BuildManager))
