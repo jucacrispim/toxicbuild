@@ -168,20 +168,19 @@ class SlackPlugin(MasterPlugin):
                                  headers=headers)
 
     @asyncio.coroutine
-    def send_started_msg(self, build):
+    def send_started_msg(self, repo, build):
         """Sends a message about a started build to a slack channel.
 
         :param build: A build that just started."""
 
         dt = datetime2string(build.started)
         build_state = 'Build *started* at *{datetime}*'.format(datetime=dt)
-        repo = self._instance
         title = '[{}] {}'.format(repo.name, build_state)
         msg = {'text': title}
         yield from self._send_msg(msg)
 
     @asyncio.coroutine
-    def send_finished_msg(self, build):
+    def send_finished_msg(self, repo, build):
         """Sends a message about a finished build to a slack channel.
 
         :param build: A build that just finished."""
@@ -191,7 +190,6 @@ class SlackPlugin(MasterPlugin):
 
         dt = datetime2string(build.finished)
         build_state = 'Build *finished* at *{datetime}*'.format(datetime=dt)
-        repo = self._instance
         title = '[{}] {}'.format(repo.name, build_state)
 
         msg = {'text': title}

@@ -152,7 +152,7 @@ class SlackPluginTest(TestCase):
         dt = plugins.datetime2string(build.started)
         txt = '[my-test-repo] Build *started* at *{}*'.format(dt)
         expected = {'text': txt}
-        yield from self.plugin.send_started_msg(build)
+        yield from self.plugin.send_started_msg(self.repo, build)
         called = self.plugin._send_msg.call_args[0][0]
         self.assertEqual(called, expected, called)
 
@@ -166,7 +166,7 @@ class SlackPluginTest(TestCase):
         dt = plugins.datetime2string(build.finished)
         txt = '[my-test-repo] Build *finished* at *{}*'.format(dt)
         expected = {'text': txt}
-        yield from self.plugin.send_finished_msg(build)
+        yield from self.plugin.send_finished_msg(self.repo, build)
         called = self.plugin._send_msg.call_args[0][0]
         self.assertEqual(called, expected, called)
 
@@ -177,7 +177,7 @@ class SlackPluginTest(TestCase):
         build = MagicMock()
         build.finished = now()
         build.status = 'warning'
-        yield from self.plugin.send_finished_msg(build)
+        yield from self.plugin.send_finished_msg(self.repo, build)
         self.assertFalse(self.plugin._send_msg.called)
 
     @asyncio.coroutine
