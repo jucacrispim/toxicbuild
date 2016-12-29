@@ -76,7 +76,7 @@ class UtilsTest(TestCase):
                                   out_fn=out_fn,
                                   **envvars)
         # lets give time to the scheduler...
-        yield from asyncio.sleep(0.1)
+        yield from asyncio.sleep(0.5)
         self.assertTrue(lines.called)
         self.assertTrue(isinstance(
             lines.call_args[0][0][1], str), lines.call_args)
