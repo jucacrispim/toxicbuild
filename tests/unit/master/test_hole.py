@@ -683,6 +683,7 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'build_finished', Mock())
     @patch.object(hole, 'repo_status_changed', Mock())
     @patch.object(hole, 'build_added', Mock())
+    @patch.object(hole, 'step_output_arrived', Mock())
     def test_disconnectfromsignals(self):
 
         self.handler._disconnectfromsignals()
@@ -691,7 +692,8 @@ class UIStreamHandlerTest(TestCase):
                              hole.build_started.disconnect.called,
                              hole.build_finished.disconnect.called,
                              hole.repo_status_changed.disconnect.called,
-                             hole.build_added.disconnect.called]))
+                             hole.build_added.disconnect.called,
+                             hole.step_output_arrived.disconnect.called]))
 
     @patch.object(hole, 'step_started', Mock())
     @patch.object(hole, 'step_finished', Mock())
@@ -699,6 +701,7 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'build_finished', Mock())
     @patch.object(hole, 'repo_status_changed', Mock())
     @patch.object(hole, 'build_added', Mock())
+    @patch.object(hole, 'step_output_arrived', Mock())
     def test_connect2signals(self):
 
         self.handler._connect2signals()
@@ -707,7 +710,8 @@ class UIStreamHandlerTest(TestCase):
                              hole.build_started.connect.called,
                              hole.build_finished.connect.called,
                              hole.repo_status_changed.connect.called,
-                             hole.build_added.connect.called]))
+                             hole.build_added.connect.called,
+                             hole.step_output_arrived.connect.called]))
 
     @async_test
     def test_step_started(self):
@@ -876,6 +880,35 @@ class UIStreamHandlerTest(TestCase):
 
         self.assertEqual(self.BODY['status'], 'fail')
         self.assertIsInstance(self.BODY['id'], str)
+
+    @async_test
+    def test_send_step_output_info(self):
+        testslave = yield from slave.Slave.create(name='name',
+                                                  host='localhost',
+                                                  port=1234,
+                                                  token='123')
+
+        testrepo = yield from repository.Repository.create('name',
+                                                           'git@git.nada',
+                                                           300, 'git',
+                                                           slaves=[testslave])
+
+        self.CODE = None
+        self.BODY = None
+
+        @asyncio.coroutine
+        def sr(code, body):
+            self.CODE = code
+            self.BODY = body
+
+        self.handler.protocol.send_response = sr
+
+        info = {'uuid': 'some-uuid', 'output': 'bla!'}
+        f = self.handler.send_step_output_info(repo=testrepo,
+                                               step_info=info)
+        yield from f
+
+        self.assertEqual(self.BODY['uuid'], 'some-uuid')
 
 
 class HoleServerTest(TestCase):

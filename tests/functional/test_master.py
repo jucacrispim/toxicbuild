@@ -253,6 +253,38 @@ class ToxicMasterTest(BaseFunctionalTest):
 
         self.assertEqual(resp, 'ok', resp)
 
+    @async_test
+    def test_14_stream_step_output(self):
+        # we need to wait so we have time to clone and create revs
+        yield from asyncio.sleep(2)
+        with (yield from get_dummy_client()) as client:
+            yield from client.start_build()
+
+        with (yield from get_dummy_client()) as client:
+            yield from client.write({'action': 'stream', 'token': '123',
+                                     'body': {}})
+
+            steps = []
+            # this ugly part here it to wait for the right message
+            # If we don't use this we may read the wrong message and
+            # the test will fail.
+            while True:
+                response = yield from client.get_response()
+                body = response['body'] if response else {}
+                if body.get('event_type') == 'step_output_info':
+                    steps.append(body)
+
+                if body.get('event_type') == 'build_finished':
+                    has_sleep = False
+                    for step in body['steps']:
+                        if step['command'] == 'sleep 3':
+                            has_sleep = True
+
+                    if not has_sleep:
+                        break
+
+        self.assertTrue(steps)
+
     @classmethod
     def _delete_test_data(cls):
         loop = asyncio.get_event_loop()

@@ -39,7 +39,8 @@ from toxicbuild.master.exceptions import UIFunctionNotFound
 from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,
-                                       repo_status_changed, build_added)
+                                       repo_status_changed, build_added,
+                                       step_output_arrived)
 
 
 class UIHole(BaseToxicProtocol, LoggerMixin):
@@ -533,9 +534,11 @@ class UIStreamHandler(LoggerMixin):
         build_finished.connect(self.build_finished, weak=False)
         repo_status_changed.connect(self.send_repo_status_info, weak=False)
         build_added.connect(self.build_added, weak=False)
+        step_output_arrived.connect(self.send_step_output_info, weak=False)
 
     def _disconnectfromsignals(self):
 
+        step_output_arrived.disconnect(self.send_step_output_info)
         step_started.disconnect(self.step_started)
         step_finished.disconnect(self.step_finished)
         build_started.disconnect(self.build_started)
@@ -578,13 +581,27 @@ class UIStreamHandler(LoggerMixin):
 
     @asyncio.coroutine
     def send_repo_status_info(self, repo, old_status, new_status):
-        """Called by the signal ``repo_status_changed``"""
+        """Called by the signal ``repo_status_changed``
+
+        :param repo: The repository that had its status changed.
+        :param old_status: The old status of the repository
+        :param new_status: The new status of the repostiory."""
 
         rdict = yield from repo.to_dict(id_as_str=True)
         rdict['status'] = new_status
         rdict['old_status'] = old_status
         rdict['event_type'] = 'repo_status_changed'
         f = ensure_future(self.protocol.send_response(code=0, body=rdict))
+        return f
+
+    def send_step_output_info(self, repo, step_info):
+        """Called by the signal ``step_output_arrived``.
+
+        :param repo: The repository that is building something.
+        :param step_info: The information about the step output."""
+
+        step_info['event_type'] = 'step_output_info'
+        f = ensure_future(self.protocol.send_response(code=0, body=step_info))
         return f
 
 
