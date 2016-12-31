@@ -230,16 +230,29 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
 
     def open(self, action):
         if action == 'repo-status':
-            ensure_future(self.listen2event(
-                'repo_status_changed',
-                out_fn=self._send_repo_status_info))
+            events = ['repo_status_changed']
+            out_fn = self._send_repo_status_info
 
         elif action == 'builds':  # pragma no branch
             events = ['build_started', 'build_finished', 'build_added',
                       'step_started', 'step_finished']
+            out_fn = self._send_build_info
 
-            ensure_future(self.listen2event(
-                *events, out_fn=self._send_build_info))
+        elif action == 'step-output':
+            events = ['step_output_info']
+            out_fn = self._send_step_output_info
+
+        ensure_future(self.listen2event(*events, out_fn=out_fn))
+
+    def _send_step_output_info(self, info):
+        """Sends information about step output to the ws client.
+
+        :param info: Message sent by the master"""
+
+        step_uuid = self.request.arguments.get('uuid')[0].decode()
+        uuid = info.get('uuid')
+        if step_uuid == uuid:
+            self.write2sock(info)
 
     def _send_build_info(self, info):
         """Sends information about builds to the ws client.

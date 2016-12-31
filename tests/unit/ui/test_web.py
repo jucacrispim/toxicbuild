@@ -394,6 +394,15 @@ class StreamHandlerTest(AsyncTestCase):
                                   'build_added', 'step_started',
                                   'step_finished'))
 
+    @patch.object(web, 'ensure_future', MagicMock())
+    @patch.object(web.StreamHandler, 'listen2event', MagicMock())
+    def test_open_step_output_info(self):
+        self.handler.request.arguments = {'repository_id': [b'123']}
+        self.handler.open('step-output')
+        event = self.handler.listen2event.call_args[0][0]
+        self.assertTrue(self.handler.listen2event.called)
+        self.assertEqual(event, 'step_output_info')
+
     @patch.object(web, 'get_hole_client', MagicMock())
     @gen_test
     def test_get_stream_client(self):
@@ -525,6 +534,24 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler.client = MagicMock()
         self.handler.on_close()
         self.assertTrue(self.handler.client.disconnect.called)
+
+    def test_send_step_output_info(self):
+        self.handler.request.arguments = {
+            'uuid': ['sfdaf1'.encode('utf-8')]}
+
+        info = {'uuid': 'sfdaf1'}
+        self.handler.write2sock = MagicMock()
+        self.handler._send_step_output_info(info)
+        self.assertTrue(self.handler.write2sock.called)
+
+    def test_send_step_output_info_wrong_uuid(self):
+        self.handler.request.arguments = {
+            'uuid': ['sfdafs1'.encode('utf-8')]}
+
+        info = {'uuid': 'sfdaf1'}
+        self.handler.write2sock = MagicMock()
+        self.handler._send_step_output_info(info)
+        self.assertFalse(self.handler.write2sock.called)
 
     @gen_test
     def test_send_build_info(self):
