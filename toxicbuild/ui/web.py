@@ -31,6 +31,7 @@ from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.core.utils import bcrypt_string, LoggerMixin
 from toxicbuild.ui import settings
 from toxicbuild.ui.client import get_hole_client
+from toxicbuild.ui.exceptions import BadActionError
 from toxicbuild.ui.models import Repository, Slave, BuildSet, Builder
 
 
@@ -233,7 +234,7 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
             events = ['repo_status_changed']
             out_fn = self._send_repo_status_info
 
-        elif action == 'builds':  # pragma no branch
+        elif action == 'builds':
             events = ['build_started', 'build_finished', 'build_added',
                       'step_started', 'step_finished']
             out_fn = self._send_build_info
@@ -241,6 +242,10 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
         elif action == 'step-output':
             events = ['step_output_info']
             out_fn = self._send_step_output_info
+
+        else:
+            msg = 'Action {} is not known'.format(action)
+            raise BadActionError(msg)
 
         ensure_future(self.listen2event(*events, out_fn=out_fn))
 

@@ -403,6 +403,10 @@ class StreamHandlerTest(AsyncTestCase):
         self.assertTrue(self.handler.listen2event.called)
         self.assertEqual(event, 'step_output_info')
 
+    def test_open_bad_action(self):
+        with self.assertRaises(web.BadActionError):
+            self.handler.open('bad-action')
+
     @patch.object(web, 'get_hole_client', MagicMock())
     @gen_test
     def test_get_stream_client(self):
