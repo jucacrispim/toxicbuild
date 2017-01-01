@@ -1,3 +1,5 @@
+var CURRENT_STEP_SHOWN = null;
+
 jQuery('#stepDetailsModal').on('show.bs.modal', function (event) {
   var button = jQuery(event.relatedTarget);
   var command = button.data('step-command');
@@ -5,6 +7,7 @@ jQuery('#stepDetailsModal').on('show.bs.modal', function (event) {
   var status = button.data('step-status');
   var start = button.data('step-start');
   var end = button.data('step-end');
+  var uuid = button.data('step-uuid');
 
   var modal = jQuery(this)
   modal.find('#step-command').text(command);
@@ -12,7 +15,9 @@ jQuery('#stepDetailsModal').on('show.bs.modal', function (event) {
   modal.find('#step-status').text(status);
   modal.find('#step-start').text(start);
   modal.find('#step-end').text(end);
+  CURRENT_STEP_SHOWN = uuid;
 });
+
 
 jQuery('#buildsetDetailsModal').on('show.bs.modal', function (event) {
   var button = jQuery(event.relatedTarget);
@@ -173,6 +178,7 @@ var STEP_TEMPLATE = `
 		      data-toggle="modal"
 		      data-target="#stepDetailsModal"
 		      data-dismiss="modal"
+                      data-step-uuid="{{step.uuid}}"
 		      data-step-command="{{step.command}}"
 		      data-step-output="{{step.output}}"
 		      data-step-status="{{step.status}}"
@@ -189,6 +195,47 @@ var STEP_TEMPLATE = `
 
 var BUILDERS = [];
 
+function StepOutputSentinel(uuid){
+  // Entity responsible for changing the step output
+  // acording to the info sent by the server.
+
+  var host = window.location.host;
+  var obj = {
+    url: 'ws://' + host + '/api/socks/step-output?uuid=' + uuid,
+    ws: null,
+    old_output: '{{step.output}}',
+
+    init: function(){
+      var self = this;
+      self.ws = new WebSocket(self.url);
+      self.ws.onmessage = function(event){
+	self.handleEvent(self, event);
+      };
+    },
+
+    handleEvent: function(self, event){
+      var data = jQuery.parseJSON(event.data);
+      utils.log(data.event_type);
+      var step_el = jQuery('#step-' + data.uuid);
+      var button = jQuery('button', step_el);
+      self.old_output = button.data('step-output');
+      var new_output = self.old_output + data.output;
+      button.data('step-output', new_output);
+      self.old_output = new_output;
+      if (CURRENT_STEP_SHOWN == data.uuid){
+	var modal = jQuery('#stepDetailsModal');
+	modal.find('#step-output').text(new_output);
+	//jQuery("#step-output").scrollTop($("#step-output")[0].scrollHeight);
+	var element = document.getElementById('step-output');
+	element.scrollIntoView(false);
+      }
+    },
+
+  };
+  obj.init();
+  return obj
+};
+
 function WaterfallManager(){
   var id = jQuery('#waterfall-repo-id').val();
   var host = window.location.host;
@@ -201,6 +248,8 @@ function WaterfallManager(){
     _step_finished_queue: [],
     _build_started_queue: [],
     _build_finished_queue: [],
+    _step_sentinels: {},
+    _step_output: {},
 
     init: function(){
       var self = this;
@@ -247,13 +296,16 @@ function WaterfallManager(){
 	return false;
       };
       // here we handle the case when the information about one step
-      // arrived before the information about an previous step.
+      // arrived before the information about a previous step.
       if ((typeof self._build_last_step[build.uuid] != 'undefined' &&
       	   self._build_last_step[build.uuid] < step.index -1) ||
-      	  (typeof self._build_last_step[build.uuid] == 'undefined' && step.index != 0)){
+      	  (typeof self._build_last_step[build.uuid] == 'undefined' &&
+	   step.index != 0)){
 
-	var steps_count = jQuery('.build-step-info-container', build_el.parent()).length;
-      	if (self._step_started_queue.indexOf(step) < 0 && steps_count - 1 > step.index){
+	var steps_count = jQuery('.build-step-info-container',
+				 build_el.parent()).length;
+      	if (self._step_started_queue.indexOf(step) < 0 &&
+	    steps_count - 1 > step.index){
 	  utils.log('step enqueued: ' + step.uuid);
       	  self._step_started_queue.push(step);
       	  return false;
@@ -263,6 +315,7 @@ function WaterfallManager(){
       template.hide();
       build_el.parent().append(template);
       template.slideDown('slow');
+      self._step_sentinels[step.uuid] = StepOutputSentinel(step.uuid)
       self._build_last_step[build.uuid] = step.index;
       if (!from_queue){
 	self._handleStepQueue(build);
@@ -278,6 +331,13 @@ function WaterfallManager(){
 	return false
       };
 
+      try{
+      	self._step_sentinels[step.uuid].ws.close();
+      } catch(e){
+      	utils.log(e);
+      };
+
+      delete self._step_sentinels[step.uuid];
       var html = step_el.html();
       step_el.removeClass('step-running').addClass('step-' + step.status);
       html = html.replace('Step still running', step.finished);

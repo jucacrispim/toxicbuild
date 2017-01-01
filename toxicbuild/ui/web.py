@@ -267,9 +267,9 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
         repository_id = self.request.arguments[
             'repository_id'][0].decode()
 
-        repo = info.get('repository')
+        repo = info.get('repository', {})
 
-        if repository_id == repo.get('id'):
+        if not repo or (repo and repository_id == repo.get('id')):
             self.write2sock(info)
 
     def _send_repo_status_info(self, info):
