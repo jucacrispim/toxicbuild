@@ -21,7 +21,7 @@ import asyncio
 from datetime import datetime
 from unittest import TestCase
 from unittest.mock import MagicMock, Mock, patch
-from toxicbuild.master import hole, build, repository, slave
+from toxicbuild.master import hole, build, repository, slave, plugins
 from tests import async_test
 
 
@@ -175,6 +175,46 @@ class HoleHandlerTest(TestCase):
                          1, allrepos)
 
     @async_test
+    def test_repo_enable_plugin(self):
+
+        class TestPlugin(plugins.MasterPlugin):
+            name = 'test-hole-plugin'
+            type = 'test'
+
+            @asyncio.coroutine
+            def run(self):
+                pass
+
+        yield from self._create_test_data()
+        action = 'repo-enable-plugin'
+        handler = hole.HoleHandler({}, action, MagicMock())
+        yield from handler.repo_enable_plugin(self.repo.name,
+                                              'test-hole-plugin')
+        repo = yield from hole.Repository.get(id=self.repo.id)
+        self.assertEqual(len(repo.plugins), 1)
+
+    @async_test
+    def test_repo_disable_plugin(self):
+
+        class TestPlugin(plugins.MasterPlugin):
+            name = 'test-hole-plugin'
+            type = 'test'
+
+            @asyncio.coroutine
+            def run(self):
+                pass
+
+        yield from self._create_test_data()
+        action = 'repo-enable-plugin'
+        handler = hole.HoleHandler({}, action, MagicMock())
+        yield from handler.repo_enable_plugin(self.repo.name,
+                                              'test-hole-plugin')
+        kw = {'name': 'test-hole-plugin'}
+        yield from handler.repo_disable_plugin(self.repo.name, **kw)
+        repo = yield from hole.Repository.get(id=self.repo.id)
+        self.assertEqual(len(repo.plugins), 0)
+
+    @async_test
     def test_repo_list(self):
         yield from self._create_test_data()
         handler = hole.HoleHandler({}, 'repo-list', MagicMock())
@@ -273,12 +313,14 @@ class HoleHandlerTest(TestCase):
         yield from handler.repo_add_branch(repo_name=self.repo.name,
                                            branch_name='release',
                                            notify_only_latest=True)
+        repo = yield from hole.Repository.get(url=self.repo.url)
+        branch_count = len(repo.branches)
         yield from handler.repo_remove_branch(repo_name=self.repo.name,
                                               branch_name='release')
 
         repo = yield from hole.Repository.get(url=self.repo.url)
 
-        self.assertEqual(len(repo.branches), 0)
+        self.assertEqual(len(repo.branches), branch_count - 1)
 
     @patch.object(repository, 'BuildManager', MagicMock(
         spec=repository.BuildManager))
@@ -444,6 +486,14 @@ class HoleHandlerTest(TestCase):
             id__in=[self.builders[0].id]))['builder-list']
         self.assertEqual(builders[0]['id'], str(self.builders[0].id))
 
+    def test_plugins_list(self):
+        handler = hole.HoleHandler({}, 'plugin-list', MagicMock())
+        plugins_count = len(hole.MasterPlugin.list_plugins())
+        plugins = handler.plugins_list()
+        self.assertEqual(len(plugins['plugins-list']), plugins_count)
+        self.assertIn('name', plugins['plugins-list'][0].keys())
+        self.assertEqual(plugins['plugins-list'][0]['statuses'], 'list')
+
     @async_test
     def test_builder_show(self):
         yield from self._create_test_data()
@@ -525,7 +575,9 @@ class HoleHandlerTest(TestCase):
                     'repo_remove_slave': handler.repo_remove_slave,
                     'repo_add_branch': handler.repo_add_branch,
                     'repo_remove_branch': handler.repo_remove_branch,
+                    'repo_enable_plugin': handler.repo_enable_plugin,
                     'repo_start_build': handler.repo_start_build,
+                    'repo_disable_plugin': handler.repo_disable_plugin,
                     'slave_add': handler.slave_add,
                     'slave_get': handler.slave_get,
                     'slave_list': handler.slave_list,
@@ -533,6 +585,7 @@ class HoleHandlerTest(TestCase):
                     'slave_update': handler.slave_update,
                     'buildset_list': handler.buildset_list,
                     'builder_list': handler.builder_list,
+                    'plugins_list': handler.plugins_list,
                     'builder_show': handler.builder_show}
 
         action_methods = handler._get_action_methods()
@@ -632,6 +685,7 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'build_finished', Mock())
     @patch.object(hole, 'repo_status_changed', Mock())
     @patch.object(hole, 'build_added', Mock())
+    @patch.object(hole, 'step_output_arrived', Mock())
     def test_disconnectfromsignals(self):
 
         self.handler._disconnectfromsignals()
@@ -640,7 +694,8 @@ class UIStreamHandlerTest(TestCase):
                              hole.build_started.disconnect.called,
                              hole.build_finished.disconnect.called,
                              hole.repo_status_changed.disconnect.called,
-                             hole.build_added.disconnect.called]))
+                             hole.build_added.disconnect.called,
+                             hole.step_output_arrived.disconnect.called]))
 
     @patch.object(hole, 'step_started', Mock())
     @patch.object(hole, 'step_finished', Mock())
@@ -648,6 +703,7 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'build_finished', Mock())
     @patch.object(hole, 'repo_status_changed', Mock())
     @patch.object(hole, 'build_added', Mock())
+    @patch.object(hole, 'step_output_arrived', Mock())
     def test_connect2signals(self):
 
         self.handler._connect2signals()
@@ -656,7 +712,8 @@ class UIStreamHandlerTest(TestCase):
                              hole.build_started.connect.called,
                              hole.build_finished.connect.called,
                              hole.repo_status_changed.connect.called,
-                             hole.build_added.connect.called]))
+                             hole.build_added.connect.called,
+                             hole.step_output_arrived.connect.called]))
 
     @async_test
     def test_step_started(self):
@@ -825,6 +882,35 @@ class UIStreamHandlerTest(TestCase):
 
         self.assertEqual(self.BODY['status'], 'fail')
         self.assertIsInstance(self.BODY['id'], str)
+
+    @async_test
+    def test_send_step_output_info(self):
+        testslave = yield from slave.Slave.create(name='name',
+                                                  host='localhost',
+                                                  port=1234,
+                                                  token='123')
+
+        testrepo = yield from repository.Repository.create('name',
+                                                           'git@git.nada',
+                                                           300, 'git',
+                                                           slaves=[testslave])
+
+        self.CODE = None
+        self.BODY = None
+
+        @asyncio.coroutine
+        def sr(code, body):
+            self.CODE = code
+            self.BODY = body
+
+        self.handler.protocol.send_response = sr
+
+        info = {'uuid': 'some-uuid', 'output': 'bla!'}
+        f = self.handler.send_step_output_info(repo=testrepo,
+                                               step_info=info)
+        yield from f
+
+        self.assertEqual(self.BODY['uuid'], 'some-uuid')
 
 
 class HoleServerTest(TestCase):

@@ -218,7 +218,7 @@ class ToxicCliActions:
         try:
             sig = self.actions[cmd]
         except KeyError:
-            msg = _('Command "{}" does not exist').format(cmd)  # noqa
+            msg = _('Command "{}" does not exist').format(cmd)  # noqa f821
             raise ToxicShellError(msg)
 
         known_params = sig['parameters']
@@ -230,7 +230,7 @@ class ToxicCliActions:
         try:
             action_sig = self.actions[action_name]
         except KeyError:
-            msg = _('Command "{}" does not exist').format(action_name)  # noqa
+            msg = _('Command "{}" does not exist').format(action_name)  # noqa f821
             raise ToxicShellError(msg)
 
         action_help = {}
@@ -403,8 +403,8 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
                 '%s' % action_help['short_doc']]
 
         if full:
-            params = _('Parameters')  # noqa
-            required = _('Required')  # noqa
+            params = _('Parameters')  # noqa f821
+            required = _('Required')  # noqa f821
 
             text += [action_help['doc'], '\n']
 
@@ -424,13 +424,13 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
 
         text = [('action-name', 'help'), ' - ']
 
-        text.append(_('Displays this help text.'))  # noqa
+        text.append(_('Displays this help text.'))  # noqa f821
 
-        params = _('Parameters')  # noqa
+        params = _('Parameters')  # noqa f821
         text += ['\n%s: ' % params, ('param', 'command-name\n\n')]
         text += [('action-name', 'quit'), ' - ']
 
-        text.append(_('Finishes the program'))  # noqa
+        text.append(_('Finishes the program'))  # noqa f821
         text.append('\n')
 
         ordered_actions = sorted(self.actions.keys())
@@ -442,11 +442,11 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
 
     def _get_welcome_text(self):
         # Translators: Do not translate what is inside {}
-        return _('Welcome to {toxicbuild}')  # noqa
+        return _('Welcome to {toxicbuild}')  # noqa f821
 
     def _get_help_text(self):
         # Translators: Do not translate what is inside {}
-        return _('Type {h} for help and {q} for quit')  # noqa
+        return _('Type {h} for help and {q} for quit')  # noqa f821
 
     def _format_help_text(self, text):
         # all this mess to put colors on h and q... pfff
@@ -496,17 +496,17 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         return ''.join(formated_output)
 
     def _format_repo_list(self, repos):
-        output = [(_('name'), _('vcs'))]  # noqa
+        output = [(_('name'), _('vcs'))]  # noqa f821
         output += [(r['name'], r['vcs_type']) for r in repos]
         return self._format_output_columns(output)
 
     def _format_slave_list(self, slaves):
-        output = [(_('name'), _('host'), _('port'))]  # noqa
+        output = [(_('name'), _('host'), _('port'))]  # noqa f821
         output += [(s['name'], s['host'], s['port']) for s in slaves]
         return self._format_output_columns(output)
 
     def _format_builder_list(self, builders):
-        output = [(_('name'), _('status'))]  # noqa
+        output = [(_('name'), _('status'))]  # noqa f821
         output += [(b['name'], b['status'])
                    for b in builders]
         return self._format_output_columns(output)
@@ -537,12 +537,12 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
     def _format_peek_step(self, response):
         if response.get('finished'):
             # Translators: Do not translate what is inside {}
-            msg = _('step {step} finished with status {status}')  # noqa
+            msg = _('step {step} finished with status {status}')  # noqa f821
             msg = msg.format(step=response['command'],
                              status=response['status'])
         else:
             # Translators: Do not translate what is inside {}
-            msg = _('step {step} is running')  # noqa
+            msg = _('step {step} is running')  # noqa f821
             msg = msg.format(step=response['command'])
 
         return msg

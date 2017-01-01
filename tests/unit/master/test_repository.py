@@ -27,6 +27,15 @@ from toxicbuild.master.exceptions import CloneException
 from tests import async_test
 
 
+class RepoPlugin(repository.MasterPlugin):
+    name = 'repo-plugin'
+    type = 'test'
+
+    @asyncio.coroutine
+    def run(self):
+        pass
+
+
 class RepositoryTest(TestCase):
 
     def setUp(self):
@@ -48,6 +57,7 @@ class RepositoryTest(TestCase):
         yield from self._create_db_revisions()
         d = yield from self.repo.to_dict()
         self.assertTrue(d['id'])
+        self.assertTrue('plugins' in d.keys())
 
     @async_test
     def test_to_dict_id_as_str(self):
@@ -255,6 +265,38 @@ class RepositoryTest(TestCase):
         rev = yield from self.repo.add_revision(branch, **kw)
         self.assertTrue(rev.id)
         self.assertEqual('uhuuu!!', rev.title)
+
+    @async_test
+    def test_enable_plugin(self):
+        yield from self.repo.save()
+        yield from self.repo.enable_plugin('repo-plugin')
+        self.assertEqual(len(self.repo.plugins), 1)
+
+    def test_match_kw(self):
+        plugin = repository.MasterPlugin()
+        kw = {'name': 'BaseMasterPlugin', 'type': None}
+        match = self.repo._match_kw(plugin, **kw)
+        self.assertTrue(match)
+
+    def test_match_not_matching(self):
+        plugin = repository.MasterPlugin()
+        kw = {'name': 'BaseMasterPlugin', 'type': 'bla'}
+        match = self.repo._match_kw(plugin, **kw)
+        self.assertFalse(match)
+
+    def test_test_match_bad_attr(self):
+        plugin = repository.MasterPlugin()
+        kw = {'name': 'BaseMasterPlugin', 'other': 'ble'}
+        match = self.repo._match_kw(plugin, **kw)
+        self.assertFalse(match)
+
+    @async_test
+    def test_disable_plugin(self):
+        yield from self.repo.save()
+        yield from self.repo.enable_plugin('repo-plugin')
+        kw = {'name': 'repo-plugin'}
+        yield from self.repo.disable_plugin(**kw)
+        self.assertEqual(len(self.repo.plugins), 0)
 
     @async_test
     def test_add_builds_for_slave(self):

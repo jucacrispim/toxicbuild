@@ -20,7 +20,6 @@
 import asyncio
 import os
 from unittest import mock, TestCase
-import tornado
 from toxicbuild.core.utils import load_module_from_file
 from toxicbuild.slave import build, managers
 from tests.unit.slave import TEST_DATA_DIR
@@ -48,9 +47,6 @@ class BuilderTest(TestCase):
         managers.get_toxicbuildconf.return_value = toxicconf
 
         self.builder = build.Builder(manager, 'builder1', '.')
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
 
     @async_test
     def test_build_success(self):
@@ -82,6 +78,21 @@ class BuilderTest(TestCase):
         self.assertEqual(build_info['status'], 'fail')
         self.assertEqual(len(build_info['steps']), 2)
 
+    @async_test
+    def test_send_step_output_info(self):
+        step_info = {'uuid': 'some-uuid'}
+
+        send_mock = mock.Mock()
+
+        @asyncio.coroutine
+        def send_info(msg):
+            send_mock(msg)
+
+        self.builder.manager.send_info = send_info
+        yield from self.builder._send_step_output_info(step_info,
+                                                       0, 'some line')
+        self.assertTrue(send_mock.called)
+
     def test_get_env_vars(self):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
         self.builder.plugins = self.builder.manager._load_plugins(pconfig)
@@ -101,9 +112,6 @@ class BuilderTest(TestCase):
 
 
 class BuildStepTest(TestCase):
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
 
     @async_test
     def test_step_success(self):
@@ -132,6 +140,7 @@ class BuildStepTest(TestCase):
 
     @async_test
     def test_step_timeout(self):
-        step = build.BuildStep(name='test', command='sleep 3', timeout=1)
+        step = build.BuildStep(name='test', command='sleep 1', timeout=1)
         status = yield from step.execute(cwd='.')
         self.assertEqual(status['status'], 'exception')
+        yield from asyncio.sleep(1)

@@ -18,6 +18,11 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+try:
+    from asyncio import ensure_future
+except ImportError:  # pragma no cover
+    from asyncio import async as ensure_future
+
 import os
 import re
 import shutil
@@ -30,6 +35,7 @@ from mongomotor.fields import (StringField, IntField, ReferenceField,
 from toxicbuild.core import utils
 from toxicbuild.master.build import BuildSet, Builder, BuildManager
 from toxicbuild.master.exceptions import CloneException
+from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.pollers import Poller
 from toxicbuild.master.signals import (build_started, build_finished,
                                        repo_status_changed)
@@ -62,6 +68,7 @@ class Repository(Document, utils.LoggerMixin):
     slaves = ListField(ReferenceField(Slave, reverse_delete_rule=PULL))
     clone_status = StringField(choices=('cloning', 'ready', 'clone-exception'),
                                default='cloning')
+    plugins = ListField(EmbeddedDocumentField(MasterPlugin))
 
     meta = {
         'ordering': ['name']
@@ -84,6 +91,7 @@ class Repository(Document, utils.LoggerMixin):
                    'branches': [b.to_dict() for b in self.branches],
                    'slaves': [s.to_dict(id_as_str)
                               for s in (yield from self.slaves)],
+                   'plugins': [p.to_dict() for p in self.plugins],
                    'clone_status': self.clone_status}
         if id_as_str:
             my_dict['id'] = str(self.id)
@@ -203,7 +211,8 @@ class Repository(Document, utils.LoggerMixin):
         self.poller.poll, so I can handle exceptions here."""
 
         # reloading so we detect changes in config
-        yield from self.reload('branches')
+        yield from self.reload()
+
         with_clone = False
         try:
             with_clone = yield from self.poller.poll()
@@ -347,7 +356,56 @@ class Repository(Document, utils.LoggerMixin):
         return revision
 
     @asyncio.coroutine
+    def enable_plugin(self, plugin_name, **plugin_config):
+        """Enables a plugin to this repository.
+
+        :param plugin_name: The name of the plugin that is being enabled.
+        :param plugin_config: A dictionary containing the configuration
+          passed to the plugin."""
+
+        plugin_cls = MasterPlugin.get_plugin(name=plugin_name)
+        plugin = plugin_cls(**plugin_config)
+        self.plugins.append(plugin)
+        yield from self.save()
+        ensure_future(plugin.run())
+
+    def _match_kw(self, plugin, **kwargs):
+        """True if the plugin's attributes match the
+        kwargs.
+
+        :param plugin: A plugin instance.
+        :param kwargs: kwargs to match the plugin"""
+
+        for k, v in kwargs.items():
+            try:
+                attr = getattr(plugin, k)
+            except AttributeError:
+                return False
+            else:
+                if attr != v:
+                    return False
+
+        return True
+
+    @asyncio.coroutine
+    def disable_plugin(self, **kwargs):
+        """Disables a plugin to the repository.
+
+        :param kwargs: kwargs to match the plugin."""
+        matched = [p for p in self.plugins if self._match_kw(p, **kwargs)]
+        for p in matched:
+            self.plugins.remove(p)
+        yield from self.save()
+
+    @asyncio.coroutine
     def add_builds_for_slave(self, buildset, slave, builders=[]):
+        """Adds a buildset to the build queue of a given slave
+        for this repository.
+
+        :param buildset: An instance of
+          :class:`toxicbuild.master.build.BuildSet`.
+        :param slave: An instance of :class:`toxicbuild.master.build.Slave`.
+        """
         yield from self.build_manager.add_builds_for_slave(
             buildset, slave, builders=builders)
 

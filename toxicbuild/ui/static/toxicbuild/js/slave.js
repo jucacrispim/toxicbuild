@@ -20,7 +20,7 @@ var SLAVE_ROW_TEMPLATE = `
 <tr id="obj-row-{{slave.id}}">
   <td>
     {{slave.name}}
-    <button type="button" class="btn btn-default btn-xs btn-main-edit"
+    <button type="button" class="btn btn-default btn-xs btn-main-edit btn-edit-slave"
 	    data-toggle="modal"
 	    data-target="#slaveModal"
 	    data-obj-id="{{slave.id}}"
@@ -71,6 +71,7 @@ var SlaveView = function (model){
 
     renderModal: function(){
       var self = this;
+      utils.log(self.model);
       if (self.model.id){
 	self.modal.find('.req-type').val('put');
 	self.modal.find('.modal-title').text(self.model.name);
@@ -93,11 +94,12 @@ var SlaveView = function (model){
 	      token: token};
     },
 
-    insertObjRow: function(){
+    insertObjRow: function(data){
       var self = this;
 
       var obj_row = SLAVE_ROW_TEMPLATE.replace(
 	  /{{slave.name}}/g, self.model.name);
+      obj_row = obj_row.replace(/{{slave.id}}/g, data.id);
       obj_row = obj_row.replace(/{{slave.host}}/g, self.model.host);
       obj_row = obj_row.replace(/{{slave.port}}/g, self.model.port);
       obj_row = obj_row.replace(/{{slave.token}}/g, self.model.token);
@@ -121,6 +123,7 @@ var _SlaveManager = function (){
       var self = inherited;
       super_instance.init(self, model_confs);
       super_instance.modal = self.modal;
+      super_instance.views = self.views
     },
 
     delete: function(){

@@ -449,7 +449,7 @@ class BuildManagerTest(TestCase):
         yield from asyncio.gather(*futures)
         self.assertTrue(self.repo.build_manager.add_builds.called)
 
-    @mock.patch.object(build, 'ensure_future', mock.Mock)
+    @mock.patch.object(build, 'ensure_future', mock.Mock())
     @async_test
     def test_start_pending(self):
         yield from self._create_test_data()
@@ -463,7 +463,8 @@ class BuildManagerTest(TestCase):
         self.buildset == self.buildset
         self.repo.build_manager._execute_builds = _eb
         yield from self.repo.build_manager.start_pending()
-        self.assertTrue(build.ensure_future.called)
+        yield from self.other_repo.build_manager.start_pending()
+        self.assertEqual(build.ensure_future.call_count, 1)
 
     @mock.patch.object(build, 'ensure_future', mock.Mock)
     @async_test
@@ -538,6 +539,12 @@ class BuildManagerTest(TestCase):
         self.buildset.builds.append(self.consumed_build)
 
         yield from self.buildset.save()
+
+        self.other_repo = repository.Repository(
+            name='otherreponame', url='git@somewhere', update_seconds=300,
+            vcs_type='git', slaves=[self.slave])
+
+        yield from self.other_repo.save()
 
 
 class BuilderTest(TestCase):

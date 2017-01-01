@@ -420,9 +420,10 @@ class BuildManager(LoggerMixin):
     @asyncio.coroutine
     def start_pending(self):
         """Starts all pending buildsets that are not already scheduled for
-        ``self.repo``."""
+        ``self.repository``."""
 
-        buildsets = BuildSet.objects(builds__status=BuildSet.PENDING)
+        buildsets = BuildSet.objects(builds__status=BuildSet.PENDING,
+                                     repository=self.repository)
         buildsets = yield from buildsets.to_list()
         for buildset in buildsets:
             slaves = set()

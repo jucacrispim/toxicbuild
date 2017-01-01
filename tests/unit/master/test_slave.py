@@ -21,6 +21,7 @@ import asyncio
 import datetime
 from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch
+from uuid import uuid4
 import toxicbuild
 from toxicbuild.core.utils import datetime2string
 from toxicbuild.master import slave, build, repository
@@ -31,6 +32,7 @@ from tests import async_test
 @patch.object(slave, 'build_finished', Mock())
 @patch.object(slave, 'step_started', Mock())
 @patch.object(slave, 'step_finished', Mock())
+@patch.object(slave, 'step_output_arrived', Mock())
 class SlaveTest(TestCase):
 
     def setUp(self):
@@ -150,7 +152,7 @@ class SlaveTest(TestCase):
         def gc():
 
             @asyncio.coroutine
-            def b(build):
+            def b(build, process_coro):
                 client.build()
                 return []
 
@@ -170,7 +172,7 @@ class SlaveTest(TestCase):
         def gc():
 
             @asyncio.coroutine
-            def b(build):
+            def b(build, process_coro):
                 raise slave.ToxicClientException
 
             client.__enter__.return_value.build = b
@@ -184,78 +186,123 @@ class SlaveTest(TestCase):
 
     @patch.object(slave, 'build_started', Mock())
     @async_test
-    def test_process_build_info_with_build_started(self):
+    def test_process_info_with_build_started(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime2string(datetime.datetime.now(tz=tz))
 
         build_info = {'status': 'running', 'steps': [],
-                      'started': now, 'finished': None}
+                      'started': now, 'finished': None,
+                      'info_type': 'build_info'}
 
-        yield from self.slave._process_build_info(self.build, build_info)
+        yield from self.slave._process_info(self.build, build_info)
         self.assertTrue(slave.build_started.send.called)
 
     @patch.object(slave, 'build_finished', Mock())
     @async_test
-    def test_process_build_info_with_build_finished(self):
+    def test_process_info_with_build_finished(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime2string(datetime.datetime.now(tz=tz))
 
         build_info = {'status': 'running', 'steps': [],
-                      'started': now, 'finished': now}
+                      'started': now, 'finished': now,
+                      'info_type': 'build_info'}
 
-        yield from self.slave._process_build_info(self.build, build_info)
+        yield from self.slave._process_info(self.build, build_info)
         self.assertTrue(slave.build_finished.send.called)
 
     @async_test
-    def test_process_build_info_with_step(self):
+    def test_process_info_with_step(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
 
         build_info = {'status': 'running', 'cmd': 'ls', 'name': 'ls',
                       'started': now, 'finished': None, 'output': '',
-                      'index': 0}
+                      'index': 0, 'info_type': 'step_info'}
 
-        self.slave._set_step_info = MagicMock(
-            spec=self.slave._set_step_info)
-        yield from self.slave._process_build_info(self.build, build_info)
-        self.assertTrue(self.slave._set_step_info.called)
+        self.slave._process_step_info = MagicMock(
+            spec=self.slave._process_step_info)
+        yield from self.slave._process_info(self.build, build_info)
+        self.assertTrue(self.slave._process_step_info.called)
 
     @async_test
-    def test_set_step_info_new(self):
+    def test_process_info_with_step_output(self):
+        yield from self._create_test_data()
+        info = {'info_type': 'step_output_info'}
+
+        self.slave._process_step_output_info = MagicMock(
+            spec=self.slave._process_step_output_info)
+
+        yield from self.slave._process_info(self.build, info)
+        self.assertTrue(self.slave._process_step_output_info.called)
+
+    @async_test
+    def test_process_step_info_new(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
         started = now.strftime('%a %b %d %H:%M:%S %Y %z')
-        finished = now.strftime('%a %b %d %H:%M:%S %Y %z')
+        finished = None
 
-        yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
-                                             'running', '', started, finished,
-                                             0)
+        step_info = {'status': 'running', 'cmd': 'ls', 'name': 'run ls',
+                     'output': '', 'started': started, 'finished': finished,
+                     'index': 0, 'uuid': uuid4()}
+        yield from self.slave._process_step_info(self.build, step_info)
         self.assertEqual(len(self.build.steps), 1)
 
     @async_test
-    def test_set_step_info(self):
+    def test_process_step_info(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
         started = now.strftime('%a %b %d %H:%M:%S %Y %z')
         finished = now.strftime('%a %b %d %H:%M:%S %Y %z')
+        a_uuid = uuid4()
+        other_uuid = uuid4()
 
-        yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
-                                             'running', '', started, finished,
-                                             0)
-        yield from self.slave._set_step_info(self.build, 'echo "oi"', 'echo',
-                                             'running', '', started, finished,
-                                             1)
-        yield from self.slave._set_step_info(self.build, 'ls', 'run ls',
-                                             'success', 'somefile.txt\n',
-                                             started, finished, 2)
+        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
+                'output': '', 'started': started, 'finished': None,
+                'index': 0, 'uuid': a_uuid}
+
+        yield from self.slave._process_step_info(self.build, info)
+
+        info = {'cmd': 'echo "oi"', 'name': 'echo', 'status': 'success',
+                'output': '', 'started': started, 'finished': finished,
+                'index': 1, 'uuid': other_uuid}
+
+        yield from self.slave._process_step_info(self.build, info)
+
+        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'success',
+                'output': 'somefile.txt\n', 'started': started,
+                'finished': finished,
+                'index': 0, 'uuid': a_uuid}
+
+        yield from self.slave._process_step_info(self.build, info)
 
         self.assertEqual(self.build.steps[0].status, 'success')
         self.assertEqual(len(self.build.steps), 2)
+
+    @async_test
+    def test_process_step_output_info(self):
+        yield from self._create_test_data()
+
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+        started = now.strftime('%a %b %d %H:%M:%S %Y %z')
+        a_uuid = uuid4()
+
+        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
+                'output': '', 'started': started, 'finished': None,
+                'index': 0, 'uuid': a_uuid}
+
+        yield from self.slave._process_step_info(self.build, info)
+
+        info = {'uuid': a_uuid, 'output': 'somefile.txt\n'}
+        yield from self.slave._process_step_output_info(self.build, info)
+        step = self.slave._get_step(self.build, a_uuid)
+        self.assertTrue(step.output)
 
     @asyncio.coroutine
     def _create_test_data(self):

@@ -25,7 +25,7 @@ from toxicbuild.core.utils import get_toxicbuildconf, LoggerMixin, ExecCmdError
 from toxicbuild.slave.build import Builder, BuildStep
 from toxicbuild.slave.exceptions import (BuilderNotFound, BadBuilderConfig,
                                          BusyRepository)
-from toxicbuild.slave.plugins import Plugin
+from toxicbuild.slave.plugins import SlavePlugin
 
 
 class BuildManager(LoggerMixin):
@@ -212,21 +212,27 @@ class BuildManager(LoggerMixin):
         # this envvars are used in all steps in this builder
         builder_envvars = bdict.get('envvars', {})
         builder = Builder(self, bdict['name'], self.workdir, **builder_envvars)
+        builder.steps = self._get_builder_steps(builder, bdict)
+        return builder
+
+    def _get_builder_steps(self, builder, bdict):
         plugins_conf = bdict.get('plugins')
+        steps = []
+
         if plugins_conf:
             builder.plugins = self._load_plugins(plugins_conf)
 
         for plugin in builder.plugins:
-            builder.steps += plugin.get_steps_before()
+            steps += plugin.get_steps_before()
 
         for sdict in bdict['steps']:
             step = BuildStep(**sdict)
-            builder.steps.append(step)
+            steps.append(step)
 
         for plugin in builder.plugins:
-            builder.steps += plugin.get_steps_after()
+            steps += plugin.get_steps_after()
 
-        return builder
+        return steps
 
     # kind of wierd place for this thing
     @asyncio.coroutine
@@ -244,7 +250,7 @@ class BuildManager(LoggerMixin):
 
         plist = []
         for pdict in plugins_config:
-            plugin_class = Plugin.get(pdict['name'])
+            plugin_class = SlavePlugin.get_plugin(pdict['name'])
             del pdict['name']
             plugin = plugin_class(**pdict)
             plist.append(plugin)

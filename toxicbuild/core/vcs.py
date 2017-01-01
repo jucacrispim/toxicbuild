@@ -230,9 +230,13 @@ class Git(VCS):
 
     @asyncio.coroutine
     def get_remote_branches(self):
+        yield from self.fetch()
         cmd = '%s branch -r' % self.vcsbin
 
-        remote_branches = (yield from self.exec_cmd(cmd)).split('\n')
+        out = yield from self.exec_cmd(cmd)
+        msg = 'Remote branches: {}'.format(out)
+        self.log(msg, level='debug')
+        remote_branches = out.split('\n')
         # master, with some shitty arrow...
         remote_branches.pop(0)
         return [b.strip().split('/')[1] for b in remote_branches]

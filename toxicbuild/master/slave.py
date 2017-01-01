@@ -21,13 +21,13 @@ import asyncio
 import traceback
 from mongomotor import Document
 from mongomotor.fields import (StringField, IntField, BooleanField)
-from tornado.platform.asyncio import to_asyncio_future
 from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
 from toxicbuild.core.utils import string2datetime, LoggerMixin, now
 from toxicbuild.master.build import BuildStep, Builder
 from toxicbuild.master.client import get_build_client
 from toxicbuild.master.signals import (build_started, build_finished,
-                                       step_started, step_finished)
+                                       step_started, step_finished,
+                                       step_output_arrived)
 
 
 class Slave(Document, LoggerMixin):
@@ -51,7 +51,7 @@ class Slave(Document, LoggerMixin):
     @asyncio.coroutine
     def create(cls, **kwargs):
         slave = cls(**kwargs)
-        yield from to_asyncio_future(slave.save())
+        yield from slave.save()
         return slave
 
     def to_dict(self, id_as_str=False):
@@ -65,7 +65,7 @@ class Slave(Document, LoggerMixin):
     @classmethod
     @asyncio.coroutine
     def get(cls, **kwargs):
-        slave = yield from to_asyncio_future(cls.objects.get(**kwargs))
+        slave = yield from cls.objects.get(**kwargs)
         return slave
 
     @asyncio.coroutine
@@ -87,7 +87,7 @@ class Slave(Document, LoggerMixin):
         self.is_alive = alive
         # using yield instead of yield from because mongomotor's
         # save returns a tornado Future, not a asyncio Future
-        yield from to_asyncio_future(self.save())
+        yield from self.save()
         return self.is_alive
 
     @asyncio.coroutine
@@ -97,7 +97,7 @@ class Slave(Document, LoggerMixin):
         :param revision: An instance of
           :class:`toxicbuild.master.repository.RepositoryRevision`
         """
-        repository = yield from to_asyncio_future(revision.repository)
+        repository = yield from revision.repository
         repo_url = repository.url
         vcs_type = repository.vcs_type
         branch = revision.branch
@@ -124,7 +124,8 @@ class Slave(Document, LoggerMixin):
         with (yield from self.get_client()) as client:
 
             try:
-                build_info = yield from client.build(build)
+                build_info = yield from client.build(
+                    build, process_coro=self._process_info)
             except (ToxicClientException, BadJsonData):
                 output = traceback.format_exc()
                 build.status = 'exception'
@@ -141,71 +142,104 @@ class Slave(Document, LoggerMixin):
         return build_info
 
     @asyncio.coroutine
-    def _process_build_info(self, build, build_info):
-        """ This method is called by the client when some information about
-        the build is sent by the build server.
+    def _process_info(self, build, info):
+        """ Method used to process information sent by
+        the build server about an in progress build.
+
+        :param build: The build that is being executed
+        :param info: A dictionary. The information sent by the
+          slave that is executing the build.
         """
-        # when there's the steps key it's a build info
-        if 'steps' in build_info:
-            repo = yield from to_asyncio_future(build.repository)
-            build.status = build_info['status']
-            build.started = string2datetime(build_info['started'])
-            finished = build_info['finished']
-            if finished:
-                build.finished = string2datetime(finished)
 
-            yield from build.update()
+        # if we need one more conditional here is better to use
+        # a map...
+        if info['info_type'] == 'build_info':
+            yield from self._process_build_info(build, info)
 
-            if not build.finished:
-                msg = 'build started at {}'.format(build_info['started'])
-                self.log(msg)
-                build_started.send(repo, build=build)
-            else:
-                msg = 'build finished at {} with status {}'.format(
-                    build_info['finished'], build.status)
-                self.log(msg)
-                build_finished.send(repo, build=build)
+        elif info['info_type'] == 'step_info':
+            yield from self._process_step_info(build, info)
 
         else:
-            # here is the step info
-            yield from self._set_step_info(build, build_info['cmd'],
-                                           build_info['name'],
-                                           build_info['status'],
-                                           build_info['output'],
-                                           build_info['started'],
-                                           build_info['finished'],
-                                           build_info['index'])
+            yield from self._process_step_output_info(build, info)
 
     @asyncio.coroutine
-    def _set_step_info(self, build, cmd, name, status, output, started,
-                       finished, index):
+    def _process_build_info(self, build, build_info):
+        repo = yield from build.repository
+        build.status = build_info['status']
+        build.started = string2datetime(build_info['started'])
+        finished = build_info['finished']
+        if finished:
+            build.finished = string2datetime(finished)
 
-        repo = yield from to_asyncio_future(build.repository)
-        requested_step = None
+        yield from build.update()
 
-        for step in build.steps:
-            if step.command == cmd:
-                step.status = status
-                step.output = output
-                step.finished = string2datetime(finished)
-                requested_step = step
-                msg = 'step {} finished at {} with status {}'.format(
-                    step.command, finished, step.status)
-                self.log(msg, level='debug')
-                step_finished.send(repo, build=build, step=requested_step)
+        if not build.finished:
+            msg = 'build started at {}'.format(build_info['started'])
+            self.log(msg)
+            build_started.send(repo, build=build)
+        else:
+            msg = 'build finished at {} with status {}'.format(
+                build_info['finished'], build.status)
+            self.log(msg)
+            build_finished.send(repo, build=build)
 
-        if not requested_step:
+    @asyncio.coroutine
+    def _process_step_info(self, build, step_info):
+
+        cmd = step_info['cmd']
+        name = step_info['name']
+        status = step_info['status']
+        output = step_info['output']
+        started = step_info['started']
+        finished = step_info['finished']
+        index = step_info['index']
+        uuid = step_info['uuid']
+
+        repo = yield from build.repository
+        requested_step = self._get_step(build, uuid)
+
+        if requested_step:
+            requested_step.status = status
+            requested_step.output = output
+            requested_step.finished = string2datetime(finished)
+            msg = 'step {} finished at {} with status {}'.format(
+                requested_step.command, finished, requested_step.status)
+            self.log(msg, level='debug')
+            step_finished.send(repo, build=build, step=requested_step)
+
+        else:
             requested_step = BuildStep(name=name, command=cmd,
                                        status=status, output=output,
                                        started=string2datetime(started),
-                                       index=index)
+                                       index=index, uuid=uuid)
             msg = 'step {} started at {}'.format(requested_step.command,
                                                  started)
             self.log(msg, level='debug')
             step_started.send(repo, build=build, step=requested_step)
             build.steps.append(requested_step)
 
-            yield from build.update()
-        else:
-            # yield from step.update()
-            pass
+        yield from build.update()
+
+    @asyncio.coroutine
+    def _process_step_output_info(self, build, info):
+        uuid = info['uuid']
+        output = info['output']
+        repo = yield from build.repository
+        step = self._get_step(build, uuid)
+        step.output = ''.join([step.output or '', output])
+        yield from build.update()
+        msg = 'step_output_arrived for {}'.format(uuid)
+        self.log(msg, level='debug')
+        step_output_arrived.send(repo, step_info=info)
+
+    def _get_step(self, build, step_uuid):
+        """Returns a step from ``build``. Returns None if the requested
+        step is not present in the build.
+
+        :param build: A :class:`toxicbuild.master.build.Build` instance.
+        :param step_uuid: The uuid of the requested step.
+        """
+
+        for step in build.steps:
+            if step.uuid == step_uuid:
+                return step

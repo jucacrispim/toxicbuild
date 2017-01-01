@@ -81,19 +81,24 @@
 	  {% for step in build.steps %}
 	  <li class="step step-{{step.status}}" id="step-{{step.uuid}}">
 	    <div class="build-step-info-container">
-	      {{step.name}} - {{step.status}}
-	      <button type="button" class="btn btn-default btn-step-details btn-transparent btn-sm"
-		      data-toggle="modal"
-		      data-target="#stepDetailsModal"
-		      data-dismiss="modal"
-		      data-step-command="{{step.command}}"
-		      data-step-output="{{step.output}}"
-		      data-step-status="{{step.status}}"
-		      data-step-start="{{step.started}}"
-		      data-step-end="{{step.finished}}">
-		<span data-toggle="tooltip" title="Step details" data-placement="right">
-		  <span class="glyphicon glyphicon-modal-window" aria-hidden="true"></span>
-		</span>
+	      <div class="step-info-text">
+		{{step.name}} - {{step.status}}
+	      </div>
+	      <div class="step-info-btn">
+		<button type="button" class="btn btn-default btn-step-details btn-transparent btn-sm"
+			data-toggle="modal"
+			data-target="#stepDetailsModal"
+			data-dismiss="modal"
+			data-step-uuid="{{step.uuid}}"
+			data-step-command="{{step.command}}"
+			data-step-output="{{step.output}}"
+			data-step-status="{{step.status}}"
+			data-step-start="{{step.started}}"
+			data-step-end="{{step.finished}}">
+		  <span data-toggle="tooltip" title="Step details" data-placement="right">
+		    <span class="glyphicon glyphicon-modal-window" aria-hidden="true"></span>
+		  </span>
+	      </div>
 
 	      </button>
 	    </div>

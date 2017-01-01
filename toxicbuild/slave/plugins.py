@@ -19,26 +19,20 @@
 
 import asyncio
 import os
-from toxicbuild.slave.exceptions import PluginNotFound
+from toxicbuild.core.plugins import Plugin
 from toxicbuild.slave.build import BuildStep
 
 
-class Plugin:
+class SlavePlugin(Plugin):
+    """This is a base slave plugin. Slave plugins may add steps to a build
+    before and/or after the used defined steps. It may also set enivronment
+    variables to be used in the tests."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     # Your plugin must have an unique name
-    name = 'BasePlugin'
-
-    @classmethod
-    def get(cls, name):
-        """ Returns a Plugin subclass based on its name."""
-
-        for plugin in cls.__subclasses__():
-            if plugin.name == name:
-                return plugin
-        raise PluginNotFound('Plugin {} does not exist.'.format(name))
+    name = 'BaseSlavePlugin'
 
     def get_steps_before(self):
         """Returns a list of steps to be executed before the steps provided
@@ -84,7 +78,7 @@ class PythonCreateVenvStep(BuildStep):
         return step_info
 
 
-class PythonVenvPlugin(Plugin):
+class PythonVenvPlugin(SlavePlugin):
     name = 'python-venv'
 
     def __init__(self, pyversion, requirements_file='requirements.txt',
@@ -124,7 +118,7 @@ class AptitudeInstallStep(BuildStep):
         super().__init__(name, cmd, stop_on_fail=True, timeout=timeout)
 
 
-class AptitudeInstallPlugin(Plugin):
+class AptitudeInstallPlugin(SlavePlugin):
 
     """Installs packages using aptitude."""
 

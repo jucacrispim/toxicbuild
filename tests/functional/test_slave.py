@@ -60,13 +60,36 @@ class DummyBuildClient(BaseToxicClient):
 
         build_resp = []
         while r:
-            build_resp.append(r)
+            if r.get('body').get('info_type') != 'step_output_info':
+                build_resp.append(r)
+
             r = yield from self.get_response()
             if not r:
                 break
 
         steps, build_status = build_resp[1:-1], build_resp[-1]
         return steps, build_status
+
+    @asyncio.coroutine
+    def build_output_info(self, builder_name):
+        data = {'action': 'build',
+                'body': {'repo_url': self.repo_url,
+                         'branch': 'master',
+                         'vcs_type': 'git',
+                         'named_tree': 'master',
+                         'builder_name': builder_name}}
+
+        r = yield from self.request2server(data['action'], data['body'])
+        build_resp = []
+        while r:
+            if r.get('body').get('info_type') == 'step_output_info':
+                build_resp.append(r)
+
+            r = yield from self.get_response()
+            if not r:
+                break
+
+        return build_resp
 
     @asyncio.coroutine
     def list_builders(self):
@@ -136,3 +159,10 @@ class SlaveTest(BaseFunctionalTest):
             step_info, build_status = yield from client.build('builder-3')
 
         self.assertEqual(build_status['body']['status'], 'exception')
+
+    @async_test
+    def test_step_output_info(self):
+        with (yield from get_dummy_client()) as client:
+            output_info = yield from client.build_output_info('builder-2')
+
+        self.assertTrue(output_info)

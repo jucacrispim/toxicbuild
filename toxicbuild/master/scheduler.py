@@ -36,7 +36,7 @@ class PeriodicTask:
     """
 
     def __init__(self, call_or_coro, interval):
-        """:param call_or_coro: coroutine to be consumed at ``ìnterval``.
+        """:param call_or_coro: coroutine to be consumed at ``interval``.
         :param interval: Time in seconds to consume call_or_coro
         """
         self.call_or_coro = call_or_coro

@@ -1,5 +1,23 @@
 # -*- coding: utf-8 -*-
 
+# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+
+# This file is part of toxicbuild.
+
+# toxicbuild is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# toxicbuild is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
+
+
 import asyncio
 import json
 from unittest import TestCase
@@ -93,6 +111,18 @@ def get_client_mock(r2s_return_value=None):
     return cl
 
 
+class PluginTest(TestCase):
+
+    @patch.object(models.Plugin, 'get_client', lambda:
+                  get_client_mock([{'name': 'some-plugin', 'type': 'test',
+                                    'somefield': 'list',
+                                    'otherfield': 'string'}]))
+    @async_test
+    def test_list(self):
+        plugins = yield from models.Plugin.list()
+        self.assertEqual(plugins[0].name, 'some-plugin')
+
+
 class RepositoryTest(TestCase):
 
     def setUp(self):
@@ -102,9 +132,6 @@ class RepositoryTest(TestCase):
                                             name='my-repo')
 
         self.repository.get_client = get_client_mock
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
 
     @patch.object(models.Repository, 'get_client', get_client_mock)
     @async_test
@@ -196,6 +223,24 @@ class RepositoryTest(TestCase):
     def test_update(self):
         self.repository.get_client = lambda: get_client_mock('ok')
         resp = yield from self.repository.update(update_seconds=1000)
+        self.assertEqual(resp, 'ok')
+
+    @async_test
+    def test_enable_plugin(self):
+        self.repository.get_client = lambda: get_client_mock('ok')
+
+        resp = yield from self.repository.enable_plugin('some-plugin',
+                                                        bla='bla',
+                                                        ble=0)
+
+        self.assertEqual(resp, 'ok')
+
+    @async_test
+    def test_disable_plugin(self):
+        self.repository.get_client = lambda: get_client_mock('ok')
+
+        resp = yield from self.repository.disable_plugin(name='some-plugin')
+
         self.assertEqual(resp, 'ok')
 
 

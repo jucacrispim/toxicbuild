@@ -36,9 +36,11 @@ from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import (Slave, Repository, Builder, BuildSet,
                                RepositoryRevision, settings)
 from toxicbuild.master.exceptions import UIFunctionNotFound
+from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,
-                                       repo_status_changed, build_added)
+                                       repo_status_changed, build_added,
+                                       step_output_arrived)
 
 
 class UIHole(BaseToxicProtocol, LoggerMixin):
@@ -81,12 +83,14 @@ class HoleHandler:
     * `repo-remove-slave`
     * `repo-add-branch`
     * `repo-remove-branch`
+    * `repo-enable-plugin`
     * `repo-start-build`
     * `slave-add`
     * `slave-get`
     * `slave-list`
     * `slave-remove`
     * `slave-update`
+    * `plugins-list`
     * `buildset-list`
     * `builder-show`
     * `list-funcs`
@@ -224,15 +228,48 @@ class HoleHandler:
     @asyncio.coroutine
     def repo_add_branch(self, repo_name, branch_name,
                         notify_only_latest=False):
+        """Adds a branch to the list of branches of the repository.
+
+        :param repo_name: Reporitory name
+        :param branch_name: Branch's name
+        :notify_only_latest: If True only the latest commit in the
+          branch will trigger a build."""
         repo = yield from Repository.get(name=repo_name)
         yield from repo.add_or_update_branch(branch_name, notify_only_latest)
         return {'repo-add-branch': 'ok'}
 
     @asyncio.coroutine
     def repo_remove_branch(self, repo_name, branch_name):
+        """Removes a branch from the list of branches of a repository.
+        :param repo_name: Repository name
+        :param branch_name: Branch's name."""
+
         repo = yield from Repository.get(name=repo_name)
         yield from repo.remove_branch(branch_name)
         return {'repo-remove-branch': 'ok'}
+
+    @asyncio.coroutine
+    def repo_enable_plugin(self, repo_name, plugin_name, **kwargs):
+        """Enables a plugin to a repository.
+
+        :param repo_name: Repository name.
+        :param plugin_name: Plugin name
+        :param kwargs: kwargs passed to the plugin."""
+
+        repo = yield from Repository.get(name=repo_name)
+        yield from repo.enable_plugin(plugin_name, **kwargs)
+        return {'repo-enable-plugin': 'ok'}
+
+    @asyncio.coroutine
+    def repo_disable_plugin(self, repo_name, **kwargs):
+        """Disables a plugin from a repository.
+
+        :param repo_name: Repository name.
+        :param kwargs: kwargs passed to the plugin"""
+
+        repo = yield from Repository.get(name=repo_name)
+        yield from repo.disable_plugin(**kwargs)
+        return {'repo-disable-plugin': 'ok'}
 
     @asyncio.coroutine
     def repo_start_build(self, repo_name, branch, builder_name=None,
@@ -370,6 +407,13 @@ class HoleHandler:
 
         return {'builder-list': blist}
 
+    def plugins_list(self):
+        """Lists all plugins available to the master."""
+
+        plugins = MasterPlugin.list_plugins()
+        plugins_schemas = [p.get_schema(to_serialize=True) for p in plugins]
+        return {'plugins-list': plugins_schemas}
+
     @asyncio.coroutine
     def builder_show(self, repo_name, builder_name, skip=0, offset=None):
         """ Returns information about one specific builder.
@@ -490,9 +534,11 @@ class UIStreamHandler(LoggerMixin):
         build_finished.connect(self.build_finished, weak=False)
         repo_status_changed.connect(self.send_repo_status_info, weak=False)
         build_added.connect(self.build_added, weak=False)
+        step_output_arrived.connect(self.send_step_output_info, weak=False)
 
     def _disconnectfromsignals(self):
 
+        step_output_arrived.disconnect(self.send_step_output_info)
         step_started.disconnect(self.step_started)
         step_finished.disconnect(self.step_finished)
         build_started.disconnect(self.build_started)
@@ -535,13 +581,27 @@ class UIStreamHandler(LoggerMixin):
 
     @asyncio.coroutine
     def send_repo_status_info(self, repo, old_status, new_status):
-        """Called by the signal ``repo_status_changed``"""
+        """Called by the signal ``repo_status_changed``
+
+        :param repo: The repository that had its status changed.
+        :param old_status: The old status of the repository
+        :param new_status: The new status of the repostiory."""
 
         rdict = yield from repo.to_dict(id_as_str=True)
         rdict['status'] = new_status
         rdict['old_status'] = old_status
         rdict['event_type'] = 'repo_status_changed'
         f = ensure_future(self.protocol.send_response(code=0, body=rdict))
+        return f
+
+    def send_step_output_info(self, repo, step_info):
+        """Called by the signal ``step_output_arrived``.
+
+        :param repo: The repository that is building something.
+        :param step_info: The information about the step output."""
+
+        step_info['event_type'] = 'step_output_info'
+        f = ensure_future(self.protocol.send_response(code=0, body=step_info))
         return f
 
 

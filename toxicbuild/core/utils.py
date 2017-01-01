@@ -19,46 +19,20 @@
 
 
 import asyncio
+try:
+    from asyncio import ensure_future
+except ImportError:  # pragma no cover
+    from asyncio import async as ensure_future
+
 from datetime import datetime, timezone, timedelta
 import importlib
 import logging
 import os
-from subprocess import PIPE
+import subprocess
 import sys
 import time
 import bcrypt
 from toxicbuild.core.exceptions import ExecCmdError, ConfigError
-
-
-@asyncio.coroutine
-def exec_cmd(cmd, cwd, timeout=3600, **envvars):
-    """ Executes a shell command. Raises with stderr if return code > 0
-    :param cmd: command to run.
-    :param cwd: Directory to execute the command.
-    :param timeout: How long we should wait for a command complete. Default
-      is 3600.
-    :param envvars: Environment variables to be used in the command.
-    """
-
-    envvars = _get_envvars(envvars)
-
-    # the thing here is that in not win operating systems
-    # we redirect stderr to stdout so we can see the whole
-    # output of the command.
-    if not sys.platform.startswith('win32'):
-        cmd = ' '.join([cmd, '2>&1'])
-
-    proc = yield from asyncio.create_subprocess_shell(
-        cmd, stdout=PIPE, stderr=PIPE, cwd=cwd, env=envvars)
-
-    stdout, stderr = yield from asyncio.wait_for(
-        proc.communicate(), timeout)
-
-    output = stdout.decode().strip()
-    if int(proc.returncode) > 0:
-        raise ExecCmdError(output)
-
-    return output
 
 
 def _get_envvars(envvars):
@@ -74,7 +48,59 @@ def _get_envvars(envvars):
 
         newvars[var] = value
 
+    newvars['LANG'] = os.environ.get('LANG', '')
     return newvars
+
+
+@asyncio.coroutine
+def _create_cmd_proc(cmd, cwd, **envvars):
+    """Creates a process that will execute a command in a shell.
+
+    :param cmd: command to run.
+    :param cwd: Directory to execute the command.
+    :param envvars: Environment variables to be used in the command.
+    """
+    envvars = _get_envvars(envvars)
+
+    proc = yield from asyncio.create_subprocess_shell(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd,
+        env=envvars)
+
+    return proc
+
+
+@asyncio.coroutine
+def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
+    """ Executes a shell command. Raises with the command output
+    if return code > 0.
+    :param cmd: command to run.
+    :param cwd: Directory to execute the command.
+    :param timeout: How long we should wait for a command complete. Default
+      is 3600.
+    :param out_fn: A coroutine that receives each line of the step
+      output. The coroutine signature must be in the form:
+      mycoro(line_index, line).
+    :param envvars: Environment variables to be used in the command.
+    """
+
+    proc = yield from _create_cmd_proc(cmd, cwd, **envvars)
+    out = []
+
+    line_index = 0
+    while proc.returncode is None:
+        outline = yield from asyncio.wait_for(proc.stdout.readline(), timeout)
+        outline = outline.decode()
+        if out_fn:
+            ensure_future(out_fn(line_index, outline))
+
+        line_index += 1
+        out.append(outline)
+
+    output = ''.join(out).strip('\n')
+    if int(proc.returncode) > 0:
+        raise ExecCmdError(output)
+
+    return output
 
 
 def load_module_from_file(filename):

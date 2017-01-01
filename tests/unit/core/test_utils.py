@@ -33,7 +33,6 @@ class UtilsTest(TestCase):
 
     @async_test
     def test_exec_cmd(self):
-        # no assertions here because if no exceptions, it's ok.
         out = yield from utils.exec_cmd('ls', cwd='.')
         self.assertTrue(out)
 
@@ -46,7 +45,11 @@ class UtilsTest(TestCase):
     @async_test
     def test_exec_cmd_with_timeout(self, *args, **kwargs):
         with self.assertRaises(asyncio.TimeoutError):
-            yield from utils.exec_cmd('sleep 3', cwd='.', timeout=1)
+            yield from utils.exec_cmd('sleep 2', cwd='.', timeout=1)
+
+        # wait here to avoid runtime error saying the loop is closed
+        # when the process try to send its message to the caller
+        time.sleep(1)
 
     @async_test
     def test_exec_cmd_with_envvars(self):
@@ -59,36 +62,32 @@ class UtilsTest(TestCase):
 
         self.assertEqual(returned, 'something')
 
-    @patch.object(utils.sys, 'platform', 'linux')
     @async_test
-    def test_exec_cmd_redirecting_stderr(self):
-        cmd = 'echo "bla";exit 1'
+    def test_exec_cmd_with_out_fn(self):
+        envvars = {'PATH': 'PATH:venv/bin',
+                   'MYPROGRAMVAR': 'something'}
 
-        try:
-            yield from utils.exec_cmd(cmd, cwd='.')
-        except utils.ExecCmdError as e:
-            ret = str(e)
+        cmd = 'echo $MYPROGRAMVAR'
 
-        self.assertEqual(ret, 'bla')
+        lines = Mock()
 
-    @patch.object(utils.sys, 'platform', 'win32')
-    @async_test
-    def test_exec_cmd_not_redirecting_stderr(self):
-        cmd = 'echo "bla";exit 1'
-
-        try:
-            yield from utils.exec_cmd(cmd, cwd='.')
-        except utils.ExecCmdError as e:
-            ret = str(e)
-
-        self.assertEqual(ret, 'bla')
+        out_fn = asyncio.coroutine(lambda i, l: lines((i, l)))
+        yield from utils.exec_cmd(cmd, cwd='.',
+                                  out_fn=out_fn,
+                                  **envvars)
+        # lets give time to the scheduler...
+        yield from asyncio.sleep(0.5)
+        self.assertTrue(lines.called)
+        self.assertTrue(isinstance(
+            lines.call_args[0][0][1], str), lines.call_args)
 
     def test_get_envvars(self):
         envvars = {'PATH': 'PATH:venv/bin',
                    'MYPROGRAMVAR': 'something'}
 
         expected = {'PATH': '{}:venv/bin'.format(os.environ.get('PATH')),
-                    'MYPROGRAMVAR': 'something'}
+                    'MYPROGRAMVAR': 'something',
+                    'LANG': os.environ.get('LANG', '')}
 
         returned = utils._get_envvars(envvars)
 

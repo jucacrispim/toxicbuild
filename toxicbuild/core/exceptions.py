@@ -40,3 +40,7 @@ class ToxicClientException(Exception):
 
 class BadJsonData(Exception):
     pass
+
+
+class PluginNotFound(Exception):
+    pass

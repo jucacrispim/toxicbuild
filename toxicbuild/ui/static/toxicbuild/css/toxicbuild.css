@@ -110,6 +110,7 @@ tr:nth-child(even) {
 .toxicweb-container{
     margin-left: 0;
     float:left;
+    width: 1000px;
 }
 
 .logout-link-container{
@@ -275,6 +276,22 @@ tr:nth-child(even) {
 
 }
 
+.build-step-info-container{
+    overflow: hidden;
+}
+
+.step-info-text{
+    float:left;
+}
+.step-info-btn{
+    float: right;
+}
+
+.step-info-text{
+    max-width: 85%;
+}
+
+
 .builder-success,
 .step-success{
     background-color: #3caf3c;
@@ -306,13 +323,11 @@ tr:nth-child(even) {
 .btn-step-details{
     padding: 1px 6px;
     float: right;
-    margin-left: 15px;
 }
 
 .btn-step-details:hover{
     padding: 1px 6px;
     float: right;
-    margin-left: 15px;
 }
 
 .btn-buildset-details:focus,
