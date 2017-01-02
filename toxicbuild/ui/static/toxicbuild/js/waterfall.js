@@ -16,6 +16,8 @@ jQuery('#stepDetailsModal').on('show.bs.modal', function (event) {
   modal.find('#step-start').text(start);
   modal.find('#step-end').text(end);
   CURRENT_STEP_SHOWN = uuid;
+  var element = document.getElementById('step-output');
+  element.scrollIntoView(false);
 });
 
 
@@ -226,8 +228,6 @@ function StepOutputSentinel(uuid){
 	var modal = jQuery('#stepDetailsModal');
 	modal.find('#step-output').text(new_output);
 	//jQuery("#step-output").scrollTop($("#step-output")[0].scrollHeight);
-	var element = document.getElementById('step-output');
-	element.scrollIntoView(false);
       }
     },
 

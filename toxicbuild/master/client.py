@@ -24,6 +24,7 @@ except ImportError:  # pragma: no cover
     from asyncio import async as ensure_future
 
 from toxicbuild.core import BaseToxicClient
+from toxicbuild.core.exceptions import BadJsonData
 
 
 class BuildClient(BaseToxicClient):
@@ -86,7 +87,14 @@ class BuildClient(BaseToxicClient):
         yield from self.write(data)
         futures = []
         while True:
-            r = yield from self.get_response()
+            try:
+                r = yield from self.get_response()
+            except BadJsonData as e:  # pragma no cover for hacks!
+                # This is a hack to handle bad step information
+                # that is comming. It must be corrected in its root, not here
+                if 'build_info' not in str(e):
+                    continue
+
             if not r:
                 break
 

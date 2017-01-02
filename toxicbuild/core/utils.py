@@ -255,7 +255,8 @@ def read_stream(reader):
             data += char
 
         len_data = int(data)
-
+        msg = '[read_stream] incomming data of size {}'.format(len_data)
+        log(msg, level='debug')
         if len_data <= 1024:
             raw_data = yield from reader.read(len_data)
         else:
