@@ -87,13 +87,7 @@ class BuildClient(BaseToxicClient):
         yield from self.write(data)
         futures = []
         while True:
-            try:
-                r = yield from self.get_response()
-            except BadJsonData as e:  # pragma no cover for hacks!
-                # This is a hack to handle bad step information
-                # that is comming. It must be corrected in its root, not here
-                if 'build_info' not in str(e):
-                    continue
+            r = yield from self.get_response()
 
             if not r:
                 break

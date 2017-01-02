@@ -223,6 +223,7 @@ class Slave(Document, LoggerMixin):
     @asyncio.coroutine
     def _process_step_output_info(self, build, info):
         uuid = info['uuid']
+        info['output'] = info['output'] + '\n'
         output = info['output']
         repo = yield from build.repository
         step = self._get_step(build, uuid)

@@ -101,7 +101,7 @@ class Builder(LoggerMixin):
     def _send_step_output_info(self, step_info, line_index, line):
         msg = {'info_type': 'step_output_info',
                'uuid': step_info['uuid'], 'output_index': line_index,
-               'output': line}
+               'output': line.strip('\n')}
 
         yield from self.manager.send_info(msg)
 
