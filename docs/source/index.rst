@@ -239,12 +239,20 @@ Licence
 ToxicBuild is free software released under the GPLv3 or later.
 
 
+.. toctree::
+   :maxdepth: 1
+
+   hacking
+
+
 Known Bugs
 ==========
 
 - The waterfall.js does not now how to include new builders that came via
   websocket and sometimes it places the build in a wired place. Must reload
   the page.
+
+- Slaves should kill all processes created by its child processes.
 
 
 Aditional notes
