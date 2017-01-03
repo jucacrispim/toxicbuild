@@ -242,7 +242,7 @@ ToxicBuild is free software released under the GPLv3 or later.
 Hacking
 ========
 
-See :doc:`Hacking ToxicBuild<hacking>`.
+See :doc:`Hacking ToxicBuild <hacking>`.
 
 
 Known Bugs
