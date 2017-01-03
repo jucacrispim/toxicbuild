@@ -293,6 +293,26 @@ class StreamUtilsTest(TestCase):
         self.assertEqual(ret, self.giant)
 
     @async_test
+    def test_read_stream_with_good_data_in_parts(self):
+        reader = Mock()
+
+        self._rlimit = 0
+
+        @asyncio.coroutine
+        def read(limit):
+            if limit != 1:
+                limit = 10
+
+            part = self.good_data[self._rlimit: limit + self._rlimit]
+            self._rlimit += limit
+            return part
+
+        reader.read = read
+        ret = yield from utils.read_stream(reader)
+
+        self.assertEqual(ret, self.data)
+
+    @async_test
     def test_read_stream_with_giant_data_with_more(self):
         reader = Mock()
 
@@ -319,3 +339,16 @@ class StreamUtilsTest(TestCase):
         called_arg = writer.write.call_args[0][0]
 
         self.assertEqual(called_arg, self.good_data)
+
+    # @async_test
+    # def test_write_step_output(self):
+    #     output = {"code": 0, "body": {"output": "test_list_plugins (tests.unit.core.test_plugins.PluginTest) ... ok\n", "output_index": 254, "uuid": "3e8dd1f3-71e0-49fd-95d7-92c95f833756", "info_type": "step_output_info"}}  # noqa f501
+    #     import json
+    #     output = json.dumps(output)
+    #     writer = MagicMock()
+    #     yield from utils.write_stream(writer, output)
+
+    #     called_arg = writer.write.call_args[0][0]
+    #     import ipdb;ipdb.set_trace()
+    #     called_len = int(called_arg.split('\n')[0])
+    #     self.assertEqual(called_len, 204)

@@ -259,13 +259,11 @@ def read_stream(reader):
             raw_data = yield from reader.read(len_data)
         else:
             raw_data = yield from reader.read(1024)
-            while len(raw_data) < len_data:
-                left = len_data - len(raw_data)
-                next_chunk = left if left < 1024 else 1024
-                raw_data += yield from reader.read(next_chunk)
 
-        msg = 'received data {} with length {}'.format(raw_data, len_data)
-        log(msg, level='debug')
+        while len(raw_data) < len_data:
+            left = len_data - len(raw_data)
+            next_chunk = left if left < 1024 else 1024
+            raw_data += yield from reader.read(next_chunk)
 
     return raw_data
 
