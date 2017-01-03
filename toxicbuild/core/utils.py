@@ -255,8 +255,6 @@ def read_stream(reader):
             data += char
 
         len_data = int(data)
-        msg = '[read_stream] incomming data of size {}'.format(len_data)
-        log(msg, level='debug')
         if len_data <= 1024:
             raw_data = yield from reader.read(len_data)
         else:
@@ -266,6 +264,8 @@ def read_stream(reader):
                 next_chunk = left if left < 1024 else 1024
                 raw_data += yield from reader.read(next_chunk)
 
+    msg = 'received data {} with length {}'.format(raw_data, len_data)
+    log(msg, level='debug')
     return raw_data
 
 
