@@ -238,11 +238,7 @@ Licence
 
 ToxicBuild is free software released under the GPLv3 or later.
 
-
-.. toctree::
-   :maxdepth: 1
-
-   hacking
+See also: :doc:`Hacking ToxicBuild<hacking>`.
 
 
 Known Bugs
