@@ -92,6 +92,13 @@ class BuildTest(TestCase):
         buildset = yield from b.get_buildset()
         self.assertEqual(buildset, self.buildset)
 
+    @async_test
+    def test_get_output(self):
+        yield from self._create_test_data()
+        build = self.buildset.builds[0]
+        expected = 'some command\nsome output'
+        self.assertEqual(expected, build.output)
+
     @asyncio.coroutine
     def _create_test_data(self):
         self.repo = repository.Repository(name='bla', url='git@bla.com')
@@ -104,6 +111,9 @@ class BuildTest(TestCase):
         b = build.Build(branch='master', builder=self.builder,
                         repository=self.repo, slave=self.slave,
                         named_tree='v0.1')
+        s = build.BuildStep(name='some step', output='some output',
+                            command='some command')
+        b.steps.append(s)
         self.rev = repository.RepositoryRevision(commit='saçfijf',
                                                  commit_date=now(),
                                                  repository=self.repo,

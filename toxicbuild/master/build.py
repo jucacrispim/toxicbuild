@@ -217,6 +217,15 @@ class Build(EmbeddedDocument):
         buildset = yield from BuildSet.objects.get(builds__uuid=self.uuid)
         return buildset
 
+    @property
+    def output(self):
+        output = []
+        for step in self.steps:
+            output.append(step.command + '\n')
+            output.append(step.output)
+
+        return ''.join(output)
+
 
 class BuildSet(SerializeMixin, Document):
 
