@@ -24,7 +24,6 @@ except ImportError:  # pragma: no cover
     from asyncio import async as ensure_future
 
 from toxicbuild.core import BaseToxicClient
-from toxicbuild.core.exceptions import BadJsonData
 
 
 class BuildClient(BaseToxicClient):
