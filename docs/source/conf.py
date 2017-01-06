@@ -12,9 +12,15 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
 import os
 from toxicbuild import VERSION
+from toxicbuild.master import create_settings_and_connect
+from toxicbuild.slave import create_settings
+from toxicbuild.ui import create_settings as create_settings_ui
+
+create_settings_and_connect()
+create_settings()
+create_settings_ui()
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the

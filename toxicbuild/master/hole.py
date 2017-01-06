@@ -421,7 +421,8 @@ class HoleHandler:
         :param repo_name: The builder's repository name.
         :param builder_name. The bulider's name.
         :param skip: How many elements we should skip in the result.
-        :param offset: How many results we should return."""
+        :param offset: How many results we should return.
+        """
 
         kwargs = {'name': builder_name}
         repo = yield from Repository.get(name=repo_name)

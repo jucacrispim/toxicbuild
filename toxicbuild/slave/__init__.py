@@ -105,9 +105,10 @@ def restart(workdir, pidfile=PIDFILE):
     """Restarts toxicslave
 
     The instance of toxicslave in ``workdir`` will be restarted.
+
     :param workdir: Workdir for master to be killed.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
-      ``toxicslave.pid``
+        ``toxicslave.pid``
     """
 
     stop(workdir, pidfile=pidfile)

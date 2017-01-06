@@ -141,7 +141,8 @@ class BuildStep:
         :param cwd: Directory where the command will be executed.
         :param out_fn: Function used to handle each line of the
           command output.
-        :param envvars: Environment variables to be used on execution."""
+        :param envvars: Environment variables to be used on execution.
+        """
 
         step_status = {}
         try:
