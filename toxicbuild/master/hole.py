@@ -419,7 +419,7 @@ class HoleHandler:
         """ Returns information about one specific builder.
 
         :param repo_name: The builder's repository name.
-        :param builder_name. The bulider's name.
+        :param builder_name: The bulider's name.
         :param skip: How many elements we should skip in the result.
         :param offset: How many results we should return.
         """

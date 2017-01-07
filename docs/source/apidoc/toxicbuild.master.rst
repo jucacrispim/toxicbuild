@@ -35,6 +35,7 @@ toxicbuild.master.hole module
     :members:
     :undoc-members:
     :show-inheritance:
+    :exclude-members: UIHole
 
 toxicbuild.master.plugins module
 --------------------------------

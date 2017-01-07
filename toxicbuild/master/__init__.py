@@ -155,7 +155,7 @@ def restart(workdir, pidfile=PIDFILE):
     The instance of toxicmaster in ``workdir`` will be restarted.
     :param workdir: Workdir for master to be killed.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
-      ``toxicmaster.pid``
+    ``toxicmaster.pid``
     """
 
     stop(workdir, pidfile=pidfile)

@@ -15,15 +15,11 @@ that enables you to configure your ci process using the power of the Python
 programming language.
 
 
-User Guide
-==========
+.. toctree::
+   :maxdepth: 1
 
-See :doc:`ToxicBuild's User Guide <user_guide>`
-
-Hacking
-========
-
-See :doc:`Hacking ToxicBuild <hacking>`.
+   user_guide
+   hacking
 
 
 Licence
