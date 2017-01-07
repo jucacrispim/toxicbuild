@@ -518,7 +518,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
     def _format_peek(self, response):
         response = response['body']
 
-        if response['event_type'] in ['build_started, ''build_finished']:
+        if response['event_type'] in ['build_started', 'build_finished']:
             msg = self._format_peek_build(response)
 
         elif response['event_type'] in ['step_started', 'step_finished']:

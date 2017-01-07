@@ -771,16 +771,16 @@ class ToxicCliTest(unittest.TestCase):
         self.assertEqual(called, (_('name'), _('status')))  # noqa
 
     def test_format_peek_with_build(self):
-        response = {'body': {'steps': [], 'info_type': 'build_info'}}
-        self.cli._format_peek_build = Mock()
+        response = {'body': {'steps': [], 'event_type': 'build_started'}}
+        self.cli._format_peek_build = Mock(return_value='')
 
         self.cli._format_peek(response)
 
         self.assertTrue(self.cli._format_peek_build.called)
 
     def test_format_peek_with_step(self):
-        response = {'body': {'command': 'ls', 'info_type': 'step_info'}}
-        self.cli._format_peek_step = Mock()
+        response = {'body': {'command': 'ls', 'event_type': 'step_finished'}}
+        self.cli._format_peek_step = Mock(return_value='')
 
         self.cli._format_peek(response)
 
