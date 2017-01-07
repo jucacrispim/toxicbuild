@@ -523,7 +523,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
 
         elif response['event_type'] in ['step_started', 'step_finished']:
             msg = self._format_peek_step(response)
-        else:
+        else:  # pragma no cover
             msg = ''
 
         self._peek_output.append(msg)
