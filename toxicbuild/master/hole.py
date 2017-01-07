@@ -84,6 +84,7 @@ class HoleHandler:
     * `repo-add-branch`
     * `repo-remove-branch`
     * `repo-enable-plugin`
+    * `repo-disable-plugin`
     * `repo-start-build`
     * `slave-add`
     * `slave-get`
@@ -136,7 +137,13 @@ class HoleHandler:
     @asyncio.coroutine
     def repo_add(self, repo_name, repo_url, update_seconds, vcs_type,
                  slaves=None):
-        """ Adds a new repository and first_run() it. """
+        """ Adds a new repository and first_run() it.
+
+        :param repo_name: Repository name
+        :param repo_url: Repository vcs url
+        :param update_seconds: Time to poll for changes
+        :param vcs_type: Type of vcs being used.
+        :param slaves: A list of slave names."""
 
         repo_name = repo_name.strip()
         repo_url = repo_url.strip()
@@ -153,8 +160,11 @@ class HoleHandler:
 
     @asyncio.coroutine
     def repo_get(self, repo_name=None, repo_url=None):
-        """Shows information about one specific repository.
-        One of ``repo_name`` or ``repo_url`` is required. """
+        """Shows information about one specific repository. One of
+        ``repo_name`` or ``repo_url`` is required.
+
+        :param repo_name: Repository name,
+        :param repo_url: Repository vcs url."""
 
         if not (repo_name or repo_url):
             raise TypeError("repo_name or repo_url required")
@@ -172,7 +182,9 @@ class HoleHandler:
 
     @asyncio.coroutine
     def repo_remove(self, repo_name):
-        """ Removes a repository from toxicubild """
+        """ Removes a repository from toxicubild.
+
+        :param repo_name: Repository name."""
 
         repo = yield from Repository.get(name=repo_name)
         yield from repo.remove()
@@ -193,7 +205,10 @@ class HoleHandler:
 
     @asyncio.coroutine
     def repo_update(self, repo_name, **kwargs):
-        """ Updates repository information. """
+        """ Updates repository information.
+
+        :param repo_name: Repository name
+        :param kwargs: kwargs to update the repository"""
 
         if kwargs.get('slaves'):
             qs = Slave.objects(name__in=kwargs.get('slaves'))
@@ -208,7 +223,10 @@ class HoleHandler:
 
     @asyncio.coroutine
     def repo_add_slave(self, repo_name, slave_name):
-        """ Adds a slave to a repository. """
+        """ Adds a slave to a repository.
+
+        :param repo_name: Repository name.
+        :param slave_name: Slave name."""
 
         repo = yield from Repository.get(name=repo_name)
         slave = yield from Slave.get(name=slave_name)
@@ -233,7 +251,7 @@ class HoleHandler:
         :param repo_name: Reporitory name
         :param branch_name: Branch's name
         :notify_only_latest: If True only the latest commit in the
-          branch will trigger a build."""
+        branch will trigger a build."""
         repo = yield from Repository.get(name=repo_name)
         yield from repo.add_or_update_branch(branch_name, notify_only_latest)
         return {'repo-add-branch': 'ok'}
