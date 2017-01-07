@@ -15,7 +15,7 @@ plugin's config params. It already has the following fields:
 - statuses: A list of statuses that triggers the plugin.
 
 Example:
---------
+^^^^^^^^
 
 import asyncio
 from mongomotor.fields import StringField

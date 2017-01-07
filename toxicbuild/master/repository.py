@@ -60,6 +60,9 @@ class RepositoryBranch(EmbeddedDocument):
 
 
 class Repository(Document, utils.LoggerMixin):
+    """Repository is where you store your code and where toxicbuild
+    looks for incomming changes."""
+
     name = StringField(required=True, unique=True)
     url = StringField(required=True, unique=True)
     update_seconds = IntField(default=300, required=True)
@@ -155,7 +158,16 @@ class Repository(Document, utils.LoggerMixin):
     @asyncio.coroutine
     def create(cls, name, url, update_seconds, vcs_type, slaves=None,
                branches=None):
-        """ Creates a new repository and schedule it. """
+        """ Creates a new repository and schedule it.
+
+        :param name: Repository name.
+        :param url: Repository version control system url
+        :param update_seconds: How long we should wait until
+          poll the changes again.
+        :param vcs_type: Which type of version control system this
+          repository uses.
+        :param slaves: A list of slaves for this repository.
+        :param branches: A list of branches config for this repository."""
 
         slaves = slaves or []
         branches = branches or []
@@ -195,6 +207,7 @@ class Repository(Document, utils.LoggerMixin):
             # means the repository was not scheduled
             pass
 
+        # removes the repository from the file system.
         Thread(target=shutil.rmtree, args=[self.workdir]).start()
 
         yield from self.delete()
@@ -202,6 +215,9 @@ class Repository(Document, utils.LoggerMixin):
     @classmethod
     @asyncio.coroutine
     def get(cls, **kwargs):
+        """Returns a repository instance
+
+        :param kwargs: kwargs to match the repository."""
         repo = yield from cls.objects.get(**kwargs)
         return repo
 
@@ -266,6 +282,9 @@ class Repository(Document, utils.LoggerMixin):
 
     @asyncio.coroutine
     def add_slave(self, slave):
+        """Adds a new slave to a repository.
+
+        :param slave: A slave instance."""
         self.slaves
         slaves = yield from self.slaves
         slaves.append(slave)
@@ -275,6 +294,9 @@ class Repository(Document, utils.LoggerMixin):
 
     @asyncio.coroutine
     def remove_slave(self, slave):
+        """Removes a slave from a repository.
+
+        :param slave: A slave instance."""
         slaves = yield from self.slaves
         slaves.pop(slaves.index(slave))
         yield from self.update(set__slaves=slaves)
@@ -283,7 +305,11 @@ class Repository(Document, utils.LoggerMixin):
     @asyncio.coroutine
     def add_or_update_branch(self, branch_name, notify_only_latest=False):
         """Adds a new branch to this repository. If the branch
-        already exists updates it with a new value."""
+        already exists updates it with a new value.
+
+        :param branch_name: The name of a branch
+        :param notify_only_latest: If we should build only the most
+          recent build of this branch"""
 
         # this is a shitty way of doing this. What is the
         # better way?
@@ -304,13 +330,16 @@ class Repository(Document, utils.LoggerMixin):
 
     @asyncio.coroutine
     def remove_branch(self, branch_name):
-        """Removes a branch from this repository."""
+        """Removes a branch from this repository.
+
+        :param branch_name: The branch name."""
 
         yield from self.update(pull__branches__name=branch_name)
 
     @asyncio.coroutine
     def get_latest_revision_for_branch(self, branch):
         """ Returns the latest revision for a given branch
+
         :param branch: branch name
         """
         latest = RepositoryRevision.objects.filter(
@@ -415,6 +444,7 @@ class Repository(Document, utils.LoggerMixin):
         makes the repository change its status triggers a
         ``repo_status_changed`` signal.
 
+        :param sender: The object that sent the signal
         :param build: The build that was started or finished"""
 
         status = yield from self.get_status()
@@ -425,6 +455,8 @@ class Repository(Document, utils.LoggerMixin):
 
 
 class RepositoryRevision(Document):
+    """A commit in the code tree."""
+
     repository = ReferenceField(Repository, required=True)
     commit = StringField(required=True)
     branch = StringField(required=True)

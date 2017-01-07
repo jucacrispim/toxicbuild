@@ -132,7 +132,9 @@ class Poller(LoggerMixin):
         self.notify_change(*revisions)
 
     def notify_change(self, *revisions):
-        """ Notify about incoming changes. """
+        """ Notify about new revisions added to the repository.
+
+        :param revisions: A list of new revisions"""
 
         # returning for testing purposes
         return revision_added.send(self.repository, revisions=revisions)

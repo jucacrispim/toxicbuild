@@ -48,7 +48,10 @@ class SerializeMixin:
     """Simple mixin to serialization relatad stuff."""
 
     def to_dict(self, id_as_str=False):
-        """ Transforms a Document into a dictionary."""
+        """ Transforms a Document into a dictionary.
+
+        :param id_as_str: If true, transforms the id field into a string.
+        """
 
         objdict = json.loads(super().to_json())
         objdict['id'] = str(self.id) if id_as_str else self.id
@@ -64,7 +67,7 @@ class SerializeMixin:
 
 class Builder(SerializeMixin, Document):
 
-    """ The entity responsible for execute the build steps
+    """ The entity responsible for executing the build steps.
     """
 
     name = StringField()
@@ -73,6 +76,9 @@ class Builder(SerializeMixin, Document):
     @classmethod
     @asyncio.coroutine
     def create(cls, **kwargs):
+        """Creates a new Builder.
+
+        :param kwargs: kwargs passed to the builder constructor"""
         repo = cls(**kwargs)
         yield from repo.save()
         return repo
@@ -80,12 +86,16 @@ class Builder(SerializeMixin, Document):
     @classmethod
     @asyncio.coroutine
     def get(cls, **kwargs):
+        """Returns a builder instance."""
         builder = yield from cls.objects.get(**kwargs)
         return builder
 
     @classmethod
     @asyncio.coroutine
     def get_or_create(cls, **kwargs):
+        """Returns a builder instance. If it does not exist, creates it.
+
+        :param kwargs: kwargs to match the builder."""
         try:
             builder = yield from cls.get(**kwargs)
         except cls.DoesNotExist:
@@ -95,6 +105,7 @@ class Builder(SerializeMixin, Document):
 
     @asyncio.coroutine
     def get_status(self):
+        """Returns the builder status."""
 
         try:
             qs = BuildSet.objects(builds__builder=self).order_by('-created')
@@ -120,18 +131,24 @@ class Builder(SerializeMixin, Document):
 
     @asyncio.coroutine
     def to_dict(self, id_as_str=False):
+        """Returns a dictionary for this builder.
+
+        :param id_as_str: If true, the object id will be converted to string"""
+
         objdict = super().to_dict(id_as_str=id_as_str)
         objdict['status'] = yield from self.get_status()
         return objdict
 
     @asyncio.coroutine
     def to_json(self):
+        """Returns a json for this builder."""
         return (yield from self.async_to_json())
 
 
 class BuildStep(EmbeddedDocument):
 
-    """ A step for build
+    """ A step for a build. This is the object that will store
+    the step data. Who actually execute the steps is the slave.
     """
 
     STATUSES = ['running', 'fail', 'success', 'exception',
@@ -169,7 +186,8 @@ class BuildStep(EmbeddedDocument):
 
 class Build(EmbeddedDocument):
 
-    """ A set of steps for a repository
+    """ A set of steps for a repository. This is the object that stores
+    the build data. The build is carried by the slave.
     """
 
     PENDING = 'pending'
@@ -200,7 +218,7 @@ class Build(EmbeddedDocument):
 
     @asyncio.coroutine
     def update(self):
-        """Does an atomic update on this embedded document."""
+        """Does an atomic update in this embedded document."""
 
         result = yield from BuildSet.objects(
             builds__uuid=self.uuid).update_one(set__builds__S=self)
@@ -214,11 +232,13 @@ class Build(EmbeddedDocument):
 
     @asyncio.coroutine
     def get_buildset(self):
+        """Returns the buildset that 'owns' this build."""
         buildset = yield from BuildSet.objects.get(builds__uuid=self.uuid)
         return buildset
 
     @property
     def output(self):
+        """The build output. It is the commands + the output of the steps."""
         output = []
         for step in self.steps:
             output.append(step.command + '\n')
@@ -322,6 +342,10 @@ class BuildManager(LoggerMixin):
     """ Controls which builds should be executed sequentially or
     in parallel.
     """
+    # Note that this core reached its limit. It really needs a good
+    # refactor, so we can implement builds that trigger other builds
+    # in other slaves in a (almost) simple way.
+
 
     # each repository has its own key the default dict
     # each slave has its own queue
