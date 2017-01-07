@@ -133,7 +133,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         """ Send a response to client formated by the (unknown) toxicbuild
         remote build specs.
         :param code: code for this message. code == 0 is success and
-          code > 0 is error.
+        code > 0 is error.
         :param body: response body. It has to be a serializable object.
         """
         response = {'code': code,

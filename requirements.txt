@@ -1,6 +1,6 @@
 aiohttp==1.0.5
 behave==1.2.5
-Sphinx==1.3
+Sphinx==1.5.1
 coverage==4.2
 greenlet==0.4.6
 docutils==0.12

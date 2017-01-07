@@ -95,9 +95,9 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
     def get_revisions(self, since={}, branches=None):
         """ Returns the revisions for ``branches`` since ``since``.
         :param since: dictionary in the format: {branch_name: since_date}.
-          ``since`` is a datetime object.
+        ``since`` is a datetime object.
         :param branches: A list of branches to look for new revisions. If
-          ``branches`` is None all remote branches will be used.
+        ``branches`` is None all remote branches will be used.
         """
 
     @abstractmethod  # pragma no branch

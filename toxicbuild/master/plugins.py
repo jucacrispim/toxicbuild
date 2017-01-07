@@ -25,11 +25,9 @@ class MyPlugin(MasterPlugin):
 
     name = 'my-plugin'
     type = 'notification'
-
     something_to_store_on_database = StringField()
 
     @asyncio.coroutine
-
     def run(self):
         '''Here is where you implement your stuff'''
 
