@@ -26,6 +26,10 @@ from tests import async_test
 
 class UIHoleClientTest(TestCase):
 
+    def test_client_with_token_arg(self):
+        client = UIHoleClient('localhost', 7777, hole_token='some-token')
+        self.assertEqual(client.hole_token, 'some-token')
+
     @patch.object(UIHoleClient, 'get_response', MagicMock())
     @patch.object(UIHoleClient, 'write', MagicMock())
     @async_test

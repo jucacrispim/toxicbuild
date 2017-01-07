@@ -24,6 +24,10 @@ from toxicbuild.ui import settings
 
 class UIHoleClient(BaseToxicClient):
 
+    def __init__(self, *args, hole_token=None):
+        self.hole_token = hole_token or settings.HOLE_TOKEN
+        super().__init__(*args)
+
     def __getattr__(self, name):
         action = name.replace('_', '-')
 
@@ -37,7 +41,7 @@ class UIHoleClient(BaseToxicClient):
     def request2server(self, action, body):
 
         data = {'action': action, 'body': body,
-                'token': settings.HOLE_TOKEN}
+                'token': self.hole_token}
 
         yield from self.write(data)
         response = yield from self.get_response()
@@ -54,7 +58,7 @@ class UIHoleClient(BaseToxicClient):
 
 
 @asyncio.coroutine
-def get_hole_client(host, port):
-    client = UIHoleClient(host, port)
+def get_hole_client(host, port, hole_token=None):
+    client = UIHoleClient(host, port, hole_token=hole_token)
     yield from client.connect()
     return client

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -189,10 +189,12 @@ class HistoryEdit(HistoryEditMixin, urwid.Edit):
 
 class ToxicCliActions:
 
-    def __init__(self, *args, host='localhost', port=6666, **kwargs):
+    def __init__(self, *args, host='localhost', port=6666, token=None,
+                 **kwargs):
         super().__init__(*args, **kwargs)
         self.host = host
         self.port = port
+        self.token = token
         self._loop = asyncio.get_event_loop()
         self.actions = self.get_actions()
 
@@ -200,7 +202,7 @@ class ToxicCliActions:
     def get_client(self):
         """ Returns a client connected to a toxicbuild master"""
 
-        client = yield from get_hole_client(self.host, self.port)
+        client = yield from get_hole_client(self.host, self.port, self.token)
         return client
 
     def get_actions(self):
@@ -257,7 +259,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
 
     # urwid, great library!
 
-    def __init__(self, host='localhost', port=6666):
+    def __init__(self, host='localhost', port=6666, token=None):
 
         self.prompt = 'toxicbuild> '
         self.input = HistoryEdit(self.prompt)
@@ -266,7 +268,8 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         self.div = urwid.Divider()
         self.pile = urwid.Pile([self.main_screen, self.div, self.messages,
                                 self.div, self.input])
-        super().__init__(self.pile, valign='bottom', host=host, port=port)
+        super().__init__(self.pile, valign='bottom', host=host, port=port,
+                         token=token)
 
         self._stop_peek = False
 
@@ -357,6 +360,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
                 if self._stop_peek:
                     client.diconnect()
                     break
+                self.main_screen.set_text(response)
                 self.main_screen.set_text(
                     self._format_peek(response))  # pragma no cover
 
@@ -514,10 +518,12 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
     def _format_peek(self, response):
         response = response['body']
 
-        if 'steps' in response:
+        if response['info_type'] == 'build_info':
             msg = self._format_peek_build(response)
-        else:
+        elif response['info_type'] == 'step_info':
             msg = self._format_peek_step(response)
+        else:
+            msg = ''
 
         return msg
 

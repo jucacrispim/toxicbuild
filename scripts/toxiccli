@@ -42,15 +42,15 @@ if __name__ == '__main__':
     import sys
     from toxicbuild.ui.cli import ToxicCli
 
-    if '-h' in sys.argv:
+    if '-h' in sys.argv or '--help' in sys.argv:
         print('nice try.')
         sys.exit(1)
 
     try:
-        host, port = sys.argv[1], int(sys.argv[2])
+        host, port, token = sys.argv[1], int(sys.argv[2]), sys.argv[3]
     except IndexError:
         print('params missing')
         sys.exit(1)
 
-    tc = ToxicCli(host, port)
+    tc = ToxicCli(host, port, token)
     tc.run()
