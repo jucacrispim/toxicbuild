@@ -346,7 +346,6 @@ class BuildManager(LoggerMixin):
     # refactor, so we can implement builds that trigger other builds
     # in other slaves in a (almost) simple way.
 
-
     # each repository has its own key the default dict
     # each slave has its own queue
     _build_queues = defaultdict(lambda: defaultdict(deque))
