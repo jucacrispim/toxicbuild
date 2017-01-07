@@ -350,7 +350,7 @@ class ToxicCliActionsTest(unittest.TestCase):
         client = MagicMock()
 
         @asyncio.coroutine
-        def ghc(host, port):
+        def ghc(host, port, token):
             client.__enter__.return_value = client
             return client
 
@@ -371,7 +371,7 @@ class ToxicCliActionsTest(unittest.TestCase):
         client.list_funcs = lf
 
         @asyncio.coroutine
-        def ghc(host, port):
+        def ghc(host, port, token):
             client.__enter__.return_value = client
             return client
 
@@ -422,7 +422,7 @@ class ToxicCliActionsTest(unittest.TestCase):
         client.request2server = r2s
 
         @asyncio.coroutine
-        def ghc(host, port):
+        def ghc(host, port, token):
             client.__enter__.return_value = client
             return client
 
@@ -771,7 +771,7 @@ class ToxicCliTest(unittest.TestCase):
         self.assertEqual(called, (_('name'), _('status')))  # noqa
 
     def test_format_peek_with_build(self):
-        response = {'body': {'steps': []}}
+        response = {'body': {'steps': [], 'info_type': 'build_info'}}
         self.cli._format_peek_build = Mock()
 
         self.cli._format_peek(response)
@@ -779,7 +779,7 @@ class ToxicCliTest(unittest.TestCase):
         self.assertTrue(self.cli._format_peek_build.called)
 
     def test_format_peek_with_step(self):
-        response = {'body': {'command': 'ls'}}
+        response = {'body': {'command': 'ls', 'info_type': 'step_info'}}
         self.cli._format_peek_step = Mock()
 
         self.cli._format_peek(response)

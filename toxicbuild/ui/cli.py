@@ -272,6 +272,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
                          token=token)
 
         self._stop_peek = False
+        self._peek_output = []
 
     def __getattr__(self, attrname):
         if attrname.startswith('_format'):
@@ -360,7 +361,6 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
                 if self._stop_peek:
                     client.diconnect()
                     break
-                self.main_screen.set_text(response)
                 self.main_screen.set_text(
                     self._format_peek(response))  # pragma no cover
 
@@ -518,14 +518,16 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
     def _format_peek(self, response):
         response = response['body']
 
-        if response['info_type'] == 'build_info':
+        if response['event_type'] in ['build_started, ''build_finished']:
             msg = self._format_peek_build(response)
-        elif response['info_type'] == 'step_info':
+
+        elif response['event_type'] in ['step_started', 'step_finished']:
             msg = self._format_peek_step(response)
         else:
             msg = ''
 
-        return msg
+        self._peek_output.append(msg)
+        return '\n'.join(self._peek_output)
 
     def _format_peek_build(self, response):
         if response.get('finished'):
