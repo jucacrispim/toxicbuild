@@ -22,42 +22,30 @@ programming language.
    hacking
 
 
+Issue Tracker
+=============
+
+You can follow the development of toxicbuild throught the issue tracker in
+https://github.com/jucacrispim/toxicbuild/issues
+`<https://github.com/jucacrispim/toxicbuild/issues>`_
+
 Licence
 =======
 
 ToxicBuild is free software released under the GPLv3 or later.
 
 
-Known Bugs
-==========
-
-- The waterfall.js does not now how to include new builders that came via
-  websocket and sometimes it places the build in a wired place. Must reload
-  the page.
-
-- Slaves should kill all processes created by its child processes.
-
-
-Aditional notes
-===============
-
-- Slaves must to work in all platforms. Probably now they will not work, some
-  development towards this feature must be done. Master and ui would be nice to
-  work in as many platforms as possible.
-
-- ToxicBuild should have a build step that triggers another builder.
-
-- Should support more vcs, not only git.
-
-- It needs other report methods other than the web ui.
-
-- Needs an install for master, slave and ui separately.
-
-- Should support ssl.
-
 
 Changelog
 =========
+
+* 0.4.0 (not released yet!)
+
+  - Corrected bug with pending builds that started before the previous finish.
+  - Added master plugins (slack notification)
+  - Added build step output view 'real time'
+  - Css bugfixes
+  - Improved docs
 
 * 0.3.1
 
