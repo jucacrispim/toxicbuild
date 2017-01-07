@@ -374,6 +374,7 @@ class Repository(Document, utils.LoggerMixin):
     @asyncio.coroutine
     def add_revision(self, branch, commit, commit_date, author, title):
         """ Adds a revision to the repository.
+
         :param commit: commit uuid
         :param branch: branch name
         :param commit_date: commit's date (on authors time)
