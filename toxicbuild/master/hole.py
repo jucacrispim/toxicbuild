@@ -251,7 +251,7 @@ class HoleHandler:
         :param repo_name: Reporitory name
         :param branch_name: Branch's name
         :notify_only_latest: If True only the latest commit in the
-        branch will trigger a build."""
+          branch will trigger a build."""
         repo = yield from Repository.get(name=repo_name)
         yield from repo.add_or_update_branch(branch_name, notify_only_latest)
         return {'repo-add-branch': 'ok'}
