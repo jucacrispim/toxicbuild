@@ -17,19 +17,21 @@ plugin's config params. It already has the following fields:
 Example:
 ^^^^^^^^
 
-import asyncio
-from mongomotor.fields import StringField
-from toxicbuild.master.plugins import MasterPlugin
+.. code-block:: python
 
-class MyPlugin(MasterPlugin):
+    import asyncio
+    from mongomotor.fields import StringField
+    from toxicbuild.master.plugins import MasterPlugin
 
-    name = 'my-plugin'
-    type = 'notification'
-    something_to_store_on_database = StringField()
+    class MyPlugin(MasterPlugin):
 
-    @asyncio.coroutine
-    def run(self):
-        '''Here is where you implement your stuff'''
+        name = 'my-plugin'
+        type = 'notification'
+        something_to_store_on_database = StringField()
+
+        @asyncio.coroutine
+        def run(self):
+            '''Here is where you implement your stuff'''
 
 """
 
