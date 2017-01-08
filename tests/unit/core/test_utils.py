@@ -66,7 +66,6 @@ class UtilsTest(TestCase):
         procs = subprocess.check_output(['ps', 'aux']).decode()
         self.assertNotIn('sleep 2', procs)
 
-
     @async_test
     def test_exec_cmd_with_envvars(self):
         envvars = {'PATH': 'PATH:venv/bin',
