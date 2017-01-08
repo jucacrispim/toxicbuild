@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,7 +20,9 @@
 
 import asyncio
 import datetime
+from concurrent import futures
 import os
+import subprocess
 import time
 from unittest import TestCase
 from unittest.mock import patch, Mock, MagicMock
@@ -52,6 +54,20 @@ class UtilsTest(TestCase):
         time.sleep(1)
 
     @async_test
+    def test_kill_group(self):
+        proc = yield from utils._create_cmd_proc('sleep 2', cwd='.')
+        try:
+            f = proc.stdout.readline()
+            yield from asyncio.wait_for(f, 1)
+        except futures.TimeoutError:
+            pass
+
+        utils._kill_group(proc)
+        procs = subprocess.check_output(['ps', 'aux']).decode()
+        self.assertNotIn('sleep 2', procs)
+
+
+    @async_test
     def test_exec_cmd_with_envvars(self):
         envvars = {'PATH': 'PATH:venv/bin',
                    'MYPROGRAMVAR': 'something'}
@@ -75,8 +91,7 @@ class UtilsTest(TestCase):
         yield from utils.exec_cmd(cmd, cwd='.',
                                   out_fn=out_fn,
                                   **envvars)
-        # lets give time to the scheduler...
-        yield from asyncio.sleep(0.5)
+        yield
         self.assertTrue(lines.called)
         self.assertTrue(isinstance(
             lines.call_args[0][0][1], str), lines.call_args)

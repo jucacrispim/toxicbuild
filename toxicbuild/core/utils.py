@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -64,9 +64,21 @@ def _create_cmd_proc(cmd, cwd, **envvars):
 
     proc = yield from asyncio.create_subprocess_shell(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd,
-        env=envvars)
+        env=envvars, preexec_fn=os.setsid)
 
     return proc
+
+
+def _kill_group(process):
+    """Kills all processes of the group which a process belong.
+
+    :param process: A process that belongs to the group you want to kill.
+    """
+    try:
+        pgid = os.getpgid(process.pid)
+        os.killpg(pgid, 9)
+    except ProcessLookupError:
+        pass
 
 
 @asyncio.coroutine
@@ -97,6 +109,9 @@ def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
         out.append(outline)
 
     output = ''.join(out).strip('\n')
+    # we must ensure that all process started by our command are
+    # dead.
+    _kill_group(proc)
     if int(proc.returncode) > 0:
         raise ExecCmdError(output)
 
