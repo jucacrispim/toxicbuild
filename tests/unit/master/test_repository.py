@@ -59,6 +59,14 @@ class RepositoryTest(TestCase):
         self.assertTrue(d['id'])
         self.assertTrue('plugins' in d.keys())
 
+    @patch.object(repository.Repository, 'update_code', MagicMock())
+    @async_test
+    def test_update_repo_code(self):
+        yield from self._create_db_revisions()
+        self.repo.update_code = MagicMock(spec=self.repo.update_code)
+        repo = yield from repository._update_repo_code(self.repo.id)
+        self.assertTrue(repo.update_code.called)
+
     @async_test
     def test_to_dict_id_as_str(self):
         yield from self._create_db_revisions()

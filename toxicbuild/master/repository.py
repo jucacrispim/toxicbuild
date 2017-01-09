@@ -22,7 +22,7 @@ try:
     from asyncio import ensure_future
 except ImportError:  # pragma no cover
     from asyncio import async as ensure_future
-
+import functools
 import os
 import re
 import shutil
@@ -48,6 +48,16 @@ from toxicbuild.master.slave import Slave
 # The format is {repourl: hash} for update_code
 # and {repourl-start-pending: hash} for starting pending builds
 _scheduler_hashes = {}
+
+# Function that will be scheduled to poll changes from remote repo.
+@asyncio.coroutine
+def _update_repo_code(repo_id):
+    """Updates code from a repository."""
+
+    repo = yield from Repository.get(id=repo_id)
+    yield from repo.update_code()
+    # return for test purposes
+    return repo
 
 
 class RepositoryBranch(EmbeddedDocument):
@@ -226,9 +236,6 @@ class Repository(Document, utils.LoggerMixin):
         """Updates the repository's code. It is just a wrapper for
         self.poller.poll, so I can handle exceptions here."""
 
-        # reloading so we detect changes in config
-        yield from self.reload()
-
         with_clone = False
         try:
             with_clone = yield from self.poller.poll()
@@ -258,7 +265,8 @@ class Repository(Document, utils.LoggerMixin):
         # we remove the repository.
 
         # adding update_code
-        sched_hash = self.scheduler.add(self.update_code, self.update_seconds)
+        update_fn = functools.partial(_update_repo_code, self.id)
+        sched_hash = self.scheduler.add(update_fn, self.update_seconds)
         _scheduler_hashes[self.url] = sched_hash
 
         # adding start_pending
