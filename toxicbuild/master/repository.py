@@ -49,6 +49,7 @@ from toxicbuild.master.slave import Slave
 # and {repourl-start-pending: hash} for starting pending builds
 _scheduler_hashes = {}
 
+
 # Function that will be scheduled to poll changes from remote repo.
 @asyncio.coroutine
 def _update_repo_code(repo_id):
