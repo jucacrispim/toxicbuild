@@ -23,6 +23,7 @@ import datetime
 from concurrent import futures
 import os
 import subprocess
+import sys
 import time
 from unittest import TestCase
 from unittest.mock import patch, Mock, MagicMock
@@ -55,7 +56,9 @@ class UtilsTest(TestCase):
 
     @async_test
     def test_kill_group(self):
-        proc = yield from utils._create_cmd_proc('sleep 2', cwd='.')
+        wait = sys.version_info.minor
+        cmd = 'sleep {}'.format(wait)
+        proc = yield from utils._create_cmd_proc(cmd, cwd='.')
         try:
             f = proc.stdout.readline()
             yield from asyncio.wait_for(f, 1)
@@ -64,7 +67,7 @@ class UtilsTest(TestCase):
 
         utils._kill_group(proc)
         procs = subprocess.check_output(['ps', 'aux']).decode()
-        self.assertNotIn('sleep 2', procs)
+        self.assertNotIn(cmd, procs)
 
     @async_test
     def test_exec_cmd_with_envvars(self):
