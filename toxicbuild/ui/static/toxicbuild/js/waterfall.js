@@ -1,6 +1,10 @@
 var CURRENT_STEP_SHOWN = null;
+var FOLLOW_STEP_OUTPUT = false;
 
 jQuery('#stepDetailsModal').on('show.bs.modal', function (event) {
+  FOLLOW_STEP_OUTPUT = false;
+  jQuery('#follow-step-output').text('Follow output');
+
   var button = jQuery(event.relatedTarget);
   var command = button.data('step-command');
   var output = button.data('step-output');
@@ -20,7 +24,6 @@ jQuery('#stepDetailsModal').on('show.bs.modal', function (event) {
   element.scrollIntoView(false);
 });
 
-
 jQuery('#buildsetDetailsModal').on('show.bs.modal', function (event) {
   var button = jQuery(event.relatedTarget);
   var commit = button.data('buildset-commit');
@@ -36,6 +39,19 @@ jQuery('#buildsetDetailsModal').on('show.bs.modal', function (event) {
   modal.find('#buildset-created').text(created);
   modal.find('#buildset-branch').text(branch);
 });
+
+jQuery('#follow-step-output').on('click', function(event){
+  FOLLOW_STEP_OUTPUT = !FOLLOW_STEP_OUTPUT;
+  utils.log(FOLLOW_STEP_OUTPUT);
+  if (FOLLOW_STEP_OUTPUT){
+    jQuery("#stepDetailsModal").scrollTop($("#step-output")[0].scrollHeight);
+    jQuery('#follow-step-output').text('Stop following output');
+  }
+  else{
+    jQuery('#follow-step-output').text('Follow output');
+  }
+})
+
 
 function rebuildBuildset(button){
   var named_tree = button.data('buildset-commit');
@@ -227,7 +243,9 @@ function StepOutputSentinel(uuid){
       if (CURRENT_STEP_SHOWN == data.uuid){
 	var modal = jQuery('#stepDetailsModal');
 	modal.find('#step-output').text(new_output);
-	//jQuery("#step-output").scrollTop($("#step-output")[0].scrollHeight);
+	if (FOLLOW_STEP_OUTPUT){
+	  jQuery("#stepDetailsModal").scrollTop($("#step-output")[0].scrollHeight);
+	}
       }
     },
 
