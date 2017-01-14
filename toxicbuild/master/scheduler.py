@@ -26,7 +26,7 @@ except ImportError:  # pragma: no cover
 
 
 __doc__ = """
-A very simple implementation of a in memory task scheduler using asyncio.
+A very simple implementation of an in memory task scheduler using asyncio.
 """
 
 
