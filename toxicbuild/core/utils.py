@@ -24,6 +24,7 @@ try:
 except ImportError:  # pragma no cover
     from asyncio import async as ensure_future
 
+import copy
 from datetime import datetime, timezone, timedelta
 import importlib
 import logging
@@ -40,7 +41,7 @@ def _get_envvars(envvars):
     interpolation of values using the current values from the envvar
     and the values passed as parameters. """
 
-    newvars = {}
+    newvars = copy.copy(os.environ)
     for var, value in envvars.items():
         if var in value:
             current = os.environ.get(var, '')
@@ -48,7 +49,6 @@ def _get_envvars(envvars):
 
         newvars[var] = value
 
-    newvars['LANG'] = os.environ.get('LANG', '')
     return newvars
 
 
@@ -87,7 +87,7 @@ def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
     if return code > 0.
     :param cmd: command to run.
     :param cwd: Directory to execute the command.
-    :param timeout: How long we should wait for a command complete. Default
+    :param timeout: How long we should wait some output. Default
     is 3600.
     :param out_fn: A coroutine that receives each line of the step
     output. The coroutine signature must be in the form:

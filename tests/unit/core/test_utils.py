@@ -108,7 +108,9 @@ class UtilsTest(TestCase):
 
         returned = utils._get_envvars(envvars)
 
-        self.assertEqual(returned, expected)
+        for var, val in expected.items():
+            self.assertIn(var, returned)
+            self.assertEqual(returned[var], val)
 
     def test_load_module_from_file_with_file_not_found(self):
         with self.assertRaises(FileNotFoundError):
