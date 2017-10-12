@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -511,6 +511,12 @@ class BuildManagerTest(TestCase):
         build.ensure_future = mock.Mock()
         yield from self.repo.build_manager.start_pending()
         self.assertFalse(build.ensure_future.called)
+
+    @async_test
+    def test_test_disconnect_from_signals(self):
+        yield from self._create_test_data()
+        self.repo.build_manager.disconnect_from_signals()
+        self.assertFalse(self.repo.build_manager._is_connected_to_signals)
 
     @asyncio.coroutine
     def _create_test_data(self):

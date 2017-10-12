@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -356,6 +356,7 @@ class BuildManager(LoggerMixin):
     def __init__(self, repository):
         self.repository = repository
         self._is_getting_builders = False
+        self._is_connected_to_signals = False
         self.connect2signals()
 
     @property
@@ -479,14 +480,20 @@ class BuildManager(LoggerMixin):
     def connect2signals(self):
         """ Connects the BuildManager to the revision_added signal."""
 
-        @asyncio.coroutine
-        def revadded(sender, revisions):  # pragma no cover
-            yield from self.add_builds(revisions)
-
         # connect here needs not to be weak otherwise no
         # receiver is available when polling is triggered by the
         # scheduler.
-        revision_added.connect(revadded, sender=self.repository, weak=False)
+        revision_added.connect(self._revadded, sender=self.repository,
+                               weak=False)
+        self._is_connected_to_signals = True
+
+    def disconnect_from_signals(self):
+        revision_added.disconnect(self._revadded)
+        self._is_connected_to_signals = False
+
+    @asyncio.coroutine
+    def _revadded(self, sender, revisions):  # pragma no cover
+        yield from self.add_builds(revisions)
 
     @asyncio.coroutine
     def _execute_builds(self, slave):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -57,6 +57,7 @@ def _update_repo_code(repo_id):
 
     repo = yield from Repository.get(id=repo_id)
     yield from repo.update_code()
+    repo.build_manager.disconnect_from_signals()
     # return for test purposes
     return repo
 
