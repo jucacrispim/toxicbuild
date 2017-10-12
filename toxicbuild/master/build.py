@@ -483,8 +483,7 @@ class BuildManager(LoggerMixin):
         # connect here needs not to be weak otherwise no
         # receiver is available when polling is triggered by the
         # scheduler.
-        revision_added.connect(self._revadded, sender=self.repository,
-                               weak=False)
+        revision_added.connect(self._revadded, sender=self.repository)
         self._is_connected_to_signals = True
 
     def disconnect_from_signals(self):

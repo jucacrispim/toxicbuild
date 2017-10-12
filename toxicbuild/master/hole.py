@@ -547,13 +547,13 @@ class UIStreamHandler(LoggerMixin):
         yield from self.send_info('build_added', **kw)
 
     def _connect2signals(self):
-        step_started.connect(self.step_started, weak=False)
-        step_finished.connect(self.step_finished, weak=False)
-        build_started.connect(self.build_started, weak=False)
-        build_finished.connect(self.build_finished, weak=False)
-        repo_status_changed.connect(self.send_repo_status_info, weak=False)
-        build_added.connect(self.build_added, weak=False)
-        step_output_arrived.connect(self.send_step_output_info, weak=False)
+        step_started.connect(self.step_started)
+        step_finished.connect(self.step_finished)
+        build_started.connect(self.build_started)
+        build_finished.connect(self.build_finished)
+        repo_status_changed.connect(self.send_repo_status_info)
+        build_added.connect(self.build_added)
+        step_output_arrived.connect(self.send_step_output_info)
 
     def _disconnectfromsignals(self):
 
