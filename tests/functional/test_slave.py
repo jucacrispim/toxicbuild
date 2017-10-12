@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -147,11 +147,10 @@ class SlaveTest(BaseFunctionalTest):
     def test_build_with_plugin(self):
         with (yield from get_dummy_client()) as client:
             step_info, build_status = yield from client.build('builder-2')
-
         self.assertEqual(len(step_info), 6)
         self.assertEqual(build_status['body']['total_steps'], 3)
         self.assertEqual(build_status['body']['status'], 'success')
-        self.assertIn('3.4', build_status['body']['steps'][-1]['output'])
+        self.assertIn('Python 3', build_status['body']['steps'][-1]['output'])
 
     @async_test
     def test_buid_with_timeout_step(self):
