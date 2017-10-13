@@ -199,6 +199,43 @@ class RepositoryHandlerTest(AsyncTestCase):
         self.assertTrue(get_item_mock.called)
 
     @gen_test
+    def test_enable_plugin(self):
+        kwargs = {'name': [b'some-repo'],
+                  'plugin_name': [b'my-plugin'],
+                  'a-param': [b'a-param']}
+
+        self.handler.request.arguments = kwargs
+        self.handler.request.uri = 'http://bla.com/enable-plugin'
+        get_item_mock = MagicMock()
+
+        @asyncio.coroutine
+        def gi(**kw):
+            return get_item_mock
+
+        self.handler.get_item = gi
+        self.handler.prepare()
+        yield from self.handler.enable_plugin()
+        self.assertTrue(get_item_mock.enable_plugin.called)
+
+    @gen_test
+    def test_disable_plugin(self):
+        kwargs = {'name': [b'some-repo'],
+                  'plugin_name': [b'my-plugin']}
+
+        self.handler.request.arguments = kwargs
+        self.handler.request.uri = 'http://bla.com/disable-plugin'
+        get_item_mock = MagicMock()
+
+        @asyncio.coroutine
+        def gi(**kw):
+            return get_item_mock
+
+        self.handler.get_item = gi
+        self.handler.prepare()
+        yield from self.handler.disable_plugin()
+        self.assertTrue(get_item_mock.disable_plugin.called)
+
+    @gen_test
     def test_add_branch(self):
         kwargs = {'branch_name': [b'master'],
                   'notify_only_latest': [b'1'],
@@ -291,6 +328,28 @@ class RepositoryHandlerTest(AsyncTestCase):
         self.handler.request.uri = 'http://localhost:1235/add-branch'
         self.handler.prepare()
         yield self.handler.post('remove-branch')
+
+        self.assertTrue(post_mock.called)
+
+    @gen_test
+    def test_post_with_enable_plugin(self):
+        post_mock = MagicMock()
+        self.handler.enable_plugin = asyncio.coroutine(
+            lambda *args: post_mock())
+        self.handler.request.uri = 'http://localhost:1235/enable-plugin'
+        self.handler.prepare()
+        yield self.handler.post('enable-plugin')
+
+        self.assertTrue(post_mock.called)
+
+    @gen_test
+    def test_post_with_disable_plugin(self):
+        post_mock = MagicMock()
+        self.handler.disable_plugin = asyncio.coroutine(
+            lambda *args: post_mock())
+        self.handler.request.uri = 'http://localhost:1235/disable-plugin'
+        self.handler.prepare()
+        yield self.handler.post('disable-plugin')
 
         self.assertTrue(post_mock.called)
 

@@ -124,12 +124,36 @@ class RepositoryHandler(BaseModelHandler):
             yield from self.remove_branch()
             return
 
+        elif 'enable-plugin' in self.request.uri:
+            r = yield from self.enable_plugin()
+            return r
+
+        elif 'disable-plugin' in self.request.uri:
+            r = yield from self.disable_plugin()
+            return r
+
         elif'start-build' not in args:
             yield super().post(*args)
             return
 
         ret = yield from self.start_build()
         self.write(ret)
+
+    @asyncio.coroutine
+    def enable_plugin(self):
+        repo = yield from self.get_item(repo_name=self.params.get('name'))
+        del self.params['name']
+        plugin_name = self.params.get('plugin_name')
+        del self.params['plugin_name']
+        r = yield from repo.enable_plugin(plugin_name, **self.params)
+        return r
+
+    @asyncio.coroutine
+    def disable_plugin(self):
+        repo = yield from self.get_item(repo_name=self.params.get('name'))
+        plugin_name = self.params.get('plugin_name')
+        r = yield from repo.disable_plugin(plugin_name=plugin_name)
+        return r
 
     @asyncio.coroutine
     def list_plugins(self):
@@ -174,6 +198,10 @@ class RepositoryHandler(BaseModelHandler):
             kw = {'name': self.params.get('name'),
                   'branch_name': self.params.get('branch_name')}
             self.params = kw
+
+        elif ('enable-plugin' in self.request.uri or
+              'disable-plugin' in self.request.uri):
+            pass
 
         else:
             kw = {}
