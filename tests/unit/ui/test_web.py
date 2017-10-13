@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -319,6 +319,12 @@ class RepositoryHandlerTest(AsyncTestCase):
         self.assertFalse(post_mock.called)
         self.assertTrue(item.start_build.called)
 
+    @patch.object(web.Plugin, 'list', MagicMock())
+    @gen_test
+    def test_list_plugins(self):
+        yield from self.handler.list_plugins()
+        self.assertTrue(web.Plugin.list.called)
+
 
 @patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
 class SlaveHandlerTest(AsyncTestCase):
@@ -599,11 +605,12 @@ class MainHandlerTest(AsyncTestCase):
 
     @patch.object(web, 'Repository', MagicMock())
     @patch.object(web, 'Slave', MagicMock())
+    @patch.object(web, 'Plugin', MagicMock())
     @gen_test
     def test_get(self):
         self.handler.render_template = MagicMock()
 
-        expected_context = {'repos': None, 'slaves': None,
+        expected_context = {'repos': None, 'slaves': None, 'plugins': None,
                             'get_btn_class': self.handler._get_btn_class}
 
         yield self.handler.get()

@@ -226,6 +226,28 @@ tr:nth-child(even) {
     display: none;
 }
 
+.plugin-name img{
+    width: 20px;
+    height: 20px;
+}
+
+.enable-plugin-input{
+    float: left;
+    width: 15px;
+    height: 15px;
+    margin-top: -13%;
+}
+
+.enable-plugin-label{
+    float: left;
+    margin-left: -20%;
+    margin-right: 15%;
+}
+
+.enable-plugin-container{
+    float: right;
+}
+
 /* waterfall */
 
 .step{

@@ -148,12 +148,10 @@ class SlackPlugin(MasterPlugin):
 
     @asyncio.coroutine
     def run(self):
-        # we can't use weak references here otherwise
-        # no plugin is available when the signal is sent.
         if 'running' in self.statuses:
-            build_started.connect(self.send_started_msg, weak=False)
+            build_started.connect(self.send_started_msg)
 
-        build_finished.connect(self.send_finished_msg, weak=False)
+        build_finished.connect(self.send_finished_msg)
 
     @asyncio.coroutine
     def stop(self):

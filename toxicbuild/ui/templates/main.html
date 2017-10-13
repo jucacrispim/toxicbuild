@@ -17,6 +17,8 @@
 
 {% include "start_build_modal.html" %}
 
+{% include "output_plugins_modal.html" %}
+
 <div class="row main-row">
   <table class="table">
     <thead>
@@ -40,6 +42,19 @@
 		    data-repo-vcs-type="{{repo.vcs_type}}"
 		    data-repo-id="{{repo.id}}">
 	      <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+	    </button>
+	  </span>
+	  <span data-toggle="tooltip" title="Config output methods"
+		data-placement="right">
+	    <button type="button"
+		    class="btn btn-default btn-xs btn-main-edit btn-transparent
+			   btn-edit-slave"
+		    data-toggle="modal" data-target="#outputPluginModal"
+		    data-repo-name="{{repo.name}}" data-repo-url="{{repo.url}}"
+		    data-repo-update-seconds="{{repo.update_seconds}}"
+		    data-repo-vcs-type="{{repo.vcs_type}}"
+		    data-repo-id="{{repo.id}}">
+	      <span class="glyphicon glyphicon-share" aria-hidden="true"></span>
 	    </button>
 	  </span>
 	</td>
@@ -129,6 +144,7 @@
 <script src="{{static_url}}toxicbuild/js/utils.js"></script>
 <script src="{{static_url}}toxicbuild/js/base.js"></script>
 <script src="{{static_url}}toxicbuild/js/repository.js"></script>
+<script src="{{static_url}}toxicbuild/js/plugin.js"></script>
 <script src="{{static_url}}toxicbuild/js/slave.js"></script>
 <script src="{{static_url}}toxicbuild/js/main.js"></script>
 
@@ -138,6 +154,7 @@
   var SLAVES = {{[s.name for s in slaves]}};
   RepositoryManager.init({{[r.to_json() for r in repos]}});
   SlaveManager.init({{[s.to_json() for s in slaves]}});
+  PluginManager.init({{[p.to_json() for p in plugins]}});
 
   jQuery(function () {
     jQuery('[data-toggle="tooltip"]').tooltip()

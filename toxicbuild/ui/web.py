@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -32,7 +32,7 @@ from toxicbuild.core.utils import bcrypt_string, LoggerMixin
 from toxicbuild.ui import settings
 from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui.exceptions import BadActionError
-from toxicbuild.ui.models import Repository, Slave, BuildSet, Builder
+from toxicbuild.ui.models import Repository, Slave, BuildSet, Builder, Plugin
 
 
 COOKIE_NAME = 'toxicui'
@@ -130,6 +130,11 @@ class RepositoryHandler(BaseModelHandler):
 
         ret = yield from self.start_build()
         self.write(ret)
+
+    @asyncio.coroutine
+    def list_plugins(self):
+        plugins = yield from Plugin.list()
+        return plugins
 
     @asyncio.coroutine
     def start_build(self):
@@ -331,9 +336,11 @@ class MainHandler(LoggedTemplateHandler):
     def get(self):
         repos = yield from Repository.list()
         slaves = yield from Slave.list()
+        plugins = yield from Plugin.list()
 
         context = {'repos': repos, 'slaves': slaves,
-                   'get_btn_class': self._get_btn_class}
+                   'get_btn_class': self._get_btn_class,
+                   'plugins': plugins}
         self.render_template(self.main_template, context)
 
     def _get_btn_class(self, status):

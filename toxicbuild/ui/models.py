@@ -148,7 +148,7 @@ class Plugin(BaseModel):
     def list(cls):
         """Lists all plugins available in the master."""
         with (yield from cls.get_client()) as client:
-            resp = yield from client.plugin_list()
+            resp = yield from client.plugins_list()
 
         plugins = [cls(**p) for p in resp]
         return plugins
