@@ -14,8 +14,10 @@ class SeleniumBrowserException(Exception):
 class SeleniumBrowser(webdriver.Chrome):
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.maximize_window()
+        options = webdriver.ChromeOptions()
+        options.add_argument('--start-maximized')
+        super().__init__(*args, chrome_options=options, **kwargs)
+        # self.maximize_window()
         self.implicitly_wait(10)
 
     def click(self, element):
