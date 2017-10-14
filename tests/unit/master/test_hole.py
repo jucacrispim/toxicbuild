@@ -494,6 +494,11 @@ class HoleHandlerTest(TestCase):
         self.assertIn('name', plugins['plugins-list'][0].keys())
         self.assertEqual(plugins['plugins-list'][0]['statuses'], 'list')
 
+    def test_plugin_get(self):
+        handler = hole.HoleHandler({}, 'plugin-list', MagicMock())
+        plugin = handler.plugin_get(name='slack-notification')
+        self.assertTrue(plugin)
+
     @async_test
     def test_builder_show(self):
         yield from self._create_test_data()

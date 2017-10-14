@@ -432,6 +432,13 @@ class HoleHandler:
         plugins_schemas = [p.get_schema(to_serialize=True) for p in plugins]
         return {'plugins-list': plugins_schemas}
 
+    def plugin_get(self, **kwargs):
+        """Returns a specific plugin."""
+
+        name = kwargs.get('name')
+        plugin = MasterPlugin.get_plugin(name=name)
+        return {'plugin-get': plugin.get_schema(to_serialize=True)}
+
     @asyncio.coroutine
     def builder_show(self, repo_name, builder_name, skip=0, offset=None):
         """ Returns information about one specific builder.
