@@ -106,7 +106,7 @@ class Repository(Document, utils.LoggerMixin):
                    'branches': [b.to_dict() for b in self.branches],
                    'slaves': [s.to_dict(id_as_str)
                               for s in (yield from self.slaves)],
-                   'plugins': [p.to_dict() for p in self.plugins],
+                   'plugins': [p.to_dict(id_as_str) for p in self.plugins],
                    'clone_status': self.clone_status}
         if id_as_str:
             my_dict['id'] = str(self.id)

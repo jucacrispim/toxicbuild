@@ -497,11 +497,15 @@ class HoleHandler:
     @asyncio.coroutine
     def _get_repo_dict(self, repo):
         """Returns a dictionary for a given repository"""
+
         repo_dict = json.loads(repo.to_json())
         repo_dict['id'] = str(repo.id)
         repo_dict['status'] = yield from repo.get_status()
         slaves = yield from repo.slaves
         repo_dict['slaves'] = [self._get_slave_dict(s) for s in slaves]
+        for p in repo_dict['plugins']:
+            p['name'] = p['_name']
+
         return repo_dict
 
     def _get_slave_dict(self, slave):
