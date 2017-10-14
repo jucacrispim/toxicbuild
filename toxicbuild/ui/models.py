@@ -153,6 +153,17 @@ class Plugin(BaseModel):
         plugins = [cls(**p) for p in resp]
         return plugins
 
+    @classmethod
+    def get(cls, name):
+        """Return the schema for a specific plugin
+
+        :param name: The name of the plugin"""
+
+        with (yield from cls.get_client()) as client:
+            resp = yield from client.plugin_get(name=name)
+
+        return cls(**resp)
+
 
 class Repository(BaseModel):
 

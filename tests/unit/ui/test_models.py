@@ -122,6 +122,15 @@ class PluginTest(TestCase):
         plugins = yield from models.Plugin.list()
         self.assertEqual(plugins[0].name, 'some-plugin')
 
+    @patch.object(models.Plugin, 'get_client', lambda:
+                  get_client_mock({'name': 'some-plugin', 'type': 'test',
+                                   'somefield': 'list',
+                                   'otherfield': 'string'}))
+    @async_test
+    def test_get(self):
+        plugin = yield from models.Plugin.get('some-plugin')
+        self.assertEqual(plugin.name, 'some-plugin')
+
 
 class RepositoryTest(TestCase):
 
