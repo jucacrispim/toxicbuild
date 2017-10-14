@@ -92,6 +92,7 @@ class HoleHandler:
     * `slave-remove`
     * `slave-update`
     * `plugins-list`
+    * `plugin-get`
     * `buildset-list`
     * `builder-show`
     * `list-funcs`

@@ -591,6 +591,7 @@ class HoleHandlerTest(TestCase):
                     'buildset_list': handler.buildset_list,
                     'builder_list': handler.builder_list,
                     'plugins_list': handler.plugins_list,
+                    'plugin_get': handler.plugin_get,
                     'builder_show': handler.builder_show}
 
         action_methods = handler._get_action_methods()
