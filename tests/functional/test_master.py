@@ -254,7 +254,16 @@ class ToxicMasterTest(BaseFunctionalTest):
         self.assertEqual(resp, 'ok', resp)
 
     @async_test
-    def test_14_stream_step_output(self):
+    def test_14_get_plugin(self):
+
+        with (yield from get_dummy_client()) as client:
+            resp = yield from client.request2server(
+                'plugin-get', {'name': 'slack-notification'})
+
+        self.assertEqual(resp['name'], 'slack-notification', resp)
+
+    @async_test
+    def test_15_stream_step_output(self):
         # we need to wait so we have time to clone and create revs
         yield from asyncio.sleep(2)
         with (yield from get_dummy_client()) as client:
