@@ -304,6 +304,7 @@ class Repository(BaseModel):
 
         d = super().to_dict()
         d['slaves'] = [s.to_dict() for s in d['slaves']]
+        d['plugins'] = [p.to_dict() for p in d['plugins']]
         return d
 
     def enable_plugin(self, plugin_name, **kwargs):

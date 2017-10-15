@@ -171,6 +171,33 @@ class RepositoryHandlerTest(AsyncTestCase):
         handler.prepare()
         self.assertEqual(handler.params, expected)
 
+    @patch.object(web.Plugin, 'get', MagicMock())
+    @gen_test
+    def test_prepare_for_plugin(self):
+        request = MagicMock()
+        request.arguments = {'name': [b'myrepo'],
+                             'plugin_name': [b'some-plugin'],
+                             'a-attr': [b'value'],
+                             'other-attr': [b'value1, value2']}
+        application = MagicMock()
+        handler = web.RepositoryHandler(application, request=request,
+                                        model=web.Repository)
+        handler.request.uri = 'localhost:8000/enable-plugin'
+
+        @asyncio.coroutine
+        def get_mock(*a, **kw):
+            return web.Plugin(**{'name': 'some-plugin',
+                                 'a-attr': 'string',
+                                 'other-attr': 'list'})
+
+        expected = {'name': 'myrepo',
+                    'plugin_name': 'some-plugin',
+                    'a-attr': 'value',
+                    'other-attr': ['value1', 'value2']}
+        web.Plugin.get = get_mock
+        yield handler.prepare()
+        self.assertEqual(handler.params, expected)
+
     @patch.object(web.BaseModelHandler, 'delete',
                   gen.coroutine(lambda x: None))
     @gen_test

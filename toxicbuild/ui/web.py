@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+# THIS WHOLE MODULE NEEDS TO BE RE-WRITTEN
+
 import asyncio
 try:
     from asyncio import ensure_future
@@ -141,6 +143,7 @@ class RepositoryHandler(BaseModelHandler):
 
     @asyncio.coroutine
     def enable_plugin(self):
+
         repo = yield from self.get_item(repo_name=self.params.get('name'))
         del self.params['name']
         plugin_name = self.params.get('plugin_name')
@@ -152,7 +155,7 @@ class RepositoryHandler(BaseModelHandler):
     def disable_plugin(self):
         repo = yield from self.get_item(repo_name=self.params.get('name'))
         plugin_name = self.params.get('plugin_name')
-        r = yield from repo.disable_plugin(plugin_name=plugin_name)
+        r = yield from repo.disable_plugin(name=plugin_name)
         return r
 
     @asyncio.coroutine
@@ -184,10 +187,12 @@ class RepositoryHandler(BaseModelHandler):
         r = yield from item.remove_branch(**self.params)
         return r
 
+    @gen.coroutine
     def prepare(self):
         super().prepare()
         if 'start-build' in self.request.uri:
             self._prepare_start_build()
+
         elif 'add-branch' in self.request.uri:
             kw = {'name': self.params.get('name'),
                   'branch_name': self.params.get('branch_name'),
@@ -201,7 +206,7 @@ class RepositoryHandler(BaseModelHandler):
 
         elif ('enable-plugin' in self.request.uri or
               'disable-plugin' in self.request.uri):
-            pass
+            yield from self._prepare_for_plugin()
 
         else:
             kw = {}
@@ -231,6 +236,20 @@ class RepositoryHandler(BaseModelHandler):
         kw['branch'] = self.params.get('branch')
         kw['slaves'] = self.params.getlist('slaves')
         kw['named_tree'] = self.params.get('named_tree')
+
+        self.params = kw
+
+    @asyncio.coroutine
+    def _prepare_for_plugin(self):
+        kw = {}
+        plugin_name = self.params.get('plugin_name')
+        plugin = yield from Plugin.get(name=plugin_name)
+        for k, v in self.params.items():
+            try:
+                kw[k] = v[0] if getattr(plugin, k) != 'list' else [
+                    i.strip() for i in v[0].split(',')]
+            except AttributeError:
+                kw[k] = v[0]
 
         self.params = kw
 

@@ -188,6 +188,86 @@ var RepositoryModel = function(attrs){
       utils.sendAjax(type, url, data, my_success_cb, my_error_cb);
     },
 
+    enablePlugin: function(data, success_cb, error_cb){
+      var self = this;
+
+      success_cb = success_cb || function(response){return false};
+      error_cb = error_cb || function(response){return false};
+
+      var type = 'post';
+      var url = '/api/repo/enable-plugin';
+
+      var my_success_cb = function(response){
+	utils.log(response);
+	success_cb(response);
+      };
+
+      var my_error_cb = function(response){
+	utils.log(response);
+	error_cb(response);
+      };
+
+      utils.sendAjax(type, url, data, my_success_cb, my_error_cb);
+    },
+
+    disablePlugin: function(data, success_cb, error_cb){
+      var self = this;
+
+      success_cb = success_cb || function(response){return false};
+      error_cb = error_cb || function(response){return false};
+
+      var type = 'post';
+      var url = '/api/repo/disable-plugin';
+
+      var my_success_cb = function(response){
+	utils.log(response);
+	success_cb(response);
+      };
+
+      var my_error_cb = function(response){
+	utils.log(response);
+	error_cb(response);
+      };
+
+      utils.sendAjax(type, url, data, my_success_cb, my_error_cb);
+    },
+
+
+    hasPlugin: function(plugin_name){
+      self = this;
+
+      out_plugin = null;
+      jQuery.each(self.plugins, function(i, plugin){
+	if (plugin.name == plugin_name){
+	  out_plugin = plugin;
+	}
+      });
+      return out_plugin;
+    },
+
+    add2PluginList: function(plugin){
+      self = this;
+
+      if (!self.hasPlugin(plugin.name)){
+	self.plugins.push(plugin);
+      }
+    },
+
+    rmFromPluginList: function(plugin_name){
+      self = this;
+
+      var pi = -1;
+      jQuery.each(self.plugins, function(i, plugin){
+	if (plugin.name == plugin_name){
+	  pi = i;
+	}
+      });
+
+      if (pi >= 0){
+	self.plugins.splice(pi, 1);
+      }
+    }
+
   }
 
   jQuery.extend(instance, instance_attrs)
@@ -294,6 +374,19 @@ var RepositoryManager = {
     }
 
     self.connect2events();
+  },
+
+  getRepoById: function(repo_id){
+    self = this;
+
+    repo = null;
+
+    jQuery.each(self.views, function(id, view){
+      if (id == repo_id){
+	repo = view.model;
+      }
+    });
+    return repo;
   },
 
   connect2events: function(){
