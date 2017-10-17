@@ -77,6 +77,7 @@ class UtilsTest(TestCase):
         cmd = 'echo $MYPROGRAMVAR'
 
         returned = yield from utils.exec_cmd(cmd, cwd='.', **envvars)
+        yield from asyncio.sleep(1)
 
         self.assertEqual(returned, 'something')
 
@@ -94,6 +95,7 @@ class UtilsTest(TestCase):
                                   out_fn=out_fn,
                                   **envvars)
         yield
+        yield from asyncio.sleep(1)
         self.assertTrue(lines.called)
         self.assertTrue(isinstance(
             lines.call_args[0][0][1], str), lines.call_args)

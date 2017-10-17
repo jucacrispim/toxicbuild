@@ -602,6 +602,7 @@ class HoleHandlerTest(TestCase):
     def test_get_repo_dict(self):
         yield from self._create_test_data()
         self.repo.slaves = [self.slave]
+        self.repo.plugins = [{'_name': 'myplugin'}]
 
         handler = hole.HoleHandler({}, 'action', MagicMock())
         repo_dict = yield from handler._get_repo_dict(self.repo)
