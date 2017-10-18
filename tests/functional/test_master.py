@@ -196,7 +196,7 @@ class ToxicMasterTest(BaseFunctionalTest):
     @async_test
     def test_10_repo_start_build(self):
         # we need to wait so we have time to clone and create revs
-        yield from asyncio.sleep(2)
+        yield from asyncio.sleep(3)
         with (yield from get_dummy_client()) as client:
             yield from client.start_build()
 
