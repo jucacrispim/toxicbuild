@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016, 2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -42,6 +42,21 @@ class MetaMasterPluginTest(TestCase):
         self.assertEqual(self.test_cls.name, 'base-plugin')
 
 
+class PrettyFieldTest(TestCase):
+
+    def setUp(self):
+
+        class TestClass(plugins.EmbeddedDocument):
+
+            some_attr = plugins.PrettyStringField(pretty_name='Some Attribute')
+
+        self.test_class = TestClass
+
+    def test_pretty_name(self):
+        self.assertEqual(self.test_class.some_attr.pretty_name,
+                         'Some Attribute')
+
+
 class MasterPluginTest(TestCase):
 
     def setUp(self):
@@ -57,6 +72,16 @@ class MasterPluginTest(TestCase):
     def tearDown(self):
         yield from Repository.drop_collection()
 
+    def test_create_field_dict(self):
+        f = plugins.PrettyStringField(pretty_name='bla')
+        fdict = plugins.MasterPlugin._create_field_dict(f)
+        self.assertEqual(fdict['pretty_name'], 'bla')
+
+    def test_create_field_dict_error(self):
+        f = plugins.StringField()
+        fdict = plugins.MasterPlugin._create_field_dict(f)
+        self.assertEqual(fdict['pretty_name'], '')
+
     def test_translate_schema(self):
         schema = plugins.MasterPlugin.get_schema()
         translation = plugins.MasterPlugin._translate_schema(schema)
@@ -68,7 +93,9 @@ class MasterPluginTest(TestCase):
 
     def test_get_schema_to_serialize(self):
         schema = plugins.MasterPlugin.get_schema(to_serialize=True)
-        self.assertEqual(schema['statuses'], 'list')
+        expected = {'name': 'statuses', 'type': 'list',
+                    'pretty_name': 'Statuses'}
+        self.assertEqual(schema['statuses'], expected)
 
     @async_test
     def test_to_dict(self):

@@ -22,7 +22,7 @@ var PLUGIN_TEMPLATE = `
 
   <span class="plugin-name">
     <img src="/static/toxicbuild/img/{{PLUGIN-NAME}}.png"/>
-    {{PLUGIN-NAME}}
+    {{PLUGIN-PRETTY-NAME}} {{DESCRIPTION}}
       <span class="glyphicon glyphicon-triangle-left plugin-config-glyphicon"
             aria-hidden="true"></span>
   </span>
@@ -94,17 +94,29 @@ var PluginView = function(model){
       var template = PLUGIN_TEMPLATE.replace(/{{PLUGIN-NAME}}/g,
 					     self.model.name);
 
+      var pretty_name = self.model.pretty_name ? self.model.pretty_name :
+	self.model.name
+      var template = template.replace(/{{PLUGIN-PRETTY-NAME}}/g,
+				      pretty_name);
+
+      var description = self.model.description ? " - " + self.model.description :
+	  "";
+
+      var template = template.replace(/{{DESCRIPTION}}/g, description);
+
       var plugin_attrs = '';
       plugin = repo.hasPlugin(self.model.name)
       checked = plugin ? "checked" : "";
       jQuery.each(self.model, function(key, value){
-	var bad_attrs = ['name', 'list', 'type', 'fields']
+	var bad_attrs = ['name', 'list', 'type', 'fields',
+			 'pretty_name', 'description']
 	if (bad_attrs.indexOf(key) >= 0){
 	  // continue
 	  return 1
 	}
 	var val = checked ? plugin[key] : "";
-	var label = '<label for="" class="control-label">'+ key + '</label>';
+	var pretty_name = value.pretty_name;
+	var label = '<label for="" class="control-label">'+ pretty_name + '</label>';
 	plugin_attrs += '<br/>' + label +
 	  '<input type="text" class="form-control" name="' + key + '"' +
 	  'value="' + val + '"/>'
@@ -170,6 +182,7 @@ var PluginManager = {
 
       var repo = RepositoryManager.getRepoById(btn.data('repo-id'));
       self._current_repo = repo;
+      utils.log(self._current_view);
 
       jQuery.each(self.views, function(name, view){
 	view.renderModal(self._current_repo);
@@ -223,29 +236,46 @@ var PluginManager = {
     });
   },
 
+  _set_queues: function(chk, container){
+    var plugin_name = jQuery('input[type=hidden]', container)[0].value;
+    var checked = chk.context.checked;
+    if (checked && self._to_disable.indexOf(plugin_name) < 0){
+      self._to_enable.push(plugin_name);
+    }else if(checked && self._to_disable.indexOf(plugin_name) >= 0){
+      var index = self._to_disable.indexOf(plugin_name);
+      self._to_disable.splice(index, 1)
+    }else if (!checked && self._to_enable.indexOf(plugin_name) < 0){
+      self._to_disable.push(plugin_name);
+    }else{
+      index = self._to_enable.indexOf(plugin_name);
+      self._to_enable.splice(index, 1);
+    };
+  },
+
   connectChecboxEvents: function(){
     self = this;
 
     jQuery.each(jQuery('input[type=checkbox]'), function(i, el){
       var el = jQuery(el);
       el.on('click', function(){
+	// here set set the queue for enabled/disabled plugins
 	var chk = jQuery(this);
 	var container = chk.parent().parent().parent();
-	var plugin_name = jQuery('input[type=hidden]', container)[0].value;
-	var checked = chk.context.checked;
-	if (checked && self._to_disable.indexOf(plugin_name) < 0){
-	  self._to_enable.push(plugin_name);
-	}else if(checked && self._to_disable.indexOf(plugin_name) >= 0){
-	  var index = self._to_disable.indexOf(plugin_name);
-	  self._to_disable.splice(index, 1)
-	}else if (!checked && self._to_enable.indexOf(plugin_name) < 0){
-	  self._to_disable.push(plugin_name);
-	}else{
-	  index = self._to_enable.indexOf(plugin_name);
-	  self._to_enable.splice(index, 1);
+	self._set_queues(chk, container);
+
+	// setting the action for the click in the check button
+	var attrs_container = jQuery('.plugin-attrs-container', container);
+	var glyph = jQuery('.glyphicon', container);
+	if (chk.context.checked && attrs_container.is(':hidden')){
+	  var plugin_name = jQuery('input[type=hidden]', container)[0].value;
+	  var view = self.views[plugin_name]
+	  view.showConfigs(container, glyph);
+	}else if (!chk.context.checked && attrs_container.is(':visible')){
+	  var plugin_name = jQuery('input[type=hidden]', container)[0].value;
+	  var view = self.views[plugin_name]
+	  view.showConfigs(container, glyph);
 	}
-	utils.log('enable: ' + self._to_enable);
-	utils.log('disable: ' + self._to_disable);
+
       });
     });
   },

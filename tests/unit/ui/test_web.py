@@ -177,8 +177,8 @@ class RepositoryHandlerTest(AsyncTestCase):
         request = MagicMock()
         request.arguments = {'name': [b'myrepo'],
                              'plugin_name': [b'some-plugin'],
-                             'a-attr': [b'value'],
-                             'other-attr': [b'value1, value2']}
+                             'a_attr': [b'value'],
+                             'other_attr': [b'value1, value2']}
         application = MagicMock()
         handler = web.RepositoryHandler(application, request=request,
                                         model=web.Repository)
@@ -187,13 +187,15 @@ class RepositoryHandlerTest(AsyncTestCase):
         @asyncio.coroutine
         def get_mock(*a, **kw):
             return web.Plugin(**{'name': 'some-plugin',
-                                 'a-attr': 'string',
-                                 'other-attr': 'list'})
+                                 'a_attr': {'type': 'string',
+                                            'pretty_name': "A attribute"},
+                                 'other_attr': {'type': 'list',
+                                                'pretty_name': 'Other'}})
 
         expected = {'name': 'myrepo',
                     'plugin_name': 'some-plugin',
-                    'a-attr': 'value',
-                    'other-attr': ['value1', 'value2']}
+                    'a_attr': 'value',
+                    'other_attr': ['value1', 'value2']}
         web.Plugin.get = get_mock
         yield handler.prepare()
         self.assertEqual(handler.params, expected)

@@ -115,8 +115,10 @@ class PluginTest(TestCase):
 
     @patch.object(models.Plugin, 'get_client', lambda:
                   get_client_mock([{'name': 'some-plugin', 'type': 'test',
-                                    'somefield': 'list',
-                                    'otherfield': 'string'}]))
+                                    'somefield': {'type': 'list',
+                                                  'pretty_name': 'Some Field'},
+                                    'otherfield': {'type': 'string',
+                                                   'pretty_name': ''}}]))
     @async_test
     def test_list(self):
         plugins = yield from models.Plugin.list()
@@ -124,8 +126,10 @@ class PluginTest(TestCase):
 
     @patch.object(models.Plugin, 'get_client', lambda:
                   get_client_mock({'name': 'some-plugin', 'type': 'test',
-                                   'somefield': 'list',
-                                   'otherfield': 'string'}))
+                                   'somefield': {'type': 'list',
+                                                 'pretty_name': 'Some Field'},
+                                   'otherfield': {'type': 'string',
+                                                  'pretty_name': ''}}))
     @async_test
     def test_get(self):
         plugin = yield from models.Plugin.get('some-plugin')

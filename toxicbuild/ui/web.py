@@ -241,14 +241,17 @@ class RepositoryHandler(BaseModelHandler):
 
     @asyncio.coroutine
     def _prepare_for_plugin(self):
+
         kw = {}
         plugin_name = self.params.get('plugin_name')
         plugin = yield from Plugin.get(name=plugin_name)
         for k, v in self.params.items():
             try:
-                kw[k] = v[0] if getattr(plugin, k) != 'list' else [
+                kw[k] = v[0] if getattr(plugin, k)['type'] != 'list' else [
                     i.strip() for i in v[0].split(',')]
-            except AttributeError:
+            except (AttributeError, TypeError):
+                # TypeError happens when a attribute is not a dict
+                # ie, plugin pretty_name and description
                 kw[k] = v[0]
 
         self.params = kw

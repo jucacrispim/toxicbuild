@@ -25,8 +25,12 @@ Example:
 
     class MyPlugin(MasterPlugin):
 
+        # you must define name and type
         name = 'my-plugin'
         type = 'notification'
+        # optionally you may define pretty_name and description
+        pretty_name = "My Plugin"
+        description = "A very cool plugin"
         something_to_store_on_database = StringField()
 
         @asyncio.coroutine
@@ -35,7 +39,7 @@ Example:
 
 """
 
-# Copyright 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016, 2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -63,9 +67,37 @@ from toxicbuild.core.utils import datetime2string
 from toxicbuild.master.signals import build_started, build_finished
 
 
-_translate_table = {ListField: 'list',
-                    StringField: 'string',
-                    URLField: 'url'}
+class PrettyField:
+    """A field with a descriptive name for humans"""
+
+    def __init__(self, *args, **kwargs):
+        keys = ['pretty_name', 'description']
+        for k in keys:
+            setattr(self, k, kwargs.get(k))
+            try:
+                del kwargs[k]
+            except KeyError:
+                pass
+
+        super().__init__(*args, **kwargs)
+
+
+class PrettyStringField(PrettyField, StringField):
+    pass
+
+
+class PrettyURLField(PrettyField, URLField):
+    pass
+
+
+class PrettyListField(PrettyField, ListField):
+    pass
+
+
+_translate_table = {PrettyListField: 'list',
+                    PrettyStringField: 'string',
+                    PrettyURLField: 'url',
+                    StringField: 'string'}
 
 
 class MetaMasterPlugin(DocumentMetaclass):
@@ -74,8 +106,15 @@ class MetaMasterPlugin(DocumentMetaclass):
     name and type as string in definition time."""
 
     def __new__(cls, name, bases, attrs):
-        attrs['_name'] = StringField(required=True, default=attrs['name'])
-        attrs['_type'] = StringField(required=True, default=attrs['type'])
+        attrs['_name'] = PrettyStringField(required=True,
+                                           default=attrs['name'])
+        attrs['_type'] = PrettyStringField(
+            required=True, default=attrs['type'])
+        attrs['_pretty_name'] = PrettyStringField(
+            default=attrs.get('pretty_name'))
+        attrs['_description'] = PrettyStringField(default=attrs.get(
+            'description'))
+
         new_cls = super().__new__(cls, name, bases, attrs)
         return new_cls
 
@@ -86,13 +125,28 @@ class MasterPlugin(Plugin, EmbeddedDocument, metaclass=MetaMasterPlugin):
 
     # you must define a name and a type in your own plugin.
     name = 'BaseMasterPlugin'
+    pretty_name = ''
+    description = "Base for master's plugins"
     type = None
 
-    branches = ListField(StringField())
+    branches = PrettyListField(StringField(), pretty_name="Branches")
     # statuses that trigger the plugin
-    statuses = ListField(StringField())
+    statuses = PrettyListField(StringField(), pretty_name="Statuses")
 
     meta = {'allow_inheritance': True}
+
+    @classmethod
+    def _create_field_dict(cls, field):
+        try:
+            fdict = {'pretty_name': field.pretty_name,
+                     'name': field.name,
+                     'type': _translate_table[type(field)]}
+        except (KeyError, AttributeError):
+            fdict = {'pretty_name': '',
+                     'name': field.name,
+                     'type': _translate_table[type(field)]}
+
+        return fdict
 
     @classmethod
     def _translate_schema(cls, fields):
@@ -102,9 +156,14 @@ class MasterPlugin(Plugin, EmbeddedDocument, metaclass=MetaMasterPlugin):
         good = copy.copy(fields)
         del good['name']
         del good['type']
-        translation = {k: _translate_table[type(v)] for k, v in good.items()}
+        del good['pretty_name']
+        del good['description']
+        translation = {k: cls._create_field_dict(v) for k, v in good.items()}
+
         translation['name'] = fields['name']
         translation['type'] = fields['type']
+        translation['pretty_name'] = fields['pretty_name']
+        translation['description'] = fields['description']
         return translation
 
     @classmethod
@@ -113,8 +172,12 @@ class MasterPlugin(Plugin, EmbeddedDocument, metaclass=MetaMasterPlugin):
         fields = copy.copy(cls._fields)
         fields['type'] = cls.type
         fields['name'] = cls.name
+        fields['pretty_name'] = cls.pretty_name
+        fields['description'] = cls.description
         del fields['_type']
         del fields['_name']
+        del fields['_pretty_name']
+        del fields['_description']
         if to_serialize:
             fields = cls._translate_schema(fields)
         return fields
@@ -142,9 +205,11 @@ class SlackPlugin(MasterPlugin):
 
     name = 'slack-notification'
     type = 'notification'
+    pretty_name = "Slack"
+    description = "Send a message to a slack channel"
 
-    webhook_url = URLField(required=True)
-    channel_name = StringField()
+    webhook_url = PrettyURLField(required=True, pretty_name='Webhook URL')
+    channel_name = PrettyStringField(pretty_name="Channel name")
 
     @asyncio.coroutine
     def run(self):

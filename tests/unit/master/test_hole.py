@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015,2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -492,7 +492,10 @@ class HoleHandlerTest(TestCase):
         plugins = handler.plugins_list()
         self.assertEqual(len(plugins['plugins-list']), plugins_count)
         self.assertIn('name', plugins['plugins-list'][0].keys())
-        self.assertEqual(plugins['plugins-list'][0]['statuses'], 'list')
+
+        expected = {'pretty_name': 'Statuses',
+                    'name': 'statuses', 'type': 'list'}
+        self.assertEqual(plugins['plugins-list'][0]['statuses'], expected)
 
     def test_plugin_get(self):
         handler = hole.HoleHandler({}, 'plugin-list', MagicMock())
