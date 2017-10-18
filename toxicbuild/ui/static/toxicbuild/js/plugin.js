@@ -118,8 +118,8 @@ var PluginView = function(model){
 	var pretty_name = value.pretty_name;
 	var label = '<label for="" class="control-label">'+ pretty_name + '</label>';
 	plugin_attrs += '<br/>' + label +
-	  '<input type="text" class="form-control" name="' + key + '"' +
-	  'value="' + val + '"/>'
+	  '<input type="text" class="form-control plugin-form-control" name="'
+	  + key + '"' + 'value="' + val + '"/>'
       });
       template = template.replace(/{{PLUGIN-ATTRS}}/, plugin_attrs);
       template = template.replace(/{{CHECKED}}/, checked);
@@ -187,6 +187,7 @@ var PluginManager = {
       jQuery.each(self.views, function(name, view){
 	view.renderModal(self._current_repo);
 	self.connectChecboxEvents();
+	self.connectInputEvents(name);
       });
 
     });
@@ -252,6 +253,22 @@ var PluginManager = {
     };
   },
 
+  connectInputEvents: function(plugin_name){
+    var self = this;
+    var container = jQuery('#plugin-container-' + plugin_name);
+    jQuery.each(jQuery('input', container), function(i, el){
+      var el = jQuery(el);
+      el.on('input', function(){
+	if(self._to_disable.indexOf(plugin_name) < 0){
+	  self._to_disable.push(plugin_name);
+	}
+	if(self._to_enable.indexOf(plugin_name) < 0){
+	  self._to_enable.push(plugin_name);
+	}
+      });
+    });
+  },
+
   connectChecboxEvents: function(){
     self = this;
 
@@ -290,7 +307,6 @@ var PluginManager = {
       };
     });
     data['name'] = self._current_repo.name;
-    utils.log(data);
     return data;
   },
 
