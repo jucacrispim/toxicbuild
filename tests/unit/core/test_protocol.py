@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -166,8 +166,8 @@ class BaseToxicProtocolTest(TestCase):
 
     @async_test
     def test_send_response(self):
-        expected = {'code': 0,
-                    'body': 'something!'}
+        expected = protocol.OrderedDict({'code': 0,
+                                         'body': 'something!'})
 
         yield from self.protocol.send_response(code=0, body='something!')
 

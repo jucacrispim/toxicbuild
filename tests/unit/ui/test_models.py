@@ -39,20 +39,39 @@ class BaseModelTest(TestCase):
         yield from models.BaseModel.get_client()
         self.assertTrue(models.get_hole_client.called)
 
+    def test_attributes_order(self):
+        ordered = models.OrderedDict()
+        ordered['z'] = 1
+        ordered['a'] = 2
+
+        model = models.BaseModel(ordered)
+        self.assertLess(model.__ordered__.index('z'),
+                        model.__ordered__.index('a'))
+
     def test_to_dict(self):
-        instance = models.BaseModel(name='bla', other='ble')
+        kw = models.OrderedDict()
+        kw['name'] = 'bla'
+        kw['other'] = 'ble'
+        instance = models.BaseModel(kw)
 
         instance_dict = instance.to_dict()
 
-        expected = {'name': 'bla', 'other': 'ble'}
+        expected = models.OrderedDict()
+        expected['name'] = 'bla'
+        expected['other'] = 'ble'
         self.assertEqual(expected, instance_dict)
+        keys = list(instance_dict.keys())
+        self.assertLess(keys.index('name'), keys.index('other'))
 
     def test_to_json(self):
-        instance = models.BaseModel(name='bla', other='ble')
+        kw = models.OrderedDict()
+        kw['name'] = 'bla'
+        kw['other'] = 'ble'
+        instance = models.BaseModel(kw)
 
         instance_json = instance.to_json()
 
-        expected = json.dumps({'name': 'bla', 'other': 'ble'})
+        expected = json.dumps(kw)
         self.assertEqual(expected, instance_json)
 
     def test_equal(self):
@@ -140,9 +159,10 @@ class RepositoryTest(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.repository = models.Repository(id='313lsjdf', vcs_type='git',
-                                            update_seconds=300, slaves=[],
-                                            name='my-repo')
+        kw = models.OrderedDict(id='313lsjdf', vcs_type='git',
+                                update_seconds=300, slaves=[],
+                                name='my-repo')
+        self.repository = models.Repository(kw)
 
         self.repository.get_client = get_client_mock
 
@@ -185,8 +205,9 @@ class RepositoryTest(TestCase):
     def test_add_slave(self):
         self.repository.get_client = lambda: get_client_mock('add slave ok')
 
-        slave = models.Slave(name='localslave', host='localhost', port=7777,
-                             token='123')
+        kw = models.OrderedDict(name='localslave', host='localhost', port=7777,
+                                token='123')
+        slave = models.Slave(kw)
         resp = yield from self.repository.add_slave(slave)
 
         self.assertEqual(resp, 'add slave ok')
@@ -194,8 +215,8 @@ class RepositoryTest(TestCase):
     @async_test
     def test_remove_slave(self):
         self.repository.get_client = lambda: get_client_mock('remove slave ok')
-
-        slave = models.Slave(name='localslave', host='localhost', port=7777)
+        kw = dict(name='localslave', host='localhost', port=7777)
+        slave = models.Slave(kw)
         resp = yield from self.repository.remove_slave(slave)
 
         self.assertEqual(resp, 'remove slave ok')
@@ -228,7 +249,8 @@ class RepositoryTest(TestCase):
         self.assertEqual(resp, 'start build ok')
 
     def test_to_dict(self):
-        self.repository.slaves = [models.Slave(name='bla')]
+        kw = dict(name='bla')
+        self.repository.slaves = [models.Slave(kw)]
         repo_dict = self.repository.to_dict()
         self.assertTrue(isinstance(repo_dict['slaves'][0], dict))
 
@@ -286,7 +308,8 @@ class SlaveTest(TestCase):
 
     @async_test
     def test_delete(self):
-        slave = models.Slave(name='slave', host='localhost', port=1234)
+        kw = dict(name='slave', host='localhost', port=1234)
+        slave = models.Slave(kw)
         slave.get_client = lambda: get_client_mock('ok')
 
         resp = yield from slave.delete()
@@ -294,7 +317,8 @@ class SlaveTest(TestCase):
 
     @async_test
     def test_update(self):
-        slave = models.Slave(name='slave', host='localhost', port=1234)
+        kw = dict(name='slave', host='localhost', port=1234)
+        slave = models.Slave(kw)
         slave.get_client = lambda: get_client_mock('ok')
 
         resp = yield from slave.update(port=4321)

@@ -96,6 +96,8 @@ class MasterPluginTest(TestCase):
         expected = {'name': 'statuses', 'type': 'list',
                     'pretty_name': 'Statuses'}
         self.assertEqual(schema['statuses'], expected)
+        keys = list(schema.keys())
+        self.assertLess(keys.index('branches'), keys.index('statuses'))
 
     @async_test
     def test_to_dict(self):

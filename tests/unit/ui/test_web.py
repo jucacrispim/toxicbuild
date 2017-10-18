@@ -186,11 +186,11 @@ class RepositoryHandlerTest(AsyncTestCase):
 
         @asyncio.coroutine
         def get_mock(*a, **kw):
-            return web.Plugin(**{'name': 'some-plugin',
-                                 'a_attr': {'type': 'string',
-                                            'pretty_name': "A attribute"},
-                                 'other_attr': {'type': 'list',
-                                                'pretty_name': 'Other'}})
+            return web.Plugin({'name': 'some-plugin',
+                               'a_attr': {'type': 'string',
+                                          'pretty_name': "A attribute"},
+                               'other_attr': {'type': 'list',
+                                              'pretty_name': 'Other'}})
 
         expected = {'name': 'myrepo',
                     'plugin_name': 'some-plugin',
@@ -766,10 +766,10 @@ class WaterfallHandlerTest(AsyncTestCase):
     @patch.object(web, 'Repository', MagicMock())
     @gen_test
     def test_ordered_builds(self):
-        bd0 = models.Builder(name='z', id=0)
-        bd1 = models.Builder(name='a', id=1)
-        builds = [models.Build(name='z', builder=bd0),
-                  models.Build(name='a', builder=bd1)]
+        bd0 = models.Builder(dict(name='z', id=0))
+        bd1 = models.Builder(dict(name='a', id=1))
+        builds = [models.Build(dict(name='z', builder=bd0)),
+                  models.Build(dict(name='a', builder=bd1))]
 
         list_mock = MagicMock(return_value=[bd0, bd1])
         web.Builder.list = asyncio.coroutine(lambda *a, **kw: list_mock(**kw))
@@ -784,8 +784,9 @@ class WaterfallHandlerTest(AsyncTestCase):
         self.assertTrue(ordered[0].builder.name < ordered[1].builder.name)
 
     def test_get_ending(self):
-        builders = [models.Builder(id=1), models.Builder(id=2)]
-        build = models.Build(builder=builders[1])
+        builders = [models.Builder(dict(id=1)),
+                    models.Builder(dict(id=2))]
+        build = models.Build(dict(builder=builders[1]))
         expected = '</td><td class="builder-column builder-column-id-1'
         expected += 'builder-column-index-1">'
         returned = ''
@@ -798,15 +799,16 @@ class WaterfallHandlerTest(AsyncTestCase):
     def _create_test_data(self):
         builders = []
         for i in range(3):
-            builders.append(models.Builder(id=i, name='bla{}'.format(i)))
+            kw = dict(id=i, name='bla{}'.format(i))
+            builders.append(models.Builder(kw))
 
         buildsets = []
 
         for i in range(5):
-
-            builds = [models.Build(id=j, builder=builders[j])
+            builds = [models.Build(dict(id=j, builder=builders[j]))
                       for j in range(3)]
-            buildsets.append(models.BuildSet(id=i, builds=builds))
+            kw = dict(id=i, builds=builds)
+            buildsets.append(models.BuildSet(kw))
 
         self.builders = builders
         self.buildsets = buildsets

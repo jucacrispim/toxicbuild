@@ -31,7 +31,7 @@ Example:
         # optionally you may define pretty_name and description
         pretty_name = "My Plugin"
         description = "A very cool plugin"
-        something_to_store_on_database = StringField()
+        something_to_store_on_database = PrettyStringField()
 
         @asyncio.coroutine
         def run(self):
@@ -57,6 +57,7 @@ Example:
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from collections import OrderedDict
 import copy
 from mongomotor import EmbeddedDocument
 from mongoengine.base.metaclasses import DocumentMetaclass
@@ -158,8 +159,15 @@ class MasterPlugin(Plugin, EmbeddedDocument, metaclass=MetaMasterPlugin):
         del good['type']
         del good['pretty_name']
         del good['description']
-        translation = {k: cls._create_field_dict(v) for k, v in good.items()}
+        translation = OrderedDict()
 
+        for k, v in good.items():
+            translation[k] = cls._create_field_dict(v)
+
+        # we move these guys here so the user defined attributes
+        # appear first
+        translation.move_to_end('branches')
+        translation.move_to_end('statuses')
         translation['name'] = fields['name']
         translation['type'] = fields['type']
         translation['pretty_name'] = fields['pretty_name']
@@ -169,7 +177,13 @@ class MasterPlugin(Plugin, EmbeddedDocument, metaclass=MetaMasterPlugin):
     @classmethod
     def get_schema(cls, to_serialize=False):
         """Returns a dictionary with the schema of the plugin."""
-        fields = copy.copy(cls._fields)
+
+        ordered = cls._fields_ordered
+        fields = OrderedDict()
+
+        for of in ordered:
+            fields[of] = cls._fields[of]
+
         fields['type'] = cls.type
         fields['name'] = cls.name
         fields['pretty_name'] = cls.pretty_name

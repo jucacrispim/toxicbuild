@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from collections import OrderedDict
 import json
 import traceback
 from toxicbuild.core import utils
@@ -74,7 +75,7 @@ class BaseToxicClient(utils.LoggerMixin):
         data = yield from utils.read_stream(self.reader)
         data = data.decode() or '{}'
         try:
-            json_data = json.loads(data)
+            json_data = json.loads(data, object_pairs_hook=OrderedDict)
         except Exception:
             msg = traceback.format_exc()
             self.log(msg, level='error')

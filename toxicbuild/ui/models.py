@@ -19,6 +19,7 @@
 
 
 import asyncio
+from collections import OrderedDict
 import json
 from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui import settings
@@ -31,19 +32,25 @@ class BaseModel:
     # that are simply treated as other objects.
     references = {}
 
-    def __init__(self, **kwargs):
+    def __init__(self, ordered_kwargs):
+        self.__ordered__ = [k for k in ordered_kwargs.keys()]
         # here is where we transform the dictonaries from the
         # master's response into objects that are references.
+        # Note that we can't use **kwargs here because we want to
+        # keep the order of the attrs.
         for name, cls in self.references.items():
-            if not isinstance(kwargs.get(name), (dict, cls)):
-                kwargs[name] = [cls(**kw) if not isinstance(kw, cls) else kw
-                                for kw in kwargs.get(name, [])]
+            if not isinstance(ordered_kwargs.get(name), (dict, cls)):
+                ordered_kwargs[name] = [cls(kw) if not isinstance(kw, cls)
+                                        else kw
+                                        for kw in ordered_kwargs.get(name, [])]
             else:
-                obj = kwargs[name]
-                kwargs[name] = cls(**obj) if not isinstance(obj, cls) else obj
+                obj = ordered_kwargs[name]
+                ordered_kwargs[name] = cls(**obj) if not isinstance(
+                    obj, cls) else obj
 
-        for key, value in kwargs.items():
+        for key, value in ordered_kwargs.items():
             setattr(self, key, value)
+            self.__ordered__.append(key)
 
     def __eq__(self, other):
         return type(self) == type(other) and self.id == other.id
@@ -64,9 +71,9 @@ class BaseModel:
     def to_dict(self):
         """Transforms a model into a dict."""
 
-        attrs = [a for a in dir(self) if not a.startswith('_')]
+        attrs = [a for a in self.__ordered__ if not a.startswith('_')]
 
-        d = {}
+        d = OrderedDict()
         for attr in attrs:
             objattr = getattr(self, attr)
             if not callable(objattr) and attr != 'references':
@@ -99,7 +106,7 @@ class Slave(BaseModel):
 
         with (yield from cls.get_client()) as client:
             slave_dict = yield from client.slave_add(**kw)
-        slave = cls(**slave_dict)
+        slave = cls(slave_dict)
         return slave
 
     @classmethod
@@ -111,7 +118,7 @@ class Slave(BaseModel):
 
         with (yield from cls.get_client()) as client:
             slave_dict = yield from client.slave_get(**kwargs)
-        slave = cls(**slave_dict)
+        slave = cls(slave_dict)
         return slave
 
     @classmethod
@@ -121,7 +128,7 @@ class Slave(BaseModel):
 
         with (yield from cls.get_client()) as client:
             slaves = yield from client.slave_list()
-        slave_list = [cls(**slave) for slave in slaves]
+        slave_list = [cls(slave) for slave in slaves]
         return slave_list
 
     @asyncio.coroutine
@@ -150,7 +157,7 @@ class Plugin(BaseModel):
         with (yield from cls.get_client()) as client:
             resp = yield from client.plugins_list()
 
-        plugins = [cls(**p) for p in resp]
+        plugins = [cls(p) for p in resp]
         return plugins
 
     @classmethod
@@ -162,7 +169,7 @@ class Plugin(BaseModel):
         with (yield from cls.get_client()) as client:
             resp = yield from client.plugin_get(name=name)
 
-        return cls(**resp)
+        return cls(resp)
 
 
 class Repository(BaseModel):
@@ -189,7 +196,7 @@ class Repository(BaseModel):
         kw.update({'slaves': slaves})
         with (yield from cls.get_client()) as client:
             repo_dict = yield from client.repo_add(**kw)
-        repo = cls(**repo_dict)
+        repo = cls(repo_dict)
         return repo
 
     @classmethod
@@ -201,7 +208,7 @@ class Repository(BaseModel):
 
         with (yield from cls.get_client()) as client:
             repo_dict = yield from client.repo_get(**kwargs)
-        repo = cls(**repo_dict)
+        repo = cls(repo_dict)
         return repo
 
     @classmethod
@@ -211,7 +218,7 @@ class Repository(BaseModel):
 
         with (yield from cls.get_client()) as client:
             repos = yield from client.repo_list()
-        repo_list = [cls(**repo) for repo in repos]
+        repo_list = [cls(repo) for repo in repos]
         return repo_list
 
     @asyncio.coroutine
@@ -342,7 +349,7 @@ class Builder(BaseModel):
         with (yield from cls.get_client()) as client:
             builders = yield from client.builder_list(**kwargs)
 
-        builders_list = [cls(**builder) for builder in builders]
+        builders_list = [cls(builder) for builder in builders]
         return builders_list
 
 
@@ -373,5 +380,5 @@ class BuildSet(BaseModel):
         with (yield from cls.get_client()) as client:
             buildsets = yield from client.buildset_list(repo_name=repo_name,
                                                         offset=10)
-        buildset_list = [cls(**buildset) for buildset in buildsets]
+        buildset_list = [cls(buildset) for buildset in buildsets]
         return buildset_list

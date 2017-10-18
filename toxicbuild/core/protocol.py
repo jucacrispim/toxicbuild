@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -22,6 +22,7 @@ try:
     from asyncio import ensure_future
 except ImportError:  # pragma: no cover
     from asyncio import async as ensure_future
+from collections import OrderedDict
 import json
 import time
 import traceback
@@ -133,11 +134,12 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         """ Send a response to client formated by the (unknown) toxicbuild
         remote build specs.
         :param code: code for this message. code == 0 is success and
-        code > 0 is error.
+          code > 0 is error.
         :param body: response body. It has to be a serializable object.
         """
-        response = {'code': code,
-                    'body': body}
+        response = OrderedDict()
+        response['code'] = code
+        response['body'] = body
         data = json.dumps(response)
         yield from utils.write_stream(self._stream_writer, data)
 
