@@ -28,7 +28,9 @@ def step_impl(context):
 def step_impl(context, slave_name):
     browser = context.browser
     input_element = browser.find_element_by_id('slave_name')
-    input_element.send_keys(slave_name)
+    for l in slave_name:
+        browser.click(input_element)
+        input_element.send_keys(l)
 
 
 @when('fills the host field with "{slave_host}"')  # noqa f401

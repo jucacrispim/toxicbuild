@@ -1,5 +1,6 @@
 Feature:
-    A user inserts and deletes a repo in web ui
+    A user inserts and deletes a repo in web ui, enabling and disabling
+    output methods plugins.
 
     Scenario: The user inserts a new repo without required information
         Given the user is logged in the web interface
@@ -18,6 +19,18 @@ Feature:
         Then he sees the "Repository is being created. Please wait." message
         And the repo status "pending"
         And the repo status "success"
+
+    Scenario: The user enables an output method plugin
+        Given the user already inserted a new repo
+        When he clicks in the configure output methods button
+        And sees the output methods modal
+        And clicks in the enable ckeckbox
+        And fills the webhook url field with "https://something.net/bla"
+        And fills the channel name field with "my-channel"
+        And fills the branches field with "master, dev, release"
+        And fills the statuses field with "fail, exeption, warning, success"
+        And clicks in the save plugin button
+        Then he sees the "Plugin slack-notification enabled" message
 
     Scenario: A user removes a repo
         Given the user is logged in the web interface and has a repo

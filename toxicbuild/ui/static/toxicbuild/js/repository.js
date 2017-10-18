@@ -29,6 +29,18 @@ var REPO_ROW_TEMPLATE = `
 		  data-repo-id="{{repo.id}}">
 	    <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
 	  </button>
+
+	  <span data-toggle="tooltip" title="Config output methods"
+		data-placement="right">
+	    <button type="button"
+		    class="btn btn-default btn-xs btn-main-edit btn-transparent
+			   btn-edit-plugin"
+		    data-toggle="modal" data-target="#outputPluginModal"
+		    data-repo-id="{{repo.id}}">
+	      <span class="glyphicon glyphicon-share" aria-hidden="true"></span>
+	    </button>
+	  </span>
+
 	</td>
 	<td>{{repo.url}}</td>
 	<td>
