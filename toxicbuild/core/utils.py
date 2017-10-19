@@ -99,7 +99,7 @@ def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
     out = []
 
     line_index = 0
-    while proc.returncode is None:
+    while proc.returncode is None or not out:
         outline = yield from asyncio.wait_for(proc.stdout.readline(), timeout)
         outline = outline.decode()
         if out_fn:
