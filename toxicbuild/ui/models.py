@@ -77,7 +77,8 @@ class BaseModel:
         d = OrderedDict()
         for attr in attrs:
             objattr = getattr(self, attr)
-            if not callable(objattr) and attr != 'references':
+            is_ref = attr == 'references'
+            if not (callable(objattr) and not is_ref):  # pragma no branch
                 d[attr] = objattr
 
         return d
