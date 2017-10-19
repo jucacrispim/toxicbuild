@@ -116,7 +116,8 @@
     (venv-workon toxic:test-venv-name)
     (defvar old-path (getenv "PYTHONPATH"))
     (setenv "PYTHONPATH" toxic:test-env-dir)
-    (pdj:run-in-term toxic-cmd buffer-name)
+    (let ((pdj:multi-term-switch-to-buffer nil))
+      (pdj:run-in-term toxic-cmd buffer-name))
     (setenv "PYTHONPATH" old-path)
     (venv-workon toxic:original-venv-name)))
 
