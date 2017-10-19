@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -33,11 +33,12 @@ class BaseModel:
     references = {}
 
     def __init__(self, ordered_kwargs):
-        self.__ordered__ = [k for k in ordered_kwargs.keys()]
         # here is where we transform the dictonaries from the
         # master's response into objects that are references.
         # Note that we can't use **kwargs here because we want to
         # keep the order of the attrs.
+        self.__ordered__ = [k for k in ordered_kwargs.keys()]
+
         for name, cls in self.references.items():
             if not isinstance(ordered_kwargs.get(name), (dict, cls)):
                 ordered_kwargs[name] = [cls(kw) if not isinstance(kw, cls)
@@ -45,7 +46,7 @@ class BaseModel:
                                         for kw in ordered_kwargs.get(name, [])]
             else:
                 obj = ordered_kwargs[name]
-                ordered_kwargs[name] = cls(**obj) if not isinstance(
+                ordered_kwargs[name] = cls(obj) if not isinstance(
                     obj, cls) else obj
 
         for key, value in ordered_kwargs.items():
@@ -366,7 +367,6 @@ class BuildSet(BaseModel):
     references = {'builds': Build}
 
     def __init__(self, *args, **kw):
-
         super().__init__(*args, **kw)
 
     @classmethod
@@ -380,5 +380,6 @@ class BuildSet(BaseModel):
         with (yield from cls.get_client()) as client:
             buildsets = yield from client.buildset_list(repo_name=repo_name,
                                                         offset=10)
+
         buildset_list = [cls(buildset) for buildset in buildsets]
         return buildset_list

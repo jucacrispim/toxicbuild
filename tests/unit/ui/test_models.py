@@ -328,7 +328,8 @@ class SlaveTest(TestCase):
 class BuildSetTest(TestCase):
 
     @patch.object(models.BuildSet, 'get_client', lambda: get_client_mock(
-        [{'id': 'sasdfasf', 'builds': [{'steps': [{'name': 'unit'}]}]},
+        [{'id': 'sasdfasf', 'builds': [{'steps': [{'name': 'unit'}],
+                                        'builder': {'name': 'some'}}]},
          {'id': 'paopofe', 'builds': [{}]}]))
     @async_test
     def test_list(self):
