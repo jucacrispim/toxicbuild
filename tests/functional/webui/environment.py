@@ -14,7 +14,8 @@ create_settings_and_connect()
 from toxicbuild.ui.models import Slave, Repository  # noqa 402
 from tests.functional import (start_slave, stop_slave,  # noqa 402
                               start_master,
-                              stop_master, start_webui, stop_webui)
+                              stop_master, start_webui, stop_webui,
+                              REPO_DIR)
 from tests.functional.webui import SeleniumBrowser  # noqa 402
 
 
@@ -37,8 +38,8 @@ def quit_browser(context):
 def create_slave(context):
     """Creates a slave to be used in repo tests"""
 
-    yield from Slave.add(name='repo-slave', host='localhost', port=1234,
-                         token='123sdf34adsf')
+    yield from Slave.add(name='repo-slave', host='localhost', port=2222,
+                         token='123')
 
 
 @asyncio.coroutine
@@ -48,6 +49,17 @@ def del_slave(context):
     slaves = yield from Slave.list()
     for slave in slaves:
         yield from slave.delete()
+
+
+@asyncio.coroutine
+def create_repo(context):
+    """Creates a new repo to be used in tests"""
+
+    repo = yield from Repository.add(name='repo-bla', update_seconds=1,
+                                     vcs_type='git', url=REPO_DIR,
+                                     slaves=['repo-slave'])
+
+    yield from repo.add_branch('master', False)
 
 
 @asyncio.coroutine
@@ -72,6 +84,8 @@ def before_feature(context, feature):
     loop.run_until_complete(create_slave(context))
     start_webui()
     create_browser(context)
+    if 'waterfall.feature' in feature.filename:
+        loop.run_until_complete(create_repo(context))
 
 
 def after_feature(context, feature):
