@@ -145,7 +145,7 @@
   (defvar toxic:--slave-path nil)
   (setq toxic:--slave-path (concat toxic:test-env-path "slave/"))
   (defvar toxic:--start-slave-cmd
-    (format "%s %stoxicslave start %s"
+    (format "%s %stoxicslave start %s --loglevel=debug"
 	    toxic:py-venv-exec toxic:test-env-dir toxic:--slave-path))
 
   (toxic:--run-in-env-on-test-dir
@@ -183,7 +183,7 @@
   (defvar toxic:--master-path nil)
   (setq toxic:--master-path (concat toxic:test-env-path "master/"))
   (defvar toxic:--start-master-cmd
-    (format "%s %stoxicmaster start %s"
+    (format "%s %stoxicmaster start %s --loglevel=debug"
 	    toxic:py-venv-exec toxic:test-env-dir toxic:--master-path))
 
   (defvar toxic:--master-buffer-name "toxicmaster")
