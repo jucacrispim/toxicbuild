@@ -59,12 +59,13 @@ Example:
 import asyncio
 from collections import OrderedDict
 import copy
+import json
 from mongomotor import EmbeddedDocument
 from mongoengine.base.metaclasses import DocumentMetaclass
 from mongomotor.fields import StringField, URLField, ListField
 from toxicbuild.core import requests
 from toxicbuild.core.plugins import Plugin
-from toxicbuild.core.utils import datetime2string
+from toxicbuild.core.utils import datetime2string, LoggerMixin
 from toxicbuild.master.signals import build_started, build_finished
 
 
@@ -120,7 +121,8 @@ class MetaMasterPlugin(DocumentMetaclass):
         return new_cls
 
 
-class MasterPlugin(Plugin, EmbeddedDocument, metaclass=MetaMasterPlugin):
+class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
+                   metaclass=MetaMasterPlugin):
     """Base plugin for master's plugins. Master's plugins usually
     react to signals sent by the master."""
 
@@ -225,8 +227,15 @@ class SlackPlugin(MasterPlugin):
     webhook_url = PrettyURLField(required=True, pretty_name='Webhook URL')
     channel_name = PrettyStringField(pretty_name="Channel name")
 
+    def _get_message(self, text):
+        return {'text': text, 'channel': self.channel_name,
+                'username': 'ToxicBuild'}
+
     @asyncio.coroutine
     def run(self):
+        msg = 'running {} for'.format(self.name)
+        self.log(msg, level='info')
+
         if 'running' in self.statuses:
             build_started.connect(self.send_started_msg)
 
@@ -241,9 +250,15 @@ class SlackPlugin(MasterPlugin):
     def _send_msg(self, message):
         """Sends a message as an incomming webhook to slack."""
 
-        headers = {'content-type': 'application/json'}
-        yield from requests.post(self.webhook_url, data=message,
-                                 headers=headers)
+        msg = 'sending message to slack for'
+        self.log(msg, level='info')
+        headers = {'Content-Type': 'application/json'}
+        response = yield from requests.post(self.webhook_url,
+                                            data=json.dumps(message),
+                                            headers=headers)
+        msg = 'slack response - status {} | text {}'.format(
+            response.status, response.text)
+        self.log(msg, level='debug')
 
     @asyncio.coroutine
     def send_started_msg(self, repo, build):
@@ -252,9 +267,9 @@ class SlackPlugin(MasterPlugin):
         :param build: A build that just started."""
 
         dt = datetime2string(build.started)
-        build_state = 'Build *started* at *{datetime}*'.format(datetime=dt)
+        build_state = 'Build *started* at *{}*'.format(dt)
         title = '[{}] {}'.format(repo.name, build_state)
-        msg = {'text': title}
+        msg = self._get_message(title)
         yield from self._send_msg(msg)
 
     @asyncio.coroutine
@@ -267,8 +282,9 @@ class SlackPlugin(MasterPlugin):
             return
 
         dt = datetime2string(build.finished)
-        build_state = 'Build *finished* at *{datetime}*'.format(datetime=dt)
+        build_state = 'Build *finished* at *{}* with status *{}*'.format(
+            dt, build.status)
         title = '[{}] {}'.format(repo.name, build_state)
 
-        msg = {'text': title}
+        msg = self._get_message(title)
         yield from self._send_msg(msg)

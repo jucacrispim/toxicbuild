@@ -164,13 +164,16 @@ class SlackPluginTest(TestCase):
     @async_test
     def test_send_msg(self):
         yield from self._create_test_data()
+        post = MagicMock()
+        plugins.requests.post = asyncio.coroutine(
+            lambda *a, **kw: post(*a, **kw))
         msg = {'text': 'something happend'}
         yield from self.plugin._send_msg(msg)
-        called = plugins.requests.post.call_args
+        called = post.call_args
         self.assertEqual(called[0][0], self.plugin.webhook_url)
-        self.assertEqual(called[1]['data'], msg)
+        self.assertEqual(called[1]['data'], plugins.json.dumps(msg))
         self.assertEqual(called[1]['headers'],
-                         {'content-type': 'application/json'})
+                         {'Content-Type': 'application/json'})
 
     @async_test
     def test_send_started_msg(self):
@@ -180,7 +183,8 @@ class SlackPluginTest(TestCase):
         build.started = now()
         dt = plugins.datetime2string(build.started)
         txt = '[my-test-repo] Build *started* at *{}*'.format(dt)
-        expected = {'text': txt}
+        expected = {'text': txt, 'username': 'ToxicBuild',
+                    'channel': self.plugin.channel_name}
         yield from self.plugin.send_started_msg(self.repo, build)
         called = self.plugin._send_msg.call_args[0][0]
         self.assertEqual(called, expected, called)
@@ -193,8 +197,11 @@ class SlackPluginTest(TestCase):
         build.finished = now()
         build.status = 'success'
         dt = plugins.datetime2string(build.finished)
-        txt = '[my-test-repo] Build *finished* at *{}*'.format(dt)
-        expected = {'text': txt}
+        txt = '[my-test-repo] Build *finished* at *{}* with status *{}*'
+        txt = txt.format(dt, build.status)
+        expected = {'text': txt, 'username': 'ToxicBuild',
+                    'channel': self.plugin.channel_name}
+
         yield from self.plugin.send_finished_msg(self.repo, build)
         called = self.plugin._send_msg.call_args[0][0]
         self.assertEqual(called, expected, called)
