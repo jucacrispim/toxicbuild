@@ -174,9 +174,13 @@ class RepositoryTest(TestCase):
     @patch.object(repository.utils, 'log', Mock())
     def test_schedule(self):
         self.repo.scheduler = Mock(spec=self.repo.scheduler)
+        plugin = MagicMock
+        plugin.run = asyncio.coroutine(lambda *a, **kw: plugin())
+        self.repo.plugins = [plugin]
         self.repo.schedule()
 
         self.assertTrue(self.repo.scheduler.add.called)
+        self.assertTrue(self.repo.plugins[0].called)
 
     @patch.object(repository.utils, 'log', Mock())
     @patch('toxicbuild.master.scheduler')

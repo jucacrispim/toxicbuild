@@ -281,6 +281,11 @@ class Repository(Document, utils.LoggerMixin):
         build_started.connect(self._check_for_status_change)
         build_finished.connect(self._check_for_status_change)
 
+        # starting plugins
+        for plugin in self.plugins:
+            f = plugin.run()
+            ensure_future(f)
+
     @classmethod
     @asyncio.coroutine
     def schedule_all(cls):
