@@ -79,7 +79,7 @@ def get(url, **kwargs):
     """
 
     method = 'GET'
-    resp = yield from _request(method, **kwargs)
+    resp = yield from _request(method, url, **kwargs)
     return resp
 
 
@@ -92,7 +92,7 @@ def post(url, **kwargs):
     """
 
     method = 'POST'
-    resp = yield from _request(method, **kwargs)
+    resp = yield from _request(method, url, **kwargs)
     return resp
 
 
@@ -105,7 +105,7 @@ def put(url, **kwargs):
     """
 
     method = 'PUT'
-    resp = yield from _request(method, **kwargs)
+    resp = yield from _request(method, url, **kwargs)
     return resp
 
 
@@ -118,5 +118,5 @@ def delete(url, **kwargs):
     """
 
     method = 'DELETE'
-    resp = yield from _request(method, **kwargs)
+    resp = yield from _request(method, url, **kwargs)
     return resp

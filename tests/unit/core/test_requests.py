@@ -67,8 +67,8 @@ class RequestsTest(TestCase):
         self.req_type = None
 
         @asyncio.coroutine
-        def req(*a, **kw):
-            self.req_type = a[0]
+        def req(method, url, **kw):
+            self.req_type = method
             return requests.Response(200, 'some text')
 
         requests._request = req
@@ -84,8 +84,8 @@ class RequestsTest(TestCase):
         self.req_type = None
 
         @asyncio.coroutine
-        def req(*a, **kw):
-            self.req_type = a[0]
+        def req(method, url, **kw):
+            self.req_type = method
             return requests.Response(200, 'some text')
 
         requests._request = req
@@ -101,8 +101,8 @@ class RequestsTest(TestCase):
         self.req_type = None
 
         @asyncio.coroutine
-        def req(*a, **kw):
-            self.req_type = a[0]
+        def req(method, url, **kw):
+            self.req_type = method
             return requests.Response(200, 'some text')
 
         requests._request = req
@@ -118,8 +118,8 @@ class RequestsTest(TestCase):
         self.req_type = None
 
         @asyncio.coroutine
-        def req(*a, **kw):
-            self.req_type = a[0]
+        def req(method, url, **kw):
+            self.req_type = method
             return requests.Response(200, 'some text')
 
         requests._request = req
