@@ -156,6 +156,14 @@ class LoggerMixin:
         log('[{}] {} '.format(type(self).__name__, msg), level)
 
 
+def format_timedelta(td):
+    """Format a timedelta object to a human-friendly string.
+
+    :param dt: A timedelta object."""
+
+    return str(td).split('.')[0]
+
+
 def datetime2string(dt, dtformat='%a %b %d %H:%M:%S %Y %z'):
     """Transforms a datetime object into a formated string.
 

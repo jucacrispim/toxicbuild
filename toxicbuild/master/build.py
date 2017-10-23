@@ -25,6 +25,7 @@ except ImportError:  # pragma no cover
     from asyncio import async as ensure_future
 
 from collections import defaultdict, deque
+from datetime import timedelta
 import json
 from uuid import uuid4
 from mongoengine.queryset import queryset_manager
@@ -34,7 +35,7 @@ from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                IntField)
 from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
-                                   LoggerMixin)
+                                   format_timedelta, LoggerMixin)
 from toxicbuild.master.exceptions import DBError
 from toxicbuild.master.signals import revision_added, build_added
 
@@ -265,6 +266,10 @@ class BuildSet(SerializeMixin, Document):
     builds = ListField(EmbeddedDocumentField(Build))
     # when this buildset was first created.
     created = DateTimeField(default=now)
+    # when it actually started the builds
+    started = DateTimeField()
+    finished = DateTimeField()
+    total_time = IntField()
 
     meta = {
         'indexes': [
@@ -298,6 +303,18 @@ class BuildSet(SerializeMixin, Document):
     def to_dict(self, id_as_str=False):
         objdict = super().to_dict(id_as_str=id_as_str)
         objdict['commit_date'] = datetime2string(self.commit_date)
+        objdict['created'] = datetime2string(self.created)
+        objdict['started'] = datetime2string(self.started) if self.started \
+            else ''
+        objdict['finished'] = datetime2string(self.finished) if self.finished \
+            else ''
+
+        if self.total_time:
+            td = timedelta(seconds=self.total_time)
+            objdict['total_time'] = format_timedelta(td)
+        else:
+            objdict['total_time'] = ''
+
         objdict['builds'] = []
         for b in self.builds:
             bdict = b.to_dict(id_as_str=id_as_str)
@@ -495,6 +512,21 @@ class BuildManager(LoggerMixin):
         yield from self.add_builds(revisions)
 
     @asyncio.coroutine
+    def _set_started_for_buildset(self, buildset):
+        if not buildset.started:
+            buildset.started = now()
+            yield from buildset.save()
+
+    @asyncio.coroutine
+    def _set_finished_for_buildset(self, buildset):
+        just_now = now()
+        if not buildset.finished or buildset.finished < just_now:
+            buildset.finished = just_now
+            buildset.total_time = int((buildset.finished -
+                                       buildset.started).seconds)
+            yield from buildset.save()
+
+    @asyncio.coroutine
     def _execute_builds(self, slave):
         """ Execute the buildsets in the queue of a given slave.
 
@@ -517,7 +549,9 @@ class BuildManager(LoggerMixin):
                     if slave == build_slave:
                         builds.append(build)
                 if builds:
+                    yield from self._set_started_for_buildset(buildset)
                     yield from self._execute_in_parallel(slave, builds)
+                    yield from self._set_finished_for_buildset(buildset)
                     self.log('builds for {} finished'.format(slave.name),
                              level='debug')
         finally:

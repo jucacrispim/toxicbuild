@@ -159,6 +159,13 @@ class BuildSetTest(TestCase):
         self.assertTrue(objdict['commit_date'])
 
     @async_test
+    def test_to_dict_total_time(self):
+        yield from self._create_test_data()
+        self.buildset.total_time = 1
+        objdict = self.buildset.to_dict()
+        self.assertEqual(objdict['total_time'], '0:00:01')
+
+    @async_test
     def test_to_json(self):
         yield from self._create_test_data()
 
@@ -463,6 +470,67 @@ class BuildManagerTest(TestCase):
         chunks = list(self.manager._get_builds_chunks([mock.Mock(),
                                                        mock.Mock()]))
         self.assertEqual(len(chunks), 2)
+
+    @async_test
+    def test_set_started_for_buildset(self):
+        yield from self._create_test_data()
+        buildset = mock.MagicMock()
+        save_mock = mock.MagicMock()
+        buildset.save = asyncio.coroutine(lambda *a, **kw: save_mock())
+        buildset.started = None
+        yield from self.manager._set_started_for_buildset(buildset)
+        self.assertTrue(buildset.started)
+        self.assertTrue(save_mock.called)
+
+    @async_test
+    def test_set_started_for_buildset_already_started(self):
+        yield from self._create_test_data()
+        buildset = mock.MagicMock()
+        save_mock = mock.MagicMock()
+        just_now = mock.MagicMock()
+        buildset.save = asyncio.coroutine(lambda *a, **kw: save_mock())
+        buildset.started = just_now
+        yield from self.manager._set_started_for_buildset(buildset)
+        self.assertTrue(buildset.started is just_now)
+        self.assertFalse(save_mock.called)
+
+    @async_test
+    def test_set_finished_for_buildset(self):
+        yield from self._create_test_data()
+        buildset = mock.MagicMock()
+        save_mock = mock.MagicMock()
+        buildset.save = asyncio.coroutine(lambda *a, **kw: save_mock())
+        buildset.finished = None
+        yield from self.manager._set_finished_for_buildset(buildset)
+        self.assertTrue(buildset.finished)
+        self.assertTrue(save_mock.called)
+
+    @async_test
+    def test_set_finished_for_buildset_already_finished(self):
+        yield from self._create_test_data()
+        buildset = mock.MagicMock()
+        save_mock = mock.MagicMock()
+        buildset.save = asyncio.coroutine(lambda *a, **kw: save_mock())
+        finished = now() + datetime.timedelta(days=20)
+        buildset.finished = finished
+        yield from self.manager._set_finished_for_buildset(buildset)
+        self.assertTrue(buildset.finished is finished)
+        self.assertFalse(save_mock.called)
+
+    @mock.patch.object(build, 'now', mock.Mock())
+    @async_test
+    def test_set_finished_for_buildset_total_time(self):
+        yield from self._create_test_data()
+        buildset = mock.MagicMock()
+        save_mock = mock.MagicMock()
+        buildset.save = asyncio.coroutine(lambda *a, **kw: save_mock())
+        buildset.started = now()
+        build.now.return_value = buildset.started + datetime.timedelta(
+            seconds=10)
+        buildset.finished = None
+        yield from self.manager._set_finished_for_buildset(buildset)
+        self.assertEqual(buildset.total_time, 10)
+        self.assertTrue(save_mock.called)
 
     @async_test
     def test_add_builds_from_signal(self):

@@ -31,6 +31,9 @@ jQuery('#buildsetDetailsModal').on('show.bs.modal', function (event) {
   var title = button.data('buildset-commit-title');
   var created = button.data('buildset-created');
   var branch = button.data('buildset-branch');
+  var started = button.data('buildset-started');
+  var finished = button.data('buildset-finished');
+  var total = button.data('buildset-total-time');
 
   var modal = jQuery(this)
   modal.find('#buildset-commit').text(commit);
@@ -38,6 +41,9 @@ jQuery('#buildsetDetailsModal').on('show.bs.modal', function (event) {
   modal.find('#buildset-commit-title').text(title);
   modal.find('#buildset-created').text(created);
   modal.find('#buildset-branch').text(branch);
+  modal.find('#buildset-started').text(started);
+  modal.find('#buildset-finished').text(finished);
+  modal.find('#buildset-total-time').text(total);
 });
 
 jQuery('#follow-step-output').on('click', function(event){

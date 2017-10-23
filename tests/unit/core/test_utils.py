@@ -161,6 +161,12 @@ class UtilsTest(TestCase):
 
         self.assertEqual(B.m.__doc__, A.m.__doc__)
 
+    def test_format_timedelta(self):
+        td = datetime.timedelta(seconds=97)
+        expected = '0:01:37'
+        returned = utils.format_timedelta(td)
+        self.assertEqual(expected, returned)
+
     def test_datetime2string(self):
         dt = utils.now()
         expected = datetime.datetime.strftime(dt, '%a %b %d %H:%M:%S %Y %z')
