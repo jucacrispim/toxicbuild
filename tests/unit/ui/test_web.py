@@ -147,7 +147,8 @@ class RepositoryHandlerTest(AsyncTestCase):
                              'vcs_type': [b'git'], 'update_seconds': [b'10'],
                              'slaves': [b'someslave']}
         expected = {'name': 'myrepo', 'url': 'git@bla.com', 'vcs_type': 'git',
-                    'update_seconds': '10', 'slaves': ['someslave']}
+                    'update_seconds': '10', 'slaves': ['someslave'],
+                    'parallel_builds': None}
         application = MagicMock()
         handler = web.RepositoryHandler(application, request=request,
                                         model=web.Repository)

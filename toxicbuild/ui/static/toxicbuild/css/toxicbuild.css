@@ -56,6 +56,17 @@ tr:nth-child(even) {
     background-color: #4c4a49;
 }
 
+.repo-name-group .left-container{
+    float: left;
+    width: 82%;
+    padding-right: 10px;
+}
+
+.repo-name-group .right-container{
+    width: 18%;
+    float: left;
+}
+
 .form-group-vcs-type-update{
     min-height: 80px;
 }

@@ -214,6 +214,7 @@ class RepositoryHandler(BaseModelHandler):
             kw['url'] = self.params.get('url')
             kw['vcs_type'] = self.params.get('vcs_type')
             kw['update_seconds'] = self.params.get('update_seconds')
+            kw['parallel_builds'] = self.params.get('parallel_builds')
             kw['slaves'] = self.params.getlist('slaves')
             self.params = kw
 

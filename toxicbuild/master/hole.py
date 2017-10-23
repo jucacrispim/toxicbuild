@@ -137,14 +137,16 @@ class HoleHandler:
 
     @asyncio.coroutine
     def repo_add(self, repo_name, repo_url, update_seconds, vcs_type,
-                 slaves=None):
+                 slaves=None, parallel_builds=None):
         """ Adds a new repository and first_run() it.
 
         :param repo_name: Repository name
         :param repo_url: Repository vcs url
         :param update_seconds: Time to poll for changes
         :param vcs_type: Type of vcs being used.
-        :param slaves: A list of slave names."""
+        :param slaves: A list of slave names.
+        :params parallel_builds: How many parallel builds this repository
+          executes. If None, there is no limit."""
 
         repo_name = repo_name.strip()
         repo_url = repo_url.strip()
@@ -154,8 +156,9 @@ class HoleHandler:
             slave = yield from Slave.get(name=name)
             slaves.append(slave)
 
-        repo = yield from Repository.create(repo_name, repo_url,
-                                            update_seconds, vcs_type, slaves)
+        repo = yield from Repository.create(
+            repo_name, repo_url, update_seconds, vcs_type,
+            slaves, parallel_builds=parallel_builds)
         repo_dict = yield from self._get_repo_dict(repo)
         return {'repo-add': repo_dict}
 

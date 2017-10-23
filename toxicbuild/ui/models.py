@@ -183,17 +183,21 @@ class Repository(BaseModel):
 
     @classmethod
     @asyncio.coroutine
-    def add(cls, name, url, vcs_type, update_seconds=300, slaves=[]):
+    def add(cls, name, url, vcs_type, update_seconds=300, slaves=[],
+            parallel_builds=None):
         """Adds a new repository.
 
         :param name: Repository's name.
         :param url: Repository's url.
         :param vcs_type: VCS type used on the repository.
         :param update_seconds: Interval to update the repository code.
-        :param slaves: List with slave names for this reporitory."""
+        :param slaves: List with slave names for this reporitory.
+        :params parallel_builds: How many paralles builds this repository
+          executes. If None, there is no limit."""
 
         kw = {'repo_name': name, 'repo_url': url, 'vcs_type': vcs_type,
-              'update_seconds': update_seconds}
+              'update_seconds': update_seconds,
+              'parallel_builds': parallel_builds}
 
         kw.update({'slaves': slaves})
         with (yield from cls.get_client()) as client:

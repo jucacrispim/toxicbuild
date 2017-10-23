@@ -301,6 +301,7 @@ var RepositoryView = function (model){
       self.modal.find('#repo_url').val('');
       self.modal.find('#repo_update_seconds').val(300);
       self.modal.find('#repo_vcs_type').val('');
+      self.modal.find('#repo_parallel_builds').val('');
       self.modal.find("#repo_slaves").html('');
       self.modal.find("#btn-delete-repo").hide();
       jQuery('#repo-req-type').val('post');
@@ -316,6 +317,7 @@ var RepositoryView = function (model){
 	self.modal.find('#repo_name').val(self.model.name);
 	self.modal.find('#repo_url').val(self.model.url);
 	self.modal.find('#repo_update_seconds').val(self.model.update_seconds);
+	self.modal.find('#repo_parallel_builds').val(self.model.parallel_builds);
 	self.modal.find('#btn-delete-repo').show();
 
 	for (i in self.model.branches){
@@ -484,6 +486,8 @@ var RepositoryManager = {
     var url = self._current_view.modal.find('#repo_url').val();
     var update_seconds = self._current_view.modal.find('#repo_update_seconds').val();
     var vcs_type = self._current_view.modal.find('#repo_vcs_type').val();
+    var parallel_builds = self._current_view.modal.find(
+      '#repo_parallel_builds').val();
     var slaves = [];
 
     jQuery('#repo_slaves option:selected').each(function(){
@@ -491,7 +495,8 @@ var RepositoryManager = {
     });
 
     return {'name': name, 'url': url, 'update_seconds': update_seconds,
-	    'vcs_type': vcs_type, 'slaves': slaves}
+	    'vcs_type': vcs_type, 'slaves': slaves,
+	    'parallel_builds': parallel_builds}
   },
 
   createOrUpdate: function(){

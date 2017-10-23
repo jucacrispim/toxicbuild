@@ -84,6 +84,9 @@ class Repository(Document, utils.LoggerMixin):
     clone_status = StringField(choices=('cloning', 'ready', 'clone-exception'),
                                default='cloning')
     plugins = ListField(EmbeddedDocumentField(MasterPlugin))
+    # max number of builds in parallel that this repo exeutes
+    # If None, there's no limit for parallel builds.
+    parallel_builds = IntField()
 
     meta = {
         'ordering': ['name']
@@ -169,7 +172,7 @@ class Repository(Document, utils.LoggerMixin):
     @classmethod
     @asyncio.coroutine
     def create(cls, name, url, update_seconds, vcs_type, slaves=None,
-               branches=None):
+               branches=None, parallel_builds=None):
         """ Creates a new repository and schedule it.
 
         :param name: Repository name.
@@ -179,13 +182,16 @@ class Repository(Document, utils.LoggerMixin):
         :param vcs_type: Which type of version control system this
           repository uses.
         :param slaves: A list of slaves for this repository.
-        :param branches: A list of branches config for this repository."""
+        :param branches: A list of branches config for this repository.
+        :params parallel_builds: How many paralles builds this repository
+          executes. If None, there is no limit."""
 
         slaves = slaves or []
         branches = branches or []
 
         repo = cls(url=url, update_seconds=update_seconds, vcs_type=vcs_type,
-                   slaves=slaves, name=name, branches=branches)
+                   slaves=slaves, name=name, branches=branches,
+                   parallel_builds=parallel_builds)
         yield from repo.save()
         repo.schedule()
         return repo

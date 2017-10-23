@@ -496,13 +496,15 @@ class BuildManager(LoggerMixin):
 
     @asyncio.coroutine
     def _execute_builds(self, slave):
-        """ Execute the builds in the queue of a given slave.
+        """ Execute the buildsets in the queue of a given slave.
 
         :param slave: A :class:`toxicbuild.master.slave.Slave` instance."""
 
         self.is_building[slave.name] = True
         self.log('executing builds for {}'.format(slave.name), level='debug')
         try:
+            # here we take the buildsets that are in queue and send
+            # each one of them to a slave execute the builds
             while True:
                 try:
                     buildset = self.build_queues[slave.name].popleft()
@@ -530,9 +532,21 @@ class BuildManager(LoggerMixin):
           :class:`toxicbuild.master.build.Build` instances."""
 
         fs = []
-        for build in builds:
-            f = ensure_future(slave.build(build))
-            fs.append(f)
+        for chunk in self._get_builds_chunks(builds):
+            chunk_fs = []
+            for build in chunk:
+                f = ensure_future(slave.build(build))
+                chunk_fs.append(f)
+                fs.append(f)
+                yield from asyncio.wait(chunk_fs)
 
-        yield from asyncio.wait(fs)
         return fs
+
+    def _get_builds_chunks(self, builds):
+
+        if self.repository.parallel_builds is None:
+            yield builds
+            return
+
+        for i in range(0, len(builds), self.repository.parallel_builds):
+            yield builds[i:i + self.repository.parallel_builds]

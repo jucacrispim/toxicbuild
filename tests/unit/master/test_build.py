@@ -449,6 +449,22 @@ class BuildManagerTest(TestCase):
             self.assertTrue(f.done())
 
     @async_test
+    def test_get_builds_chunks_with_limitless_parallels(self):
+        yield from self._create_test_data()
+        self.manager.repository.parallel_builds = None
+        chunks = list(self.manager._get_builds_chunks([mock.Mock(),
+                                                       mock.Mock()]))
+        self.assertEqual(len(chunks), 1)
+
+    @async_test
+    def test_get_builds_chunks_with_limit(self):
+        yield from self._create_test_data()
+        self.manager.repository.parallel_builds = 1
+        chunks = list(self.manager._get_builds_chunks([mock.Mock(),
+                                                       mock.Mock()]))
+        self.assertEqual(len(chunks), 2)
+
+    @async_test
     def test_add_builds_from_signal(self):
         # ensures that builds are added when revision_added signal is sent.
 
