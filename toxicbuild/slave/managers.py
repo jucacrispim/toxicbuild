@@ -21,7 +21,8 @@ import asyncio
 from collections import defaultdict
 import os
 from toxicbuild.core import get_vcs
-from toxicbuild.core.utils import get_toxicbuildconf, LoggerMixin, ExecCmdError
+from toxicbuild.core.utils import (get_toxicbuildconf, LoggerMixin,
+                                   ExecCmdError, match_string)
 from toxicbuild.slave.build import Builder, BuildStep
 from toxicbuild.slave.exceptions import (BuilderNotFound, BadBuilderConfig,
                                          BusyRepository)
@@ -174,10 +175,14 @@ class BuildManager(LoggerMixin):
         finally:
             self.is_updating = False
 
-    # the whole purpose of toxicbuild is this!
-    # see the git history and look for the first versions.
-    # First thing I changed on buildbot was to add the possibility
-    # to load builers from a config file.
+    def _branch_match(self, builder):
+        return builder.get('branch') is None or match_string(
+            self.branch, [builder.get('branch', '')])
+
+        # the whole purpose of toxicbuild is this!
+        # see the git history and look for the first versions.
+        # First thing I changed on buildbot was to add the possibility
+        # to load builers from a config file.
     def list_builders(self):
         """ Returns a list with all builders names for this branch
         based on toxicbuild.conf file

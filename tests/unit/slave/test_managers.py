@@ -276,6 +276,21 @@ class BuilderManagerTest(TestCase):
         with self.assertRaises(managers.BadBuilderConfig):
             self.manager.list_builders()
 
+    def test_branch_match(self):
+        builder = {'name': 'builder', 'branch': 'master'}
+        self.branch = 'master'
+        self.assertTrue(self.manager._branch_match(builder))
+
+    def test_branch_match_no_branch(self):
+        builder = {'name': 'builder'}
+        self.branch = 'master'
+        self.assertTrue(self.manager._branch_match(builder))
+
+    def test_branch_match_no_match(self):
+        builder = {'name': 'builder', 'branch': 'other'}
+        self.branch = 'master'
+        self.assertFalse(self.manager._branch_match(builder))
+
     def test_load_builder(self):
         builder = self.manager.load_builder('builder1')
         self.assertEqual(len(builder.steps), 2)
