@@ -255,6 +255,18 @@ class UtilsTest(TestCase):
 
         self.assertEqual(len(utils.os.chdir.call_args_list), 2)
 
+    def test_match_string(self):
+        filters = ['something', '*thing']
+        smatch = 'something'
+        smatch2 = 'otherthing'
+        self.assertTrue(all([utils.match_string(smatch, filters),
+                             utils.match_string(smatch2, filters)]))
+
+    def test_match_string_not_match(self):
+        filters = ['something', '*thing']
+        smatch = 'somestuff'
+        self.assertFalse(utils.match_string(smatch, filters))
+
 
 class StreamUtilsTest(TestCase):
 
@@ -377,3 +389,22 @@ class StreamUtilsTest(TestCase):
     #     import ipdb;ipdb.set_trace()
     #     called_len = int(called_arg.split('\n')[0])
     #     self.assertEqual(called_len, 204)
+
+
+class MatchKeyDictTest(TestCase):
+
+    def test_getitem(self):
+        d = utils.MatchKeysDict()
+        d['a'] = 1
+        self.assertTrue(d['a'])
+
+    def test_getitem_wildcard(self):
+        d = utils.MatchKeysDict()
+        d['a*'] = 1
+        self.assertTrue(d['asdf'])
+
+    def test_getitem_keyerror(self):
+        d = utils.MatchKeysDict()
+        d['a*'] = 1
+        with self.assertRaises(KeyError):
+            d['key']

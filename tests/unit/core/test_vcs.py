@@ -87,6 +87,14 @@ class VCSTest(TestCase):
         with self.assertRaises(vcs.VCSError):
             vcs.get_vcs('bla')
 
+    def test_filter_remote_branches(self):
+        remote_branches = ['master', 'release', 'dev-bla',
+                           'other-branch', 'bla']
+        filters = ['master', 'dev-*']
+        expected = ['master', 'dev-bla']
+        returned = self.vcs._filter_remote_branches(remote_branches, filters)
+        self.assertEqual(returned, expected)
+
 
 @mock.patch.object(vcs, 'exec_cmd', mock.MagicMock())
 class GitTest(TestCase):
@@ -274,6 +282,7 @@ class GitTest(TestCase):
         @asyncio.coroutine
         def remote_branches(*a, **kw):
             rb_mock()
+            return ['master', 'some-feature']
 
         @asyncio.coroutine
         def branch_revisions(*a, **kw):
@@ -301,6 +310,7 @@ class GitTest(TestCase):
         @asyncio.coroutine
         def remote_branches(*a, **kw):
             rb_mock()
+            return ['master', 'some-feature']
 
         @asyncio.coroutine
         def branch_revisions(*a, **kw):

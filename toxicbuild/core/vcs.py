@@ -23,7 +23,7 @@ import os
 from toxicbuild.core.exceptions import VCSError
 from toxicbuild.core.utils import (exec_cmd, inherit_docs, string2datetime,
                                    datetime2string, utc2localtime,
-                                   localtime2utc, LoggerMixin)
+                                   localtime2utc, LoggerMixin, match_string)
 
 
 class VCS(LoggerMixin, metaclass=ABCMeta):
@@ -94,10 +94,12 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
     @asyncio.coroutine
     def get_revisions(self, since={}, branches=None):
         """ Returns the revisions for ``branches`` since ``since``.
+
         :param since: dictionary in the format: {branch_name: since_date}.
-        ``since`` is a datetime object.
+          ``since`` is a datetime object.
         :param branches: A list of branches to look for new revisions. If
-        ``branches`` is None all remote branches will be used.
+          ``branches`` is None all remote branches will be used. You can use
+          wildcards in branches to filter the remote branches.
         """
 
     @abstractmethod  # pragma no branch
@@ -105,6 +107,7 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
     def get_revisions_for_branch(self, branch, since=None):
         """ Returns the revisions for ``branch`` since ``since``.
         If ``since`` is None, all revisions will be returned.
+
         :param branch: branch name
         :param since: datetime
         """
@@ -114,6 +117,12 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
     def get_remote_branches(self):
         """ Returns a list of the remote branches available.
         """
+
+    def _filter_remote_branches(self, remote_branches, branch_filters):
+        """Filters the remote branches based in filters for the branches'
+        names."""
+
+        return [b for b in remote_branches if match_string(b, branch_filters)]
 
 
 @inherit_docs
@@ -175,7 +184,10 @@ class Git(VCS):
         # with the remote repo and then we can see new branches
         yield from self.fetch()
         remote_branches = yield from self.get_remote_branches()
-        remote_branches = branches or remote_branches
+        if branches:
+            remote_branches = self._filter_remote_branches(
+                remote_branches, branches)
+
         revisions = {}
         for branch in remote_branches:
             try:

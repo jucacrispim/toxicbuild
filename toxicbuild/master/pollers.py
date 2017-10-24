@@ -20,7 +20,7 @@
 import asyncio
 import traceback
 from toxicbuild.core.vcs import get_vcs
-from toxicbuild.core.utils import LoggerMixin
+from toxicbuild.core.utils import LoggerMixin, MatchKeysDict
 from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.signals import revision_added
 
@@ -100,7 +100,8 @@ class Poller(LoggerMixin):
         since = dict((branch, r.commit_date) for branch, r
                      in dbrevisions.items() if r)
 
-        repo_branches = {b.name: b for b in self.repository.branches}
+        repo_branches = MatchKeysDict(
+            **{b.name: b for b in self.repository.branches})
         newer_revisions = yield from self.vcs.get_revisions(
             since=since, branches=repo_branches.keys())
 

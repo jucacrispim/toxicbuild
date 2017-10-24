@@ -26,6 +26,7 @@ except ImportError:  # pragma no cover
 
 import copy
 from datetime import datetime, timezone, timedelta
+import fnmatch
 import importlib
 import logging
 import os
@@ -325,6 +326,37 @@ class changedir(object):
 
     def __exit__(self, *a, **kw):
         os.chdir(self.old_dir)
+
+
+def match_string(smatch, filters):
+    """Checks if a string match agains a list
+    of filters containing wildcards.
+
+    :param smatch: String to test against the filters
+    :param filters: Filter to match a string."""
+
+    return any([fnmatch.fnmatch(smatch, f) for f in filters])
+
+
+class MatchKeysDict(dict):
+    """A dictionary that returns the values matching the keys using
+    :meth:`toxicbuild.core.utils.match_string`.
+
+    .. code-block:: python
+
+        >>> d = MatchKeysDict()
+        >>> d['k*'] = 1
+        >>> d['key']
+        1
+        >>> k['keyboard']
+        1
+    """
+
+    def __getitem__(self, key):
+        for k in self.keys():
+            if match_string(key, [k]):
+                return super().__getitem__(k)
+        return super().__getitem__(key)
 
 
 # Sorry, but not willing to test  a daemonizer.
