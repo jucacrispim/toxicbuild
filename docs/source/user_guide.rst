@@ -65,13 +65,20 @@ And now access http://localhost:8888 in your browser. Use the username and
 password supplied in the create process to access the web interface.
 
 Now that you are in the web interface, the first thing you need to do is
-to add a new repository to ToxicBuild.
+to add a new repository to ToxicBuild. To do so, click in the `Add repository`
+button.
 
 |add-repo-img|
 
 .. |add-repo-img| image:: ./_static/add-repo.png
     :alt: Adding new repository
 
+
+.. note::
+
+   The `parallel builds` field is not required. It limits the number of
+   parallel builds that will be executed by the repository. If None, there
+   is no limit for parallel builds.
 
 .. note::
 
@@ -88,10 +95,15 @@ to add a new repository to ToxicBuild.
    You need to choose at least one slave or no builds will be executed.
 
 
-After you project is cloned you should see the status of your project
-as `ready`. The only thing missing now is to configure the build in
-your project.
+Now we may configure some methods to toxicbuild notify us about builds. You
+can see the output configure options clicking in the `Configure output methods`
+button.
 
+<IMG>
+
+
+After we configure all we wanted, it's time to configure the build itself. It
+is done by adding a build config file in the root directory of your source code.
 
 Configuring a build
 +++++++++++++++++++
@@ -105,13 +117,13 @@ created for the `builders` that will execute the `steps`.
 So, let's say you have build process consisting in two steps: ``make`` and
 ``make test``. To have this executed by ToxicBuild we create a builder
 with these two steps. This config must be in a file called `toxicbuild.conf`
-in the root dir of your code:
+in the root directory of your code:
 
 
 .. note::
 
    The `toxicbuild.conf` file is a Python file, do whatever you want, but
-   you must have a ``BUILDERS`` list.
+   it must have a ``BUILDERS`` list.
 
 
 .. code-block:: python
@@ -135,6 +147,12 @@ in the root dir of your code:
 And it is done! Commit and push this config to you repository and ToxicBuild
 will execute this steps everytime a change is detected in your source code.
 
+When ToxicBuild detects a change in the source code, it starts to run the
+build. You can see details of the builds in the `waterfall`. You navigate to
+the waterfall by clicking in the `status` button.
+
+<IMG>
+
 Step params
 -----------
 
@@ -153,7 +171,7 @@ Builder params
 Builder has extra optional params, too. They are the following:
 
 * ``branch``: Indicates which branch triggers this builder. If no branch, all
-  branches will trigger the builder.
+  branches will trigger the builder. You may use wildcards here.
 * ``envvars``: A dictionary in the form {VAR: VALUE} for environment variables
   to be used in all steps in this builder.
 * ``plugins``: A list of plugins that will be used in the builder.
