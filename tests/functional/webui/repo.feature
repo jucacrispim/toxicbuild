@@ -4,6 +4,7 @@ Feature:
 
     Scenario:
         The user inserts a new repo without required information
+
         Given the user is logged in the web interface
         When he clicks in the add repo button
         And sees the repo modal
@@ -13,6 +14,7 @@ Feature:
 
     Scenario:
         The user inserts a new repo and that works
+
         Given the user already tried to save a repo
         When he fills the url field with a repo url
         And selects a slave named "repo-slave"
@@ -23,6 +25,7 @@ Feature:
 
     Scenario:
         The user enables an output method plugin
+
         Given the user already inserted a new repo
         When he clicks in the configure output methods button
         And sees the output methods modal
@@ -36,6 +39,7 @@ Feature:
 
     Scenario:
         A user removes a repo
+
         Given the user is logged in the web interface and has a repo
         When he clicks in the edit repo button
         And sees the repo modal
