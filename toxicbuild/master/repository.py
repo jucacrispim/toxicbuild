@@ -110,6 +110,7 @@ class Repository(Document, utils.LoggerMixin):
                    'slaves': [s.to_dict(id_as_str)
                               for s in (yield from self.slaves)],
                    'plugins': [p.to_dict() for p in self.plugins],
+                   'parallel_builds': self.parallel_builds,
                    'clone_status': self.clone_status}
         if id_as_str:
             my_dict['id'] = str(self.id)

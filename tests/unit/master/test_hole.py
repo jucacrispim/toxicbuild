@@ -614,6 +614,7 @@ class HoleHandlerTest(TestCase):
         self.assertIn('slaves', repo_dict)
         self.assertTrue('status', repo_dict)
         self.assertTrue(repo_dict['slaves'][0]['name'])
+        self.assertIn('parallel_builds', repo_dict.keys())
 
     @async_test
     def test_get_slave_dict(self):

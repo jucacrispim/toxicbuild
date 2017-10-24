@@ -57,13 +57,6 @@ def step_impl(context):
     input_element.send_keys(REPO_DIR)
 
 
-@when('fills the update seconds field with "{update_seconds}"')  # noqa f401
-def step_impl(context, update_seconds):
-    browser = context.browser
-    input_element = browser.find_element_by_id('repo_update_seconds')
-    input_element.send_keys(update_seconds)
-
-
 @when('selects a slave named "{slave_name}"')  # noqa f401
 def step_impl(context, slave_name):
     browser = context.browser

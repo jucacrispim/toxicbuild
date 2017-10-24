@@ -156,9 +156,13 @@ class HoleHandler:
             slave = yield from Slave.get(name=name)
             slaves.append(slave)
 
+        kw = {}
+        if parallel_builds:
+            kw['parallel_builds'] = parallel_builds
+
         repo = yield from Repository.create(
             repo_name, repo_url, update_seconds, vcs_type,
-            slaves, parallel_builds=parallel_builds)
+            slaves, **kw)
         repo_dict = yield from self._get_repo_dict(repo)
         return {'repo-add': repo_dict}
 
@@ -506,6 +510,7 @@ class HoleHandler:
         repo_dict['status'] = yield from repo.get_status()
         slaves = yield from repo.slaves
         repo_dict['slaves'] = [self._get_slave_dict(s) for s in slaves]
+        repo_dict['parallel_builds'] = repo.parallel_builds or ''
         for p in repo_dict['plugins']:
             p['name'] = p['_name']
 
