@@ -3,6 +3,7 @@ Changelog
 
 * 0.4.0 (not released yet!)
 
+  - Added wildcards filters for branches
   - added started, finished and total time for buildsets
   - Added option to limit builds in parallel
   - Corrected bug with pending builds that started before the previous
