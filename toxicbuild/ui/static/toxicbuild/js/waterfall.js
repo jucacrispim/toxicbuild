@@ -351,6 +351,7 @@ function WaterfallManager(){
       if (!from_queue){
 	self._handleStepQueue(build);
       }
+      self._handleBuildSetStarted(build.buildset);
     },
 
     handleStepFinished: function(step){
@@ -433,6 +434,7 @@ function WaterfallManager(){
       builder_input.parent().removeClass('builder-pending');
       builder_input.parent().addClass('builder-' + build.status);
       builder_input.val(build.status);
+      self._handleBuildSetFinished(build.buildset);
     },
 
     handleBuildAdded: function(build){
@@ -506,6 +508,24 @@ function WaterfallManager(){
       self._step_finished_queue = new_steps_queue;
     },
 
+    _handleBuildSetStarted: function(buildset){
+      var buildset_li = jQuery('#buildset-' + buildset.id);
+      var buildset_btn = jQuery('button', buildset_li);
+      if(!buildset_btn.data('buildset-started')){
+	buildset_btn.data('buildset-started', buildset.started);
+      };
+    },
+
+    _handleBuildSetFinished: function(buildset){
+      // this is wrong. We shouldn't set these everytime
+      // a step finishes, but only when the last step of the
+      // buildset finishes, but I don't know how to to that.
+      var buildset_li = jQuery('#buildset-' + buildset.id);
+      var buildset_btn = jQuery('button', buildset_li);
+      buildset_btn.data('buildset-finished', buildset.finished);
+      buildset_btn.data('buildset-total-time', buildset.total_time);
+    },
+
     _addBuildSet: function(buildset){
       var self = this;
 
@@ -516,6 +536,9 @@ function WaterfallManager(){
       template = template.replace(/{{buildset.branch}}/g, buildset.branch);
       template = template.replace(/{{buildset.title}}/g, buildset.title);
       template = template.replace(/{{buildset.created}}/g, buildset.created);
+      template = template.replace(/{{buildset.started}}/g, buildset.started);
+      template = template.replace(/{{buildset.finished}}/g, buildset.finished);
+      template = template.replace(/{{buildset.total_time}}/g, buildset.total_time);
       var first_row = jQuery('#waterfall-first-row');
       jQuery(template).insertAfter(first_row);
 
