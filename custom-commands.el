@@ -424,5 +424,10 @@
     '(menu-item "Create test environment" toxic:create-test-env)))
 
 
-(toxic:create-menu)
-(toxic:add-watcher)
+(defun toxic:setup ()
+
+  (toxic:create-menu)
+  (toxic:add-watcher))
+
+
+(toxic:setup)
