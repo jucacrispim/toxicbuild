@@ -23,7 +23,7 @@ import functools
 from uuid import uuid4
 from toxicbuild.core.exceptions import ExecCmdError
 from toxicbuild.core.utils import (exec_cmd, LoggerMixin, datetime2string,
-                                   now, string2datetime)
+                                   now, string2datetime, localtime2utc)
 
 
 class Builder(LoggerMixin):
@@ -59,8 +59,10 @@ class Builder(LoggerMixin):
         for index, step in enumerate(self.steps):
             msg = 'Executing %s' % step.command
             self.log(msg, level='debug')
+            local_now = localtime2utc(now())
             step_info = {'status': 'running', 'cmd': step.command,
-                         'name': step.name, 'started': datetime2string(now()),
+                         'name': step.name,
+                         'started': datetime2string(local_now),
                          'finished': None, 'index': index, 'output': '',
                          'info_type': 'step_info', 'uuid': str(uuid4()),
                          'total_time': None}
@@ -80,7 +82,7 @@ class Builder(LoggerMixin):
             msg = 'Finished {} with status {}'.format(step.command, status)
             self.log(msg, level='debug')
 
-            finished = now()
+            finished = localtime2utc(now())
             step_info.update({'finished': datetime2string(finished)})
             step_info['total_time'] = (
                 finished - string2datetime(build_info['started'])).seconds

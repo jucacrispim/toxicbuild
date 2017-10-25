@@ -56,6 +56,7 @@ class BuilderTest(TestCase):
 
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'success')
+        self.assertIn('total_time', build_info['steps'][0].keys())
 
     @async_test
     def test_build_fail(self):

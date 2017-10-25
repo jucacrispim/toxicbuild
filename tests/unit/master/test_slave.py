@@ -281,7 +281,7 @@ class SlaveTest(TestCase):
 
         info = {'cmd': 'ls', 'name': 'run ls', 'status': 'success',
                 'output': 'somefile.txt\n', 'started': started,
-                'finished': finished,
+                'finished': finished, 'total_time': 2,
                 'index': 0, 'uuid': a_uuid}
 
         yield from self.slave._process_step_info(self.build, info)
