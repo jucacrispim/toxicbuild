@@ -171,7 +171,12 @@ class UtilsTest(TestCase):
         dt = utils.now()
         expected = datetime.datetime.strftime(dt, '%a %b %d %H:%M:%S %Y %z')
         returned = utils.datetime2string(dt)
+        self.assertEqual(returned, expected)
 
+    def test_datetime2string_timezone(self):
+        dt = utils.localtime2utc(utils.now())
+        expected = datetime.datetime.strftime(dt, '%a %b %d %H:%M:%S %Y %z')
+        returned = utils.datetime2string(datetime.datetime.now())
         self.assertEqual(returned, expected)
 
     def test_datetime2string_with_other_format(self):

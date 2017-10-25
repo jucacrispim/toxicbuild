@@ -171,6 +171,8 @@ def datetime2string(dt, dtformat='%a %b %d %H:%M:%S %Y %z'):
     :param dt: The datetime object.
     :param dtformat: The format to use."""
 
+    if dt.utcoffset() is None:
+        dt = localtime2utc(dt)
     return datetime.strftime(dt, dtformat)
 
 
