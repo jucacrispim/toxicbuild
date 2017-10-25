@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -22,7 +22,8 @@ from copy import copy
 import functools
 from uuid import uuid4
 from toxicbuild.core.exceptions import ExecCmdError
-from toxicbuild.core.utils import (exec_cmd, LoggerMixin, datetime2string, now)
+from toxicbuild.core.utils import (exec_cmd, LoggerMixin, datetime2string,
+                                   now, string2datetime)
 
 
 class Builder(LoggerMixin):
@@ -61,7 +62,8 @@ class Builder(LoggerMixin):
             step_info = {'status': 'running', 'cmd': step.command,
                          'name': step.name, 'started': datetime2string(now()),
                          'finished': None, 'index': index, 'output': '',
-                         'info_type': 'step_info', 'uuid': str(uuid4())}
+                         'info_type': 'step_info', 'uuid': str(uuid4()),
+                         'total_time': None}
 
             yield from self.manager.send_info(step_info)
 
@@ -78,7 +80,11 @@ class Builder(LoggerMixin):
             msg = 'Finished {} with status {}'.format(step.command, status)
             self.log(msg, level='debug')
 
-            step_info.update({'finished': datetime2string(now())})
+            finished = now()
+            step_info.update({'finished': datetime2string(finished)})
+            step_info['total_time'] = (
+                finished - string2datetime(build_info['started'])).seconds
+
             yield from self.manager.send_info(step_info)
 
             # here is: if build_status is something other than None
@@ -94,7 +100,9 @@ class Builder(LoggerMixin):
 
         build_info['status'] = build_status
         build_info['total_steps'] = len(self.steps)
-        build_info['finished'] = datetime2string(now())
+        finished = now()
+        build_info['finished'] = datetime2string(finished)
+
         return build_info
 
     @asyncio.coroutine

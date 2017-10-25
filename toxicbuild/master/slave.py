@@ -203,8 +203,7 @@ class Slave(Document, LoggerMixin):
             requested_step.status = status
             requested_step.output = output
             requested_step.finished = string2datetime(finished)
-            requested_step.total_time = (requested_step.finished -
-                                         requested_step.started).seconds
+            requested_step.total_time = step_info['total_time']
             msg = 'step {} finished at {} with status {}'.format(
                 requested_step.command, finished, requested_step.status)
             self.log(msg, level='debug')
