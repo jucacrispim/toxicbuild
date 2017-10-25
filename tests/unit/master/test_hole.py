@@ -133,6 +133,23 @@ class HoleHandlerTest(TestCase):
         self.assertTrue(repo['repo-add']['id'])
 
     @async_test
+    def test_repo_add_parallel_builds(self):
+        yield from self._create_test_data()
+
+        name = 'reponameoutro'
+        url = 'git@somehere.com'
+        vcs_type = 'git'
+        update_seconds = 300
+        slaves = ['name']
+        action = 'repo-add'
+        handler = hole.HoleHandler({}, action, MagicMock())
+
+        repo = yield from handler.repo_add(name, url, update_seconds, vcs_type,
+                                           slaves, parallel_builds=1)
+
+        self.assertEqual(repo['repo-add']['parallel_builds'], 1)
+
+    @async_test
     def test_repo_get_with_repo_name(self):
         yield from self._create_test_data()
         repo_name = 'reponame'
