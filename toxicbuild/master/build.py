@@ -164,6 +164,7 @@ class BuildStep(EmbeddedDocument):
     finished = DateTimeField(default=None)
     # the index of the step in the build.
     index = IntField(requred=True)
+    total_time = IntField()
 
     def to_dict(self):
         objdict = json.loads(super().to_json())
@@ -178,6 +179,10 @@ class BuildStep(EmbeddedDocument):
             objdict['finished'] = None
         else:
             objdict['finished'] = datetime2string(self.finished)
+
+        total = format_timedelta(timedelta(seconds=self.total_time)) \
+            if self.total_time is not None else ''
+        objdict['total_time'] = total
 
         return objdict
 

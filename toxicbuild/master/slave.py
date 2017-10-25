@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -170,6 +170,7 @@ class Slave(Document, LoggerMixin):
         finished = build_info['finished']
         if finished:
             build.finished = string2datetime(finished)
+            build.total_time = (build.finished - build.started).seconds
 
         yield from build.update()
 
@@ -202,6 +203,8 @@ class Slave(Document, LoggerMixin):
             requested_step.status = status
             requested_step.output = output
             requested_step.finished = string2datetime(finished)
+            requested_step.total_time = (requested_step.finished -
+                                         requested_step.started).seconds
             msg = 'step {} finished at {} with status {}'.format(
                 requested_step.command, finished, requested_step.status)
             self.log(msg, level='debug')

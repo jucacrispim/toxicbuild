@@ -11,7 +11,8 @@ jQuery('#stepDetailsModal').on('show.bs.modal', function (event) {
   var status = button.data('step-status');
   var start = button.data('step-start');
   var end = button.data('step-end');
-  var uuid = button.data('step-uuid');
+  var uuid = button.data('step-uuid')
+  var total = button.data('step-total-time');
 
   var modal = jQuery(this)
   modal.find('#step-command').text(command);
@@ -19,6 +20,7 @@ jQuery('#stepDetailsModal').on('show.bs.modal', function (event) {
   modal.find('#step-status').text(status);
   modal.find('#step-start').text(start);
   modal.find('#step-end').text(end);
+  modal.find('#step-total-time').text(total);
   CURRENT_STEP_SHOWN = uuid;
   var element = document.getElementById('step-output');
   element.scrollIntoView(false);
@@ -154,7 +156,10 @@ var BUILDSET_TEMPLATE  = `
 		    data-buildset-branch="{{buildset.branch}}"
 		    data-buildset-commit-author="{{buildset.author}}"
 		    data-buildset-commit-title="{{buildset.title}}"
-		    data-buildset-created="{{buildset.created}}">
+		    data-buildset-created="{{buildset.created}}"
+                    data-buildset-started="{{buildset.started}}"
+                    data-buildset-finished="{{buildset.finished}}"
+                    data-buildset-total-time="{{buildset.total_time}}">
 	      <span data-toggle="tooltip" title="Buildset details" data-placement="right">
 
 		<span class="glyphicon glyphicon-modal-window" aria-hidden="true"></span>
@@ -207,7 +212,8 @@ var STEP_TEMPLATE = `
 		      data-step-output="{{step.output}}"
 		      data-step-status="{{step.status}}"
 		      data-step-start="{{step.started}}"
-		      data-step-end="{{step.finished}}">
+		      data-step-end="{{step.finished}}"
+                      data-step-total-time="{{step.total_time}}">
 		<span data-toggle="tooltip" title="Step details" data-placement="right">
 		  <span class="glyphicon glyphicon-modal-window" aria-hidden="true"></span>
 		</span>
@@ -310,6 +316,7 @@ function WaterfallManager(){
       //template = template.replace(/{{step.output}}/g, "No output...");
       template = template.replace(/{{step.started}}/g, step.started);
       template = template.replace(/{{step.finished}}/g, 'Step still running');
+      template = template.replace(/{{step.total_time}}/g, 'Step still running');
 
       var build = step.build
       var build_el = jQuery('#build-info-' + build.uuid);
@@ -365,6 +372,7 @@ function WaterfallManager(){
       var html = step_el.html();
       step_el.removeClass('step-running').addClass('step-' + step.status);
       html = html.replace('Step still running', step.finished);
+      html = html.replace('Step still running', step.total_time);
       html = html.replace('{{step.output}}', step.output.replace(/"/g, "'"));
       html = html.replace(/running/g, step.status);
       step_el.html(html);

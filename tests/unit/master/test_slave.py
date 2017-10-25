@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -203,11 +203,15 @@ class SlaveTest(TestCase):
     def test_process_info_with_build_finished(self):
         yield from self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
-        now = datetime2string(datetime.datetime.now(tz=tz))
+        now = datetime.datetime.now(tz=tz)
+        formate_now = datetime2string(now)
+        future_now = now + datetime.timedelta(seconds=2)
+        future_formated_now = datetime2string(future_now)
 
         build_info = {'status': 'running', 'steps': [],
-                      'started': now, 'finished': now,
-                      'info_type': 'build_info'}
+                      'started': formate_now, 'finished': future_formated_now,
+                      'info_type': 'build_info',
+                      'total_time': 2}
 
         yield from self.slave._process_info(self.build, build_info)
         self.assertTrue(slave.build_finished.send.called)
@@ -258,7 +262,8 @@ class SlaveTest(TestCase):
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
         started = now.strftime('%a %b %d %H:%M:%S %Y %z')
-        finished = now.strftime('%a %b %d %H:%M:%S %Y %z')
+        finished = (now + datetime.timedelta(seconds=2)).strftime(
+            '%a %b %d %H:%M:%S %Y %z')
         a_uuid = uuid4()
         other_uuid = uuid4()
 
@@ -283,6 +288,7 @@ class SlaveTest(TestCase):
 
         self.assertEqual(self.build.steps[0].status, 'success')
         self.assertEqual(len(self.build.steps), 2)
+        self.assertTrue(self.build.steps[0].total_time)
 
     @async_test
     def test_process_step_output_info(self):
