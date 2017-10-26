@@ -208,8 +208,22 @@ tr:nth-child(even) {
     width: 80px;
 }
 
+.toxic-spinner-running,
 .toxic-spinner-main{
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    -ms-transform: translateZ(0);
+    background-image: url("/static/toxicbuild/img/cog-dark-bg.gif");
+    width: 17px;
+    height: 17px;
     font-size: 1.11em;
+}
+
+.toxic-spinner-running{
+    background-image: url("/static/toxicbuild/img/cog-blue-bg.gif");
+    position: absolute;
+    margin-top: 0.1%;
+    margin-left: 0.5%;
 }
 
 .repo-status-form{
