@@ -346,7 +346,6 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
         buildset = info.get('buildset')
         if buildset:
             self._format_info_dt(buildset)
-            print(info['buildset']['started'])
 
     def _send_repo_status_info(self, info):
         self.write2sock(info)
