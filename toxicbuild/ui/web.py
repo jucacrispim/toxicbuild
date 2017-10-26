@@ -444,7 +444,9 @@ class WaterfallHandler(LoggedTemplateHandler):
             return sorted(
                 builds, key=lambda b: builders[builders.index(b.builder)].name)
 
-        def fmtdt(dt):
+        def fmtdt(dt):  # pragma: no cover
+            # when the attribute is not set, it is a empty string int the
+            # template, so we simply skip it here
             if not isinstance(dt, datetime.datetime):
                 return
             return format_datetime(dt)
