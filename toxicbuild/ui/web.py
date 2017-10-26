@@ -25,6 +25,7 @@ try:
 except ImportError:  # pragma no cover
     from asyncio import async as ensure_future
 
+import datetime
 from tornado import gen
 from tornado.websocket import WebSocketHandler, WebSocketError
 from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
@@ -388,7 +389,13 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
                 out_fn(body)
 
     def on_close(self):
-        self.client.disconnect()
+        # for test purpose
+        _has_disconnected = False
+        if self.client:
+            self.client.disconnect()
+            _has_disconnected = True
+
+        return _has_disconnected
 
     def write2sock(self, body):
         try:
@@ -437,10 +444,15 @@ class WaterfallHandler(LoggedTemplateHandler):
             return sorted(
                 builds, key=lambda b: builders[builders.index(b.builder)].name)
 
+        def fmtdt(dt):
+            if not isinstance(dt, datetime.datetime):
+                return
+            return format_datetime(dt)
+
         context = {'buildsets': buildsets, 'builders': builders,
                    'ordered_builds': _ordered_builds,
                    'get_ending': self._get_ending,
-                   'repository': repo, 'fmtdt': format_datetime}
+                   'repository': repo, 'fmtdt': fmtdt}
         self.render_template(self.template, context)
 
     @asyncio.coroutine

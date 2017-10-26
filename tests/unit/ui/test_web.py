@@ -654,6 +654,11 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler.on_close()
         self.assertTrue(self.handler.client.disconnect.called)
 
+    def test_on_close_without_client(self):
+        self.handler.client = None
+        has_disconnected = self.handler.on_close()
+        self.assertFalse(has_disconnected)
+
     def test_send_step_output_info(self):
         self.handler.request.arguments = {
             'uuid': ['sfdaf1'.encode('utf-8')]}
