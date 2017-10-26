@@ -23,7 +23,7 @@ from unittest.mock import MagicMock, patch
 import tornado
 from tornado import gen
 from tornado.testing import AsyncTestCase, gen_test
-from toxicbuild.ui import web, models
+from toxicbuild.ui import web, models, utils
 
 
 @patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
@@ -501,6 +501,26 @@ class StreamHandlerTest(AsyncTestCase):
     def test_open_bad_action(self):
         with self.assertRaises(web.BadActionError):
             self.handler.open('bad-action')
+
+    @patch.object(utils, 'settings', MagicMock())
+    def test_format_info_dt(self):
+        utils.settings.TIMEZONE = 'America/Sao_Paulo'
+        utils.settings.DTFORMAT = '%d/%m/%Y %H:%M:%S'
+        info = {'started': 'Wed Oct 25 08:53:38 2017 -0000',
+                'finished': 'Wed Oct 25 08:53:44 2017 -0000'}
+        self.handler._format_info_dt(info)
+        self.assertFalse(info['started'].endswith('0000'))
+
+    @patch.object(utils, 'settings', MagicMock())
+    def test_format_info_dt_buildset(self):
+        utils.settings.TIMEZONE = 'America/Sao_Paulo'
+        utils.settings.DTFORMAT = '%d/%m/%Y %H:%M:%S'
+        info = {'buildset': {'started': 'Wed Oct 25 08:53:38 2017 -0000',
+                             'finished': 'Wed Oct 25 08:53:44 2017 -0000',
+                             'created': 'Wed Oct 25 08:53:44 2017 -0000'}}
+        self.handler._format_info_dt(info)
+        self.assertFalse(info['buildset']['created'].endswith('0000'))
+        self.assertFalse(info['buildset']['started'].endswith('0000'))
 
     @patch.object(web, 'get_hole_client', MagicMock())
     @gen_test

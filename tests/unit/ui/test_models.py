@@ -19,6 +19,7 @@
 
 
 import asyncio
+import datetime
 import json
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
@@ -47,6 +48,10 @@ class BaseModelTest(TestCase):
         model = models.BaseModel(ordered)
         self.assertLess(model.__ordered__.index('z'),
                         model.__ordered__.index('a'))
+
+    def test_datetime_attributes(self):
+        model = models.BaseModel({'somedt': 'Wed Oct 25 06:50:49 2017 +0000'})
+        self.assertIsInstance(model.somedt, datetime.datetime)
 
     def test_to_dict(self):
         kw = models.OrderedDict()

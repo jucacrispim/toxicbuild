@@ -21,8 +21,10 @@
 import asyncio
 from collections import OrderedDict
 import json
-from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui import settings
+from toxicbuild.core.utils import string2datetime
+from toxicbuild.ui.client import get_hole_client
+from toxicbuild.ui.utils import is_datetime
 
 
 class BaseModel:
@@ -50,6 +52,8 @@ class BaseModel:
                     obj, cls) else obj
 
         for key, value in ordered_kwargs.items():
+            if is_datetime(value):
+                value = string2datetime(value)
             setattr(self, key, value)
             self.__ordered__.append(key)
 

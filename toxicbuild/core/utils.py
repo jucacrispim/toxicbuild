@@ -37,6 +37,9 @@ import bcrypt
 from toxicbuild.core.exceptions import ExecCmdError, ConfigError
 
 
+DTFORMAT = '%a %b %d %H:%M:%S %Y %z'
+
+
 def _get_envvars(envvars):
     """Returns environment variables to be used in shell. Does the
     interpolation of values using the current values from the envvar
@@ -165,18 +168,19 @@ def format_timedelta(td):
     return str(td).split('.')[0]
 
 
-def datetime2string(dt, dtformat='%a %b %d %H:%M:%S %Y %z'):
+def datetime2string(dt, dtformat=DTFORMAT):
     """Transforms a datetime object into a formated string.
 
     :param dt: The datetime object.
     :param dtformat: The format to use."""
 
     if dt.utcoffset() is None:
-        dt = localtime2utc(dt)
+        tz = timezone(timedelta(seconds=0))
+        dt = dt.replace(tzinfo=tz)
     return datetime.strftime(dt, dtformat)
 
 
-def string2datetime(dtstr, dtformat='%a %b %d %H:%M:%S %Y %z'):
+def string2datetime(dtstr, dtformat=DTFORMAT):
     """Transforns a string into a datetime object acording to ``dtformat``.
 
     :param dtstr: The string containing the formated date.

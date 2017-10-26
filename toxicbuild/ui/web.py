@@ -30,11 +30,12 @@ from tornado.websocket import WebSocketHandler, WebSocketError
 from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
 from pyrocumulus.web.handlers import TemplateHandler, PyroRequest
 from pyrocumulus.web.urlmappers import URLSpec
-from toxicbuild.core.utils import bcrypt_string, LoggerMixin
+from toxicbuild.core.utils import bcrypt_string, LoggerMixin, string2datetime
 from toxicbuild.ui import settings
 from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui.exceptions import BadActionError
 from toxicbuild.ui.models import Repository, Slave, BuildSet, Builder, Plugin
+from toxicbuild.ui.utils import format_datetime, is_datetime
 
 
 COOKIE_NAME = 'toxicui'
@@ -323,10 +324,29 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
         repository_id = self.request.arguments[
             'repository_id'][0].decode()
 
+        self._format_info_dt(info)
         repo = info.get('repository', {})
 
         if not repo or (repo and repository_id == repo.get('id')):
             self.write2sock(info)
+
+    def _format_info_dt(self, info):
+        started = info.get('started')
+        if started and is_datetime(started):
+            info['started'] = format_datetime(string2datetime(started))
+
+        finished = info.get('finished')
+        if finished and is_datetime(finished):
+            info['finished'] = format_datetime(string2datetime(finished))
+
+        created = info.get('created')
+        if created and is_datetime(created):
+            info['created'] = format_datetime(string2datetime(created))
+
+        buildset = info.get('buildset')
+        if buildset:
+            self._format_info_dt(buildset)
+            print(info['buildset']['started'])
 
     def _send_repo_status_info(self, info):
         self.write2sock(info)
@@ -421,7 +441,7 @@ class WaterfallHandler(LoggedTemplateHandler):
         context = {'buildsets': buildsets, 'builders': builders,
                    'ordered_builds': _ordered_builds,
                    'get_ending': self._get_ending,
-                   'repository': repo}
+                   'repository': repo, 'fmtdt': format_datetime}
         self.render_template(self.template, context)
 
     @asyncio.coroutine

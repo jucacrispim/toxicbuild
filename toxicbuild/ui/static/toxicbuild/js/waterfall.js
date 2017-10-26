@@ -50,7 +50,6 @@ jQuery('#buildsetDetailsModal').on('show.bs.modal', function (event) {
 
 jQuery('#follow-step-output').on('click', function(event){
   FOLLOW_STEP_OUTPUT = !FOLLOW_STEP_OUTPUT;
-  utils.log(FOLLOW_STEP_OUTPUT);
   if (FOLLOW_STEP_OUTPUT){
     jQuery("#stepDetailsModal").scrollTop($("#step-output")[0].scrollHeight);
     jQuery('#follow-step-output').text('Stop following output');
@@ -67,7 +66,6 @@ function rebuildBuildset(button){
   var url = '/api/repo/start-build';
   var repo_name = jQuery('#waterfall-repo-name').val();
   var data = {name: repo_name, named_tree: named_tree, branch: branch};
-  utils.log('rebuild buildset for ' + repo_name);
   var success_cb = function(response){
     utils.showSuccessMessage('Buildset re-scheduled.');
   };
@@ -245,7 +243,6 @@ function StepOutputSentinel(uuid){
 
     handleEvent: function(self, event){
       var data = jQuery.parseJSON(event.data);
-      utils.log(data.event_type);
       var step_el = jQuery('#step-' + data.uuid);
       var button = jQuery('button', step_el);
       self.old_output = button.data('step-output');
@@ -292,7 +289,6 @@ function WaterfallManager(){
     handleEvent: function(self, event){
 
       var data = jQuery.parseJSON(event.data);
-      utils.log(data.event_type);
       if (data.event_type == 'build_added'){
 	self.handleBuildAdded(data);
       }else if (data.event_type == 'build_started'){
@@ -337,7 +333,6 @@ function WaterfallManager(){
 				 build_el.parent()).length;
       	if (self._step_started_queue.indexOf(step) < 0 &&
 	    steps_count - 1 > step.index){
-	  utils.log('step enqueued: ' + step.uuid);
       	  self._step_started_queue.push(step);
       	  return false;
       	};
@@ -351,7 +346,6 @@ function WaterfallManager(){
       if (!from_queue){
 	self._handleStepQueue(build);
       }
-      self._handleBuildSetStarted(build.buildset);
     },
 
     handleStepFinished: function(step){
@@ -404,6 +398,7 @@ function WaterfallManager(){
 	builder_input.parent().addClass('builder-running');
 	builder_input.val('running');
       }
+      self._handleBuildSetStarted(build.buildset);
     },
 
     handleBuildFinished: function(build){

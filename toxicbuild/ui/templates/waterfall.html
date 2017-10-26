@@ -41,9 +41,9 @@
 		    data-buildset-branch="{{buildset.branch}}"
 		    data-buildset-commit-author="{{buildset.author}}"
 		    data-buildset-commit-title="{{buildset.title}}"
-		    data-buildset-created="{{buildset.created}}"
-		    data-buildset-started="{{buildset.started}}"
-		    data-buildset-finished="{{buildset.finished}}"
+		    data-buildset-created="{{fmtdt(buildset.created)}}"
+		    data-buildset-started="{{fmtdt(buildset.started)}}"
+		    data-buildset-finished="{{fmtdt(buildset.finished)}}"
 		    data-buildset-total-time="{{buildset.total_time}}">
 	      <span data-toggle="tooltip" title="Buildset details" data-placement="right">
 
@@ -96,8 +96,8 @@
 			data-step-command="{{step.command}}"
 			data-step-output="{{step.output}}"
 			data-step-status="{{step.status}}"
-			data-step-start="{{step.started}}"
-			data-step-end="{{step.finished}}"
+			data-step-start="{{fmtdt(step.started)}}"
+			data-step-end="{{fmtdt(step.finished)}}"
 			data-step-total-time="{{step.total_time}}">
 		  <span data-toggle="tooltip" title="Step details" data-placement="right">
 		    <span class="glyphicon glyphicon-modal-window" aria-hidden="true"></span>
