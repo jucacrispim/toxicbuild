@@ -26,6 +26,7 @@ except ImportError:  # pragma no cover
     from asyncio import async as ensure_future
 
 import datetime
+import traceback
 from tornado import gen
 from tornado.websocket import WebSocketHandler, WebSocketError
 from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
@@ -34,6 +35,7 @@ from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.core.utils import bcrypt_string, LoggerMixin, string2datetime
 from toxicbuild.ui import settings
 from toxicbuild.ui.client import get_hole_client
+from toxicbuild.ui.connectors import StreamConnector
 from toxicbuild.ui.exceptions import BadActionError
 from toxicbuild.ui.models import Repository, Slave, BuildSet, Builder, Plugin
 from toxicbuild.ui.utils import format_datetime, is_datetime
@@ -285,27 +287,54 @@ class SlaveHandler(BaseModelHandler):
 class StreamHandler(LoggerMixin, WebSocketHandler):
 
     def initialize(self):
-        self.client = None
+        self.action = None
+        self.repo_id = None
+        self.events = {'repo_status_changed': self._send_repo_status_info,
+                       'build_started': self._send_build_info,
+                       'build_finished': self._send_build_info,
+                       'build_added': self._send_build_info,
+                       'step_started': self._send_build_info,
+                       'step_finished': self._send_build_info,
+                       'step_output_info': self._send_step_output_info}
+        # maps actions to message (event) types
+        self.action_messages = {'repo-status': ['repo_status_changed'],
+                                'builds': ['build_started', 'build_finished',
+                                           'build_added', 'step_started',
+                                           'step_finished'],
+                                'step-output': ['step_output_info']}
+
+    def _bad_message_type_logger(self, message):
+        msg = 'Bad. message type: {}'.format(message['event_type'])
+        self.log(msg, level='warning')
+
+    def _get_repo_id(self):
+        try:
+            repo_id = self.request.arguments.get('repo_id')[0].decode()
+        except TypeError:
+            repo_id = None
+
+        return repo_id
 
     def open(self, action):
-        if action == 'repo-status':
-            events = ['repo_status_changed']
-            out_fn = self._send_repo_status_info
+        self.action = action
+        self.repo_id = self._get_repo_id()
+        f = ensure_future(StreamConnector.plug(self.repo_id, self.receiver))
+        return f
 
-        elif action == 'builds':
-            events = ['build_started', 'build_finished', 'build_added',
-                      'step_started', 'step_finished']
-            out_fn = self._send_build_info
-
-        elif action == 'step-output':
-            events = ['step_output_info']
-            out_fn = self._send_step_output_info
-
-        else:
-            msg = 'Action {} is not known'.format(action)
-            raise BadActionError(msg)
-
-        ensure_future(self.listen2event(*events, out_fn=out_fn))
+    def receiver(self, sender, **message):
+        message_type = message.get('event_type')
+        msg = 'message arrived: {}'.format(message_type)
+        self.log(msg, level='debug')
+        if message_type not in self.action_messages.get(self.action, []):
+            msg = 'leaving receiver'
+            self.log(msg, level='debug')
+            return
+        outfn = self.events.get(message_type, self._bad_message_type_logger)
+        try:
+            outfn(message)
+        except Exception:
+            msg = traceback.format_exc()
+            self.log(msg, level='error')
 
     def _send_step_output_info(self, info):
         """Sends information about step output to the ws client.
@@ -322,14 +351,8 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
 
         :param info: The message sent by the master"""
 
-        repository_id = self.request.arguments[
-            'repository_id'][0].decode()
-
         self._format_info_dt(info)
-        repo = info.get('repository', {})
-
-        if not repo or (repo and repository_id == repo.get('id')):
-            self.write2sock(info)
+        self.write2sock(info)
 
     def _format_info_dt(self, info):
         started = info.get('started')
@@ -351,59 +374,14 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
     def _send_repo_status_info(self, info):
         self.write2sock(info)
 
-    @asyncio.coroutine
-    def get_stream_client(self):
-        """Return a client already connected to the master and
-        listening the stream."""
-
-        host = settings.HOLE_HOST
-        port = settings.HOLE_PORT
-        client = yield from get_hole_client(host, port)
-        yield from client.connect2stream()
-        return client
-
-    @asyncio.coroutine
-    def listen2event(self, *event_types, out_fn):
-        """Creates a connection to the master and sends a messge to
-        the ws client when an event of event_type is sent by the mater.
-
-        :param event_types: A list of the events that will be handled by
-          this connection.
-        :para out_fn: A function that receives the message sent by the
-          master if the message has the right event_type
-        """
-
-        self.client = yield from self.get_stream_client()
-        while self.client._connected:
-            response = yield from self.client.get_response()
-            body = response.get('body', {})
-
-            if not body:
-                self.log('Bad data: closing connection', level='debug')
-                self.client.disconnect()
-                break
-
-            master_event_type = body.get('event_type')
-
-            if master_event_type in event_types:
-                out_fn(body)
-
     def on_close(self):
-        # for test purpose
-        _has_disconnected = False
-        if self.client:
-            self.client.disconnect()
-            _has_disconnected = True
-
-        return _has_disconnected
+        StreamConnector.unplug(self.repo_id, self.receiver)
 
     def write2sock(self, body):
         try:
             self.write_message(body)
         except WebSocketError:
-            self.log('WebSocketError: closing connection',
-                     level='debug')
-            self.client.disconnect()
+            self.log('WebSocketError', level='debug')
 
 
 class MainHandler(LoggedTemplateHandler):

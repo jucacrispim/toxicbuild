@@ -470,37 +470,82 @@ class StreamHandlerTest(AsyncTestCase):
         application = MagicMock()
         self.handler = web.StreamHandler(application, request=request)
 
-    @patch.object(web, 'ensure_future', MagicMock())
-    @patch.object(web.StreamHandler, 'listen2event', MagicMock())
-    def test_open_repo_status(self):
-        self.handler.open('repo-status')
-        event = self.handler.listen2event.call_args[0][0]
-        self.assertTrue(self.handler.listen2event.called)
-        self.assertEqual(event, 'repo_status_changed')
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
 
-    @patch.object(web, 'ensure_future', MagicMock())
-    @patch.object(web.StreamHandler, 'listen2event', MagicMock())
-    def test_open_builds(self):
-        self.handler.request.arguments = {'repository_id': [b'123']}
-        self.handler.open('builds')
-        events = self.handler.listen2event.call_args[0]
-        self.assertTrue(self.handler.listen2event.called)
-        self.assertEqual(events, ('build_started', 'build_finished',
-                                  'build_added', 'step_started',
-                                  'step_finished'))
+    def test_get_repo_id(self):
+        self.handler.request.arguments = {'repo_id': [b'asdf']}
+        repo_id = self.handler._get_repo_id()
+        self.assertEqual(repo_id, 'asdf')
 
-    @patch.object(web, 'ensure_future', MagicMock())
-    @patch.object(web.StreamHandler, 'listen2event', MagicMock())
-    def test_open_step_output_info(self):
-        self.handler.request.arguments = {'repository_id': [b'123']}
-        self.handler.open('step-output')
-        event = self.handler.listen2event.call_args[0][0]
-        self.assertTrue(self.handler.listen2event.called)
-        self.assertEqual(event, 'step_output_info')
+    def test_get_repo_id_type_error(self):
+        repo_id = self.handler._get_repo_id()
+        self.assertIsNone(repo_id)
 
-    def test_open_bad_action(self):
-        with self.assertRaises(web.BadActionError):
-            self.handler.open('bad-action')
+    @patch.object(web, 'StreamConnector', MagicMock())
+    @gen_test
+    def test_open(self):
+        self.handler.request.arguments = {'repo_id': [b'asdf']}
+        plug = MagicMock()
+        web.StreamConnector.plug = asyncio.coroutine(lambda *a, **kw: plug())
+        f = self.handler.open('repo-status')
+        yield from f
+        self.assertTrue(plug.called)
+        self.assertTrue(self.handler.repo_id)
+        self.assertEqual(self.handler.action, 'repo-status')
+
+    @gen_test
+    def test_bad_message_type_logger(self):
+        self.handler.log = MagicMock()
+        self.handler._bad_message_type_logger(
+            {'event_type': 'unknown'})
+        self.assertTrue(self.handler.log.called)
+
+    @gen_test
+    def test_receiver(self):
+        sender = MagicMock()
+        message = {'event_type': 'build_started'}
+        sbi = MagicMock()
+
+        self.handler._send_build_info = sbi
+
+        self.handler.events['build_started'] = self.handler._send_build_info
+        self.handler.action = 'builds'
+        self.handler.receiver(sender, **message)
+        yield from asyncio.sleep(0.001)
+        self.assertTrue(sbi.called)
+
+    @gen_test
+    def test_receiver_wrong_action(self):
+        sender = MagicMock()
+        message = {'event_type': 'build_started'}
+        sbi = MagicMock()
+
+        self.handler._send_build_info = sbi
+
+        self.handler.events['build_started'] = self.handler._send_build_info
+        self.handler.action = 'build-step'
+        self.handler.receiver(sender, **message)
+        yield from asyncio.sleep(0.001)
+        self.assertFalse(sbi.called)
+
+    @patch.object(web.traceback, 'format_exc', MagicMock())
+    @gen_test
+    def test_receiver_exception(self):
+        sender = MagicMock()
+        message = {'event_type': 'build_started'}
+        sbi = MagicMock(side_effect=Exception)
+
+        self.handler._send_build_info = sbi
+
+        self.handler.events['build_started'] = self.handler._send_build_info
+        self.handler.action = 'builds'
+        self.handler.log = MagicMock()
+        self.handler.receiver(sender, **message)
+        yield from asyncio.sleep(0.001)
+        self.assertTrue(sbi.called)
+        self.assertTrue(web.traceback.format_exc.called)
+        self.assertTrue(self.handler.log.called)
 
     @patch.object(utils, 'settings', MagicMock())
     def test_format_info_dt(self):
@@ -522,20 +567,6 @@ class StreamHandlerTest(AsyncTestCase):
         self.assertFalse(info['buildset']['created'].endswith('0000'))
         self.assertFalse(info['buildset']['started'].endswith('0000'))
 
-    @patch.object(web, 'get_hole_client', MagicMock())
-    @gen_test
-    def test_get_stream_client(self):
-
-        client_mock = MagicMock()
-
-        @asyncio.coroutine
-        def get_client(*a, **kw):
-            return client_mock
-
-        web.get_hole_client = get_client
-        yield from self.handler.get_stream_client()
-        self.assertTrue(client_mock.connect2stream.called)
-
     def test_write2sock(self):
         body = {'some': 'response'}
         self.handler.write_message = MagicMock()
@@ -545,119 +576,15 @@ class StreamHandlerTest(AsyncTestCase):
     def test_write2sock_with_connection_closed(self):
         body = {'some': 'response'}
         self.handler.write_message = MagicMock(side_effect=web.WebSocketError)
-        self.handler.client = MagicMock()
+        self.handler.log = MagicMock()
         self.handler.write2sock(body)
         self.assertTrue(self.handler.write_message.called)
-        self.assertTrue(self.handler.client.disconnect.called)
+        self.assertTrue(self.handler.log.called)
 
-    @patch.object(web.StreamHandler, 'log', MagicMock())
-    @gen_test
-    def test_listen2event_with_bad_data(self):
-        client_mock = MagicMock()
-        client_mock._connected = True
-
-        def disconnect():
-            client_mock._connected = False
-
-        client_mock.disconnect = disconnect
-
-        @asyncio.coroutine
-        def get_response():
-            return {}
-
-        client_mock.get_response = get_response
-
-        @asyncio.coroutine
-        def get_client(*a, **kw):
-            return client_mock
-
-        web.get_hole_client = get_client
-
-        self.handler.write_message = MagicMock()
-        out_fn = asyncio.coroutine(lambda *a, **kw: None)
-        yield from self.handler.listen2event('repo_status_changed',
-                                             out_fn=out_fn)
-        called = self.handler.log.call_args[0][0]
-        self.assertIn('closing connection', called)
-
-    @patch.object(web, 'get_hole_client', MagicMock())
-    @patch.object(web.StreamHandler, 'write_message', MagicMock())
-    @gen_test
-    def test_listen2event(self):
-
-        class client_mock(MagicMock):
-            COUNT = -1
-
-            @property
-            def _connected(self):
-                self.COUNT += 1
-                return not bool(self.COUNT)
-
-        client_mock = client_mock()
-
-        @asyncio.coroutine
-        def get_response():
-            return {'body': {'event_type': 'repo_status_changed',
-                             'repository': {'id': '1234'}}}
-
-        client_mock.get_response = get_response
-
-        @asyncio.coroutine
-        def get_client(*a, **kw):
-            return client_mock
-
-        self.CALLED = False
-
-        def out_fn(info):
-            self.CALLED = True
-
-        web.get_hole_client = get_client
-        yield from self.handler.listen2event('repo_status_changed',
-                                             out_fn=out_fn)
-        self.assertTrue(self.CALLED)
-
-    @patch.object(web, 'get_hole_client', MagicMock())
-    @patch.object(web.StreamHandler, 'write_message', MagicMock())
-    @gen_test
-    def test_listen2event_wrong_event(self):
-
-        class client_mock(MagicMock):
-            COUNT = -1
-
-            @property
-            def _connected(self):
-                self.COUNT += 1
-                return not bool(self.COUNT)
-
-        client_mock = client_mock()
-
-        @asyncio.coroutine
-        def get_response():
-            return {'body': {'event_type': 'repo_somethig',
-                             'repository': {'id': '1234'}}}
-
-        client_mock.get_response = get_response
-
-        @asyncio.coroutine
-        def get_client(*a, **kw):
-            return client_mock
-
-        web.get_hole_client = get_client
-        out_fn_mock = MagicMock()
-        out_fn = asyncio.coroutine(lambda *a, **kw: out_fn_mock())
-        yield from self.handler.listen2event('repo_status_changed',
-                                             out_fn=out_fn)
-        self.assertFalse(out_fn_mock.called)
-
+    @patch.object(web, 'StreamConnector', MagicMock())
     def test_on_close(self):
-        self.handler.client = MagicMock()
         self.handler.on_close()
-        self.assertTrue(self.handler.client.disconnect.called)
-
-    def test_on_close_without_client(self):
-        self.handler.client = None
-        has_disconnected = self.handler.on_close()
-        self.assertFalse(has_disconnected)
+        self.assertTrue(web.StreamConnector.unplug.called)
 
     def test_send_step_output_info(self):
         self.handler.request.arguments = {
@@ -687,17 +614,6 @@ class StreamHandlerTest(AsyncTestCase):
 
         self.handler._send_build_info(info)
         self.assertTrue(self.handler.write2sock.called)
-
-    @gen_test
-    def test_send_build_info_wrong_repo(self):
-        self.handler.request.arguments = {
-            'repository_id': ['1'.encode('utf-8')]}
-        self.handler.write2sock = MagicMock()
-        info = {'event_type': 'repo_status_changed',
-                'repository': {'id': '2'}}
-
-        self.handler._send_build_info(info)
-        self.assertFalse(self.handler.write2sock.called)
 
     @gen_test
     def test_send_repo_status_info(self):
