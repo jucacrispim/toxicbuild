@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -67,7 +67,7 @@ class ProtocolTest(TestCase):
         self.protocol.get_json_data = r
 
     def test_call(self):
-        self.assertEqual(self.protocol(), self.protocol)
+        self.assertEqual(type(self.protocol()), type(self.protocol))
 
     @async_test
     def test_healthcheck(self):

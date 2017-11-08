@@ -828,12 +828,12 @@ class UIStreamHandlerTest(TestCase):
             self.CODE = code
             self.BODY = body
 
-        self.handler.protocol.send_response = sr
+        self.handler.send_response = sr
 
-        f = yield from self.handler.send_info('step_started',
-                                              build=testbuild, step=teststep)
-        yield from f
+        yield from self.handler.send_info('step_started',
+                                          build=testbuild, step=teststep)
 
+        yield from asyncio.sleep(0)
         self.assertEqual(self.CODE, 0)
         self.assertIn('build', self.BODY.keys())
 
@@ -872,10 +872,9 @@ class UIStreamHandlerTest(TestCase):
             self.CODE = code
             self.BODY = body
 
-        self.handler.protocol.send_response = sr
-        f = yield from self.handler.send_info('step-started', build=testbuild)
-        yield from f
-
+        self.handler.send_response = sr
+        yield from self.handler.send_info('step-started', build=testbuild)
+        yield from asyncio.sleep(0)
         self.assertEqual(self.CODE, 0)
         self.assertIn('steps', self.BODY.keys())
         self.assertIn('buildset', self.BODY.keys())
@@ -902,12 +901,12 @@ class UIStreamHandlerTest(TestCase):
             self.CODE = code
             self.BODY = body
 
-        self.handler.protocol.send_response = sr
-        f = yield from self.handler.send_repo_status_info(repo=testrepo,
-                                                          old_status='running',
-                                                          new_status='fail')
-        yield from f
+        self.handler.send_response = sr
+        yield from self.handler.send_repo_status_info(repo=testrepo,
+                                                      old_status='running',
+                                                      new_status='fail')
 
+        yield from asyncio.sleep(0)
         self.assertEqual(self.BODY['status'], 'fail')
         self.assertIsInstance(self.BODY['id'], str)
 
@@ -939,6 +938,33 @@ class UIStreamHandlerTest(TestCase):
         yield from f
 
         self.assertEqual(self.BODY['uuid'], 'some-uuid')
+
+    @async_test
+    def test_send_response(self):
+        sr_mock = MagicMock()
+
+        @asyncio.coroutine
+        def sr(code, body):
+            sr_mock()
+
+        self.handler.protocol.send_response = sr
+        yield from self.handler.send_response(code=0, body='bla')
+        self.assertTrue(sr_mock.called)
+
+    @async_test
+    def test_send_response_exception(self):
+
+        @asyncio.coroutine
+        def sr(code, body):
+            raise ConnectionResetError
+
+        self.handler.protocol.send_response = sr
+        self.handler.log = MagicMock()
+        self.handler.protocol._transport.close = MagicMock()
+        self.handler._disconnectfromsignals = MagicMock()
+        yield from self.handler.send_response(code=0, body='bla')
+        self.assertTrue(self.handler.protocol._transport.close.called)
+        self.assertTrue(self.handler._disconnectfromsignals.called)
 
 
 class HoleServerTest(TestCase):

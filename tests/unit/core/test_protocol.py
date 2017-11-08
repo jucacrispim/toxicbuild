@@ -72,7 +72,7 @@ class BaseToxicProtocolTest(TestCase):
 
     def test_call(self):
 
-        self.assertEqual(self.protocol(), self.protocol)
+        self.assertEqual(type(self.protocol()), type(self.protocol))
 
     @mock.patch.object(protocol.asyncio, 'StreamReader', mock.Mock())
     @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
@@ -101,16 +101,43 @@ class BaseToxicProtocolTest(TestCase):
         yield from prot._client_connected_future
         self.assertTrue(cc_mock.called)
 
+    @mock.patch.object(protocol.asyncio, 'StreamReader', mock.Mock())
     @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
+    @async_test
+    def test_connection_made_with_connection_reset(self):
+        # this one ensures that we handle ConnectionResetError properly
+        loop = mock.Mock()
+        prot = protocol.BaseToxicProtocol(loop)
+        prot._stream_reader = mock.MagicMock()
+        prot._stream_writer = mock.MagicMock()
+        prot._stream_reader.read = self.protocol._stream_reader.read
+        transport = mock.Mock()
+
+        @asyncio.coroutine
+        def cc():
+            raise ConnectionResetError
+
+        prot.client_connected = cc
+        prot.salt = self.protocol.salt
+        prot.encrypted_token = self.protocol.encrypted_token
+        prot.log = mock.Mock()
+        prot.connection_made(transport)
+        yield from prot._check_data_future
+        yield from prot._client_connected_future
+        # here we look for the debug message saying that the connection
+        # was reset
+        msg = prot.log.call_args_list[0][0][0]
+        self.assertEqual(msg, 'Connection reset')
+
     def test_connection_lost(self):
         self.protocol.connection_lost(mock.Mock())
-        self.assertTrue(self.protocol._stream_writer.close.called)
+        self.assertIsNone(self.protocol._stream_writer)
 
     @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
     def test_connection_lost_with_cb(self):
         self.protocol.connection_lost_cb = mock.Mock()
         self.protocol.connection_lost(mock.Mock())
-        self.assertTrue(self.protocol._stream_writer.close.called)
+        self.assertIsNone(self.protocol._stream_writer)
         self.assertTrue(self.protocol.connection_lost_cb.called)
 
     @mock.patch.object(protocol.utils, 'log', mock.Mock())

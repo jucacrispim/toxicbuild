@@ -614,7 +614,7 @@ class UIStreamHandler(LoggerMixin):
         final_info = {'event_type': info_type}
         final_info.update(info)
 
-        f = ensure_future(self.protocol.send_response(code=0, body=final_info))
+        f = ensure_future(self.send_response(code=0, body=final_info))
 
         return f
 
@@ -630,7 +630,7 @@ class UIStreamHandler(LoggerMixin):
         rdict['status'] = new_status
         rdict['old_status'] = old_status
         rdict['event_type'] = 'repo_status_changed'
-        f = ensure_future(self.protocol.send_response(code=0, body=rdict))
+        f = ensure_future(self.send_response(code=0, body=rdict))
         return f
 
     def send_step_output_info(self, repo, step_info):
@@ -640,8 +640,16 @@ class UIStreamHandler(LoggerMixin):
         :param step_info: The information about the step output."""
 
         step_info['event_type'] = 'step_output_info'
-        f = ensure_future(self.protocol.send_response(code=0, body=step_info))
+        f = ensure_future(self.send_response(code=0, body=step_info))
         return f
+
+    @asyncio.coroutine
+    def send_response(self, code, body):
+        try:
+            yield from self.protocol.send_response(code=code, body=body)
+        except ConnectionResetError:
+            self.protocol._transport.close()
+            self._disconnectfromsignals()
 
 
 class HoleServer:

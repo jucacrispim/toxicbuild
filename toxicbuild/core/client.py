@@ -74,6 +74,7 @@ class BaseToxicClient(utils.LoggerMixin):
         # context we can consider it as being a False json
         data = yield from utils.read_stream(self.reader)
         data = data.decode() or '{}'
+
         try:
             json_data = json.loads(data, object_pairs_hook=OrderedDict)
         except Exception:

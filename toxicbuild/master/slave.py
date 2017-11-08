@@ -230,6 +230,7 @@ class Slave(Document, LoggerMixin):
         repo = yield from build.repository
         step = self._get_step(build, uuid)
         step.output = ''.join([step.output or '', output])
+        info['repository'] = {'id': str(repo.id)}
         yield from build.update()
         msg = 'step_output_arrived for {}'.format(uuid)
         self.log(msg, level='debug')

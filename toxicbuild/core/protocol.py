@@ -78,6 +78,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
 
     def connection_lost(self, exc):
         self.close_connection()
+        super().connection_lost(exc)
         if self.connection_lost_cb:
             self.connection_lost_cb(exc)
 
@@ -126,6 +127,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
     def close_connection(self):
         """ Closes the connection with the client
         """
+
         self._stream_writer.close()
         self._connected = False
 
@@ -174,7 +176,13 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         @asyncio.coroutine
         def logged_cb():
             init = (time.time() * 1e3)
-            status = yield from self.client_connected()
+            try:
+                status = yield from self.client_connected()
+            except ConnectionResetError:
+                status = 1
+                msg = 'Connection reset'
+                self.log(msg, level='debug')
+
             end = (time.time() * 1e3)
             self.log('{}: {} {}'.format(self.action, status, (end - init)))
 
