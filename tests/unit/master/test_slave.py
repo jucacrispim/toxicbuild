@@ -214,6 +214,7 @@ class SlaveTest(TestCase):
                       'total_time': 2}
 
         yield from self.slave._process_info(self.build, build_info)
+        self.assertEqual(self.build.total_time, 2)
         self.assertTrue(slave.build_finished.send.called)
 
     @async_test

@@ -48,6 +48,28 @@ jQuery('#buildsetDetailsModal').on('show.bs.modal', function (event) {
   modal.find('#buildset-total-time').text(total);
 });
 
+jQuery('#buildDetailsModal').on('show.bs.modal', function (event) {
+  var button = jQuery(event.relatedTarget);
+  var commit = button.data('buildset-commit');
+  var author = button.data('buildset-commit-author');
+  var title = button.data('buildset-commit-title');
+  var created = button.data('build-created');
+  var branch = button.data('build-branch');
+  var started = button.data('build-started');
+  var finished = button.data('build-finished');
+  var total = button.data('build-total-time');
+
+  var modal = jQuery(this)
+  modal.find('#buildset-commit').text(commit);
+  modal.find('#buildset-commit-author').text(author);
+  modal.find('#buildset-commit-title').text(title);
+  modal.find('#buildset-created').text(created);
+  modal.find('#buildset-branch').text(branch);
+  modal.find('#buildset-started').text(started);
+  modal.find('#buildset-finished').text(finished);
+  modal.find('#buildset-total-time').text(total);
+});
+
 jQuery('#follow-step-output').on('click', function(event){
   FOLLOW_STEP_OUTPUT = !FOLLOW_STEP_OUTPUT;
   if (FOLLOW_STEP_OUTPUT){
@@ -193,6 +215,24 @@ var BUILD_TEMPLATE = `
         <span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>
       </button>
     </span>
+
+    <span data-toggle="tooltip" title="Build details" data-placement="right" class="build-details-btn">
+      <button type="button" class="btn btn-default btn-build-details btn-transparent btn-build-details-build btn-sm"
+	      data-buildset-commit="{{buildset.commit}}"
+	      data-buildset-branch="{{buildset.branch}}"
+	      data-builder-name="{{build.builder.name}}"
+	      data-buildset-commit-author="{{buildset.author}}"
+	      data-buildset-commit-title="{{buildset.title}}"
+	      data-build-created="{{buildset.created}}"
+	      data-build-started="{{build.started}}"
+	      data-build-finished="{{build.finished}}"
+	      data-build-total-time="{{build.total_time}}"
+	      data-toggle="modal"
+	      data-target="#buildDetailsModal">
+	<span class="glyphicon glyphicon-modal-window" aria-hidden="true"></span>
+      </button>
+    </span>
+
   </li>
 </ul>
   `;
@@ -377,6 +417,8 @@ function WaterfallManager(){
       var self = this;
 
       var build_el = jQuery('#build-info-' + build.uuid);
+      var details_btn = jQuery(jQuery('.btn-build-details', build_el)[0]);
+      details_btn.attr('data-build-started', build.started);
 
       if (build_el.length == 0){
 	self._build_started_queue.push(build);
@@ -409,6 +451,11 @@ function WaterfallManager(){
 	self._build_finished_queue.push(build);
 	return false;
       }
+
+      var details_btn = jQuery(jQuery('.btn-build-details', build_el)[0]);
+      details_btn.attr('data-build-finished', build.finished);
+      details_btn.attr('data-build-total-time', build.total_time);
+
 
       var spinner = jQuery('#spinner-build-' + build.uuid);
       spinner.hide();
@@ -567,10 +614,16 @@ function WaterfallManager(){
 	build_el = jQuery('#build-builder-' + build.builder.id);
       };
 
-      var template = BUILD_TEMPLATE.replace(/{{build.status}}/g, build.status);
+      template = BUILD_TEMPLATE.replace(/{{build.status}}/g, build.status);
+      template = template.replace(/{{buildset.title}}/g, buildset.title);
+      template = template.replace(/{{buildset.author}}/g, buildset.author);
+      template = template.replace(/{{buildset.created}}/g, buildset.created);
       template = template.replace(/{{buildset.commit}}/g, buildset.commit);
       template = template.replace(/{{build.id}}/g, build.uuid);
       template = template.replace(/{{buildset.branch}}/g, buildset.branch);
+      template = template.replace(/{{build.started}}/g, build.started);
+      template = template.replace(/{{build.finished}}/g, build.finished);
+      template = template.replace(/{{build.total_time}}/g, build.total_time);
       var builder_name = builder ? builder.name : 'new-builder';
       template = template.replace(/{{build.builder.name}}/g, builder_name);
       jQuery(build_el).append(template);

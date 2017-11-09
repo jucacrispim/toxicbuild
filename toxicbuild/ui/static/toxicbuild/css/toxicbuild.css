@@ -275,6 +275,10 @@ tr:nth-child(even) {
 
 /* waterfall */
 
+.build-details-btn{
+    float:right;
+    margin-right: -3px;
+}
 .step{
     border-bottom: 1px solid #4c4a49;
 }

@@ -209,6 +209,7 @@ class Build(EmbeddedDocument):
     builder = ReferenceField(Builder, required=True)
     status = StringField(default=PENDING, choices=STATUSES)
     steps = ListField(EmbeddedDocumentField(BuildStep))
+    total_time = IntField()
 
     def to_dict(self, id_as_str=False):
         steps = [s.to_dict() for s in self.steps]
@@ -216,6 +217,15 @@ class Build(EmbeddedDocument):
         objdict['builder']['id'] = objdict['builder']['$oid']
         objdict['uuid'] = str(self.uuid)
         objdict['steps'] = steps
+        objdict['started'] = datetime2string(self.started) if self.started \
+            else ''
+        objdict['finished'] = datetime2string(self.finished) if self.finished \
+            else ''
+        if self.total_time is not None:
+            td = timedelta(seconds=self.total_time)
+            objdict['total_time'] = format_timedelta(td)
+        else:
+            objdict['total_time'] = ''
         return objdict
 
     def to_json(self):
@@ -314,7 +324,7 @@ class BuildSet(SerializeMixin, Document):
         objdict['finished'] = datetime2string(self.finished) if self.finished \
             else ''
 
-        if self.total_time:
+        if self.total_time is not None:
             td = timedelta(seconds=self.total_time)
             objdict['total_time'] = format_timedelta(td)
         else:

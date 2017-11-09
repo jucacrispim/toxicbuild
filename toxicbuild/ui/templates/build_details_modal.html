@@ -1,0 +1,31 @@
+<div class="modal fade" id="buildDetailsModal" tabindex="-1" role="dialog" aria-labelledby="Show step">
+  <div class="modal-dialog modal-dialog-step" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="buildDetailsModalLabel">Build details</h4>
+      </div>
+
+      <!-- modal body -->
+      <div class="modal-body">
+	<ul class="toxic-ul">
+	  <li>Commit author: <span id="buildset-commit-author"></span></li>
+	  <li>Commit title:
+	    <strong><span id="buildset-commit-title"></span></strong>
+	  </li>
+	  <li>Branch: <span id="buildset-branch"></span></li>
+	  <li>Commit: <span id="buildset-commit"></span></li>
+	  <li>Created: <span id="buildset-created"></span></li>
+	  <li>Started: <span id="buildset-started"></span></li>
+	  <li>Finished: <span id="buildset-finished"></span></li>
+	  <li>Total: <span id="buildset-total-time"></span></li>
+	</ul>
+      </div>
+
+	<!-- modal footer -->
+	<div class="modal-footer">
+	  <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+	</div>
+    </div>
+  </div>
+</div>

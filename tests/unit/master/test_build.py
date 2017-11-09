@@ -73,6 +73,20 @@ class BuildTest(TestCase):
         self.assertTrue(bd['builder']['id'])
 
     @async_test
+    def test_to_dict(self):
+        yield from self._create_test_data()
+        bs = build.BuildStep(name='bla',
+                             command='ls',
+                             started=now(),
+                             finished=now(),
+                             total_time=1,
+                             status='finished')
+        self.buildset.builds[0].steps.append(bs)
+        self.buildset.builds[0].total_time = 1
+        bd = self.buildset.builds[0].to_dict()
+        self.assertEqual(bd['total_time'], '0:00:01')
+
+    @async_test
     def test_update(self):
         yield from self._create_test_data()
         b = self.buildset.builds[0]

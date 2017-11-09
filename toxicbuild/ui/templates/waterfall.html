@@ -3,6 +3,8 @@
 {% block main_area %}
 {% include "step_details_modal.html" %}
 {% include "buildset_details_modal.html" %}
+{% include "build_details_modal.html" %}
+
 <input type="hidden" id="waterfall-repo-id" value="{{repository.id}}"/>
 <input type="hidden" id="waterfall-repo-name" value="{{repository.name}}"/>
 <table>
@@ -70,8 +72,10 @@
 	{% end %}
 	<ul>
 	  <li class="step step-{{build.status}}" id="build-info-{{build.uuid}}">
-	    Build - {{build.status}} <i class="fa fa-3x fa-fw " id="spinner-build-{{build.uuid}}"
-					{% if build.status != 'running' %} style="display:none" {% end %}><div class="toxic-spinner-main toxic-spinner-running"></div></i>
+	    Build - {{build.status}} <i class="fa fa-3x fa-fw toxic-spinner-main toxic-spinner-running " id="spinner-build-{{build.uuid}}"
+					{% if build.status != 'running' %} style="display:none" {% end %}>
+
+	      </i>
 	    <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" {% if build.status in ['pending', 'running'] %} style="display:none" {% end %}>
 	      <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-build btn-sm"
 		      data-buildset-commit="{{buildset.commit}}"
@@ -80,6 +84,24 @@
 		<span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>
 	      </button>
 	    </span>
+
+	    <span data-toggle="tooltip" title="Build details" data-placement="right" {% if build.status in ['pending', 'running'] %} style="display:none" {% end %} class="build-details-btn">
+	      <button type="button" class="btn btn-default btn-build-details btn-transparent btn-build-details-build btn-sm"
+		      data-buildset-commit="{{buildset.commit}}"
+		      data-buildset-branch="{{buildset.branch}}"
+		      data-builder-name="{{build.builder.name}}"
+		      data-buildset-commit-author="{{buildset.author}}"
+		      data-buildset-commit-title="{{buildset.title}}"
+		      data-build-created="{{fmtdt(buildset.created)}}"
+		      data-build-started="{{fmtdt(build.started)}}"
+		      data-build-finished="{{fmtdt(build.finished)}}"
+		      data-build-total-time="{{build.total_time}}"
+		      data-toggle="modal"
+		      data-target="#buildDetailsModal">
+		<span class="glyphicon glyphicon-modal-window" aria-hidden="true"></span>
+	      </button>
+	    </span>
+
 	  </li>
 	  {% for step in build.steps %}
 	  <li class="step step-{{step.status}}" id="step-{{step.uuid}}">
