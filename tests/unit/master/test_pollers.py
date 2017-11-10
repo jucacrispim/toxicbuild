@@ -50,7 +50,7 @@ class GitPollerTest(TestCase):
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @async_test
-    def test_process_changes(self):
+    async def test_process_changes(self):
         # now in the future, of course!
         now = datetime.datetime.now() + datetime.timedelta(100)
         branches = [
@@ -59,8 +59,8 @@ class GitPollerTest(TestCase):
             repository.RepositoryBranch(name='dev',
                                         notify_only_latest=False)]
         self.repo.branches = branches
-        yield from self.repo.save()
-        yield from self._create_db_revisions()
+        await self.repo.save()
+        await self._create_db_revisions()
 
         @asyncio.coroutine
         def gr(*a, **kw):
@@ -76,7 +76,7 @@ class GitPollerTest(TestCase):
 
         self.poller.vcs.get_revisions = gr
 
-        yield from self.poller.process_changes()
+        await self.poller.process_changes()
 
         called_revs = pollers.revision_added.send.call_args[1]['revisions']
         # call only 1 because self.poller.notify_only_latest is True
@@ -85,8 +85,8 @@ class GitPollerTest(TestCase):
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @async_test
-    def test_poll(self):
-        yield from self._create_db_revisions()
+    async def test_poll(self):
+        await self._create_db_revisions()
 
         now = datetime.datetime.now()
 
@@ -112,17 +112,19 @@ class GitPollerTest(TestCase):
                                 'author': 'eu', 'title': 'otherthing'}]}
 
         self.poller.vcs.get_revisions = gr
+        self.poller.vcs.update_submodule = asyncio.coroutine(
+            lambda *a, **kw: None)
         self.poller.vcs.workdir_exists = workdir_exists
         self.poller.vcs.clone = clone
         self.poller.vcs.has_changes = has_changes
 
-        yield from self.poller.poll()
+        await self.poller.poll()
 
         self.assertTrue(self.CLONE_CALLED)
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @async_test
-    def test_poll_with_clone_exception(self):
+    async def test_poll_with_clone_exception(self):
 
         def workdir_exists():
             return False
@@ -136,12 +138,12 @@ class GitPollerTest(TestCase):
         self.poller.vcs.clone = clone
 
         with self.assertRaises(CloneException):
-            yield from self.poller.poll()
+            await self.poller.poll()
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @async_test
-    def test_poll_without_clone(self):
-        yield from self._create_db_revisions()
+    async def test_poll_without_clone(self):
+        await self._create_db_revisions()
 
         now = datetime.datetime.now()
 
@@ -170,44 +172,51 @@ class GitPollerTest(TestCase):
         self.poller.vcs.workdir_exists = workdir_exists
         self.poller.vcs.clone = clone
         self.poller.vcs.has_changes = has_changes
+        self.poller.vcs.update_submodule = asyncio.coroutine(
+            lambda *a, **kw: None)
 
-        yield from self.poller.poll()
+        await self.poller.poll()
 
         self.assertFalse(self.CLONE_CALLED)
 
     @mock.patch.object(pollers, 'LoggerMixin', mock.Mock())
     @async_test
-    def test_poll_with_exception_processing_changes(self):
+    async def test_poll_with_exception_processing_changes(self):
         self.poller.vcs.workdir_exists = mock.Mock(return_value=True)
-        self.poller.vcs.update_submodule = mock.MagicMock()
+        self.poller.vcs.update_submodule = asyncio.coroutine(
+            lambda *a, **kw: None)
         self.poller.log = mock.Mock()
         self.poller.vcs.process_changes = mock.Mock(side_effect=Exception)
-        yield from self.poller.poll()
+        await self.poller.poll()
         log_level = self.poller.log.call_args[1]['level']
         self.assertEqual(log_level, 'error')
 
     @async_test
-    def test_poll_with_submodule(self):
-        self.poller.process_changes = mock.MagicMock()
+    async def test_poll_with_submodule(self):
+        self.poller.process_changes = asyncio.coroutine(
+            lambda *a, **kw: None)
         self.poller.vcs.workdir_exists = lambda: True
-        self.poller.vcs.update_submodule = mock.MagicMock()
-        yield from self.poller.poll()
+        update_submodule = mock.MagicMock(
+            spec=self.poller.vcs.update_submodule)
+        self.poller.vcs.update_submodule = asyncio.coroutine(
+            lambda *a, **kw: update_submodule(*a, **kw))
 
-        self.assertTrue(self.poller.vcs.update_submodule.called)
+        await self.poller.poll()
+
+        self.assertTrue(update_submodule.called)
 
     @async_test
-    def test_poll_already_polling(self):
+    async def test_poll_already_polling(self):
         self.poller.process_changes = mock.MagicMock()
         self.poller.vcs.workdir_exists = lambda: True
         self.poller.vcs.update_submodule = mock.MagicMock()
         self.poller._is_polling = True
-        yield from self.poller.poll()
+        await self.poller.poll()
 
         self.assertFalse(self.poller.process_changes.called)
 
-    @asyncio.coroutine
-    def _create_db_revisions(self):
-        yield from self.repo.save()
+    async def _create_db_revisions(self):
+        await self.repo.save()
         rep = self.repo
         now = datetime.datetime.now()
 
@@ -216,10 +225,10 @@ class GitPollerTest(TestCase):
                 repository=rep, commit='123asdf', branch='master',
                 commit_date=now, author='zé', title='algo')
 
-            yield from rev.save()
+            await rev.save()
 
             rev = repository.RepositoryRevision(
                 repository=rep, commit='123asef', branch='other',
                 commit_date=now, author='tião', title='outro')
 
-            yield from rev.save()
+            await rev.save()

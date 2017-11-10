@@ -17,11 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
-try:
-    from asyncio import ensure_future
-except ImportError:  # pragma no cover
-    from asyncio import async as ensure_future
+from asyncio import ensure_future
 import functools
 import os
 import re
@@ -51,12 +47,11 @@ _scheduler_hashes = {}
 
 
 # Function that will be scheduled to poll changes from remote repo.
-@asyncio.coroutine
-def _update_repo_code(repo_id):
+async def _update_repo_code(repo_id):
     """Updates code from a repository."""
 
-    repo = yield from Repository.get(id=repo_id)
-    yield from repo.update_code()
+    repo = await Repository.get(id=repo_id)
+    await repo.update_code()
     repo.build_manager.disconnect_from_signals()
     # return for test purposes
     return repo
@@ -101,14 +96,13 @@ class Repository(Document, utils.LoggerMixin):
         self.build_manager = BuildManager(self)
         self._old_status = None
 
-    @asyncio.coroutine
-    def to_dict(self, id_as_str=False):
+    async def to_dict(self, id_as_str=False):
         my_dict = {'id': self.id, 'name': self.name, 'url': self.url,
                    'update_seconds': self.update_seconds,
                    'vcs_type': self.vcs_type,
                    'branches': [b.to_dict() for b in self.branches],
                    'slaves': [s.to_dict(id_as_str)
-                              for s in (yield from self.slaves)],
+                              for s in (await self.slaves)],
                    'plugins': [p.to_dict() for p in self.plugins],
                    'parallel_builds': self.parallel_builds,
                    'clone_status': self.clone_status}
@@ -136,15 +130,13 @@ class Repository(Document, utils.LoggerMixin):
 
         return self._poller_instance
 
-    @asyncio.coroutine
-    def get_status(self):
+    async def get_status(self):
         """Returns the status for the repository. The status is the
         status of the last buildset created for this repository that is
         not pending."""
 
-        last_buildset = yield from BuildSet.objects(
-            repository=self).order_by(
-                '-created').first()
+        last_buildset = await BuildSet.objects(repository=self).order_by(
+            '-created').first()
 
         clone_statuses = ['cloning', 'clone-exception']
         if not last_buildset and self.clone_status in clone_statuses:
@@ -160,7 +152,7 @@ class Repository(Document, utils.LoggerMixin):
                 stop = start + 1
                 last_buildset = BuildSet.objects(repository=self).order_by(
                     '-created')[start:stop]
-                last_buildset = yield from last_buildset.first()
+                last_buildset = await last_buildset.first()
 
                 if not last_buildset:
                     status = 'ready'
@@ -171,9 +163,8 @@ class Repository(Document, utils.LoggerMixin):
         return status
 
     @classmethod
-    @asyncio.coroutine
-    def create(cls, name, url, update_seconds, vcs_type, slaves=None,
-               branches=None, parallel_builds=None):
+    async def create(cls, name, url, update_seconds, vcs_type, slaves=None,
+                     branches=None, parallel_builds=None):
         """ Creates a new repository and schedule it.
 
         :param name: Repository name.
@@ -193,25 +184,24 @@ class Repository(Document, utils.LoggerMixin):
         repo = cls(url=url, update_seconds=update_seconds, vcs_type=vcs_type,
                    slaves=slaves, name=name, branches=branches,
                    parallel_builds=parallel_builds)
-        yield from repo.save()
+        await repo.save()
         repo.schedule()
         return repo
 
-    @asyncio.coroutine
-    def remove(self):
+    async def remove(self):
         """ Removes all builds and builders and revisions related to the
         repository, removes the poller from the scheduler, removes the
         source code from the file system and then removes the repository.
         """
 
         builds = BuildSet.objects.filter(repository=self)
-        yield from builds.delete()
+        await builds.delete()
 
         builders = Builder.objects.filter(repository=self)
-        yield from builders.delete()
+        await builders.delete()
 
         revisions = RepositoryRevision.objects.filter(repository=self)
-        yield from revisions.delete()
+        await revisions.delete()
 
         try:
             sched_hash = _scheduler_hashes[self.url]
@@ -229,32 +219,30 @@ class Repository(Document, utils.LoggerMixin):
         # removes the repository from the file system.
         Thread(target=shutil.rmtree, args=[self.workdir]).start()
 
-        yield from self.delete()
+        await self.delete()
 
     @classmethod
-    @asyncio.coroutine
-    def get(cls, **kwargs):
+    async def get(cls, **kwargs):
         """Returns a repository instance
 
         :param kwargs: kwargs to match the repository."""
-        repo = yield from cls.objects.get(**kwargs)
+        repo = await cls.objects.get(**kwargs)
         return repo
 
-    @asyncio.coroutine
-    def update_code(self):
+    async def update_code(self):
         """Updates the repository's code. It is just a wrapper for
         self.poller.poll, so I can handle exceptions here."""
 
         with_clone = False
         try:
-            with_clone = yield from self.poller.poll()
+            with_clone = await self.poller.poll()
             clone_status = 'ready'
         except CloneException:
             with_clone = True
             clone_status = 'clone-exception'
 
         self.clone_status = clone_status
-        yield from self.save()
+        await self.save()
 
         if with_clone:
             repo_status_changed.send(self, old_status='cloning',
@@ -294,38 +282,35 @@ class Repository(Document, utils.LoggerMixin):
             ensure_future(f)
 
     @classmethod
-    @asyncio.coroutine
-    def schedule_all(cls):
+    async def schedule_all(cls):
         """ Schedule all repositories. """
 
-        repos = yield from cls.objects.all().to_list()
+        repos = await cls.objects.all().to_list()
         for repo in repos:
             repo.schedule()
 
-    @asyncio.coroutine
-    def add_slave(self, slave):
+    async def add_slave(self, slave):
         """Adds a new slave to a repository.
 
         :param slave: A slave instance."""
         self.slaves
-        slaves = yield from self.slaves
+        slaves = await self.slaves
         slaves.append(slave)
         self.slaves = slaves
-        yield from self.save()
+        await self.save()
         return slave
 
-    @asyncio.coroutine
-    def remove_slave(self, slave):
+    async def remove_slave(self, slave):
         """Removes a slave from a repository.
 
         :param slave: A slave instance."""
-        slaves = yield from self.slaves
+        slaves = await self.slaves
         slaves.pop(slaves.index(slave))
-        yield from self.update(set__slaves=slaves)
+        await self.update(set__slaves=slaves)
         return slave
 
-    @asyncio.coroutine
-    def add_or_update_branch(self, branch_name, notify_only_latest=False):
+    async def add_or_update_branch(self, branch_name,
+                                   notify_only_latest=False):
         """Adds a new branch to this repository. If the branch
         already exists updates it with a new value.
 
@@ -348,18 +333,16 @@ class Repository(Document, utils.LoggerMixin):
                                       notify_only_latest=notify_only_latest)
             self.branches.append(branch)
 
-        yield from self.save()
+        await self.save()
 
-    @asyncio.coroutine
-    def remove_branch(self, branch_name):
+    async def remove_branch(self, branch_name):
         """Removes a branch from this repository.
 
         :param branch_name: The branch name."""
 
-        yield from self.update(pull__branches__name=branch_name)
+        await self.update(pull__branches__name=branch_name)
 
-    @asyncio.coroutine
-    def get_latest_revision_for_branch(self, branch):
+    async def get_latest_revision_for_branch(self, branch):
         """ Returns the latest revision for a given branch
 
         :param branch: branch name
@@ -367,34 +350,31 @@ class Repository(Document, utils.LoggerMixin):
         latest = RepositoryRevision.objects.filter(
             repository=self, branch=branch).order_by('-commit_date')
 
-        latest = yield from latest.first()
+        latest = await latest.first()
 
         return latest
 
-    @asyncio.coroutine
-    def get_latest_revisions(self):
+    async def get_latest_revisions(self):
         """ Returns the latest revision for all known branches
         """
-        branches = yield from self.get_known_branches()
+        branches = await self.get_known_branches()
         revs = {}
         for branch in branches:
-            rev = yield from self.get_latest_revision_for_branch(branch)
+            rev = await self.get_latest_revision_for_branch(branch)
             revs[branch] = rev
 
         return revs
 
-    @asyncio.coroutine
-    def get_known_branches(self):
+    async def get_known_branches(self):
         """ Returns the names for the branches that already have some
         revision here.
         """
-        branches = yield from RepositoryRevision.objects.filter(
+        branches = await RepositoryRevision.objects.filter(
             repository=self).distinct('branch')
 
         return branches
 
-    @asyncio.coroutine
-    def add_revision(self, branch, commit, commit_date, author, title):
+    async def add_revision(self, branch, commit, commit_date, author, title):
         """ Adds a revision to the repository.
 
         :param commit: commit uuid
@@ -404,11 +384,10 @@ class Repository(Document, utils.LoggerMixin):
         revision = RepositoryRevision(repository=self, commit=commit,
                                       branch=branch, commit_date=commit_date,
                                       author=author, title=title)
-        yield from revision.save()
+        await revision.save()
         return revision
 
-    @asyncio.coroutine
-    def enable_plugin(self, plugin_name, **plugin_config):
+    async def enable_plugin(self, plugin_name, **plugin_config):
         """Enables a plugin to this repository.
 
         :param plugin_name: The name of the plugin that is being enabled.
@@ -418,7 +397,7 @@ class Repository(Document, utils.LoggerMixin):
         plugin_cls = MasterPlugin.get_plugin(name=plugin_name)
         plugin = plugin_cls(**plugin_config)
         self.plugins.append(plugin)
-        yield from self.save()
+        await self.save()
         ensure_future(plugin.run())
 
     def _match_kw(self, plugin, **kwargs):
@@ -439,18 +418,16 @@ class Repository(Document, utils.LoggerMixin):
 
         return True
 
-    @asyncio.coroutine
-    def disable_plugin(self, **kwargs):
+    async def disable_plugin(self, **kwargs):
         """Disables a plugin to the repository.
 
         :param kwargs: kwargs to match the plugin."""
         matched = [p for p in self.plugins if self._match_kw(p, **kwargs)]
         for p in matched:
             self.plugins.remove(p)
-        yield from self.save()
+        await self.save()
 
-    @asyncio.coroutine
-    def add_builds_for_slave(self, buildset, slave, builders=[]):
+    async def add_builds_for_slave(self, buildset, slave, builders=[]):
         """Adds a buildset to the build queue of a given slave
         for this repository.
 
@@ -458,11 +435,10 @@ class Repository(Document, utils.LoggerMixin):
           :class:`toxicbuild.master.build.BuildSet`.
         :param slave: An instance of :class:`toxicbuild.master.build.Slave`.
         """
-        yield from self.build_manager.add_builds_for_slave(
+        await self.build_manager.add_builds_for_slave(
             buildset, slave, builders=builders)
 
-    @asyncio.coroutine
-    def _check_for_status_change(self, sender, build):
+    async def _check_for_status_change(self, sender, build):
         """Called when a build is started or finished. If this event
         makes the repository change its status triggers a
         ``repo_status_changed`` signal.
@@ -470,7 +446,7 @@ class Repository(Document, utils.LoggerMixin):
         :param sender: The object that sent the signal
         :param build: The build that was started or finished"""
 
-        status = yield from self.get_status()
+        status = await self.get_status()
         if status != self._old_status:
             repo_status_changed.send(self, old_status=self._old_status,
                                      new_status=status)
@@ -488,7 +464,6 @@ class RepositoryRevision(Document):
     commit_date = DateTimeField(required=True)
 
     @classmethod
-    @asyncio.coroutine
-    def get(cls, **kwargs):
-        ret = yield from cls.objects.get(**kwargs)
+    async def get(cls, **kwargs):
+        ret = await cls.objects.get(**kwargs)
         return ret

@@ -41,25 +41,25 @@ class SlaveTest(TestCase):
                                  token='asdf')
 
     @async_test
-    def tearDown(self):
-        yield from slave.Slave.drop_collection()
-        yield from build.BuildSet.drop_collection()
-        yield from build.Builder.drop_collection()
-        yield from repository.RepositoryRevision.drop_collection()
-        yield from repository.Repository.drop_collection()
+    async def tearDown(self):
+        await slave.Slave.drop_collection()
+        await build.BuildSet.drop_collection()
+        await build.Builder.drop_collection()
+        await repository.RepositoryRevision.drop_collection()
+        await repository.Repository.drop_collection()
         super().tearDown()
 
     @async_test
-    def test_create(self):
-        slave_inst = yield from slave.Slave.create(name='name',
+    async def test_create(self):
+        slave_inst = await slave.Slave.create(name='name',
                                                    host='somewhere.net',
                                                    port=7777,
                                                    token='asdf')
         self.assertTrue(slave_inst.id)
 
     @async_test
-    def test_to_dict(self):
-        slave_inst = yield from slave.Slave.create(name='name',
+    async def test_to_dict(self):
+        slave_inst = await slave.Slave.create(name='name',
                                                    host='somewhere.net',
                                                    port=7777,
                                                    token='asdf')
@@ -67,8 +67,8 @@ class SlaveTest(TestCase):
         self.assertTrue(slave_dict['id'])
 
     @async_test
-    def test_to_dict_id_as_str(self):
-        slave_inst = yield from slave.Slave.create(name='name',
+    async def test_to_dict_id_as_str(self):
+        slave_inst = await slave.Slave.create(name='name',
                                                    host='somewhere.net',
                                                    port=7777,
                                                    token='asdf')
@@ -76,14 +76,14 @@ class SlaveTest(TestCase):
         self.assertIsInstance(slave_dict['id'], str)
 
     @async_test
-    def test_get(self):
-        slave_inst = yield from slave.Slave.create(name='name',
+    async def test_get(self):
+        slave_inst = await slave.Slave.create(name='name',
                                                    host='somewhere.net',
                                                    port=7777,
                                                    token='asdf')
         slave_id = slave_inst.id
 
-        slave_inst = yield from slave.Slave.get(name='name',
+        slave_inst = await slave.Slave.get(name='name',
                                                 host='somewhere.net',
                                                 port=7777)
 
@@ -92,18 +92,18 @@ class SlaveTest(TestCase):
     @patch.object(toxicbuild.master.client.asyncio, 'open_connection',
                   Mock())
     @async_test
-    def test_get_client(self):
+    async def test_get_client(self):
 
         @asyncio.coroutine
         def oc(*a, **kw):
             return [MagicMock(), MagicMock()]
 
         toxicbuild.master.client.asyncio.open_connection = oc
-        client = yield from self.slave.get_client()
+        client = await self.slave.get_client()
         self.assertTrue(client._connected)
 
     @async_test
-    def test_healthcheck(self):
+    async def test_healthcheck(self):
 
         @asyncio.coroutine
         def gc():
@@ -118,13 +118,13 @@ class SlaveTest(TestCase):
 
         self.slave.get_client = gc
 
-        yield from self.slave.healthcheck()
+        await self.slave.healthcheck()
 
         self.assertTrue(self.slave.is_alive)
 
     @async_test
-    def test_list_builders(self):
-        yield from self._create_test_data()
+    async def test_list_builders(self):
+        await self._create_test_data()
 
         @asyncio.coroutine
         def gc():
@@ -139,13 +139,13 @@ class SlaveTest(TestCase):
 
         self.slave.get_client = gc
 
-        builders = yield from self.slave.list_builders(self.revision)
+        builders = await self.slave.list_builders(self.revision)
 
         self.assertEqual(builders, [self.builder, self.other_builder])
 
     @async_test
-    def test_build(self):
-        yield from self._create_test_data()
+    async def test_build(self):
+        await self._create_test_data()
         client = MagicMock()
 
         @asyncio.coroutine
@@ -160,12 +160,12 @@ class SlaveTest(TestCase):
             return client
 
         self.slave.get_client = gc
-        yield from self.slave.build(self.build)
+        await self.slave.build(self.build)
         self.assertTrue(client.build.called)
 
     @async_test
-    def test_build_with_exception(self):
-        yield from self._create_test_data()
+    async def test_build_with_exception(self):
+        await self._create_test_data()
         client = MagicMock()
 
         @asyncio.coroutine
@@ -179,15 +179,15 @@ class SlaveTest(TestCase):
             return client
 
         self.slave.get_client = gc
-        build_info = yield from self.slave.build(self.build)
+        build_info = await self.slave.build(self.build)
         self.assertEqual(self.build.status, 'exception')
         self.assertTrue(self.build.finished)
         self.assertEqual(len(build_info['steps']), 1)
 
     @patch.object(slave, 'build_started', Mock())
     @async_test
-    def test_process_info_with_build_started(self):
-        yield from self._create_test_data()
+    async def test_process_info_with_build_started(self):
+        await self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime2string(datetime.datetime.now(tz=tz))
 
@@ -195,13 +195,13 @@ class SlaveTest(TestCase):
                       'started': now, 'finished': None,
                       'info_type': 'build_info'}
 
-        yield from self.slave._process_info(self.build, build_info)
+        await self.slave._process_info(self.build, build_info)
         self.assertTrue(slave.build_started.send.called)
 
     @patch.object(slave, 'build_finished', Mock())
     @async_test
-    def test_process_info_with_build_finished(self):
-        yield from self._create_test_data()
+    async def test_process_info_with_build_finished(self):
+        await self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
         formate_now = datetime2string(now)
@@ -213,13 +213,13 @@ class SlaveTest(TestCase):
                       'info_type': 'build_info',
                       'total_time': 2}
 
-        yield from self.slave._process_info(self.build, build_info)
+        await self.slave._process_info(self.build, build_info)
         self.assertEqual(self.build.total_time, 2)
         self.assertTrue(slave.build_finished.send.called)
 
     @async_test
-    def test_process_info_with_step(self):
-        yield from self._create_test_data()
+    async def test_process_info_with_step(self):
+        await self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
 
@@ -227,25 +227,27 @@ class SlaveTest(TestCase):
                       'started': now, 'finished': None, 'output': '',
                       'index': 0, 'info_type': 'step_info'}
 
-        self.slave._process_step_info = MagicMock(
-            spec=self.slave._process_step_info)
-        yield from self.slave._process_info(self.build, build_info)
-        self.assertTrue(self.slave._process_step_info.called)
+        process_step_info = MagicMock(spec=self.slave._process_step_info)
+        self.slave._process_step_info = asyncio.coroutine(
+            lambda *a, **kw: process_step_info())
+        await self.slave._process_info(self.build, build_info)
+        self.assertTrue(process_step_info.called)
 
     @async_test
-    def test_process_info_with_step_output(self):
-        yield from self._create_test_data()
+    async def test_process_info_with_step_output(self):
+        await self._create_test_data()
         info = {'info_type': 'step_output_info'}
 
-        self.slave._process_step_output_info = MagicMock(
-            spec=self.slave._process_step_output_info)
+        process_step_info = MagicMock(spec=self.slave._process_step_info)
+        self.slave._process_step_output_info = asyncio.coroutine(
+            lambda *a, **kw: process_step_info())
 
-        yield from self.slave._process_info(self.build, info)
-        self.assertTrue(self.slave._process_step_output_info.called)
+        await self.slave._process_info(self.build, info)
+        self.assertTrue(process_step_info.called)
 
     @async_test
-    def test_process_step_info_new(self):
-        yield from self._create_test_data()
+    async def test_process_step_info_new(self):
+        await self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
         started = now.strftime('%a %b %d %H:%M:%S %Y %z')
@@ -254,12 +256,12 @@ class SlaveTest(TestCase):
         step_info = {'status': 'running', 'cmd': 'ls', 'name': 'run ls',
                      'output': '', 'started': started, 'finished': finished,
                      'index': 0, 'uuid': uuid4()}
-        yield from self.slave._process_step_info(self.build, step_info)
+        await self.slave._process_step_info(self.build, step_info)
         self.assertEqual(len(self.build.steps), 1)
 
     @async_test
-    def test_process_step_info(self):
-        yield from self._create_test_data()
+    async def test_process_step_info(self):
+        await self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
         started = now.strftime('%a %b %d %H:%M:%S %Y %z')
@@ -272,28 +274,28 @@ class SlaveTest(TestCase):
                 'output': '', 'started': started, 'finished': None,
                 'index': 0, 'uuid': a_uuid}
 
-        yield from self.slave._process_step_info(self.build, info)
+        await self.slave._process_step_info(self.build, info)
 
         info = {'cmd': 'echo "oi"', 'name': 'echo', 'status': 'success',
                 'output': '', 'started': started, 'finished': finished,
                 'index': 1, 'uuid': other_uuid}
 
-        yield from self.slave._process_step_info(self.build, info)
+        await self.slave._process_step_info(self.build, info)
 
         info = {'cmd': 'ls', 'name': 'run ls', 'status': 'success',
                 'output': 'somefile.txt\n', 'started': started,
                 'finished': finished, 'total_time': 2,
                 'index': 0, 'uuid': a_uuid}
 
-        yield from self.slave._process_step_info(self.build, info)
+        await self.slave._process_step_info(self.build, info)
 
         self.assertEqual(self.build.steps[0].status, 'success')
         self.assertEqual(len(self.build.steps), 2)
         self.assertTrue(self.build.steps[0].total_time)
 
     @async_test
-    def test_process_step_output_info(self):
-        yield from self._create_test_data()
+    async def test_process_step_output_info(self):
+        await self._create_test_data()
 
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
@@ -304,21 +306,20 @@ class SlaveTest(TestCase):
                 'output': '', 'started': started, 'finished': None,
                 'index': 0, 'uuid': a_uuid}
 
-        yield from self.slave._process_step_info(self.build, info)
+        await self.slave._process_step_info(self.build, info)
 
         info = {'uuid': a_uuid, 'output': 'somefile.txt\n'}
-        yield from self.slave._process_step_output_info(self.build, info)
+        await self.slave._process_step_output_info(self.build, info)
         step = self.slave._get_step(self.build, a_uuid)
         self.assertTrue(step.output)
 
-    @asyncio.coroutine
-    def _create_test_data(self):
-        yield from self.slave.save()
+    async def _create_test_data(self):
+        await self.slave.save()
         self.repo = repository.Repository(
             name='reponame', url='git@somewhere', update_seconds=300,
             vcs_type='git', slaves=[self.slave])
 
-        yield from self.repo.save()
+        await self.repo.save()
 
         self.revision = repository.RepositoryRevision(
             repository=self.repo, branch='master', commit='bgcdf3123',
@@ -326,23 +327,23 @@ class SlaveTest(TestCase):
             author='tião', title='something'
         )
 
-        yield from self.revision.save()
+        await self.revision.save()
 
-        self.buildset = yield from build.BuildSet.create(
+        self.buildset = await build.BuildSet.create(
             repository=self.repo, revision=self.revision)
 
-        yield from self.buildset.save()
+        await self.buildset.save()
 
         self.builder = build.Builder(repository=self.repo, name='builder-1')
-        yield from self.builder.save()
+        await self.builder.save()
         self.other_builder = build.Builder(repository=self.repo,
                                            name='builder-2')
-        yield from self.other_builder.save()
-        yield from self.builder.save()
+        await self.other_builder.save()
+        await self.builder.save()
 
         self.build = build.Build(repository=self.repo, slave=self.slave,
                                  branch='master', named_tree='v0.1',
                                  builder=self.builder)
 
         self.buildset.builds.append(self.build)
-        yield from self.buildset.save()
+        await self.buildset.save()

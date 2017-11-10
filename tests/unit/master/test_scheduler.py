@@ -78,7 +78,7 @@ class SchedulerTest(TestCase):
         self.assertFalse(self.scheduler.tasks.get(call))
 
     @async_test
-    def test_consume_tasks(self):
+    async def test_consume_tasks(self):
         self.TASK_CORO_CONSUMED = False
         self.TASK_CALL_CONSUMED = False
 
@@ -92,7 +92,7 @@ class SchedulerTest(TestCase):
         self.scheduler.add(task_coro, interval=1)
         self.scheduler.add(task_call, interval=1)
 
-        yield from asyncio.sleep(1.1)
+        await asyncio.sleep(1.1)
 
         self.assertTrue(self.TASK_CALL_CONSUMED)
         self.assertTrue(self.TASK_CORO_CONSUMED)

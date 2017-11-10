@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 import traceback
 from mongomotor import Document
 from mongomotor.fields import (StringField, IntField, BooleanField)
@@ -48,10 +47,9 @@ class Slave(Document, LoggerMixin):
     }
 
     @classmethod
-    @asyncio.coroutine
-    def create(cls, **kwargs):
+    async def create(cls, **kwargs):
         slave = cls(**kwargs)
-        yield from slave.save()
+        await slave.save()
         return slave
 
     def to_dict(self, id_as_str=False):
@@ -63,68 +61,64 @@ class Slave(Document, LoggerMixin):
         return my_dict
 
     @classmethod
-    @asyncio.coroutine
-    def get(cls, **kwargs):
-        slave = yield from cls.objects.get(**kwargs)
+    async def get(cls, **kwargs):
+        slave = await cls.objects.get(**kwargs)
         return slave
 
-    @asyncio.coroutine
-    def get_client(self):
+    async def get_client(self):
         """ Returns a :class:`toxicbuild.master.client.BuildClient` instance
         already connected to the server.
         """
-        connected_client = yield from get_build_client(self, self.host,
-                                                       self.port)
+        connected_client = await get_build_client(self, self.host,
+                                                  self.port)
         return connected_client
 
-    @asyncio.coroutine
-    def healthcheck(self):
+    async def healthcheck(self):
         """ Check if the build server is up and running
         """
-        with (yield from self.get_client()) as client:
-            alive = yield from client.healthcheck()
+        with (await self.get_client()) as client:
+            alive = await client.healthcheck()
 
         self.is_alive = alive
-        # using yield instead of yield from because mongomotor's
+        # using yield instead of await because mongomotor's
         # save returns a tornado Future, not a asyncio Future
-        yield from self.save()
+        await self.save()
         return self.is_alive
 
-    @asyncio.coroutine
-    def list_builders(self, revision):
+    async def list_builders(self, revision):
         """ List builder available in for a given revision
 
         :param revision: An instance of
           :class:`toxicbuild.master.repository.RepositoryRevision`
         """
-        repository = yield from revision.repository
+        repository = await revision.repository
         repo_url = repository.url
         vcs_type = repository.vcs_type
         branch = revision.branch
         named_tree = revision.commit
 
-        with (yield from self.get_client()) as client:
-            builders = yield from client.list_builders(repo_url, vcs_type,
-                                                       branch, named_tree)
+        with (await self.get_client()) as client:
+            builders = await client.list_builders(repo_url, vcs_type,
+                                                  branch, named_tree)
 
-        builders = [(yield from Builder.get_or_create(repository=repository,
-                                                      name=bname))
-                    for bname in builders]
+        builder_instnces = []
+        for bname in builders:
+            builder = await Builder.get_or_create(repository=repository,
+                                                  name=bname)
+            builder_instnces.append(builder)
 
-        builders = yield from builders
-        return list(builders)
+        return list(builder_instnces)
 
-    @asyncio.coroutine
-    def build(self, build):
+    async def build(self, build):
         """ Connects to a build server and requests a build on that server
 
         :param build: An instance of :class:`toxicbuild.master.build.Build`
         """
 
-        with (yield from self.get_client()) as client:
+        with (await self.get_client()) as client:
 
             try:
-                build_info = yield from client.build(
+                build_info = await client.build(
                     build, process_coro=self._process_info)
             except (ToxicClientException, BadJsonData):
                 output = traceback.format_exc()
@@ -136,13 +130,12 @@ class Slave(Document, LoggerMixin):
                                            command='', name='exception')
                 build.steps.append(exception_step)
 
-                yield from build.update()
+                await build.update()
                 build_info = build.to_dict()
 
         return build_info
 
-    @asyncio.coroutine
-    def _process_info(self, build, info):
+    async def _process_info(self, build, info):
         """ Method used to process information sent by
         the build server about an in progress build.
 
@@ -154,17 +147,16 @@ class Slave(Document, LoggerMixin):
         # if we need one more conditional here is better to use
         # a map...
         if info['info_type'] == 'build_info':
-            yield from self._process_build_info(build, info)
+            await self._process_build_info(build, info)
 
         elif info['info_type'] == 'step_info':
-            yield from self._process_step_info(build, info)
+            await self._process_step_info(build, info)
 
         else:
-            yield from self._process_step_output_info(build, info)
+            await self._process_step_output_info(build, info)
 
-    @asyncio.coroutine
-    def _process_build_info(self, build, build_info):
-        repo = yield from build.repository
+    async def _process_build_info(self, build, build_info):
+        repo = await build.repository
         build.status = build_info['status']
         build.started = string2datetime(build_info['started'])
         finished = build_info['finished']
@@ -172,7 +164,7 @@ class Slave(Document, LoggerMixin):
             build.finished = string2datetime(finished)
             build.total_time = (build.finished - build.started).seconds
 
-        yield from build.update()
+        await build.update()
 
         if not build.finished:
             msg = 'build started at {}'.format(build_info['started'])
@@ -184,8 +176,7 @@ class Slave(Document, LoggerMixin):
             self.log(msg)
             build_finished.send(repo, build=build)
 
-    @asyncio.coroutine
-    def _process_step_info(self, build, step_info):
+    async def _process_step_info(self, build, step_info):
 
         cmd = step_info['cmd']
         name = step_info['name']
@@ -196,7 +187,7 @@ class Slave(Document, LoggerMixin):
         index = step_info['index']
         uuid = step_info['uuid']
 
-        repo = yield from build.repository
+        repo = await build.repository
         requested_step = self._get_step(build, uuid)
 
         if requested_step:
@@ -220,18 +211,17 @@ class Slave(Document, LoggerMixin):
             step_started.send(repo, build=build, step=requested_step)
             build.steps.append(requested_step)
 
-        yield from build.update()
+        await build.update()
 
-    @asyncio.coroutine
-    def _process_step_output_info(self, build, info):
+    async def _process_step_output_info(self, build, info):
         uuid = info['uuid']
         info['output'] = info['output'] + '\n'
         output = info['output']
-        repo = yield from build.repository
+        repo = await build.repository
         step = self._get_step(build, uuid)
         step.output = ''.join([step.output or '', output])
         info['repository'] = {'id': str(repo.id)}
-        yield from build.update()
+        await build.update()
         msg = 'step_output_arrived for {}'.format(uuid)
         self.log(msg, level='debug')
         step_output_arrived.send(repo, step_info=info)

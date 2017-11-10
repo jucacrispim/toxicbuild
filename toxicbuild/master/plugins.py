@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This module implements plugins meat to be used in reaction
+"""This module implements plugins meant to be used in reaction
 to some signal sent by the master in the build process.
 
 To implement your own plugins you must to subclass
@@ -19,7 +19,6 @@ Example:
 
 .. code-block:: python
 
-    import asyncio
     from mongomotor.fields import StringField
     from toxicbuild.master.plugins import MasterPlugin
 
@@ -33,8 +32,7 @@ Example:
         description = "A very cool plugin"
         something_to_store_on_database = PrettyStringField()
 
-        @asyncio.coroutine
-        def run(self):
+        async def run(self):
             '''Here is where you implement your stuff'''
 
 """
@@ -56,7 +54,6 @@ Example:
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 from collections import OrderedDict
 import copy
 import json
@@ -203,15 +200,13 @@ class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
         objdict = {k: getattr(self, k) for k in schema.keys()}
         return objdict
 
-    @asyncio.coroutine
-    def run(self):
+    async def run(self):
         """Runs the plugin. You must implement this in your plugin."""
 
         msg = 'You must implement a run() method in your plugin'
         raise NotImplementedError(msg)
 
-    @asyncio.coroutine
-    def stop(self):
+    async def stop(self):
         """Stops the plugin. Here is where you may disconnect from signals
         or other stuff needed to stop your plugin."""
 
@@ -231,8 +226,7 @@ class SlackPlugin(MasterPlugin):
         return {'text': text, 'channel': self.channel_name,
                 'username': 'ToxicBuild'}
 
-    @asyncio.coroutine
-    def run(self):
+    async def run(self):
         msg = 'running {} for'.format(self.name)
         self.log(msg, level='info')
 
@@ -241,27 +235,24 @@ class SlackPlugin(MasterPlugin):
 
         build_finished.connect(self.send_finished_msg)
 
-    @asyncio.coroutine
-    def stop(self):
+    async def stop(self):
         build_started.disconnect(self.send_started_msg)
         build_finished.disconnect(self.send_finished_msg)
 
-    @asyncio.coroutine
-    def _send_msg(self, message):
+    async def _send_msg(self, message):
         """Sends a message as an incomming webhook to slack."""
 
         msg = 'sending message to slack for'
         self.log(msg, level='info')
         headers = {'Content-Type': 'application/json'}
-        response = yield from requests.post(self.webhook_url,
-                                            data=json.dumps(message),
-                                            headers=headers)
+        response = await requests.post(self.webhook_url,
+                                       data=json.dumps(message),
+                                       headers=headers)
         msg = 'slack response - status {} | text {}'.format(
             response.status, response.text)
         self.log(msg, level='debug')
 
-    @asyncio.coroutine
-    def send_started_msg(self, repo, build):
+    async def send_started_msg(self, repo, build):
         """Sends a message about a started build to a slack channel.
 
         :param build: A build that just started."""
@@ -270,10 +261,9 @@ class SlackPlugin(MasterPlugin):
         build_state = 'Build *started* at *{}*'.format(dt)
         title = '[{}] {}'.format(repo.name, build_state)
         msg = self._get_message(title)
-        yield from self._send_msg(msg)
+        self._send_msg(msg)
 
-    @asyncio.coroutine
-    def send_finished_msg(self, repo, build):
+    async def send_finished_msg(self, repo, build):
         """Sends a message about a finished build to a slack channel.
 
         :param build: A build that just finished."""
@@ -287,4 +277,4 @@ class SlackPlugin(MasterPlugin):
         title = '[{}] {}'.format(repo.name, build_state)
 
         msg = self._get_message(title)
-        yield from self._send_msg(msg)
+        await self._send_msg(msg)

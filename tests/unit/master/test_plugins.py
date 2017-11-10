@@ -100,24 +100,23 @@ class MasterPluginTest(TestCase):
         self.assertLess(keys.index('branches'), keys.index('statuses'))
 
     @async_test
-    def test_to_dict(self):
-        yield from self._create_test_data()
+    async def test_to_dict(self):
+        await self._create_test_data()
         plugin_dict = self.plugin.to_dict()
         self.assertEqual(plugin_dict['name'], 'test-plugin')
 
     @async_test
-    def test_run(self):
-        yield from self._create_test_data()
+    async def test_run(self):
+        await self._create_test_data()
         with self.assertRaises(NotImplementedError):
-            yield from self.plugin.run()
+            await self.plugin.run()
 
-    @asyncio.coroutine
-    def _create_test_data(self):
+    async def _create_test_data(self):
         self.repo = Repository(name='my-test-repo',
                                url='git@somewhere.com/bla.git',
                                update_seconds=300,
                                vcs_type='git')
-        yield from self.repo.save()
+        await self.repo.save()
         self.plugin = self.plugin_class(branches=['master'])
         self.repo.plugins.append(self.plugin)
         self.repo.save()
@@ -126,49 +125,49 @@ class MasterPluginTest(TestCase):
 class SlackPluginTest(TestCase):
 
     @async_test
-    def tearDown(self):
-        yield from Repository.drop_collection()
+    async def tearDown(self):
+        await Repository.drop_collection()
 
     @patch.object(plugins.build_started, 'connect', MagicMock())
     @patch.object(plugins.build_finished, 'connect', MagicMock())
     @async_test
-    def test_run_with_build_started(self):
-        yield from self._create_test_data()
+    async def test_run_with_build_started(self):
+        await self._create_test_data()
         self.plugin.statuses = ['running']
 
-        yield from self.plugin.run()
+        await self.plugin.run()
         self.assertTrue(plugins.build_started.connect.called)
         self.assertTrue(plugins.build_finished.connect.called)
 
     @patch.object(plugins.build_started, 'connect', MagicMock())
     @patch.object(plugins.build_finished, 'connect', MagicMock())
     @async_test
-    def test_run_without_build_started(self):
-        yield from self._create_test_data()
+    async def test_run_without_build_started(self):
+        await self._create_test_data()
         self.plugin.statuses = ['fail']
 
-        yield from self.plugin.run()
+        await self.plugin.run()
         self.assertFalse(plugins.build_started.connect.called)
         self.assertTrue(plugins.build_finished.connect.called)
 
     @patch.object(plugins.build_started, 'disconnect', MagicMock())
     @patch.object(plugins.build_finished, 'disconnect', MagicMock())
     @async_test
-    def test_stop(self):
-        yield from self._create_test_data()
-        yield from self.plugin.stop()
+    async def test_stop(self):
+        await self._create_test_data()
+        await self.plugin.stop()
         self.assertTrue(plugins.build_started.disconnect.called)
         self.assertTrue(plugins.build_finished.disconnect.called)
 
     @patch.object(plugins.requests, 'post', MagicMock())
     @async_test
-    def test_send_msg(self):
-        yield from self._create_test_data()
+    async def test_send_msg(self):
+        await self._create_test_data()
         post = MagicMock()
         plugins.requests.post = asyncio.coroutine(
             lambda *a, **kw: post(*a, **kw))
         msg = {'text': 'something happend'}
-        yield from self.plugin._send_msg(msg)
+        await self.plugin._send_msg(msg)
         called = post.call_args
         self.assertEqual(called[0][0], self.plugin.webhook_url)
         self.assertEqual(called[1]['data'], plugins.json.dumps(msg))
@@ -176,8 +175,8 @@ class SlackPluginTest(TestCase):
                          {'Content-Type': 'application/json'})
 
     @async_test
-    def test_send_started_msg(self):
-        yield from self._create_test_data()
+    async def test_send_started_msg(self):
+        await self._create_test_data()
         self.plugin._send_msg = MagicMock(spec=self.plugin._send_msg)
         build = MagicMock()
         build.started = now()
@@ -185,14 +184,16 @@ class SlackPluginTest(TestCase):
         txt = '[my-test-repo] Build *started* at *{}*'.format(dt)
         expected = {'text': txt, 'username': 'ToxicBuild',
                     'channel': self.plugin.channel_name}
-        yield from self.plugin.send_started_msg(self.repo, build)
+        await self.plugin.send_started_msg(self.repo, build)
         called = self.plugin._send_msg.call_args[0][0]
         self.assertEqual(called, expected, called)
 
     @async_test
-    def test_send_finished_msg(self):
-        yield from self._create_test_data()
-        self.plugin._send_msg = MagicMock(spec=self.plugin._send_msg)
+    async def test_send_finished_msg(self):
+        await self._create_test_data()
+        send_msg = MagicMock(spec=self.plugin._send_msg)
+        self.plugin._send_msg = asyncio.coroutine(
+            lambda *a, **kw: send_msg(*a, **kw))
         build = MagicMock()
         build.finished = now()
         build.status = 'success'
@@ -202,27 +203,27 @@ class SlackPluginTest(TestCase):
         expected = {'text': txt, 'username': 'ToxicBuild',
                     'channel': self.plugin.channel_name}
 
-        yield from self.plugin.send_finished_msg(self.repo, build)
-        called = self.plugin._send_msg.call_args[0][0]
+        await self.plugin.send_finished_msg(self.repo, build)
+        called = send_msg.call_args[0][0]
         self.assertEqual(called, expected, called)
 
     @async_test
-    def test_send_finished_msg_with_bad_status(self):
-        yield from self._create_test_data()
+    async def test_send_finished_msg_with_bad_status(self):
+        await self._create_test_data()
         self.plugin._send_msg = MagicMock(spec=self.plugin._send_msg)
         build = MagicMock()
         build.finished = now()
         build.status = 'warning'
-        yield from self.plugin.send_finished_msg(self.repo, build)
+        await self.plugin.send_finished_msg(self.repo, build)
         self.assertFalse(self.plugin._send_msg.called)
 
     @asyncio.coroutine
-    def _create_test_data(self):
+    async def _create_test_data(self):
         self.repo = Repository(name='my-test-repo',
                                url='git@somewere.com/bla.git',
                                update_seconds=300,
                                vcs_type='git')
-        yield from self.repo.save()
+        await self.repo.save()
         url = 'https://some-slack-url.bla/xxxx/yyyy'
         self.plugin = plugins.SlackPlugin(branches=['master'],
                                           webhook_url=url,

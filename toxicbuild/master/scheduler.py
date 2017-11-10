@@ -19,10 +19,7 @@
 
 import time
 import asyncio
-try:
-    from asyncio import ensure_future
-except ImportError:  # pragma: no cover
-    from asyncio import async as ensure_future
+from asyncio import ensure_future
 
 
 __doc__ = """
@@ -100,8 +97,7 @@ class TaskScheduler:
             if asyncio.coroutines.iscoroutine(ret):
                 ensure_future(ret)
 
-    @asyncio.coroutine
-    def start(self):
+    async def start(self):
         if self._started:  # pragma: no cover
             return
 
@@ -109,7 +105,7 @@ class TaskScheduler:
 
         while not self._stop:
             self.consume_tasks()
-            yield from asyncio.sleep(1)
+            await asyncio.sleep(1)
 
         self._started = False
 

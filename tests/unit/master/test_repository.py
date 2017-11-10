@@ -53,24 +53,26 @@ class RepositoryTest(TestCase):
         super(RepositoryTest, self).tearDown()
 
     @async_test
-    def test_to_dict(self):
-        yield from self._create_db_revisions()
-        d = yield from self.repo.to_dict()
+    async def test_to_dict(self):
+        await self._create_db_revisions()
+        d = await self.repo.to_dict()
         self.assertTrue(d['id'])
         self.assertTrue('plugins' in d.keys())
 
     @patch.object(repository.Repository, 'update_code', MagicMock())
     @async_test
-    def test_update_repo_code(self):
-        yield from self._create_db_revisions()
-        self.repo.update_code = MagicMock(spec=self.repo.update_code)
-        repo = yield from repository._update_repo_code(self.repo.id)
-        self.assertTrue(repo.update_code.called)
+    async def test_update_repo_code(self):
+        update_code = MagicMock(spec=self.repo.update_code)
+        repository.Repository.update_code = asyncio.coroutine(
+            lambda *a, **kw: update_code(*a, **kw))
+        await self._create_db_revisions()
+        await repository._update_repo_code(self.repo.id)
+        self.assertTrue(update_code.called)
 
     @async_test
-    def test_to_dict_id_as_str(self):
-        yield from self._create_db_revisions()
-        d = yield from self.repo.to_dict(True)
+    async def test_to_dict_id_as_str(self):
+        await self._create_db_revisions()
+        d = await self.repo.to_dict(True)
         self.assertIsInstance(d['id'], str)
 
     def test_workdir(self):
@@ -82,26 +84,26 @@ class RepositoryTest(TestCase):
 
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
-    def test_create(self):
-        slave_inst = yield from slave.Slave.create(name='name', host='bla.com',
+    async def test_create(self):
+        slave_inst = await slave.Slave.create(name='name', host='bla.com',
                                                    port=1234, token='123')
-        repo = yield from repository.Repository.create(
+        repo = await repository.Repository.create(
             'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave_inst])
 
         self.assertTrue(repo.id)
-        slaves = yield from repo.slaves
+        slaves = await repo.slaves
         self.assertEqual(slaves[0], slave_inst)
 
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
-    def test_create_with_branches(self):
-        slave_inst = yield from slave.Slave.create(name='name', host='bla.com',
-                                                   port=1234, token='123;_')
+    async def test_create_with_branches(self):
+        slave_inst = await slave.Slave.create(name='name', host='bla.com',
+                                              port=1234, token='123;_')
         branches = [repository.RepositoryBranch(name='branch{}'.format(str(i)),
                                                 notify_only_latest=bool(i))
                     for i in range(3)]
 
-        repo = yield from repository.Repository.create(
+        repo = await repository.Repository.create(
             'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave_inst],
             branches=branches)
 
@@ -111,21 +113,21 @@ class RepositoryTest(TestCase):
     @patch.object(repository, 'shutil', Mock())
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
-    def test_remove(self):
-        repo = yield from repository.Repository.create(
+    async def test_remove(self):
+        repo = await repository.Repository.create(
             'reponame', 'git@somewhere.com', 300, 'git')
         repo.schedule()
         builder = repository.Builder(name='b1', repository=repo)
-        yield from builder.save()
-        yield from repo.remove()
+        await builder.save()
+        await repo.remove()
 
-        builders_count = yield from repository.Builder.objects.filter(
+        builders_count = await repository.Builder.objects.filter(
             repository=repo).count()
 
         self.assertEqual(builders_count, 0)
 
         with self.assertRaises(repository.Repository.DoesNotExist):
-            yield from repository.Repository.get(url=repo.url)
+            await repository.Repository.get(url=repo.url)
 
         self.assertIsNone(repository._scheduler_hashes.get(repo.url))
         self.assertIsNone(repository._scheduler_hashes.get(
@@ -133,42 +135,44 @@ class RepositoryTest(TestCase):
 
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
-    def test_get(self):
-        slave_inst = yield from slave.Slave.create(name='name', host='bla.com',
+    async def test_get(self):
+        slave_inst = await slave.Slave.create(name='name', host='bla.com',
                                                    port=1234, token='123')
-        old_repo = yield from repository.Repository.create(
+        old_repo = await repository.Repository.create(
             'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave_inst])
-        new_repo = yield from repository.Repository.get(url=old_repo.url)
+        new_repo = await repository.Repository.get(url=old_repo.url)
 
-        slaves = yield from new_repo.slaves
+        slaves = await new_repo.slaves
         self.assertEqual(old_repo, new_repo)
         self.assertEqual(slaves[0], slave_inst)
 
     @async_test
-    def test_update_code_with_clone_exception(self):
+    async def test_update_code_with_clone_exception(self):
         self.repo._poller_instance = MagicMock()
-        yield from self.repo.save()
+        await self.repo.save()
         self.repo._poller_instance.poll.side_effect = CloneException
-        yield from self.repo.update_code()
+        await self.repo.update_code()
         self.assertEqual(self.repo.clone_status, 'clone-exception')
 
     @async_test
-    def test_update_code(self):
+    async def test_update_code(self):
         self.repo.clone_status = 'cloning'
-        yield from self.repo.save()
-        self.repo._poller_instance = MagicMock()
+        await self.repo.save()
+        poller = MagicMock()
+        poller.poll = asyncio.coroutine(lambda *a, **kw: True)
+        self.repo._poller_instance = poller
 
-        yield from self.repo.update_code()
+        await self.repo.update_code()
         self.assertEqual(self.repo.clone_status, 'ready')
 
     @patch.object(repository, 'repo_status_changed', Mock())
     @async_test
-    def test_update_with_clone_sending_signal(self):
+    async def test_update_with_clone_sending_signal(self):
         self.repo.clone_status = 'cloning'
-        yield from self.repo.save()
+        await self.repo.save()
         self.repo._poller_instance = MagicMock()
         self.repo._poller_instance.poll = asyncio.coroutine(lambda: True)
-        yield from self.repo.update_code()
+        await self.repo.update_code()
         self.assertTrue(repository.repo_status_changed.send.called)
 
     @patch.object(repository.utils, 'log', Mock())
@@ -185,103 +189,102 @@ class RepositoryTest(TestCase):
     @patch.object(repository.utils, 'log', Mock())
     @patch('toxicbuild.master.scheduler')
     @async_test
-    def test_schedule_all(self, *a, **kw):
-        yield from self._create_db_revisions()
+    async def test_schedule_all(self, *a, **kw):
+        await self._create_db_revisions()
         self.repo.scheduler = Mock(spec=self.repo.scheduler)
-        yield from self.repo.schedule_all()
+        await self.repo.schedule_all()
         from toxicbuild.master import scheduler
         self.assertTrue(scheduler.add.called)
 
     @async_test
-    def test_add_slave(self):
-        yield from self._create_db_revisions()
-        slave = yield from repository.Slave.create(name='name',
-                                                   host='127.0.0.1',
-                                                   port=7777,
-                                                   token='123')
+    async def test_add_slave(self):
+        await self._create_db_revisions()
+        slave = await repository.Slave.create(name='name',
+                                              host='127.0.0.1',
+                                              port=7777,
+                                              token='123')
 
-        yield from self.repo.add_slave(slave)
-        slaves = yield from self.repo.slaves
+        await self.repo.add_slave(slave)
+        slaves = await self.repo.slaves
         self.assertEqual(len(slaves), 1)
 
     @async_test
-    def test_remove_slave(self):
-        yield from self._create_db_revisions()
-        slave = yield from repository.Slave.create(name='name',
-                                                   host='127.0.0.1',
-                                                   port=7777,
-                                                   token='123')
-        yield from self.repo.add_slave(slave)
-        yield from self.repo.remove_slave(slave)
+    async def test_remove_slave(self):
+        await self._create_db_revisions()
+        slave = await repository.Slave.create(name='name',
+                                              host='127.0.0.1',
+                                              port=7777,
+                                              token='123')
+        await self.repo.add_slave(slave)
+        await self.repo.remove_slave(slave)
 
-        self.assertEqual(len((yield from self.repo.slaves)), 0)
+        self.assertEqual(len((await self.repo.slaves)), 0)
 
     @async_test
-    def test_add_branch(self):
-        yield from self.repo.add_or_update_branch('master')
+    async def test_add_branch(self):
+        await self.repo.add_or_update_branch('master')
         self.assertEqual(len(self.repo.branches), 1)
 
     @async_test
-    def test_update_branch(self):
-        yield from self.repo.add_or_update_branch('master')
-        yield from self.repo.add_or_update_branch('other-branch')
-        yield from self.repo.add_or_update_branch('master', True)
-        repo = yield from repository.Repository.get(id=self.repo.id)
+    async def test_update_branch(self):
+        await self.repo.add_or_update_branch('master')
+        await self.repo.add_or_update_branch('other-branch')
+        await self.repo.add_or_update_branch('master', True)
+        repo = await repository.Repository.get(id=self.repo.id)
         self.assertTrue(repo.branches[0].notify_only_latest)
         self.assertEqual(len(repo.branches), 2)
 
     @async_test
-    def test_remove_branch(self):
-        yield from self.repo.add_or_update_branch('master')
-        yield from self.repo.remove_branch('master')
+    async def test_remove_branch(self):
+        await self.repo.add_or_update_branch('master')
+        await self.repo.remove_branch('master')
         self.assertTrue(len(self.repo.branches), 0)
 
     @async_test
-    def test_get_latest_revision_for_branch(self):
-        yield from self._create_db_revisions()
+    async def test_get_latest_revision_for_branch(self):
+        await self._create_db_revisions()
         expected = '123asdf1'
-        rev = yield from self.repo.get_latest_revision_for_branch('master')
+        rev = await self.repo.get_latest_revision_for_branch('master')
         self.assertEqual(expected, rev.commit)
 
     @async_test
-    def test_get_latest_revision_for_branch_without_revision(self):
-        yield from self._create_db_revisions()
-        rev = yield from self.repo.get_latest_revision_for_branch(
-            'nonexistant')
+    async def test_get_latest_revision_for_branch_without_revision(self):
+        await self._create_db_revisions()
+        rev = await self.repo.get_latest_revision_for_branch('nonexistant')
         self.assertIsNone(rev)
 
     @async_test
-    def test_get_latest_revisions(self):
-        yield from self._create_db_revisions()
-        revs = yield from self.repo.get_latest_revisions()
+    async def test_get_latest_revisions(self):
+        await self._create_db_revisions()
+        revs = await self.repo.get_latest_revisions()
 
         self.assertEqual(revs['master'].commit, '123asdf1')
         self.assertEqual(revs['dev'].commit, '123asdf1')
 
     @async_test
-    def test_get_known_branches(self):
-        yield from self._create_db_revisions()
+    async def test_get_known_branches(self):
+        await self._create_db_revisions()
         expected = ['master', 'dev']
-        returned = yield from self.repo.get_known_branches()
+        returned = await self.repo.get_known_branches()
 
         self.assertTrue(expected, returned)
 
     @async_test
-    def test_add_revision(self):
-        yield from self.repo.save()
+    async def test_add_revision(self):
+        await self.repo.save()
         branch = 'master'
         commit = 'asdf213'
         commit_date = datetime.datetime.now()
         kw = {'commit': commit, 'commit_date': commit_date,
               'author': 'someone', 'title': 'uhuuu!!'}
-        rev = yield from self.repo.add_revision(branch, **kw)
+        rev = await self.repo.add_revision(branch, **kw)
         self.assertTrue(rev.id)
         self.assertEqual('uhuuu!!', rev.title)
 
     @async_test
-    def test_enable_plugin(self):
-        yield from self.repo.save()
-        yield from self.repo.enable_plugin('repo-plugin')
+    async def test_enable_plugin(self):
+        await self.repo.save()
+        await self.repo.enable_plugin('repo-plugin')
         self.assertEqual(len(self.repo.plugins), 1)
 
     def test_match_kw(self):
@@ -303,50 +306,52 @@ class RepositoryTest(TestCase):
         self.assertFalse(match)
 
     @async_test
-    def test_disable_plugin(self):
-        yield from self.repo.save()
-        yield from self.repo.enable_plugin('repo-plugin')
+    async def test_disable_plugin(self):
+        await self.repo.save()
+        await self.repo.enable_plugin('repo-plugin')
         kw = {'name': 'repo-plugin'}
-        yield from self.repo.disable_plugin(**kw)
+        await self.repo.disable_plugin(**kw)
         self.assertEqual(len(self.repo.plugins), 0)
 
     @async_test
-    def test_add_builds_for_slave(self):
-        yield from self.repo.save()
-        self.repo.build_manager.add_builds_for_slave = MagicMock(
+    async def test_add_builds_for_slave(self):
+        await self.repo.save()
+        add_builds_for_slave = MagicMock(
             spec=build.BuildManager.add_builds_for_slave)
+        self.repo.build_manager.add_builds_for_slave = asyncio.coroutine(
+            lambda *a, **kw: add_builds_for_slave(*a, **kw))
 
         buildset = MagicMock()
         slave = MagicMock()
         builders = [MagicMock()]
         args = (buildset, slave)
 
-        yield from self.repo.add_builds_for_slave(*args, builders=builders)
+        await self.repo.add_builds_for_slave(*args, builders=builders)
 
-        called_args = self.repo.build_manager.add_builds_for_slave.call_args[0]
+        called_args = add_builds_for_slave.call_args[0]
 
         self.assertEqual(called_args, args)
-        called_kw = self.repo.build_manager.add_builds_for_slave.call_args[1]
+        called_kw = add_builds_for_slave.call_args[1]
         self.assertEqual(called_kw['builders'], builders)
 
     @async_test
-    def test_get_status_with_running_build(self):
-        yield from self._create_db_revisions()
+    async def test_get_status_with_running_build(self):
+        await self._create_db_revisions()
 
         running_build = build.Build(repository=self.repo, slave=self.slave,
                                     branch='master', named_tree='master',
                                     started=datetime.datetime.now(),
                                     status='running', builder=self.builder)
-        buildset = yield from build.BuildSet.create(repository=self.repo,
-                                                    revision=self.revs[0])
+        buildset = await build.BuildSet.create(repository=self.repo,
+                                               revision=self.revs[0])
 
         buildset.builds.append(running_build)
-        yield from buildset.save()
-        self.assertEqual((yield from self.repo.get_status()), 'running')
+        await buildset.save()
+        self.assertEqual((await self.repo.get_status()), 'running')
 
     @async_test
-    def test_get_status_with_success_build(self):
-        yield from self._create_db_revisions()
+    async def test_get_status_with_success_build(self):
+        await self._create_db_revisions()
 
         success_build = build.Build(repository=self.repo, slave=self.slave,
                                     branch='master', named_tree='master',
@@ -358,51 +363,51 @@ class RepositoryTest(TestCase):
                                     builder=self.builder)
         builds = [success_build, pending_build]
         for i, b in enumerate(builds):
-            buildset = yield from build.BuildSet.create(repository=self.repo,
-                                                        revision=self.revs[i])
+            buildset = await build.BuildSet.create(repository=self.repo,
+                                                   revision=self.revs[i])
             buildset.builds.append(b)
-            yield from buildset.save()
+            await buildset.save()
 
-        self.assertEqual((yield from self.repo.get_status()), 'success')
+        self.assertEqual((await self.repo.get_status()), 'success')
 
     @async_test
-    def test_get_status_with_fail_build(self):
-        yield from self._create_db_revisions()
+    async def test_get_status_with_fail_build(self):
+        await self._create_db_revisions()
 
         fail_build = build.Build(repository=self.repo, slave=self.slave,
                                  branch='master', named_tree='master',
                                  started=datetime.datetime.now(),
                                  status='fail', builder=self.builder)
-        buildset = yield from build.BuildSet.create(repository=self.repo,
-                                                    revision=self.revs[0])
+        buildset = await build.BuildSet.create(repository=self.repo,
+                                               revision=self.revs[0])
 
         buildset.builds.append(fail_build)
-        yield from buildset.save()
-        self.assertEqual((yield from self.repo.get_status()), 'fail')
+        await buildset.save()
+        self.assertEqual((await self.repo.get_status()), 'fail')
 
     @async_test
-    def test_get_status_cloning_repo(self):
-        yield from self._create_db_revisions()
+    async def test_get_status_cloning_repo(self):
+        await self._create_db_revisions()
         self.repo.clone_status = 'cloning'
-        status = yield from self.repo.get_status()
+        status = await self.repo.get_status()
         self.assertEqual(status, 'cloning')
 
     @async_test
-    def test_get_status_clone_exception(self):
-        yield from self._create_db_revisions()
+    async def test_get_status_clone_exception(self):
+        await self._create_db_revisions()
         self.repo.clone_status = 'clone-exception'
-        status = yield from self.repo.get_status()
+        status = await self.repo.get_status()
         self.assertEqual(status, 'clone-exception')
 
     @async_test
-    def test_get_status_without_build(self):
-        yield from self._create_db_revisions()
+    async def test_get_status_without_build(self):
+        await self._create_db_revisions()
 
-        self.assertEqual((yield from self.repo.get_status()), 'ready')
+        self.assertEqual((await self.repo.get_status()), 'ready')
 
     @async_test
-    def test_get_status_only_pending(self):
-        yield from self._create_db_revisions()
+    async def test_get_status_only_pending(self):
+        await self._create_db_revisions()
 
         p_build = build.Build(repository=self.repo, slave=self.slave,
                               branch='master', named_tree='master',
@@ -414,17 +419,17 @@ class RepositoryTest(TestCase):
                                builder=self.builder)
         builds = [p_build, p1_build]
         for i, b in enumerate(builds):
-            buildset = yield from build.BuildSet.create(repository=self.repo,
-                                                        revision=self.revs[i])
+            buildset = await build.BuildSet.create(repository=self.repo,
+                                                   revision=self.revs[i])
 
             buildset.builds.append(b)
-            yield from buildset.save()
+            await buildset.save()
 
-        self.assertEqual((yield from self.repo.get_status()), 'ready')
+        self.assertEqual((await self.repo.get_status()), 'ready')
 
     @patch.object(repository, 'repo_status_changed', Mock())
     @async_test
-    def test_check_for_status_change_not_changing(self):
+    async def test_check_for_status_change_not_changing(self):
         self.repo._old_status = 'running'
 
         @asyncio.coroutine
@@ -433,12 +438,12 @@ class RepositoryTest(TestCase):
 
         self.repo.get_status = get_status
 
-        yield from self.repo._check_for_status_change(Mock(), Mock())
+        await self.repo._check_for_status_change(Mock(), Mock())
         self.assertFalse(repository.repo_status_changed.send.called)
 
     @patch.object(repository, 'repo_status_changed', Mock())
     @async_test
-    def test_check_for_status_change_changing(self):
+    async def test_check_for_status_change_changing(self):
         self.repo._old_status = 'running'
 
         @asyncio.coroutine
@@ -447,17 +452,16 @@ class RepositoryTest(TestCase):
 
         self.repo.get_status = get_status
 
-        yield from self.repo._check_for_status_change(Mock(), Mock())
+        await self.repo._check_for_status_change(Mock(), Mock())
         self.assertTrue(repository.repo_status_changed.send.called)
 
-    @asyncio.coroutine
-    def _create_db_revisions(self):
-        yield from self.repo.save()
+    async def _create_db_revisions(self):
+        await self.repo.save()
         rep = self.repo
         now = datetime.datetime.now()
-        self.builder = yield from build.Builder.create(name='builder0',
+        self.builder = await build.Builder.create(name='builder0',
                                                        repository=self.repo)
-        self.slave = yield from slave.Slave.create(name='slave',
+        self.slave = await slave.Slave.create(name='slave',
                                                    host='localhost',
                                                    port=1234,
                                                    token='asdf')
@@ -472,14 +476,14 @@ class RepositoryTest(TestCase):
                     title='commit {}'.format(r),
                     commit_date=now + datetime.timedelta(r))
 
-                yield from rev.save()
+                await rev.save()
                 self.revs.append(rev)
 
         # creating another repo just to test the known branches stuff.
         self.other_repo = repository.Repository(name='bla', url='/bla/bla',
                                                 update_seconds=300,
                                                 vcs_type='git')
-        yield from self.other_repo.save()
+        await self.other_repo.save()
 
         for r in range(2):
             for branch in ['b1', 'b2']:
@@ -491,7 +495,7 @@ class RepositoryTest(TestCase):
                     branch=branch,
                     commit_date=now + datetime.timedelta(r))
 
-                yield from rev.save()
+                await rev.save()
 
 
 class RepositoryBranchTest(TestCase):
@@ -505,21 +509,21 @@ class RepositoryBranchTest(TestCase):
 class RepositoryRevisionTest(TestCase):
 
     @async_test
-    def tearDown(self):
-        yield from repository.RepositoryRevision.drop_collection()
-        yield from repository.Repository.drop_collection()
+    async def tearDown(self):
+        await repository.RepositoryRevision.drop_collection()
+        await repository.Repository.drop_collection()
 
     @async_test
-    def test_get(self):
+    async def test_get(self):
         repo = repository.Repository(name='bla', url='bla@bl.com/aaa')
-        yield from repo.save()
+        await repo.save()
         rev = repository.RepositoryRevision(repository=repo,
                                             commit='asdfasf',
                                             branch='master',
                                             author='ze',
                                             title='bla',
                                             commit_date=utils.now())
-        yield from rev.save()
-        r = yield from repository.RepositoryRevision.get(
+        await rev.save()
+        r = await repository.RepositoryRevision.get(
             commit='asdfasf', repository=repo)
         self.assertEqual(r, rev)

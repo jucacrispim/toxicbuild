@@ -23,11 +23,7 @@
 # In fact, boring module!
 
 import asyncio
-try:
-    from asyncio import ensure_future
-except ImportError:  # pragma no cover
-    from asyncio import async as ensure_future
-
+from asyncio import ensure_future
 import inspect
 import json
 import traceback
@@ -48,8 +44,7 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
     salt = settings.BCRYPT_SALT
     encrypted_token = settings.ACCESS_TOKEN
 
-    @asyncio.coroutine
-    def client_connected(self):
+    async def client_connected(self):
 
         data = self.data.get('body') or {}
         if self.action == 'stream':
@@ -58,12 +53,12 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
             handler = HoleHandler(data, self.action, self)
 
         try:
-            yield from handler.handle()
+            await handler.handle()
             status = 0
         except Exception:
             msg = traceback.format_exc()
             status = 1
-            yield from self.send_response(code=1, body={'error': msg})
+            await self.send_response(code=1, body={'error': msg})
             self.close_connection()
 
         return status
@@ -103,8 +98,7 @@ class HoleHandler:
         self.action = action
         self.protocol = protocol
 
-    @asyncio.coroutine
-    def handle(self):
+    async def handle(self):
 
         attrname = self.action.replace('-', '_')
         if attrname not in self._get_action_methods():
@@ -113,9 +107,9 @@ class HoleHandler:
         func = getattr(self, attrname)
         r = func(**self.data)
         if asyncio.coroutines.iscoroutine(r):
-            r = yield from r
+            r = await r
 
-        yield from self.protocol.send_response(code=0, body=r)
+        await self.protocol.send_response(code=0, body=r)
         self.protocol.close_connection()
 
     def _get_method_signature(self, method):
@@ -135,9 +129,8 @@ class HoleHandler:
 
         return siginfo
 
-    @asyncio.coroutine
-    def repo_add(self, repo_name, repo_url, update_seconds, vcs_type,
-                 slaves=None, parallel_builds=None):
+    async def repo_add(self, repo_name, repo_url, update_seconds, vcs_type,
+                       slaves=None, parallel_builds=None):
         """ Adds a new repository and first_run() it.
 
         :param repo_name: Repository name
@@ -153,21 +146,20 @@ class HoleHandler:
         slaves_info = slaves or []
         slaves = []
         for name in slaves_info:
-            slave = yield from Slave.get(name=name)
+            slave = await Slave.get(name=name)
             slaves.append(slave)
 
         kw = {}
         if parallel_builds:
             kw['parallel_builds'] = parallel_builds
 
-        repo = yield from Repository.create(
+        repo = await Repository.create(
             repo_name, repo_url, update_seconds, vcs_type,
             slaves, **kw)
-        repo_dict = yield from self._get_repo_dict(repo)
+        repo_dict = await self._get_repo_dict(repo)
         return {'repo-add': repo_dict}
 
-    @asyncio.coroutine
-    def repo_get(self, repo_name=None, repo_url=None):
+    async def repo_get(self, repo_name=None, repo_url=None):
         """Shows information about one specific repository. One of
         ``repo_name`` or ``repo_url`` is required.
 
@@ -184,35 +176,32 @@ class HoleHandler:
         if repo_url:
             kw['url'] = repo_url
 
-        repo = yield from Repository.get(**kw)
-        repo_dict = yield from self._get_repo_dict(repo)
+        repo = await Repository.get(**kw)
+        repo_dict = await self._get_repo_dict(repo)
         return {'repo-get': repo_dict}
 
-    @asyncio.coroutine
-    def repo_remove(self, repo_name):
+    async def repo_remove(self, repo_name):
         """ Removes a repository from toxicubild.
 
         :param repo_name: Repository name."""
 
-        repo = yield from Repository.get(name=repo_name)
-        yield from repo.remove()
+        repo = await Repository.get(name=repo_name)
+        await repo.remove()
         return {'repo-remove': 'ok'}
 
-    @asyncio.coroutine
-    def repo_list(self):
+    async def repo_list(self):
         """ Lists all repositories. """
 
-        repos = yield from Repository.objects.all().to_list()
+        repos = await Repository.objects.all().to_list()
         repo_list = []
         for repo in repos:
 
-            repo_dict = yield from self._get_repo_dict(repo)
+            repo_dict = await self._get_repo_dict(repo)
             repo_list.append(repo_dict)
 
         return {'repo-list': repo_list}
 
-    @asyncio.coroutine
-    def repo_update(self, repo_name, **kwargs):
+    async def repo_update(self, repo_name, **kwargs):
         """ Updates repository information.
 
         :param repo_name: Repository name
@@ -220,157 +209,150 @@ class HoleHandler:
 
         if kwargs.get('slaves'):
             qs = Slave.objects(name__in=kwargs.get('slaves'))
-            slaves_instances = yield from qs.to_list()
+            slaves_instances = await qs.to_list()
             kwargs['slaves'] = slaves_instances
 
-        repo = yield from Repository.get(name=repo_name)
+        repo = await Repository.get(name=repo_name)
         [setattr(repo, k, v) for k, v in kwargs.items()]
 
-        yield from repo.save()
+        await repo.save()
         return {'repo-update': 'ok'}
 
-    @asyncio.coroutine
-    def repo_add_slave(self, repo_name, slave_name):
+    async def repo_add_slave(self, repo_name, slave_name):
         """ Adds a slave to a repository.
 
         :param repo_name: Repository name.
         :param slave_name: Slave name."""
 
-        repo = yield from Repository.get(name=repo_name)
-        slave = yield from Slave.get(name=slave_name)
-        yield from repo.add_slave(slave)
+        repo = await Repository.get(name=repo_name)
+        slave = await Slave.get(name=slave_name)
+        await repo.add_slave(slave)
         return {'repo-add-slave': 'ok'}
 
-    @asyncio.coroutine
-    def repo_remove_slave(self, repo_name, slave_name):
+    async def repo_remove_slave(self, repo_name, slave_name):
         """ Removes a slave from toxicbuild. """
 
-        repo = yield from Repository.get(name=repo_name)
+        repo = await Repository.get(name=repo_name)
 
-        slave = yield from Slave.get(name=slave_name)
-        yield from repo.remove_slave(slave)
+        slave = await Slave.get(name=slave_name)
+        await repo.remove_slave(slave)
         return {'repo-remove-slave': 'ok'}
 
-    @asyncio.coroutine
-    def repo_add_branch(self, repo_name, branch_name,
-                        notify_only_latest=False):
+    async def repo_add_branch(self, repo_name, branch_name,
+                              notify_only_latest=False):
         """Adds a branch to the list of branches of the repository.
 
         :param repo_name: Reporitory name
         :param branch_name: Branch's name
         :notify_only_latest: If True only the latest commit in the
           branch will trigger a build."""
-        repo = yield from Repository.get(name=repo_name)
-        yield from repo.add_or_update_branch(branch_name, notify_only_latest)
+        repo = await Repository.get(name=repo_name)
+        await repo.add_or_update_branch(branch_name, notify_only_latest)
         return {'repo-add-branch': 'ok'}
 
-    @asyncio.coroutine
-    def repo_remove_branch(self, repo_name, branch_name):
+    async def repo_remove_branch(self, repo_name, branch_name):
         """Removes a branch from the list of branches of a repository.
         :param repo_name: Repository name
         :param branch_name: Branch's name."""
 
-        repo = yield from Repository.get(name=repo_name)
-        yield from repo.remove_branch(branch_name)
+        repo = await Repository.get(name=repo_name)
+        await repo.remove_branch(branch_name)
         return {'repo-remove-branch': 'ok'}
 
-    @asyncio.coroutine
-    def repo_enable_plugin(self, repo_name, plugin_name, **kwargs):
+    async def repo_enable_plugin(self, repo_name, plugin_name, **kwargs):
         """Enables a plugin to a repository.
 
         :param repo_name: Repository name.
         :param plugin_name: Plugin name
         :param kwargs: kwargs passed to the plugin."""
 
-        repo = yield from Repository.get(name=repo_name)
-        yield from repo.enable_plugin(plugin_name, **kwargs)
+        repo = await Repository.get(name=repo_name)
+        await repo.enable_plugin(plugin_name, **kwargs)
         return {'repo-enable-plugin': 'ok'}
 
-    @asyncio.coroutine
-    def repo_disable_plugin(self, repo_name, **kwargs):
+    async def repo_disable_plugin(self, repo_name, **kwargs):
         """Disables a plugin from a repository.
 
         :param repo_name: Repository name.
         :param kwargs: kwargs passed to the plugin"""
 
-        repo = yield from Repository.get(name=repo_name)
-        yield from repo.disable_plugin(**kwargs)
+        repo = await Repository.get(name=repo_name)
+        await repo.disable_plugin(**kwargs)
         return {'repo-disable-plugin': 'ok'}
 
-    @asyncio.coroutine
-    def repo_start_build(self, repo_name, branch, builder_name=None,
-                         named_tree=None, slaves=[]):
+    async def repo_start_build(self, repo_name, branch, builder_name=None,
+                               named_tree=None, slaves=[]):
         """ Starts a(some) build(s) in a given repository. """
-
         # Mutable stuff on method declaration. Sin!!! Take that, PyLint!
-        repo = yield from Repository.get(name=repo_name)
 
-        slaves = yield from [(yield from Slave.get(name=name))
-                             for name in slaves]
+        repo = await Repository.get(name=repo_name)
+
+        slave_instances = []
+        for sname in slaves:
+            slave = await Slave.get(name=sname)
+            slave_instances.append(slave)
+
+        slaves = slave_instances
 
         if not slaves:
-            slaves = yield from repo.slaves
+            slaves = await repo.slaves
 
         if not named_tree:
-            rev = yield from repo.get_latest_revision_for_branch(branch)
+            rev = await repo.get_latest_revision_for_branch(branch)
             named_tree = rev.commit
         else:
-            rev = yield from RepositoryRevision.get(repository=repo,
-                                                    branch=branch,
-                                                    commit=named_tree)
+            rev = await RepositoryRevision.get(repository=repo,
+                                               branch=branch,
+                                               commit=named_tree)
 
         if not builder_name:
-            builders = yield from self._get_builders(slaves, rev)
+            builders = await self._get_builders(slaves, rev)
         else:
-            blist = [(yield from Builder.get(name=builder_name,
-                                             repository=repo))]
+            blist = [(await Builder.get(name=builder_name,
+                                        repository=repo))]
             builders = {}
             for slave in slaves:
                 builders.update({slave: blist})
 
         builds_count = 0
 
-        buildset = yield from BuildSet.create(repository=repo, revision=rev,
-                                              save=False)
+        buildset = await BuildSet.create(repository=repo, revision=rev,
+                                         save=False)
         for slave in slaves:
-            yield from repo.add_builds_for_slave(buildset, slave,
-                                                 builders[slave])
+            await repo.add_builds_for_slave(buildset, slave,
+                                            builders[slave])
 
         return {'repo-start-build': '{} builds added'.format(builds_count)}
 
-    @asyncio.coroutine
-    def slave_add(self, slave_name, slave_host, slave_port, slave_token):
+    async def slave_add(self, slave_name, slave_host, slave_port, slave_token):
         """ Adds a new slave to toxicbuild. """
 
-        slave = yield from Slave.create(name=slave_name, host=slave_host,
-                                        port=slave_port, token=slave_token)
+        slave = await Slave.create(name=slave_name, host=slave_host,
+                                   port=slave_port, token=slave_token)
 
         slave_dict = self._get_slave_dict(slave)
         return {'slave-add': slave_dict}
 
-    @asyncio.coroutine
-    def slave_get(self, slave_name):
+    async def slave_get(self, slave_name):
         """Returns information about on specific slave"""
 
-        slave = yield from Slave.get(name=slave_name)
+        slave = await Slave.get(name=slave_name)
         slave_dict = self._get_slave_dict(slave)
         return {'slave-get': slave_dict}
 
-    @asyncio.coroutine
-    def slave_remove(self, slave_name):
+    async def slave_remove(self, slave_name):
         """ Removes a slave from toxicbuild. """
 
-        slave = yield from Slave.get(name=slave_name)
+        slave = await Slave.get(name=slave_name)
 
-        yield from slave.delete()
+        await slave.delete()
 
         return {'slave-remove': 'ok'}
 
-    @asyncio.coroutine
-    def slave_list(self):
+    async def slave_list(self):
         """ Lists all slaves. """
 
-        slaves = yield from Slave.objects.all().to_list()
+        slaves = await Slave.objects.all().to_list()
         slave_list = []
 
         for slave in slaves:
@@ -379,18 +361,16 @@ class HoleHandler:
 
         return {'slave-list': slave_list}
 
-    @asyncio.coroutine
-    def slave_update(self, slave_name, **kwargs):
+    async def slave_update(self, slave_name, **kwargs):
         """Updates infomation of a slave."""
 
-        slave = yield from Slave.get(name=slave_name)
+        slave = await Slave.get(name=slave_name)
         [setattr(slave, k, v) for k, v in kwargs.items()]
 
-        yield from slave.save()
+        await slave.save()
         return {'slave-update': 'ok'}
 
-    @asyncio.coroutine
-    def buildset_list(self, repo_name=None, skip=0, offset=None):
+    async def buildset_list(self, repo_name=None, skip=0, offset=None):
         """ Lists all buildsets.
 
         If ``repo_name``, only builders from this repository will be listed.
@@ -401,16 +381,16 @@ class HoleHandler:
 
         buildsets = BuildSet.objects
         if repo_name:
-            repository = yield from Repository.get(name=repo_name)
+            repository = await Repository.get(name=repo_name)
             buildsets = buildsets.filter(repository=repository)
 
         buildsets = buildsets.order_by('-created')
-        count = yield from buildsets.count()
+        count = await buildsets.count()
 
         stop = count if not offset else skip + offset
 
         buildsets = buildsets[skip:stop]
-        buildsets = yield from buildsets.to_list()
+        buildsets = await buildsets.to_list()
         buildset_list = []
         for b in buildsets:
             bdict = b.to_dict(id_as_str=True)
@@ -418,18 +398,17 @@ class HoleHandler:
 
         return {'buildset-list': buildset_list}
 
-    @asyncio.coroutine
-    def builder_list(self, **kwargs):
+    async def builder_list(self, **kwargs):
         """List builders.
 
         :param kwargs: Arguments to filter the list."""
 
         queryset = Builder.objects.filter(**kwargs)
-        builders = yield from queryset.to_list()
+        builders = await queryset.to_list()
         blist = []
 
         for b in builders:
-            blist.append((yield from b.to_dict(id_as_str=True)))
+            blist.append((await b.to_dict(id_as_str=True)))
 
         return {'builder-list': blist}
 
@@ -447,8 +426,7 @@ class HoleHandler:
         plugin = MasterPlugin.get_plugin(name=name)
         return {'plugin-get': plugin.get_schema(to_serialize=True)}
 
-    @asyncio.coroutine
-    def builder_show(self, repo_name, builder_name, skip=0, offset=None):
+    async def builder_show(self, repo_name, builder_name, skip=0, offset=None):
         """ Returns information about one specific builder.
 
         :param repo_name: The builder's repository name.
@@ -458,26 +436,26 @@ class HoleHandler:
         """
 
         kwargs = {'name': builder_name}
-        repo = yield from Repository.get(name=repo_name)
+        repo = await Repository.get(name=repo_name)
         kwargs.update({'repository': repo})
 
-        builder = yield from Builder.get(**kwargs)
+        builder = await Builder.get(**kwargs)
         buildsets = BuildSet.objects(builds__builder=builder)
-        count = yield from buildsets.count()
+        count = await buildsets.count()
         stop = count if not offset else skip + offset
         buildsets = buildsets[skip:stop]
-        buildsets = yield from buildsets.to_list()
+        buildsets = await buildsets.to_list()
         buildsets_list = []
         for buildset in buildsets:
             bdict = buildset.to_dict()
             bdict['builds'] = []
-            for b in (yield from buildset.get_builds_for(builder=builder)):
+            for b in (await buildset.get_builds_for(builder=builder)):
                 build_dict = b.to_dict()
                 bdict['builds'].append(build_dict)
 
             buildsets_list.append(bdict)
 
-        builder_dict = yield from builder.to_dict()
+        builder_dict = await builder.to_dict()
         builder_dict['buildsets'] = buildsets_list
         return {'builder-show': builder_dict}
 
@@ -501,14 +479,13 @@ class HoleHandler:
         funcs = {n: getattr(self, n) for n in func_names}
         return funcs
 
-    @asyncio.coroutine
-    def _get_repo_dict(self, repo):
+    async def _get_repo_dict(self, repo):
         """Returns a dictionary for a given repository"""
 
         repo_dict = json.loads(repo.to_json())
         repo_dict['id'] = str(repo.id)
-        repo_dict['status'] = yield from repo.get_status()
-        slaves = yield from repo.slaves
+        repo_dict['status'] = await repo.get_status()
+        slaves = await repo.slaves
         repo_dict['slaves'] = [self._get_slave_dict(s) for s in slaves]
         repo_dict['parallel_builds'] = repo.parallel_builds or ''
         for p in repo_dict['plugins']:
@@ -521,12 +498,11 @@ class HoleHandler:
         slave_dict['id'] = str(slave.id)
         return slave_dict
 
-    @asyncio.coroutine
-    def _get_builders(self, slaves, revision):
-        repo = yield from revision.repository
+    async def _get_builders(self, slaves, revision):
+        repo = await revision.repository
         builders = {}
         for slave in slaves:
-            builders[slave] = yield from repo.build_manager.get_builders(
+            builders[slave] = await repo.build_manager.get_builders(
                 slave, revision)
 
         return builders
@@ -546,25 +522,20 @@ class UIStreamHandler(LoggerMixin):
 
         self.protocol.connection_lost_cb = connection_lost_cb
 
-    @asyncio.coroutine
-    def step_started(self, reciever, **kw):
-        yield from self.send_info('step_started', **kw)
+    async def step_started(self, reciever, **kw):
+        await self.send_info('step_started', **kw)
 
-    @asyncio.coroutine
-    def step_finished(self, reciever, **kw):
-        yield from self.send_info('step_finished', **kw)
+    async def step_finished(self, reciever, **kw):
+        await self.send_info('step_finished', **kw)
 
-    @asyncio.coroutine
-    def build_started(self, reciever, **kw):
-        yield from self.send_info('build_started', **kw)
+    async def build_started(self, reciever, **kw):
+        await self.send_info('build_started', **kw)
 
-    @asyncio.coroutine
-    def build_finished(self, reciever, **kw):
-        yield from self.send_info('build_finished', **kw)
+    async def build_finished(self, reciever, **kw):
+        await self.send_info('build_finished', **kw)
 
-    @asyncio.coroutine
-    def build_added(self, reciever, **kw):
-        yield from self.send_info('build_added', **kw)
+    async def build_added(self, reciever, **kw):
+        await self.send_info('build_added', **kw)
 
     def _connect2signals(self):
         step_started.connect(self.step_started)
@@ -585,20 +556,18 @@ class UIStreamHandler(LoggerMixin):
         repo_status_changed.disconnect(self.send_repo_status_info)
         build_added.disconnect(self.build_added)
 
-    @asyncio.coroutine
-    def handle(self):
+    async def handle(self):
         self._connect2signals()
-        yield from self.protocol.send_response(code=0, body={'stream': 'ok'})
+        await self.protocol.send_response(code=0, body={'stream': 'ok'})
 
-    @asyncio.coroutine
-    def send_info(self, info_type, build=None, step=None):
-        repo = yield from build.repository
-        slave = yield from build.slave
+    async def send_info(self, info_type, build=None, step=None):
+        repo = await build.repository
+        slave = await build.slave
 
         build_dict = build.to_dict(id_as_str=True)
         slave = slave.to_dict(id_as_str=True)
-        repo = yield from repo.to_dict(id_as_str=True)
-        buildset = yield from build.get_buildset()
+        repo = await repo.to_dict(id_as_str=True)
+        buildset = await build.get_buildset()
 
         build_dict['slave'] = slave
         build_dict['repository'] = repo
@@ -618,15 +587,14 @@ class UIStreamHandler(LoggerMixin):
 
         return f
 
-    @asyncio.coroutine
-    def send_repo_status_info(self, repo, old_status, new_status):
+    async def send_repo_status_info(self, repo, old_status, new_status):
         """Called by the signal ``repo_status_changed``
 
         :param repo: The repository that had its status changed.
         :param old_status: The old status of the repository
         :param new_status: The new status of the repostiory."""
 
-        rdict = yield from repo.to_dict(id_as_str=True)
+        rdict = await repo.to_dict(id_as_str=True)
         rdict['status'] = new_status
         rdict['old_status'] = old_status
         rdict['event_type'] = 'repo_status_changed'
@@ -643,10 +611,9 @@ class UIStreamHandler(LoggerMixin):
         f = ensure_future(self.send_response(code=0, body=step_info))
         return f
 
-    @asyncio.coroutine
-    def send_response(self, code, body):
+    async def send_response(self, code, body):
         try:
-            yield from self.protocol.send_response(code=code, body=body)
+            await self.protocol.send_response(code=code, body=body)
         except ConnectionResetError:
             self.protocol._transport.close()
             self._disconnectfromsignals()

@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 import traceback
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.core.utils import LoggerMixin, MatchKeysDict
@@ -45,8 +44,7 @@ class Poller(LoggerMixin):
     def is_polling(self):
         return self._is_polling
 
-    @asyncio.coroutine
-    def poll(self):
+    async def poll(self):
         """ Check for changes on repository and if there are changes, notify
         about it.
         """
@@ -64,7 +62,7 @@ class Poller(LoggerMixin):
             if not self.vcs.workdir_exists():
                 self.log('clonning repo')
                 try:
-                    yield from self.vcs.clone(self.repository.url)
+                    await self.vcs.clone(self.repository.url)
                     with_clone = True
                 except Exception as e:
                     msg = traceback.format_exc()
@@ -75,10 +73,10 @@ class Poller(LoggerMixin):
             # remove no branch when hg is implemented
             if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
                 self.log('updating submodule', level='debug')
-                yield from self.vcs.update_submodule()
+                await self.vcs.update_submodule()
 
             try:
-                yield from self.process_changes()
+                await self.process_changes()
             except Exception as e:
                 # shit happends
                 msg = traceback.format_exc()
@@ -89,20 +87,19 @@ class Poller(LoggerMixin):
 
         return with_clone
 
-    @asyncio.coroutine
-    def process_changes(self):
+    async def process_changes(self):
         """ Process all changes since the last revision in db
         """
         self.log('processing changes', level='debug')
 
-        dbrevisions = yield from self.repository.get_latest_revisions()
+        dbrevisions = await self.repository.get_latest_revisions()
 
         since = dict((branch, r.commit_date) for branch, r
                      in dbrevisions.items() if r)
 
         repo_branches = MatchKeysDict(
             **{b.name: b for b in self.repository.branches})
-        newer_revisions = yield from self.vcs.get_revisions(
+        newer_revisions = await self.vcs.get_revisions(
             since=since, branches=repo_branches.keys())
 
         known_branches = dbrevisions.keys()
@@ -116,8 +113,8 @@ class Poller(LoggerMixin):
             # revisions, but the last one only.
             if branch not in known_branches:
                 rev = revs[-1]
-                revision = yield from self.repository.add_revision(branch,
-                                                                   **rev)
+                revision = await self.repository.add_revision(branch,
+                                                              **rev)
                 msg = 'Last revision added for branch {} '
                 self.log(msg.format(branch), level='debug')
                 revisions.append(revision)
@@ -126,9 +123,9 @@ class Poller(LoggerMixin):
             notify_only_latest = repo_branches.get(branch).notify_only_latest \
                 if repo_branches.get(branch) else False
 
-            yield from self._process_branch_revisions(branch, revs,
-                                                      notify_only_latest,
-                                                      revisions)
+            await self._process_branch_revisions(branch, revs,
+                                                 notify_only_latest,
+                                                 revisions)
 
         self.notify_change(*revisions)
 
@@ -144,15 +141,13 @@ class Poller(LoggerMixin):
         msg = '[{}] {}'.format(self.repository.name, msg)
         super().log(msg, level)
 
-    @asyncio.coroutine
-    def _process_branch_revisions(self, branch, revisions, notify_only_latest,
-                                  to_notify):
+    async def _process_branch_revisions(self, branch, revisions,
+                                        notify_only_latest, to_notify):
         """Processes the revisions for a branch"""
 
         branch_revs = []
         for rev in revisions:
-            revision = yield from self.repository.add_revision(
-                branch, **rev)
+            revision = await self.repository.add_revision(branch, **rev)
             # the thing here is: if notify_only_latest, we only
             # add the most recent revision, the last one of the revisions
             # list to the revisionset

@@ -18,11 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-try:
-    from asyncio import ensure_future
-except ImportError:  # pragma: no cover
-    from asyncio import async as ensure_future
-
+from asyncio import ensure_future
 from toxicbuild.core import BaseToxicClient
 
 
@@ -35,21 +31,19 @@ class BuildClient(BaseToxicClient):
         self.slave = slave
         super().__init__(*args, **kwargs)
 
-    @asyncio.coroutine
-    def healthcheck(self):
+    async def healthcheck(self):
         """ Asks to know if the server is up and running
         """
         data = {'action': 'healthcheck'}
         try:
-            yield from self.write(data)
-            response = yield from self.get_response()
+            await self.write(data)
+            response = await self.get_response()
             del response
             return True
-        except:
+        except Exception:
             return False
 
-    @asyncio.coroutine
-    def list_builders(self, repo_url, vcs_type, branch, named_tree):
+    async def list_builders(self, repo_url, vcs_type, branch, named_tree):
         """ Asks the server for the builders available for ``repo_url``,
         on ``branch`` and ``named_tree``.
         """
@@ -59,22 +53,21 @@ class BuildClient(BaseToxicClient):
                          'vcs_type': vcs_type,
                          'branch': branch,
                          'named_tree': named_tree}}
-        yield from self.write(data)
-        response = yield from self.get_response()
+        await self.write(data)
+        response = await self.get_response()
         builders = response['body']['builders']
         return builders
 
-    @asyncio.coroutine
-    def build(self, build, process_coro=None):
+    async def build(self, build, process_coro=None):
         """Requests a build for the build server.
 
         :param build: The build that will be executed.
         :param process_coro: A coroutine to process the intermediate
           build information sent by the build server."""
 
-        repository = yield from build.repository
-        builder_name = (yield from build.builder).name
-        slave = yield from build.slave
+        repository = await build.repository
+        builder_name = (await build.builder).name
+        slave = await build.slave
         data = {'action': 'build',
                 'token': slave.token,
                 'body': {'repo_url': repository.url,
@@ -83,10 +76,10 @@ class BuildClient(BaseToxicClient):
                          'named_tree': build.named_tree,
                          'builder_name': builder_name}}
 
-        yield from self.write(data)
+        await self.write(data)
         futures = []
         while True:
-            r = yield from self.get_response()
+            r = await self.get_response()
 
             if not r:
                 break
@@ -99,12 +92,11 @@ class BuildClient(BaseToxicClient):
         return futures
 
 
-@asyncio.coroutine
-def get_build_client(slave, addr, port):
+async def get_build_client(slave, addr, port):
     """ Instanciate :class:`toxicbuild.master.client.BuildClient` and
     connects it to a build server
     """
 
     client = BuildClient(slave, addr, port)
-    yield from client.connect()
+    await client.connect()
     return client

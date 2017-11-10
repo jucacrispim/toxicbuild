@@ -30,30 +30,39 @@ class UIHoleTest(TestCase):
     @patch.object(hole.HoleHandler, 'handle', MagicMock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
     @async_test
-    def test_client_connected_ok(self):
+    async def test_client_connected_ok(self):
+        send_response = MagicMock()
+        hole.BaseToxicProtocol.send_response = asyncio.coroutine(
+            lambda *a, **kw: send_response(*a, **kw))
         uihole = hole.UIHole(Mock())
         uihole.data = {}
         uihole._stream_writer = Mock()
         # no exception means ok
-        yield from uihole.client_connected()
+        await uihole.client_connected()
 
     @patch.object(hole, 'UIStreamHandler', Mock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
     @async_test
-    def test_client_connected_with_stream(self):
+    async def test_client_connected_with_stream(self):
+        send_response = MagicMock()
+        hole.BaseToxicProtocol.send_response = asyncio.coroutine(
+            lambda *a, **kw: send_response(*a, **kw))
         uihole = hole.UIHole(Mock())
         uihole.data = {}
         uihole.action = 'stream'
         uihole._stream_writer = Mock()
 
-        yield from uihole.client_connected()
+        await uihole.client_connected()
 
         self.assertTrue(hole.UIStreamHandler.called)
 
     @patch.object(hole.HoleHandler, 'handle', MagicMock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
     @async_test
-    def test_client_connected_error(self):
+    async def test_client_connected_error(self):
+        send_response = MagicMock()
+        hole.BaseToxicProtocol.send_response = asyncio.coroutine(
+            lambda *a, **kw: send_response(*a, **kw))
 
         @asyncio.coroutine
         def handle(*a, **kw):
@@ -64,9 +73,9 @@ class UIHoleTest(TestCase):
         uihole.data = {}
         uihole._stream_writer = Mock()
 
-        yield from uihole.client_connected()
+        await uihole.client_connected()
 
-        response = uihole.send_response.call_args[1]
+        response = send_response.call_args[1]
         response_code = response['code']
         self.assertEqual(response_code, 1, response)
 
@@ -75,26 +84,32 @@ class UIHoleTest(TestCase):
 class HoleHandlerTest(TestCase):
 
     @async_test
-    def tearDown(self):
-        yield from hole.Slave.drop_collection()
-        yield from hole.Repository.drop_collection()
-        yield from build.BuildSet.drop_collection()
-        yield from build.Builder.drop_collection()
+    async def tearDown(self):
+        await hole.Slave.drop_collection()
+        await hole.Repository.drop_collection()
+        await build.BuildSet.drop_collection()
+        await build.Builder.drop_collection()
 
     @async_test
-    def test_handle(self):
+    async def test_handle(self):
         protocol = MagicMock()
+        send_response = MagicMock()
+        protocol.send_response = asyncio.coroutine(
+            lambda *a, **kw: send_response(*a, **kw))
         handler = hole.HoleHandler({}, 'my-action', protocol)
         handler.my_action = lambda *a, **kw: None
 
-        yield from handler.handle()
-        code = protocol.send_response.call_args[1]['code']
+        await handler.handle()
+        code = send_response.call_args[1]['code']
 
         self.assertEqual(code, 0)
 
     @async_test
-    def test_handle_with_coro(self):
+    async def test_handle_with_coro(self):
         protocol = MagicMock()
+        send_response = MagicMock()
+        protocol.send_response = asyncio.coroutine(
+            lambda *a, **kw: send_response(*a, **kw))
         handler = hole.HoleHandler({}, 'my-action', protocol)
 
         @asyncio.coroutine
@@ -103,21 +118,21 @@ class HoleHandlerTest(TestCase):
 
         handler.my_action = my_action
 
-        yield from handler.handle()
-        code = protocol.send_response.call_args[1]['code']
+        await handler.handle()
+        code = send_response.call_args[1]['code']
 
         self.assertEqual(code, 0)
 
     @async_test
-    def test_handle_with_not_known_action(self):
+    async def test_handle_with_not_known_action(self):
         handler = hole.HoleHandler({}, 'action', MagicMock())
 
         with self.assertRaises(hole.UIFunctionNotFound):
-            yield from handler.handle()
+            await handler.handle()
 
     @async_test
-    def test_repo_add(self):
-        yield from self._create_test_data()
+    async def test_repo_add(self):
+        await self._create_test_data()
 
         name = 'reponameoutro'
         url = 'git@somehere.com'
@@ -127,14 +142,14 @@ class HoleHandlerTest(TestCase):
         action = 'repo-add'
         handler = hole.HoleHandler({}, action, MagicMock())
 
-        repo = yield from handler.repo_add(name, url, update_seconds, vcs_type,
-                                           slaves)
+        repo = await handler.repo_add(name, url, update_seconds, vcs_type,
+                                      slaves)
 
         self.assertTrue(repo['repo-add']['id'])
 
     @async_test
-    def test_repo_add_parallel_builds(self):
-        yield from self._create_test_data()
+    async def test_repo_add_parallel_builds(self):
+        await self._create_test_data()
 
         name = 'reponameoutro'
         url = 'git@somehere.com'
@@ -144,55 +159,55 @@ class HoleHandlerTest(TestCase):
         action = 'repo-add'
         handler = hole.HoleHandler({}, action, MagicMock())
 
-        repo = yield from handler.repo_add(name, url, update_seconds, vcs_type,
-                                           slaves, parallel_builds=1)
+        repo = await handler.repo_add(name, url, update_seconds, vcs_type,
+                                      slaves, parallel_builds=1)
 
         self.assertEqual(repo['repo-add']['parallel_builds'], 1)
 
     @async_test
-    def test_repo_get_with_repo_name(self):
-        yield from self._create_test_data()
+    async def test_repo_get_with_repo_name(self):
+        await self._create_test_data()
         repo_name = 'reponame'
         action = 'repo-get'
         handler = hole.HoleHandler({}, action, MagicMock())
-        repo = (yield from handler.repo_get(repo_name=repo_name))['repo-get']
+        repo = (await handler.repo_get(repo_name=repo_name))['repo-get']
 
         self.assertEqual(repo['name'], repo_name)
         self.assertTrue(repo['id'])
         self.assertIn('status', repo.keys())
 
     @async_test
-    def test_repo_get_with_repo_url(self):
-        yield from self._create_test_data()
+    async def test_repo_get_with_repo_url(self):
+        await self._create_test_data()
         repo_url = 'git@somewhere.com'
         action = 'repo-get'
         handler = hole.HoleHandler({}, action, MagicMock())
-        repo = (yield from handler.repo_get(repo_url=repo_url))['repo-get']
+        repo = (await handler.repo_get(repo_url=repo_url))['repo-get']
 
         self.assertEqual(repo['url'], repo_url)
 
     @async_test
-    def test_repo_get_without_params(self):
+    async def test_repo_get_without_params(self):
         action = 'repo-get'
         handler = hole.HoleHandler({}, action, MagicMock())
 
         with self.assertRaises(TypeError):
-            yield from handler.repo_get()
+            await handler.repo_get()
 
     @patch.object(repository, 'shutil', Mock())
     @async_test
-    def test_repo_remove(self):
-        yield from self._create_test_data()
+    async def test_repo_remove(self):
+        await self._create_test_data()
         action = 'repo-remove'
         handler = hole.HoleHandler({}, action, MagicMock())
-        yield from handler.repo_remove(repo_name='reponame')
+        await handler.repo_remove(repo_name='reponame')
         allrepos = [r.name for r in (
-            yield from hole.Repository.objects.to_list())]
-        self.assertEqual((yield from hole.Repository.objects.count()),
+            await hole.Repository.objects.to_list())]
+        self.assertEqual((await hole.Repository.objects.count()),
                          1, allrepos)
 
     @async_test
-    def test_repo_enable_plugin(self):
+    async def test_repo_enable_plugin(self):
 
         class TestPlugin(plugins.MasterPlugin):
             name = 'test-hole-plugin'
@@ -202,16 +217,16 @@ class HoleHandlerTest(TestCase):
             def run(self):
                 pass
 
-        yield from self._create_test_data()
+        await self._create_test_data()
         action = 'repo-enable-plugin'
         handler = hole.HoleHandler({}, action, MagicMock())
-        yield from handler.repo_enable_plugin(self.repo.name,
-                                              'test-hole-plugin')
-        repo = yield from hole.Repository.get(id=self.repo.id)
+        await handler.repo_enable_plugin(self.repo.name,
+                                         'test-hole-plugin')
+        repo = await hole.Repository.get(id=self.repo.id)
         self.assertEqual(len(repo.plugins), 1)
 
     @async_test
-    def test_repo_disable_plugin(self):
+    async def test_repo_disable_plugin(self):
 
         class TestPlugin(plugins.MasterPlugin):
             name = 'test-hole-plugin'
@@ -221,59 +236,59 @@ class HoleHandlerTest(TestCase):
             def run(self):
                 pass
 
-        yield from self._create_test_data()
+        await self._create_test_data()
         action = 'repo-enable-plugin'
         handler = hole.HoleHandler({}, action, MagicMock())
-        yield from handler.repo_enable_plugin(self.repo.name,
-                                              'test-hole-plugin')
+        await handler.repo_enable_plugin(self.repo.name,
+                                         'test-hole-plugin')
         kw = {'name': 'test-hole-plugin'}
-        yield from handler.repo_disable_plugin(self.repo.name, **kw)
-        repo = yield from hole.Repository.get(id=self.repo.id)
+        await handler.repo_disable_plugin(self.repo.name, **kw)
+        repo = await hole.Repository.get(id=self.repo.id)
         self.assertEqual(len(repo.plugins), 0)
 
     @async_test
-    def test_repo_list(self):
-        yield from self._create_test_data()
+    async def test_repo_list(self):
+        await self._create_test_data()
         handler = hole.HoleHandler({}, 'repo-list', MagicMock())
-        repo_list = (yield from handler.repo_list())['repo-list']
+        repo_list = (await handler.repo_list())['repo-list']
 
         self.assertEqual(len(repo_list), 2)
         self.assertIn('status', repo_list[0].keys())
 
     @async_test
-    def test_repo_update(self):
-        yield from self._create_test_data()
+    async def test_repo_update(self):
+        await self._create_test_data()
 
         data = {'url': 'git@somewhere.com',
                 'update_seconds': 60}
         action = 'repo-update'
         handler = hole.HoleHandler(data, action, MagicMock())
-        yield from handler.repo_update(repo_name=self.repo.name,
-                                       update_seconds=60)
-        repo = yield from hole.Repository.get(name=self.repo.name)
+        await handler.repo_update(repo_name=self.repo.name,
+                                  update_seconds=60)
+        repo = await hole.Repository.get(name=self.repo.name)
 
         self.assertEqual(repo.update_seconds, 60)
 
     @async_test
-    def test_repo_update_with_slaves(self):
-        yield from self._create_test_data()
+    async def test_repo_update_with_slaves(self):
+        await self._create_test_data()
 
         data = {'url': 'git@somewhere.com',
                 'update_seconds': 60}
         action = 'repo-update'
         handler = hole.HoleHandler(data, action, MagicMock())
         slaves = ['name']
-        yield from handler.repo_update(repo_name=self.repo.name,
-                                       update_seconds=60, slaves=slaves)
-        repo = yield from hole.Repository.get(name=self.repo.name)
+        await handler.repo_update(repo_name=self.repo.name,
+                                  update_seconds=60, slaves=slaves)
+        repo = await hole.Repository.get(name=self.repo.name)
 
         self.assertEqual(repo.update_seconds, 60)
 
     @async_test
-    def test_repo_add_slave(self):
-        yield from self._create_test_data()
+    async def test_repo_add_slave(self):
+        await self._create_test_data()
 
-        slave = yield from hole.Slave.create(name='name2',
+        slave = await hole.Slave.create(name='name2',
                                              host='127.0.0.1', port=1234,
                                              token='asdf')
 
@@ -282,60 +297,60 @@ class HoleHandlerTest(TestCase):
 
         handler = hole.HoleHandler({}, action, MagicMock())
 
-        yield from handler.repo_add_slave(repo_name=repo_name,
-                                          slave_name='name2')
+        await handler.repo_add_slave(repo_name=repo_name,
+                                     slave_name='name2')
 
-        repo = yield from hole.Repository.get(url=self.repo.url)
+        repo = await hole.Repository.get(url=self.repo.url)
 
-        self.assertEqual((yield from repo.slaves)[0].id, slave.id)
+        self.assertEqual((await repo.slaves)[0].id, slave.id)
 
     @async_test
-    def test_repo_remove_slave(self):
-        yield from self._create_test_data()
+    async def test_repo_remove_slave(self):
+        await self._create_test_data()
 
-        slave = yield from hole.Slave.create(name='name2', host='127.0.0.1',
+        slave = await hole.Slave.create(name='name2', host='127.0.0.1',
                                              port=1234, token='123')
-        yield from self.repo.add_slave(slave)
+        await self.repo.add_slave(slave)
 
         handler = hole.HoleHandler({}, 'repo-remove-slave', MagicMock())
 
-        yield from handler.repo_remove_slave(self.repo.name, slave.name)
+        await handler.repo_remove_slave(self.repo.name, slave.name)
 
-        repo = yield from hole.Repository.get(url=self.repo.url)
+        repo = await hole.Repository.get(url=self.repo.url)
 
-        self.assertEqual(len((yield from repo.slaves)), 0)
+        self.assertEqual(len((await repo.slaves)), 0)
 
     @async_test
-    def test_repo_add_branch(self):
-        yield from self._create_test_data()
+    async def test_repo_add_branch(self):
+        await self._create_test_data()
         action = 'repo-add-branch'
 
         handler = hole.HoleHandler({}, action, MagicMock())
 
-        yield from handler.repo_add_branch(repo_name=self.repo.name,
-                                           branch_name='release',
-                                           notify_only_latest=True)
+        await handler.repo_add_branch(repo_name=self.repo.name,
+                                      branch_name='release',
+                                      notify_only_latest=True)
 
-        repo = yield from hole.Repository.get(url=self.repo.url)
+        repo = await hole.Repository.get(url=self.repo.url)
 
         self.assertEqual(len(repo.branches), 1)
 
     @async_test
-    def test_repo_remove_branch(self):
-        yield from self._create_test_data()
+    async def test_repo_remove_branch(self):
+        await self._create_test_data()
         action = 'repo-add-branch'
 
         handler = hole.HoleHandler({}, action, MagicMock())
 
-        yield from handler.repo_add_branch(repo_name=self.repo.name,
-                                           branch_name='release',
-                                           notify_only_latest=True)
-        repo = yield from hole.Repository.get(url=self.repo.url)
+        await handler.repo_add_branch(repo_name=self.repo.name,
+                                      branch_name='release',
+                                      notify_only_latest=True)
+        repo = await hole.Repository.get(url=self.repo.url)
         branch_count = len(repo.branches)
-        yield from handler.repo_remove_branch(repo_name=self.repo.name,
-                                              branch_name='release')
+        await handler.repo_remove_branch(repo_name=self.repo.name,
+                                         branch_name='release')
 
-        repo = yield from hole.Repository.get(url=self.repo.url)
+        repo = await hole.Repository.get(url=self.repo.url)
 
         self.assertEqual(len(repo.branches), branch_count - 1)
 
@@ -344,35 +359,41 @@ class HoleHandlerTest(TestCase):
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
         spec=repository.Repository.add_builds_for_slave))
     @async_test
-    def test_repo_start_build(self):
-        yield from self._create_test_data()
-        (yield from self.revision.repository).build_manager\
+    async def test_repo_start_build(self):
+        await self._create_test_data()
+        add_builds_for_slave = MagicMock()
+        hole.Repository.add_builds_for_slave = asyncio.coroutine(
+            lambda *a, **kw: add_builds_for_slave(*a, **kw))
+        (await self.revision.repository).build_manager\
             .get_builders = asyncio.coroutine(lambda s, r: [self.builders[0]])
         handler = hole.HoleHandler({}, 'repo-start-build', MagicMock())
         self.repo.slaves = [self.slave]
-        yield from self.repo.save()
+        await self.repo.save()
 
-        yield from handler.repo_start_build(self.repo.name, 'master')
+        await handler.repo_start_build(self.repo.name, 'master')
 
-        self.assertEqual(len(self.repo.add_builds_for_slave.call_args_list), 1)
+        self.assertEqual(len(add_builds_for_slave.call_args_list), 1)
 
     @patch.object(hole.HoleHandler, '_get_builders', MagicMock())
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
         spec=repository.Repository.add_builds_for_slave))
     @async_test
-    def test_repo_start_build_with_builder_name(self):
-        yield from self._create_test_data()
+    async def test_repo_start_build_with_builder_name(self):
+        add_builds_for_slave = MagicMock()
+        hole.Repository.add_builds_for_slave = asyncio.coroutine(
+            lambda *a, **kw: add_builds_for_slave(*a, **kw))
+        await self._create_test_data()
         hole.HoleHandler._get_builders = MagicMock(
             spec=hole.HoleHandler._get_builders)
         handler = hole.HoleHandler({}, 'repo-start-build', MagicMock())
         self.repo.slaves = [self.slave]
-        yield from self.repo.save()
+        await self.repo.save()
 
-        yield from handler.repo_start_build(self.repo.name, 'master',
-                                            builder_name='b00')
+        await handler.repo_start_build(self.repo.name, 'master',
+                                       builder_name='b00')
 
         self.assertFalse(hole.HoleHandler._get_builders.called)
-        self.assertEqual(len(self.repo.add_builds_for_slave.call_args_list), 1)
+        self.assertEqual(len(add_builds_for_slave.call_args_list), 1)
 
     @patch.object(repository, 'BuildManager', MagicMock())
     @patch.object(hole.RepositoryRevision, 'get', MagicMock())
@@ -380,7 +401,10 @@ class HoleHandlerTest(TestCase):
         spec=repository.Repository.add_builds_for_slave))
     @patch.object(hole.HoleHandler, '_get_builders', MagicMock())
     @async_test
-    def test_repo_start_build_with_named_tree(self):
+    async def test_repo_start_build_with_named_tree(self):
+        add_builds_for_slave = MagicMock()
+        hole.Repository.add_builds_for_slave = asyncio.coroutine(
+            lambda *a, **kw: add_builds_for_slave(*a, **kw))
 
         get_mock = MagicMock()
 
@@ -390,16 +414,16 @@ class HoleHandlerTest(TestCase):
             return self.revision
 
         hole.RepositoryRevision.get = get
-        yield from self._create_test_data()
+        await self._create_test_data()
 
         hole.HoleHandler._get_builders = asyncio.coroutine(
             lambda s, r, builders=None: {self.slave: self.builders[0]})
         handler = hole.HoleHandler({}, 'repo-start-build', MagicMock())
         self.repo.slaves = [self.slave]
-        yield from self.repo.save()
+        await self.repo.save()
 
-        yield from handler.repo_start_build(self.repo.name, 'master',
-                                            named_tree='123qewad')
+        await handler.repo_start_build(self.repo.name, 'master',
+                                       named_tree='123qewad')
 
         self.assertTrue(get_mock.called)
 
@@ -407,103 +431,106 @@ class HoleHandlerTest(TestCase):
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
         spec=repository.Repository.add_builds_for_slave))
     @async_test
-    def test_repo_start_build_with_slave(self):
-        yield from self._create_test_data()
+    async def test_repo_start_build_with_slave(self):
+        await self._create_test_data()
+        add_builds_for_slave = MagicMock()
+        hole.Repository.add_builds_for_slave = asyncio.coroutine(
+            lambda *a, **kw: add_builds_for_slave(*a, **kw))
 
         hole.HoleHandler._get_builders = asyncio.coroutine(
             lambda s, r, builders=None: {self.slave: self.builders[0]})
         handler = hole.HoleHandler({}, 'repo-start-build', MagicMock())
         self.repo.slaves = [self.slave]
-        yield from self.repo.save()
+        await self.repo.save()
 
-        yield from handler.repo_start_build(self.repo.name, 'master',
-                                            slaves=['name'])
+        await handler.repo_start_build(self.repo.name, 'master',
+                                       slaves=['name'])
 
-        self.assertEqual(len(self.repo.add_builds_for_slave.call_args_list), 1)
+        self.assertEqual(len(add_builds_for_slave.call_args_list), 1)
 
     @async_test
-    def test_slave_add(self):
+    async def test_slave_add(self):
         data = {'host': '127.0.0.1', 'port': 1234}
         handler = hole.HoleHandler(data, 'slave-add', MagicMock())
-        slave = yield from handler.slave_add(slave_name='slave',
-                                             slave_host='locahost',
-                                             slave_port=1234,
-                                             slave_token='1234')
+        slave = await handler.slave_add(slave_name='slave',
+                                        slave_host='locahost',
+                                        slave_port=1234,
+                                        slave_token='1234')
         slave = slave['slave-add']
 
         self.assertTrue(slave['id'])
 
     @async_test
-    def test_slave_get(self):
-        yield from self._create_test_data()
+    async def test_slave_get(self):
+        await self._create_test_data()
         slave_name = 'name'
         action = 'slave-get'
         handler = hole.HoleHandler({}, action, MagicMock())
-        slave = (yield from handler.slave_get(
+        slave = (await handler.slave_get(
             slave_name=slave_name))['slave-get']
 
         self.assertEqual(slave['name'], slave_name)
         self.assertTrue(slave['id'])
 
     @async_test
-    def test_slave_remove(self):
-        yield from self._create_test_data()
+    async def test_slave_remove(self):
+        await self._create_test_data()
         data = {'host': '127.0.0.1', 'port': 7777}
         handler = hole.HoleHandler(data, 'slave-remove', MagicMock())
-        yield from handler.slave_remove(slave_name='name')
-        yield from asyncio.sleep(0.1)
-        self.assertEqual((yield from hole.Slave.objects.count()), 0)
+        await handler.slave_remove(slave_name='name')
+        await asyncio.sleep(0.1)
+        self.assertEqual((await hole.Slave.objects.count()), 0)
 
     @async_test
-    def test_slave_list(self):
-        yield from self._create_test_data()
+    async def test_slave_list(self):
+        await self._create_test_data()
         handler = hole.HoleHandler({}, 'slave-list', MagicMock())
-        slaves = (yield from handler.slave_list())['slave-list']
+        slaves = (await handler.slave_list())['slave-list']
 
         self.assertEqual(len(slaves), 1)
 
     @async_test
-    def test_slave_update(self):
-        yield from self._create_test_data()
+    async def test_slave_update(self):
+        await self._create_test_data()
 
         data = {'host': '10.0.0.1', 'slave_name': self.slave.name}
         action = 'slave-update'
         handler = hole.HoleHandler(data, action, MagicMock())
-        yield from handler.slave_update(slave_name=self.slave.name,
-                                        host='10.0.0.1')
-        slave = yield from hole.Slave.get(name=self.slave.name)
+        await handler.slave_update(slave_name=self.slave.name,
+                                   host='10.0.0.1')
+        slave = await hole.Slave.get(name=self.slave.name)
         self.assertEqual(slave.host, '10.0.0.1')
 
     @async_test
-    def test_buildset_list(self):
-        yield from self._create_test_data()
+    async def test_buildset_list(self):
+        await self._create_test_data()
         handler = hole.HoleHandler({}, 'buildset-list', MagicMock())
-        buildsets = yield from handler.buildset_list(self.repo.name)
+        buildsets = await handler.buildset_list(self.repo.name)
         buildsets = buildsets['buildset-list']
 
         self.assertEqual(len(buildsets), 3)
         self.assertEqual(len(buildsets[0]['builds']), 5)
 
     @async_test
-    def test_buildset_list_without_repo_name(self):
+    async def test_buildset_list_without_repo_name(self):
 
-        yield from self._create_test_data()
+        await self._create_test_data()
         handler = hole.HoleHandler({}, 'buildset-list', MagicMock())
 
-        builders = yield from handler.buildset_list()
+        builders = await handler.buildset_list()
         builders = builders['buildset-list']
         self.assertEqual(len(builders), 3)
 
     @async_test
-    def test_builder_list(self):
-        yield from self._create_test_data()
+    async def test_builder_list(self):
+        await self._create_test_data()
         handler = hole.HoleHandler({}, 'builder-list', MagicMock())
 
-        builders = (yield from handler.builder_list(
+        builders = (await handler.builder_list(
             id__in=[self.builders[0].id]))['builder-list']
         self.assertEqual(builders[0]['id'], str(self.builders[0].id))
 
-    def test_plugins_list(self):
+    async def test_plugins_list(self):
         handler = hole.HoleHandler({}, 'plugin-list', MagicMock())
         plugins_count = len(hole.MasterPlugin.list_plugins())
         plugins = handler.plugins_list()
@@ -520,29 +547,29 @@ class HoleHandlerTest(TestCase):
         self.assertTrue(plugin)
 
     @async_test
-    def test_builder_show(self):
-        yield from self._create_test_data()
+    async def test_builder_show(self):
+        await self._create_test_data()
 
         data = {'name': 'b0', 'repo-url': self.repo.url}
         action = 'builder-show'
         handler = hole.HoleHandler(data, action, MagicMock())
-        builder = yield from handler.builder_show(repo_name=self.repo.name,
-                                                  builder_name='b01')
+        builder = await handler.builder_show(repo_name=self.repo.name,
+                                             builder_name='b01')
         builder = builder['builder-show']
 
         self.assertEqual(len(builder['buildsets']), 1)
         self.assertEqual(len(builder['buildsets'][0]['builds']), 3)
 
     @async_test
-    def test_builder_show_with_skip_and_offset(self):
-        yield from self._create_test_data()
+    async def test_builder_show_with_skip_and_offset(self):
+        await self._create_test_data()
 
         data = {'name': 'b0', 'repo-url': self.repo.url}
         action = 'builder-show'
         handler = hole.HoleHandler(data, action, MagicMock())
-        builder = yield from handler.builder_show(repo_name=self.repo.name,
-                                                  builder_name='b01',
-                                                  skip=1, offset=1)
+        builder = await handler.builder_show(repo_name=self.repo.name,
+                                             builder_name='b01',
+                                             skip=1, offset=1)
         builder = builder['builder-show']
 
         self.assertEqual(len(builder['buildsets']), 0)
@@ -566,16 +593,16 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(repository, 'BuildManager', MagicMock())
     @async_test
-    def test_get_builders(self):
-        yield from self._create_test_data()
-        (yield from self.revision.repository).build_manager\
+    async def test_get_builders(self):
+        await self._create_test_data()
+        (await self.revision.repository).build_manager\
             .get_builders = asyncio.coroutine(
             lambda s, r: [self.builders[0]])
         slaves = [self.slave]
         expected = {self.slave: [self.builders[0]]}
         handler = hole.HoleHandler({}, 'action', self)
 
-        builders = yield from handler._get_builders(slaves, self.revision)
+        builders = await handler._get_builders(slaves, self.revision)
 
         self.assertEqual(builders, expected)
 
@@ -619,13 +646,13 @@ class HoleHandlerTest(TestCase):
         self.assertEqual(action_methods, expected)
 
     @async_test
-    def test_get_repo_dict(self):
-        yield from self._create_test_data()
+    async def test_get_repo_dict(self):
+        await self._create_test_data()
         self.repo.slaves = [self.slave]
         self.repo.plugins = [{'_name': 'myplugin'}]
 
         handler = hole.HoleHandler({}, 'action', MagicMock())
-        repo_dict = yield from handler._get_repo_dict(self.repo)
+        repo_dict = await handler._get_repo_dict(self.repo)
 
         self.assertIn('id', repo_dict)
         self.assertIn('slaves', repo_dict)
@@ -634,8 +661,8 @@ class HoleHandlerTest(TestCase):
         self.assertIn('parallel_builds', repo_dict.keys())
 
     @async_test
-    def test_get_slave_dict(self):
-        yield from self._create_test_data()
+    async def test_get_slave_dict(self):
+        await self._create_test_data()
 
         handler = hole.HoleHandler({}, 'action', MagicMock())
         slave_dict = handler._get_slave_dict(self.slave)
@@ -643,14 +670,13 @@ class HoleHandlerTest(TestCase):
         self.assertEqual(type(slave_dict['id']), str)
 
     @patch.object(repository.utils, 'log', Mock())
-    @asyncio.coroutine
-    def _create_test_data(self):
+    async def _create_test_data(self):
         self.slave = hole.Slave(name='name', host='127.0.0.1', port=7777,
                                 token='123')
-        yield from self.slave.save()
-        self.repo = yield from hole.Repository.create(
+        await self.slave.save()
+        self.repo = await hole.Repository.create(
             'reponame', 'git@somewhere.com', 300, 'git')
-        self.other_repo = yield from hole.Repository.create(
+        self.other_repo = await hole.Repository.create(
             'other', 'git@bla.com', 300, 'git')
 
         self.builds = []
@@ -661,17 +687,17 @@ class HoleHandlerTest(TestCase):
                 commit='123qewad{}'.format(k),
                 branch='master',
                 commit_date=now, author='zé', title='boa!')
-            yield from self.revision.save()
-            self.buildset = yield from build.BuildSet.create(
+            await self.revision.save()
+            self.buildset = await build.BuildSet.create(
                 repository=self.repo, revision=self.revision)
 
-            yield from self.buildset.save(revision=self.revision)
+            await self.buildset.save(revision=self.revision)
             builds = []
             self.builders = []
             for i in range(3):
                 builder = build.Builder(name='b{}{}'.format(i, k),
                                         repository=self.repo)
-                yield from builder.save()
+                await builder.save()
                 if i == 0:
                     r = 3
                 else:
@@ -689,7 +715,7 @@ class HoleHandlerTest(TestCase):
                     self.builders.append(builder)
 
             self.buildset.builds = builds
-            yield from self.buildset.save()
+            await self.buildset.save()
 
 
 @patch.object(hole.UIStreamHandler, 'log', Mock())
@@ -701,11 +727,11 @@ class UIStreamHandlerTest(TestCase):
         self.handler = hole.UIStreamHandler(protocol)
 
     @async_test
-    def tearDown(self):
-        yield from build.BuildSet.drop_collection()
-        yield from build.Builder.drop_collection()
-        yield from slave.Slave.drop_collection()
-        yield from repository.Repository.drop_collection()
+    async def tearDown(self):
+        await build.BuildSet.drop_collection()
+        await build.Builder.drop_collection()
+        await slave.Slave.drop_collection()
+        await repository.Repository.drop_collection()
 
     @patch.object(hole, 'step_started', Mock())
     @patch.object(hole, 'step_finished', Mock())
@@ -714,7 +740,7 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'repo_status_changed', Mock())
     @patch.object(hole, 'build_added', Mock())
     @patch.object(hole, 'step_output_arrived', Mock())
-    def test_disconnectfromsignals(self):
+    async def test_disconnectfromsignals(self):
 
         self.handler._disconnectfromsignals()
         self.assertTrue(all([hole.step_started.disconnect.called,
@@ -744,62 +770,74 @@ class UIStreamHandlerTest(TestCase):
                              hole.step_output_arrived.connect.called]))
 
     @async_test
-    def test_step_started(self):
-        self.handler.send_info = MagicMock()
-        yield from self.handler.step_started(Mock())
-        called = self.handler.send_info.call_args[0][0]
+    async def test_step_started(self):
+        send_info = MagicMock()
+        self.handler.send_info = asyncio.coroutine(
+            lambda *a, **kw: send_info(*a, **kw))
+        await self.handler.step_started(Mock())
+        called = send_info.call_args[0][0]
         self.assertEqual(called, 'step_started')
 
     @async_test
-    def test_step_finished(self):
-        self.handler.send_info = MagicMock()
-        yield from self.handler.step_finished(Mock())
-        called = self.handler.send_info.call_args[0][0]
+    async def test_step_finished(self):
+        send_info = MagicMock()
+        self.handler.send_info = asyncio.coroutine(
+            lambda *a, **kw: send_info(*a, **kw))
+        await self.handler.step_finished(Mock())
+        called = send_info.call_args[0][0]
         self.assertEqual(called, 'step_finished')
 
     @async_test
-    def test_build_started(self):
-        self.handler.send_info = MagicMock()
-        yield from self.handler.build_started(Mock())
-        called = self.handler.send_info.call_args[0][0]
+    async def test_build_started(self):
+        send_info = MagicMock()
+        self.handler.send_info = asyncio.coroutine(
+            lambda *a, **kw: send_info(*a, **kw))
+        await self.handler.build_started(Mock())
+        called = send_info.call_args[0][0]
         self.assertEqual(called, 'build_started')
 
     @async_test
-    def test_build_finished(self):
-        self.handler.send_info = MagicMock()
-        yield from self.handler.build_finished(Mock())
-        called = self.handler.send_info.call_args[0][0]
+    async def test_build_finished(self):
+        send_info = MagicMock()
+        self.handler.send_info = asyncio.coroutine(
+            lambda *a, **kw: send_info(*a, **kw))
+        await self.handler.build_finished(Mock())
+        called = send_info.call_args[0][0]
         self.assertEqual(called, 'build_finished')
 
     @async_test
-    def test_build_added(self):
-        self.handler.send_info = MagicMock()
-        yield from self.handler.build_added(Mock())
-        called = self.handler.send_info.call_args[0][0]
+    async def test_build_added(self):
+        send_info = MagicMock()
+        self.handler.send_info = asyncio.coroutine(
+            lambda *a, **kw: send_info(*a, **kw))
+        await self.handler.build_added(Mock())
+        called = send_info.call_args[0][0]
         self.assertEqual(called, 'build_added')
 
     @async_test
-    def test_handle(self):
+    async def test_handle(self):
         self.handler._connect2signals = Mock()
-        self.handler.protocol.send_response = MagicMock()
+        send_response = MagicMock()
+        self.handler.protocol.send_response = asyncio.coroutine(
+            lambda *a, **kw: send_response(*a, **kw))
 
-        yield from self.handler.handle()
+        await self.handler.handle()
 
         self.assertTrue(self.handler._connect2signals.called)
-        self.assertTrue(self.handler.protocol.send_response.called)
+        self.assertTrue(send_response.called)
 
     @patch.object(repository.Repository, 'schedule', Mock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
     @async_test
-    def test_send_info_step(self):
-        testrepo = yield from repository.Repository.create('name',
-                                                           'git@git.nada',
-                                                           300, 'git')
-        testslave = yield from slave.Slave.create(name='name',
+    async def test_send_info_step(self):
+        testrepo = await repository.Repository.create('name',
+                                                      'git@git.nada',
+                                                      300, 'git')
+        testslave = await slave.Slave.create(name='name',
                                                   host='localhost',
                                                   port=1234, token='123')
 
-        testbuilder = yield from build.Builder.create(name='b1',
+        testbuilder = await build.Builder.create(name='b1',
                                                       repository=testrepo)
         testbuild = build.Build(repository=testrepo, slave=testslave,
                                 branch='master', named_tree='master',
@@ -815,10 +853,10 @@ class UIStreamHandlerTest(TestCase):
                                             author='eu',
                                             title='some',
                                             commit_date=datetime.now())
-        yield from rev.save()
-        buildset = yield from build.BuildSet.create(testrepo, rev)
+        await rev.save()
+        buildset = await build.BuildSet.create(testrepo, rev)
         buildset.builds.append(testbuild)
-        yield from buildset.save()
+        await buildset.save()
 
         self.CODE = None
         self.BODY = None
@@ -830,25 +868,25 @@ class UIStreamHandlerTest(TestCase):
 
         self.handler.send_response = sr
 
-        yield from self.handler.send_info('step_started',
-                                          build=testbuild, step=teststep)
+        await self.handler.send_info('step_started',
+                                     build=testbuild, step=teststep)
 
-        yield from asyncio.sleep(0)
+        await asyncio.sleep(0)
         self.assertEqual(self.CODE, 0)
         self.assertIn('build', self.BODY.keys())
 
     @patch.object(repository.Repository, 'schedule', Mock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
     @async_test
-    def test_send_info_build(self):
-        testrepo = yield from repository.Repository.create('name',
-                                                           'git@git.nada',
-                                                           300, 'git')
-        testslave = yield from slave.Slave.create(name='name',
+    async def test_send_info_build(self):
+        testrepo = await repository.Repository.create('name',
+                                                      'git@git.nada',
+                                                      300, 'git')
+        testslave = await slave.Slave.create(name='name',
                                                   host='localhost',
                                                   port=1234,
                                                   token='123')
-        testbuilder = yield from build.Builder.create(name='b1',
+        testbuilder = await build.Builder.create(name='b1',
                                                       repository=testrepo)
         testbuild = build.Build(repository=testrepo, slave=testslave,
                                 branch='master', named_tree='master',
@@ -859,10 +897,10 @@ class UIStreamHandlerTest(TestCase):
                                             author='eu',
                                             title='some',
                                             commit_date=datetime.now())
-        yield from rev.save()
-        buildset = yield from build.BuildSet.create(testrepo, rev)
+        await rev.save()
+        buildset = await build.BuildSet.create(testrepo, rev)
         buildset.builds.append(testbuild)
-        yield from buildset.save()
+        await buildset.save()
 
         self.CODE = None
         self.BODY = None
@@ -873,8 +911,8 @@ class UIStreamHandlerTest(TestCase):
             self.BODY = body
 
         self.handler.send_response = sr
-        yield from self.handler.send_info('step-started', build=testbuild)
-        yield from asyncio.sleep(0)
+        await self.handler.send_info('step-started', build=testbuild)
+        await asyncio.sleep(0)
         self.assertEqual(self.CODE, 0)
         self.assertIn('steps', self.BODY.keys())
         self.assertIn('buildset', self.BODY.keys())
@@ -883,16 +921,16 @@ class UIStreamHandlerTest(TestCase):
         self.assertIsInstance(self.BODY['repository']['id'], str)
 
     @async_test
-    def test_send_repo_status_info(self):
-        testslave = yield from slave.Slave.create(name='name',
+    async def test_send_repo_status_info(self):
+        testslave = await slave.Slave.create(name='name',
                                                   host='localhost',
                                                   port=1234,
                                                   token='123')
 
-        testrepo = yield from repository.Repository.create('name',
-                                                           'git@git.nada',
-                                                           300, 'git',
-                                                           slaves=[testslave])
+        testrepo = await repository.Repository.create('name',
+                                                      'git@git.nada',
+                                                      300, 'git',
+                                                      slaves=[testslave])
         self.CODE = None
         self.BODY = None
 
@@ -902,25 +940,25 @@ class UIStreamHandlerTest(TestCase):
             self.BODY = body
 
         self.handler.send_response = sr
-        yield from self.handler.send_repo_status_info(repo=testrepo,
-                                                      old_status='running',
-                                                      new_status='fail')
+        await self.handler.send_repo_status_info(repo=testrepo,
+                                                 old_status='running',
+                                                 new_status='fail')
 
-        yield from asyncio.sleep(0)
+        await asyncio.sleep(0)
         self.assertEqual(self.BODY['status'], 'fail')
         self.assertIsInstance(self.BODY['id'], str)
 
     @async_test
-    def test_send_step_output_info(self):
-        testslave = yield from slave.Slave.create(name='name',
+    async def test_send_step_output_info(self):
+        testslave = await slave.Slave.create(name='name',
                                                   host='localhost',
                                                   port=1234,
                                                   token='123')
 
-        testrepo = yield from repository.Repository.create('name',
-                                                           'git@git.nada',
-                                                           300, 'git',
-                                                           slaves=[testslave])
+        testrepo = await repository.Repository.create('name',
+                                                      'git@git.nada',
+                                                      300, 'git',
+                                                      slaves=[testslave])
 
         self.CODE = None
         self.BODY = None
@@ -935,12 +973,12 @@ class UIStreamHandlerTest(TestCase):
         info = {'uuid': 'some-uuid', 'output': 'bla!'}
         f = self.handler.send_step_output_info(repo=testrepo,
                                                step_info=info)
-        yield from f
+        await f
 
         self.assertEqual(self.BODY['uuid'], 'some-uuid')
 
     @async_test
-    def test_send_response(self):
+    async def test_send_response(self):
         sr_mock = MagicMock()
 
         @asyncio.coroutine
@@ -948,11 +986,11 @@ class UIStreamHandlerTest(TestCase):
             sr_mock()
 
         self.handler.protocol.send_response = sr
-        yield from self.handler.send_response(code=0, body='bla')
+        await self.handler.send_response(code=0, body='bla')
         self.assertTrue(sr_mock.called)
 
     @async_test
-    def test_send_response_exception(self):
+    async def test_send_response_exception(self):
 
         @asyncio.coroutine
         def sr(code, body):
@@ -962,7 +1000,7 @@ class UIStreamHandlerTest(TestCase):
         self.handler.log = MagicMock()
         self.handler.protocol._transport.close = MagicMock()
         self.handler._disconnectfromsignals = MagicMock()
-        yield from self.handler.send_response(code=0, body='bla')
+        await self.handler.send_response(code=0, body='bla')
         self.assertTrue(self.handler.protocol._transport.close.called)
         self.assertTrue(self.handler._disconnectfromsignals.called)
 
