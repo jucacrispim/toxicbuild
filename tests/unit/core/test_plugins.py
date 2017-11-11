@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016 2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -34,6 +34,19 @@ class MyOtherPlugin(BasePlugin):
     type = 'test'
 
 
+class MySubPlugin(MyPlugin):
+    name = 'sub-plugin'
+
+
+class SomeBasePlugin(BasePlugin):
+    name = 'base'
+    no_list = True
+
+
+class SomeOtherPlugin(SomeBasePlugin):
+    name = 'the-actual-plugin'
+
+
 class PluginTest(TestCase):
 
     def setUp(self):
@@ -41,7 +54,7 @@ class PluginTest(TestCase):
 
     def test_list_plugins(self):
         plugins_list = BasePlugin.list_plugins()
-        self.assertEqual(len(plugins_list), 2)
+        self.assertEqual(len(plugins_list), 4)
 
     def test_get_plugin(self):
 

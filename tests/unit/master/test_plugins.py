@@ -85,19 +85,12 @@ class MasterPluginTest(TestCase):
     def test_translate_schema(self):
         schema = plugins.MasterPlugin.get_schema()
         translation = plugins.MasterPlugin._translate_schema(schema)
-        self.assertTrue(translation['branches'], 'list')
+        keys = {'name', 'pretty_name', 'type', 'description', '_cls'}
+        self.assertEqual(set(translation.keys()), keys)
 
     def test_get_schema(self):
         schema = plugins.MasterPlugin.get_schema()
         self.assertEqual(schema['name'], 'BaseMasterPlugin')
-
-    def test_get_schema_to_serialize(self):
-        schema = plugins.MasterPlugin.get_schema(to_serialize=True)
-        expected = {'name': 'statuses', 'type': 'list',
-                    'pretty_name': 'Statuses'}
-        self.assertEqual(schema['statuses'], expected)
-        keys = list(schema.keys())
-        self.assertLess(keys.index('branches'), keys.index('statuses'))
 
     @async_test
     async def test_to_dict(self):
@@ -117,12 +110,12 @@ class MasterPluginTest(TestCase):
                                update_seconds=300,
                                vcs_type='git')
         await self.repo.save()
-        self.plugin = self.plugin_class(branches=['master'])
+        self.plugin = self.plugin_class()
         self.repo.plugins.append(self.plugin)
         self.repo.save()
 
 
-class SlackPluginTest(TestCase):
+class NotificationPlugin(TestCase):
 
     @async_test
     async def tearDown(self):
@@ -159,15 +152,55 @@ class SlackPluginTest(TestCase):
         self.assertTrue(plugins.build_started.disconnect.called)
         self.assertTrue(plugins.build_finished.disconnect.called)
 
+    def test_get_schema_to_serialize(self):
+        schema = plugins.NotificationPlugin.get_schema(to_serialize=True)
+        expected = {'name': 'statuses', 'type': 'list',
+                    'pretty_name': 'Statuses'}
+        self.assertEqual(schema['statuses'], expected)
+        keys = list(schema.keys())
+        self.assertLess(keys.index('branches'), keys.index('statuses'))
+
+    @async_test
+    async def test_send_started_message(self):
+        p = plugins.NotificationPlugin()
+        repo, build = MagicMock(), MagicMock()
+        with self.assertRaises(NotImplementedError):
+            await p.send_started_message(repo, build)
+
+    @async_test
+    async def test_send_finished_message(self):
+        p = plugins.NotificationPlugin()
+        repo, build = MagicMock(), MagicMock()
+        with self.assertRaises(NotImplementedError):
+            await p.send_finished_message(repo, build)
+
+    async def _create_test_data(self):
+        self.repo = Repository(name='my-test-repo',
+                               url='git@somewere.com/bla.git',
+                               update_seconds=300,
+                               vcs_type='git')
+        await self.repo.save()
+        self.plugin = plugins.NotificationPlugin(branches=['master'],
+                                                 statuses=['fail', 'success'])
+        self.repo.plugins.append(self.plugin)
+        self.repo.save()
+
+
+class SlackPluginTest(TestCase):
+
+    @async_test
+    async def tearDown(self):
+        await Repository.drop_collection()
+
     @patch.object(plugins.requests, 'post', MagicMock())
     @async_test
-    async def test_send_msg(self):
+    async def test_send_message(self):
         await self._create_test_data()
         post = MagicMock()
         plugins.requests.post = asyncio.coroutine(
             lambda *a, **kw: post(*a, **kw))
         msg = {'text': 'something happend'}
-        await self.plugin._send_msg(msg)
+        await self.plugin._send_message(msg)
         called = post.call_args
         self.assertEqual(called[0][0], self.plugin.webhook_url)
         self.assertEqual(called[1]['data'], plugins.json.dumps(msg))
@@ -175,24 +208,24 @@ class SlackPluginTest(TestCase):
                          {'Content-Type': 'application/json'})
 
     @async_test
-    async def test_send_started_msg(self):
+    async def test_send_started_message(self):
         await self._create_test_data()
-        self.plugin._send_msg = MagicMock(spec=self.plugin._send_msg)
+        self.plugin._send_message = MagicMock(spec=self.plugin._send_message)
         build = MagicMock()
         build.started = now()
         dt = plugins.datetime2string(build.started)
         txt = '[my-test-repo] Build *started* at *{}*'.format(dt)
         expected = {'text': txt, 'username': 'ToxicBuild',
                     'channel': self.plugin.channel_name}
-        await self.plugin.send_started_msg(self.repo, build)
-        called = self.plugin._send_msg.call_args[0][0]
+        await self.plugin.send_started_message(self.repo, build)
+        called = self.plugin._send_message.call_args[0][0]
         self.assertEqual(called, expected, called)
 
     @async_test
-    async def test_send_finished_msg(self):
+    async def test_send_finished_message(self):
         await self._create_test_data()
-        send_msg = MagicMock(spec=self.plugin._send_msg)
-        self.plugin._send_msg = asyncio.coroutine(
+        send_msg = MagicMock(spec=self.plugin._send_message)
+        self.plugin._send_message = asyncio.coroutine(
             lambda *a, **kw: send_msg(*a, **kw))
         build = MagicMock()
         build.finished = now()
@@ -203,21 +236,20 @@ class SlackPluginTest(TestCase):
         expected = {'text': txt, 'username': 'ToxicBuild',
                     'channel': self.plugin.channel_name}
 
-        await self.plugin.send_finished_msg(self.repo, build)
+        await self.plugin.send_finished_message(self.repo, build)
         called = send_msg.call_args[0][0]
         self.assertEqual(called, expected, called)
 
     @async_test
-    async def test_send_finished_msg_with_bad_status(self):
+    async def test_send_finished_message_with_bad_status(self):
         await self._create_test_data()
-        self.plugin._send_msg = MagicMock(spec=self.plugin._send_msg)
+        self.plugin._send_message = MagicMock(spec=self.plugin._send_message)
         build = MagicMock()
         build.finished = now()
         build.status = 'warning'
-        await self.plugin.send_finished_msg(self.repo, build)
-        self.assertFalse(self.plugin._send_msg.called)
+        await self.plugin.send_finished_message(self.repo, build)
+        self.assertFalse(self.plugin._send_message.called)
 
-    @asyncio.coroutine
     async def _create_test_data(self):
         self.repo = Repository(name='my-test-repo',
                                url='git@somewere.com/bla.git',

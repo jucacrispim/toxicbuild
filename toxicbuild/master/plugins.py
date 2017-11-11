@@ -61,7 +61,7 @@ from mongomotor import EmbeddedDocument
 from mongoengine.base.metaclasses import DocumentMetaclass
 from mongomotor.fields import StringField, URLField, ListField
 from toxicbuild.core import requests
-from toxicbuild.core.plugins import Plugin
+from toxicbuild.core.plugins import Plugin, PluginMeta
 from toxicbuild.core.utils import datetime2string, LoggerMixin
 from toxicbuild.master.signals import build_started, build_finished
 
@@ -99,7 +99,7 @@ _translate_table = {PrettyListField: 'list',
                     StringField: 'string'}
 
 
-class MetaMasterPlugin(DocumentMetaclass):
+class MetaMasterPlugin(PluginMeta, DocumentMetaclass):
     """Metaclass that sets name and type to the class definition as
     mongo fields while keeping the interface of setting your plugin's
     name and type as string in definition time."""
@@ -128,10 +128,6 @@ class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
     pretty_name = ''
     description = "Base for master's plugins"
     type = None
-
-    branches = PrettyListField(StringField(), pretty_name="Branches")
-    # statuses that trigger the plugin
-    statuses = PrettyListField(StringField(), pretty_name="Statuses")
 
     meta = {'allow_inheritance': True}
 
@@ -163,10 +159,6 @@ class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
         for k, v in good.items():
             translation[k] = cls._create_field_dict(v)
 
-        # we move these guys here so the user defined attributes
-        # appear first
-        translation.move_to_end('branches')
-        translation.move_to_end('statuses')
         translation['name'] = fields['name']
         translation['type'] = fields['type']
         translation['pretty_name'] = fields['pretty_name']
@@ -211,13 +203,55 @@ class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
         or other stuff needed to stop your plugin."""
 
 
-class SlackPlugin(MasterPlugin):
+class NotificationPlugin(MasterPlugin):
+
+    name = 'NotificationPlugin'
+    pretty_name = ''
+    description = 'Base plugin for notifications'
+    type = 'notification'
+
+    branches = PrettyListField(StringField(), pretty_name="Branches")
+    # statuses that trigger the plugin
+    statuses = PrettyListField(StringField(), pretty_name="Statuses")
+
+    meta = {'allow_inheritance': True}
+
+    async def run(self):
+        msg = 'running {} for'.format(self.name)
+        self.log(msg, level='info')
+
+        if 'running' in self.statuses:
+            build_started.connect(self.send_started_message)
+
+        build_finished.connect(self.send_finished_message)
+
+    async def stop(self):
+        build_started.disconnect(self.send_started_message)
+        build_finished.disconnect(self.send_finished_message)
+
+    async def send_started_message(self, repo, build):
+        raise NotImplementedError
+
+    async def send_finished_message(self, repo, build):
+        raise NotImplementedError
+
+    @classmethod
+    def _translate_schema(cls, to_serialize=False):
+        translation = super()._translate_schema(to_serialize)
+        # we move these guys here so the user defined attributes
+        # appear first
+        translation.move_to_end('branches')
+        translation.move_to_end('statuses')
+        return translation
+
+
+class SlackPlugin(NotificationPlugin):
     """Plugin that send notifications about builds to slack."""
 
     name = 'slack-notification'
-    type = 'notification'
     pretty_name = "Slack"
     description = "Send a message to a slack channel"
+    type = 'notification'
 
     webhook_url = PrettyURLField(required=True, pretty_name='Webhook URL')
     channel_name = PrettyStringField(pretty_name="Channel name")
@@ -226,20 +260,7 @@ class SlackPlugin(MasterPlugin):
         return {'text': text, 'channel': self.channel_name,
                 'username': 'ToxicBuild'}
 
-    async def run(self):
-        msg = 'running {} for'.format(self.name)
-        self.log(msg, level='info')
-
-        if 'running' in self.statuses:
-            build_started.connect(self.send_started_msg)
-
-        build_finished.connect(self.send_finished_msg)
-
-    async def stop(self):
-        build_started.disconnect(self.send_started_msg)
-        build_finished.disconnect(self.send_finished_msg)
-
-    async def _send_msg(self, message):
+    async def _send_message(self, message):
         """Sends a message as an incomming webhook to slack."""
 
         msg = 'sending message to slack for'
@@ -252,7 +273,7 @@ class SlackPlugin(MasterPlugin):
             response.status, response.text)
         self.log(msg, level='debug')
 
-    async def send_started_msg(self, repo, build):
+    async def send_started_message(self, repo, build):
         """Sends a message about a started build to a slack channel.
 
         :param build: A build that just started."""
@@ -261,9 +282,9 @@ class SlackPlugin(MasterPlugin):
         build_state = 'Build *started* at *{}*'.format(dt)
         title = '[{}] {}'.format(repo.name, build_state)
         msg = self._get_message(title)
-        self._send_msg(msg)
+        self._send_message(msg)
 
-    async def send_finished_msg(self, repo, build):
+    async def send_finished_message(self, repo, build):
         """Sends a message about a finished build to a slack channel.
 
         :param build: A build that just finished."""
@@ -277,4 +298,4 @@ class SlackPlugin(MasterPlugin):
         title = '[{}] {}'.format(repo.name, build_state)
 
         msg = self._get_message(title)
-        await self._send_msg(msg)
+        await self._send_message(msg)

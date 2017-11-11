@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016 2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,7 +20,17 @@
 from toxicbuild.core.exceptions import PluginNotFound
 
 
-class Plugin:
+class PluginMeta(type):
+
+    def __new__(cls, name, bases, attrs):
+        no_list = attrs.get('no_list')
+        r = super().__new__(cls, name, bases, attrs)
+        if no_list is None:
+            setattr(r, 'no_list', False)
+        return r
+
+
+class Plugin(metaclass=PluginMeta):
     """This is a base plugin. Plugins may implement aditional behavior
     to your builds."""
 
@@ -35,8 +45,11 @@ class Plugin:
         """Returns a list of Plugin subclasses.
 
         :param plugin_type: the plugin's type."""
+        plugins = []
+        for plugin in cls.__subclasses__():
+            plugins += plugin.list_plugins(plugin_type=plugin_type)
 
-        return cls.__subclasses__()
+        return plugins + [p for p in cls.__subclasses__() if not p.no_list]
 
     @classmethod
     def get_plugin(cls, name):
@@ -45,7 +58,12 @@ class Plugin:
         :param name: Plugin's name."""
 
         for plugin in cls.__subclasses__():
-            if plugin.name == name:
+            try:
+                return plugin.get_plugin(name)
+            except PluginNotFound:
+                pass
+
+            if plugin.name == name and not plugin.no_list:
                 return plugin
 
         raise PluginNotFound('Plugin {} does not exist.'.format(name))
