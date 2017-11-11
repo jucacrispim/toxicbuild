@@ -34,11 +34,14 @@ class UIHoleTest(TestCase):
         send_response = MagicMock()
         hole.BaseToxicProtocol.send_response = asyncio.coroutine(
             lambda *a, **kw: send_response(*a, **kw))
+        handle = MagicMock()
+        hole.HoleHandler.handle = asyncio.coroutine(lambda *a, **kw: handle())
         uihole = hole.UIHole(Mock())
         uihole.data = {}
         uihole._stream_writer = Mock()
         # no exception means ok
-        await uihole.client_connected()
+        status = await uihole.client_connected()
+        self.assertEqual(status, 0)
 
     @patch.object(hole, 'UIStreamHandler', Mock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
@@ -530,7 +533,7 @@ class HoleHandlerTest(TestCase):
             id__in=[self.builders[0].id]))['builder-list']
         self.assertEqual(builders[0]['id'], str(self.builders[0].id))
 
-    async def test_plugins_list(self):
+    def test_plugins_list(self):
         handler = hole.HoleHandler({}, 'plugin-list', MagicMock())
         plugins_count = len(hole.MasterPlugin.list_plugins())
         plugins = handler.plugins_list()
@@ -740,7 +743,7 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'repo_status_changed', Mock())
     @patch.object(hole, 'build_added', Mock())
     @patch.object(hole, 'step_output_arrived', Mock())
-    async def test_disconnectfromsignals(self):
+    def test_disconnectfromsignals(self):
 
         self.handler._disconnectfromsignals()
         self.assertTrue(all([hole.step_started.disconnect.called,

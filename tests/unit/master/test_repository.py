@@ -159,9 +159,8 @@ class RepositoryTest(TestCase):
         self.repo.clone_status = 'cloning'
         await self.repo.save()
         poller = MagicMock()
-        poller.poll = asyncio.coroutine(lambda *a, **kw: True)
+        poller.poll = asyncio.coroutine(lambda *a, **kw: False)
         self.repo._poller_instance = poller
-
         await self.repo.update_code()
         self.assertEqual(self.repo.clone_status, 'ready')
 
