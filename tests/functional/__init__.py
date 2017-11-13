@@ -24,7 +24,7 @@ create_settings_ui()
 create_settings_and_connect()
 
 
-def start_slave():
+def start_slave(sleep=0.5):
     """Starts an slave server in a new process for tests"""
 
     toxicslave_conf = os.environ.get('TOXICSLAVE_SETTINGS')
@@ -38,6 +38,7 @@ def start_slave():
         cmd += ['-c', toxicslave_conf]
 
     os.system(' '.join(cmd))
+    time.sleep(sleep)
 
 
 def stop_slave():
@@ -52,7 +53,7 @@ def stop_slave():
     os.system(' '.join(cmd))
 
 
-def start_master():
+def start_master(sleep=0.5):
     """Starts a master server in a new process for tests"""
 
     toxicmaster_conf = os.environ.get('TOXICMASTER_SETTINGS')
@@ -66,6 +67,7 @@ def start_master():
         cmd += ['-c', toxicmaster_conf]
 
     os.system(' '.join(cmd))
+    time.sleep(sleep)
 
 
 def stop_master():
