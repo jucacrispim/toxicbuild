@@ -18,21 +18,23 @@ from toxicbuild.core.conf import Settings
 from toxicbuild.core.utils import (log, daemonize as daemon, bcrypt,
                                    bcrypt_string, changedir)
 from toxicbuild.master.scheduler import TaskScheduler
-# the api
-from toxicbuild.master.build import Build, Builder, BuildSet
-from toxicbuild.master.repository import (Repository, RepositoryRevision,
-                                          RepositoryBranch)
-from toxicbuild.master.slave import Slave
+
+# these must be before the api import.
+settings = None
+dbconn = None
+scheduler = None
+
+# # the api
+# from toxicbuild.master.build import Build, Builder, BuildSet  # noqa f402
+# from toxicbuild.master.repository import (Repository, RepositoryRevision,
+#                                           RepositoryBranch)  # noqa f402
+# from toxicbuild.master.slave import Slave  # noqa f402
 
 PIDFILE = 'toxicmaster.pid'
 LOGFILE = 'toxicmaster.log'
 
 ENVVAR = 'TOXICMASTER_SETTINGS'
 DEFAULT_SETTINGS = 'toxicmaster.conf'
-
-settings = None
-dbconn = None
-scheduler = None
 
 
 def create_settings_and_connect():
@@ -44,10 +46,9 @@ def create_settings_and_connect():
     dbconn = connect(**dbsettings)
 
 
-def ensure_indexes():
-    Repository.ensure_indexes()
-    Slave.ensure_indexes()
-    BuildSet.ensure_indexes()
+def ensure_indexes(*classes):
+    for cls in classes:
+        cls.ensure_indexes()
 
 
 def create_scheduler():
@@ -62,11 +63,15 @@ def toxicinit():
     """ Initialize services. """
 
     create_settings_and_connect()
-    ensure_indexes()
-    create_scheduler()
 
     # importing here to avoid circular imports
+    from toxicbuild.master.build import BuildSet
     from toxicbuild.master.hole import HoleServer
+    from toxicbuild.master.repository import Repository
+    from toxicbuild.master.slave import Slave
+
+    ensure_indexes(BuildSet, Repository, Slave)
+    create_scheduler()
 
     log('[init] Scheduling all')
     yield from Repository.schedule_all()
@@ -197,11 +202,6 @@ def create(root_dir):
         access_token))
 
     return access_token
-
-make_pyflakes_happy = [Slave, Build, Builder, RepositoryRevision,
-                       BuildSet, RepositoryBranch, Repository]
-
-del make_pyflakes_happy
 
 
 if __name__ == '__main__':

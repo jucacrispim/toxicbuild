@@ -29,8 +29,10 @@ import json
 import traceback
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import LoggerMixin
-from toxicbuild.master import (Slave, Repository, Builder, BuildSet,
-                               RepositoryRevision, settings)
+from toxicbuild.master import settings
+from toxicbuild.master.build import BuildSet, Builder
+from toxicbuild.master.repository import Repository, RepositoryRevision
+from toxicbuild.master.slave import Slave
 from toxicbuild.master.exceptions import UIFunctionNotFound
 from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.signals import (step_started, step_finished,
