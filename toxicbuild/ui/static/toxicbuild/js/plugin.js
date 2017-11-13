@@ -155,8 +155,8 @@ var PluginManager = {
   _current_view: null,
   _current_model: null,
   _current_repo: null,
-  _to_enable: [],
-  _to_disable: [],
+  _to_enable: new Set(),
+  _to_disable: new Set(),
 
   init: function(plugins){
     var self = this;
@@ -182,11 +182,9 @@ var PluginManager = {
 
       var repo = RepositoryManager.getRepoById(btn.data('repo-id'));
       self._current_repo = repo;
-      utils.log(self._current_view);
-
       jQuery.each(self.views, function(name, view){
 	view.renderModal(self._current_repo);
-	self.connectChecboxEvents();
+	self.connectChecboxEvents(name);
 	self.connectInputEvents(name);
       });
 
@@ -215,7 +213,7 @@ var PluginManager = {
 					 utils.showErrorMessage(error_msg));
 	self.modal.modal('hide');
       });
-      self._to_disable = [];
+      self._to_disable = new Set();
 
       jQuery.each(self._to_enable, function(i, plugin_name){
 	container = jQuery('#plugin-container-' + plugin_name);
@@ -228,11 +226,10 @@ var PluginManager = {
 					utils.showSuccessMessage(success_msg),
 					utils.showErrorMessage(error_msg));
 	plugin = jQuery.extend(data, {'name': plugin_name});
-	utils.log(plugin);
 	self._current_repo.add2PluginList(plugin);
 	self.modal.modal('hide');
       });
-      self._to_enable = [];
+      self._to_enable = new Set();
 
     });
   },
@@ -240,16 +237,14 @@ var PluginManager = {
   _set_queues: function(chk, container){
     var plugin_name = jQuery('input[type=hidden]', container)[0].value;
     var checked = chk.context.checked;
-    if (checked && self._to_disable.indexOf(plugin_name) < 0){
-      self._to_enable.push(plugin_name);
-    }else if(checked && self._to_disable.indexOf(plugin_name) >= 0){
-      var index = self._to_disable.indexOf(plugin_name);
-      self._to_disable.splice(index, 1)
-    }else if (!checked && self._to_enable.indexOf(plugin_name) < 0){
-      self._to_disable.push(plugin_name);
+    if (checked && !self._to_disable.has(plugin_name)){
+      self._to_enable.add(plugin_name);
+    }else if(checked && self._to_disable.has(plugin_name)){
+      self._to_disable.delete(plugin_name);
+    }else if (!checked && !self._to_enable.has(plugin_name)){
+      self._to_disable.add(plugin_name);
     }else{
-      index = self._to_enable.indexOf(plugin_name);
-      self._to_enable.splice(index, 1);
+      self._to_enable.delete(plugin_name);
     };
   },
 
@@ -259,20 +254,20 @@ var PluginManager = {
     jQuery.each(jQuery('input', container), function(i, el){
       var el = jQuery(el);
       el.on('input', function(){
-	if(self._to_disable.indexOf(plugin_name) < 0){
-	  self._to_disable.push(plugin_name);
+	if(self._to_disable.has(plugin_name)){
+	  self._to_disable.add(plugin_name);
 	}
-	if(self._to_enable.indexOf(plugin_name) < 0){
-	  self._to_enable.push(plugin_name);
+	if(self._to_enable.has(plugin_name)){
+	  self._to_enable.add(plugin_name);
 	}
       });
     });
   },
 
-  connectChecboxEvents: function(){
+  connectChecboxEvents: function(plugin_name){
     self = this;
-
-    jQuery.each(jQuery('input[type=checkbox]'), function(i, el){
+    var container = jQuery('#plugin-container-' + plugin_name);
+    jQuery.each(jQuery('input[type=checkbox]', container), function(i, el){
       var el = jQuery(el);
       el.on('click', function(){
 	// here set set the queue for enabled/disabled plugins
