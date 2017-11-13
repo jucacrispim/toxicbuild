@@ -273,6 +273,10 @@ tr:nth-child(even) {
     float: right;
 }
 
+.plugin-container{
+    margin-bottom: 2%;
+}
+
 /* waterfall */
 
 .build-details-btn{

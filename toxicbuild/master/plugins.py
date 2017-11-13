@@ -63,6 +63,7 @@ from mongomotor.fields import StringField, URLField, ListField
 from toxicbuild.core import requests
 from toxicbuild.core.plugins import Plugin, PluginMeta
 from toxicbuild.core.utils import datetime2string, LoggerMixin
+from toxicbuild.master.mail import MailSender
 from toxicbuild.master.signals import build_started, build_finished
 
 
@@ -94,6 +95,7 @@ class PrettyListField(PrettyField, ListField):
 
 
 _translate_table = {PrettyListField: 'list',
+                    ListField: 'list',
                     PrettyStringField: 'string',
                     PrettyURLField: 'url',
                     StringField: 'string'}
@@ -215,24 +217,37 @@ class NotificationPlugin(MasterPlugin):
     statuses = PrettyListField(StringField(), pretty_name="Statuses")
 
     meta = {'allow_inheritance': True}
+    no_list = True
 
     async def run(self):
         msg = 'running {} for'.format(self.name)
         self.log(msg, level='info')
 
         if 'running' in self.statuses:
-            build_started.connect(self.send_started_message)
+            build_started.connect(self.send_started_message, weak=False)
 
-        build_finished.connect(self.send_finished_message)
+        build_finished.connect(self.send_finished_message, weak=False)
 
     async def stop(self):
         build_started.disconnect(self.send_started_message)
         build_finished.disconnect(self.send_finished_message)
 
     async def send_started_message(self, repo, build):
+        """Sends a message about a started build.
+
+        :param repo: A
+          :class:`~toxicbuild.master.repository.Repository` instance.
+        :param build: A :class:`~toxicbuild.master.build.Build` instance."""
+
         raise NotImplementedError
 
     async def send_finished_message(self, repo, build):
+        """Sends a message about a finished build.
+
+        :param repo: A
+          :class:`~toxicbuild.master.repository.Repository` instance.
+        :param build: A :class:`~toxicbuild.master.build.Build` instance."""
+
         raise NotImplementedError
 
     @classmethod
@@ -250,7 +265,7 @@ class SlackPlugin(NotificationPlugin):
 
     name = 'slack-notification'
     pretty_name = "Slack"
-    description = "Send a message to a slack channel"
+    description = "Sends messages to a slack channel"
     type = 'notification'
 
     webhook_url = PrettyURLField(required=True, pretty_name='Webhook URL')
@@ -274,9 +289,6 @@ class SlackPlugin(NotificationPlugin):
         self.log(msg, level='debug')
 
     async def send_started_message(self, repo, build):
-        """Sends a message about a started build to a slack channel.
-
-        :param build: A build that just started."""
 
         dt = datetime2string(build.started)
         build_state = 'Build *started* at *{}*'.format(dt)
@@ -285,9 +297,6 @@ class SlackPlugin(NotificationPlugin):
         self._send_message(msg)
 
     async def send_finished_message(self, repo, build):
-        """Sends a message about a finished build to a slack channel.
-
-        :param build: A build that just finished."""
 
         if build.status not in self.statuses:
             return
@@ -299,3 +308,40 @@ class SlackPlugin(NotificationPlugin):
 
         msg = self._get_message(title)
         await self._send_message(msg)
+
+
+class EmailPlugin(NotificationPlugin):
+    """Sends notification about builds through email"""
+
+    name = 'email-notification'
+    pretty_name = 'Email'
+    description = 'Sends messages through email'
+    type = 'notification'
+
+    recipients = PrettyListField(StringField(), pretty_name="Recipients")
+
+    async def send_started_message(self, repo, build):
+        buildset = await build.get_buildset()
+        dt = datetime2string(build.started)
+        subject = '[ToxicBuild][{}] Build started at {}'.format(repo.name, dt)
+        message = 'A build has just started for the repository {}.'.format(
+            repo.name)
+
+        message += '\n\ncommit: {}\ntitle: {}'.format(buildset.commit,
+                                                      buildset.title)
+
+        async with MailSender(self.recipients) as sender:
+            await sender.send(subject, message)
+
+    async def send_finished_message(self, repo, build):
+        buildset = await build.get_buildset()
+        dt = datetime2string(build.finished)
+        subject = '[ToxicBuild][{}] Build finished at {}'.format(repo.name, dt)
+        message = 'A build finished for the repository {}'.format(repo.name)
+        message += '\n\ncommit: {}\ntitle: {}'.format(buildset.commit,
+                                                      buildset.title)
+        message += '\ntotal time: {}\nstatus: {}'.format(build.total_time,
+                                                         build.status)
+
+        async with MailSender(self.recipients) as sender:
+            await sender.send(subject, message)

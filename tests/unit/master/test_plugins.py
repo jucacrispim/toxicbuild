@@ -21,9 +21,19 @@ import asyncio
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 from toxicbuild.core.utils import now
-from toxicbuild.master import Repository
-from toxicbuild.master import plugins
-from tests import async_test
+from toxicbuild.master.repository import Repository
+from toxicbuild.master import plugins, mail
+from tests import async_test, AsyncMagicMock
+
+
+mock_settings = MagicMock()
+mock_settings.SMTP_MAIL_FROM = 'tester@somewhere.net'
+mock_settings.SMTP_HOST = 'localhost'
+mock_settings.SMTP_PORT = 587
+mock_settings.SMTP_USERNAME = 'tester'
+mock_settings.SMTP_PASSWORD = '123'
+mock_settings.SMTP_VALIDATE_CERTS = True
+mock_settings.SMTP_STARTTLS = True
 
 
 class MetaMasterPluginTest(TestCase):
@@ -260,5 +270,60 @@ class SlackPluginTest(TestCase):
         self.plugin = plugins.SlackPlugin(branches=['master'],
                                           webhook_url=url,
                                           statuses=['fail', 'success'])
+        self.repo.plugins.append(self.plugin)
+        self.repo.save()
+
+
+class EmailPluginTest(TestCase):
+
+    @async_test
+    async def tearDown(self):
+        await Repository.drop_collection()
+
+    @patch.object(mail, 'settings', mock_settings)
+    @patch.object(plugins.MailSender, 'connect', AsyncMagicMock())
+    @patch.object(plugins.MailSender, 'disconnect', AsyncMagicMock())
+    @patch.object(plugins.MailSender, 'send', AsyncMagicMock())
+    @async_test
+    async def test_send_started_message(self):
+        await self._create_test_data()
+        build = MagicMock()
+        build.started = now()
+        build.get_buildset = AsyncMagicMock()
+        build.get_buildset.return_value.commit = '0980s9fas9f'
+        build.get_buildset.return_value.title = 'some cool stuff'
+        repo = MagicMock()
+        repo.name = 'My Project'
+        await self.plugin.send_started_message(repo, build)
+        self.assertTrue(plugins.MailSender.send.called)
+
+    @patch.object(mail, 'settings', mock_settings)
+    @patch.object(plugins.MailSender, 'connect', AsyncMagicMock())
+    @patch.object(plugins.MailSender, 'disconnect', AsyncMagicMock())
+    @patch.object(plugins.MailSender, 'send', AsyncMagicMock())
+    @async_test
+    async def test_send_finished_message(self):
+        await self._create_test_data()
+        build = MagicMock()
+        build.finished = now()
+        build.get_buildset = AsyncMagicMock()
+        build.get_buildset.return_value.title = 'commit title'
+        build.get_buildset.return_value.commit = 'asdfçlj'
+        build.buildset.commit = '0980s9fas9f'
+        build.buildset.title = 'some cool stuff in this commit'
+        repo = MagicMock()
+        repo.name = 'My Project'
+        await self.plugin.send_finished_message(repo, build)
+        self.assertTrue(plugins.MailSender.send.called)
+
+    async def _create_test_data(self):
+        self.repo = Repository(name='my-test-repo',
+                               url='git@somewere.com/bla.git',
+                               update_seconds=300,
+                               vcs_type='git')
+        await self.repo.save()
+        self.plugin = plugins.EmailPlugin(branches=['master'],
+                                          statuses=['fail', 'success'],
+                                          recipients=['me@me.com'])
         self.repo.plugins.append(self.plugin)
         self.repo.save()
