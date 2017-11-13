@@ -24,3 +24,4 @@ tests/functional/data/slave/src/
 /.eggs/
 /tests/functional/data/master/src/
 /tests/functional/data/slave/venv-usrbinpython3.4/
+/sock_send_test.py
