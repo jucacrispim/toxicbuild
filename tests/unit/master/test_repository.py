@@ -24,7 +24,7 @@ from unittest.mock import Mock, MagicMock, patch
 from toxicbuild.core import utils
 from toxicbuild.master import repository, build, slave
 from toxicbuild.master.exceptions import CloneException
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class RepoPlugin(repository.MasterPlugin):
@@ -45,11 +45,12 @@ class RepositoryTest(TestCase):
             vcs_type='git', update_seconds=100, clone_status='ready')
 
     @async_test
-    def tearDown(self):
-        yield from repository.Repository.drop_collection()
-        yield from repository.RepositoryRevision.drop_collection()
-        yield from slave.Slave.drop_collection()
-        yield from build.Builder.drop_collection()
+    async def tearDown(self):
+        await repository.Repository.drop_collection()
+        await repository.RepositoryRevision.drop_collection()
+        await slave.Slave.drop_collection()
+        await build.Builder.drop_collection()
+        repository.Repository._plugins_instances = {}
         super(RepositoryTest, self).tearDown()
 
     @async_test
@@ -178,7 +179,8 @@ class RepositoryTest(TestCase):
     def test_schedule(self):
         self.repo.scheduler = Mock(spec=self.repo.scheduler)
         plugin = MagicMock
-        plugin.run = asyncio.coroutine(lambda *a, **kw: plugin())
+        plugin.name = 'my-plugin'
+        plugin.run = AsyncMagicMock()
         self.repo.plugins = [plugin]
         self.repo.schedule()
 
@@ -279,6 +281,26 @@ class RepositoryTest(TestCase):
         rev = await self.repo.add_revision(branch, **kw)
         self.assertTrue(rev.id)
         self.assertEqual('uhuuu!!', rev.title)
+
+    def test_run_plugin(self):
+        plugin = MagicMock()
+        plugin.name = 'my-plugin'
+        plugin.run = AsyncMagicMock()
+        expected_key = '{}-plugin-{}'.format(self.repo.url, plugin.name)
+        self.repo._run_plugin(plugin)
+        self.assertTrue(plugin.run.called)
+        self.assertIn(
+            expected_key, repository.Repository._plugins_instances.keys())
+
+    def test_stop_plugin(self):
+        plugin = MagicMock()
+        plugin.name = 'my-plugin'
+        plugin.run = AsyncMagicMock()
+        plugin.stop = AsyncMagicMock()
+        self.repo._run_plugin(plugin)
+        self.repo._stop_plugin(plugin)
+        self.assertTrue(plugin.stop.called)
+        self.assertFalse(repository.Repository._plugins_instances)
 
     @async_test
     async def test_enable_plugin(self):

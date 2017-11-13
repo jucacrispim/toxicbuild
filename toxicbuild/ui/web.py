@@ -132,11 +132,11 @@ class RepositoryHandler(BaseModelHandler):
 
         elif 'enable-plugin' in self.request.uri:
             r = yield from self.enable_plugin()
-            return r
+            return
 
         elif 'disable-plugin' in self.request.uri:
             r = yield from self.disable_plugin()
-            return r
+            return
 
         elif'start-build' not in args:
             yield super().post(*args)

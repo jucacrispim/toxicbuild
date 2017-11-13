@@ -199,7 +199,7 @@ var PluginManager = {
     jQuery('#btn-save-plugins').on('click', function(){
       var btn = jQuery(this);
 
-      jQuery.each(self._to_disable, function(i, plugin_name){
+      self._to_disable.forEach(function(plugin_name){
 	container = jQuery('#plugin-container-' + plugin_name);
 	var plugin_name = jQuery('input[type=hidden]', container)[0].value;
 	var data = {'name': self._current_repo.name,
@@ -215,7 +215,7 @@ var PluginManager = {
       });
       self._to_disable = new Set();
 
-      jQuery.each(self._to_enable, function(i, plugin_name){
+      self._to_enable.forEach(function(plugin_name){
 	container = jQuery('#plugin-container-' + plugin_name);
 	var plugin_name = jQuery('input[type=hidden]', container)[0].value;
 	var data = self.getPluginData(container);

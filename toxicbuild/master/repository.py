@@ -87,6 +87,8 @@ class Repository(Document, utils.LoggerMixin):
         'ordering': ['name']
     }
 
+    _plugins_instances = {}
+
     def __init__(self, *args, **kwargs):
         from toxicbuild.master import scheduler
 
@@ -255,7 +257,8 @@ class Repository(Document, utils.LoggerMixin):
         * Starts builds that are pending using
           ``self.build_manager.start_pending``.
         * Connects to ``build_started`` and ``build_finished`` signals
-          to handle changing of status."""
+          to handle changing of status.
+        * Runs the enabled plugins."""
 
         self.log('Scheduling {url}'.format(url=self.url))
         # we store this hashes so we can remove it from the scheduler when
@@ -278,8 +281,7 @@ class Repository(Document, utils.LoggerMixin):
 
         # starting plugins
         for plugin in self.plugins:
-            f = plugin.run()
-            ensure_future(f)
+            self._run_plugin(plugin)
 
     @classmethod
     async def schedule_all(cls):
@@ -387,18 +389,29 @@ class Repository(Document, utils.LoggerMixin):
         await revision.save()
         return revision
 
+    def _run_plugin(self, plugin):
+        key = '{}-plugin-{}'.format(self.url, plugin.name)
+        type(self)._plugins_instances[key] = plugin
+        ensure_future(plugin.run())
+
+    def _stop_plugin(self, plugin):
+        key = '{}-plugin-{}'.format(self.url, plugin.name)
+        plugin = type(self)._plugins_instances[key]
+        ensure_future(plugin.stop())
+        del type(self)._plugins_instances[key]
+
     async def enable_plugin(self, plugin_name, **plugin_config):
         """Enables a plugin to this repository.
 
         :param plugin_name: The name of the plugin that is being enabled.
-        :param plugin_config: A dictionary containing the configuration
-          passed to the plugin."""
+        :param plugin_config: A dictionary containing the plugin's
+          configuration."""
 
         plugin_cls = MasterPlugin.get_plugin(name=plugin_name)
         plugin = plugin_cls(**plugin_config)
         self.plugins.append(plugin)
         await self.save()
-        ensure_future(plugin.run())
+        self._run_plugin(plugin)
 
     def _match_kw(self, plugin, **kwargs):
         """True if the plugin's attributes match the
@@ -425,6 +438,7 @@ class Repository(Document, utils.LoggerMixin):
         matched = [p for p in self.plugins if self._match_kw(p, **kwargs)]
         for p in matched:
             self.plugins.remove(p)
+            self._stop_plugin(p)
         await self.save()
 
     async def add_builds_for_slave(self, buildset, slave, builders=[]):
