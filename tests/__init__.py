@@ -2,6 +2,7 @@
 
 import asyncio
 import atexit
+from unittest.mock import MagicMock
 
 
 def async_test(f):
@@ -22,3 +23,14 @@ def close_loop():
 
 
 atexit.register(close_loop)
+
+
+class AsyncMagicMock(MagicMock):
+
+    def __call__(self, *a, **kw):
+        s = super().__call__(*a, **kw)
+
+        async def ret():
+            return s
+
+        return ret()
