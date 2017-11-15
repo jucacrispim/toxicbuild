@@ -50,27 +50,27 @@
 
   (hack-local-variables)
 
-  (defvar toxic:--ln-toxicslave
+  (setq toxic:--ln-toxicslave
     (format "ln -s %sscripts/toxicslave %stoxicslave"
 	    pdj:project-directory toxic:test-env-dir))
 
-  (defvar toxic:--ln-toxicmaster
+  (setq toxic:--ln-toxicmaster
     (format "ln -s %sscripts/toxicmaster %stoxicmaster"
 	    pdj:project-directory toxic:test-env-dir))
 
-  (defvar toxic:--ln-toxicweb
+  (setq toxic:--ln-toxicweb
     (format "ln -s %sscripts/toxicweb %stoxicweb"
 	    pdj:project-directory toxic:test-env-dir))
 
-  (defvar toxic:--ln-toxicbuild-script
+  (setq toxic:--ln-toxicbuild-script
     (format "ln -s %sscripts/toxicbuild %stoxicbuild-script"
 	    pdj:project-directory toxic:test-env-dir))
 
-  (defvar toxic:--ln-toxicbuild
+  (setq toxic:--ln-toxicbuild
     (format "ln -s %stoxicbuild %stoxicbuild"
 	    pdj:project-directory toxic:test-env-dir))
 
-  (defvar toxic:--link-everything
+  (setq toxic:--link-everything
     (concat toxic:--ln-toxicslave " && " toxic:--ln-toxicmaster " && "
 	    toxic:--ln-toxicbuild-script " && " toxic:--ln-toxicbuild
 	    " && " toxic:--ln-toxicweb))
@@ -197,7 +197,7 @@
 
   (interactive)
 
-  (toxic:--kill-buffer-shell-process toxic:master-buffer-name))
+  (toxic:--kill-buffer-shell-process toxic:--master-buffer-name))
 
 
 (defun toxic:restart-master ()
@@ -205,8 +205,14 @@
 
   (interactive)
 
-  (toxic:stop-master)
-  (toxic:start-master))
+  (deferred:$
+    (deferred:next
+      (lambda ()
+	(toxic:stop-master)))
+
+    (deferred:nextc it
+      (lambda ()
+	(toxic:start-master)))))
 
 
 (defun toxic:start-webui ()
