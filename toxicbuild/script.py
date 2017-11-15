@@ -25,7 +25,7 @@ from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import changedir
 from toxicbuild.master import create as create_master
 from toxicbuild.master import create_settings_and_connect
-from toxicbuild.master import Slave
+from toxicbuild.master.slave import Slave
 from toxicbuild.slave import create as create_slave
 from toxicbuild.ui import create as create_ui
 
