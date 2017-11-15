@@ -32,8 +32,9 @@ Example:
         description = "A very cool plugin"
         something_to_store_on_database = PrettyStringField()
 
-        async def run(self):
-            '''Here is where you implement your stuff'''
+        async def run(self, sender):
+            '''Here is where you implement your stuff. Sender is a
+               repository instance.'''
 
 """
 
@@ -54,12 +55,15 @@ Example:
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+from asyncio import ensure_future
 from collections import OrderedDict
 import copy
 import json
+from uuid import uuid4
 from mongomotor import EmbeddedDocument
 from mongoengine.base.metaclasses import DocumentMetaclass
-from mongomotor.fields import StringField, URLField, ListField
+from mongomotor.fields import (StringField, URLField, ListField, UUIDField,
+                               ReferenceField)
 from toxicbuild.core import requests
 from toxicbuild.core.plugins import Plugin, PluginMeta
 from toxicbuild.core.utils import datetime2string, LoggerMixin
@@ -98,7 +102,9 @@ _translate_table = {PrettyListField: 'list',
                     ListField: 'list',
                     PrettyStringField: 'string',
                     PrettyURLField: 'url',
-                    StringField: 'string'}
+                    StringField: 'string',
+                    UUIDField: 'string',
+                    ReferenceField: 'string'}
 
 
 class MetaMasterPlugin(PluginMeta, DocumentMetaclass):
@@ -130,6 +136,8 @@ class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
     pretty_name = ''
     description = "Base for master's plugins"
     type = None
+
+    uuid = UUIDField(default=uuid4)
 
     meta = {'allow_inheritance': True}
 
@@ -192,9 +200,12 @@ class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
     def to_dict(self):
         schema = type(self).get_schema()
         objdict = {k: getattr(self, k) for k in schema.keys()}
+        objdict['uuid'] = str(objdict['uuid'])
+
+        objdict['repository'] = str(self._instance.id)
         return objdict
 
-    async def run(self):
+    async def run(self, sender):
         """Runs the plugin. You must implement this in your plugin."""
 
         msg = 'You must implement a run() method in your plugin'
@@ -218,22 +229,40 @@ class NotificationPlugin(MasterPlugin):
 
     meta = {'allow_inheritance': True}
     no_list = True
+    sender = None
 
-    async def run(self):
+    async def run(self, sender):
+        self.sender = sender
         msg = 'running {} for'.format(self.name)
         self.log(msg, level='info')
 
         if 'running' in self.statuses:
-            build_started.connect(self.send_started_message, weak=False)
+            build_started.connect(self._build_started)
 
-        build_finished.connect(self.send_finished_message, weak=False)
+        build_finished.connect(self._build_finished)
 
     async def stop(self):
-        build_started.disconnect(self.send_started_message)
-        build_finished.disconnect(self.send_finished_message)
+        build_started.disconnect(self._build_started)
+        build_finished.disconnect(self._build_finished)
+
+    def _build_started(self, repo, build):
+        ensure_future(self._check_build('started', repo, build))
+
+    def _build_finished(self, repo, build):
+        ensure_future(self._check_build('finished', repo, build))
+
+    async def _check_build(self, sig_type, repo, build):
+        sigs = {'started': self.send_started_message,
+                'finished': self.send_finished_message}
+
+        buildset = await build.get_buildset()
+        if repo == self.sender and buildset.branch in self.branches:
+            coro = sigs[sig_type]
+            ensure_future(coro(repo, build))
 
     async def send_started_message(self, repo, build):
-        """Sends a message about a started build.
+        """Sends a message about a started build. You must implement
+        this in your plugin.
 
         :param repo: A
           :class:`~toxicbuild.master.repository.Repository` instance.
@@ -242,7 +271,8 @@ class NotificationPlugin(MasterPlugin):
         raise NotImplementedError
 
     async def send_finished_message(self, repo, build):
-        """Sends a message about a finished build.
+        """Sends a message about a finished build. You must implement
+        this in your plugin.
 
         :param repo: A
           :class:`~toxicbuild.master.repository.Repository` instance.

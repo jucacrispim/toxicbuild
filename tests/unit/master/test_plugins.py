@@ -95,7 +95,8 @@ class MasterPluginTest(TestCase):
     def test_translate_schema(self):
         schema = plugins.MasterPlugin.get_schema()
         translation = plugins.MasterPlugin._translate_schema(schema)
-        keys = {'name', 'pretty_name', 'type', 'description', '_cls'}
+        keys = {'name', 'pretty_name', 'type', 'description', '_cls',
+                'uuid'}
         self.assertEqual(set(translation.keys()), keys)
 
     def test_get_schema(self):
@@ -111,8 +112,9 @@ class MasterPluginTest(TestCase):
     @async_test
     async def test_run(self):
         await self._create_test_data()
+        sender = MagicMock()
         with self.assertRaises(NotImplementedError):
-            await self.plugin.run()
+            await self.plugin.run(sender)
 
     async def _create_test_data(self):
         self.repo = Repository(name='my-test-repo',
@@ -138,7 +140,7 @@ class NotificationPlugin(TestCase):
         await self._create_test_data()
         self.plugin.statuses = ['running']
 
-        await self.plugin.run()
+        await self.plugin.run(sender=MagicMock())
         self.assertTrue(plugins.build_started.connect.called)
         self.assertTrue(plugins.build_finished.connect.called)
 
@@ -149,7 +151,7 @@ class NotificationPlugin(TestCase):
         await self._create_test_data()
         self.plugin.statuses = ['fail']
 
-        await self.plugin.run()
+        await self.plugin.run(sender=MagicMock())
         self.assertFalse(plugins.build_started.connect.called)
         self.assertTrue(plugins.build_finished.connect.called)
 
@@ -171,16 +173,94 @@ class NotificationPlugin(TestCase):
         self.assertLess(keys.index('branches'), keys.index('statuses'))
 
     @async_test
-    async def test_send_started_message(self):
-        p = plugins.NotificationPlugin()
+    async def test_build_started(self):
+        await self._create_test_data()
+        self.plugin._check_build = AsyncMagicMock()
         repo, build = MagicMock(), MagicMock()
+        self.plugin._build_started(repo, build)
+        sig_type = self.plugin._check_build.call_args[0][0]
+        self.assertEqual(sig_type, 'started')
+
+    @async_test
+    async def test_build_finished(self):
+        await self._create_test_data()
+        self.plugin._check_build = AsyncMagicMock()
+        repo, build = MagicMock(), MagicMock()
+        self.plugin._build_finished(repo, build)
+        sig_type = self.plugin._check_build.call_args[0][0]
+        self.assertEqual(sig_type, 'finished')
+
+    @async_test
+    async def test_check_build_started(self):
+        await self._create_test_data()
+        sig = 'started'
+        build = MagicMock()
+        buildset = MagicMock()
+        buildset.branch = 'master'
+        build.get_buildset = AsyncMagicMock(return_value=buildset)
+        self.plugin.branches = ['master', 'release']
+        self.plugin.sender = self.repo
+        self.plugin.send_started_message = AsyncMagicMock()
+        self.plugin.send_finished_message = AsyncMagicMock()
+        await self.plugin._check_build(sig, self.repo, build)
+        self.assertTrue(self.plugin.send_started_message.called)
+
+    @async_test
+    async def test_check_build_finished(self):
+        await self._create_test_data()
+        sig = 'finished'
+        build = MagicMock()
+        buildset = MagicMock()
+        buildset.branch = 'master'
+        build.get_buildset = AsyncMagicMock(return_value=buildset)
+        self.plugin.branches = ['master', 'release']
+        self.plugin.sender = self.repo
+        self.plugin.send_started_message = AsyncMagicMock()
+        self.plugin.send_finished_message = AsyncMagicMock()
+        await self.plugin._check_build(sig, self.repo, build)
+        self.assertTrue(self.plugin.send_finished_message.called)
+
+    @async_test
+    async def test_check_build_finished_wrong_branch(self):
+        await self._create_test_data()
+        sig = 'finished'
+        build = MagicMock()
+        buildset = MagicMock()
+        buildset.branch = 'feature-1'
+        build.get_buildset = AsyncMagicMock(return_value=buildset)
+        self.plugin.branches = ['master', 'release']
+        self.plugin.sender = self.repo
+        self.plugin.send_started_message = AsyncMagicMock()
+        self.plugin.send_finished_message = AsyncMagicMock()
+        await self.plugin._check_build(sig, self.repo, build)
+        self.assertFalse(self.plugin.send_finished_message.called)
+
+    @async_test
+    async def test_check_build_finished_wrong_repo(self):
+        await self._create_test_data()
+        sig = 'finished'
+        build = MagicMock()
+        buildset = MagicMock()
+        buildset.branch = 'master'
+        build.get_buildset = AsyncMagicMock(return_value=buildset)
+        self.plugin.branches = ['master', 'release']
+        self.plugin.sender = MagicMock()
+        self.plugin.send_started_message = AsyncMagicMock()
+        self.plugin.send_finished_message = AsyncMagicMock()
+        await self.plugin._check_build(sig, self.repo, build)
+        self.assertFalse(self.plugin.send_finished_message.called)
+
+    @async_test
+    async def test_send_started_message(self):
+        repo, build = MagicMock(), MagicMock()
+        p = plugins.NotificationPlugin()
         with self.assertRaises(NotImplementedError):
             await p.send_started_message(repo, build)
 
     @async_test
     async def test_send_finished_message(self):
-        p = plugins.NotificationPlugin()
         repo, build = MagicMock(), MagicMock()
+        p = plugins.NotificationPlugin()
         with self.assertRaises(NotImplementedError):
             await p.send_finished_message(repo, build)
 

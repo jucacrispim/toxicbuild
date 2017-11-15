@@ -109,7 +109,8 @@ var PluginView = function(model){
       checked = plugin ? "checked" : "";
       jQuery.each(self.model, function(key, value){
 	var bad_attrs = ['name', 'list', 'type', 'fields',
-			 'pretty_name', 'description']
+			 'pretty_name', 'description', 'uuid',
+			 'repository']
 	if (bad_attrs.indexOf(key) >= 0){
 	  // continue
 	  return 1

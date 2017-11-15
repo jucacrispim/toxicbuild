@@ -236,7 +236,7 @@ class HoleHandlerTest(TestCase):
             type = 'test'
 
             @asyncio.coroutine
-            def run(self):
+            def run(self, sender):
                 pass
 
         await self._create_test_data()

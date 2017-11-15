@@ -32,7 +32,7 @@ class RepoPlugin(repository.MasterPlugin):
     type = 'test'
 
     @asyncio.coroutine
-    def run(self):
+    def run(self, sender):
         pass
 
 

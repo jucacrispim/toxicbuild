@@ -392,7 +392,7 @@ class Repository(Document, utils.LoggerMixin):
     def _run_plugin(self, plugin):
         key = '{}-plugin-{}'.format(self.url, plugin.name)
         type(self)._plugins_instances[key] = plugin
-        ensure_future(plugin.run())
+        ensure_future(plugin.run(self))
 
     def _stop_plugin(self, plugin):
         key = '{}-plugin-{}'.format(self.url, plugin.name)
