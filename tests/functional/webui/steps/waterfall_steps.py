@@ -31,7 +31,7 @@ def step_impl(context):
     browser = context.browser
     elements = browser.find_elements_by_class_name('step-running')
     assert elements
-    time.sleep(0.1)
+    time.sleep(0.3)
 
 @then('he waits for all builds to complete')  # noqa f401
 def step_impl(context):
