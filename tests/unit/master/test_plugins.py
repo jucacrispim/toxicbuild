@@ -21,7 +21,9 @@ import asyncio
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 from toxicbuild.core.utils import now
-from toxicbuild.master.repository import Repository
+from toxicbuild.master.build import BuildSet, Build, Builder, BuildStep
+from toxicbuild.master.repository import Repository, RepositoryRevision
+from toxicbuild.master.slave import Slave
 from toxicbuild.master import plugins, mail
 from tests import async_test, AsyncMagicMock
 
@@ -407,3 +409,75 @@ class EmailPluginTest(TestCase):
                                           recipients=['me@me.com'])
         self.repo.plugins.append(self.plugin)
         self.repo.save()
+
+
+class CustomWebhookPluginTest(TestCase):
+
+    @async_test
+    async def tearDown(self):
+        await Repository.drop_collection()
+        await Slave.drop_collection()
+        await BuildSet.drop_collection()
+        await Builder.drop_collection()
+
+    @patch.object(plugins.requests, 'post', AsyncMagicMock())
+    @async_test
+    async def test_send_message(self):
+        await self._create_test_data()
+        await self.plugin._send_message(self.repo, self.buildset.builds[0])
+        called_url = plugins.requests.post.call_args[0][0]
+        self.assertEqual(called_url, self.plugin.webhook_url)
+
+    @patch.object(plugins.CustomWebhookPlugin, '_send_message',
+                  AsyncMagicMock())
+    @async_test
+    async def test_send_started_message(self):
+        await self._create_test_data()
+        await self.plugin.send_started_message(
+            self.repo, self.buildset.builds[0])
+        self.assertTrue(self.plugin._send_message.called)
+
+    @patch.object(plugins.CustomWebhookPlugin, '_send_message',
+                  AsyncMagicMock())
+    @async_test
+    async def test_send_finished_message(self):
+        await self._create_test_data()
+        await self.plugin.send_finished_message(
+            self.repo, self.buildset.builds[0])
+        self.assertTrue(self.plugin._send_message.called)
+
+    async def _create_test_data(self):
+        self.repo = Repository(name='my-test-repo',
+                               url='git@somewere.com/bla.git',
+                               update_seconds=300,
+                               vcs_type='git')
+        await self.repo.save()
+        self.plugin = plugins.CustomWebhookPlugin(
+            branches=['master'], statuses=['fail', 'success'],
+            webhook_url='http://something.com/bla')
+        self.repo.plugins.append(self.plugin)
+        self.repo.save()
+
+        self.slave = Slave(name='sla', host='localhost', port=1234,
+                           token='123')
+        await self.slave.save()
+        self.builder = Builder(repository=self.repo, name='builder-bla')
+        await self.builder.save()
+        b = Build(branch='master', builder=self.builder,
+                  repository=self.repo, slave=self.slave,
+                  named_tree='v0.1')
+        s = BuildStep(name='some step', output='some output',
+                      command='some command')
+        b.steps.append(s)
+        self.rev = RepositoryRevision(commit='saçfijf',
+                                      commit_date=now(),
+                                      repository=self.repo,
+                                      branch='master',
+                                      author='tião',
+                                      title='blabla')
+        await self.rev.save()
+
+        self.buildset = await BuildSet.create(repository=self.repo,
+                                              revision=self.rev)
+        self.buildset.builds.append(b)
+        await self.buildset.save()

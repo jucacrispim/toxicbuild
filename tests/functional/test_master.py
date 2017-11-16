@@ -24,6 +24,7 @@ from toxicbuild.master import settings
 from toxicbuild.master.plugins import MasterPlugin
 from tests import async_test
 from tests.functional import BaseFunctionalTest, REPO_DIR
+from tests.functional.custom_webhook import WebHookMessage
 
 
 class DummyUIClient(BaseToxicClient):
@@ -85,8 +86,11 @@ class DummyUIClient(BaseToxicClient):
     def enable_plugin(self):
         action = 'repo-enable-plugin'
         body = {'repo_name': 'test-repo',
-                'plugin_name': 'slack-notification',
-                'webhook_url': 'https://some.slack.url'}
+                'plugin_name': 'custom-webhook',
+                'webhook_url': 'http://localhost:{}/webhookmessage/'.format(
+                    settings.WEBHOOK_PORT),
+                'branches': ['master'],
+                'statuses': ['running', 'fail', 'success']}
 
         resp = yield from self.request2server(action, body)
         return resp
@@ -238,11 +242,26 @@ class ToxicMasterTest(BaseFunctionalTest):
         self.assertEqual(len(resp), plugins_count, MasterPlugin.list_plugins())
 
     @async_test
-    def test_12_enable_plugin(self):
+    async def test_12_enable_plugin(self):
 
-        with (yield from get_dummy_client()) as client:
-            resp = yield from client.enable_plugin()
+        with (await get_dummy_client()) as client:
+            resp = await client.enable_plugin()
 
+        with (await get_dummy_client()) as client:
+            await client.start_build()
+
+        with (await get_dummy_client()) as client:
+            await client.write({'action': 'stream', 'token': '123',
+                                'body': {}})
+
+            while True:
+                response = await client.get_response()
+                body = response['body'] if response else {}
+                if body.get('event_type') == 'build_finished':
+                    break
+
+        has_msg = await WebHookMessage.objects.count()
+        self.assertTrue(has_msg)
         self.assertEqual(resp, 'ok', resp)
 
     @async_test
@@ -297,6 +316,7 @@ class ToxicMasterTest(BaseFunctionalTest):
     @classmethod
     def _delete_test_data(cls):
         loop = asyncio.get_event_loop()
+        loop.run_until_complete(WebHookMessage.drop_collection())
         with loop.run_until_complete(get_dummy_client()) as client:
             loop.run_until_complete(
                 client.request2server('slave-remove',

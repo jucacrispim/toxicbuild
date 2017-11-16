@@ -345,7 +345,7 @@ class EmailPlugin(NotificationPlugin):
 
     name = 'email-notification'
     pretty_name = 'Email'
-    description = 'Sends messages through email'
+    description = 'Sends email messages'
     type = 'notification'
 
     recipients = PrettyListField(StringField(), pretty_name="Recipients")
@@ -375,3 +375,30 @@ class EmailPlugin(NotificationPlugin):
 
         async with MailSender(self.recipients) as sender:
             await sender.send(subject, message)
+
+
+class CustomWebhookPlugin(NotificationPlugin):
+    """Sends a POST request to a custom URL. The request
+    mime type is json/application and the body of the request
+    has a json with 3 keys: ``repository``, ``build`` and ``buildset``."""
+
+    name = 'custom-webhook'
+    pretty_name = 'Custom Webhook'
+    description = 'Sends messages to a custom webhook.'
+    type = 'notification'
+    webhook_url = PrettyURLField(required=True, pretty_name='Webhook URL')
+
+    async def _send_message(self, repo, build):
+        buildset = await build.get_buildset()
+        build_dict = build.to_dict(id_as_str=True)
+        buildset_dict = buildset.to_dict(id_as_str=True)
+        repo_dict = await repo.to_dict(id_as_str=True)
+        msg = {'repo': repo_dict, 'buildset': buildset_dict,
+               'build': build_dict}
+        await requests.post(self.webhook_url, data=json.dumps(msg))
+
+    async def send_started_message(self, repo, build):
+        await self._send_message(repo, build)
+
+    async def send_finished_message(self, repo, build):
+        await self._send_message(repo, build)

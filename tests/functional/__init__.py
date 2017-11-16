@@ -18,6 +18,20 @@ MASTER_ROOT_DIR = os.path.join(DATA_DIR, 'master')
 UI_ROOT_DIR = os.path.join(DATA_DIR, 'ui')
 PYVERSION = ''.join([str(n) for n in sys.version_info[:2]])
 
+toxicmaster_conf = os.environ.get('TOXICMASTER_SETTINGS')
+if not toxicmaster_conf:
+    toxicmaster_conf = os.path.join(MASTER_ROOT_DIR, 'toxicmaster.conf')
+    os.environ['TOXICMASTER_SETTINGS'] = toxicmaster_conf
+
+toxicslave_conf = os.environ.get('TOXICSLAVE_SETTINGS')
+if not toxicslave_conf:
+    toxicslave_conf = os.path.join(SLAVE_ROOT_DIR, 'toxicslave.conf')
+    os.environ['TOXICSLAVE_SETTINGS'] = toxicslave_conf
+
+toxicweb_conf = os.environ.get('TOXICUI_SETTINGS')
+if not toxicweb_conf:
+    toxicweb_conf = os.path.join(UI_ROOT_DIR, 'toxicui.conf')
+    os.environ['TOXICUI_SETTINGS'] = toxicweb_conf
 
 create_settings()
 create_settings_ui()
@@ -57,6 +71,7 @@ def start_master(sleep=0.5):
     """Starts a master server in a new process for tests"""
 
     toxicmaster_conf = os.environ.get('TOXICMASTER_SETTINGS')
+
     toxicmaster_cmd = os.path.join(SCRIPTS_DIR, 'toxicmaster')
     pidfile = 'toxicmaster{}.pid'.format(PYVERSION)
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
@@ -112,6 +127,33 @@ def stop_webui():
     os.system(' '.join(cmd))
 
 
+def start_customwebserver():
+    """Start the custom web server for tests """
+
+    custom_cmd = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              'custom_webhook.py')
+    pidfile = 'customwh{}.pid'.format(PYVERSION)
+    cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
+           custom_cmd, 'start', MASTER_ROOT_DIR, '--daemonize',
+           '--pidfile', pidfile]
+
+    os.system(' '.join(cmd))
+
+
+def stop_customwebserver():
+    """Stops the custom web server"""
+
+    custom_cmd = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              'custom_webhook.py')
+    pidfile = 'customwh{}.pid'.format(PYVERSION)
+
+    cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
+           'python', custom_cmd, 'stop', MASTER_ROOT_DIR,
+           '--pidfile', pidfile]
+
+    os.system(' '.join(cmd))
+
+
 class BaseFunctionalTest(TestCase):
 
     """An AsyncTestCase that starts a master and a slave process on
@@ -134,15 +176,25 @@ class BaseFunctionalTest(TestCase):
         stop_master()
 
     @classmethod
+    def start_custom(cls):
+        start_customwebserver()
+
+    @classmethod
+    def stop_custom(cls):
+        stop_customwebserver()
+
+    @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.start_slave()
         cls.start_master()
+        start_customwebserver()
         time.sleep(0.1)
 
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
+        stop_customwebserver()
         cls.stop_master()
         cls.stop_slave()
 

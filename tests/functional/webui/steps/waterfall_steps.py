@@ -9,7 +9,6 @@ from tests.functional.webui.steps.base_steps import (  # noqa f811
 @when('he clicks in the waterfall button')
 def step_impl(context):
     browser = context.browser
-    time.sleep(0.3)
     btn = browser.find_element_by_id('btn-status-repo-bla')
     browser.click(btn)
 
