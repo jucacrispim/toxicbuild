@@ -42,7 +42,7 @@ If you are interested in mess around with toxicbuild, read:
 Issue Tracker
 =============
 
-You can follow the development of toxicbuild throught the issue tracker in
+You can follow the development of toxicbuild through the issue tracker in
 `<https://github.com/jucacrispim/toxicbuild/issues>`_
 
 Licence
@@ -55,7 +55,7 @@ Changelog
 =========
 
 .. toctree::
-   :maxdepth:
+   :maxdepth: 1
 
    CHANGELOG
 

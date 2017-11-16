@@ -37,6 +37,14 @@ toxicbuild.master.hole module
     :show-inheritance:
     :exclude-members: UIHole
 
+toxicbuild.master.mail module
+-----------------------------
+
+.. automodule:: toxicbuild.master.mail
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 toxicbuild.master.plugins module
 --------------------------------
 

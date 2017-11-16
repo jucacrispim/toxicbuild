@@ -4,7 +4,7 @@ ToxicBuild's User Guide
 Install
 +++++++
 
-ToxicBuild is written in Python, and runs in Python3.4 and later. It uses
+ToxicBuild is written in Python, and runs in Python3.5 and later. It uses
 mongodb to store data and git as vcs. You must have these installed.
 
 .. note::
@@ -48,8 +48,20 @@ This is done using the command ``toxicbuild create``.
 .. note::
 
    This install process assumes you have the mongo instance running in
-   localhost and listen the default port. If needed, change these configs
+   localhost and is listen the default port. If needed, change these configs
    in the file `~/ci/master/toxicmaster.conf`.
+
+
+.. note::
+
+   By default, all dates and times are displayed using the UTC timezone in the
+   following format: ``'%a %b %d %H:%M:%S %Y %z'``. You can change it using the
+   ``TIMEZONE`` and ``DTFORMAT`` variables in the `~/ci/ui/toxicui.conf` file.
+
+   A list with the format codes can be found `here <http://strftime.org/>`_
+   and a list of timezones can be found
+   `here <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`_.
+
 
 After the environment is created, use the command ``toxicbuld start`` to
 start everything needed.
@@ -99,8 +111,7 @@ Now we may configure some methods to toxicbuild notify us about builds. You
 can see the output configure options clicking in the `Configure output methods`
 button.
 
-<IMG>
-
+<img>
 
 After we configure all we wanted, it's time to configure the build itself. It
 is done by adding a build config file in the root directory of your source code.
@@ -151,7 +162,12 @@ When ToxicBuild detects a change in the source code, it starts to run the
 build. You can see details of the builds in the `waterfall`. You navigate to
 the waterfall by clicking in the `status` button.
 
-<IMG>
+
+|waterfall-img|
+
+.. |waterfall-img| image:: ./_static/waterfall.png
+    :alt: Waterfall
+
 
 Step params
 -----------
