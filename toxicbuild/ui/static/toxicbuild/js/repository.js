@@ -316,6 +316,7 @@ var RepositoryView = function (model){
 	self.modal.find('.modal-title').text(self.model.name);
 	self.modal.find('#repo_name').val(self.model.name);
 	self.modal.find('#repo_url').val(self.model.url);
+	self.modal.find('#repo_vcs_type').val(self.model.vcs_type);
 	self.modal.find('#repo_update_seconds').val(self.model.update_seconds);
 	self.modal.find('#repo_parallel_builds').val(self.model.parallel_builds);
 	self.modal.find('#btn-delete-repo').show();
