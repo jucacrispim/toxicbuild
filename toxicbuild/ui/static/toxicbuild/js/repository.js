@@ -299,7 +299,7 @@ var RepositoryView = function (model){
       self.modal.find('.modal-title').text('Add repository')
       self.modal.find('#repo_name').val('');
       self.modal.find('#repo_url').val('');
-      self.modal.find('#repo_update_seconds').val(300);
+      self.modal.find('#repo_update_seconds').val(10);
       self.modal.find('#repo_vcs_type').val('');
       self.modal.find('#repo_parallel_builds').val('');
       self.modal.find("#repo_slaves").html('');
@@ -329,6 +329,8 @@ var RepositoryView = function (model){
 	  template = template.replace('{{checked}}', checked);
 	  jQuery('#branches-container').append(template);
 	}
+      }else{
+	self.modal.find('#repo_vcs_type').val('git');
       };
 
       var repo_slaves = [];
