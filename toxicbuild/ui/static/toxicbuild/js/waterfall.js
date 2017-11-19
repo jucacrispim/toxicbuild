@@ -205,7 +205,7 @@ var BUILD_TEMPLATE = `
 <ul>
   <li class="step step-{{build.status}}" id="build-info-{{build.id}}">
     Build - {{build.status}}
-    <i class="fa fa-3x fa-fw toxic-spinner-main toxic-spinner-running" id="spinner-build-{{build.uuid}}" style="display:none"></i>
+    <i class="fa fa-3x fa-fw toxic-spinner-running" id="spinner-build-{{build.uuid}}" style="display:none"></i>
     <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" style="display:none" class="rebuild-icon">
       <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-build btn-sm"
         data-buildset-commit="{{buildset.commit}}"
