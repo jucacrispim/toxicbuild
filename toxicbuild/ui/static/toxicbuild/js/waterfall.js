@@ -327,7 +327,6 @@ function WaterfallManager(){
     },
 
     handleEvent: function(self, event){
-
       var data = jQuery.parseJSON(event.data);
       if (data.event_type == 'build_added'){
 	self.handleBuildAdded(data);

@@ -478,6 +478,11 @@ class StreamHandlerTest(AsyncTestCase):
         repo_id = self.handler._get_repo_id()
         self.assertEqual(repo_id, 'asdf')
 
+    def test_get_repo_id_with_repository_id(self):
+        self.handler.request.arguments = {'repository_id': [b'asdf']}
+        repo_id = self.handler._get_repo_id()
+        self.assertEqual(repo_id, 'asdf')
+
     def test_get_repo_id_type_error(self):
         repo_id = self.handler._get_repo_id()
         self.assertIsNone(repo_id)

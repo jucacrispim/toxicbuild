@@ -306,10 +306,14 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
         self.log(msg, level='warning')
 
     def _get_repo_id(self):
-        try:
-            repo_id = self.request.arguments.get('repo_id')[0].decode()
-        except TypeError:
-            repo_id = None
+        repo_id = None
+        keys = ['repo_id', 'repository_id']
+        for key in keys:
+            try:
+                repo_id = self.request.arguments.get(key)[0].decode()
+                break
+            except TypeError:
+                pass
 
         return repo_id
 
