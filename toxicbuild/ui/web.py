@@ -34,9 +34,7 @@ from pyrocumulus.web.handlers import TemplateHandler, PyroRequest
 from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.core.utils import bcrypt_string, LoggerMixin, string2datetime
 from toxicbuild.ui import settings
-from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui.connectors import StreamConnector
-from toxicbuild.ui.exceptions import BadActionError
 from toxicbuild.ui.models import Repository, Slave, BuildSet, Builder, Plugin
 from toxicbuild.ui.utils import format_datetime, is_datetime
 
