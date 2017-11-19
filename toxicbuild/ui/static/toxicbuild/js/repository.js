@@ -49,7 +49,7 @@ var REPO_ROW_TEMPLATE = `
 	    </button>
 	  </form>
           <div class="spinner-placeholder" id="spinner-placeholder-{{repo.name}}">
-	    <i class="fa fa-cog fa-spin fa-3x fa-fw toxic-spinner-main" id="spinner-repo-{{repo.name}}"></i>
+	    <i class="fa fa-cog fa-3x fa-fw toxic-spinner-main" id="spinner-repo-{{repo.name}}"></i>
 	  </div>
 
 	</td>

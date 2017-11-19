@@ -219,6 +219,11 @@ tr:nth-child(even) {
     font-size: 1.11em;
 }
 
+tr:nth-child(even) .toxic-spinner-running,
+tr:nth-child(even) .toxic-spinner-main{
+    background-image: url("/static/toxicbuild/img/cog-light-grey-bg.gif");
+}
+
 .toxic-spinner-running{
     background-image: url("/static/toxicbuild/img/cog-blue-bg.gif");
     position: absolute;
