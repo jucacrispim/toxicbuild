@@ -24,7 +24,7 @@ If you are interested in using toxicbuild in your ci process read:
    :maxdepth: 3
 
    install
-   usage
+   repo_config
 
 
 Hacking
