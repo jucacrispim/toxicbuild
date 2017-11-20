@@ -45,17 +45,6 @@ from toxicbuild.master.slave import Slave
 _scheduler_hashes = {}
 
 
-# Function that will be scheduled to poll changes from remote repo.
-async def _update_repo_code(repo_id):
-    """Updates code from a repository."""
-
-    repo = await Repository.get(id=repo_id)
-    await repo.update_code()
-    repo.build_manager.disconnect_from_signals()
-    # return for test purposes
-    return repo
-
-
 class RepositoryBranch(EmbeddedDocument):
     name = StringField(required=True)
     notify_only_latest = BooleanField(default=False)

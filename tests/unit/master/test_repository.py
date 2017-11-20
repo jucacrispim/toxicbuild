@@ -60,16 +60,6 @@ class RepositoryTest(TestCase):
         self.assertTrue(d['id'])
         self.assertTrue('plugins' in d.keys())
 
-    @patch.object(repository.Repository, 'update_code', MagicMock())
-    @async_test
-    async def test_update_repo_code(self):
-        update_code = MagicMock(spec=self.repo.update_code)
-        repository.Repository.update_code = asyncio.coroutine(
-            lambda *a, **kw: update_code(*a, **kw))
-        await self._create_db_revisions()
-        await repository._update_repo_code(self.repo.id)
-        self.assertTrue(update_code.called)
-
     @async_test
     async def test_to_dict_id_as_str(self):
         await self._create_db_revisions()
