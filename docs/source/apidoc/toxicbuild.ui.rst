@@ -28,13 +28,6 @@ toxicbuild.ui.context_processors module
     :undoc-members:
     :show-inheritance:
 
-toxicbuild.ui.exceptions module
--------------------------------
-
-.. automodule:: toxicbuild.ui.exceptions
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 toxicbuild.ui.inutils module
 ----------------------------

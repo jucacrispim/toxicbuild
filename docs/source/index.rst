@@ -23,7 +23,8 @@ If you are interested in using toxicbuild in your ci process read:
 .. toctree::
    :maxdepth: 3
 
-   user_guide
+   install
+   usage
 
 
 Hacking
