@@ -72,7 +72,7 @@
 	{% end %}
 	<ul>
 	  <li class="step step-{{build.status}}" id="build-info-{{build.uuid}}">
-	    Build - {{build.status}} <i class="fa fa-3x fa-fw toxic-spinner-main toxic-spinner-running " id="spinner-build-{{build.uuid}}"
+	    Build - {{build.status}} <i class="fa fa-3x fa-fw toxic-spinner-running " id="spinner-build-{{build.uuid}}"
 					{% if build.status != 'running' %} style="display:none" {% end %}>
 
 	      </i>
