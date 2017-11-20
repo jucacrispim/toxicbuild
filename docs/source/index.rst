@@ -25,6 +25,7 @@ If you are interested in using toxicbuild in your ci process read:
 
    install
    repo_config
+   build_config
 
 
 Hacking
