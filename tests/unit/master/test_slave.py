@@ -89,8 +89,6 @@ class SlaveTest(TestCase):
 
         self.assertEqual(slave_id, slave_inst.id)
 
-    @patch.object(toxicbuild.master.client.asyncio, 'open_connection',
-                  Mock())
     @async_test
     async def test_get_client(self):
 
@@ -98,7 +96,6 @@ class SlaveTest(TestCase):
         def oc(*a, **kw):
             return [MagicMock(), MagicMock()]
 
-        toxicbuild.master.client.asyncio.open_connection = oc
         client = await self.slave.get_client()
         self.assertTrue(client._connected)
 

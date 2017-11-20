@@ -211,14 +211,11 @@ class BuildClientTest(TestCase):
         await self.client.build(buildinstance, process_coro=None)
         self.assertEqual(len(process.call_args_list), 0)
 
-    @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @async_test
     async def test_get_build_client(self):
 
         async def oc(*a, **kw):
             return mock.MagicMock(), mock.MagicMock()
-
-        client.asyncio.open_connection = oc
 
         slave = mock.Mock()
         inst = await client.get_build_client(slave, 'localhost', 7777)
