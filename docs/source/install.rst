@@ -71,7 +71,7 @@ You can change the database connection parameters changing the
 
 For authentication, add the `username` and `password` keys:
 
-.. code-bock:: python
+.. code-block:: python
 
    DATABASE = {'host': 'localhost',
 	       'port': 27017,
