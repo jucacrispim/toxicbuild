@@ -18,7 +18,6 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future
-import functools
 import os
 import re
 import shutil
@@ -235,6 +234,7 @@ class Repository(Document, utils.LoggerMixin):
         """Updates the repository's code. It is just a wrapper for
         self.poller.poll, so I can handle exceptions here."""
 
+        await self.reload()
         with_clone = False
         try:
             with_clone = await self.poller.poll()
@@ -265,8 +265,7 @@ class Repository(Document, utils.LoggerMixin):
         # we remove the repository.
 
         # adding update_code
-        update_fn = functools.partial(_update_repo_code, self.id)
-        sched_hash = self.scheduler.add(update_fn, self.update_seconds)
+        sched_hash = self.scheduler.add(self.update_code, self.update_seconds)
         _scheduler_hashes[self.url] = sched_hash
 
         # adding start_pending

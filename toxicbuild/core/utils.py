@@ -259,7 +259,7 @@ def inherit_docs(cls):
             for parent in cls.__bases__:
                 try:
                     parfunc = getattr(parent, name)
-                except:
+                except Exception:
                     continue
                 if parfunc and getattr(parfunc, '__doc__', None):
                     func.__doc__ = parfunc.__doc__
