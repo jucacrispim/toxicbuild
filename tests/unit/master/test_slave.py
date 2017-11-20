@@ -22,7 +22,6 @@ import datetime
 from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch
 from uuid import uuid4
-import toxicbuild
 from toxicbuild.core.utils import datetime2string
 from toxicbuild.master import slave, build, repository
 from tests import async_test
