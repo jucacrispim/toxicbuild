@@ -342,7 +342,6 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
         """Sends information about step output to the ws client.
 
         :param info: Message sent by the master"""
-
         step_uuid = self.request.arguments.get('uuid')[0].decode()
         uuid = info.get('uuid')
         if step_uuid == uuid:

@@ -86,6 +86,11 @@ class StreamConnector(LoggerMixin):
         self.client.disconnect()
         self._connected = False
 
+    def _get_repo_id(self, body):
+        if 'build' in body.keys():
+            return body.get('build').get('repository').get('id')
+        return body.get('repository', {}).get('id')
+
     @asyncio.coroutine
     def _listen(self):
         yield from self._connect()
@@ -98,8 +103,9 @@ class StreamConnector(LoggerMixin):
                          level='warning')
                 break
 
-            repo_id = body.get('repository', {}).get('id')
-            message_arrived.send(repo_id, **body)
+            repo_id = self._get_repo_id(body)
+            if repo_id == self.repo_id:
+                message_arrived.send(repo_id, **body)
 
     @classmethod
     @asyncio.coroutine

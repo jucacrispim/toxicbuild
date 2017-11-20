@@ -263,13 +263,14 @@ var STEP_TEMPLATE = `
 
 var BUILDERS = [];
 
-function StepOutputSentinel(uuid){
+function StepOutputSentinel(uuid, repo_id){
   // Entity responsible for changing the step output
   // acording to the info sent by the server.
 
   var host = window.location.host;
   var obj = {
-    url: 'ws://' + host + '/api/socks/step-output?uuid=' + uuid,
+    url: 'ws://' + host + '/api/socks/step-output?uuid=' + uuid +
+      '&repository_id=' + repo_id,
     ws: null,
     old_output: '{{step.output}}',
 
@@ -310,6 +311,7 @@ function WaterfallManager(){
   obj = {
     url: 'ws://' + host + '/api/socks/builds?repository_id=' + id,
     ws: null,
+    _repository_id: id,
     _build_last_step: {},
     _step_started_queue: [],
     _step_finished_queue: [],
@@ -380,7 +382,8 @@ function WaterfallManager(){
       template.hide();
       build_el.parent().append(template);
       template.slideDown('slow');
-      self._step_sentinels[step.uuid] = StepOutputSentinel(step.uuid)
+      self._step_sentinels[step.uuid] = StepOutputSentinel(step.uuid,
+							   self._repository_id)
       self._build_last_step[build.uuid] = step.index;
       if (!from_queue){
 	self._handleStepQueue(build);
