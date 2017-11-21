@@ -5,7 +5,7 @@ Sphinx==1.5.1
 coverage==4.2
 greenlet==0.4.6
 docutils==0.12
-sphinx-pdj-theme==0.1.1
+sphinx-pdj-theme==0.1.2
 pytz==2014.10
 mongomotor==0.9.3
 motor==1.1
