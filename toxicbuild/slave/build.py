@@ -85,7 +85,7 @@ class Builder(LoggerMixin):
             finished = localtime2utc(now())
             step_info.update({'finished': datetime2string(finished)})
             step_info['total_time'] = (
-                finished - string2datetime(build_info['started'])).seconds
+                finished - string2datetime(step_info['started'])).seconds
 
             yield from self.manager.send_info(step_info)
 
