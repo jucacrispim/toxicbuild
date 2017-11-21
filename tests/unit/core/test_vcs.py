@@ -23,7 +23,7 @@ import datetime
 import os
 from unittest import mock, TestCase
 from toxicbuild.core import vcs, utils
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 @mock.patch.object(vcs, 'exec_cmd', mock.MagicMock())
@@ -196,10 +196,12 @@ class GitTest(TestCase):
         expected_branches = ['dev', 'master']
         vcs.exec_cmd = e
         self.vcs.fetch = fetch
+        self.vcs._update_remote_prune = AsyncMagicMock()
         branches = yield from self.vcs.get_remote_branches()
         called_cmd = emock.call_args[0][0]
         self.assertEqual(expected, called_cmd)
         self.assertEqual(expected_branches, branches)
+        self.assertTrue(self.vcs._update_remote_prune.called)
         self.assertTrue(fetch_mock.called)
 
     @async_test

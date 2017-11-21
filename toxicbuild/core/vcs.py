@@ -243,6 +243,7 @@ class Git(VCS):
     @asyncio.coroutine
     def get_remote_branches(self):
         yield from self.fetch()
+        yield from self._update_remote_prune()
         cmd = '%s branch -r' % self.vcsbin
 
         out = yield from self.exec_cmd(cmd)
@@ -252,6 +253,15 @@ class Git(VCS):
         # master, with some shitty arrow...
         remote_branches.pop(0)
         return [b.strip().split('/')[1] for b in remote_branches]
+
+    @asyncio.coroutine
+    def _update_remote_prune(self):
+        """Updates remote branches list, prunning deleted branches."""
+
+        cmd = '{} remote update --prune'.format(self.vcsbin)
+        msg = 'Updating --prune remote'
+        self.log(msg, level='debug')
+        yield from self.exec_cmd(cmd)
 
 
 VCS_TYPES = {'git': Git}
