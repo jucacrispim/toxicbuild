@@ -1,7 +1,7 @@
 Changelog
 =========
 
-* 0.4.0 (not released yet!)
+* 0.4.0
 
   - Added build details modal.
   - Added timezone option on ui
@@ -12,7 +12,8 @@ Changelog
   - Added option to limit builds in parallel
   - Corrected bug with pending builds that started before the previous
     finish.
-  - Added master plugins (slack notification and email notification)
+  - Added master plugins (slack notification, email notification and
+    custom webhook notification).
   - Added build step output view 'real time'
   - Css bugfixes
   - Improved docs

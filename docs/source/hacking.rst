@@ -103,12 +103,73 @@ notification or integration with 3rd party systems like slack.
 Writting master plugins
 +++++++++++++++++++++++
 
-To write master plugins is quite simple. You must subclass
+To write master plugins is quite simple. In the
+:mod:`toxicbuild.master.plugins` module, you must subclass
 :class:`toxicbuild.master.plugins.MasterPlugin` and implement a ``run()``
 method. Optionaly you may implement a ``stop()`` method too. Both are
-coroutines. Take a look at :mod:`toxicbuild.master.plugins` for more
-information.
+coroutines.
 
+.. code-block:: python
+
+   class MyPlugin(MasterPlugin):
+
+       # These are required for every plugin
+       name = 'my-plugin'
+       pretty_name = 'My Plugin'
+       description = 'Do some nice stuff'
+       type = 'some-plugin-type'
+
+       # If you need to store config values in database, you can
+       # create them here
+       some_config = PrettyStringField(pretty_name='Some Config',
+		                       required=True)
+
+
+       async def run(self):
+           """Do your stuff here. Connect to signals and do something
+           in reaction to them."""
+
+       async def stop(self):
+           """Disconnect from signals here."""
+
+
+To make things easier, we already have
+:class:`toxicbuild.master.plugins.NotificationPlugin` that reacts to
+``build_started`` and ``build_finished`` signals. To write a notification
+plugin, subclass :class:`toxicbuild.master.plugins.NotificationPlugin` and
+implement ``send_started_message`` and ``send_finished_message`` methods.
+
+.. code-block:: python
+
+   class MyNotificationPlugin(NotificationPlugin):
+
+       name = 'my-notification-plugin'
+       pretty_name = 'My Notification Plugin'
+       description = 'Sends messages to somewhere'
+       type = 'notification'
+
+       async def send_started_message(self, repo, build):
+           """Sends a message informing about a build that has jsut
+	   started."""
+
+       async def send_finished_message(self, repo, build):
+           """Sends a message informing about a build that has jsut
+           finished."""
+
+
+Master signals
+++++++++++++++
+
+The following signals are sent in master:
+
+* revision_added - Sent when changes are detected in the source code.
+* build_added - Sent when a new build is added to the database.
+* build_started - Sent when a build starts.
+* build_finished - Sent when a build finishes.
+* step_started - Sent when a build step starts
+* step_finished - Sent when a build step finishes.
+* step_output_arrived - Sent when we have some output from a step.
+* repo_status_changed - Sent when the status of a repository changes.
 
 Slave
 -----
@@ -129,6 +190,27 @@ To write slave plugins you must extend
 your conffile; ``get_steps_after()`` that adds steps after the steps created
 by you and ``get_env_vars()`` that adds environment variables to all steps
 of your build.
+
+.. code-block:: python
+
+   class MySlavePlugin(SlavePlugin):
+
+       name = 'my-slave-plugin'
+
+       def get_steps_before(self):
+           cmd = 'ls -la'
+	   name = 'list files'
+           my_step = BuildStep(cmd, name)
+	   return [my_step]
+
+       def get_step_after(self):
+           cmd = 'ls -la'
+	   name = 'list files again'
+	   my_step = BuildStep(cmd, name)
+	   return [my_step]
+
+       def get_env_vars(self):
+           return {'PATH': '/opt/bin:PATH'}
 
 
 User Interfaces
