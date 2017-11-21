@@ -38,7 +38,7 @@ API.
     ...     client = BaseToxicClient('localhost', 6666)
     ...     await client.connect()
     ...     msg = {'token': 'auth-token', 'action': 'list-funcs', 'body': {}}
-    ...     await client.send(msg)
+    ...     await client.write(msg)
     ...     response = await client.get_response()
     ...     client.disconnect()
     ...     print(response['body']['list-funcs'].keys())
@@ -46,5 +46,10 @@ API.
     >>> loop.run_until_complete(list_funcs())
 
 
-For more information about the actions supported by the master and the slave
-look at...
+For more information about the actions supported by the master look at
+:class:`toxicbuild.master.hole.HoleHandler` and
+:source:`tests/functional/test_master.py`.
+
+For for information about the actions supported by the slave look at
+:class:`toxicbuild.slave.protocols.BuildServerProtocol` and
+:source:`tests/functional/test_slave.py`.
