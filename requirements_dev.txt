@@ -62,7 +62,7 @@ simplegeneric==0.8.1
 six==1.9.0
 snowballstemmer==1.2.0
 Sphinx==1.5.1
-sphinx-pdj-theme==0.1
+sphinx-pdj-theme==0.1.1
 stevedore==1.4.0
 tornado==4.4
 traitlets==4.3.1
