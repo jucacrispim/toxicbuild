@@ -13,11 +13,11 @@ integration process. This is done by clicking in the `Add repository` button.
 Repository Params
 +++++++++++++++++
 
-- Name (required): A name for the repository.
-- Parallel builds: Limits the number of parallel builds for this repository.
-  If null or 0 there is no limit for builds.
-- URL (required): The url for the repository.
-- Branches: It indicates which branches ToxicBuild should look for changes.
+- ``Name (required)``: A name for the repository.
+- ``Parallel builds``: Limits the number of parallel builds for this
+  repository. If null or 0 there is no limit for builds.
+- ``URL (required)``: The url for the repository.
+- ``Branches``: It indicates which branches ToxicBuild should look for changes.
   If no branch is inserted here ToxicBuild will look for changes in all remote
   branches.
 
@@ -26,7 +26,7 @@ Repository Params
      If `Only latest commit`, when a bunch of commits are retrieved in the same
      fetch, only the most recent one will be builded.
 
-- Slaves: The slaves that will execute builds for this repository. You must
+- ``Slaves``: The slaves that will execute builds for this repository. You must
   to choose at least one slave or no build will be executed.
 
 
@@ -43,10 +43,10 @@ parameters:
     :alt: Notification methods
 
 
-- Branches: Which branches may trigger the notification method. This is a list.
-  The values are coma-separated.
-- Statuses: Which statuses may trigger the notification method. This is a list.
-  The values are coma-separated.
+- ``Branches``: Which branches may trigger the notification method. This is
+  a list. The values are coma-separated.
+- ``Statuses``: Which statuses may trigger the notification method. This is
+  a list. The values are coma-separated.
 
 Email notification
 ------------------
@@ -58,7 +58,7 @@ Sends notifications using email. This method have the following parameters:
    To use this notification method you must configure the smtp parameters
    in toxicmaster.
 
-- Recipients: Email addresses that will receive messages. This is a list.
+- ``Recipients``: Email addresses that will receive messages. This is a list.
   The values are coma-separated.
 
 
@@ -68,8 +68,8 @@ Slack notification
 Sends notifications to a slack channel. This method have the following
 parameters:
 
-- Webhook URL: The url for the slack webhook.
-- Channel name: The name of the slack channel.
+- ``Webhook URL``: The url for the slack webhook.
+- ``Channel name``: The name of the slack channel.
 
 
 Custom webhook notification
@@ -78,7 +78,7 @@ Custom webhook notification
 Sends notifications to a custom webhook. This method have the following
 parameters:
 
-- Webhook URL: The url for the webhook. This method sends a post request
+- ``Webhook URL``: The url for the webhook. This method sends a post request
   the the webhook url. The body of the request is a json with 3 keys:
   ``repository``, ``build`` and ``buildset``.
 
