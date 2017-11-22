@@ -19,6 +19,7 @@
 
 from pyrocumulus.conf import settings
 from pyrocumulus.web.template import ContextProcessor
+from toxicbuild import VERSION
 
 
 class ToxicWebMainContextProcessor(ContextProcessor):
@@ -26,4 +27,5 @@ class ToxicWebMainContextProcessor(ContextProcessor):
     def get_context(self):
         master_location = '{}:{}'.format(settings.HOLE_HOST,
                                          settings.HOLE_PORT)
-        return {'master_location': master_location}
+        return {'master_location': master_location,
+                'version': VERSION}
