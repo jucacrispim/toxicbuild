@@ -330,3 +330,10 @@ class GitTest(TestCase):
 
         self.assertEqual(len(revisions['master']), 2)
         self.assertFalse(revisions.get('some-feature'))
+
+    @async_test
+    def test_update_remote_prune(self):
+        expected = 'git remote update --prune'
+        yield from self.vcs._update_remote_prune()
+        called = vcs.exec_cmd.call_args[0][0]
+        self.assertEqual(expected, called)
