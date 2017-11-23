@@ -23,7 +23,7 @@ from unittest import mock, TestCase
 from toxicbuild.core.utils import load_module_from_file
 from toxicbuild.slave import build, managers
 from tests.unit.slave import TEST_DATA_DIR
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class BuilderTest(TestCase):
@@ -110,6 +110,62 @@ class BuilderTest(TestCase):
                     'VAR1': 'someval'}
         returned = self.builder._get_env_vars()
         self.assertEqual(expected, returned)
+
+    def test_get_tmp_dir(self):
+        expected = '{}-{}'.format(self.builder.workdir, self.builder.name)
+        self.assertEqual(expected, self.builder._get_tmp_dir())
+
+    def test_get_container_name(self):
+        expected = '{}-{}'.format(self.builder.workdir.replace('/', '-'),
+                                  self.builder.name)
+        self.assertEqual(expected, self.builder._get_container_name())
+
+    @mock.patch.object(build, 'exec_cmd', AsyncMagicMock())
+    @async_test
+    def test_copy_workdir(self):
+        yield from self.builder._copy_workdir()
+        self.assertEqual(len(build.exec_cmd.call_args_list), 2)
+        expected0 = 'mkdir -p {}'.format(self.builder._get_tmp_dir())
+        expected1 = 'cp -R {}/* {}'.format(self.builder.workdir,
+                                           self.builder._get_tmp_dir())
+        called0 = build.exec_cmd.call_args_list[0][0][0]
+        called1 = build.exec_cmd.call_args_list[1][0][0]
+        self.assertEqual(expected0, called0)
+        self.assertEqual(expected1, called1)
+
+    @mock.patch.object(build, 'exec_cmd', AsyncMagicMock())
+    @async_test
+    def test_remove_dir(self):
+        expected = 'rm -rf {}'.format(self.builder._get_tmp_dir())
+        yield from self.builder._remove_tmp_dir()
+        called = build.exec_cmd.call_args[0][0]
+        self.assertEqual(expected, called)
+
+    @async_test
+    async def test_test_aenter(self):
+        self.builder._copy_workdir = AsyncMagicMock()
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        async with self.builder._run_in_build_env():
+            self.assertTrue(self.builder._copy_workdir.called)
+
+    @async_test
+    async def test_aexit(self):
+        self.builder._copy_workdir = AsyncMagicMock()
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        async with self.builder._run_in_build_env():
+            pass
+
+        self.assertTrue(self.builder._remove_tmp_dir.called)
+
+    @async_test
+    async def test_aexit_no_remove(self):
+        self.builder.remove_env = False
+        self.builder._copy_workdir = AsyncMagicMock()
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        async with self.builder._run_in_build_env():
+            pass
+
+        self.assertFalse(self.builder._remove_tmp_dir.called)
 
 
 class BuildStepTest(TestCase):

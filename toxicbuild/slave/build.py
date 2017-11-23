@@ -33,10 +33,12 @@ class Builder(LoggerMixin):
     the toxicbuild.conf file
     """
 
-    def __init__(self, manager, name, workdir, **envvars):
+    def __init__(self, manager, name, workdir, remove_env=True, **envvars):
         """:param manager: instance of :class:`toxicbuild.slave.BuildManager`.
         :param name: name for this builder.
         :param workdir: directory where the steps will be executed.
+        :param remove_env: Indicates if the build environment should be
+          removed when the build is done.
         :param envvars: Environment variables to be used on the steps.
         """
         self.manager = manager
@@ -44,10 +46,30 @@ class Builder(LoggerMixin):
         self.workdir = workdir
         self.steps = []
         self.plugins = []
+        self.remove_env = remove_env
         self.envvars = envvars
 
+    async def __aenter__(self):
+        await self._copy_workdir()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self.remove_env:
+            await self._remove_tmp_dir()
+
+    def _run_in_build_env(self):
+        # This is basicaly useless. It is here
+        # just because async with self._run_in_build_env() looks
+        # better than async with self.
+        return self
+
+    async def build(self):
+        async with self._run_in_build_env():
+            build_info = await self._do_build()
+        return build_info
+
     @asyncio.coroutine
-    def build(self):
+    def _do_build(self):
         build_status = None
         build_info = {'steps': [], 'status': 'running',
                       'started': datetime2string(now()),
