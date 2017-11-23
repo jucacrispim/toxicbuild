@@ -20,6 +20,7 @@
 import asyncio
 from copy import copy
 import functools
+import os
 from uuid import uuid4
 from toxicbuild.core.exceptions import ExecCmdError
 from toxicbuild.core.utils import (exec_cmd, LoggerMixin, datetime2string,
@@ -120,6 +121,35 @@ class Builder(LoggerMixin):
         for plugin in self.plugins:
             envvars.update(plugin.get_env_vars())
         return envvars
+
+    def _get_tmp_dir(self):
+        return '{}-{}'.format(self.workdir, self.name)
+
+    def _get_container_name(self):
+        return self._get_tmp_dir().replace(os.sep, '-')
+
+    @asyncio.coroutine
+    def _copy_workdir(self):
+        """Copy a workdir to a temp dir to run the tests"""
+
+        tmp_dir = self._get_tmp_dir()
+        self.log('Coping workdir to {}'.format(tmp_dir), level='debug')
+
+        mkdir_cmd = 'mkdir -p {}'.format(tmp_dir)
+        yield from exec_cmd(mkdir_cmd, cwd='.')
+        cp_cmd = 'cp -R {}/* {}'.format(self.workdir, tmp_dir)
+
+        self.log('Executing {}'.format(cp_cmd), level='debug')
+        yield from exec_cmd(cp_cmd, cwd='.')
+
+    @asyncio.coroutine
+    def _remove_tmp_dir(self):
+        """Removes the temporary dir"""
+
+        self.log('Removing tmp-dir', level='debug')
+        rm_cmd = 'rm -rf {}'.format(self._get_tmp_dir())
+        self.log('Executing {}'.format(rm_cmd), level='debug')
+        yield from exec_cmd(rm_cmd, cwd='.')
 
 
 class BuildStep:
