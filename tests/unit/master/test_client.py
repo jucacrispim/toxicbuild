@@ -21,7 +21,7 @@ import asyncio
 from unittest import mock, TestCase
 from toxicbuild.core.utils import now
 from toxicbuild.master import client, build, repository, slave
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class BuildClientTest(TestCase):
@@ -211,13 +211,12 @@ class BuildClientTest(TestCase):
         await self.client.build(buildinstance, process_coro=None)
         self.assertEqual(len(process.call_args_list), 0)
 
+    @mock.patch.object(client.BuildClient, 'connect', AsyncMagicMock(
+        spec=client.BuildClient.connect))
     @async_test
     async def test_get_build_client(self):
-
-        async def oc(*a, **kw):
-            return mock.MagicMock(), mock.MagicMock()
 
         slave = mock.Mock()
         inst = await client.get_build_client(slave, 'localhost', 7777)
 
-        self.assertTrue(inst._connected)
+        self.assertTrue(inst.connect.called)

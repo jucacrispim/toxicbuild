@@ -24,7 +24,7 @@ from unittest.mock import Mock, MagicMock, patch
 from uuid import uuid4
 from toxicbuild.core.utils import datetime2string
 from toxicbuild.master import slave, build, repository
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 @patch.object(slave, 'build_started', Mock())
@@ -88,15 +88,13 @@ class SlaveTest(TestCase):
 
         self.assertEqual(slave_id, slave_inst.id)
 
+    @patch('toxicbuild.master.client.BuildClient.connect',
+           AsyncMagicMock(spec='toxicbuild.master.client.BuildClient.connect'))
     @async_test
-    async def test_get_client(self):
-
-        @asyncio.coroutine
-        def oc(*a, **kw):
-            return [MagicMock(), MagicMock()]
+    async def test_get_client(self, *a, **kw):
 
         client = await self.slave.get_client()
-        self.assertTrue(client._connected)
+        self.assertTrue(client.connect.called)
 
     @async_test
     async def test_healthcheck(self):
