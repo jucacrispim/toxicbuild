@@ -104,12 +104,6 @@ Toxicslave config values
 The configuration file for toxicslave is located at
 `~/ci/slave/toxicslave.conf`.
 
-
-Toxicweb config values
-----------------------
-The configuration file for toxicui is located at
-`~/ci/ui/toxicui.conf`.
-
 Running builds in docker containers
 ++++++++++++++++++++++++++++++++++++
 
@@ -133,9 +127,28 @@ example of a Dockerfile that installs and runs a toxicslave instance.
    # preciso por a parte das configs aqui
    CMD [ "/usr/bin/toxicslave", "start", "/opt/slave" ]
 
-After your image is ready, in the config file you must set the following
-variables...
+After your image is ready, in the toxicslave config file you must set the
+following variables:
 
+.. code-block:: python
+
+   USE_DOCKER = True
+   # here you need at least the linux-generic image, this is the default.
+   # You can change the image used in your build by using the ``platform``
+   # parameter in the builder configuration.
+   DOCKER_IMAGES = {'linux-generic': 'my-image-name',
+                    'python3.6': 'my-py36-image'}
+   CONTAINER_SLAVE_WORKDIR = '/opt/slave'
+   CONTAINER_SLAVE_PORT = 7777
+   CONTAINER_SLAVE_TOKEN = 'slave-token'
+
+And thats it. Your builds will run inside docker containers.
+
+
+Toxicweb config values
+----------------------
+The configuration file for toxicui is located at
+`~/ci/ui/toxicui.conf`.
 
 By default, all dates and times are displayed using the UTC timezone in the
 following format: ``'%a %b %d %H:%M:%S %Y %z'``. You can change it using the
