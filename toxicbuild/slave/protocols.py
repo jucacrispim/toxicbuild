@@ -18,9 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-from copy import copy
 import traceback
-from toxicbuild.core.client import BaseToxicClient
 from toxicbuild.core.protocol import BaseToxicProtocol
 from toxicbuild.core.utils import log, datetime2string, now
 from toxicbuild.slave import settings

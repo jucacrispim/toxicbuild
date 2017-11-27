@@ -19,8 +19,8 @@
 
 import asyncio
 from unittest import mock, TestCase
-from toxicbuild.slave import protocols, docker
-from tests import async_test, AsyncMagicMock
+from toxicbuild.slave import protocols
+from tests import async_test
 
 
 @mock.patch.object(asyncio, 'StreamReader', mock.Mock())
