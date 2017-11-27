@@ -19,8 +19,8 @@
 
 import asyncio
 from unittest import mock, TestCase
-from toxicbuild.slave import protocols
-from tests import async_test
+from toxicbuild.slave import protocols, docker
+from tests import async_test, AsyncMagicMock
 
 
 @mock.patch.object(asyncio, 'StreamReader', mock.Mock())
@@ -97,10 +97,12 @@ class ProtocolTest(TestCase):
         with self.assertRaises(protocols.BadData):
             yield from self.protocol.get_buildmanager()
 
+    @mock.patch.object(protocols, 'settings', mock.Mock())
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @async_test
     def test_build(self):
+        protocols.settings.USE_DOCKER = False
         self.protocol.data = yield from self.protocol.get_json_data()
         protocols.BuildManager.return_value.current_build = None
 
@@ -203,10 +205,12 @@ class ProtocolTest(TestCase):
 
         self.assertEqual(self.response['body'], 'I\'m alive!')
 
+    @mock.patch.object(protocols, 'settings', mock.Mock())
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @async_test
     def test_client_connected_build(self):
+        protocols.settings.USE_DOCKER = False
         self.message = {'action': 'build',
                         'token': '123',
                         'body': {
@@ -218,10 +222,8 @@ class ProtocolTest(TestCase):
         protocols.BuildManager.return_value.current_build = None
         self.protocol.connection_made(self.transport)
         yield from self._wait_futures()
-
         manager = protocols.BuildManager.return_value.__enter__.return_value
         builder = manager.load_builder.return_value
-
         self.assertTrue(builder.build.called)
 
     @mock.patch.object(protocols, 'log', mock.Mock())

@@ -291,11 +291,22 @@ class BuilderManagerTest(TestCase):
         self.branch = 'master'
         self.assertFalse(self.manager._branch_match(builder))
 
+    @patch.object(managers, 'settings', Mock())
     def test_load_builder(self):
+        managers.settings.USE_DOCKER = False
         builder = self.manager.load_builder('builder1')
         self.assertEqual(len(builder.steps), 2)
 
+    @patch.object(managers, 'settings', Mock())
+    @patch.object(managers, 'DockerContainerBuilder', Mock())
+    def test_load_builder_docker(self):
+        managers.settings.USE_DOCKER = True
+        self.manager.load_builder('builder1')
+        self.assertTrue(managers.DockerContainerBuilder.called)
+
+    @patch.object(managers, 'settings', Mock())
     def test_load_builder_with_plugin(self):
+        managers.settings.USE_DOCKER = False
         builder = self.manager.load_builder('builder3')
         self.assertEqual(len(builder.steps), 3)
 
@@ -304,7 +315,9 @@ class BuilderManagerTest(TestCase):
             builder = self.manager.load_builder('builder300')
             del builder
 
+    @patch.object(managers, 'settings', Mock())
     def test_load_builder_with_envvars(self):
+        managers.settings.USE_DOCKER = False
         builder = self.manager.load_builder('builder4')
         self.assertTrue(builder.envvars)
 

@@ -23,7 +23,9 @@ import os
 from toxicbuild.core import get_vcs
 from toxicbuild.core.utils import (get_toxicbuildconf, LoggerMixin,
                                    ExecCmdError, match_string)
+from toxicbuild.slave import settings
 from toxicbuild.slave.build import Builder, BuildStep
+from toxicbuild.slave.docker import DockerContainerBuilder
 from toxicbuild.slave.exceptions import (BuilderNotFound, BadBuilderConfig,
                                          BusyRepository)
 from toxicbuild.slave.plugins import SlavePlugin
@@ -45,6 +47,7 @@ class BuildManager(LoggerMixin):
     def __init__(self, protocol, repo_url, vcs_type, branch, named_tree):
         self.protocol = protocol
         self.repo_url = repo_url
+        self.vcs_type = vcs_type
         self.vcs = get_vcs(vcs_type)(self.workdir)
         self.branch = branch
         self.named_tree = named_tree
@@ -201,10 +204,12 @@ class BuildManager(LoggerMixin):
         return builders
 
     def load_builder(self, name):
-        """ Load a builder from toxicbuild.conf
+        """ Load a builder from toxicbuild.conf. If a container
+        is to be used in for the build, returns a container builder
+        instance. Otherwise, return a Builder instance.
+
         :param name: builder name
         """
-
         try:
             bdict = [b for b in self.configmodule.BUILDERS if (b.get(
                 'branch') is None and b['name'] == name) or (b.get(
@@ -214,10 +219,23 @@ class BuildManager(LoggerMixin):
                 name, self.repo_url, self.branch)
             raise BuilderNotFound(msg)
 
-        # this envvars are used in all steps in this builder
-        builder_envvars = bdict.get('envvars', {})
-        builder = Builder(self, bdict['name'], self.workdir, **builder_envvars)
-        builder.steps = self._get_builder_steps(builder, bdict)
+        platform = bdict.get('platform', 'linux-generic')
+        remove_env = bdict.get('remove_env', True)
+        # now we have all we need to instanciate the container builder if
+        # needed.
+        if settings.USE_DOCKER:
+            builder = DockerContainerBuilder(self, platform, self.repo_url,
+                                             self.vcs_type, self.branch,
+                                             self.named_tree,
+                                             name, self.workdir,
+                                             remove_env=remove_env)
+        else:
+            # this envvars are used in all steps in this builder
+            builder_envvars = bdict.get('envvars', {})
+            builder = Builder(self, bdict['name'], self.workdir, platform,
+                              remove_env=remove_env, **builder_envvars)
+            builder.steps = self._get_builder_steps(builder, bdict)
+
         return builder
 
     def _get_builder_steps(self, builder, bdict):

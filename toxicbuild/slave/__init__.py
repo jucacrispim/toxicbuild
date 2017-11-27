@@ -10,7 +10,6 @@ from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string, bcrypt,
                                    changedir)
-from toxicbuild.slave.managers import BuildManager
 
 
 ENVVAR = 'TOXICSLAVE_SETTINGS'
@@ -151,10 +150,6 @@ def create(root_dir):
     print('Toxicslave environment created with access token: {}'.format(
         access_token))
     return access_token
-
-
-make_pyflakes_happy = [BuildManager]
-del make_pyflakes_happy
 
 
 if __name__ == '__main__':

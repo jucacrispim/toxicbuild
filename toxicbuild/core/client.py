@@ -44,8 +44,15 @@ class BaseToxicClient(utils.LoggerMixin):
             raise ToxicClientException(msg)
         return self
 
+    async def __aenter__(self):
+        await self.connect()
+        return self
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.__exit__(exc_type, exc_val, exc_tb)
 
     @asyncio.coroutine
     def connect(self):

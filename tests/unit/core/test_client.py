@@ -20,7 +20,7 @@
 import asyncio
 from unittest import mock, TestCase
 from toxicbuild.core import client
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class BuildClientTest(TestCase):
@@ -36,6 +36,22 @@ class BuildClientTest(TestCase):
             with self.client as client_inst:
                 make_pyflakes_happy = client_inst
                 del make_pyflakes_happy
+
+    @async_test
+    async def test_aenter(self):
+        self.client.connect = AsyncMagicMock()
+        self.client.disconnect = mock.Mock()
+        async with self.client:
+            self.assertTrue(self.client.connect.called)
+
+    @async_test
+    async def test_aexit(self):
+        self.client.connect = AsyncMagicMock()
+        self.client.disconnect = mock.Mock()
+        async with self.client:
+            pass
+
+        self.assertTrue(self.client.disconnect.called)
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @async_test

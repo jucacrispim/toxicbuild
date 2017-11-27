@@ -115,11 +115,6 @@ class BuilderTest(TestCase):
         expected = '{}-{}'.format(self.builder.workdir, self.builder.name)
         self.assertEqual(expected, self.builder._get_tmp_dir())
 
-    def test_get_container_name(self):
-        expected = '{}-{}'.format(self.builder.workdir.replace('/', '-'),
-                                  self.builder.name)
-        self.assertEqual(expected, self.builder._get_container_name())
-
     @mock.patch.object(build, 'exec_cmd', AsyncMagicMock())
     @async_test
     def test_copy_workdir(self):

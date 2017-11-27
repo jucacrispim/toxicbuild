@@ -18,10 +18,13 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from copy import copy
 import traceback
+from toxicbuild.core.client import BaseToxicClient
 from toxicbuild.core.protocol import BaseToxicProtocol
 from toxicbuild.core.utils import log, datetime2string, now
-from toxicbuild.slave import BuildManager, settings
+from toxicbuild.slave import settings
+from toxicbuild.slave.managers import BuildManager
 from toxicbuild.slave.exceptions import (BadData, BadBuilderConfig)
 
 
@@ -116,8 +119,7 @@ class BuildServerProtocol(BaseToxicProtocol):
                               'named_tree': manager.named_tree}
             else:
                 build_info = yield from builder.build()
-
-        return build_info
+            return build_info
 
     @asyncio.coroutine
     def get_buildmanager(self):

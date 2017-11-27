@@ -20,7 +20,6 @@
 import asyncio
 from copy import copy
 import functools
-import os
 from uuid import uuid4
 from toxicbuild.core.exceptions import ExecCmdError
 from toxicbuild.core.utils import (exec_cmd, LoggerMixin, datetime2string,
@@ -33,10 +32,12 @@ class Builder(LoggerMixin):
     the toxicbuild.conf file
     """
 
-    def __init__(self, manager, name, workdir, remove_env=True, **envvars):
+    def __init__(self, manager, name, workdir, platorm='linux-generic',
+                 remove_env=True, **envvars):
         """:param manager: instance of :class:`toxicbuild.slave.BuildManager`.
         :param name: name for this builder.
         :param workdir: directory where the steps will be executed.
+        :param: platform: When the builder execute is builds.
         :param remove_env: Indicates if the build environment should be
           removed when the build is done.
         :param envvars: Environment variables to be used on the steps.
@@ -46,6 +47,7 @@ class Builder(LoggerMixin):
         self.workdir = workdir
         self.steps = []
         self.plugins = []
+        self.platform = platorm
         self.remove_env = remove_env
         self.envvars = envvars
 
@@ -76,8 +78,6 @@ class Builder(LoggerMixin):
                       'finished': None, 'info_type': 'build_info'}
 
         yield from self.manager.send_info(build_info)
-
-        self.manager.send_info(build_info)
 
         for index, step in enumerate(self.steps):
             msg = 'Executing %s' % step.command
@@ -146,9 +146,6 @@ class Builder(LoggerMixin):
 
     def _get_tmp_dir(self):
         return '{}-{}'.format(self.workdir, self.name)
-
-    def _get_container_name(self):
-        return self._get_tmp_dir().replace(os.sep, '-')
 
     @asyncio.coroutine
     def _copy_workdir(self):
