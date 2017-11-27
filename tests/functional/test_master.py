@@ -157,7 +157,7 @@ class ToxicMasterTest(BaseFunctionalTest):
 
         with (yield from get_dummy_client()) as client:
             yield from client.wait_clone()
-            yield asyncio.sleep(1)
+            yield from asyncio.sleep(1)
 
         self.assertTrue(response)
 
