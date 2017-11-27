@@ -83,6 +83,20 @@ class DummyUIClient(BaseToxicClient):
             resp = yield from self.get_response()
 
     @asyncio.coroutine
+    def wait_clone(self):
+        yield from self.write({'action': 'stream', 'token': '123',
+                               'body': {}})
+        while True:
+            r = yield from self.get_response()
+            body = r['body'] if r else {}
+            try:
+                event = body['event_type']
+                if event == 'repo_status_changed':
+                    break
+            except KeyError:
+                pass
+
+    @asyncio.coroutine
     def enable_plugin(self):
         action = 'repo-enable-plugin'
         body = {'repo_name': 'test-repo',
@@ -140,6 +154,9 @@ class ToxicMasterTest(BaseFunctionalTest):
     def test_03_create_repo(self):
         with (yield from get_dummy_client()) as client:
             response = yield from client.create_repo()
+
+        with (yield from get_dummy_client()) as client:
+            yield from client.wait_clone()
 
         self.assertTrue(response)
 
@@ -200,7 +217,6 @@ class ToxicMasterTest(BaseFunctionalTest):
     @async_test
     def test_10_repo_start_build(self):
         # we need to wait so we have time to clone and create revs
-        yield from asyncio.sleep(3)
         with (yield from get_dummy_client()) as client:
             yield from client.start_build()
 
@@ -283,8 +299,6 @@ class ToxicMasterTest(BaseFunctionalTest):
 
     @async_test
     def test_15_stream_step_output(self):
-        # we need to wait so we have time to clone and create revs
-        yield from asyncio.sleep(2)
         with (yield from get_dummy_client()) as client:
             yield from client.start_build()
 
