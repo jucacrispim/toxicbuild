@@ -193,7 +193,7 @@ class GitTest(TestCase):
         def fetch():
             fetch_mock()
 
-        expected_branches = ['dev', 'master']
+        expected_branches = set(['dev', 'master'])
         vcs.exec_cmd = e
         self.vcs.fetch = fetch
         self.vcs._update_remote_prune = AsyncMagicMock()

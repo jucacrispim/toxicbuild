@@ -252,8 +252,7 @@ class Git(VCS):
         remote_branches = out.split('\n')
         # master, with some shitty arrow...
         remote_branches[0] = remote_branches[0].split('->')[1].strip()
-        remote_branches = set(remote_branches)
-        return [b.strip().split('/')[1] for b in remote_branches]
+        return set([b.strip().split('/')[1] for b in remote_branches])
 
     @asyncio.coroutine
     def _update_remote_prune(self):
