@@ -99,10 +99,43 @@ we need to configure the smpt options.
    SMTP_STARTTLS = False
 
 
+Toxicslave config values
+-------------------------
+The configuration file for toxicslave is located at
+`~/ci/slave/toxicslave.conf`.
+
+
 Toxicweb config values
 ----------------------
-The configuration file for toxicmaster is located at
+The configuration file for toxicui is located at
 `~/ci/ui/toxicui.conf`.
+
+Running builds in docker containers
+++++++++++++++++++++++++++++++++++++
+
+It is possible to run builds inside docker containers so each time we
+run a build it is executed in a new environment. The most important thing
+is to have a docker image that runs a toxicslave instance. This image will
+be used as base to the container that will execute the build. Here is an
+example of a Dockerfile that installs and runs a toxicslave instance.
+
+.. code-block:: sh
+
+   FROM debian:9.2
+   RUN apt-get update && apt-get install -y build-essential \
+		                            python3.5 python3.5-dev
+   # we must have a 'python' exec
+   RUN ln -s /usr/bin/python3 /usr/bin/python
+   RUN pip3 install toxicbuild
+   RUN toxicslave create /opt/slave
+   # This must be done, otherwise the builds will end in exception
+   RUN mkdir /opt/slave/src
+   # preciso por a parte das configs aqui
+   CMD [ "/usr/bin/toxicslave", "start", "/opt/slave" ]
+
+After your image is ready, in the config file you must set the following
+variables...
+
 
 By default, all dates and times are displayed using the UTC timezone in the
 following format: ``'%a %b %d %H:%M:%S %Y %z'``. You can change it using the
@@ -111,6 +144,8 @@ following format: ``'%a %b %d %H:%M:%S %Y %z'``. You can change it using the
 A list with the format codes can be found `here <http://strftime.org/>`_
 and a list of timezones can be found
 `here <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`_.
+
+
 
 
 Starting toxicbuild
