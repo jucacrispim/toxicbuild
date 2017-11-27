@@ -109,20 +109,28 @@ class PythonVenvPlugin(SlavePlugin):
         return {'PATH': '{}/bin:PATH'.format(self.venv_dir)}
 
 
-class AptitudeInstallStep(BuildStep):
+class AptUpdateStep(BuildStep):
 
-    def __init__(self, packages, timeout=600):
-        packages = ' '.join(packages)
-        cmd = ' '.join(['sudo aptitude install -y', packages])
+    def __init__(self, timeout=600):
+        cmd = 'sudo apt-get update'
         name = 'Installing packages with aptitude'
         super().__init__(name, cmd, stop_on_fail=True, timeout=timeout)
 
 
-class AptitudeInstallPlugin(SlavePlugin):
+class AptInstallStep(BuildStep):
+
+    def __init__(self, packages, timeout=600):
+        packages = ' '.join(packages)
+        cmd = ' '.join(['sudo apt-get install -y', packages])
+        name = 'Installing packages with aptitude'
+        super().__init__(name, cmd, stop_on_fail=True, timeout=timeout)
+
+
+class AptInstallPlugin(SlavePlugin):
 
     """Installs packages using aptitude."""
 
-    name = 'aptitude-install'
+    name = 'apt-install'
 
     def __init__(self, packages, timeout=600):
         """Initializes the plugin.
@@ -131,8 +139,9 @@ class AptitudeInstallPlugin(SlavePlugin):
         self.packages = packages
 
     def get_steps_before(self):
-        step = AptitudeInstallStep(self.packages)
-        return [step]
+        update = AptUpdateStep()
+        install = AptInstallStep(self.packages)
+        return [update, install]
 
     def get_env_vars(self):
         return {'DEBIAN_FRONTEND': 'noninteractive'}

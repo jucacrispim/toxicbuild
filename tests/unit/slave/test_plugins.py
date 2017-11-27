@@ -116,10 +116,10 @@ class AptitudeInstallPluginTest(TestCase):
 
     def setUp(self):
         packages = ['libawesome', 'libawesome-dev']
-        self.plugin = plugins.AptitudeInstallPlugin(packages=packages)
+        self.plugin = plugins.AptInstallPlugin(packages=packages)
 
     def test_name(self):
-        self.assertEqual(self.plugin.name, 'aptitude-install')
+        self.assertEqual(self.plugin.name, 'apt-install')
 
     def test_env_vars(self):
         self.assertEqual(self.plugin.get_env_vars()['DEBIAN_FRONTEND'],
@@ -127,7 +127,8 @@ class AptitudeInstallPluginTest(TestCase):
 
     def test_get_steps_before(self):
         expected = [
-            plugins.AptitudeInstallStep(self.plugin.packages)
+            plugins.AptUpdateStep(),
+            plugins.AptInstallStep(self.plugin.packages)
         ]
 
         steps_before = self.plugin.get_steps_before()
