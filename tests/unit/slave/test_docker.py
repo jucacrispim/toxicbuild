@@ -76,11 +76,13 @@ class DockerContainerBuilderManagerTest(TestCase):
         self.container.kill_container = AsyncMagicMock()
         self.container.rm_container = AsyncMagicMock()
         self.container.copy2container = AsyncMagicMock()
+        self.container.rm_from_container = AsyncMagicMock()
         self.container.remove_env = False
         async with self.container:
             pass
         self.assertTrue(self.container.kill_container.called)
         self.assertFalse(self.container.rm_container.called)
+        self.assertTrue(self.container.rm_from_container.called)
 
     @patch.object(docker, 'exec_cmd', AsyncMagicMock(return_value='1'))
     @async_test
@@ -162,6 +164,17 @@ class DockerContainerBuilderManagerTest(TestCase):
             self.container.name, self.container.container_slave_workdir,
             self.container.source_dir)
         await self.container.copy2container()
+        called = docker.exec_cmd.call_args[0][0]
+        self.assertEqual(expected, called)
+
+    @patch.object(docker, 'exec_cmd', AsyncMagicMock())
+    @async_test
+    async def test_rm_from_container(self):
+        expected = 'docker exec {} rm -rf {}/{}'.format(
+            self.container.name, self.container.container_slave_workdir,
+            self.container.source_dir)
+
+        await self.container.rm_from_container()
         called = docker.exec_cmd.call_args[0][0]
         self.assertEqual(expected, called)
 

@@ -91,7 +91,12 @@ class DockerContainerBuilder(LoggerMixin):
 
     async def __aexit__(self, ext_typ, exc_val, exc_tb):
         await self.client.__aexit__(ext_typ, exc_val, exc_tb)
+        if not self.remove_env:
+            # removes the source code from the container
+            await self.rm_from_container()
+
         await self.kill_container()
+
         if self.remove_env:
             await self.rm_container()
 
@@ -171,6 +176,20 @@ class DockerContainerBuilder(LoggerMixin):
             self.source_dir, self.docker_cmd, self.name,
             self.container_slave_workdir, self.source_dir)
         self.log(cmd, level='debug')
+        await exec_cmd(cmd, cwd='.')
+
+    async def rm_from_container(self):
+        """Removes the source code of a container that will not be removed.
+        """
+
+        msg = 'Removing files from container {}'.format(self.name)
+        self.log(msg, level='debug')
+
+        cmd = '{} exec {} rm -rf {}/{}'.format(self.docker_cmd, self.name,
+                                               self.container_slave_workdir,
+                                               self.source_dir)
+        msg = 'Executing {}'.format(cmd)
+        self.log(msg, level='debug')
         await exec_cmd(cmd, cwd='.')
 
     async def get_container_ip(self):
