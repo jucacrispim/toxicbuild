@@ -60,8 +60,8 @@ class User(Document):
     async def delete(self, *args, **kwargs):
         # this is here because we cant set CASCADE delete rule in
         # Organization, so we delete it here.
+        await super().delete(*args, **kwargs)
         await Organization.objects.filter(owner=self).delete()
-        super().delete(*args, **kwargs)
 
 
 class Team(EmbeddedDocument):
