@@ -108,7 +108,7 @@ class BuildServerProtocol(BaseToxicProtocol):
                 raise BadData("No builder name for build.")
 
             try:
-                builder = manager.load_builder(builder_name)
+                builder = yield from manager.load_builder(builder_name)
             except BadBuilderConfig:
                 build_info = {'steps': [], 'status': 'exception',
                               'started': datetime2string(now()),

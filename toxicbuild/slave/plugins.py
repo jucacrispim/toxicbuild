@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,7 +19,10 @@
 
 import asyncio
 import os
+from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.plugins import Plugin
+from toxicbuild.core.utils import run_in_thread
+from toxicbuild.slave import settings
 from toxicbuild.slave.build import BuildStep
 
 
@@ -33,6 +36,21 @@ class SlavePlugin(Plugin):
 
     # Your plugin must have an unique name
     name = 'BaseSlavePlugin'
+
+    @property
+    def data_dir(self):
+        """The directory where the plugin store its data."""
+
+        try:
+            data_dir = settings.PLUGINS_DATA_DIR
+        except ConfigError:
+            data_dir = os.path.join('..', '.')
+
+        return os.path.join(data_dir, self.name)
+
+    async def create_data_dir(self):
+        if not os.path.exists(self.data_dir):
+            await run_in_thread(os.makedirs, self.data_dir)
 
     def get_steps_before(self):
         """Returns a list of steps to be executed before the steps provided
@@ -80,6 +98,7 @@ class PythonCreateVenvStep(BuildStep):
 
 class PythonVenvPlugin(SlavePlugin):
     name = 'python-venv'
+    uses_data_dir = True
 
     def __init__(self, pyversion, requirements_file='requirements.txt',
                  remove_env=False):
@@ -113,7 +132,7 @@ class AptUpdateStep(BuildStep):
 
     def __init__(self, timeout=600):
         cmd = 'sudo apt-get update'
-        name = 'Installing packages with aptitude'
+        name = 'Updating apt packages list'
         super().__init__(name, cmd, stop_on_fail=True, timeout=timeout)
 
 
@@ -122,13 +141,13 @@ class AptInstallStep(BuildStep):
     def __init__(self, packages, timeout=600):
         packages = ' '.join(packages)
         cmd = ' '.join(['sudo apt-get install -y', packages])
-        name = 'Installing packages with aptitude'
+        name = 'Installing packages with apt-get'
         super().__init__(name, cmd, stop_on_fail=True, timeout=timeout)
 
 
 class AptInstallPlugin(SlavePlugin):
 
-    """Installs packages using aptitude."""
+    """Installs packages using apt."""
 
     name = 'apt-install'
 

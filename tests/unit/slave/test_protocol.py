@@ -20,7 +20,7 @@
 import asyncio
 from unittest import mock, TestCase
 from toxicbuild.slave import protocols
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 @mock.patch.object(asyncio, 'StreamReader', mock.Mock())
@@ -106,9 +106,9 @@ class ProtocolTest(TestCase):
         self.protocol.data = yield from self.protocol.get_json_data()
         protocols.BuildManager.return_value.current_build = None
 
-        yield from self.protocol.build()
-
         manager = protocols.BuildManager.return_value.__enter__.return_value
+        manager.load_builder = AsyncMagicMock()
+        yield from self.protocol.build()
         self.assertTrue(manager.load_builder.called)
 
     @mock.patch.object(protocols, 'BuildManager',
@@ -220,9 +220,10 @@ class ProtocolTest(TestCase):
                             'vcs_type': 'git',
                             'builder_name': 'bla'}}
         protocols.BuildManager.return_value.current_build = None
+        manager = protocols.BuildManager.return_value.__enter__.return_value
+        manager.load_builder = AsyncMagicMock()
         self.protocol.connection_made(self.transport)
         yield from self._wait_futures()
-        manager = protocols.BuildManager.return_value.__enter__.return_value
         builder = manager.load_builder.return_value
         self.assertTrue(builder.build.called)
 

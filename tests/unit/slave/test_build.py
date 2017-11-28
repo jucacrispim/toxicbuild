@@ -94,17 +94,21 @@ class BuilderTest(TestCase):
                                                        0, 'some line')
         self.assertTrue(send_mock.called)
 
-    def test_get_env_vars(self):
+    @async_test
+    async def test_get_env_vars(self):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
-        self.builder.plugins = self.builder.manager._load_plugins(pconfig)
+        self.builder.plugins = await self.builder.manager._load_plugins(
+            pconfig)
         expected = {'PATH': 'venv-usrbinpython3.4/bin:PATH'}
         returned = self.builder._get_env_vars()
 
         self.assertEqual(expected, returned)
 
-    def test_get_envvar_with_builder_envvars(self):
+    @async_test
+    async def test_get_envvar_with_builder_envvars(self):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
-        self.builder.plugins = self.builder.manager._load_plugins(pconfig)
+        self.builder.plugins = await self.builder.manager._load_plugins(
+            pconfig)
         self.builder.envvars = {'VAR1': 'someval'}
         expected = {'PATH': 'venv-usrbinpython3.4/bin:PATH',
                     'VAR1': 'someval'}

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -25,7 +25,7 @@ import tornado
 from toxicbuild.core.utils import load_module_from_file
 from toxicbuild.slave import plugins, managers
 from tests.unit.slave import TEST_DATA_DIR
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 TOXICCONF = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
 TOXICCONF = load_module_from_file(TOXICCONF)
@@ -292,38 +292,56 @@ class BuilderManagerTest(TestCase):
         self.assertFalse(self.manager._branch_match(builder))
 
     @patch.object(managers, 'settings', Mock())
-    def test_load_builder(self):
+    @async_test
+    async def test_load_builder(self):
         managers.settings.USE_DOCKER = False
-        builder = self.manager.load_builder('builder1')
+        builder = await self.manager.load_builder('builder1')
         self.assertEqual(len(builder.steps), 2)
 
     @patch.object(managers, 'settings', Mock())
     @patch.object(managers, 'DockerContainerBuilder', Mock())
-    def test_load_builder_docker(self):
+    @async_test
+    async def test_load_builder_docker(self):
         managers.settings.USE_DOCKER = True
-        self.manager.load_builder('builder1')
+        await self.manager.load_builder('builder1')
         self.assertTrue(managers.DockerContainerBuilder.called)
 
     @patch.object(managers, 'settings', Mock())
-    def test_load_builder_with_plugin(self):
+    @async_test
+    async def test_load_builder_with_plugin(self):
         managers.settings.USE_DOCKER = False
-        builder = self.manager.load_builder('builder3')
+        builder = await self.manager.load_builder('builder3')
         self.assertEqual(len(builder.steps), 3)
 
-    def test_load_builder_with_not_found(self):
+    @async_test
+    async def test_load_builder_with_not_found(self):
         with self.assertRaises(managers.BuilderNotFound):
-            builder = self.manager.load_builder('builder300')
+            builder = await self.manager.load_builder('builder300')
             del builder
 
     @patch.object(managers, 'settings', Mock())
-    def test_load_builder_with_envvars(self):
+    @async_test
+    async def test_load_builder_with_envvars(self):
         managers.settings.USE_DOCKER = False
-        builder = self.manager.load_builder('builder4')
+        builder = await self.manager.load_builder('builder4')
         self.assertTrue(builder.envvars)
 
-    def test_load_plugins(self):
+    @patch.object(managers.SlavePlugin, 'create_data_dir', AsyncMagicMock())
+    @async_test
+    async def test_load_plugins(self):
         plugins_conf = [{'name': 'python-venv',
                          'pyversion': '/usr/bin/python3.4'}]
-        returned = self.manager._load_plugins(plugins_conf)
+        returned = await self.manager._load_plugins(plugins_conf)
 
         self.assertEqual(type(returned[0]), plugins.PythonVenvPlugin)
+        self.assertTrue(returned[0].create_data_dir.called)
+
+    @patch.object(managers.SlavePlugin, 'create_data_dir', AsyncMagicMock())
+    @async_test
+    async def test_load_plugins_no_data_dir(self):
+        plugins_conf = [{'name': 'apt-install',
+                         'packages': ['some-package', 'other']}]
+        returned = await self.manager._load_plugins(plugins_conf)
+
+        self.assertEqual(type(returned[0]), plugins.AptInstallPlugin)
+        self.assertFalse(returned[0].create_data_dir.called)

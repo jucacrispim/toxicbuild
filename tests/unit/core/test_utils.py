@@ -277,6 +277,15 @@ class UtilsTest(TestCase):
         smatch = 'somestuff'
         self.assertFalse(utils.match_string(smatch, filters))
 
+    @patch.object(utils, '_THREAD_EXECUTOR', MagicMock())
+    @async_test
+    def test_run_in_thread(self):
+        fn = Mock()
+        yield from utils.run_in_thread(fn, 1, a=2)
+        called = utils._THREAD_EXECUTOR.submit.call_args
+        expected = ((fn, 1), {'a': 2})
+        self.assertEqual(called, expected)
+
 
 class StreamUtilsTest(TestCase):
 

@@ -203,7 +203,7 @@ class BuildManager(LoggerMixin):
 
         return builders
 
-    def load_builder(self, name):
+    async def load_builder(self, name):
         """ Load a builder from toxicbuild.conf. If a container
         is to be used in for the build, returns a container builder
         instance. Otherwise, return a Builder instance.
@@ -234,16 +234,16 @@ class BuildManager(LoggerMixin):
             builder_envvars = bdict.get('envvars', {})
             builder = Builder(self, bdict['name'], self.workdir, platform,
                               remove_env=remove_env, **builder_envvars)
-            builder.steps = self._get_builder_steps(builder, bdict)
+            builder.steps = await self._get_builder_steps(builder, bdict)
 
         return builder
 
-    def _get_builder_steps(self, builder, bdict):
+    async def _get_builder_steps(self, builder, bdict):
         plugins_conf = bdict.get('plugins')
         steps = []
 
         if plugins_conf:
-            builder.plugins = self._load_plugins(plugins_conf)
+            builder.plugins = await self._load_plugins(plugins_conf)
 
         for plugin in builder.plugins:
             steps += plugin.get_steps_before()
@@ -266,7 +266,7 @@ class BuildManager(LoggerMixin):
         msg = '[{}]{}'.format(self.repo_url, msg)
         super().log(msg, level=level)
 
-    def _load_plugins(self, plugins_config):
+    async def _load_plugins(self, plugins_config):
         """ Returns a list of :class:`toxicbuild.slave.plugins.Plugin`
         subclasses based on the plugins listed on the config for a builder.
         """
@@ -276,5 +276,7 @@ class BuildManager(LoggerMixin):
             plugin_class = SlavePlugin.get_plugin(pdict['name'])
             del pdict['name']
             plugin = plugin_class(**pdict)
+            if getattr(plugin, 'uses_data_dir', False):
+                await plugin.create_data_dir()
             plist.append(plugin)
         return plist

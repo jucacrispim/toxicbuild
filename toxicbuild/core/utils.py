@@ -19,11 +19,8 @@
 
 
 import asyncio
-try:
-    from asyncio import ensure_future
-except ImportError:  # pragma no cover
-    from asyncio import async as ensure_future
-
+from asyncio import ensure_future
+from concurrent.futures import ThreadPoolExecutor
 import copy
 from datetime import datetime, timezone, timedelta
 import fnmatch
@@ -38,6 +35,9 @@ from toxicbuild.core.exceptions import ExecCmdError, ConfigError
 
 
 DTFORMAT = '%a %b %d %H:%M:%S %Y %z'
+
+
+_THREAD_EXECUTOR = ThreadPoolExecutor()
 
 
 def _get_envvars(envvars):
@@ -365,7 +365,13 @@ class MatchKeysDict(dict):
         return super().__getitem__(key)
 
 
+@asyncio.coroutine
+def run_in_thread(fn, *args, **kwargs):
+    return _THREAD_EXECUTOR.submit(fn, *args, **kwargs)
+
 # Sorry, but not willing to test  a daemonizer.
+
+
 def daemonize(call, cargs, ckwargs, stdout, stderr,
               workdir, pidfile):  # pragma: no cover
     """ Run a callable as a daemon

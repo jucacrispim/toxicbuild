@@ -21,7 +21,7 @@ import asyncio
 from unittest import TestCase
 from unittest.mock import MagicMock, Mock, patch
 from toxicbuild.slave import plugins, build
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class MyPlugin(plugins.SlavePlugin):
@@ -41,6 +41,32 @@ class PluginTest(TestCase):
 
     def test_get_env_vars(self):
         self.assertEqual({}, self.plugin.get_env_vars())
+
+    def test_data_dir_without_settings(self):
+        expected = '.././my-plugin'
+        self.assertEqual(expected, self.plugin.data_dir)
+
+    @patch.object(plugins, 'settings', Mock())
+    def test_data_dir_with_settings(self):
+        plugins.settings.PLUGINS_DATA_DIR = '/some/dir/'
+        expected = '/some/dir/my-plugin'
+        self.assertEqual(expected, self.plugin.data_dir)
+
+    @patch.object(plugins.os.path, 'exists', Mock(return_value=True))
+    @patch.object(plugins, 'run_in_thread', AsyncMagicMock())
+    @async_test
+    async def test_create_data_dir_already_exists(self):
+        await self.plugin.create_data_dir()
+        self.assertFalse(plugins.run_in_thread.called)
+
+    @patch.object(plugins.os.path, 'exists', Mock(return_value=False))
+    @patch.object(plugins, 'run_in_thread', AsyncMagicMock())
+    @async_test
+    async def test_create_data_dir(self):
+        await self.plugin.create_data_dir()
+        expected = ((plugins.os.makedirs, self.plugin.data_dir), {})
+        called = plugins.run_in_thread.call_args
+        self.assertEqual(expected, called)
 
 
 class PythonCreateVenvStepTest(TestCase):
