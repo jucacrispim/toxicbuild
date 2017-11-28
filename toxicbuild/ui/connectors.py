@@ -104,7 +104,8 @@ class StreamConnector(LoggerMixin):
                 break
 
             repo_id = self._get_repo_id(body)
-            if repo_id == self.repo_id:
+            event = body.get('event_type')
+            if repo_id == self.repo_id or event == 'repo_status_changed':
                 message_arrived.send(repo_id, **body)
 
     @classmethod

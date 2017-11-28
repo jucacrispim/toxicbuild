@@ -211,6 +211,32 @@ class StreamConnectorTest(TestCase):
             delattr(connectors.StreamConnector, '_connected')
 
     @patch.object(connectors, 'message_arrived', MagicMock())
+    @async_test
+    def test_listen_wrong_repo_repo_status_changed(self):
+        try:
+            inst = connectors.StreamConnector('other-repo')
+            inst._connect = MagicMock()
+            inst.client = MagicMock()
+
+            def _c(self):
+                self.index += 1
+                return not bool(self.index)
+
+            connectors.StreamConnector._connected = property(_c)
+
+            @asyncio.coroutine
+            def get_response():
+                return {'body': {'repository': {'id': 'some-repo'},
+                                 'event_type': 'repo_status_changed'}}
+
+            inst.client.get_response = get_response
+            inst.index = -1
+            yield from inst._listen()
+            self.assertTrue(connectors.message_arrived.send.called)
+        finally:
+            delattr(connectors.StreamConnector, '_connected')
+
+    @patch.object(connectors, 'message_arrived', MagicMock())
     @patch.object(connectors.StreamConnector, '_prepare_instance', MagicMock())
     @async_test
     def test_plug(self):

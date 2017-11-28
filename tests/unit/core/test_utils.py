@@ -56,8 +56,7 @@ class UtilsTest(TestCase):
 
     @async_test
     def test_kill_group(self):
-        wait = sys.version_info.minor
-        cmd = 'sleep {}'.format(wait)
+        cmd = 'sleep 55'
         proc = yield from utils._create_cmd_proc(cmd, cwd='.')
         try:
             f = proc.stdout.readline()
