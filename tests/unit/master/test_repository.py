@@ -38,7 +38,8 @@ class RepoPlugin(repository.MasterPlugin):
 
 class RepositoryTest(TestCase):
 
-    def setUp(self):
+    @async_test
+    async def setUp(self):
         super(RepositoryTest, self).setUp()
         self.repo = repository.Repository(
             name='reponame', url="git@somewhere.com/project.git",

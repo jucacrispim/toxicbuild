@@ -126,7 +126,7 @@ class MasterPluginTest(TestCase):
         await self.repo.save()
         self.plugin = self.plugin_class()
         self.repo.plugins.append(self.plugin)
-        self.repo.save()
+        await self.repo.save()
 
 
 class NotificationPlugin(TestCase):

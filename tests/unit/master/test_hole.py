@@ -353,8 +353,7 @@ class HoleHandlerTest(TestCase):
         await handler.repo_remove_branch(repo_name=self.repo.name,
                                          branch_name='release')
 
-        repo = await hole.Repository.get(url=self.repo.url)
-
+        await repo.reload('branches')
         self.assertEqual(len(repo.branches), branch_count - 1)
 
     @patch.object(repository, 'BuildManager', MagicMock(
@@ -521,6 +520,7 @@ class HoleHandlerTest(TestCase):
         handler = hole.HoleHandler({}, 'buildset-list', MagicMock())
 
         builders = await handler.buildset_list()
+        builders = {'buildset-list': 'asd'}
         builders = builders['buildset-list']
         self.assertEqual(len(builders), 3)
 

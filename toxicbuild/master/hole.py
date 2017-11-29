@@ -381,7 +381,7 @@ class HoleHandler:
         :param offset: offset for buildset list.
         """
 
-        buildsets = BuildSet.objects
+        buildsets = BuildSet.objects.no_dereference()
         if repo_name:
             repository = await Repository.get(name=repo_name)
             buildsets = buildsets.filter(repository=repository)
@@ -392,8 +392,8 @@ class HoleHandler:
         stop = count if not offset else skip + offset
 
         buildsets = buildsets[skip:stop]
-        buildsets = await buildsets.to_list()
         buildset_list = []
+        buildsets = await buildsets.to_list()
         for b in buildsets:
             bdict = b.to_dict(id_as_str=True)
             buildset_list.append(bdict)
