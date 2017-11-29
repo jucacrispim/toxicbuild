@@ -69,7 +69,7 @@ def toxicinit():
     from toxicbuild.master.hole import HoleServer
     from toxicbuild.master.repository import Repository
     from toxicbuild.master.slave import Slave
-    from toxicbuild.mater.users import User, Organization
+    from toxicbuild.master.users import User, Organization
 
     ensure_indexes(BuildSet, Repository, Slave, User, Organization)
     create_scheduler()

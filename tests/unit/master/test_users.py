@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import time
 from unittest import TestCase
 from toxicbuild.master import users
 from tests import async_test
@@ -72,6 +73,7 @@ class OrganizationTest(TestCase):
         org = users.Organization(name='org', owner=owner)
         await org.save()
         await org.delete()
+        time.sleep(1)
         await owner.reload()
         orgs = await owner.organizations
         self.assertFalse(orgs)
