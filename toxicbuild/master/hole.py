@@ -157,6 +157,12 @@ class HoleHandler:
 
         return siginfo
 
+    def _user_is_allowed(self, what):
+        if self.protocol.user.is_superuser or \
+           what in self.protocol.user.allowed_actions:
+            return True
+        return False
+
     async def repo_add(self, repo_name, repo_url, owner_id,
                        update_seconds, vcs_type, slaves=None,
                        parallel_builds=None):
@@ -170,6 +176,9 @@ class HoleHandler:
         :param slaves: A list of slave names.
         :params parallel_builds: How many parallel builds this repository
           executes. If None, there is no limit."""
+
+        if not self._user_is_allowed('add_repo'):
+            raise NotEnoughPerms
 
         repo_name = repo_name.strip()
         repo_url = repo_url.strip()
@@ -388,6 +397,9 @@ class HoleHandler:
         :param slave_port: Port to connect to the slave
         :param slave_token: Auth token for the slave.
         :param owner_id: Slave's owner id."""
+
+        if not self._user_is_allowed('add_slave'):
+            raise NotEnoughPerms
 
         owner = await self._get_owner(owner_id)
         slave = await Slave.create(name=slave_name, host=slave_host,

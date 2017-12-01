@@ -19,7 +19,8 @@
 
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, UUIDField, ListField,
-                               ReferenceField, EmbeddedDocumentListField)
+                               ReferenceField, EmbeddedDocumentListField,
+                               BooleanField, EmailField)
 from mongomotor.queryset import PULL
 from toxicbuild.master.utils import as_db_ref
 
@@ -50,25 +51,37 @@ class Organization(Document):
         # we set it here so we can query for user's repo in a easier way
         owner = await self.owner
         # do not deref to avoid a query for all orgs
-        organizations = as_db_ref(owner, 'organizations')
-        if ('organization', self.id) not in organizations:
+        organizations = [ref.id for ref in as_db_ref(owner, 'organizations')]
+        if self.id not in organizations:
             await owner.update(push__organizations=self)
 
 
 class User(Document):
     uuid = UUIDField()
 
+    email = EmailField(required=True, unique=True)
     username = StringField(required=True, unique=True)
     password = StringField()
+    is_superuser = BooleanField(default=False)
     # organizations owned by the user
     organizations = ListField(ReferenceField('Organization',
                                              reverse_delete_rule=PULL))
     # organizations which the user is part of, but not the owner
     member_of = ListField(ReferenceField('Organization'))
+    # what the user can do: create_repo, create_slave or create_user
+    allowed_actions = ListField(StringField())
+
+    async def save(self, *args, **kwargs):
+        if not self.username:
+            self.username = self.email.split('@')[0]
+
+        r = await super().save(*args, **kwargs)
+        return r
 
     async def delete(self, *args, **kwargs):
-        await super().delete(*args, **kwargs)
+        r = await super().delete(*args, **kwargs)
         await Organization.objects.filter(owner=self).delete()
+        return r
 
 
 class Team(EmbeddedDocument):

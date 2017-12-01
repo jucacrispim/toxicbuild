@@ -22,7 +22,7 @@ from collections import defaultdict, deque
 import datetime
 from unittest import TestCase, mock
 from toxicbuild.core.utils import now
-from toxicbuild.master import build, repository, slave
+from toxicbuild.master import build, repository, slave, users
 from tests import async_test
 
 
@@ -60,6 +60,7 @@ class BuildTest(TestCase):
         await slave.Slave.drop_collection()
         await repository.RepositoryRevision.drop_collection()
         await repository.Repository.drop_collection()
+        await users.User.drop_collection()
 
     @async_test
     async def test_to_json(self):
@@ -122,10 +123,13 @@ class BuildTest(TestCase):
         self.assertEqual(expected, build.output)
 
     async def _create_test_data(self):
-        self.repo = repository.Repository(name='bla', url='git@bla.com')
+        self.owner = users.User(email='a@a.com', password='asfd')
+        await self.owner.save()
+        self.repo = repository.Repository(name='bla', url='git@bla.com',
+                                          owner=self.owner)
         await self.repo.save()
         self.slave = slave.Slave(name='sla', host='localhost', port=1234,
-                                 token='123')
+                                 token='123', owner=self.owner)
         await self.slave.save()
         self.builder = build.Builder(repository=self.repo, name='builder-bla')
         await self.builder.save()
@@ -282,10 +286,13 @@ class BuildSetTest(TestCase):
         self.assertEqual(len(builds), 1)
 
     async def _create_test_data(self):
-        self.repo = repository.Repository(name='bla', url='git@bla.com')
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
+        self.repo = repository.Repository(name='bla', url='git@bla.com',
+                                          owner=self.owner)
         await self.repo.save()
         self.slave = slave.Slave(name='sla', host='localhost', port=1234,
-                                 token='123')
+                                 token='123', owner=self.owner)
         await self.slave.save()
         self.builder = build.Builder(repository=self.repo, name='builder-bla')
         self.other_builder = build.Builder(
@@ -632,13 +639,15 @@ class BuildManagerTest(TestCase):
         self.assertFalse(self.repo.build_manager._is_connected_to_signals)
 
     async def _create_test_data(self):
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
         self.slave = slave.Slave(host='127.0.0.1', port=7777, name='slave',
-                                 token='123')
+                                 token='123', owner=self.owner)
         self.slave.build = asyncio.coroutine(lambda x: None)
         await self.slave.save()
         self.repo = repository.Repository(
             name='reponame', url='git@somewhere', update_seconds=300,
-            vcs_type='git', slaves=[self.slave])
+            vcs_type='git', slaves=[self.slave], owner=self.owner)
 
         await self.repo.save()
 
@@ -670,7 +679,8 @@ class BuildManagerTest(TestCase):
 
         self.other_repo = repository.Repository(
             name='otherreponame', url='git@somewhere', update_seconds=300,
-            vcs_type='git', slaves=[self.slave])
+            vcs_type='git', slaves=[self.slave],
+            owner=self.owner)
 
         await self.other_repo.save()
 
@@ -686,8 +696,11 @@ class BuilderTest(TestCase):
 
     @async_test
     async def test_create(self):
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
         repo = repository.Repository(name='bla', url='git@bla.com',
-                                     update_seconds=300, vcs_type='git')
+                                     update_seconds=300, vcs_type='git',
+                                     owner=self.owner)
         await repo.save()
 
         builder = await build.Builder.create(repository=repo, name='b1')
@@ -695,8 +708,12 @@ class BuilderTest(TestCase):
 
     @async_test
     async def test_get(self):
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
+
         repo = repository.Repository(name='bla', url='git@bla.com',
-                                     update_seconds=300, vcs_type='git')
+                                     update_seconds=300, vcs_type='git',
+                                     owner=self.owner)
         await repo.save()
         builder = await build.Builder.create(repository=repo, name='b1')
 
@@ -719,8 +736,12 @@ class BuilderTest(TestCase):
     async def test_get_or_create_with_get(self):
         create = mock.MagicMock()
         build.Builder.create = asyncio.coroutine(lambda *a, **kw: create())
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
+
         repo = repository.Repository(name='bla', url='git@bla.com',
-                                     update_seconds=300, vcs_type='git')
+                                     update_seconds=300, vcs_type='git',
+                                     owner=self.owner)
         await repo.save()
         builder = await build.Builder.create(repository=repo, name='b1')
 
@@ -731,8 +752,12 @@ class BuilderTest(TestCase):
 
     @async_test
     async def test_get_status_without_build(self):
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
+
         repo = repository.Repository(name='bla', url='git@bla.com',
-                                     update_seconds=300, vcs_type='git')
+                                     update_seconds=300, vcs_type='git',
+                                     owner=self.owner)
         await repo.save()
         builder = await build.Builder.create(repository=repo, name='b1')
         status = await builder.get_status()
@@ -741,11 +766,14 @@ class BuilderTest(TestCase):
 
     @async_test
     async def test_get_status(self):
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
         repo = repository.Repository(name='bla', url='git@bla.com',
-                                     update_seconds=300, vcs_type='git')
+                                     update_seconds=300, vcs_type='git',
+                                     owner=self.owner)
         await repo.save()
         slave_inst = slave.Slave(name='bla', host='localhost', port=1234,
-                                 token='123')
+                                 token='123', owner=self.owner)
         await slave_inst.save()
         builder = await build.Builder.create(repository=repo, name='b1')
         buildinst = build.Build(repository=repo, slave=slave_inst,
@@ -770,11 +798,15 @@ class BuilderTest(TestCase):
 
     @async_test
     async def test_to_dict(self):
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
+
         repo = repository.Repository(name='bla', url='git@bla.com',
-                                     update_seconds=300, vcs_type='git')
+                                     update_seconds=300, vcs_type='git',
+                                     owner=self.owner)
         await repo.save()
         slave_inst = slave.Slave(name='bla', host='localhost', port=1234,
-                                 token='123')
+                                 token='123', owner=self.owner)
         await slave_inst.save()
         builder = await build.Builder.create(repository=repo, name='b1')
         objdict = await builder.to_dict()
@@ -783,11 +815,15 @@ class BuilderTest(TestCase):
 
     @async_test
     async def test_to_json(self):
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
+
         repo = repository.Repository(name='bla', url='git@bla.com',
-                                     update_seconds=300, vcs_type='git')
+                                     update_seconds=300, vcs_type='git',
+                                     owner=self.owner)
         await repo.save()
         slave_inst = slave.Slave(name='bla', host='localhost', port=1234,
-                                 token='123')
+                                 token='123', owner=self.owner)
         await slave_inst.save()
         builder = await build.Builder.create(repository=repo, name='b1')
         objdict = build.json.loads((await builder.to_json()))

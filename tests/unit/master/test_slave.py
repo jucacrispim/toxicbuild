@@ -37,7 +37,7 @@ class SlaveTest(TestCase):
     @async_test
     async def setUp(self):
         super().setUp()
-        self.owner = users.User(username='a@a.com', password='adsf')
+        self.owner = users.User(email='a@a.com', password='adsf')
         await self.owner.save()
         self.slave = slave.Slave(name='slave', host='127.0.0.1', port=7777,
                                  token='asdf', owner=self.owner)

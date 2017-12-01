@@ -20,17 +20,20 @@
 import asyncio
 from unittest import mock, TestCase
 from toxicbuild.core.utils import now
-from toxicbuild.master import client, build, repository, slave
+from toxicbuild.master import client, build, repository, slave, users
 from tests import async_test, AsyncMagicMock
 
 
 class BuildClientTest(TestCase):
 
-    def setUp(self):
+    @async_test
+    async def setUp(self):
         super().setUp()
 
         addr, port = '127.0.0.1', 7777
         slave = mock.Mock()
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
         self.client = client.BuildClient(slave, addr, port)
 
     @async_test
@@ -39,6 +42,7 @@ class BuildClientTest(TestCase):
         await repository.Repository.drop_collection()
         await slave.Slave.drop_collection()
         await build.Builder.drop_collection()
+        await users.User.drop_collection()
 
     @async_test
     async def test_healthcheck_not_alive(self):
@@ -118,7 +122,7 @@ class BuildClientTest(TestCase):
         self.client.get_response = gr
 
         slave_inst = slave.Slave(name='slv', host='localhost', port=1234,
-                                 token='123')
+                                 token='123', owner=self.owner)
         await slave_inst.save()
         process = mock.Mock()
 
@@ -126,7 +130,7 @@ class BuildClientTest(TestCase):
 
         repo = repository.Repository(name='repo', url='git@somewhere.com',
                                      slaves=[slave_inst], update_seconds=300,
-                                     vcs_type='git')
+                                     vcs_type='git', owner=self.owner)
         await repo.save()
         revision = repository.RepositoryRevision(
             commit='sdafj', repository=repo, branch='master', commit_date=now,
@@ -184,13 +188,13 @@ class BuildClientTest(TestCase):
         self.client.get_response = gr
 
         slave_inst = slave.Slave(name='slv', host='localhost', port=1234,
-                                 token='123')
+                                 token='123', owner=self.owner)
         await slave_inst.save()
         process = mock.Mock()
 
         repo = repository.Repository(name='repo', url='git@somewhere.com',
                                      slaves=[slave_inst], update_seconds=300,
-                                     vcs_type='git')
+                                     vcs_type='git', owner=self.owner)
         await repo.save()
         revision = repository.RepositoryRevision(
             commit='sdafj', repository=repo, branch='master', commit_date=now,

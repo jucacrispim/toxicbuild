@@ -74,6 +74,9 @@ class OwnedDocument(Document):
         return qs.filter(**kwargs)
 
     async def _check_perms(self, user):
+        if user.is_superuser:
+            return True
+
         owner = await self.owner
         owner_id = DBRef(owner.__class__.__name__.lower(), owner.id)
         member_of = as_db_ref(user, 'member_of')

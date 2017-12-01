@@ -37,7 +37,7 @@ class OwnedDocuentTest(TestCase):
 
     @async_test
     async def setUp(self):
-        self.owner = users.User(username='zezinho@nada.co', password='123')
+        self.owner = users.User(email='zezinho@nada.co', password='123')
         await self.owner.save()
         self.doc = TestDoc(owner=self.owner)
         await self.doc.save()
@@ -49,15 +49,23 @@ class OwnedDocuentTest(TestCase):
         self.assertEqual(doc, self.doc)
 
     @async_test
+    async def test_get_for_user_superuser(self):
+        user = users.User(email='b@b.com', password='123',
+                          is_superuser=True)
+        doc = await TestDoc.get_for_user(
+            user, id=self.doc.id)
+        self.assertEqual(doc, self.doc)
+
+    @async_test
     async def test_get_for_user_denied(self):
-        user = users.User(username='b@b.com', password='123')
+        user = users.User(email='b@b.com', password='123')
         await user.save()
         with self.assertRaises(utils.NotEnoughPerms):
             await TestDoc.get_for_user(user, id=self.doc.id)
 
     @async_test
     async def test_get_for_user_organization(self):
-        user = users.User(username='b@b.com', password='123')
+        user = users.User(email='b@b.com', password='123')
         await user.save()
         org = users.Organization(name='my-org', owner=user)
         await org.save()
@@ -69,7 +77,7 @@ class OwnedDocuentTest(TestCase):
 
     @async_test
     async def test_list_for_user(self):
-        user = users.User(username='b@b.com', password='123')
+        user = users.User(email='b@b.com', password='123')
         await user.save()
         org = users.Organization(name='my-org', owner=user)
         await org.save()
@@ -81,7 +89,7 @@ class OwnedDocuentTest(TestCase):
 
     @async_test
     async def test_list_for_user_no_perms(self):
-        user = users.User(username='b@b.com', password='123')
+        user = users.User(email='b@b.com', password='123')
         await user.save()
         repos = TestDoc.list_for_user(user)
         count = await repos.count()
@@ -89,7 +97,7 @@ class OwnedDocuentTest(TestCase):
 
     @async_test
     async def test_list_for_user_organization(self):
-        user = users.User(username='b@b.com', password='123')
+        user = users.User(email='b@b.com', password='123')
         await user.save()
         org = users.Organization(name='my-org', owner=user)
         await org.save()

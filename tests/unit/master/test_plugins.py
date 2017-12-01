@@ -21,6 +21,7 @@ import asyncio
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 from toxicbuild.core.utils import now
+from toxicbuild.master import users
 from toxicbuild.master.build import BuildSet, Build, Builder, BuildStep
 from toxicbuild.master.repository import Repository, RepositoryRevision
 from toxicbuild.master.slave import Slave
@@ -119,10 +120,12 @@ class MasterPluginTest(TestCase):
             await self.plugin.run(sender)
 
     async def _create_test_data(self):
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
         self.repo = Repository(name='my-test-repo',
                                url='git@somewhere.com/bla.git',
                                update_seconds=300,
-                               vcs_type='git')
+                               vcs_type='git', owner=self.owner)
         await self.repo.save()
         self.plugin = self.plugin_class()
         self.repo.plugins.append(self.plugin)
@@ -134,6 +137,7 @@ class NotificationPlugin(TestCase):
     @async_test
     async def tearDown(self):
         await Repository.drop_collection()
+        await users.User.drop_collection()
 
     @patch.object(plugins.build_started, 'connect', MagicMock())
     @patch.object(plugins.build_finished, 'connect', MagicMock())
@@ -267,10 +271,13 @@ class NotificationPlugin(TestCase):
             await p.send_finished_message(repo, build)
 
     async def _create_test_data(self):
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
+
         self.repo = Repository(name='my-test-repo',
                                url='git@somewere.com/bla.git',
                                update_seconds=300,
-                               vcs_type='git')
+                               vcs_type='git', owner=self.owner)
         await self.repo.save()
         self.plugin = plugins.NotificationPlugin(branches=['master'],
                                                  statuses=['fail', 'success'])
@@ -283,6 +290,7 @@ class SlackPluginTest(TestCase):
     @async_test
     async def tearDown(self):
         await Repository.drop_collection()
+        await users.User.drop_collection()
 
     @patch.object(plugins.requests, 'post', MagicMock())
     @async_test
@@ -343,10 +351,13 @@ class SlackPluginTest(TestCase):
         self.assertFalse(self.plugin._send_message.called)
 
     async def _create_test_data(self):
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
+
         self.repo = Repository(name='my-test-repo',
                                url='git@somewere.com/bla.git',
                                update_seconds=300,
-                               vcs_type='git')
+                               vcs_type='git', owner=self.owner)
         await self.repo.save()
         url = 'https://some-slack-url.bla/xxxx/yyyy'
         self.plugin = plugins.SlackPlugin(branches=['master'],
@@ -361,6 +372,7 @@ class EmailPluginTest(TestCase):
     @async_test
     async def tearDown(self):
         await Repository.drop_collection()
+        await users.User.drop_collection()
 
     @patch.object(mail, 'settings', mock_settings)
     @patch.object(plugins.MailSender, 'connect', AsyncMagicMock())
@@ -399,10 +411,13 @@ class EmailPluginTest(TestCase):
         self.assertTrue(plugins.MailSender.send.called)
 
     async def _create_test_data(self):
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
+
         self.repo = Repository(name='my-test-repo',
                                url='git@somewere.com/bla.git',
                                update_seconds=300,
-                               vcs_type='git')
+                               vcs_type='git', owner=self.owner)
         await self.repo.save()
         self.plugin = plugins.EmailPlugin(branches=['master'],
                                           statuses=['fail', 'success'],
@@ -419,6 +434,7 @@ class CustomWebhookPluginTest(TestCase):
         await Slave.drop_collection()
         await BuildSet.drop_collection()
         await Builder.drop_collection()
+        await users.User.drop_collection()
 
     @patch.object(plugins.requests, 'post', AsyncMagicMock())
     @async_test
@@ -447,10 +463,13 @@ class CustomWebhookPluginTest(TestCase):
         self.assertTrue(self.plugin._send_message.called)
 
     async def _create_test_data(self):
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
+
         self.repo = Repository(name='my-test-repo',
                                url='git@somewere.com/bla.git',
                                update_seconds=300,
-                               vcs_type='git')
+                               vcs_type='git', owner=self.owner)
         await self.repo.save()
         self.plugin = plugins.CustomWebhookPlugin(
             branches=['master'], statuses=['fail', 'success'],
@@ -459,7 +478,7 @@ class CustomWebhookPluginTest(TestCase):
         self.repo.save()
 
         self.slave = Slave(name='sla', host='localhost', port=1234,
-                           token='123')
+                           token='123', owner=self.owner)
         await self.slave.save()
         self.builder = Builder(repository=self.repo, name='builder-bla')
         await self.builder.save()

@@ -23,7 +23,7 @@ from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch
 from toxicbuild.core import utils
 from toxicbuild.master import repository, build, slave, users
-from toxicbuild.master.exceptions import CloneException, NotEnoughPerms
+from toxicbuild.master.exceptions import CloneException
 from tests import async_test, AsyncMagicMock
 
 
@@ -41,7 +41,7 @@ class RepositoryTest(TestCase):
     @async_test
     async def setUp(self):
         super(RepositoryTest, self).setUp()
-        self.owner = users.User(username='zezinho@nada.co', password='123')
+        self.owner = users.User(email='zezinho@nada.co', password='123')
         await self.owner.save()
         self.repo = repository.Repository(
             name='reponame', url="git@somewhere.com/project.git",
@@ -83,7 +83,8 @@ class RepositoryTest(TestCase):
     @async_test
     async def test_create(self):
         slave_inst = await slave.Slave.create(name='name', host='bla.com',
-                                                   port=1234, token='123')
+                                              port=1234, token='123',
+                                              owner=self.owner)
         repo = await repository.Repository.create(
             'reponame', 'git@somewhere.com', self.owner,
             300, 'git', slaves=[slave_inst])
@@ -96,7 +97,8 @@ class RepositoryTest(TestCase):
     @async_test
     async def test_create_with_branches(self):
         slave_inst = await slave.Slave.create(name='name', host='bla.com',
-                                              port=1234, token='123;_')
+                                              port=1234, token='123;_',
+                                              owner=self.owner)
         branches = [repository.RepositoryBranch(name='branch{}'.format(str(i)),
                                                 notify_only_latest=bool(i))
                     for i in range(3)]
@@ -135,7 +137,8 @@ class RepositoryTest(TestCase):
     @async_test
     async def test_get(self):
         slave_inst = await slave.Slave.create(name='name', host='bla.com',
-                                                   port=1234, token='123')
+                                              port=1234, token='123',
+                                              owner=self.owner)
         old_repo = await repository.Repository.create(
             'reponame', 'git@somewhere.com', self.owner, 300, 'git',
             slaves=[slave_inst])
@@ -201,7 +204,8 @@ class RepositoryTest(TestCase):
         slave = await repository.Slave.create(name='name',
                                               host='127.0.0.1',
                                               port=7777,
-                                              token='123')
+                                              token='123',
+                                              owner=self.owner)
 
         await self.repo.add_slave(slave)
         slaves = await self.repo.slaves
@@ -213,7 +217,8 @@ class RepositoryTest(TestCase):
         slave = await repository.Slave.create(name='name',
                                               host='127.0.0.1',
                                               port=7777,
-                                              token='123')
+                                              token='123',
+                                              owner=self.owner)
         await self.repo.add_slave(slave)
         await self.repo.remove_slave(slave)
 
@@ -481,9 +486,10 @@ class RepositoryTest(TestCase):
         self.builder = await build.Builder.create(name='builder0',
                                                        repository=self.repo)
         self.slave = await slave.Slave.create(name='slave',
-                                                   host='localhost',
-                                                   port=1234,
-                                                   token='asdf')
+                                              host='localhost',
+                                              port=1234,
+                                              token='asdf',
+                                              owner=self.owner)
         self.revs = []
 
         for r in range(2):
@@ -536,7 +542,7 @@ class RepositoryRevisionTest(TestCase):
 
     @async_test
     async def test_get(self):
-        user = users.User(username='a@a.com', password='bla')
+        user = users.User(email='a@a.com', password='bla')
         await user.save()
         repo = repository.Repository(name='bla', url='bla@bl.com/aaa',
                                      owner=user)

@@ -20,7 +20,7 @@
 import asyncio
 import datetime
 from unittest import mock, TestCase
-from toxicbuild.master import pollers, repository
+from toxicbuild.master import pollers, repository, users
 from toxicbuild.master.exceptions import CloneException
 from tests import async_test
 
@@ -28,10 +28,14 @@ from tests import async_test
 class GitPollerTest(TestCase):
 
     @mock.patch.object(pollers, 'get_vcs', mock.MagicMock())
-    def setUp(self):
+    @async_test
+    async def setUp(self):
         super(GitPollerTest, self).setUp()
+        self.owner = users.User(email='a@a.com', password='adsf')
+        await self.owner.save()
         self.repo = repository.Repository(
-            name='reponame', url='git@somewhere.org/project.git')
+            name='reponame', url='git@somewhere.org/project.git',
+            owner=self.owner)
 
         self.poller = pollers.Poller(
             self.repo, vcs_type='git', workdir='workdir')
@@ -40,6 +44,7 @@ class GitPollerTest(TestCase):
     def tearDown(self):
         yield from repository.RepositoryRevision.drop_collection()
         yield from repository.Repository.drop_collection()
+        yield from users.User.drop_collection()
         super(GitPollerTest, self).tearDown()
 
     @mock.patch.object(pollers.revision_added, 'send', mock.Mock())

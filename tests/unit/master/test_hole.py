@@ -21,6 +21,7 @@ import asyncio
 from datetime import datetime
 from unittest import TestCase
 from unittest.mock import MagicMock, Mock, patch
+from bson import ObjectId
 from toxicbuild.master import hole, build, repository, slave, plugins
 from tests import async_test
 
@@ -39,11 +40,26 @@ class UIHoleTest(TestCase):
         uihole = hole.UIHole(Mock())
         uihole._stream_writer = Mock()
         # no exception means ok
-        user = hole.User(username='ze', password='asdf')
+        user = hole.User(email='ze@ze.con', password='asdf')
         await user.save()
         uihole.data = {'user_id': str(user.id)}
         status = await uihole.client_connected()
         self.assertEqual(status, 0)
+
+    @patch.object(hole.HoleHandler, 'handle', MagicMock())
+    @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
+    @async_test
+    async def test_client_connected_user_does_not_exist(self):
+        send_response = MagicMock()
+        hole.BaseToxicProtocol.send_response = asyncio.coroutine(
+            lambda *a, **kw: send_response(*a, **kw))
+        handle = MagicMock()
+        hole.HoleHandler.handle = asyncio.coroutine(lambda *a, **kw: handle())
+        uihole = hole.UIHole(Mock())
+        uihole._stream_writer = Mock()
+        uihole.data = {}
+        status = await uihole.client_connected()
+        self.assertEqual(status, 2)
 
     @patch.object(hole, 'UIStreamHandler', Mock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
@@ -56,7 +72,7 @@ class UIHoleTest(TestCase):
         uihole.action = 'stream'
         uihole._stream_writer = Mock()
 
-        user = hole.User(username='ze', password='asdf')
+        user = hole.User(email='ze@ze.nada', password='asdf')
         await user.save()
         uihole.data = {'user_id': str(user.id)}
 
@@ -76,7 +92,7 @@ class UIHoleTest(TestCase):
         def handle(*a, **kw):
             raise Exception('bla')
 
-        user = hole.User(username='ze', password='asdf')
+        user = hole.User(email='ze@ndad.con', password='asdf')
         await user.save()
         hole.HoleHandler.handle = handle
         uihole = hole.UIHole(Mock())
@@ -89,13 +105,40 @@ class UIHoleTest(TestCase):
         response_code = response['code']
         self.assertEqual(response_code, 1, response)
 
+    @patch.object(hole.HoleHandler, 'handle', MagicMock())
+    @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
+    @async_test
+    async def test_client_connected_not_enough_perms(self):
+        send_response = MagicMock()
+        hole.BaseToxicProtocol.send_response = asyncio.coroutine(
+            lambda *a, **kw: send_response(*a, **kw))
+
+        @asyncio.coroutine
+        def handle(*a, **kw):
+            raise hole.NotEnoughPerms
+
+        user = hole.User(email='ze@ndad.con', password='asdf')
+        await user.save()
+        hole.HoleHandler.handle = handle
+        uihole = hole.UIHole(Mock())
+        uihole.data = {'user_id': str(user.id)}
+        uihole._stream_writer = Mock()
+
+        await uihole.client_connected()
+
+        response = send_response.call_args[1]
+        response_code = response['code']
+        self.assertEqual(response_code, 3, response)
+
 
 @patch.object(repository.utils, 'log', Mock())
 class HoleHandlerTest(TestCase):
 
     @async_test
     async def setUp(self):
-        self.owner = hole.User(username='asdf', password='asdf')
+        self.owner = hole.User(email='asdf@adsf.con', password='asdf',
+                               allowed_actions=['add_user', 'add_repo',
+                                                'add_slave'])
         await self.owner.save()
 
     @async_test
@@ -145,6 +188,39 @@ class HoleHandlerTest(TestCase):
         with self.assertRaises(hole.UIFunctionNotFound):
             await handler.handle()
 
+    def test_user_is_allowed_not_allowed(self):
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'action', protocol)
+        is_allowed = handler._user_is_allowed('some-thing')
+        self.assertFalse(is_allowed)
+
+    def test_user_is_allowed_superuser(self):
+        protocol = MagicMock()
+        self.owner.is_superuser = True
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'action', protocol)
+        is_allowed = handler._user_is_allowed('some-thing')
+        self.assertTrue(is_allowed)
+
+    @async_test
+    async def test_repo_add_not_enogh_perms(self):
+        name = 'reponameoutro'
+        url = 'git@somehere.com'
+        vcs_type = 'git'
+        update_seconds = 300
+        slaves = ['name']
+        action = 'repo-add'
+        protocol = MagicMock()
+        self.owner.allowed_actions = []
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, action, protocol)
+
+        with self.assertRaises(hole.NotEnoughPerms):
+            await handler.repo_add(name, url, self.owner.id,
+                                   update_seconds, vcs_type,
+                                   slaves)
+
     @async_test
     async def test_repo_add(self):
         await self._create_test_data()
@@ -155,7 +231,9 @@ class HoleHandlerTest(TestCase):
         update_seconds = 300
         slaves = ['name']
         action = 'repo-add'
-        handler = hole.HoleHandler({}, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, action, protocol)
 
         repo = await handler.repo_add(name, url, self.owner.id,
                                       update_seconds, vcs_type,
@@ -180,6 +258,12 @@ class HoleHandlerTest(TestCase):
                                       slaves, parallel_builds=1)
 
         self.assertEqual(repo['repo-add']['parallel_builds'], 1)
+
+    @async_test
+    async def test_get_owner_user_does_not_exist(self):
+        with self.assertRaises(hole.OwnerDoesNotExist):
+            handler = hole.HoleHandler({}, 'action', MagicMock())
+            await handler._get_owner(ObjectId())
 
     @async_test
     async def test_repo_get_with_repo_name(self):
@@ -315,7 +399,6 @@ class HoleHandlerTest(TestCase):
         await handler.repo_update(repo_name=self.repo.name,
                                   update_seconds=60, slaves=slaves)
         repo = await hole.Repository.get(name=self.repo.name)
-
         self.assertEqual(repo.update_seconds, 60)
 
     @async_test
@@ -511,6 +594,20 @@ class HoleHandlerTest(TestCase):
         slave = slave['slave-add']
 
         self.assertTrue(slave['id'])
+
+    @async_test
+    async def test_slave_add_not_enough_perms(self):
+        data = {'host': '127.0.0.1', 'port': 1234}
+        protocol = MagicMock()
+        self.owner.allowed_actions = []
+        protocol.user = self.owner
+        handler = hole.HoleHandler(data, 'slave-add', protocol)
+        with self.assertRaises(hole.NotEnoughPerms):
+            await handler.slave_add(slave_name='slave',
+                                    slave_host='locahost',
+                                    slave_port=1234,
+                                    owner_id=self.owner.id,
+                                    slave_token='1234')
 
     @async_test
     async def test_slave_get(self):
@@ -793,7 +890,7 @@ class UIStreamHandlerTest(TestCase):
         super().setUp()
         protocol = MagicMock()
         self.handler = hole.UIStreamHandler(protocol)
-        self.owner = hole.User(username='aasdf', password='asdf')
+        self.owner = hole.User(email='aasdf@a.com', password='asdf')
         await self.owner.save()
 
     @async_test
