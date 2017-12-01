@@ -37,9 +37,11 @@ class UIHoleTest(TestCase):
         handle = MagicMock()
         hole.HoleHandler.handle = asyncio.coroutine(lambda *a, **kw: handle())
         uihole = hole.UIHole(Mock())
-        uihole.data = {}
         uihole._stream_writer = Mock()
         # no exception means ok
+        user = hole.User(username='ze', password='asdf')
+        await user.save()
+        uihole.data = {'user_id': str(user.id)}
         status = await uihole.client_connected()
         self.assertEqual(status, 0)
 
@@ -51,9 +53,12 @@ class UIHoleTest(TestCase):
         hole.BaseToxicProtocol.send_response = asyncio.coroutine(
             lambda *a, **kw: send_response(*a, **kw))
         uihole = hole.UIHole(Mock())
-        uihole.data = {}
         uihole.action = 'stream'
         uihole._stream_writer = Mock()
+
+        user = hole.User(username='ze', password='asdf')
+        await user.save()
+        uihole.data = {'user_id': str(user.id)}
 
         await uihole.client_connected()
 
@@ -71,9 +76,11 @@ class UIHoleTest(TestCase):
         def handle(*a, **kw):
             raise Exception('bla')
 
+        user = hole.User(username='ze', password='asdf')
+        await user.save()
         hole.HoleHandler.handle = handle
         uihole = hole.UIHole(Mock())
-        uihole.data = {}
+        uihole.data = {'user_id': str(user.id)}
         uihole._stream_writer = Mock()
 
         await uihole.client_connected()
@@ -85,6 +92,11 @@ class UIHoleTest(TestCase):
 
 @patch.object(repository.utils, 'log', Mock())
 class HoleHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.owner = hole.User(username='asdf', password='asdf')
+        await self.owner.save()
 
     @async_test
     async def tearDown(self):
@@ -145,7 +157,8 @@ class HoleHandlerTest(TestCase):
         action = 'repo-add'
         handler = hole.HoleHandler({}, action, MagicMock())
 
-        repo = await handler.repo_add(name, url, update_seconds, vcs_type,
+        repo = await handler.repo_add(name, url, self.owner.id,
+                                      update_seconds, vcs_type,
                                       slaves)
 
         self.assertTrue(repo['repo-add']['id'])
@@ -162,7 +175,8 @@ class HoleHandlerTest(TestCase):
         action = 'repo-add'
         handler = hole.HoleHandler({}, action, MagicMock())
 
-        repo = await handler.repo_add(name, url, update_seconds, vcs_type,
+        repo = await handler.repo_add(name, url, self.owner.id,
+                                      update_seconds, vcs_type,
                                       slaves, parallel_builds=1)
 
         self.assertEqual(repo['repo-add']['parallel_builds'], 1)
@@ -172,7 +186,9 @@ class HoleHandlerTest(TestCase):
         await self._create_test_data()
         repo_name = 'reponame'
         action = 'repo-get'
-        handler = hole.HoleHandler({}, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, action, protocol)
         repo = (await handler.repo_get(repo_name=repo_name))['repo-get']
 
         self.assertEqual(repo['name'], repo_name)
@@ -184,7 +200,9 @@ class HoleHandlerTest(TestCase):
         await self._create_test_data()
         repo_url = 'git@somewhere.com'
         action = 'repo-get'
-        handler = hole.HoleHandler({}, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, action, protocol)
         repo = (await handler.repo_get(repo_url=repo_url))['repo-get']
 
         self.assertEqual(repo['url'], repo_url)
@@ -202,7 +220,9 @@ class HoleHandlerTest(TestCase):
     async def test_repo_remove(self):
         await self._create_test_data()
         action = 'repo-remove'
-        handler = hole.HoleHandler({}, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, action, protocol)
         await handler.repo_remove(repo_name='reponame')
         allrepos = [r.name for r in (
             await hole.Repository.objects.to_list())]
@@ -222,7 +242,9 @@ class HoleHandlerTest(TestCase):
 
         await self._create_test_data()
         action = 'repo-enable-plugin'
-        handler = hole.HoleHandler({}, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, action, protocol)
         await handler.repo_enable_plugin(self.repo.name,
                                          'test-hole-plugin')
         repo = await hole.Repository.get(id=self.repo.id)
@@ -241,7 +263,9 @@ class HoleHandlerTest(TestCase):
 
         await self._create_test_data()
         action = 'repo-enable-plugin'
-        handler = hole.HoleHandler({}, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, action, protocol)
         await handler.repo_enable_plugin(self.repo.name,
                                          'test-hole-plugin')
         kw = {'name': 'test-hole-plugin'}
@@ -252,7 +276,9 @@ class HoleHandlerTest(TestCase):
     @async_test
     async def test_repo_list(self):
         await self._create_test_data()
-        handler = hole.HoleHandler({}, 'repo-list', MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-list', protocol)
         repo_list = (await handler.repo_list())['repo-list']
 
         self.assertEqual(len(repo_list), 2)
@@ -265,7 +291,9 @@ class HoleHandlerTest(TestCase):
         data = {'url': 'git@somewhere.com',
                 'update_seconds': 60}
         action = 'repo-update'
-        handler = hole.HoleHandler(data, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler(data, action, protocol)
         await handler.repo_update(repo_name=self.repo.name,
                                   update_seconds=60)
         repo = await hole.Repository.get(name=self.repo.name)
@@ -279,7 +307,10 @@ class HoleHandlerTest(TestCase):
         data = {'url': 'git@somewhere.com',
                 'update_seconds': 60}
         action = 'repo-update'
-        handler = hole.HoleHandler(data, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+
+        handler = hole.HoleHandler(data, action, protocol)
         slaves = ['name']
         await handler.repo_update(repo_name=self.repo.name,
                                   update_seconds=60, slaves=slaves)
@@ -292,13 +323,16 @@ class HoleHandlerTest(TestCase):
         await self._create_test_data()
 
         slave = await hole.Slave.create(name='name2',
-                                             host='127.0.0.1', port=1234,
-                                             token='asdf')
+                                        host='127.0.0.1', port=1234,
+                                        owner=self.owner,
+                                        token='asdf')
 
         repo_name = self.repo.name
         action = 'repo-add-slave'
 
-        handler = hole.HoleHandler({}, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, action, protocol)
 
         await handler.repo_add_slave(repo_name=repo_name,
                                      slave_name='name2')
@@ -312,10 +346,13 @@ class HoleHandlerTest(TestCase):
         await self._create_test_data()
 
         slave = await hole.Slave.create(name='name2', host='127.0.0.1',
-                                             port=1234, token='123')
+                                        port=1234, token='123',
+                                        owner=self.owner)
         await self.repo.add_slave(slave)
+        protocol = MagicMock()
+        protocol.user = self.owner
 
-        handler = hole.HoleHandler({}, 'repo-remove-slave', MagicMock())
+        handler = hole.HoleHandler({}, 'repo-remove-slave', protocol)
 
         await handler.repo_remove_slave(self.repo.name, slave.name)
 
@@ -328,7 +365,9 @@ class HoleHandlerTest(TestCase):
         await self._create_test_data()
         action = 'repo-add-branch'
 
-        handler = hole.HoleHandler({}, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, action, protocol)
 
         await handler.repo_add_branch(repo_name=self.repo.name,
                                       branch_name='release',
@@ -343,7 +382,9 @@ class HoleHandlerTest(TestCase):
         await self._create_test_data()
         action = 'repo-add-branch'
 
-        handler = hole.HoleHandler({}, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, action, protocol)
 
         await handler.repo_add_branch(repo_name=self.repo.name,
                                       branch_name='release',
@@ -368,7 +409,9 @@ class HoleHandlerTest(TestCase):
             lambda *a, **kw: add_builds_for_slave(*a, **kw))
         (await self.revision.repository).build_manager\
             .get_builders = asyncio.coroutine(lambda s, r: [self.builders[0]])
-        handler = hole.HoleHandler({}, 'repo-start-build', MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-start-build', protocol)
         self.repo.slaves = [self.slave]
         await self.repo.save()
 
@@ -387,7 +430,9 @@ class HoleHandlerTest(TestCase):
         await self._create_test_data()
         hole.HoleHandler._get_builders = MagicMock(
             spec=hole.HoleHandler._get_builders)
-        handler = hole.HoleHandler({}, 'repo-start-build', MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-start-build', protocol)
         self.repo.slaves = [self.slave]
         await self.repo.save()
 
@@ -420,7 +465,9 @@ class HoleHandlerTest(TestCase):
 
         hole.HoleHandler._get_builders = asyncio.coroutine(
             lambda s, r, builders=None: {self.slave: self.builders[0]})
-        handler = hole.HoleHandler({}, 'repo-start-build', MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-start-build', protocol)
         self.repo.slaves = [self.slave]
         await self.repo.save()
 
@@ -441,7 +488,9 @@ class HoleHandlerTest(TestCase):
 
         hole.HoleHandler._get_builders = asyncio.coroutine(
             lambda s, r, builders=None: {self.slave: self.builders[0]})
-        handler = hole.HoleHandler({}, 'repo-start-build', MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-start-build', protocol)
         self.repo.slaves = [self.slave]
         await self.repo.save()
 
@@ -457,6 +506,7 @@ class HoleHandlerTest(TestCase):
         slave = await handler.slave_add(slave_name='slave',
                                         slave_host='locahost',
                                         slave_port=1234,
+                                        owner_id=self.owner.id,
                                         slave_token='1234')
         slave = slave['slave-add']
 
@@ -467,7 +517,9 @@ class HoleHandlerTest(TestCase):
         await self._create_test_data()
         slave_name = 'name'
         action = 'slave-get'
-        handler = hole.HoleHandler({}, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, action, protocol)
         slave = (await handler.slave_get(
             slave_name=slave_name))['slave-get']
 
@@ -478,7 +530,9 @@ class HoleHandlerTest(TestCase):
     async def test_slave_remove(self):
         await self._create_test_data()
         data = {'host': '127.0.0.1', 'port': 7777}
-        handler = hole.HoleHandler(data, 'slave-remove', MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler(data, 'slave-remove', protocol)
         await handler.slave_remove(slave_name='name')
         await asyncio.sleep(0.1)
         self.assertEqual((await hole.Slave.objects.count()), 0)
@@ -486,7 +540,9 @@ class HoleHandlerTest(TestCase):
     @async_test
     async def test_slave_list(self):
         await self._create_test_data()
-        handler = hole.HoleHandler({}, 'slave-list', MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'slave-list', protocol)
         slaves = (await handler.slave_list())['slave-list']
 
         self.assertEqual(len(slaves), 1)
@@ -497,7 +553,9 @@ class HoleHandlerTest(TestCase):
 
         data = {'host': '10.0.0.1', 'slave_name': self.slave.name}
         action = 'slave-update'
-        handler = hole.HoleHandler(data, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler(data, action, protocol)
         await handler.slave_update(slave_name=self.slave.name,
                                    host='10.0.0.1')
         slave = await hole.Slave.get(name=self.slave.name)
@@ -506,7 +564,9 @@ class HoleHandlerTest(TestCase):
     @async_test
     async def test_buildset_list(self):
         await self._create_test_data()
-        handler = hole.HoleHandler({}, 'buildset-list', MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'buildset-list', protocol)
         buildsets = await handler.buildset_list(self.repo.name)
         buildsets = buildsets['buildset-list']
 
@@ -555,7 +615,9 @@ class HoleHandlerTest(TestCase):
 
         data = {'name': 'b0', 'repo-url': self.repo.url}
         action = 'builder-show'
-        handler = hole.HoleHandler(data, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler(data, action, protocol)
         builder = await handler.builder_show(repo_name=self.repo.name,
                                              builder_name='b01')
         builder = builder['builder-show']
@@ -569,7 +631,9 @@ class HoleHandlerTest(TestCase):
 
         data = {'name': 'b0', 'repo-url': self.repo.url}
         action = 'builder-show'
-        handler = hole.HoleHandler(data, action, MagicMock())
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler(data, action, protocol)
         builder = await handler.builder_show(repo_name=self.repo.name,
                                              builder_name='b01',
                                              skip=1, offset=1)
@@ -675,12 +739,12 @@ class HoleHandlerTest(TestCase):
     @patch.object(repository.utils, 'log', Mock())
     async def _create_test_data(self):
         self.slave = hole.Slave(name='name', host='127.0.0.1', port=7777,
-                                token='123')
+                                token='123', owner=self.owner)
         await self.slave.save()
         self.repo = await hole.Repository.create(
-            'reponame', 'git@somewhere.com', 300, 'git')
+            'reponame', 'git@somewhere.com', self.owner, 300, 'git')
         self.other_repo = await hole.Repository.create(
-            'other', 'git@bla.com', 300, 'git')
+            'other', 'git@bla.com', self.owner, 300, 'git')
 
         self.builds = []
         now = datetime.now()
@@ -724,10 +788,13 @@ class HoleHandlerTest(TestCase):
 @patch.object(hole.UIStreamHandler, 'log', Mock())
 class UIStreamHandlerTest(TestCase):
 
-    def setUp(self):
+    @async_test
+    async def setUp(self):
         super().setUp()
         protocol = MagicMock()
         self.handler = hole.UIStreamHandler(protocol)
+        self.owner = hole.User(username='aasdf', password='asdf')
+        await self.owner.save()
 
     @async_test
     async def tearDown(self):
@@ -835,10 +902,12 @@ class UIStreamHandlerTest(TestCase):
     async def test_send_info_step(self):
         testrepo = await repository.Repository.create('name',
                                                       'git@git.nada',
+                                                      self.owner,
                                                       300, 'git')
         testslave = await slave.Slave.create(name='name',
-                                                  host='localhost',
-                                                  port=1234, token='123')
+                                             host='localhost',
+                                             owner=self.owner,
+                                             port=1234, token='123')
 
         testbuilder = await build.Builder.create(name='b1',
                                                       repository=testrepo)
@@ -884,13 +953,15 @@ class UIStreamHandlerTest(TestCase):
     async def test_send_info_build(self):
         testrepo = await repository.Repository.create('name',
                                                       'git@git.nada',
+                                                      self.owner,
                                                       300, 'git')
         testslave = await slave.Slave.create(name='name',
-                                                  host='localhost',
-                                                  port=1234,
-                                                  token='123')
+                                             host='localhost',
+                                             port=1234,
+                                             owner=self.owner,
+                                             token='123')
         testbuilder = await build.Builder.create(name='b1',
-                                                      repository=testrepo)
+                                                 repository=testrepo)
         testbuild = build.Build(repository=testrepo, slave=testslave,
                                 branch='master', named_tree='master',
                                 builder=testbuilder, status='running')
@@ -926,12 +997,14 @@ class UIStreamHandlerTest(TestCase):
     @async_test
     async def test_send_repo_status_info(self):
         testslave = await slave.Slave.create(name='name',
-                                                  host='localhost',
-                                                  port=1234,
-                                                  token='123')
+                                             host='localhost',
+                                             port=1234,
+                                             token='123',
+                                             owner=self.owner)
 
         testrepo = await repository.Repository.create('name',
                                                       'git@git.nada',
+                                                      self.owner,
                                                       300, 'git',
                                                       slaves=[testslave])
         self.CODE = None
@@ -954,12 +1027,14 @@ class UIStreamHandlerTest(TestCase):
     @async_test
     async def test_send_step_output_info(self):
         testslave = await slave.Slave.create(name='name',
-                                                  host='localhost',
-                                                  port=1234,
-                                                  token='123')
+                                             host='localhost',
+                                             port=1234,
+                                             owner=self.owner,
+                                             token='123')
 
         testrepo = await repository.Repository.create('name',
                                                       'git@git.nada',
+                                                      self.owner,
                                                       300, 'git',
                                                       slaves=[testslave])
 

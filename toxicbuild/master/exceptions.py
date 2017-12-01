@@ -15,3 +15,7 @@ class DBError(Exception):
 
 class NotEnoughPerms(Exception):
     pass
+
+
+class OwnerDoesNotExist(Exception):
+    pass

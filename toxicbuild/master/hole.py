@@ -32,16 +32,22 @@ from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder
 from toxicbuild.master.repository import Repository, RepositoryRevision
-from toxicbuild.master.slave import Slave
-from toxicbuild.master.exceptions import UIFunctionNotFound
+from toxicbuild.master.exceptions import (UIFunctionNotFound,
+                                          OwnerDoesNotExist, NotEnoughPerms)
 from toxicbuild.master.plugins import MasterPlugin
+from toxicbuild.master.slave import Slave
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,
                                        repo_status_changed, build_added,
                                        step_output_arrived)
+from toxicbuild.master.users import User, Organization
 
 
 class UIHole(BaseToxicProtocol, LoggerMixin):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = None
 
     salt = settings.BCRYPT_SALT
     encrypted_token = settings.ACCESS_TOKEN
@@ -49,19 +55,39 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
     async def client_connected(self):
 
         data = self.data.get('body') or {}
-        if self.action == 'stream':
-            handler = UIStreamHandler(self)
-        else:
-            handler = HoleHandler(data, self.action, self)
-
         try:
-            await handler.handle()
-            status = 0
-        except Exception:
-            msg = traceback.format_exc()
-            status = 1
-            await self.send_response(code=1, body={'error': msg})
+            user_id = self.data.get('user_id', '')
+            if not user_id:
+                raise User.DoesNotExist
+            self.user = await User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            msg = 'User {} does not exist'.format(user_id)
+            self.log(msg, level='warning')
+            status = 2
+            await self.send_response(code=status, body={'error': msg})
             self.close_connection()
+
+        else:
+            if self.action == 'stream':
+                handler = UIStreamHandler(self)
+            else:
+                handler = HoleHandler(data, self.action, self)
+
+            try:
+                await handler.handle()
+                status = 0
+
+            except NotEnoughPerms:
+                msg = 'User {} does not have enogh permissions.'.format(
+                    str(self.user.id))
+                self.log(msg, level='warning')
+                status = 3
+                await self.send_response(code=status, body={'error': msg})
+            except Exception:
+                msg = traceback.format_exc()
+                status = 1
+                await self.send_response(code=1, body={'error': msg})
+                self.close_connection()
 
         return status
 
@@ -131,12 +157,14 @@ class HoleHandler:
 
         return siginfo
 
-    async def repo_add(self, repo_name, repo_url, update_seconds, vcs_type,
-                       slaves=None, parallel_builds=None):
+    async def repo_add(self, repo_name, repo_url, owner_id,
+                       update_seconds, vcs_type, slaves=None,
+                       parallel_builds=None):
         """ Adds a new repository and first_run() it.
 
         :param repo_name: Repository name
         :param repo_url: Repository vcs url
+        :param owner_id: Id of the repository's owner.
         :param update_seconds: Time to poll for changes
         :param vcs_type: Type of vcs being used.
         :param slaves: A list of slave names.
@@ -155,11 +183,25 @@ class HoleHandler:
         if parallel_builds:
             kw['parallel_builds'] = parallel_builds
 
+        owner = await self._get_owner(owner_id)
+
         repo = await Repository.create(
-            repo_name, repo_url, update_seconds, vcs_type,
+            repo_name, repo_url, owner, update_seconds, vcs_type,
             slaves, **kw)
         repo_dict = await self._get_repo_dict(repo)
         return {'repo-add': repo_dict}
+
+    async def _get_owner(self, owner_id):
+        owner_types = [User, Organization]
+        for owner_type in owner_types:
+            try:
+                owner = await owner_type.objects.get(id=owner_id)
+                return owner
+            except owner_type.DoesNotExist:
+                pass
+
+        msg = 'The owner {} does not exist'.format(owner_id)
+        raise OwnerDoesNotExist(msg)
 
     async def repo_get(self, repo_name=None, repo_url=None):
         """Shows information about one specific repository. One of
@@ -178,7 +220,7 @@ class HoleHandler:
         if repo_url:
             kw['url'] = repo_url
 
-        repo = await Repository.get(**kw)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
         repo_dict = await self._get_repo_dict(repo)
         return {'repo-get': repo_dict}
 
@@ -187,16 +229,17 @@ class HoleHandler:
 
         :param repo_name: Repository name."""
 
-        repo = await Repository.get(name=repo_name)
+        repo = await Repository.get_for_user(self.protocol.user,
+                                             name=repo_name)
         await repo.remove()
         return {'repo-remove': 'ok'}
 
     async def repo_list(self):
         """ Lists all repositories. """
 
-        repos = await Repository.objects.all().to_list()
+        repos = Repository.list_for_user(self.protocol.user)
         repo_list = []
-        for repo in repos:
+        async for repo in repos:
 
             repo_dict = await self._get_repo_dict(repo)
             repo_list.append(repo_dict)
@@ -214,7 +257,8 @@ class HoleHandler:
             slaves_instances = await qs.to_list()
             kwargs['slaves'] = slaves_instances
 
-        repo = await Repository.get(name=repo_name)
+        repo = await Repository.get_for_user(self.protocol.user,
+                                             name=repo_name)
         [setattr(repo, k, v) for k, v in kwargs.items()]
 
         await repo.save()
@@ -226,17 +270,21 @@ class HoleHandler:
         :param repo_name: Repository name.
         :param slave_name: Slave name."""
 
-        repo = await Repository.get(name=repo_name)
-        slave = await Slave.get(name=slave_name)
+        repo = await Repository.get_for_user(self.protocol.user,
+                                             name=repo_name)
+        slave = await Slave.get_for_user(self.protocol.user,
+                                         name=slave_name)
         await repo.add_slave(slave)
         return {'repo-add-slave': 'ok'}
 
     async def repo_remove_slave(self, repo_name, slave_name):
         """ Removes a slave from toxicbuild. """
 
-        repo = await Repository.get(name=repo_name)
+        repo = await Repository.get_for_user(self.protocol.user,
+                                             name=repo_name)
 
-        slave = await Slave.get(name=slave_name)
+        slave = await Slave.get_for_user(self.protocol.user,
+                                         name=slave_name)
         await repo.remove_slave(slave)
         return {'repo-remove-slave': 'ok'}
 
@@ -248,7 +296,8 @@ class HoleHandler:
         :param branch_name: Branch's name
         :notify_only_latest: If True only the latest commit in the
           branch will trigger a build."""
-        repo = await Repository.get(name=repo_name)
+        repo = await Repository.get_for_user(self.protocol.user,
+                                             name=repo_name)
         await repo.add_or_update_branch(branch_name, notify_only_latest)
         return {'repo-add-branch': 'ok'}
 
@@ -257,7 +306,8 @@ class HoleHandler:
         :param repo_name: Repository name
         :param branch_name: Branch's name."""
 
-        repo = await Repository.get(name=repo_name)
+        repo = await Repository.get_for_user(self.protocol.user,
+                                             name=repo_name)
         await repo.remove_branch(branch_name)
         return {'repo-remove-branch': 'ok'}
 
@@ -268,7 +318,8 @@ class HoleHandler:
         :param plugin_name: Plugin name
         :param kwargs: kwargs passed to the plugin."""
 
-        repo = await Repository.get(name=repo_name)
+        repo = await Repository.get_for_user(self.protocol.user,
+                                             name=repo_name)
         await repo.enable_plugin(plugin_name, **kwargs)
         return {'repo-enable-plugin': 'ok'}
 
@@ -278,7 +329,8 @@ class HoleHandler:
         :param repo_name: Repository name.
         :param kwargs: kwargs passed to the plugin"""
 
-        repo = await Repository.get(name=repo_name)
+        repo = await Repository.get_for_user(self.protocol.user,
+                                             name=repo_name)
         await repo.disable_plugin(**kwargs)
         return {'repo-disable-plugin': 'ok'}
 
@@ -287,7 +339,8 @@ class HoleHandler:
         """ Starts a(some) build(s) in a given repository. """
         # Mutable stuff on method declaration. Sin!!! Take that, PyLint!
 
-        repo = await Repository.get(name=repo_name)
+        repo = await Repository.get_for_user(self.protocol.user,
+                                             name=repo_name)
 
         slave_instances = []
         for sname in slaves:
@@ -326,26 +379,37 @@ class HoleHandler:
 
         return {'repo-start-build': '{} builds added'.format(builds_count)}
 
-    async def slave_add(self, slave_name, slave_host, slave_port, slave_token):
-        """ Adds a new slave to toxicbuild. """
+    async def slave_add(self, slave_name, slave_host, slave_port, slave_token,
+                        owner_id):
+        """ Adds a new slave to toxicbuild.
 
+        :param slave_name: A name for the slave,
+        :param slave_host: Host where the slave is.
+        :param slave_port: Port to connect to the slave
+        :param slave_token: Auth token for the slave.
+        :param owner_id: Slave's owner id."""
+
+        owner = await self._get_owner(owner_id)
         slave = await Slave.create(name=slave_name, host=slave_host,
-                                   port=slave_port, token=slave_token)
+                                   port=slave_port, token=slave_token,
+                                   owner=owner)
 
         slave_dict = self._get_slave_dict(slave)
         return {'slave-add': slave_dict}
 
     async def slave_get(self, slave_name):
-        """Returns information about on specific slave"""
+        """Returns information about one specific slave"""
 
-        slave = await Slave.get(name=slave_name)
+        slave = await Slave.get_for_user(self.protocol.user,
+                                         name=slave_name)
         slave_dict = self._get_slave_dict(slave)
         return {'slave-get': slave_dict}
 
     async def slave_remove(self, slave_name):
         """ Removes a slave from toxicbuild. """
 
-        slave = await Slave.get(name=slave_name)
+        slave = await Slave.get_for_user(self.protocol.user,
+                                         name=slave_name)
 
         await slave.delete()
 
@@ -354,10 +418,10 @@ class HoleHandler:
     async def slave_list(self):
         """ Lists all slaves. """
 
-        slaves = await Slave.objects.all().to_list()
+        slaves = Slave.list_for_user(self.protocol.user)
         slave_list = []
 
-        for slave in slaves:
+        async for slave in slaves:
             slave_dict = self._get_slave_dict(slave)
             slave_list.append(slave_dict)
 
@@ -366,7 +430,7 @@ class HoleHandler:
     async def slave_update(self, slave_name, **kwargs):
         """Updates infomation of a slave."""
 
-        slave = await Slave.get(name=slave_name)
+        slave = await Slave.get_for_user(self.protocol.user, name=slave_name)
         [setattr(slave, k, v) for k, v in kwargs.items()]
 
         await slave.save()
@@ -383,7 +447,8 @@ class HoleHandler:
 
         buildsets = BuildSet.objects.no_dereference()
         if repo_name:
-            repository = await Repository.get(name=repo_name)
+            repository = await Repository.get_for_user(
+                self.protocol.user, name=repo_name)
             buildsets = buildsets.filter(repository=repository)
 
         buildsets = buildsets.order_by('-created')
@@ -438,7 +503,8 @@ class HoleHandler:
         """
 
         kwargs = {'name': builder_name}
-        repo = await Repository.get(name=repo_name)
+        repo = await Repository.get_for_user(self.protocol.user,
+                                             name=repo_name)
         kwargs.update({'repository': repo})
 
         builder = await Builder.get(**kwargs)
