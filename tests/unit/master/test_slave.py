@@ -23,7 +23,7 @@ from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch
 from uuid import uuid4
 from toxicbuild.core.utils import datetime2string
-from toxicbuild.master import slave, build, repository
+from toxicbuild.master import slave, build, repository, users
 from tests import async_test, AsyncMagicMock
 
 
@@ -34,10 +34,13 @@ from tests import async_test, AsyncMagicMock
 @patch.object(slave, 'step_output_arrived', Mock())
 class SlaveTest(TestCase):
 
-    def setUp(self):
+    @async_test
+    async def setUp(self):
         super().setUp()
+        self.owner = users.User(username='a@a.com', password='adsf')
+        await self.owner.save()
         self.slave = slave.Slave(name='slave', host='127.0.0.1', port=7777,
-                                 token='asdf')
+                                 token='asdf', owner=self.owner)
 
     @async_test
     async def tearDown(self):
@@ -51,40 +54,44 @@ class SlaveTest(TestCase):
     @async_test
     async def test_create(self):
         slave_inst = await slave.Slave.create(name='name',
-                                                   host='somewhere.net',
-                                                   port=7777,
-                                                   token='asdf')
+                                              host='somewhere.net',
+                                              port=7777,
+                                              token='asdf',
+                                              owner=self.owner)
         self.assertTrue(slave_inst.id)
 
     @async_test
     async def test_to_dict(self):
         slave_inst = await slave.Slave.create(name='name',
-                                                   host='somewhere.net',
-                                                   port=7777,
-                                                   token='asdf')
+                                              host='somewhere.net',
+                                              port=7777,
+                                              token='asdf',
+                                              owner=self.owner)
         slave_dict = slave_inst.to_dict()
         self.assertTrue(slave_dict['id'])
 
     @async_test
     async def test_to_dict_id_as_str(self):
         slave_inst = await slave.Slave.create(name='name',
-                                                   host='somewhere.net',
-                                                   port=7777,
-                                                   token='asdf')
+                                              host='somewhere.net',
+                                              port=7777,
+                                              token='asdf',
+                                              owner=self.owner)
         slave_dict = slave_inst.to_dict(id_as_str=True)
         self.assertIsInstance(slave_dict['id'], str)
 
     @async_test
     async def test_get(self):
         slave_inst = await slave.Slave.create(name='name',
-                                                   host='somewhere.net',
-                                                   port=7777,
-                                                   token='asdf')
+                                              host='somewhere.net',
+                                              port=7777,
+                                              token='asdf',
+                                              owner=self.owner)
         slave_id = slave_inst.id
 
         slave_inst = await slave.Slave.get(name='name',
-                                                host='somewhere.net',
-                                                port=7777)
+                                           host='somewhere.net',
+                                           port=7777)
 
         self.assertEqual(slave_id, slave_inst.id)
 
@@ -311,7 +318,7 @@ class SlaveTest(TestCase):
         await self.slave.save()
         self.repo = repository.Repository(
             name='reponame', url='git@somewhere', update_seconds=300,
-            vcs_type='git', slaves=[self.slave])
+            vcs_type='git', slaves=[self.slave], owner=self.owner)
 
         await self.repo.save()
 

@@ -18,7 +18,6 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import traceback
-from mongomotor import Document
 from mongomotor.fields import (StringField, IntField, BooleanField)
 from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
 from toxicbuild.core.utils import string2datetime, LoggerMixin, now
@@ -27,9 +26,10 @@ from toxicbuild.master.client import get_build_client
 from toxicbuild.master.signals import (build_started, build_finished,
                                        step_started, step_finished,
                                        step_output_arrived)
+from toxicbuild.master.utils import OwnedDocument
 
 
-class Slave(Document, LoggerMixin):
+class Slave(OwnedDocument, LoggerMixin):
 
     """ Slaves are the entities that actualy do the work
     of execute steps. The comunication to slaves is through
