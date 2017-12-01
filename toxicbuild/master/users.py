@@ -21,6 +21,7 @@ from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, UUIDField, ListField,
                                ReferenceField, EmbeddedDocumentListField)
 from mongomotor.queryset import PULL
+from toxicbuild.master.utils import as_db_ref
 
 
 class Organization(Document):
@@ -35,6 +36,11 @@ class Organization(Document):
 
         await user.update(push__member_of=self)
 
+    async def remove_user(self, user):
+        """Removes a user from the organization."""
+
+        await user.update(pull__member_of=self)
+
     @property
     def users(self):
         return User.objects.filter(member_of=self)
@@ -43,7 +49,10 @@ class Organization(Document):
         await super().save(*args, **kwargs)
         # we set it here so we can query for user's repo in a easier way
         owner = await self.owner
-        await owner.update(push__organizations=self)
+        # do not deref to avoid a query for all orgs
+        organizations = as_db_ref(owner, 'organizations')
+        if ('organization', self.id) not in organizations:
+            await owner.update(push__organizations=self)
 
 
 class User(Document):

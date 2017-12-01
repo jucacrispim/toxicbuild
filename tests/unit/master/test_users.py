@@ -44,6 +44,20 @@ class OrganizationTest(TestCase):
         self.assertIn(org, orgs)
 
     @async_test
+    async def test_remove_user(self):
+        owner = users.User(username='ze@ze.com')
+        await owner.save()
+        user = users.User(username='outro@outro.com')
+        await user.save()
+        org = users.Organization(name='org', owner=owner)
+        await org.save()
+        await org.add_user(user)
+        await org.remove_user(user)
+        await user.reload()
+        orgs = await user.member_of
+        self.assertNotIn(org, orgs)
+
+    @async_test
     async def test_users(self):
         owner = users.User(username='ze@ze.com')
         await owner.save()
