@@ -22,8 +22,8 @@ import datetime
 from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch
 from toxicbuild.core import utils
-from toxicbuild.master import repository, build, slave
-from toxicbuild.master.exceptions import CloneException
+from toxicbuild.master import repository, build, slave, users
+from toxicbuild.master.exceptions import CloneException, NotEnoughPerms
 from tests import async_test, AsyncMagicMock
 
 
@@ -41,9 +41,13 @@ class RepositoryTest(TestCase):
     @async_test
     async def setUp(self):
         super(RepositoryTest, self).setUp()
+        self.owner = users.User(username='zezinho@nada.co', password='123')
+        await self.owner.save()
         self.repo = repository.Repository(
             name='reponame', url="git@somewhere.com/project.git",
-            vcs_type='git', update_seconds=100, clone_status='ready')
+            vcs_type='git', update_seconds=100, clone_status='ready',
+            owner=self.owner)
+        await self.repo.save()
 
     @async_test
     async def tearDown(self):
@@ -52,6 +56,7 @@ class RepositoryTest(TestCase):
         await slave.Slave.drop_collection()
         await build.Builder.drop_collection()
         repository.Repository._plugins_instances = {}
+        await users.User.drop_collection()
         super(RepositoryTest, self).tearDown()
 
     @async_test
@@ -80,7 +85,8 @@ class RepositoryTest(TestCase):
         slave_inst = await slave.Slave.create(name='name', host='bla.com',
                                                    port=1234, token='123')
         repo = await repository.Repository.create(
-            'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave_inst])
+            'reponame', 'git@somewhere.com', self.owner,
+            300, 'git', slaves=[slave_inst])
 
         self.assertTrue(repo.id)
         slaves = await repo.slaves
@@ -96,8 +102,8 @@ class RepositoryTest(TestCase):
                     for i in range(3)]
 
         repo = await repository.Repository.create(
-            'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave_inst],
-            branches=branches)
+            'reponame', 'git@somewhere.com', self.owner, 300, 'git',
+            slaves=[slave_inst], branches=branches)
 
         self.assertTrue(repo.id)
         self.assertEqual(len(repo.branches), 3)
@@ -107,7 +113,7 @@ class RepositoryTest(TestCase):
     @async_test
     async def test_remove(self):
         repo = await repository.Repository.create(
-            'reponame', 'git@somewhere.com', 300, 'git')
+            'reponame', 'git@somewhere.com', self.owner, 300, 'git')
         repo.schedule()
         builder = repository.Builder(name='b1', repository=repo)
         await builder.save()
@@ -131,7 +137,8 @@ class RepositoryTest(TestCase):
         slave_inst = await slave.Slave.create(name='name', host='bla.com',
                                                    port=1234, token='123')
         old_repo = await repository.Repository.create(
-            'reponame', 'git@somewhere.com', 300, 'git', slaves=[slave_inst])
+            'reponame', 'git@somewhere.com', self.owner, 300, 'git',
+            slaves=[slave_inst])
         new_repo = await repository.Repository.get(url=old_repo.url)
 
         slaves = await new_repo.slaves
@@ -494,7 +501,8 @@ class RepositoryTest(TestCase):
         # creating another repo just to test the known branches stuff.
         self.other_repo = repository.Repository(name='bla', url='/bla/bla',
                                                 update_seconds=300,
-                                                vcs_type='git')
+                                                vcs_type='git',
+                                                owner=self.owner)
         await self.other_repo.save()
 
         for r in range(2):
@@ -524,10 +532,14 @@ class RepositoryRevisionTest(TestCase):
     async def tearDown(self):
         await repository.RepositoryRevision.drop_collection()
         await repository.Repository.drop_collection()
+        await users.User.drop_collection()
 
     @async_test
     async def test_get(self):
-        repo = repository.Repository(name='bla', url='bla@bl.com/aaa')
+        user = users.User(username='a@a.com', password='bla')
+        await user.save()
+        repo = repository.Repository(name='bla', url='bla@bl.com/aaa',
+                                     owner=user)
         await repo.save()
         rev = repository.RepositoryRevision(repository=repo,
                                             commit='asdfasf',

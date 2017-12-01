@@ -11,3 +11,7 @@ class CloneException(Exception):
 
 class DBError(Exception):
     pass
+
+
+class NotEnoughPerms(Exception):
+    pass

@@ -26,7 +26,7 @@ from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, IntField, ReferenceField,
                                DateTimeField, ListField, BooleanField,
-                               EmbeddedDocumentField)
+                               EmbeddedDocumentField, GenericReferenceField)
 from toxicbuild.core import utils
 from toxicbuild.master.build import BuildSet, Builder, BuildManager
 from toxicbuild.master.exceptions import CloneException
@@ -35,6 +35,7 @@ from toxicbuild.master.pollers import Poller
 from toxicbuild.master.signals import (build_started, build_finished,
                                        repo_status_changed)
 from toxicbuild.master.slave import Slave
+from toxicbuild.master.utils import OwnedDocument
 
 
 # The thing here is: When a repository poller is scheduled, I need to
@@ -54,7 +55,7 @@ class RepositoryBranch(EmbeddedDocument):
                 'notify_only_latest': self.notify_only_latest}
 
 
-class Repository(Document, utils.LoggerMixin):
+class Repository(OwnedDocument, utils.LoggerMixin):
     """Repository is where you store your code and where toxicbuild
     looks for incomming changes."""
 
@@ -153,12 +154,15 @@ class Repository(Document, utils.LoggerMixin):
         return status
 
     @classmethod
-    async def create(cls, name, url, update_seconds, vcs_type, slaves=None,
-                     branches=None, parallel_builds=None):
+    async def create(cls, name, url, owner, update_seconds, vcs_type,
+                     slaves=None, branches=None, parallel_builds=None):
         """ Creates a new repository and schedule it.
 
         :param name: Repository name.
         :param url: Repository version control system url
+        :param owner: :class:`~toxicbuild.master.users.User` or
+          :class:`~toxicbuild.master.users.Organization` that owns the
+          repository.
         :param update_seconds: How long we should wait until
           poll the changes again.
         :param vcs_type: Which type of version control system this
@@ -173,7 +177,7 @@ class Repository(Document, utils.LoggerMixin):
 
         repo = cls(url=url, update_seconds=update_seconds, vcs_type=vcs_type,
                    slaves=slaves, name=name, branches=branches,
-                   parallel_builds=parallel_builds)
+                   parallel_builds=parallel_builds, owner=owner)
         await repo.save()
         repo.schedule()
         return repo
