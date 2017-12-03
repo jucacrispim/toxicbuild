@@ -163,6 +163,34 @@ class HoleHandler:
             return True
         return False
 
+    async def user_add(self, email, password, allowed_actions, username=None):
+        """Adds a new user.
+
+        :param email: User email.
+        :param password: User password
+        :param allowed_actions: What the user can do.
+        :param username: Username for the user."""
+
+        if not self._user_is_allowed('add_user'):
+            raise NotEnoughPerms
+
+        user = User(email=email, allowed_actions=allowed_actions,
+                    username=username)
+        user.set_password(password)
+        await user.save()
+        return {'user-add': {'id': str(user.id), 'username': user.username,
+                             'email': user.email}}
+
+    async def user_remove(self, **kwargs):
+        """Removes a user from the system."""
+
+        if not self._user_is_allowed('remove_user'):
+            raise NotEnoughPerms
+
+        user = await User.objects.get(**kwargs)
+        await user.delete()
+        return {'user-remove': 'ok'}
+
     async def repo_add(self, repo_name, repo_url, owner_id,
                        update_seconds, vcs_type, slaves=None,
                        parallel_builds=None):

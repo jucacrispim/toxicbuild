@@ -22,6 +22,8 @@ from mongomotor.fields import (StringField, UUIDField, ListField,
                                ReferenceField, EmbeddedDocumentListField,
                                BooleanField, EmailField)
 from mongomotor.queryset import PULL
+from toxicbuild.core.utils import bcrypt_string
+from toxicbuild.master import settings
 from toxicbuild.master.utils import as_db_ref
 
 
@@ -82,6 +84,10 @@ class User(Document):
         r = await super().delete(*args, **kwargs)
         await Organization.objects.filter(owner=self).delete()
         return r
+
+    def set_password(self, password):
+        salt = settings.BCRYPT_SALT
+        self.password = bcrypt_string(password, salt)
 
 
 class Team(EmbeddedDocument):

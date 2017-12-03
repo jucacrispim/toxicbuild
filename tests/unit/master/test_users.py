@@ -107,6 +107,14 @@ class OrganizationTest(TestCase):
         orgs = await owner.organizations
         self.assertFalse(orgs)
 
+    @async_test
+    async def test_set_password(self):
+        user = users.User(email='a@a.com')
+        user.set_password('asdf')
+        await user.save()
+        bpasswd = users.bcrypt_string('asdf', users.settings.BCRYPT_SALT)
+        self.assertEqual(user.password, bpasswd)
+
 
 class UserTest(TestCase):
 

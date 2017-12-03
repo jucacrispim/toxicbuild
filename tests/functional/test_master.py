@@ -19,9 +19,9 @@
 
 import asyncio
 from toxicbuild.core import BaseToxicClient
-from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.master import settings
 from toxicbuild.master.plugins import MasterPlugin
+from toxicbuild.master.users import User
 from tests import async_test
 from tests.functional import BaseFunctionalTest, REPO_DIR
 from tests.functional.custom_webhook import WebHookMessage
@@ -29,10 +29,15 @@ from tests.functional.custom_webhook import WebHookMessage
 
 class DummyUIClient(BaseToxicClient):
 
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
     @asyncio.coroutine
     def request2server(self, action, body):
 
         data = {'action': action, 'body': body,
+                'user_id': str(self.user.id),
                 'token': '123'}
         yield from self.write(data)
         response = yield from self.get_response()
@@ -44,7 +49,8 @@ class DummyUIClient(BaseToxicClient):
         body = {'slave_name': 'test-slave',
                 'slave_host': 'localhost',
                 'slave_port': settings.SLAVE_PORT,
-                'slave_token': '123'}
+                'slave_token': '123',
+                'owner_id': str(self.user.id)}
 
         resp = yield from self.request2server(action, body)
         return resp
@@ -54,7 +60,8 @@ class DummyUIClient(BaseToxicClient):
         action = 'repo-add'
         body = {'repo_name': 'test-repo', 'repo_url': REPO_DIR,
                 'vcs_type': 'git', 'update_seconds': 1,
-                'slaves': ['test-slave']}
+                'slaves': ['test-slave'],
+                'owner_id': str(self.user.id)}
 
         resp = yield from self.request2server(action, body)
 
@@ -85,7 +92,8 @@ class DummyUIClient(BaseToxicClient):
     @asyncio.coroutine
     def wait_clone(self):
         yield from self.write({'action': 'stream', 'token': '123',
-                               'body': {}})
+                               'body': {},
+                               'user_id': str(self.user.id)})
         while True:
             r = yield from self.get_response()
             body = r['body'] if r else {}
@@ -120,8 +128,8 @@ class DummyUIClient(BaseToxicClient):
 
 
 @asyncio.coroutine
-def get_dummy_client():
-    dc = DummyUIClient(settings.HOLE_ADDR, settings.HOLE_PORT)
+def get_dummy_client(user):
+    dc = DummyUIClient(user, settings.HOLE_ADDR, settings.HOLE_PORT)
     yield from dc.connect()
     return dc
 
@@ -129,40 +137,52 @@ def get_dummy_client():
 class ToxicMasterTest(BaseFunctionalTest):
 
     @classmethod
-    def tearDownClass(cls):
+    @async_test
+    async def setUpClass(cls):
+        super().setUpClass()
+
+        user = User(email='toxic@test.com', is_superuser=True)
+        user.set_password('1234')
+        await user.save()
+        cls.user = user
+
+    @classmethod
+    @async_test
+    async def tearDownClass(cls):
         try:
-            cls._delete_test_data()
+            await cls._delete_test_data()
         except OSError:
             pass
 
+        await User.drop_collection()
         super().tearDownClass()
 
     @async_test
     def test_01_create_slave(self):
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             response = yield from client.create_slave()
         self.assertTrue(response)
 
     @async_test
     def test_02_list_slaves(self):
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             slaves = yield from client.request2server('slave-list', {})
 
         self.assertEqual(len(slaves), 1)
 
     @async_test
     def test_03_create_repo(self):
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             response = yield from client.create_repo()
 
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             yield from client.wait_clone()
 
         self.assertTrue(response)
 
     @async_test
     def test_04_list_repos(self):
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             repos = yield from client.request2server('repo-list', {})
 
         self.assertEqual(len(repos), 1)
@@ -170,13 +190,14 @@ class ToxicMasterTest(BaseFunctionalTest):
 
     @async_test
     def test_05_repo_add_slave(self):
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             yield from client.request2server('slave-add',
                                              {'slave_name': 'test-slave2',
                                               'slave_host': 'localhost',
                                               'slave_port': 1234,
+                                              'owner_id': str(self.user.id),
                                               'slave_token': '123'})
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server(
                 'repo-add-slave',
                 {'repo_name': 'test-repo', 'slave_name': 'test-slave2'})
@@ -184,7 +205,7 @@ class ToxicMasterTest(BaseFunctionalTest):
 
     @async_test
     def test_06_repo_remove_slave(self):
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server(
                 'repo-remove-slave',
                 {'repo_name': 'test-repo', 'slave_name': 'test-slave2'})
@@ -192,7 +213,7 @@ class ToxicMasterTest(BaseFunctionalTest):
 
     @async_test
     def test_07_slave_get(self):
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server('slave-get',
                                                     {'slave_name':
                                                      'test-slave2'})
@@ -200,7 +221,7 @@ class ToxicMasterTest(BaseFunctionalTest):
 
     @async_test
     def test_08_repo_get(self):
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server('repo-get',
                                                     {'repo_name':
                                                      'test-repo'})
@@ -208,7 +229,7 @@ class ToxicMasterTest(BaseFunctionalTest):
 
     @async_test
     def test_09_slave_remove(self):
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server('slave-remove',
                                                     {'slave_name':
                                                      'test-slave2'})
@@ -217,12 +238,13 @@ class ToxicMasterTest(BaseFunctionalTest):
     @async_test
     def test_10_repo_start_build(self):
         # we need to wait so we have time to clone and create revs
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             yield from client.start_build()
 
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             yield from client.write({'action': 'stream', 'token': '123',
-                                     'body': {}})
+                                     'body': {},
+                                     'user_id': str(self.user.id)})
 
             # this ugly part here it to wait for the right message
             # If we don't use this we may read the wrong message and
@@ -252,7 +274,7 @@ class ToxicMasterTest(BaseFunctionalTest):
         plugins_count = len([p for p in MasterPlugin.list_plugins()
                              if 'test' not in p.__module__])
 
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server('plugins-list', {})
 
         self.assertEqual(len(resp), plugins_count, MasterPlugin.list_plugins())
@@ -260,15 +282,16 @@ class ToxicMasterTest(BaseFunctionalTest):
     @async_test
     async def test_12_enable_plugin(self):
 
-        with (await get_dummy_client()) as client:
+        with (await get_dummy_client(self.user)) as client:
             resp = await client.enable_plugin()
 
-        with (await get_dummy_client()) as client:
+        with (await get_dummy_client(self.user)) as client:
             await client.start_build()
 
-        with (await get_dummy_client()) as client:
+        with (await get_dummy_client(self.user)) as client:
             await client.write({'action': 'stream', 'token': '123',
-                                'body': {}})
+                                'body': {},
+                                'user_id': str(self.user.id)})
 
             while True:
                 response = await client.get_response()
@@ -283,7 +306,7 @@ class ToxicMasterTest(BaseFunctionalTest):
     @async_test
     def test_13_disable_plugin(self):
 
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.disable_plugin()
 
         self.assertEqual(resp, 'ok', resp)
@@ -291,7 +314,7 @@ class ToxicMasterTest(BaseFunctionalTest):
     @async_test
     def test_14_get_plugin(self):
 
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server(
                 'plugin-get', {'name': 'slack-notification'})
 
@@ -299,12 +322,13 @@ class ToxicMasterTest(BaseFunctionalTest):
 
     @async_test
     def test_15_stream_step_output(self):
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             yield from client.start_build()
 
-        with (yield from get_dummy_client()) as client:
+        with (yield from get_dummy_client(self.user)) as client:
             yield from client.write({'action': 'stream', 'token': '123',
-                                     'body': {}})
+                                     'body': {},
+                                     'user_id': str(self.user.id)})
 
             steps = []
             # this ugly part here it to wait for the right message
@@ -328,19 +352,11 @@ class ToxicMasterTest(BaseFunctionalTest):
         self.assertTrue(steps)
 
     @classmethod
+    @asyncio.coroutine
     def _delete_test_data(cls):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(WebHookMessage.drop_collection())
-        with loop.run_until_complete(get_dummy_client()) as client:
-            loop.run_until_complete(
-                client.request2server('slave-remove',
-                                      {'slave_name': 'test-slave'}))
-
-            loop.run_until_complete(client.connect())
-
-            try:
-                loop.run_until_complete(
-                    client.request2server('repo-remove',
-                                          {'repo_name': 'test-repo'}))
-            except ToxicClientException:
-                pass
+        with (yield from get_dummy_client(cls.user)) as client:
+            yield from client.request2server('slave-remove',
+                                             {'slave_name': 'test-slave'})
+            yield from client.connect()
+            yield from client.request2server('repo-remove',
+                                             {'repo_name': 'test-repo'})
