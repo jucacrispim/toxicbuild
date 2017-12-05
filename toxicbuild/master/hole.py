@@ -645,17 +645,20 @@ class UIStreamHandler(LoggerMixin):
     async def build_added(self, reciever, **kw):
         await self.send_info('build_added', **kw)
 
-    def _connect2signals(self):
-        step_started.connect(self.step_started)
-        step_finished.connect(self.step_finished)
-        build_started.connect(self.build_started)
-        build_finished.connect(self.build_finished)
-        repo_status_changed.connect(self.send_repo_status_info)
-        build_added.connect(self.build_added)
-        step_output_arrived.connect(self.send_step_output_info)
+    async def _connect2signals(self):
+        repos = Repository.list_for_user(self.protocol.user)
+        async for repo in repos:
+            step_started.connect(self.step_started, sender=str(repo.id))
+            step_finished.connect(self.step_finished, sender=str(repo.id))
+            build_started.connect(self.build_started, sender=str(repo.id))
+            build_finished.connect(self.build_finished, sender=str(repo.id))
+            repo_status_changed.connect(self.send_repo_status_info,
+                                        sender=str(repo.id))
+            build_added.connect(self.build_added, sender=str(repo.id))
+            step_output_arrived.connect(self.send_step_output_info,
+                                        sender=str(repo.id))
 
     def _disconnectfromsignals(self):
-
         step_output_arrived.disconnect(self.send_step_output_info)
         step_started.disconnect(self.step_started)
         step_finished.disconnect(self.step_finished)
@@ -665,7 +668,7 @@ class UIStreamHandler(LoggerMixin):
         build_added.disconnect(self.build_added)
 
     async def handle(self):
-        self._connect2signals()
+        await self._connect2signals()
         await self.protocol.send_response(code=0, body={'stream': 'ok'})
 
     async def send_info(self, info_type, build=None, step=None):
@@ -695,13 +698,14 @@ class UIStreamHandler(LoggerMixin):
 
         return f
 
-    async def send_repo_status_info(self, repo, old_status, new_status):
+    async def send_repo_status_info(self, repo_id, old_status, new_status):
         """Called by the signal ``repo_status_changed``
 
-        :param repo: The repository that had its status changed.
+        :param repo_id: Id of the repository that had its status changed.
         :param old_status: The old status of the repository
         :param new_status: The new status of the repostiory."""
 
+        repo = await Repository.get(id=repo_id)
         rdict = await repo.to_dict(id_as_str=True)
         rdict['status'] = new_status
         rdict['old_status'] = old_status

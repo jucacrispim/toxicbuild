@@ -416,7 +416,7 @@ class BuildManager(LoggerMixin):
 
             buildset.builds.append(build)
             await buildset.save()
-            build_added.send(self, build=build)
+            build_added.send(str(self.repository.id), build=build)
 
             self.log('build added for named_tree {} on branch {}'.format(
                 revision.commit, revision.branch), level='debug')

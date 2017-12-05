@@ -169,12 +169,12 @@ class Slave(OwnedDocument, LoggerMixin):
         if not build.finished:
             msg = 'build started at {}'.format(build_info['started'])
             self.log(msg)
-            build_started.send(repo, build=build)
+            build_started.send(str(repo.id), build=build)
         else:
             msg = 'build finished at {} with status {}'.format(
                 build_info['finished'], build.status)
             self.log(msg)
-            build_finished.send(repo, build=build)
+            build_finished.send(str(repo.id), build=build)
 
     async def _process_step_info(self, build, step_info):
 
@@ -198,7 +198,7 @@ class Slave(OwnedDocument, LoggerMixin):
             msg = 'step {} finished at {} with status {}'.format(
                 requested_step.command, finished, requested_step.status)
             self.log(msg, level='debug')
-            step_finished.send(repo, build=build, step=requested_step)
+            step_finished.send(str(repo.id), build=build, step=requested_step)
 
         else:
             requested_step = BuildStep(name=name, command=cmd,
@@ -208,7 +208,7 @@ class Slave(OwnedDocument, LoggerMixin):
             msg = 'step {} started at {}'.format(requested_step.command,
                                                  started)
             self.log(msg, level='debug')
-            step_started.send(repo, build=build, step=requested_step)
+            step_started.send(str(repo.id), build=build, step=requested_step)
             build.steps.append(requested_step)
 
         await build.update()
@@ -224,7 +224,7 @@ class Slave(OwnedDocument, LoggerMixin):
         await build.update()
         msg = 'step_output_arrived for {}'.format(uuid)
         self.log(msg, level='debug')
-        step_output_arrived.send(repo, step_info=info)
+        step_output_arrived.send(str(repo.id), step_info=info)
 
     def _get_step(self, build, step_uuid):
         """Returns a step from ``build``. Returns None if the requested

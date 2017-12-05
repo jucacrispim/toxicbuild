@@ -240,7 +240,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await self.save()
 
         if with_clone:
-            repo_status_changed.send(self, old_status='cloning',
+            repo_status_changed.send(str(self.id), old_status='cloning',
                                      new_status=self.clone_status)
 
     def schedule(self):
@@ -454,7 +454,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         status = await self.get_status()
         if status != self._old_status:
-            repo_status_changed.send(self, old_status=self._old_status,
+            repo_status_changed.send(str(self.id), old_status=self._old_status,
                                      new_status=status)
             self._old_status = status
 

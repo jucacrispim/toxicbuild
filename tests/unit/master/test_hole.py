@@ -933,6 +933,7 @@ class UIStreamHandlerTest(TestCase):
         self.handler = hole.UIStreamHandler(protocol)
         self.owner = hole.User(email='aasdf@a.com', password='asdf')
         await self.owner.save()
+        self.handler.protocol.user = self.owner
 
     @async_test
     async def tearDown(self):
@@ -940,6 +941,7 @@ class UIStreamHandlerTest(TestCase):
         await build.Builder.drop_collection()
         await slave.Slave.drop_collection()
         await repository.Repository.drop_collection()
+        await hole.User.drop_collection()
 
     @patch.object(hole, 'step_started', Mock())
     @patch.object(hole, 'step_finished', Mock())
@@ -966,9 +968,13 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'repo_status_changed', Mock())
     @patch.object(hole, 'build_added', Mock())
     @patch.object(hole, 'step_output_arrived', Mock())
-    def test_connect2signals(self):
+    @async_test
+    async def test_connect2signals(self):
 
-        self.handler._connect2signals()
+        repo = hole.Repository(url='https://bla.com/git', vcs_type='git',
+                               owner=self.owner, name='my-repo')
+        await repo.save()
+        await self.handler._connect2signals()
         self.assertTrue(all([hole.step_started.connect.called,
                              hole.step_finished.connect.called,
                              hole.build_started.connect.called,
