@@ -23,7 +23,7 @@ from unittest import TestCase
 from unittest.mock import MagicMock, Mock, patch
 from bson import ObjectId
 from toxicbuild.master import hole, build, repository, slave, plugins
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class UIHoleTest(TestCase):
@@ -1030,7 +1030,7 @@ class UIStreamHandlerTest(TestCase):
 
     @async_test
     async def test_handle(self):
-        self.handler._connect2signals = Mock()
+        self.handler._connect2signals = AsyncMagicMock()
         send_response = MagicMock()
         self.handler.protocol.send_response = asyncio.coroutine(
             lambda *a, **kw: send_response(*a, **kw))
@@ -1160,7 +1160,7 @@ class UIStreamHandlerTest(TestCase):
             self.BODY = body
 
         self.handler.send_response = sr
-        await self.handler.send_repo_status_info(repo=testrepo,
+        await self.handler.send_repo_status_info(repo_id=testrepo.id,
                                                  old_status='running',
                                                  new_status='fail')
 

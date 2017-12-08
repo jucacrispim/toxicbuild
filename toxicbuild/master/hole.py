@@ -55,6 +55,7 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
     async def client_connected(self):
 
         data = self.data.get('body') or {}
+
         try:
             user_id = self.data.get('user_id', '')
             if not user_id:
@@ -119,6 +120,8 @@ class HoleHandler:
     * `buildset-list`
     * `builder-show`
     * `list-funcs`
+    * `user-add`
+    * `user-remove`
     """
 
     def __init__(self, data, action, protocol):
