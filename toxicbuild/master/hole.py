@@ -56,39 +56,43 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
 
         data = self.data.get('body') or {}
 
-        try:
-            user_id = self.data.get('user_id', '')
-            if not user_id:
-                raise User.DoesNotExist
-            self.user = await User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            msg = 'User {} does not exist'.format(user_id)
-            self.log(msg, level='warning')
-            status = 2
-            await self.send_response(code=status, body={'error': msg})
-            self.close_connection()
-
-        else:
-            if self.action == 'stream':
-                handler = UIStreamHandler(self)
-            else:
-                handler = HoleHandler(data, self.action, self)
-
+        if self.action != 'user-authenticate':
+            # when we are authenticating we don't need (and we can't have)
+            # a requester user, so we only try to get it when we are not
+            # authenticating.
             try:
-                await handler.handle()
-                status = 0
-
-            except NotEnoughPerms:
-                msg = 'User {} does not have enogh permissions.'.format(
-                    str(self.user.id))
+                user_id = self.data.get('user_id', '')
+                if not user_id:
+                    raise User.DoesNotExist
+                self.user = await User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                msg = 'User {} does not exist'.format(user_id)
                 self.log(msg, level='warning')
-                status = 3
+                status = 2
                 await self.send_response(code=status, body={'error': msg})
-            except Exception:
-                msg = traceback.format_exc()
-                status = 1
-                await self.send_response(code=1, body={'error': msg})
                 self.close_connection()
+                return status
+
+        if self.action == 'stream':
+            handler = UIStreamHandler(self)
+        else:
+            handler = HoleHandler(data, self.action, self)
+
+        try:
+            await handler.handle()
+            status = 0
+
+        except NotEnoughPerms:
+            msg = 'User {} does not have enough permissions.'.format(
+                str(self.user.id))
+            self.log(msg, level='warning')
+            status = 3
+            await self.send_response(code=status, body={'error': msg})
+        except Exception:
+            msg = traceback.format_exc()
+            status = 1
+            await self.send_response(code=1, body={'error': msg})
+            self.close_connection()
 
         return status
 
@@ -122,6 +126,7 @@ class HoleHandler:
     * `list-funcs`
     * `user-add`
     * `user-remove`
+    * `user-authenticate`
     """
 
     def __init__(self, data, action, protocol):
@@ -193,6 +198,17 @@ class HoleHandler:
         user = await User.objects.get(**kwargs)
         await user.delete()
         return {'user-remove': 'ok'}
+
+    async def user_authenticate(self, username_or_email, password):
+        """Authenticates an user. Returns user.to_dict() is
+        authenticated. Raises ``InvalidCredentials`` if a user with
+        this credentials does not exist.
+
+        :param username_or_email: Username or email to use to authenticate.
+        :param password: Not encrypted password."""
+
+        user = await User.authenticate(username_or_email, password)
+        return {'user-authenticate': user.to_dict()}
 
     async def repo_add(self, repo_name, repo_url, owner_id,
                        update_seconds, vcs_type, slaves=None,

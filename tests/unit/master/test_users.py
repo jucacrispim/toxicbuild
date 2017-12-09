@@ -145,3 +145,38 @@ class UserTest(TestCase):
         await owner.delete()
         orgs = await users.Organization.objects.count()
         self.assertEqual(orgs, 0)
+
+    @async_test
+    async def test_authenticate_username(self):
+        owner = users.User(email='ze@ze.com')
+        owner.set_password('asdf')
+        await owner.save()
+        user = await users.User.authenticate('ze', 'asdf')
+        self.assertEqual(user, owner)
+
+    @async_test
+    async def test_authenticate_email(self):
+        owner = users.User(email='ze@ze.com')
+        owner.set_password('asdf')
+        await owner.save()
+        user = await users.User.authenticate('ze@ze.com', 'asdf')
+        self.assertEqual(user, owner)
+
+    @async_test
+    async def test_authenticate_invalid_credentials(self):
+        owner = users.User(email='ze@ze.com')
+        owner.set_password('asdf')
+        await owner.save()
+        with self.assertRaises(users.InvalidCredentials):
+            await users.User.authenticate('ze@ze.com', 'asdfs')
+
+    @async_test
+    async def test_to_dict(self):
+        owner = users.User(email='ze@ze.com')
+        owner.set_password('asdf')
+        await owner.save()
+        expected = {'id': str(owner.id),
+                    'username': owner.username,
+                    'email': owner.email}
+        returned = owner.to_dict()
+        self.assertEqual(expected, returned)

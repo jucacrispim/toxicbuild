@@ -24,6 +24,7 @@ from mongomotor.fields import (StringField, UUIDField, ListField,
 from mongomotor.queryset import PULL
 from toxicbuild.core.utils import bcrypt_string
 from toxicbuild.master import settings
+from toxicbuild.master.exceptions import InvalidCredentials
 from toxicbuild.master.utils import as_db_ref
 
 
@@ -72,6 +73,34 @@ class User(Document):
     member_of = ListField(ReferenceField('Organization'))
     # what the user can do: create_repo, create_slave or create_user
     allowed_actions = ListField(StringField())
+
+    @classmethod
+    async def authenticate(cls, username_or_email, password):
+        """Authenticates an user. Returns an user if the user is
+        authenticated. Raises ``InvalidCredentials`` if a user with
+        this credentials does not exist.
+
+        :param username_or_email: Username or email to use to authenticate.
+        :param password: Not encrypted password."""
+
+        salt = settings.BCRYPT_SALT
+        password = bcrypt_string(password, salt)
+        fields = ['username', 'email']
+        for field in fields:
+            kw = {field: username_or_email, 'password': password}
+            try:
+                user = await cls.objects.get(**kw)
+                return user
+            except cls.DoesNotExist:
+                pass
+
+        raise InvalidCredentials
+
+    def to_dict(self):
+        objdict = {'id': str(self.id),
+                   'username': self.username,
+                   'email': self.email}
+        return objdict
 
     async def save(self, *args, **kwargs):
         if not self.username:

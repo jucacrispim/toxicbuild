@@ -130,15 +130,31 @@ class UIHoleTest(TestCase):
         response_code = response['code']
         self.assertEqual(response_code, 3, response)
 
+    @patch.object(hole.HoleHandler, 'user_authenticate', AsyncMagicMock())
+    @patch.object(hole.UIHole, 'send_response', AsyncMagicMock())
+    @async_test
+    async def test_client_connected_authenticate(self):
+        user = hole.User(email='ze@ndad.con', password='asdf')
+        await user.save()
+        uihole = hole.UIHole(Mock())
+        uihole.data = {'user_id': str(user.id)}
+        uihole._stream_writer = Mock()
+        uihole.action = 'user-authenticate'
+
+        await uihole.client_connected()
+
+        self.assertTrue(hole.HoleHandler.user_authenticate.called)
+
 
 @patch.object(repository.utils, 'log', Mock())
 class HoleHandlerTest(TestCase):
 
     @async_test
     async def setUp(self):
-        self.owner = hole.User(email='asdf@adsf.con', password='asdf',
+        self.owner = hole.User(email='asdf@adsf.con',
                                allowed_actions=['add_user', 'add_repo',
                                                 'add_slave', 'remove_user'])
+        self.owner.set_password('asdf')
         await self.owner.save()
 
     @async_test
@@ -147,6 +163,7 @@ class HoleHandlerTest(TestCase):
         await hole.Repository.drop_collection()
         await build.BuildSet.drop_collection()
         await build.Builder.drop_collection()
+        await hole.User.drop_collection()
 
     @async_test
     async def test_handle(self):
@@ -243,7 +260,16 @@ class HoleHandlerTest(TestCase):
         self.assertEqual(response['user-remove'], 'ok')
 
     @async_test
-    async def test_repo_add_not_enogh_perms(self):
+    async def test_user_authenticate(self):
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'action', protocol)
+        response = await handler.user_authenticate('asdf@adsf.con', 'asdf')
+        user_id = response['user-authenticate']['id']
+        self.assertEqual(str(self.owner.id), user_id)
+
+    @async_test
+    async def test_repo_add_not_enough_perms(self):
         name = 'reponameoutro'
         url = 'git@somehere.com'
         vcs_type = 'git'
@@ -844,7 +870,8 @@ class HoleHandlerTest(TestCase):
                     'plugin_get': handler.plugin_get,
                     'builder_show': handler.builder_show,
                     'user_add': handler.user_add,
-                    'user_remove': handler.user_remove}
+                    'user_remove': handler.user_remove,
+                    'user_authenticate': handler.user_authenticate}
 
         action_methods = handler._get_action_methods()
 

@@ -19,3 +19,7 @@ class NotEnoughPerms(Exception):
 
 class OwnerDoesNotExist(Exception):
     pass
+
+
+class InvalidCredentials(Exception):
+    pass
