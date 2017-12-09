@@ -67,6 +67,25 @@ class DummyUIClient(BaseToxicClient):
 
         return resp
 
+    async def create_user(self):
+        action = 'user-add'
+        body = {'username': 'ze', 'email': 'ze@ze.com', 'password': 'asdf',
+                'allowed_actions': ['add_user', 'add_repo']}
+        resp = await self.request2server(action, body)
+        return resp
+
+    async def user_authenticate(self):
+        action = 'user-authenticate'
+        body = {'username_or_email': 'ze@ze.com', 'password': 'asdf'}
+        resp = await self.request2server(action, body)
+        return resp
+
+    async def remove_user(self):
+        action = 'user-remove'
+        body = {'email': 'ze@ze.com'}
+        resp = await self.request2server(action, body)
+        return resp
+
     @asyncio.coroutine
     def start_build(self):
 
@@ -350,6 +369,25 @@ class ToxicMasterTest(BaseFunctionalTest):
                         break
 
         self.assertTrue(steps)
+
+    @async_test
+    async def test_16_add_user(self):
+        with (await get_dummy_client(self.user)) as client:
+            r = await client.create_user()
+        self.assertTrue(r['id'])
+
+    @async_test
+    async def test_17_user_authenticate(self):
+
+        with (await get_dummy_client(self.user)) as client:
+            r = await client.user_authenticate()
+        self.assertTrue(r['id'])
+
+    @async_test
+    async def test_18_user_remove(self):
+        with (await get_dummy_client(self.user)) as client:
+            r = await client.remove_user()
+        self.assertEqual(r, 'ok')
 
     @classmethod
     @asyncio.coroutine
