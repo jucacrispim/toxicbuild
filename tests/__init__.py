@@ -34,3 +34,7 @@ class AsyncMagicMock(MagicMock):
             return s
 
         return ret()
+
+
+AsyncMagicMock.__aenter__ = AsyncMagicMock()
+#AsyncMagicMock.__aexit__ = AsyncMagicMock()

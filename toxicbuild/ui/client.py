@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -24,8 +24,9 @@ from toxicbuild.ui import settings
 
 class UIHoleClient(BaseToxicClient):
 
-    def __init__(self, *args, hole_token=None):
+    def __init__(self, requester, *args, hole_token=None):
         self.hole_token = hole_token or settings.HOLE_TOKEN
+        self.requester = requester
         super().__init__(*args)
 
     def __getattr__(self, name):
@@ -43,6 +44,9 @@ class UIHoleClient(BaseToxicClient):
         data = {'action': action, 'body': body,
                 'token': self.hole_token}
 
+        if action != 'user-authenticate':
+            data['user_id'] = str(self.requester.id)
+
         yield from self.write(data)
         response = yield from self.get_response()
         return response['body'][action]
@@ -52,13 +56,13 @@ class UIHoleClient(BaseToxicClient):
         """Connects the client to the master's hole stream."""
 
         action = 'stream'
-        body = {}
+        body = {'user_id': str(self.requester.id)}
 
         yield from self.request2server(action, body)
 
 
 @asyncio.coroutine
-def get_hole_client(host, port, hole_token=None):
-    client = UIHoleClient(host, port, hole_token=hole_token)
+def get_hole_client(requester, host, port, hole_token=None):
+    client = UIHoleClient(requester, host, port, hole_token=hole_token)
     yield from client.connect()
     return client

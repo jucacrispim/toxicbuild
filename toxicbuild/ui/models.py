@@ -34,7 +34,7 @@ class BaseModel:
     # that are simply treated as other objects.
     references = {}
 
-    def __init__(self, ordered_kwargs):
+    def __init__(self, requester, ordered_kwargs):
         # here is where we transform the dictonaries from the
         # master's response into objects that are references.
         # Note that we can't use **kwargs here because we want to
@@ -43,12 +43,13 @@ class BaseModel:
 
         for name, cls in self.references.items():
             if not isinstance(ordered_kwargs.get(name), (dict, cls)):
-                ordered_kwargs[name] = [cls(kw) if not isinstance(kw, cls)
+                ordered_kwargs[name] = [cls(requester, kw) if not
+                                        isinstance(kw, cls)
                                         else kw
                                         for kw in ordered_kwargs.get(name, [])]
             else:
                 obj = ordered_kwargs[name]
-                ordered_kwargs[name] = cls(obj) if not isinstance(
+                ordered_kwargs[name] = cls(requester, obj) if not isinstance(
                     obj, cls) else obj
 
         for key, value in ordered_kwargs.items():
@@ -56,6 +57,8 @@ class BaseModel:
                 value = string2datetime(value)
             setattr(self, key, value)
             self.__ordered__.append(key)
+
+        self.requester = requester
 
     def __eq__(self, other):
         return type(self) == type(other) and self.id == other.id
@@ -65,12 +68,12 @@ class BaseModel:
 
     @classmethod
     @asyncio.coroutine
-    def get_client(cls):
+    def get_client(cls, requester):
         """Returns a client connected to master."""
 
         host = settings.HOLE_HOST
         port = settings.HOLE_PORT
-        client = yield from get_hole_client(host, port)
+        client = yield from get_hole_client(requester, host, port)
         return client
 
     def to_dict(self):
@@ -94,61 +97,102 @@ class BaseModel:
         return json.dumps(d)
 
 
+class User(BaseModel):
+
+    def __init__(self, requester, ordered_kwargs):
+        if requester is None:
+            requester = self
+        super().__init__(requester, ordered_kwargs)
+
+    @classmethod
+    async def authenticate(cls, username_or_email, password):
+        kw = {'username_or_email': username_or_email,
+              'password': password}
+
+        with (await cls.get_client(None)) as client:
+            user_dict = await client.user_authenticate(**kw)
+        user = cls(None, user_dict)
+        return user
+
+    @classmethod
+    async def add(cls, requester, email, username, password,
+                  allowed_actions):
+        kw = {'username': username,
+              'email': email,
+              'password': password, 'allowed_actions': allowed_actions}
+
+        with (await cls.get_client(requester)) as client:
+            user_dict = await client.user_add(**kw)
+        user = cls(None, user_dict)
+        return user
+
+    async def delete(self):
+        kw = {'id': str(self.id)}
+        with (await type(self).get_client(self.requester)) as client:
+            resp = await client.user_remove(**kw)
+        return resp
+
+
 class Slave(BaseModel):
 
     @classmethod
     @asyncio.coroutine
-    def add(cls, name, host, port, token):
+    def add(cls, requester, name, host, port, token, owner):
         """Adds a new slave.
 
         :param name: Slave name.
         :param host: Slave host.
         :param port: Slave port.
         :param token: Authentication token.
+        :param owner: The slave owner
         """
 
         kw = {'slave_name': name, 'slave_host': host,
-              'slave_port': port, 'slave_token': token}
+              'slave_port': port, 'slave_token': token,
+              'owner_id': str(owner.id)}
 
-        with (yield from cls.get_client()) as client:
+        with (yield from cls.get_client(requester)) as client:
             slave_dict = yield from client.slave_add(**kw)
-        slave = cls(slave_dict)
+        slave = cls(requester, slave_dict)
         return slave
 
     @classmethod
     @asyncio.coroutine
-    def get(cls, **kwargs):
+    def get(cls, requester, **kwargs):
         """Returns a slave.
 
+        :param requester: The user who is requesting the operation.
         :param kwargs: kwargs to get the slave."""
 
-        with (yield from cls.get_client()) as client:
+        with (yield from cls.get_client(requester)) as client:
             slave_dict = yield from client.slave_get(**kwargs)
-        slave = cls(slave_dict)
+        slave = cls(requester, slave_dict)
         return slave
 
     @classmethod
     @asyncio.coroutine
-    def list(cls):
-        """Lists all slaves."""
+    def list(cls, requester):
+        """Lists all slaves.
 
-        with (yield from cls.get_client()) as client:
+        :param requester: The user who is requesting the operation."""
+
+        with (yield from cls.get_client(requester)) as client:
             slaves = yield from client.slave_list()
-        slave_list = [cls(slave) for slave in slaves]
+        slave_list = [cls(requester, slave) for slave in slaves]
         return slave_list
 
     @asyncio.coroutine
     def delete(self):
         """Delete a slave."""
 
-        with (yield from self.get_client()) as client:
+        with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.slave_remove(slave_name=self.name)
         return resp
 
     @asyncio.coroutine
     def update(self, **kwargs):
         """Updates a slave"""
-        with (yield from self.get_client()) as client:
+        with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.slave_update(slave_name=self.name,
                                                   **kwargs)
         return resp
@@ -158,24 +202,28 @@ class Plugin(BaseModel):
     """A repository plugin."""
 
     @classmethod
-    def list(cls):
-        """Lists all plugins available in the master."""
-        with (yield from cls.get_client()) as client:
+    def list(cls, requester):
+        """Lists all plugins available in the master.
+
+        :param requester: The user who is requesting the operation."""
+
+        with (yield from cls.get_client(requester)) as client:
             resp = yield from client.plugins_list()
 
-        plugins = [cls(p) for p in resp]
+        plugins = [cls(requester, p) for p in resp]
         return plugins
 
     @classmethod
-    def get(cls, name):
+    def get(cls, requester, name):
         """Return the schema for a specific plugin
 
+        :param requester: The user who is requesting the operation.
         :param name: The name of the plugin"""
 
-        with (yield from cls.get_client()) as client:
+        with (yield from cls.get_client(requester)) as client:
             resp = yield from client.plugin_get(name=name)
 
-        return cls(resp)
+        return cls(requester, resp)
 
 
 class Repository(BaseModel):
@@ -187,12 +235,14 @@ class Repository(BaseModel):
 
     @classmethod
     @asyncio.coroutine
-    def add(cls, name, url, vcs_type, update_seconds=300, slaves=[],
-            parallel_builds=None):
+    def add(cls, requester, name, url, owner, vcs_type, update_seconds=300,
+            slaves=[], parallel_builds=None):
         """Adds a new repository.
 
+        :param requester: The user who is requesting the operation.
         :param name: Repository's name.
         :param url: Repository's url.
+        :param owner: The repository owner
         :param vcs_type: VCS type used on the repository.
         :param update_seconds: Interval to update the repository code.
         :param slaves: List with slave names for this reporitory.
@@ -201,41 +251,46 @@ class Repository(BaseModel):
 
         kw = {'repo_name': name, 'repo_url': url, 'vcs_type': vcs_type,
               'update_seconds': update_seconds,
-              'parallel_builds': parallel_builds}
+              'parallel_builds': parallel_builds,
+              'owner_id': str(owner.id)}
 
         kw.update({'slaves': slaves})
-        with (yield from cls.get_client()) as client:
+        with (yield from cls.get_client(requester)) as client:
             repo_dict = yield from client.repo_add(**kw)
-        repo = cls(repo_dict)
+
+        repo = cls(requester, repo_dict)
         return repo
 
     @classmethod
     @asyncio.coroutine
-    def get(cls, **kwargs):
+    def get(cls, requester, **kwargs):
         """Returns a repository.
 
+        :param requester: The user who is requesting the operation.
         :param kwargs: kwargs to get the repository."""
 
-        with (yield from cls.get_client()) as client:
+        with (yield from cls.get_client(requester)) as client:
             repo_dict = yield from client.repo_get(**kwargs)
-        repo = cls(repo_dict)
+        repo = cls(requester, repo_dict)
         return repo
 
     @classmethod
     @asyncio.coroutine
-    def list(cls):
-        """Lists all repositories."""
+    def list(cls, requester):
+        """Lists all repositories.
 
-        with (yield from cls.get_client()) as client:
+        :param requester: The user who is requesting the operation."""
+
+        with (yield from cls.get_client(requester)) as client:
             repos = yield from client.repo_list()
-        repo_list = [cls(repo) for repo in repos]
+        repo_list = [cls(requester, repo) for repo in repos]
         return repo_list
 
     @asyncio.coroutine
     def delete(self):
         """Delete a repository."""
 
-        with (yield from self.get_client()) as client:
+        with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_remove(repo_name=self.name)
         return resp
 
@@ -245,8 +300,7 @@ class Repository(BaseModel):
 
         :param slave: A Slave instance."""
 
-        client = yield from self.get_client()
-        with (yield from self.get_client()) as client:
+        with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_add_slave(repo_name=self.name,
                                                     slave_name=slave.name)
         return resp
@@ -258,7 +312,7 @@ class Repository(BaseModel):
         :param slave: A Slave instance.
         """
 
-        with (yield from self.get_client()) as client:
+        with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_remove_slave(repo_name=self.name,
                                                        slave_name=slave.name)
         return resp
@@ -271,7 +325,7 @@ class Repository(BaseModel):
         :param notify_only_latest: If we should create builds for all
           revisions or only for the lastest one."""
 
-        with (yield from self.get_client()) as client:
+        with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_add_branch(
                 repo_name=self.name, branch_name=branch_name,
                 notify_only_latest=notify_only_latest)
@@ -283,7 +337,7 @@ class Repository(BaseModel):
         """Removes a branch config from a repository.
 
         :param branch_name: The name of the branch."""
-        with (yield from self.get_client()) as client:
+        with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_remove_branch(
                 repo_name=self.name, branch_name=branch_name)
 
@@ -292,7 +346,7 @@ class Repository(BaseModel):
     @asyncio.coroutine
     def update(self, **kwargs):
         """Updates a slave"""
-        with (yield from self.get_client()) as client:
+        with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_update(repo_name=self.name,
                                                  **kwargs)
         return resp
@@ -310,7 +364,7 @@ class Repository(BaseModel):
         :param slaves: A list with names of slaves that will execute
           the builds. If no slave is supplied all will be used."""
 
-        with (yield from self.get_client()) as client:
+        with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_start_build(
                 repo_name=self.name, branch=branch, builder_name=builder_name,
                 named_tree=named_tree, slaves=slaves)
@@ -331,7 +385,7 @@ class Repository(BaseModel):
         :param kwargs: kwargs used to configure the plugin.
         """
 
-        with (yield from self.get_client()) as client:
+        with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_enable_plugin(
                 repo_name=self.name, plugin_name=plugin_name, **kwargs)
 
@@ -342,7 +396,7 @@ class Repository(BaseModel):
 
         :param kwargs: kwargs to match the plugin."""
 
-        with (yield from self.get_client()) as client:
+        with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_disable_plugin(
                 repo_name=self.name, **kwargs)
 
@@ -353,13 +407,13 @@ class Builder(BaseModel):
 
     @classmethod
     @asyncio.coroutine
-    def list(cls, **kwargs):
+    def list(cls, requester, **kwargs):
         """Lists builders already used."""
 
-        with (yield from cls.get_client()) as client:
+        with (yield from cls.get_client(requester)) as client:
             builders = yield from client.builder_list(**kwargs)
 
-        builders_list = [cls(builder) for builder in builders]
+        builders_list = [cls(requester, builder) for builder in builders]
         return builders_list
 
 
@@ -375,20 +429,17 @@ class Build(BaseModel):
 class BuildSet(BaseModel):
     references = {'builds': Build}
 
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
-
     @classmethod
     @asyncio.coroutine
-    def list(cls, repo_name=None):
+    def list(cls, requester, repo_name=None):
         """Lists buildsets. If ``repo_name`` only builds of this
         repsitory will be listed.
 
         :param repo_name: Name of a repository."""
 
-        with (yield from cls.get_client()) as client:
+        with (yield from cls.get_client(requester)) as client:
             buildsets = yield from client.buildset_list(repo_name=repo_name,
                                                         offset=10)
 
-        buildset_list = [cls(buildset) for buildset in buildsets]
+        buildset_list = [cls(requester, buildset) for buildset in buildsets]
         return buildset_list
