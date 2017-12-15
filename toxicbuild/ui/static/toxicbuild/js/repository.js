@@ -107,8 +107,8 @@ var RepositoryModel = function(attrs){
 	success_cb(response);
       };
       var my_error_cb = function(response){
-	utils.log(respose);
-	error_cb(respose);
+	utils.log(response);
+	error_cb(response);
       };
 
       utils.sendAjax(type, url, data, my_success_cb, my_error_cb);
@@ -538,7 +538,7 @@ var RepositoryManager = {
       };
     };
     var error_cb = function(response){
-      utils.showErrorMessage(response)
+      utils.showErrorMessage(response.statusText);
       self.modal.modal('hide');
     };
 

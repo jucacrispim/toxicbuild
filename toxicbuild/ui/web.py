@@ -114,7 +114,7 @@ class BaseModelHandler(LoggedTemplateHandler):
 
     @asyncio.coroutine
     def get_item(self, **kwargs):
-        item = yield from self.model.get(**kwargs)
+        item = yield from self.model.get(self.user, **kwargs)
         return item
 
     @asyncio.coroutine
@@ -444,9 +444,9 @@ class WaterfallHandler(LoggedTemplateHandler):
 
     @gen.coroutine
     def get(self, repo_name):
-        buildsets = yield from BuildSet.list(repo_name=repo_name)
+        buildsets = yield from BuildSet.list(self.user, repo_name=repo_name)
         builders = yield from self._get_builders_for_buildsets(buildsets)
-        repo = yield from Repository.get(repo_name=repo_name)
+        repo = yield from Repository.get(self.user, repo_name=repo_name)
 
         def _ordered_builds(builds):
             return sorted(
@@ -478,7 +478,7 @@ class WaterfallHandler(LoggedTemplateHandler):
         # the builder id for builds, so now I retrieve the
         # 'full' builder using builder-list
         ids = [b.id for b in builders]
-        builders = yield from Builder.list(id__in=ids)
+        builders = yield from Builder.list(self.user, id__in=ids)
         builders_dict = {b.id: b for b in builders}
         for buildset in buildsets:
             for build in buildset.builds:

@@ -26,7 +26,7 @@ from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, IntField, ReferenceField,
                                DateTimeField, ListField, BooleanField,
-                               EmbeddedDocumentField, GenericReferenceField)
+                               EmbeddedDocumentField)
 from toxicbuild.core import utils
 from toxicbuild.master.build import BuildSet, Builder, BuildManager
 from toxicbuild.master.exceptions import CloneException
