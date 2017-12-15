@@ -25,7 +25,7 @@ from unittest import TestCase
 from unittest.mock import MagicMock, patch
 import tornado
 from toxicbuild.ui import models, client
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class BaseModelTest(TestCase):
@@ -166,7 +166,9 @@ class UserTest(TestCase):
                   get_client_mock(None, 'ok'))
     @async_test
     async def test_delete(self):
-        user = models.User(None, {'id': 'some-id'})
+        requester = MagicMock()
+        requester.id = 'asdf'
+        user = models.User(requester, {'id': 'some-id'})
         r = await user.delete()
         self.assertEqual(r, 'ok')
 

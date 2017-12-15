@@ -20,22 +20,23 @@
 # THIS WHOLE MODULE NEEDS TO BE RE-WRITTEN
 
 import asyncio
-try:
-    from asyncio import ensure_future
-except ImportError:  # pragma no cover
-    from asyncio import async as ensure_future
-
+from asyncio import ensure_future
+import base64
 import datetime
+import json
 import traceback
+
 from tornado import gen
 from tornado.websocket import WebSocketHandler, WebSocketError
+
 from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
 from pyrocumulus.web.handlers import TemplateHandler, PyroRequest
 from pyrocumulus.web.urlmappers import URLSpec
-from toxicbuild.core.utils import bcrypt_string, LoggerMixin, string2datetime
-from toxicbuild.ui import settings
+
+from toxicbuild.core.utils import LoggerMixin, string2datetime
 from toxicbuild.ui.connectors import StreamConnector
-from toxicbuild.ui.models import Repository, Slave, BuildSet, Builder, Plugin
+from toxicbuild.ui.models import (Repository, Slave, BuildSet, Builder, Plugin,
+                                  User)
 from toxicbuild.ui.utils import format_datetime, is_datetime
 
 
@@ -43,6 +44,10 @@ COOKIE_NAME = 'toxicui'
 
 
 class LoginHandler(TemplateHandler):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = None
 
     def get(self, action):
         if action == 'logout':
@@ -55,26 +60,47 @@ class LoginHandler(TemplateHandler):
         error = bool(self.params.get('error'))
         self.render_template('login.html', {'error': error})
 
+    @gen.coroutine
     def post(self, action):
-        if not self.params.get('username') == settings.USERNAME:
+        username_or_email = self.params.get('username_or_email')
+        password = self.params.get('password')
+
+        if not (username_or_email and password):
+            return self.redirect('/login?error=2')
+
+        try:
+            self.user = yield from User.authenticate(username_or_email,
+                                                     password)
+        except:
             return self.redirect('/login?error=1')
 
-        salt = settings.BCRYPT_SALT
-        passwd = settings.PASSWORD
-        if not bcrypt_string(self.params.get('password'), salt) == passwd:
-            return self.redirect('/login?error=1')
-
-        self.set_secure_cookie(COOKIE_NAME, 'SAUCIFUFU!')
+        self._set_cookie_content()
         self.redirect('/')
+
+    def _set_cookie_content(self):
+        userjson = json.dumps({'id': self.user.id, 'email': self.user.email,
+                               'username': self.user.username})
+
+        content = base64.encodebytes(userjson.encode('utf-8'))
+        self.set_secure_cookie(COOKIE_NAME, content)
 
 
 class LoggedTemplateHandler(TemplateHandler):
 
     def prepare(self):
         super().prepare()
+        user = self._get_user_from_cookie()
+        if not user:
+            self.redirect('/login')
+        self.user = user
+
+    def _get_user_from_cookie(self):
         cookie = self.get_secure_cookie(COOKIE_NAME)
         if not cookie:
-            self.redirect('/login')
+            return
+
+        userjson = base64.decodebytes(cookie).decode('utf-8')
+        return User(None, json.loads(userjson))
 
 
 class BaseModelHandler(LoggedTemplateHandler):
@@ -93,7 +119,10 @@ class BaseModelHandler(LoggedTemplateHandler):
 
     @asyncio.coroutine
     def add(self, **kwargs):
-        resp = yield from self.model.add(**kwargs)
+        if not kwargs.get('owner'):
+            kwargs['owner'] = self.user
+
+        resp = yield from self.model.add(self.user, **kwargs)
 
         json_resp = resp.to_json()
         return json_resp
@@ -247,7 +276,7 @@ class RepositoryHandler(BaseModelHandler):
 
         kw = {}
         plugin_name = self.params.get('plugin_name')
-        plugin = yield from Plugin.get(name=plugin_name)
+        plugin = yield from Plugin.get(self.user, name=plugin_name)
         for k, v in self.params.items():
             try:
                 kw[k] = v[0] if getattr(plugin, k)['type'] != 'list' else [
@@ -390,9 +419,9 @@ class MainHandler(LoggedTemplateHandler):
 
     @gen.coroutine
     def get(self):
-        repos = yield from Repository.list()
-        slaves = yield from Slave.list()
-        plugins = yield from Plugin.list()
+        repos = yield from Repository.list(self.user)
+        slaves = yield from Slave.list(self.user)
+        plugins = yield from Plugin.list(self.user)
 
         context = {'repos': repos, 'slaves': slaves,
                    'get_btn_class': self._get_btn_class,

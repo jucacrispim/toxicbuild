@@ -19,7 +19,9 @@
 
 import asyncio
 from toxicbuild.core import BaseToxicClient
+from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.ui import settings
+from toxicbuild.ui.exceptions import UserDoesNotExist, NotEnoughPerms
 
 
 class UIHoleClient(BaseToxicClient):
@@ -59,6 +61,22 @@ class UIHoleClient(BaseToxicClient):
         body = {'user_id': str(self.requester.id)}
 
         yield from self.request2server(action, body)
+
+    @asyncio.coroutine
+    def get_response(self):
+        response = yield from self.read()
+
+        if 'code' in response and int(response['code']) == 1:
+            # server error
+            raise ToxicClientException(response['body']['error'])
+
+        if 'code' in response and int(response['code']) == 2:
+            raise UserDoesNotExist(response['body']['error'])
+
+        if 'code' in response and int(response['code']) == 3:
+            raise NotEnoughPerms(response['body']['error'])
+
+        return response
 
 
 @asyncio.coroutine

@@ -20,8 +20,10 @@
 import asyncio
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
-from toxicbuild.ui.client import UIHoleClient, get_hole_client
-from tests import async_test
+from toxicbuild.ui.client import (UIHoleClient, get_hole_client,
+                                  ToxicClientException, UserDoesNotExist,
+                                  NotEnoughPerms)
+from tests import async_test, AsyncMagicMock
 
 
 class UIHoleClientTest(TestCase):
@@ -90,3 +92,43 @@ class UIHoleClientTest(TestCase):
         requester.id = 'some-id'
         client = yield from get_hole_client(requester, 'localhost', 7777)
         self.assertTrue(client.connect.called)
+
+    @patch.object(UIHoleClient, 'read', AsyncMagicMock(
+        return_value={'code': '1', 'body': {'error': 'bla'}}))
+    @async_test
+    async def test_get_response_server_error(self):
+        requester = MagicMock()
+        requester.id = 'some-id'
+        client = UIHoleClient(requester, 'localhost', 7777)
+        with self.assertRaises(ToxicClientException):
+            await client.get_response()
+
+    @patch.object(UIHoleClient, 'read', AsyncMagicMock(
+        return_value={'code': '2', 'body': {'error': 'bla'}}))
+    @async_test
+    async def test_get_response_user_does_not_exist(self):
+        requester = MagicMock()
+        requester.id = 'some-id'
+        client = UIHoleClient(requester, 'localhost', 7777)
+        with self.assertRaises(UserDoesNotExist):
+            await client.get_response()
+
+    @patch.object(UIHoleClient, 'read', AsyncMagicMock(
+        return_value={'code': '3', 'body': {'error': 'bla'}}))
+    @async_test
+    async def test_get_response_not_enough_perms(self):
+        requester = MagicMock()
+        requester.id = 'some-id'
+        client = UIHoleClient(requester, 'localhost', 7777)
+        with self.assertRaises(NotEnoughPerms):
+            await client.get_response()
+
+    @patch.object(UIHoleClient, 'read', AsyncMagicMock(
+        return_value={'code': '0', 'body': {'bla': 'ble'}}))
+    @async_test
+    async def test_get_response_ok(self):
+        requester = MagicMock()
+        requester.id = 'some-id'
+        client = UIHoleClient(requester, 'localhost', 7777)
+        r = await client.get_response()
+        self.assertEqual(r['body']['bla'], 'ble')
