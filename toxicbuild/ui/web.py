@@ -311,7 +311,7 @@ class SlaveHandler(BaseModelHandler):
         yield from item.update(**self.params)
 
 
-class StreamHandler(LoggerMixin, WebSocketHandler):
+class StreamHandler(LoggerMixin, LoggedTemplateHandler, WebSocketHandler):
 
     def initialize(self):
         self.action = None
@@ -349,7 +349,8 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
     def open(self, action):
         self.action = action
         self.repo_id = self._get_repo_id()
-        f = ensure_future(StreamConnector.plug(self.repo_id, self.receiver))
+        f = ensure_future(StreamConnector.plug(
+            self.user, self.repo_id, self.receiver))
         return f
 
     def receiver(self, sender, **message):
@@ -405,7 +406,7 @@ class StreamHandler(LoggerMixin, WebSocketHandler):
         self.write2sock(info)
 
     def on_close(self):
-        StreamConnector.unplug(self.repo_id, self.receiver)
+        StreamConnector.unplug(self.user, self.repo_id, self.receiver)
 
     def write2sock(self, body):
         try:

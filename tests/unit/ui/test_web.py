@@ -51,6 +51,7 @@ class BaseModelHandlerTest(AsyncTestCase):
     @gen_test
     def test_get_item(self):
 
+        self.handler.prepare()
         yield from self.handler.get_item(id='123fsdf')
 
         self.assertTrue(self.mock_model.get.called)
@@ -81,9 +82,10 @@ class BaseModelHandlerTest(AsyncTestCase):
                   'name': 'test'}
 
         add_mock = MagicMock()
+        self.handler.prepare()
 
         @asyncio.coroutine
-        def add(**kw):
+        def add(*a, **kw):
             return add_mock()
 
         self.handler.model.add = add
@@ -94,14 +96,15 @@ class BaseModelHandlerTest(AsyncTestCase):
     @patch.object(web.BaseModelHandler, 'write', MagicMock())
     @gen_test
     def test_post(self):
-        kwargs = {'url': [b'bla@bla.com'], 'name': [b'test']}
+        kwargs = {'url': [b'bla@bla.com'], 'name': [b'test'],
+                  'owner': [b'']}
         expected = {k: [p.decode() for p in v] for k, v in kwargs.items()}
         self.handler.request.arguments = kwargs
 
         add_mock = MagicMock()
 
         @asyncio.coroutine
-        def add(**kw):
+        def add(*a, **kw):
             return add_mock(**kw)
 
         self.handler.model.add = add
@@ -464,6 +467,7 @@ class SlaveHandlerTest(AsyncTestCase):
         self.assertTrue(get_item_mock.update.called)
 
 
+@patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
 class StreamHandlerTest(AsyncTestCase):
 
     def setUp(self):
@@ -496,6 +500,7 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler.request.arguments = {'repo_id': [b'asdf']}
         plug = MagicMock()
         web.StreamConnector.plug = asyncio.coroutine(lambda *a, **kw: plug())
+        self.handler.prepare()
         f = self.handler.open('repo-status')
         yield from f
         self.assertTrue(plug.called)
@@ -591,6 +596,7 @@ class StreamHandlerTest(AsyncTestCase):
 
     @patch.object(web, 'StreamConnector', MagicMock())
     def test_on_close(self):
+        self.handler.prepare()
         self.handler.on_close()
         self.assertTrue(web.StreamConnector.unplug.called)
 
@@ -714,6 +720,7 @@ class WaterfallHandlerTest(AsyncTestCase):
 
         expected = sorted(self.builders, key=lambda b: b.name)
 
+        self.handler.prepare()
         returned = yield from self.handler._get_builders_for_buildsets(
             self.buildsets)
         self.assertEqual(expected, returned)
@@ -739,6 +746,7 @@ class WaterfallHandlerTest(AsyncTestCase):
         self.handler._get_builders_for_buildsets = asyncio.coroutine(
             lambda b: [bd0, bd1])
         self.handler.render_template = MagicMock()
+        self.handler.prepare()
         ordered = yield self.handler.get('some-repo')
         order_func = self.handler.render_template.call_args[0][1][
             'ordered_builds']

@@ -17,6 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+# !!!!!!
+# after user stuff was implemented, this whole thing is useless now.
+# It must be removed.
+# !!!!!!
+
 import asyncio
 try:
     from asyncio import async as ensure_future
@@ -63,10 +68,11 @@ class StreamConnector(LoggerMixin):
     _clients_limit = 10
     _instances = {}
 
-    def __init__(self, repo_id):
+    def __init__(self, user, repo_id):
         self.clients_connected = 0
         self.client = None
         self.repo_id = repo_id
+        self.user = user
         self._connected = False
 
     @asyncio.coroutine
@@ -77,7 +83,7 @@ class StreamConnector(LoggerMixin):
 
         host = settings.HOLE_HOST
         port = settings.HOLE_PORT
-        client = yield from get_hole_client(host, port)
+        client = yield from get_hole_client(self.user, host, port)
         yield from client.connect2stream()
         self.client = client
         self._connected = True
@@ -94,7 +100,6 @@ class StreamConnector(LoggerMixin):
     @asyncio.coroutine
     def _listen(self):
         yield from self._connect()
-
         while self._connected:
             response = yield from self.client.get_response()
             body = response.get('body')
@@ -110,7 +115,7 @@ class StreamConnector(LoggerMixin):
 
     @classmethod
     @asyncio.coroutine
-    def _prepare_instance(cls, repo_id):
+    def _prepare_instance(cls, user, repo_id):
         """Returns an instance of
         :class:`toxicbuild.ui.connectors.StreamConnector` that will
         notify about messages from a specific repository.
@@ -122,40 +127,41 @@ class StreamConnector(LoggerMixin):
         if repo_id is None:
             repo_id = cls.NONE_REPO_ID
 
-        inst = cls._instances.get(repo_id)
+        inst = cls._instances.get((user.id, repo_id))
         if not inst:
-            inst = cls(repo_id)
-            cls._instances[repo_id] = inst
+            inst = cls(user, repo_id)
+            cls._instances[(user.id, repo_id)] = inst
             ensure_future(inst._listen())
 
         inst.clients_connected += 1
         return inst
 
     @classmethod
-    def _release_instance(cls, repo_id):
+    def _release_instance(cls, user, repo_id):
 
         if repo_id is None:
             repo_id = cls.NONE_REPO_ID
 
-        conn = cls._instances[repo_id]
+        conn = cls._instances[(user.id, repo_id)]
         conn.clients_connected -= 1
 
         if conn.clients_connected < 1:
             conn._disconnect()
-            cls._instances.pop(repo_id)
+            cls._instances.pop((user.id, repo_id))
 
     @classmethod
     @asyncio.coroutine
-    def plug(cls, repo_id, callback):
+    def plug(cls, user, repo_id, callback):
         """Connects ``callback`` to events sent by a repository.
 
+        :param user: The requester user.
         :param repo_id: The Id of a repository. Messages sent by this
           repository will trigger ``callback``. If repo_id is None, messages
           from all repositories will be sent to ``callback``.
         :param callback: A callable that will handle messages from
           a repository."""
 
-        yield from cls._prepare_instance(repo_id)
+        yield from cls._prepare_instance(user, repo_id)
         kw = {}
         if repo_id is not None:
             kw = {'sender': repo_id}
@@ -163,12 +169,13 @@ class StreamConnector(LoggerMixin):
         message_arrived.connect(callback, **kw)
 
     @classmethod
-    def unplug(cls, repo_id, callback):
+    def unplug(cls, user, repo_id, callback):
         """Disconnects ``callback`` from events sent by a repository.
 
+        :param user: The requester user.
         :param repo_id: The id of a repository.
         :param callback: A callable that will handle messages from
           a repository."""
 
         message_arrived.disconnect(callback, sender=repo_id)
-        cls._release_instance(repo_id)
+        cls._release_instance(user, repo_id)
