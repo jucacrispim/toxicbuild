@@ -43,6 +43,11 @@ class OwnedDocuentTest(TestCase):
         await self.doc.save()
 
     @async_test
+    async def tearDown(self):
+        await TestDoc.drop_collection()
+        await users.User.drop_collection()
+
+    @async_test
     async def test_get_for_user_owner(self):
         doc = await TestDoc.get_for_user(
             self.owner, id=self.doc.id)
@@ -94,6 +99,14 @@ class OwnedDocuentTest(TestCase):
         repos = TestDoc.list_for_user(user)
         count = await repos.count()
         self.assertEqual(count, 0)
+
+    @async_test
+    async def test_list_for_user_superuser(self):
+        user = users.User(email='b@b.com', password='123', is_superuser=True)
+        await user.save()
+        repos = TestDoc.list_for_user(user)
+        count = await repos.count()
+        self.assertEqual(count, 1)
 
     @async_test
     async def test_list_for_user_organization(self):

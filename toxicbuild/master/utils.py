@@ -54,7 +54,7 @@ class OwnedDocument(Document):
         obj = await cls.objects.get(**kwargs)
         has_perms = await obj._check_perms(user)
         if not has_perms:
-            msg = 'The user {} has no permissions for this repository'.format(
+            msg = 'The user {} has no permissions for this object'.format(
                 user.id)
             raise NotEnoughPerms(msg)
         return obj
@@ -66,10 +66,14 @@ class OwnedDocument(Document):
         member_of = [ref.id for ref in as_db_ref(user, 'member_of')]
         organizations = [ref.id for ref in as_db_ref(user, 'organizations')]
 
-        qs = cls.objects(
-            Q(owner=user) |
-            Q(__raw__={'owner._ref.$id': {'$in': organizations}}) |
-            Q(__raw__={'owner._ref.$id': {'$in': member_of}}))
+        if user.is_superuser:
+            qs = cls.objects
+
+        else:
+            qs = cls.objects(
+                Q(owner=user) |
+                Q(__raw__={'owner._ref.$id': {'$in': organizations}}) |
+                Q(__raw__={'owner._ref.$id': {'$in': member_of}}))
 
         return qs.filter(**kwargs)
 
