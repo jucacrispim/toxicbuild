@@ -43,11 +43,18 @@ This is done using the command ``toxicbuild create``.
     Toxicslave environment created with access token: ...
     Creating root_dir ~/ci/master for toxicmaster
     Toxicmaster environment created with access token: ...
+    Creating user for authenticated access
+    email:
+    password:
+    User created successfully
     Creating root_dir ~/ci/ui
-    Username for web access:
-    Password for web access:
     Toxicui environment created for web
 
+
+.. note::
+
+   Here a super user was created. If you want create more users you can use
+   the ``toxicmaster create_user`` command.
 
 There are some config values you may want to change. They are:
 

@@ -203,9 +203,12 @@ def create(root_dir):
 def create_user(configfile, email=None, password=None, superuser=False):
     """Creates a superuser in the master.
 
-    :param email: User's email.
-    :param password: Password for authentication.
-    :param superuser: Indicates if the user is a super user."""
+    :param --email: User's email.
+    :param --password: Password for authentication.
+    :param --superuser: Indicates if the user is a super user.
+      Defaults to False"""
+
+    print('Creating user for authenticated access')
 
     os.environ[ENVVAR] = configfile
     create_settings_and_connect()
