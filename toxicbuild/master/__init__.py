@@ -19,16 +19,10 @@ from toxicbuild.core.utils import (log, daemonize as daemon, bcrypt,
                                    bcrypt_string, changedir)
 from toxicbuild.master.scheduler import TaskScheduler
 
-# these must be before the api import.
 settings = None
 dbconn = None
 scheduler = None
 
-# # the api
-# from toxicbuild.master.build import Build, Builder, BuildSet  # noqa f402
-# from toxicbuild.master.repository import (Repository, RepositoryRevision,
-#                                           RepositoryBranch)  # noqa f402
-# from toxicbuild.master.slave import Slave  # noqa f402
 
 PIDFILE = 'toxicmaster.pid'
 LOGFILE = 'toxicmaster.log'
@@ -203,6 +197,47 @@ def create(root_dir):
         access_token))
 
     return access_token
+
+
+@command
+def create_user(configfile, email=None, password=None, superuser=False):
+    """Creates a superuser in the master.
+
+    :param email: User's email.
+    :param password: Password for authentication.
+    :param superuser: Indicates if the user is a super user."""
+
+    os.environ[ENVVAR] = configfile
+    create_settings_and_connect()
+
+    from toxicbuild.master.users import User  # noqa f401
+
+    if not email:
+        email = _ask_thing('email: ')
+
+    if not password:
+        password = _ask_thing('password: ')
+
+    user = User(email=email, is_superuser=superuser,
+                allowed_actions=['add_repo', 'add_slave', 'remove_user'])
+    user.set_password(password)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(user.save())
+    print('User {} created successfully'.format(user.username))
+
+
+def _ask_thing(thing, opts=[]):
+    if opts:
+        thing += '[' + '/'.join(opts) + ']'
+
+    response = input(thing)
+    while not response:
+        response = input(thing)
+        if opts:
+            if response.lower() not in opts:
+                response = ''
+
+    return response
 
 
 if __name__ == '__main__':

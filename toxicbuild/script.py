@@ -24,6 +24,7 @@ import sys
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import changedir
 from toxicbuild.master import create as create_master
+from toxicbuild.master import create_user
 from toxicbuild.master import create_settings_and_connect
 from toxicbuild.master.slave import Slave
 from toxicbuild.slave import create as create_slave
@@ -48,6 +49,9 @@ def create(root_dir):  # pragma no cover
     # first we create a slave and a master
     slave_token = create_slave(slave_root)
     master_token = create_master(master_root)
+    # a super user to access stuff
+    conffile = os.path.join(master_root, 'toxicmaster.conf')
+    create_user(conffile, superuser=True)
 
     with changedir(master_root):
         create_settings_and_connect()

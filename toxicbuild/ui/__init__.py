@@ -164,13 +164,11 @@ def restart(workdir, pidfile=None):
 
 
 @command
-def create(root_dir, access_token, username=None, password=None):
+def create(root_dir, access_token):
     """ Create a new toxicweb project.
 
     :param --root_dir: Root directory for toxicweb.
     :param --access-token: Access token to master's hole.
-    :param --username: Username for web access
-    :param --password: Password for web access
     """
     print('Creating root_dir {}'.format(root_dir))
 
@@ -183,26 +181,14 @@ def create(root_dir, access_token, username=None, password=None):
     dest_file = os.path.join(root_dir, 'toxicui.conf')
     shutil.copyfile(template_file, dest_file)
 
-    if not username:
-        username = _ask_thing('Username for web access: ')
-
-    if not password:
-        password = _ask_thing('Password for web access: ')
-
-    # here we create a bcrypt salt and a access token for authentication.
-    salt = bcrypt.gensalt(8)
     # cookie secret to tornado secure cookies
     cookie_secret = bcrypt.gensalt(8).decode()
-    encrypted_password = bcrypt_string(password, salt)
 
     # and finally update the config file content with the new generated
     # salt and access token
     with open(dest_file, 'r+') as fd:
         content = fd.read()
         content = content.replace('{{HOLE_TOKEN}}', access_token)
-        content = content.replace('{{BCRYPT_SALT}}', salt.decode())
-        content = content.replace('{{USERNAME}}', username)
-        content = content.replace('{{PASSWORD}}', encrypted_password)
         content = content.replace('{{COOKIE_SECRET}}', cookie_secret)
         fd.seek(0)
         fd.write(content)
