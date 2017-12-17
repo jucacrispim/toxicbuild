@@ -11,6 +11,7 @@ create_settings()
 create_settings_ui()
 create_settings_and_connect()
 
+from toxicbuild.master.users import User  # noqa f402
 from toxicbuild.ui.models import Slave, Repository  # noqa 402
 from tests.functional import (start_slave, stop_slave,  # noqa 402
                               start_master,
@@ -38,7 +39,9 @@ def quit_browser(context):
 def create_slave(context):
     """Creates a slave to be used in repo tests"""
 
-    yield from Slave.add(name='repo-slave', host='localhost', port=2222,
+    yield from Slave.add(context.user, name='repo-slave', host='localhost',
+                         owner=context.user,
+                         port=2222,
                          token='123')
 
 
@@ -46,7 +49,7 @@ def create_slave(context):
 def del_slave(context):
     """Deletes the slaves created in the tests"""
 
-    slaves = yield from Slave.list()
+    slaves = yield from Slave.list(context.user)
     for slave in slaves:
         yield from slave.delete()
 
@@ -55,18 +58,32 @@ def del_slave(context):
 def create_repo(context):
     """Creates a new repo to be used in tests"""
 
-    repo = yield from Repository.add(name='repo-bla', update_seconds=1,
+    repo = yield from Repository.add(context.user,
+                                     name='repo-bla', update_seconds=1,
+                                     owner=context.user,
                                      vcs_type='git', url=REPO_DIR,
                                      slaves=['repo-slave'])
 
     yield from repo.add_branch('master', False)
 
 
+async def create_user(context):
+    user = User(email='someguy@bla.com', is_superuser=True)
+    user.set_password('123')
+    await user.save()
+    context.user = user
+    context.user.id = str(context.user.id)
+
+
+async def del_user(context):
+    await context.user.delete()
+
+
 @asyncio.coroutine
 def del_repo(context):
     """Deletes the repositories created in tests."""
 
-    repos = yield from Repository.list()
+    repos = yield from Repository.list(context.user)
     for repo in repos:
         yield from repo.delete()
 
@@ -81,6 +98,7 @@ def before_feature(context, feature):
     start_slave()
     start_master()
     loop = asyncio.get_event_loop()
+    loop.run_until_complete(create_user(context))
     loop.run_until_complete(create_slave(context))
     start_webui()
     create_browser(context)
@@ -99,6 +117,7 @@ def after_feature(context, feature):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(del_slave(context))
     loop.run_until_complete(del_repo(context))
+    loop.run_until_complete(del_user(context))
 
     quit_browser(context)
     stop_webui()
