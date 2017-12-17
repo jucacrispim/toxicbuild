@@ -46,6 +46,7 @@ class OwnedDocuentTest(TestCase):
     async def tearDown(self):
         await TestDoc.drop_collection()
         await users.User.drop_collection()
+        await users.Organization.drop_collection()
 
     @async_test
     async def test_get_for_user_owner(self):

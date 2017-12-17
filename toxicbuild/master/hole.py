@@ -39,7 +39,7 @@ from toxicbuild.master.slave import Slave
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,
                                        repo_status_changed, build_added,
-                                       step_output_arrived)
+                                       step_output_arrived, repo_added)
 from toxicbuild.master.users import User, Organization
 
 
@@ -649,33 +649,46 @@ class UIStreamHandler(LoggerMixin):
 
         self.protocol.connection_lost_cb = connection_lost_cb
 
-    async def step_started(self, reciever, **kw):
+    async def step_started(self, sender, **kw):
         await self.send_info('step_started', **kw)
 
-    async def step_finished(self, reciever, **kw):
+    async def step_finished(self, sender, **kw):
         await self.send_info('step_finished', **kw)
 
-    async def build_started(self, reciever, **kw):
+    async def build_started(self, sender, **kw):
         await self.send_info('build_started', **kw)
 
-    async def build_finished(self, reciever, **kw):
+    async def build_finished(self, sender, **kw):
         await self.send_info('build_finished', **kw)
 
-    async def build_added(self, reciever, **kw):
+    async def build_added(self, sender, **kw):
         await self.send_info('build_added', **kw)
 
     async def _connect2signals(self):
         repos = Repository.list_for_user(self.protocol.user)
         async for repo in repos:
-            step_started.connect(self.step_started, sender=str(repo.id))
-            step_finished.connect(self.step_finished, sender=str(repo.id))
-            build_started.connect(self.build_started, sender=str(repo.id))
-            build_finished.connect(self.build_finished, sender=str(repo.id))
-            repo_status_changed.connect(self.send_repo_status_info,
-                                        sender=str(repo.id))
-            build_added.connect(self.build_added, sender=str(repo.id))
-            step_output_arrived.connect(self.send_step_output_info,
-                                        sender=str(repo.id))
+            self._connect_repo(repo)
+        repo_added.connect(self.check_repo_added)
+
+    def _connect_repo(self, repo):
+        step_started.connect(self.step_started, sender=str(repo.id))
+        step_finished.connect(self.step_finished, sender=str(repo.id))
+        build_started.connect(self.build_started, sender=str(repo.id))
+        build_finished.connect(self.build_finished, sender=str(repo.id))
+        repo_status_changed.connect(self.send_repo_status_info,
+                                    sender=str(repo.id))
+        build_added.connect(self.build_added, sender=str(repo.id))
+        step_output_arrived.connect(self.send_step_output_info,
+                                    sender=str(repo.id))
+
+    async def check_repo_added(self, sender, **kw):
+        try:
+            repo = await Repository.get_for_user(self.protocol.user,
+                                                 id=sender)
+        except NotEnoughPerms:
+            return
+
+        self._connect_repo(repo)
 
     def _disconnectfromsignals(self):
         step_output_arrived.disconnect(self.send_step_output_info)

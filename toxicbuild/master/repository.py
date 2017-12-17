@@ -33,7 +33,7 @@ from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.pollers import Poller
 from toxicbuild.master.signals import (build_started, build_finished,
-                                       repo_status_changed)
+                                       repo_status_changed, repo_added)
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.utils import OwnedDocument
 
@@ -179,6 +179,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                    slaves=slaves, name=name, branches=branches,
                    parallel_builds=parallel_builds, owner=owner)
         await repo.save()
+        repo_added.send(str(repo.id))
         repo.schedule()
         return repo
 

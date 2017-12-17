@@ -970,6 +970,22 @@ class UIStreamHandlerTest(TestCase):
         await repository.Repository.drop_collection()
         await hole.User.drop_collection()
 
+    @patch.object(hole.UIStreamHandler, '_connect_repo', MagicMock())
+    @patch.object(hole.Repository, 'get_for_user', AsyncMagicMock(
+        spec=hole.Repository.get_for_user, side_effect=hole.NotEnoughPerms))
+    @async_test
+    async def test_check_repo_added_no_perms(self):
+        await self.handler.check_repo_added('some-id')
+        self.assertFalse(self.handler._connect_repo.called)
+
+    @patch.object(hole.UIStreamHandler, '_connect_repo', MagicMock())
+    @patch.object(hole.Repository, 'get_for_user', AsyncMagicMock(
+        spec=hole.Repository.get_for_user))
+    @async_test
+    async def test_check_repo_added(self):
+        await self.handler.check_repo_added('some-id')
+        self.assertTrue(self.handler._connect_repo.called)
+
     @patch.object(hole, 'step_started', Mock())
     @patch.object(hole, 'step_finished', Mock())
     @patch.object(hole, 'build_started', Mock())
