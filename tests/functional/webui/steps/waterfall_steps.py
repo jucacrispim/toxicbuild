@@ -10,6 +10,7 @@ from tests.functional.webui.steps.base_steps import (  # noqa f811
 def step_impl(context):
     browser = context.browser
     btn = browser.find_element_by_id('btn-status-repo-bla')
+    time.sleep(1)
     browser.click(btn)
 
 
@@ -36,13 +37,14 @@ def step_impl(context):
 @then('he waits for all builds to complete')  # noqa f401
 def step_impl(context):
     browser = context.browser
-    timeout = 10
+    timeout = 5
     c = 0
     running = browser.find_elements_by_class_name('step-running')
     while bool(running) and c < timeout:
         time.sleep(1)
         running = browser.find_elements_by_class_name('step-running')
         c += 1
+
     assert bool(running) is False
 
 

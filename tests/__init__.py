@@ -35,6 +35,10 @@ class AsyncMagicMock(MagicMock):
 
         return ret()
 
+    def __bool__(self):
+        return True
+
 
 AsyncMagicMock.__aenter__ = AsyncMagicMock()
 #AsyncMagicMock.__aexit__ = AsyncMagicMock()
+#AsyncMagicMock.__bool__ = lambda: True

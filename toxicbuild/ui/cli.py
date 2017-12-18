@@ -32,6 +32,7 @@ import urwid
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.ui import inutils
 from toxicbuild.ui.client import get_hole_client
+from toxicbuild.ui.models import User
 
 
 class ToxicShellError(Exception):
@@ -104,7 +105,11 @@ def get_kwargs(command_params, args):
 
     kwargs = {}
     for i, arg in enumerate(args):
-        kwargs.update({command_params[i]['name']: arg})
+        try:
+            kwargs.update({command_params[i]['name']: arg})
+        except IndexError:
+            msg = _('Bad args for command')  # noqa f821
+            raise ToxicShellError(msg)
 
     return kwargs
 
@@ -189,24 +194,43 @@ class HistoryEdit(HistoryEditMixin, urwid.Edit):
 
 class ToxicCliActions:
 
-    def __init__(self, *args, host='localhost', port=6666, token=None,
+    def __init__(self, username_or_email, password, *args,
+                 host='localhost', port=6666, token=None,
                  **kwargs):
         super().__init__(*args, **kwargs)
+        self.username_or_email = username_or_email
+        self.password = password
         self.host = host
         self.port = port
         self.token = token
+        self.user = None
         self._loop = asyncio.get_event_loop()
         self.actions = self.get_actions()
+
+    async def authenticate(self):
+        kw = {'username_or_email': self.username_or_email,
+              'password': self.password}
+
+        try:
+            client = await self.get_client()
+            user_dict = await client.user_authenticate(**kw)
+            self.user = User(None, user_dict)
+        finally:
+            client.disconnect()
 
     @asyncio.coroutine
     def get_client(self):
         """ Returns a client connected to a toxicbuild master"""
 
-        client = yield from get_hole_client(self.host, self.port, self.token)
+        client = yield from get_hole_client(self.user, self.host, self.port,
+                                            hole_token=self.token)
         return client
 
     def get_actions(self):
         """ Asks the server for which actions are available. """
+
+        if not self.user:
+            self._loop.run_until_complete(self.authenticate())
 
         with self._loop.run_until_complete(self.get_client()) as client:
             actions = self._loop.run_until_complete(client.list_funcs())
@@ -251,7 +275,6 @@ class ToxicCliActions:
 
         with (yield from self.get_client()) as client:
             response = yield from client.request2server(action, cmdkwargs)
-
         return action, response
 
 
@@ -259,7 +282,8 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
 
     # urwid, great library!
 
-    def __init__(self, host='localhost', port=6666, token=None):
+    def __init__(self, username_or_email, password, host='localhost',
+                 port=6666, token=None):
 
         self.prompt = 'toxicbuild> '
         self.input = HistoryEdit(self.prompt)
@@ -268,7 +292,9 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         self.div = urwid.Divider()
         self.pile = urwid.Pile([self.main_screen, self.div, self.messages,
                                 self.div, self.input])
-        super().__init__(self.pile, valign='bottom', host=host, port=port,
+        super().__init__(username_or_email, password, self.pile,
+                         valign='bottom',
+                         host=host, port=port,
                          token=token)
 
         self._stop_peek = False

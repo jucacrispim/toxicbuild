@@ -24,7 +24,7 @@ import unittest
 from unittest.mock import MagicMock, Mock, patch
 import tornado
 from toxicbuild.ui import cli
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 # urwid changes the locale and this makes a test on vcs fail
@@ -103,8 +103,14 @@ class CliCommandTest(unittest.TestCase):
         args = [1]
 
         kwargs = cli.get_kwargs(command_args, args)
-
         self.assertEqual(kwargs['a'], 1)
+
+    def test_get_kwargs_bad_args(self):
+        command_args = []
+        args = [1]
+
+        with self.assertRaises(cli.ToxicShellError):
+            kwargs = cli.get_kwargs(command_args, args)
 
 
 class HistoryEditTest(unittest.TestCase):
@@ -338,45 +344,44 @@ class ToxicCliActionsTest(unittest.TestCase):
     def setUp(self):
         super().setUp()
 
+        username_or_email = 'toxicuser'
+        password = 'asdf'
         cli.ToxicCliActions.get_actions.return_value = ACTIONS
-        self.cli_actions = cli.ToxicCliActions()
+        self.cli_actions = cli.ToxicCliActions(username_or_email,
+                                               password)
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
-    @patch.object(cli, 'get_hole_client', MagicMock())
+    @patch.object(cli, 'get_hole_client', AsyncMagicMock(
+        spec=cli.get_hole_client))
     @async_test
     def test_get_client(self):
-        client = MagicMock()
-
-        @asyncio.coroutine
-        def ghc(host, port, token):
-            client.__enter__.return_value = client
-            return client
-
-        cli.get_hole_client = ghc
-
+        cli.get_hole_client.return_value.__bool__ = lambda *a, **kw: True
         returned = yield from self.cli_actions.get_client()
+        self.assertTrue(returned)
 
-        self.assertTrue(returned, client)
-
-    @patch.object(cli, 'get_hole_client', MagicMock())
+    @patch.object(cli, 'get_hole_client', AsyncMagicMock(
+        spec=cli.get_hole_client))
     def test_get_actions(self):
-        client = MagicMock()
+        cli.get_hole_client.return_value = MagicMock()
+        client = cli.get_hole_client.return_value
+        client.user_authenticate = AsyncMagicMock(return_value={'id': 'id'})
+        client = cli.get_hole_client.return_value.__enter__.return_value
+        client.list_funcs = AsyncMagicMock()
+        actions = self.cli_actions.get_actions()
 
-        @asyncio.coroutine
-        def lf():
-            return ACTIONS
+        self.assertEqual(actions, ACTIONS)
 
-        client.list_funcs = lf
-
-        @asyncio.coroutine
-        def ghc(host, port, token):
-            client.__enter__.return_value = client
-            return client
-
-        cli.get_hole_client = ghc
-
+    @patch.object(cli, 'get_hole_client', AsyncMagicMock(
+        spec=cli.get_hole_client))
+    def test_get_actions_no_authenticate(self):
+        self.cli_actions.user = Mock()
+        cli.get_hole_client.return_value = MagicMock()
+        client = cli.get_hole_client.return_value
+        client.user_authenticate = AsyncMagicMock(return_value={'id': 'id'})
+        client = cli.get_hole_client.return_value.__enter__.return_value
+        client.list_funcs = AsyncMagicMock()
         actions = self.cli_actions.get_actions()
 
         self.assertEqual(actions, ACTIONS)
@@ -422,7 +427,7 @@ class ToxicCliActionsTest(unittest.TestCase):
         client.request2server = r2s
 
         @asyncio.coroutine
-        def ghc(host, port, token):
+        def ghc(requester, host, port, hole_token):
             client.__enter__.return_value = client
             return client
 
@@ -442,13 +447,15 @@ class ToxicCliTest(unittest.TestCase):
         @asyncio.coroutine
         def gc(*args, **kwargs):
             client = MagicMock()
+            client.user_authenticate = AsyncMagicMock(return_value={
+                'id': 'some-id'})
             client.list_funcs = asyncio.coroutine(lambda *args, **kwargs: None)
             client.__enter__.return_value = client
             return client
 
         cli.ToxicCliActions.get_client = gc
 
-        cls.cli = cli.ToxicCli()
+        cls.cli = cli.ToxicCli('toxicuser', 'asdf')
         cls.cli.actions = ACTIONS
         cls.loop = asyncio.get_event_loop()
 
