@@ -105,7 +105,9 @@ class PythonVenvPlugin(SlavePlugin):
         self.pyversion = pyversion
         self.requirements_file = requirements_file
         self.remove_env = remove_env
-        self.venv_dir = 'venv-{}'.format(self.pyversion.replace(os.sep, ''))
+        self.venv_dir = os.path.join(
+            self.data_dir, 'venv-{}'.format(
+                self.pyversion.replace(os.sep, '')))
 
     def get_steps_before(self):
         create_env = PythonCreateVenvStep(self.venv_dir, self.pyversion)

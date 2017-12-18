@@ -105,10 +105,10 @@ class PythonVenvPluginTest(TestCase):
         self.assertEqual(self.plugin.name, 'python-venv')
 
     def test_get_steps_before(self):
+        cmd = 'virtualenv .././python-venv/venv-usrbinpython3.4'
+        cmd += ' -p /usr/bin/python3.4'
         expected = [
-            plugins.BuildStep(
-                'create venv',
-                'virtualenv venv-usrbinpython3.4 -p /usr/bin/python3.4'),
+            plugins.BuildStep('create venv', cmd),
             plugins.BuildStep('install dependencies using pip',
                               'pip install -r requirements.txt')
         ]
@@ -125,14 +125,14 @@ class PythonVenvPluginTest(TestCase):
 
     def test_get_steps_after_removing(self):
         expected = [plugins.BuildStep(
-            'remove venv', 'rm -rf venv-usrbinpython3.4')]
+            'remove venv', 'rm -rf .././python-venv/venv-usrbinpython3.4')]
         self.plugin.remove_env = True
         steps_after = self.plugin.get_steps_after()
 
         self.assertEqual(expected, steps_after)
 
     def test_get_env_vars(self):
-        expected = {'PATH': 'venv-usrbinpython3.4/bin:PATH'}
+        expected = {'PATH': '.././python-venv/venv-usrbinpython3.4/bin:PATH'}
         env_vars = self.plugin.get_env_vars()
 
         self.assertEqual(expected, env_vars)
