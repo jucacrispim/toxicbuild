@@ -170,13 +170,19 @@ class DockerContainerBuilderManagerTest(TestCase):
     @patch.object(docker, 'exec_cmd', AsyncMagicMock())
     @async_test
     async def test_rm_from_container(self):
-        expected = 'docker exec {} rm -rf {}/{}'.format(
+        expected_source = 'docker exec {} rm -rf {}/{}'.format(
             self.container.name, self.container.container_slave_workdir,
             self.container.source_dir)
 
+        expected_build = 'docker exec {} rm -rf {}/{}-{}'.format(
+            self.container.name, self.container.container_slave_workdir,
+            self.container.source_dir, self.container.builder_name)
+
         await self.container.rm_from_container()
-        called = docker.exec_cmd.call_args[0][0]
-        self.assertEqual(expected, called)
+        called_source = docker.exec_cmd.call_args_list[0][0][0]
+        called_build = docker.exec_cmd.call_args_list[1][0][0]
+        self.assertEqual(expected_source, called_source)
+        self.assertEqual(expected_build, called_build)
 
     @patch.object(docker, 'exec_cmd', AsyncMagicMock())
     @async_test

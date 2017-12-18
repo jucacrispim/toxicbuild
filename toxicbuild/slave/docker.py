@@ -184,10 +184,19 @@ class DockerContainerBuilder(LoggerMixin):
 
         msg = 'Removing files from container {}'.format(self.name)
         self.log(msg, level='debug')
-
+        # removing source dir
         cmd = '{} exec {} rm -rf {}/{}'.format(self.docker_cmd, self.name,
                                                self.container_slave_workdir,
                                                self.source_dir)
+        msg = 'Executing {}'.format(cmd)
+        self.log(msg, level='debug')
+        await exec_cmd(cmd, cwd='.')
+
+        # removing build dir
+        cmd = '{} exec {} rm -rf {}/{}-{}'.format(self.docker_cmd, self.name,
+                                                  self.container_slave_workdir,
+                                                  self.source_dir,
+                                                  self.builder_name)
         msg = 'Executing {}'.format(cmd)
         self.log(msg, level='debug')
         await exec_cmd(cmd, cwd='.')
