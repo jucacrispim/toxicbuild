@@ -16,6 +16,7 @@ class SeleniumBrowser(webdriver.Chrome):
     def __init__(self, *args, **kwargs):
         options = webdriver.ChromeOptions()
         options.add_argument('--start-maximized')
+        options.add_argument('--no-sandbox')
         super().__init__(*args, chrome_options=options, **kwargs)
         # self.maximize_window()
         self.implicitly_wait(10)
