@@ -99,7 +99,7 @@ class BuilderTest(TestCase):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
         self.builder.plugins = await self.builder.manager._load_plugins(
             pconfig)
-        expected = {'PATH': 'venv-usrbinpython3.4/bin:PATH'}
+        expected = {'PATH': '.././python-venv/venv-usrbinpython3.4/bin:PATH'}
         returned = self.builder._get_env_vars()
 
         self.assertEqual(expected, returned)
@@ -110,7 +110,7 @@ class BuilderTest(TestCase):
         self.builder.plugins = await self.builder.manager._load_plugins(
             pconfig)
         self.builder.envvars = {'VAR1': 'someval'}
-        expected = {'PATH': 'venv-usrbinpython3.4/bin:PATH',
+        expected = {'PATH': '.././python-venv/venv-usrbinpython3.4/bin:PATH',
                     'VAR1': 'someval'}
         returned = self.builder._get_env_vars()
         self.assertEqual(expected, returned)
