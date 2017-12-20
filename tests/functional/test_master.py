@@ -316,6 +316,7 @@ class ToxicMasterTest(BaseFunctionalTest):
                 response = await client.get_response()
                 body = response['body'] if response else {}
                 if body.get('event_type') == 'build_finished':
+                    await asyncio.sleep(0.5)
                     break
 
         has_msg = await WebHookMessage.objects.count()
