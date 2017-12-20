@@ -698,6 +698,7 @@ class UIStreamHandler(LoggerMixin):
         build_finished.disconnect(self.build_finished)
         repo_status_changed.disconnect(self.send_repo_status_info)
         build_added.disconnect(self.build_added)
+        repo_added.disconnect(self.check_repo_added)
 
     async def handle(self):
         await self._connect2signals()

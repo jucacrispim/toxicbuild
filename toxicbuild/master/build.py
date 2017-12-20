@@ -489,9 +489,6 @@ class BuildManager(LoggerMixin):
     def connect2signals(self):
         """ Connects the BuildManager to the revision_added signal."""
 
-        # connect here needs not to be weak otherwise no
-        # receiver is available when polling is triggered by the
-        # scheduler.
         revision_added.connect(self._revadded, sender=self.repository)
         self._is_connected_to_signals = True
 

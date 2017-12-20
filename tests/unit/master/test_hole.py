@@ -993,6 +993,7 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'repo_status_changed', Mock())
     @patch.object(hole, 'build_added', Mock())
     @patch.object(hole, 'step_output_arrived', Mock())
+    @patch.object(hole, 'repo_added', Mock())
     def test_disconnectfromsignals(self):
 
         self.handler._disconnectfromsignals()
@@ -1002,7 +1003,8 @@ class UIStreamHandlerTest(TestCase):
                              hole.build_finished.disconnect.called,
                              hole.repo_status_changed.disconnect.called,
                              hole.build_added.disconnect.called,
-                             hole.step_output_arrived.disconnect.called]))
+                             hole.step_output_arrived.disconnect.called,
+                             hole.repo_added.disconnect.called]))
 
     @patch.object(hole, 'step_started', Mock())
     @patch.object(hole, 'step_finished', Mock())
@@ -1011,6 +1013,7 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'repo_status_changed', Mock())
     @patch.object(hole, 'build_added', Mock())
     @patch.object(hole, 'step_output_arrived', Mock())
+    @patch.object(hole, 'repo_added', Mock())
     @async_test
     async def test_connect2signals(self):
 
@@ -1024,7 +1027,8 @@ class UIStreamHandlerTest(TestCase):
                              hole.build_finished.connect.called,
                              hole.repo_status_changed.connect.called,
                              hole.build_added.connect.called,
-                             hole.step_output_arrived.connect.called]))
+                             hole.step_output_arrived.connect.called,
+                             hole.repo_added.connect.called]))
 
     @async_test
     async def test_step_started(self):
