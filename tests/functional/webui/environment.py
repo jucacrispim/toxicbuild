@@ -97,6 +97,7 @@ def before_feature(context, feature):
 
     start_slave()
     start_master()
+    time.sleep(0.5)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(create_user(context))
     loop.run_until_complete(create_slave(context))
