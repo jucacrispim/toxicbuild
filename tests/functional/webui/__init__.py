@@ -29,7 +29,7 @@ class SeleniumBrowser(webdriver.Chrome):
         action = ActionChains(self).click(element)
         action.perform()
 
-    def wait_text_become_present(self, text, timeout=10):
+    def wait_text_become_present(self, text, timeout=30):
         """Waits until a text is present in the page source.
 
         :param text: The text that should be present in the page.
