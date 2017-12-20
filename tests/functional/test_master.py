@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import os
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.master import settings
 from toxicbuild.master.plugins import MasterPlugin
@@ -316,7 +317,9 @@ class ToxicMasterTest(BaseFunctionalTest):
                 response = await client.get_response()
                 body = response['body'] if response else {}
                 if body.get('event_type') == 'build_finished':
-                    await asyncio.sleep(0.5)
+                    sleep_time = os.environ.get('TOXICSLEEP_TIME') or 0.5
+                    sleep_time = float(sleep_time)
+                    await asyncio.sleep(sleep_time)
                     break
 
         has_msg = await WebHookMessage.objects.count()
