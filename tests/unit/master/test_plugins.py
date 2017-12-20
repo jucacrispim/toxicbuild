@@ -208,7 +208,7 @@ class NotificationPlugin(TestCase):
         self.plugin.sender = self.repo
         self.plugin.send_started_message = AsyncMagicMock()
         self.plugin.send_finished_message = AsyncMagicMock()
-        await self.plugin._check_build(sig, self.repo, build)
+        await self.plugin._check_build(sig, str(self.repo.id), build)
         self.assertTrue(self.plugin.send_started_message.called)
 
     @async_test
@@ -223,7 +223,7 @@ class NotificationPlugin(TestCase):
         self.plugin.sender = self.repo
         self.plugin.send_started_message = AsyncMagicMock()
         self.plugin.send_finished_message = AsyncMagicMock()
-        await self.plugin._check_build(sig, self.repo, build)
+        await self.plugin._check_build(sig, str(self.repo.id), build)
         self.assertTrue(self.plugin.send_finished_message.called)
 
     @async_test

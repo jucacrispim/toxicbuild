@@ -245,20 +245,20 @@ class NotificationPlugin(MasterPlugin):
         build_started.disconnect(self._build_started)
         build_finished.disconnect(self._build_finished)
 
-    def _build_started(self, repo, build):
-        ensure_future(self._check_build('started', repo, build))
+    def _build_started(self, repo_id, build):
+        ensure_future(self._check_build('started', repo_id, build))
 
-    def _build_finished(self, repo, build):
-        ensure_future(self._check_build('finished', repo, build))
+    def _build_finished(self, repo_id, build):
+        ensure_future(self._check_build('finished', repo_id, build))
 
-    async def _check_build(self, sig_type, repo, build):
+    async def _check_build(self, sig_type, repo_id, build):
         sigs = {'started': self.send_started_message,
                 'finished': self.send_finished_message}
 
         buildset = await build.get_buildset()
-        if repo == self.sender and buildset.branch in self.branches:
+        if repo_id == str(self.sender.id) and buildset.branch in self.branches:
             coro = sigs[sig_type]
-            ensure_future(coro(repo, build))
+            ensure_future(coro(self.sender, build))
 
     async def send_started_message(self, repo, build):
         """Sends a message about a started build. You must implement
