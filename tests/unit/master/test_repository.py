@@ -59,6 +59,12 @@ class RepositoryTest(TestCase):
         await users.User.drop_collection()
         super(RepositoryTest, self).tearDown()
 
+    @patch.object(repository.Repository, 'update_code', AsyncMagicMock())
+    @async_test
+    async def test_update_code_fn(self):
+        await repository._update_code(self.repo.id)
+        self.assertTrue(repository.Repository.update_code.called)
+
     @async_test
     async def test_to_dict(self):
         await self._create_db_revisions()

@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future
+import functools
 import os
 import re
 import shutil
@@ -44,6 +45,15 @@ from toxicbuild.master.utils import OwnedDocument
 # The format is {repourl: hash} for update_code
 # and {repourl-start-pending: hash} for starting pending builds
 _scheduler_hashes = {}
+
+
+async def _update_code(repo_id):
+    """Calls the update_code method of a repo. We must use this instead of
+    use reload() in the update_code method because the reload() causes a
+    massive memory leak."""
+
+    repo = await Repository.get(id=repo_id)
+    await repo.update_code()
 
 
 class RepositoryBranch(EmbeddedDocument):
@@ -228,7 +238,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         """Updates the repository's code. It is just a wrapper for
         self.poller.poll, so I can handle exceptions here."""
 
-        await self.reload()
         with_clone = False
         try:
             with_clone = await self.poller.poll()
@@ -259,7 +268,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         # we remove the repository.
 
         # adding update_code
-        sched_hash = self.scheduler.add(self.update_code, self.update_seconds)
+        update_fn = functools.partial(_update_code, self.id)
+        sched_hash = self.scheduler.add(update_fn, self.update_seconds)
         _scheduler_hashes[self.url] = sched_hash
 
         # adding start_pending
