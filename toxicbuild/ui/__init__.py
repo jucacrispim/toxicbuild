@@ -9,7 +9,7 @@ from tornado.platform.asyncio import AsyncIOMainLoop
 from pyrocumulus.commands.base import get_command
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
-from toxicbuild.core.utils import bcrypt, bcrypt_string, changedir
+from toxicbuild.core.utils import bcrypt, changedir
 
 
 here = os.path.dirname(os.path.abspath(__file__))
