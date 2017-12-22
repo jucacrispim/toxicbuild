@@ -23,7 +23,6 @@ import datetime
 from concurrent import futures
 import os
 import subprocess
-import sys
 import time
 from unittest import TestCase
 from unittest.mock import patch, Mock, MagicMock
