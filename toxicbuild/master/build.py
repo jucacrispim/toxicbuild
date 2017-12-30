@@ -562,7 +562,7 @@ class BuildManager(LoggerMixin):
 
     def _get_builds_chunks(self, builds):
 
-        if self.repository.parallel_builds is None:
+        if not self.repository.parallel_builds:
             yield builds
             return
 

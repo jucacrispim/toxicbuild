@@ -492,7 +492,7 @@ class BuildManagerTest(TestCase):
     @async_test
     async def test_get_builds_chunks_with_limitless_parallels(self):
         await self._create_test_data()
-        self.manager.repository.parallel_builds = None
+        self.manager.repository.parallel_builds = 0
         chunks = list(self.manager._get_builds_chunks([mock.Mock(),
                                                        mock.Mock()]))
         self.assertEqual(len(chunks), 1)
