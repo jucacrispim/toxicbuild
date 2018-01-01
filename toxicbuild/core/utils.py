@@ -247,8 +247,8 @@ def _match_branch(branch, builder):
 
 
 def _match_slave(slave, builder):
-    if not slave or not builder.get('slaves') or slave.name in builder.get(
-            'slaves'):
+    if not slave or not builder.get('slaves') or match_string(
+            slave.name,  builder.get('slaves')):
         return True
     return False
 
@@ -260,9 +260,6 @@ def list_builders_from_config(confmodule, branch=None, slave=None):
     for builder in confmodule.BUILDERS:
 
         if _match_branch(branch, builder) and _match_slave(slave, builder):
-            builders.append(builder)
-
-        elif not branch and not slave:
             builders.append(builder)
 
     return builders
