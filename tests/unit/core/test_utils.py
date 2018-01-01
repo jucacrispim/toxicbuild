@@ -241,7 +241,7 @@ class UtilsTest(TestCase):
                                {'name': 'b1', 'branches': ['other']},
                                {'name': 'b2',
                                 'slaves': ['myslave'],
-                                'branches': ['master', 'release']},
+                                'branches': ['mast*', 'release']},
                                {'name': 'b3', 'slaves': ['otherslave']}]
         builders = utils.list_builders_from_config(confmodule, 'master', slave)
         self.assertEqual(len(builders), 2)

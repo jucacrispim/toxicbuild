@@ -240,7 +240,8 @@ def get_toxicbuildconf(directory):
 
 
 def _match_branch(branch, builder):
-    if not builder.get('branches') or branch in builder.get('branches'):
+    if not builder.get('branches') or match_string(
+            branch, builder.get('branches')):
         return True
     return False
 
