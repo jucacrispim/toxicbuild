@@ -443,7 +443,9 @@ class BuildManager(LoggerMixin):
             await self.repository.poller.vcs.checkout(revision.commit)
             try:
                 conf = get_toxicbuildconf(self.repository.poller.vcs.workdir)
-                names = list_builders_from_config(conf, revision.branch, slave)
+                builders = list_builders_from_config(
+                    conf, revision.branch, slave)
+                names = [b['name'] for b in builders]
             except Exception as e:
                 msg = 'Something wrong with your toxicbuild.conf. Original '
                 msg += 'exception was:\n {}'.format(str(e))

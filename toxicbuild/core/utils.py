@@ -239,10 +239,33 @@ def get_toxicbuildconf(directory):
     return load_module_from_file(configfile)
 
 
-def list_builders_from_config(confmodule, branch, slave):
-    builders = [b['name'] for b in confmodule.BUILDERS
-                if (b.get('branch') == branch or b.get('branch')is None) and
-                (b.get('slave') == slave.name or b.get('slave') is None)]
+def _match_branch(branch, builder):
+    if builder.get('branch') is None or builder.get('branch') == branch:
+        return True
+    return False
+
+
+def _match_slave(slave, builder):
+    if builder.get('slave') is None or builder.get('slave') == slave.name:
+        return True
+    return False
+
+
+def list_builders_from_config(confmodule, branch=None, slave=None):
+    """Lists builders from a config module"""
+
+    builders = []
+    for builder in confmodule.BUILDERS:
+        if branch and _match_branch(branch, builder):
+            if not slave or _match_slave(slave, builder):
+                builders.append(builder)
+
+        elif slave and _match_slave(slave, builder):
+            if not branch or _match_branch(branch, builder):
+                builders.append(builder)
+        elif not branch and not slave:
+            builders.append(builder)
+
     return builders
 
 

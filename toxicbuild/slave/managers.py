@@ -22,7 +22,8 @@ from collections import defaultdict
 import os
 from toxicbuild.core import get_vcs
 from toxicbuild.core.utils import (get_toxicbuildconf, LoggerMixin,
-                                   ExecCmdError, match_string)
+                                   ExecCmdError, match_string,
+                                   list_builders_from_config)
 from toxicbuild.slave import settings
 from toxicbuild.slave.build import Builder, BuildStep
 from toxicbuild.slave.docker import DockerContainerBuilder
@@ -211,9 +212,9 @@ class BuildManager(LoggerMixin):
         :param name: builder name
         """
         try:
-            bdict = [b for b in self.configmodule.BUILDERS if (b.get(
-                'branch') is None and b['name'] == name) or (b.get(
-                    'branch') == self.branch and b['name'] == name)][0]
+            builders = list_builders_from_config(self.configmodule,
+                                                 branch=self.branch)
+            bdict = [b for b in builders if b['name'] == name][0]
         except IndexError:
             msg = 'builder {} does not exist for {} branch {}'.format(
                 name, self.repo_url, self.branch)

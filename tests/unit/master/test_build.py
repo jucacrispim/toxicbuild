@@ -385,7 +385,8 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
     @mock.patch.object(build, 'list_builders_from_config',
-                       mock.Mock(return_value=['builder-0', 'builder-1']))
+                       mock.Mock(return_value=[{'name': 'builder-0'},
+                                               {'name': 'builder-1'}]))
     @async_test
     async def test_get_builders(self):
         await self._create_test_data()
@@ -404,7 +405,8 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
     @mock.patch.object(build, 'list_builders_from_config',
-                       mock.Mock(return_value=['builder-0', 'builder-1']))
+                       mock.Mock(return_value=[{'name': 'builder-0'},
+                                               {'name': 'builder-1'}]))
     @mock.patch.object(build.asyncio, 'sleep', mock.MagicMock)
     @async_test
     async def test_get_builders_polling(self):

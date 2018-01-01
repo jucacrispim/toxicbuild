@@ -240,9 +240,37 @@ class UtilsTest(TestCase):
         confmodule.BUILDERS = [{'name': 'b0'},
                                {'name': 'b1', 'branch': 'other'},
                                {'name': 'b2',
-                                'slave': 'myslave', 'branch': 'master'}]
+                                'slave': 'myslave', 'branch': 'master'},
+                               {'name': 'b3', 'slave': 'otherslave'}]
         builders = utils.list_builders_from_config(confmodule, 'master', slave)
         self.assertEqual(len(builders), 2)
+        self.assertNotIn({'name': 'b1', 'branch': 'other'}, builders)
+
+    def test_list_builders_from_config_no_branch(self):
+        confmodule = Mock()
+        slave = Mock()
+        slave.name = 'myslave'
+        confmodule.BUILDERS = [{'name': 'b0'},
+                               {'name': 'b1', 'branch': 'other',
+                                'slave': 'other'},
+                               {'name': 'b2',
+                                'slave': 'myslave', 'branch': 'master'}]
+        builders = utils.list_builders_from_config(confmodule, slave=slave)
+        self.assertEqual(len(builders), 2)
+        self.assertNotIn({'name': 'b1', 'branch': 'other',
+                          'slave': 'other'}, builders)
+
+    def test_list_builders_from_config_no_branch_no_slave(self):
+        confmodule = Mock()
+        slave = Mock()
+        slave.name = 'myslave'
+        confmodule.BUILDERS = [{'name': 'b0'},
+                               {'name': 'b1', 'branch': 'other',
+                                'slave': 'other'},
+                               {'name': 'b2',
+                                'slave': 'myslave', 'branch': 'master'}]
+        builders = utils.list_builders_from_config(confmodule)
+        self.assertEqual(len(builders), 3)
 
     def test_bcript_with_str_salt(self):
         salt = utils.bcrypt.gensalt(7).decode()
