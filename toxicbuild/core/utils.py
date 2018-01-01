@@ -240,14 +240,15 @@ def get_toxicbuildconf(directory):
 
 
 def _match_branch(branch, builder):
-    if not builder.get('branches') or match_string(
+    if not branch or not builder.get('branches') or match_string(
             branch, builder.get('branches')):
         return True
     return False
 
 
 def _match_slave(slave, builder):
-    if not builder.get('slaves') or slave.name in builder.get('slaves'):
+    if not slave or not builder.get('slaves') or slave.name in builder.get(
+            'slaves'):
         return True
     return False
 
@@ -257,13 +258,10 @@ def list_builders_from_config(confmodule, branch=None, slave=None):
 
     builders = []
     for builder in confmodule.BUILDERS:
-        if branch and _match_branch(branch, builder):
-            if not slave or _match_slave(slave, builder):
-                builders.append(builder)
 
-        elif slave and _match_slave(slave, builder):
-            if not branch or _match_branch(branch, builder):
-                builders.append(builder)
+        if _match_branch(branch, builder) and _match_slave(slave, builder):
+            builders.append(builder)
+
         elif not branch and not slave:
             builders.append(builder)
 
