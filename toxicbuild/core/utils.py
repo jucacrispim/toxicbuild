@@ -240,13 +240,13 @@ def get_toxicbuildconf(directory):
 
 
 def _match_branch(branch, builder):
-    if builder.get('branch') is None or builder.get('branch') == branch:
+    if not builder.get('branches') or branch in builder.get('branches'):
         return True
     return False
 
 
 def _match_slave(slave, builder):
-    if builder.get('slave') is None or builder.get('slave') == slave.name:
+    if not builder.get('slaves') or slave.name in builder.get('slaves'):
         return True
     return False
 

@@ -238,10 +238,11 @@ class UtilsTest(TestCase):
         slave = Mock()
         slave.name = 'myslave'
         confmodule.BUILDERS = [{'name': 'b0'},
-                               {'name': 'b1', 'branch': 'other'},
+                               {'name': 'b1', 'branches': ['other']},
                                {'name': 'b2',
-                                'slave': 'myslave', 'branch': 'master'},
-                               {'name': 'b3', 'slave': 'otherslave'}]
+                                'slaves': ['myslave'],
+                                'branches': ['master', 'release']},
+                               {'name': 'b3', 'slaves': ['otherslave']}]
         builders = utils.list_builders_from_config(confmodule, 'master', slave)
         self.assertEqual(len(builders), 2)
         self.assertNotIn({'name': 'b1', 'branch': 'other'}, builders)
@@ -251,10 +252,10 @@ class UtilsTest(TestCase):
         slave = Mock()
         slave.name = 'myslave'
         confmodule.BUILDERS = [{'name': 'b0'},
-                               {'name': 'b1', 'branch': 'other',
-                                'slave': 'other'},
+                               {'name': 'b1', 'branches': ['other'],
+                                'slaves': ['other']},
                                {'name': 'b2',
-                                'slave': 'myslave', 'branch': 'master'}]
+                                'slaves': ['myslave'], 'branches': ['master']}]
         builders = utils.list_builders_from_config(confmodule, slave=slave)
         self.assertEqual(len(builders), 2)
         self.assertNotIn({'name': 'b1', 'branch': 'other',
@@ -265,10 +266,10 @@ class UtilsTest(TestCase):
         slave = Mock()
         slave.name = 'myslave'
         confmodule.BUILDERS = [{'name': 'b0'},
-                               {'name': 'b1', 'branch': 'other',
-                                'slave': 'other'},
+                               {'name': 'b1', 'branches': ['other'],
+                                'slaves': ['other']},
                                {'name': 'b2',
-                                'slave': 'myslave', 'branch': 'master'}]
+                                'slaves': ['myslave'], 'branches': ['master']}]
         builders = utils.list_builders_from_config(confmodule)
         self.assertEqual(len(builders), 3)
 
