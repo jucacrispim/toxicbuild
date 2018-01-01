@@ -73,8 +73,9 @@ Builder params
 
 Builder has extra optional params, too. They are the following:
 
-* ``branch``: Indicates which branch triggers this builder. If no branch, all
-  branches will trigger the builder. You may use wildcards here.
+* ``branches``: A list containing the branches that trigger this builder.
+  If no branches, all branches will trigger the builder.
+  You may use wildcards here.
 * ``envvars``: A dictionary in the form {VAR: VALUE} for environment variables
   to be used in all steps in this builder.
 * ``plugins``: A list of plugins configurations that will be used in the
