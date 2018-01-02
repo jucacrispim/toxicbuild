@@ -36,7 +36,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         self.event_type = self._check_event_type()
 
     @post('auth')
-    async def authenticate(self):
+    async def authenticate(self):  # pragma no cover
         pass
 
     @post('webhooks')

@@ -99,7 +99,39 @@ class GithubWebhookReceiverTest(TestCase):
 
     @patch.object(webhook_receiver.LoggerMixin, 'log', Mock())
     @async_test
-    async def test_receive_webhook(self):
+    async def test_receive_webhook_zen(self):
         self.webhook_receiver.prepare()
         await self.webhook_receiver.receive_webhook()
         self.assertTrue(self.webhook_receiver.log.called)
+
+    @patch.object(webhook_receiver.LoggerMixin, 'log', Mock())
+    @async_test
+    async def test_receive_webhook_unknown(self):
+        body = webhook_receiver.json.dumps({
+            "hook_id": 'ZZZZZ',
+            "hook": {
+                "type": "App",
+                "id": 'XXXXX',
+                "name": "web",
+                "active": True,
+                "events": [
+                    "pull_request",
+                    "status"
+                ],
+                "config": {
+                    "content_type": "json",
+                    "insecure_ssl": "0",
+                    "url": "http://ci.poraodojuca.net:9999/github/webhooks/"
+                },
+                "updated_at": "2018-01-01T04:25:35Z",
+                "created_at": "2018-01-01T04:25:35Z",
+                "app_id": 'YYYYY'
+            }
+        })
+
+        self.webhook_receiver.request.body = body
+        self.webhook_receiver._check_event_type = Mock()
+        self.webhook_receiver.prepare()
+        self.webhook_receiver.event_type = 'unknown'
+        await self.webhook_receiver.receive_webhook()
+        self.assertFalse(self.webhook_receiver.log.called)
