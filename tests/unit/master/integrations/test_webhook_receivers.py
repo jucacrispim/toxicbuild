@@ -19,7 +19,7 @@
 
 from unittest import TestCase
 from unittest.mock import Mock, patch
-from toxicbuild.master import webhook_receiver
+from toxicbuild.master.integrations import webhook_receivers
 from tests import async_test
 
 
@@ -27,7 +27,7 @@ class GithubWebhookReceiverTest(TestCase):
 
     def setUp(self):
 
-        body = webhook_receiver.json.dumps({
+        body = webhook_receivers.json.dumps({
             "zen": "Speak like a human.",
             "hook_id": 'ZZZZZ',
             "hook": {
@@ -54,23 +54,23 @@ class GithubWebhookReceiverTest(TestCase):
         request.arguments = {}
         application = Mock()
         application.ui_methods = {}
-        self.webhook_receiver = webhook_receiver.GithubWebhookReceiver(
+        self.webhook_receiver = webhook_receivers.GithubWebhookReceiver(
             application, request)
 
     def test_parse_body(self):
         self.webhook_receiver._parse_body()
         self.assertEqual(
             self.webhook_receiver.body,
-            webhook_receiver.json.loads(self.webhook_receiver.request.body))
+            webhook_receivers.json.loads(self.webhook_receiver.request.body))
 
     def test_check_event_type_zen(self):
         self.webhook_receiver.prepare()
         r = self.webhook_receiver._check_event_type()
         self.assertEqual(r, 'zen')
 
-    @patch.object(webhook_receiver.LoggerMixin, 'log', Mock())
+    @patch.object(webhook_receivers.LoggerMixin, 'log', Mock())
     def test_check_event_type_unknown(self):
-        body = webhook_receiver.json.dumps({
+        body = webhook_receivers.json.dumps({
             "hook_id": 'ZZZZZ',
             "hook": {
                 "type": "App",
@@ -97,17 +97,17 @@ class GithubWebhookReceiverTest(TestCase):
         r = self.webhook_receiver._check_event_type()
         self.assertEqual(r, 'unknown')
 
-    @patch.object(webhook_receiver.LoggerMixin, 'log', Mock())
+    @patch.object(webhook_receivers.LoggerMixin, 'log', Mock())
     @async_test
     async def test_receive_webhook_zen(self):
         self.webhook_receiver.prepare()
         await self.webhook_receiver.receive_webhook()
         self.assertTrue(self.webhook_receiver.log.called)
 
-    @patch.object(webhook_receiver.LoggerMixin, 'log', Mock())
+    @patch.object(webhook_receivers.LoggerMixin, 'log', Mock())
     @async_test
     async def test_receive_webhook_unknown(self):
-        body = webhook_receiver.json.dumps({
+        body = webhook_receivers.json.dumps({
             "hook_id": 'ZZZZZ',
             "hook": {
                 "type": "App",
