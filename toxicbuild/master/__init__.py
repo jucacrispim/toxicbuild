@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-try:
-    from asyncio import ensure_future
-except ImportError:
-    from asyncio import async as ensure_future
-
+from asyncio import ensure_future
 import logging
 import os
 import pkg_resources
@@ -108,7 +104,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
       inside ``workdir``
     :param --loglevel: Level for logging messages. Defaults to `info`.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
-      ``toxicslave.pid``
+      ``toxicmaster.pid``
     """
 
     print('Starting toxicmaster')

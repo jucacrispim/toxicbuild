@@ -108,6 +108,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         command.daemonize = daemonize
         command.stderr = stderr
         command.application = None
+        command.log_level = loglevel
         command.stdout = stdout
         command.port = settings.TORNADO_PORT
         command.pidfile = pidfile
@@ -152,7 +153,7 @@ def stop(workdir, pidfile=None):
 
 @command
 def restart(workdir, pidfile=None):
-    """Restarts toxicslave
+    """Restarts the web interface
 
     The instance of toxicweb in ``workdir`` will be restarted.
     :param workdir: Workdir for master to be killed.
