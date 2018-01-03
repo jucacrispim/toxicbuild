@@ -57,10 +57,12 @@ setup(name='toxicbuild',
           'Topic :: Software Development :: Testing',
       ],
       entry_points={
-          'console_scripts': ['toxicbuild=toxicbuild.script:main',
-                              'toxicmaster=toxicbuild.master:main',
-                              'toxicslave=toxicbuild.slave:main',
-                              'toxicweb=toxicbuild.ui:main']
+          'console_scripts': [
+              'toxicbuild=toxicbuild.script:main',
+              'toxicmaster=toxicbuild.master:main',
+              'toxicslave=toxicbuild.slave:main',
+              'toxicweb=toxicbuild.ui:main',
+              'toxicintegrations=toxicbuild.master.intagrations:main']
       },
       test_suite='tests',
       provides=['toxicbuild'],)
