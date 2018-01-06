@@ -25,7 +25,7 @@ from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import changedir
 
 PIDFILE = 'toxicintegrations.pid'
-LOGFILE = 'toxicintegrations.log'
+LOGFILE = './toxicintegrations.log'
 ENVVAR = 'TOXICINTEGRATIONS_SETTINGS'
 DEFAULT_SETTINGS = 'toxicintegrations.conf'
 
@@ -111,7 +111,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
 
 
 @command
-def stop(workdir, pidfile=None):
+def stop(workdir, pidfile=PIDFILE):
     """ Stops toxicmaster integrations.
 
     :param workdir: Work directory for the ui to be killed.
@@ -127,14 +127,14 @@ def stop(workdir, pidfile=None):
         sys.path.append(workdir)
 
         os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir,
-                                                      'toxicui.conf')
-        os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicui'
+                                                      'toxicintegrations.conf')
+        os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicintegrations'
 
         create_settings()
 
         sys.argv = ['pyromanager.py', '']
 
-        get_command('runtornado')()
+        command = get_command('runtornado')()
 
         command.pidfile = pidfile
         command.kill = True
@@ -142,7 +142,7 @@ def stop(workdir, pidfile=None):
 
 
 @command
-def restart(workdir, pidfile=None):
+def restart(workdir, pidfile=PIDFILE):
     """Restarts toxicmaster integrations
 
     The instance of toxicweb in ``workdir`` will be restarted.

@@ -18,8 +18,11 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import json
-from pyrocumulus.web.decorators import post
+from pyrocumulus.web.applications import PyroApplication
+from pyrocumulus.web.decorators import post, get
 from pyrocumulus.web.handlers import BasePyroHandler
+from pyrocumulus.web.urlmappers import URLSpec
+from tornado import gen
 from toxicbuild.core.utils import LoggerMixin
 
 
@@ -35,6 +38,11 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         self._parse_body()
         self.event_type = self._check_event_type()
 
+    @get('hello')
+    @gen.coroutine
+    def hello(self):
+        return {'code': 200, 'msg': 'Hi there!'}
+
     @post('auth')
     async def authenticate(self):  # pragma no cover
         pass
@@ -46,9 +54,14 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             self.log(msg, level='debug')
 
     def _parse_body(self):
-        self.body = json.loads(self.request.body)
+        if self.request.body:
+            self.body = json.loads(self.request.body.decode())
 
     def _check_event_type(self):
+        if not self.body:
+            self.log('No body on request.', level='warning')
+            return
+
         if 'zen' in self.body.keys():
             r = 'zen'
         else:
@@ -57,3 +70,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             r = 'unknown'
 
         return r
+
+
+url = URLSpec('/github/(.*)', GithubWebhookReceiver)
+app = PyroApplication([url])
