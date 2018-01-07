@@ -50,7 +50,7 @@ class GithubWebhookReceiverTest(TestCase):
             }
         })
         request = Mock()
-        request.body = body
+        request.body = body.encode('utf-8')
         request.arguments = {}
         application = Mock()
         application.ui_methods = {}
@@ -61,7 +61,13 @@ class GithubWebhookReceiverTest(TestCase):
         self.webhook_receiver._parse_body()
         self.assertEqual(
             self.webhook_receiver.body,
-            webhook_receivers.json.loads(self.webhook_receiver.request.body))
+            webhook_receivers.json.loads(
+                self.webhook_receiver.request.body.decode()))
+
+    def test_parse_body_no_body(self):
+        self.webhook_receiver.request.body = None
+        self.webhook_receiver._parse_body()
+        self.assertIsNone(self.webhook_receiver.body)
 
     def test_check_event_type_zen(self):
         self.webhook_receiver.prepare()
@@ -92,10 +98,16 @@ class GithubWebhookReceiverTest(TestCase):
             }
         })
 
-        self.webhook_receiver.request.body = body
+        self.webhook_receiver.request.body = body.encode('utf-8')
         self.webhook_receiver.prepare()
         r = self.webhook_receiver._check_event_type()
         self.assertEqual(r, 'unknown')
+
+    @patch.object(webhook_receivers.LoggerMixin, 'log', Mock())
+    def test_check_event_type_no_body(self):
+        self.webhook_receiver.body = None
+        self.webhook_receiver._check_event_type()
+        self.assertTrue(self.webhook_receiver.log.called)
 
     @patch.object(webhook_receivers.LoggerMixin, 'log', Mock())
     @async_test
@@ -129,9 +141,14 @@ class GithubWebhookReceiverTest(TestCase):
             }
         })
 
-        self.webhook_receiver.request.body = body
+        self.webhook_receiver.request.body = body.encode('utf-8')
         self.webhook_receiver._check_event_type = Mock()
         self.webhook_receiver.prepare()
         self.webhook_receiver.event_type = 'unknown'
         await self.webhook_receiver.receive_webhook()
         self.assertFalse(self.webhook_receiver.log.called)
+
+    def test_hello(self):
+        expected = {'code': 200, 'msg': 'Hi there!'}
+        r = self.webhook_receiver.hello()
+        self.assertEqual(r, expected)

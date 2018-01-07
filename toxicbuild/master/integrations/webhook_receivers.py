@@ -39,7 +39,6 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         self.event_type = self._check_event_type()
 
     @get('hello')
-    @gen.coroutine
     def hello(self):
         return {'code': 200, 'msg': 'Hi there!'}
 
@@ -52,6 +51,10 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         if self.event_type == 'zen':
             msg = 'zen: {}'.format(self.body['zen'])
             self.log(msg, level='debug')
+            msg = 'Got it'
+        else:
+            msg = 'What was that?'
+        return {'code': 200, 'msg': msg}
 
     def _parse_body(self):
         if self.request.body:
