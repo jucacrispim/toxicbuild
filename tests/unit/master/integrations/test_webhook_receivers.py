@@ -133,7 +133,7 @@ class GithubWebhookReceiverTest(TestCase):
                 "config": {
                     "content_type": "json",
                     "insecure_ssl": "0",
-                    "url": "http://ci.poraodojuca.net:9999/github/webhooks/"
+                    "url": "http://webhook-reciever.nada:1234/github/webhooks"
                 },
                 "updated_at": "2018-01-01T04:25:35Z",
                 "created_at": "2018-01-01T04:25:35Z",
