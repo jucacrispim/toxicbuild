@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -27,7 +27,9 @@ import fnmatch
 import importlib
 import logging
 import os
+import random
 import subprocess
+import string
 import sys
 import time
 import bcrypt
@@ -332,12 +334,19 @@ def write_stream(writer, data):
     yield from writer.drain()
 
 
-def bcrypt_string(string, salt):
+def bcrypt_string(src_string, salt):
     encoding = sys.getdefaultencoding()
     if isinstance(salt, str):
         salt = salt.encode(encoding)
-    encrypted = bcrypt.hashpw(string.encode(encoding), salt)
+    encrypted = bcrypt.hashpw(src_string.encode(encoding), salt)
     return encrypted.decode()
+
+
+def create_random_string(length):
+    valid_chars = string.ascii_letters + string.digits
+    random_str = ''.join([l for i in range(length)
+                          for l in random.choice(valid_chars)])
+    return random_str
 
 
 class changedir(object):

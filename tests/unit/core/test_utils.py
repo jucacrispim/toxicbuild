@@ -285,6 +285,11 @@ class UtilsTest(TestCase):
         encrypted = utils.bcrypt_string(passwd, salt)
         self.assertIsInstance(encrypted, str)
 
+    def test_create_random_string(self):
+        length = 10
+        random_str = utils.create_random_string(length)
+        self.assertEqual(len(random_str), length)
+
     @patch.object(utils.os, 'chdir', Mock())
     def test_changedir(self):
         with utils.changedir('bla'):
