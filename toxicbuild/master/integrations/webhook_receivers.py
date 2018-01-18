@@ -22,7 +22,6 @@ from pyrocumulus.web.applications import PyroApplication
 from pyrocumulus.web.decorators import post, get
 from pyrocumulus.web.handlers import BasePyroHandler
 from pyrocumulus.web.urlmappers import URLSpec
-from tornado import gen
 from toxicbuild.core.utils import LoggerMixin
 
 

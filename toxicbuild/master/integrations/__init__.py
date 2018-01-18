@@ -145,8 +145,8 @@ def stop(workdir, pidfile=PIDFILE):
 def restart(workdir, pidfile=PIDFILE):
     """Restarts toxicmaster integrations
 
-    The instance of toxicweb in ``workdir`` will be restarted.
-    :param workdir: Workdir for master to be killed.
+    The instance of toxicintegrations in ``workdir`` will be restarted.
+    :param workdir: Workdir for instance to be killed.
     :param --pidfile: Name of the file to use as pidfile.
     """
 
