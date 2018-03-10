@@ -1,4 +1,5 @@
 aiohttp==1.0.5
+aioamqp==0.10.0
 aiosmtplib==1.0.2
 alabaster==0.7.2
 args==0.1.0
