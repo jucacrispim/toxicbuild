@@ -17,41 +17,88 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import aioamqp
+import json
+import asyncamqp
+from toxicbuild.core.utils import LoggerMixin
 
 
-class Exchange:
+class JsonMessage(asyncamqp.consumer.Message):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.body = json.loads(self.body.decode())
+
+
+asyncamqp.consumer.Consumer.MESSAGE_CLASS = JsonMessage
+
+
+class AmqpConnection(LoggerMixin):
+    """A connection for a broker. We can have many channels over
+    one connection."""
+
+    def __init__(self, **conn_kwargs):
+        """Constructor for AmqpConnection.
+
+        :param conn_kwargs: Kwargs used by ``asyncamqp.connect()``.
+        """
+
+        self.conn_kwargs = conn_kwargs
+        self.transport = None
+        self.protocol = None
+        self._connected = False
+
+    async def connect(self):
+        """Connects to the Rabbitmq server."""
+
+        self.transport, self.protocol = await asyncamqp.connect(
+            **self.conn_kwargs)
+        self._connected = True
+
+    async def disconnect(self):
+        """Disconnects from the Rabbitmq server."""
+
+        await self.protocol.close()
+        self.transport.close()
+        self._connected = False
+
+
+class Exchange(LoggerMixin):
     """A simple abstraction for a amqp exchange."""
 
-    def __init__(self, name, exchange_type, durable=False,
-                 routing_key='', **conn_kwargs):
+    def __init__(self, name, exchange_type, connection, durable=False,
+                 routing_key=''):
         """Constructor for :class:`~toxicbuid.core.exchange.Exchange`
 
         :param name: The exchange's name.
         :param exchange_type: The type of the exchange.
+        :param connection: An instance of
+          :class:`~toxicbuid.core.exchange.AmqpConnection`.
         :param durable: Indicates if wait for the ack from the consumer.
-        :param routing_key: A key to route messages to specific consumers
-        :param conn_kwargs: Kwargs used by ``aioamqp.connect()``."""
+        :param routing_key: A key to route messages to specific consumers.
+        """
 
         self.name = name
         self.queue_name = '{}_queue'.format(self.name)
         self.exchange_type = exchange_type
         self.durable = durable
         self.routing_key = routing_key
-        self.conn_kwargs = conn_kwargs
+        self.connection = connection
         self.transport = None
         self.protocol = None
         self.channel = None
         self.exchange_declared = False
         self.queue_declared = False
+        self._store_consume_futures = False
+        self._consume_futures = []
 
-    async def connect(self):
-        """Connects to the Rabbitmq server."""
+    async def declare_and_bind(self):
+        """Declares the exchange and queue. Binds the queue to
+        to exchange."""
 
-        self.transport, self.protocol = await aioamqp.connect(
-            **self.conn_kwargs)
+        if not self.connection._connected:
+            await self.connection.connect()
 
-        self.channel = await self.protocol.channel()
+        self.channel = await self.connection.protocol.channel()
         self.queue_declared = await self.channel.queue_declare(
             self.queue_name, durable=self.durable)
         self.exchange_declared = await self.channel.exchange_declare(
@@ -60,17 +107,13 @@ class Exchange:
                                       queue_name=self.queue_name,
                                       routing_key=self.routing_key)
 
-    async def disconnect(self):
-        """Disconnects from the Rabbitmq server."""
-
-        await self.protocol.close()
-        self.transport.close()
-
     async def publish(self, message):
         """Publishes a message to a Rabbitmq exchange
 
         :param message: The message that will be published in the
-          exchange."""
+          exchange. Must be something that can be serialized into a json"""
+
+        message = json.dumps(message)
 
         properties = {}
 
@@ -80,14 +123,29 @@ class Exchange:
         kw = {'payload': message, 'exchange_name': self.name,
               'properties': properties, 'routing_key': self.routing_key}
 
-        await self.channel.publish(**kw)
+        await self.channel.basic_publish(**kw)
 
-    async def consume(self, callback):
-        """Consumes a message from a Rabbitmq queue."""
+    async def consume(self, wait_message=True, timeout=0):
+        """Consumes a message from a Rabbitmq queue.
+
+        :param wait_message: Should we wait for new messages in the queue?
+        :param timeout: Timeout for waiting messages.
+        """
 
         if self.durable:
-            self.channel.basic_qos(prefetch_count=1, prefetch_size=0,
-                                   connection_global=False)
+            await self.channel.basic_qos(prefetch_count=1, prefetch_size=0,
+                                         connection_global=False)
 
-        await self.channel.basic_consume(callback, queue_name=self.queue_name,
-                                         no_ack=not self.durable)
+        r = await self.channel.basic_consume(queue_name=self.queue_name,
+                                             no_ack=not self.durable,
+                                             wait_message=wait_message,
+                                             timeout=timeout)
+        return r
+
+    async def get_queue_size(self):
+        info = await self.channel.queue_declare(self.queue_name,
+                                                durable=self.durable,
+                                                passive=True,
+                                                exclusive=False,
+                                                auto_delete=False)
+        return int(info['message_count'])
