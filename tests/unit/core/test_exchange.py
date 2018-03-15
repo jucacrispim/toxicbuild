@@ -20,6 +20,7 @@
 import asyncio
 from unittest import TestCase
 from unittest.mock import patch, Mock
+from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core import exchange
 from tests import async_test, AsyncMagicMock
 
@@ -51,10 +52,8 @@ class ExchangeTest(TestCase):
     async def setUpClass(cls):
         cls.conn = exchange.AmqpConnection(
             **{'host': 'localhost', 'port': 5672})
-        cls.exchange = exchange.Exchange('test_exchange',
-                                         exchange_type='direct',
-                                         connection=cls.conn)
-        await cls.exchange.declare_and_bind()
+        cls.exchange = None
+        await cls.conn.connect()
 
     @classmethod
     @async_test
@@ -67,6 +66,9 @@ class ExchangeTest(TestCase):
     async def test_basic_exchange(self):
         msg = {'key': 'value'}
 
+        type(self).exchange = exchange.Exchange('test-exc', self.conn,
+                                                'direct', bind_publisher=True)
+        await type(self).exchange.declare()
         await self.exchange.publish(msg)
         await asyncio.sleep(0.1)
         messages_on_queue = await self.exchange.get_queue_size()
@@ -79,7 +81,40 @@ class ExchangeTest(TestCase):
         self.assertEqual(messages_on_queue, 0)
 
     @async_test
+    async def test_basic_exchange_routing_key(self):
+        msg = {'key': 'value'}
+
+        type(self).exchange = exchange.Exchange('test-exc', self.conn,
+                                                'direct', bind_publisher=False)
+        await type(self).exchange.declare()
+
+        consumer = await self.exchange.consume(timeout=100,
+                                               routing_key='bla')
+        await self.exchange.publish(msg, routing_key='bla')
+        await self.exchange.publish(msg, routing_key='ble')
+        await asyncio.sleep(0.1)
+
+        msg_count = 0
+
+        async with consumer:
+            msg = await consumer.fetch_message()
+            while msg:
+                msg_count += 1
+                try:
+                    msg = await consumer.fetch_message()
+                except ConsumerTimeout:
+                    break
+
+        self.assertEqual(msg_count, 1)
+        messages_on_queue = await self.exchange.get_queue_size()
+        self.assertEqual(messages_on_queue, 0)
+
+    @async_test
     async def test_basic_durable_exchange(self):
+
+        type(self).exchange = exchange.Exchange('test-exc', self.conn,
+                                                'direct', bind_publisher=False)
+        await type(self).exchange.declare()
 
         await self.exchange.channel.exchange_delete(self.exchange.name)
         await self.exchange.channel.queue_delete(self.exchange.queue_name)
@@ -95,7 +130,7 @@ class ExchangeTest(TestCase):
             await self.exchange.channel.exchange_delete(self.exchange.name)
             await self.exchange.channel.queue_delete(self.exchange.queue_name)
             self.exchange.durable = False
-            await self.exchange.declare_and_bind()
+            await self.exchange.declare()
 
     @async_test
     async def test_sequencial_messages(self):

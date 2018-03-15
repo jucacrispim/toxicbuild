@@ -63,26 +63,32 @@ class AmqpConnection(LoggerMixin):
 
 
 class Exchange(LoggerMixin):
-    """A simple abstraction for a amqp exchange."""
+    """A simple abstraction for an amqp exchange.
+    """
 
-    def __init__(self, name, exchange_type, connection, durable=False,
-                 routing_key=''):
+    def __init__(self, name, connection, exchange_type, durable=False,
+                 bind_publisher=True):
         """Constructor for :class:`~toxicbuid.core.exchange.Exchange`
 
         :param name: The exchange's name.
-        :param exchange_type: The type of the exchange.
         :param connection: An instance of
           :class:`~toxicbuid.core.exchange.AmqpConnection`.
-        :param durable: Indicates if wait for the ack from the consumer.
-        :param routing_key: A key to route messages to specific consumers.
+        :param exchange_type: The type of the exchange.
+        :param durable: Indicates if the messages are stored to disk or not.
+        :param bind_publisher: If true, a queue will be bound to the
+          exchange when publishing stuff. It means that all messages published
+          will be sent to a queue when it is published. Otherwise messages
+          will be sent to a queue only when a consumer binds a queue to the
+          exchange.
         """
 
         self.name = name
+        self.connection = connection
         self.queue_name = '{}_queue'.format(self.name)
         self.exchange_type = exchange_type
         self.durable = durable
-        self.routing_key = routing_key
         self.connection = connection
+        self.bind_publisher = bind_publisher
         self.transport = None
         self.protocol = None
         self.channel = None
@@ -90,28 +96,55 @@ class Exchange(LoggerMixin):
         self.queue_declared = False
         self._store_consume_futures = False
         self._consume_futures = []
+        self._bound_rt = set()
 
-    async def declare_and_bind(self):
-        """Declares the exchange and queue. Binds the queue to
-        to exchange."""
+    async def declare(self):
+        """Declares the exchange and queue."""
 
         if not self.connection._connected:
             await self.connection.connect()
 
         self.channel = await self.connection.protocol.channel()
-        self.queue_declared = await self.channel.queue_declare(
-            self.queue_name, durable=self.durable)
         self.exchange_declared = await self.channel.exchange_declare(
             self.name, self.exchange_type, durable=self.durable)
-        await self.channel.queue_bind(exchange_name=self.name,
-                                      queue_name=self.queue_name,
-                                      routing_key=self.routing_key)
+        self.queue_declared = await self.channel.queue_declare(
+            self.queue_name, durable=self.durable)
 
-    async def publish(self, message):
+    def is_bound(self, routing_key):
+        return routing_key in self._bound_rt
+
+    async def bind(self, routing_key):
+        """Binds the queue to the exchange.
+
+        :param routing_key: Routing key to bind the queue."""
+
+        if self.is_bound(routing_key):
+            return
+
+        r = await self.channel.queue_bind(exchange_name=self.name,
+                                          queue_name=self.queue_name,
+                                          routing_key=routing_key)
+
+        self._bound_rt.add(routing_key)
+        return r
+
+    async def unbind(self, routing_key):
+        r = await self.channel.queue_unbind(exchange_name=self.name,
+                                            queue_name=self.queue_name,
+                                            routing_key=routing_key)
+
+        self._bound_rt.remove(routing_key)
+        return r
+
+    async def publish(self, message, routing_key=''):
         """Publishes a message to a Rabbitmq exchange
 
         :param message: The message that will be published in the
-          exchange. Must be something that can be serialized into a json"""
+          exchange. Must be something that can be serialized into a json.
+        :param routing_key: The routing key to pdublish the message."""
+
+        if self.bind_publisher:
+            await self.bind(routing_key)
 
         message = json.dumps(message)
 
@@ -121,23 +154,29 @@ class Exchange(LoggerMixin):
             properties['delivery_mode'] = 2
 
         kw = {'payload': message, 'exchange_name': self.name,
-              'properties': properties, 'routing_key': self.routing_key}
+              'properties': properties, 'routing_key': routing_key}
 
-        await self.channel.basic_publish(**kw)
+        await self.channel.publish(**kw)
 
-    async def consume(self, wait_message=True, timeout=0):
+    async def consume(self, wait_message=True, timeout=0,
+                      routing_key='', no_ack=False):
         """Consumes a message from a Rabbitmq queue.
 
         :param wait_message: Should we wait for new messages in the queue?
         :param timeout: Timeout for waiting messages.
+        :param routing_key: Routing key to consume messages.
+        :param no_ack: Indicates if we should send a ack response to the
+          server. The ack must be sent by the consumer.
         """
+
+        await self.bind(routing_key)
 
         if self.durable:
             await self.channel.basic_qos(prefetch_count=1, prefetch_size=0,
                                          connection_global=False)
 
         r = await self.channel.basic_consume(queue_name=self.queue_name,
-                                             no_ack=not self.durable,
+                                             no_ack=no_ack,
                                              wait_message=wait_message,
                                              timeout=timeout)
         return r
