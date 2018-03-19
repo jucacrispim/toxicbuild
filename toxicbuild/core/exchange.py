@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import json
+from uuid import uuid4
 import asyncamqp
 from toxicbuild.core.utils import LoggerMixin
 
@@ -67,7 +68,7 @@ class Exchange(LoggerMixin):
     """
 
     def __init__(self, name, connection, exchange_type, durable=False,
-                 bind_publisher=True):
+                 bind_publisher=True, exclusive_consumer_queue=False):
         """Constructor for :class:`~toxicbuid.core.exchange.Exchange`
 
         :param name: The exchange's name.
@@ -80,6 +81,8 @@ class Exchange(LoggerMixin):
           will be sent to a queue when it is published. Otherwise messages
           will be sent to a queue only when a consumer binds a queue to the
           exchange.
+        :param exclusive_consumer_queue: Indicates if the consumer queue is
+          exclusive to the consumer.
         """
 
         self.name = name
@@ -93,36 +96,66 @@ class Exchange(LoggerMixin):
         self.protocol = None
         self.channel = None
         self.exchange_declared = False
-        self.queue_declared = False
+        self.queue_info = None
         self._store_consume_futures = False
         self._consume_futures = []
         self._bound_rt = set()
+        self.exclusive_consumer_queue = exclusive_consumer_queue
+        self._declared_queues = set()
 
-    async def declare(self):
-        """Declares the exchange and queue."""
+    async def declare(self, queue_name=None):
+        """Declares the exchange and queue.
+
+        :param queue_name: The name for the queue to be declared. If None,
+           self.queue_name will be used."""
 
         if not self.connection._connected:
             await self.connection.connect()
 
+        if not queue_name:
+            queue_name = self.queue_name
+
         self.channel = await self.connection.protocol.channel()
         self.exchange_declared = await self.channel.exchange_declare(
             self.name, self.exchange_type, durable=self.durable)
-        self.queue_declared = await self.channel.queue_declare(
-            self.queue_name, durable=self.durable)
+
+        if not self.is_declared(queue_name) and \
+           not self.exclusive_consumer_queue:
+            await self._declare_queue(queue_name)
+
+    async def _declare_queue(self, queue_name):
+
+        self.queue_info = await self.channel.queue_declare(
+            queue_name, durable=self.durable,
+            exclusive=self.exclusive_consumer_queue)
+        self._declared_queues.add(queue_name)
 
     def is_bound(self, routing_key):
         return routing_key in self._bound_rt
 
-    async def bind(self, routing_key):
+    def is_declared(self, queue_name=None):
+        if not queue_name:
+            queue_name = self.queue_name
+        return queue_name in self._declared_queues
+
+    async def bind(self, routing_key, queue_name=None):
         """Binds the queue to the exchange.
 
-        :param routing_key: Routing key to bind the queue."""
+        :param routing_key: Routing key to bind the queue.
+        :param queue_name: The name of the queue to be bound. If not
+          self.queue_name will be used."""
 
         if self.is_bound(routing_key):
             return
 
+        if not queue_name:
+            queue_name = self.queue_name
+
+        if not self.is_declared(queue_name):
+            await self._declare_queue(queue_name)
+
         r = await self.channel.queue_bind(exchange_name=self.name,
-                                          queue_name=self.queue_name,
+                                          queue_name=queue_name,
                                           routing_key=routing_key)
 
         self._bound_rt.add(routing_key)
@@ -169,20 +202,28 @@ class Exchange(LoggerMixin):
           server. The ack must be sent by the consumer.
         """
 
-        await self.bind(routing_key)
+        queue_name = self.queue_name
+        if self.exclusive_consumer_queue:
+            queue_name = '{}-consumer-queue-{}'.format(self.name, str(uuid4()))
+            await self.bind(routing_key, queue_name)
 
         if self.durable:
             await self.channel.basic_qos(prefetch_count=1, prefetch_size=0,
                                          connection_global=False)
 
-        r = await self.channel.basic_consume(queue_name=self.queue_name,
-                                             no_ack=no_ack,
-                                             wait_message=wait_message,
-                                             timeout=timeout)
-        return r
+        consumer = await self.channel.basic_consume(queue_name=queue_name,
+                                                    no_ack=no_ack,
+                                                    wait_message=wait_message,
+                                                    timeout=timeout)
+        # help on tests
+        consumer.queue_name = queue_name
+        return consumer
 
-    async def get_queue_size(self):
-        info = await self.channel.queue_declare(self.queue_name,
+    async def get_queue_size(self, queue_name=None):
+        if not queue_name:
+            queue_name = self.queue_name
+
+        info = await self.channel.queue_declare(queue_name,
                                                 durable=self.durable,
                                                 passive=True,
                                                 exclusive=False,

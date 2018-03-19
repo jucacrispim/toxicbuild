@@ -85,7 +85,8 @@ class ExchangeTest(TestCase):
         msg = {'key': 'value'}
 
         type(self).exchange = exchange.Exchange('test-exc', self.conn,
-                                                'direct', bind_publisher=False)
+                                                'direct', bind_publisher=False,
+                                                exclusive_consumer_queue=True)
         await type(self).exchange.declare()
 
         consumer = await self.exchange.consume(timeout=100,
@@ -97,6 +98,7 @@ class ExchangeTest(TestCase):
         msg_count = 0
 
         async with consumer:
+            queue_name = consumer.queue_name
             msg = await consumer.fetch_message()
             while msg:
                 msg_count += 1
@@ -106,7 +108,8 @@ class ExchangeTest(TestCase):
                     break
 
         self.assertEqual(msg_count, 1)
-        messages_on_queue = await self.exchange.get_queue_size()
+        messages_on_queue = await self.exchange.get_queue_size(
+            queue_name=queue_name)
         self.assertEqual(messages_on_queue, 0)
 
     @async_test
@@ -134,6 +137,10 @@ class ExchangeTest(TestCase):
 
     @async_test
     async def test_sequencial_messages(self):
+        type(self).exchange = exchange.Exchange('test-exc', self.conn,
+                                                'direct', bind_publisher=True)
+        await type(self).exchange.declare()
+
         msg = {'key': 'value'}
 
         await self.exchange.publish(msg)
