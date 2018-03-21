@@ -92,19 +92,19 @@ class MutexTest(TestCase):
         self.assertTrue(self.mutex._publish_if_not_there.called)
 
     @async_test
-    async def test_aquire(self):
+    async def test_acquire(self):
         await self.mutex.create()
-        async with await self.mutex.aquire():
-            n_lock = await self.mutex.aquire(_timeout=100)
+        async with await self.mutex.acquire():
+            n_lock = await self.mutex.acquire(_timeout=100)
 
         self.assertIsNone(n_lock)
 
     @async_test
     async def test_release(self):
         await self.mutex.create()
-        async with await self.mutex.aquire():
+        async with await self.mutex.acquire():
             pass
 
-        n_lock = await self.mutex.aquire(_timeout=100)
+        n_lock = await self.mutex.acquire(_timeout=100)
 
         self.assertIsNotNone(n_lock)

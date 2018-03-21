@@ -68,7 +68,7 @@ class Mutex(Exchange):
         m = Mutex('mutex-name', conn)
         await m.create()
 
-        async with m.aquire():
+        async with m.acquire():
             # your stuff here.
     """
 
@@ -131,7 +131,7 @@ class Mutex(Exchange):
         # that's why we use the _publish_if_not_there
         await self._publish_if_not_there(msg)
 
-    async def aquire(self, _timeout=None):
+    async def acquire(self, _timeout=None):
         # _timeout is only for tests
         consumer = await self.consume(timeout=_timeout)
         try:
