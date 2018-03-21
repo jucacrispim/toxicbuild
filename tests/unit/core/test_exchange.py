@@ -45,6 +45,18 @@ class AmqpConnectionTest(TestCase):
         self.assertFalse(conn._connected)
 
 
+class JsonAckMessageTest(TestCase):
+
+    @async_test
+    async def test_acknowledge(self):
+        b = exchange.json.dumps({}).encode('utf-8')
+        channel, envelope, properties = AsyncMagicMock(), Mock(), {}
+        msg = exchange.JsonAckMessage(channel, b, envelope, properties)
+        msg.channel = AsyncMagicMock()
+        await msg.acknowledge()
+        self.assertTrue(msg.channel.basic_client_ack.called)
+
+
 class ExchangeTest(TestCase):
 
     @classmethod

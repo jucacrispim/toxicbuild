@@ -23,14 +23,18 @@ import asyncamqp
 from toxicbuild.core.utils import LoggerMixin
 
 
-class JsonMessage(asyncamqp.consumer.Message):
+class JsonAckMessage(asyncamqp.consumer.Message):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.body = json.loads(self.body.decode())
 
+    async def acknowledge(self):
+        await self.channel.basic_client_ack(
+            delivery_tag=self.envelope.delivery_tag)
 
-asyncamqp.consumer.Consumer.MESSAGE_CLASS = JsonMessage
+
+asyncamqp.consumer.Consumer.MESSAGE_CLASS = JsonAckMessage
 
 
 class AmqpConnection(LoggerMixin):
