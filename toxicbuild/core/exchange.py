@@ -138,8 +138,6 @@ class Exchange(LoggerMixin):
         return routing_key in self._bound_rt
 
     def is_declared(self, queue_name=None):
-        if not queue_name:
-            queue_name = self.queue_name
         return queue_name in self._declared_queues
 
     async def bind(self, routing_key, queue_name=None):

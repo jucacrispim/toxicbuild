@@ -71,8 +71,11 @@ class ExchangeTest(TestCase):
     @async_test
     async def tearDownClass(cls):
         await cls.exchange.channel.exchange_delete(cls.exchange.name)
-        await cls.exchange.channel.queue_delete(cls.exchange.queue_name)
         await cls.exchange.connection.disconnect()
+
+    @async_test
+    async def tearDown(self):
+        await self.exchange.channel.queue_delete(self.exchange.queue_name)
 
     @async_test
     async def test_basic_exchange(self):
@@ -94,6 +97,7 @@ class ExchangeTest(TestCase):
 
     @async_test
     async def test_basic_exchange_routing_key(self):
+        await self.exchange.connection.disconnect()
         msg = {'key': 'value'}
 
         type(self).exchange = exchange.Exchange('test-exc', self.conn,
@@ -167,3 +171,14 @@ class ExchangeTest(TestCase):
 
         messages_on_queue = await self.exchange.get_queue_size()
         self.assertEqual(messages_on_queue, 0)
+
+    @async_test
+    async def test_unbind(self):
+        type(self).exchange = exchange.Exchange('test-exc', self.conn,
+                                                'direct', bind_publisher=True)
+        await type(self).exchange.declare(self.exchange.queue_name)
+
+        self.exchange.channel.queue_unbind = AsyncMagicMock()
+        self.exchange._bound_rt.add('routing-key')
+        await self.exchange.unbind('routing-key')
+        self.assertTrue(self.exchange.channel.queue_unbind.called)

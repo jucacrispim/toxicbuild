@@ -19,6 +19,7 @@
 
 import asyncio
 from unittest import TestCase
+from unittest.mock import MagicMock
 from toxicbuild.core import coordination
 from toxicbuild.core.exchange import AmqpConnection
 from tests import async_test, AsyncMagicMock
@@ -43,7 +44,8 @@ class MutexTest(TestCase):
 
     @async_test
     async def tearDown(self):
-        if self.mutex.channel:
+        if self.mutex.channel and not isinstance(
+                self.mutex.channel, MagicMock):
             self.mutex.channel.basic_cancel(self.mutex.queue_name)
             await self.mutex.channel.queue_delete(self.mutex.queue_name)
             await self.mutex.channel.close()
@@ -58,6 +60,14 @@ class MutexTest(TestCase):
         await self.mutex.declare()
         r = await self.mutex.exists()
         self.assertTrue(r)
+
+    @async_test
+    async def test_exists_exception(self):
+        self.mutex.channel = MagicMock()
+        self.mutex.channel.queue_declare = AsyncMagicMock(
+            side_effect=coordination.ChannelClosed(code=500))
+        with self.assertRaises(coordination.ChannelClosed):
+            await self.mutex.exists()
 
     @async_test
     async def test_publish_if_not_there_already_there(self):

@@ -80,6 +80,9 @@ class Mutex(Exchange):
     async def exists(self):
         """Checks if the queue for this mutex exists."""
 
+        if not self.connection._connected:
+            await self.connection.connect()
+
         if self.channel is None:
             self.channel = await self.connection.protocol.channel()
         try:
