@@ -65,14 +65,14 @@ class MutexTest(TestCase):
         await self.mutex.publish({})
         await asyncio.sleep(0.1)
         self.mutex.publish = AsyncMagicMock()
-        await self.mutex.publish_if_not_there({})
+        await self.mutex._publish_if_not_there({})
         self.assertFalse(self.mutex.publish.called)
 
     @async_test
     async def test_publish_if_not_there(self):
         await self.mutex.declare()
         self.mutex.publish = AsyncMagicMock()
-        await self.mutex.publish_if_not_there({})
+        await self.mutex._publish_if_not_there({})
         self.assertTrue(self.mutex.publish.called)
 
     @async_test
@@ -86,7 +86,25 @@ class MutexTest(TestCase):
     async def test_create(self):
         self.mutex.exists = AsyncMagicMock(return_value=False)
         self.mutex.declare = AsyncMagicMock()
-        self.mutex.publish_if_not_there = AsyncMagicMock()
+        self.mutex._publish_if_not_there = AsyncMagicMock()
         await self.mutex.create()
         self.assertTrue(self.mutex.declare.called)
-        self.assertTrue(self.mutex.publish_if_not_there.called)
+        self.assertTrue(self.mutex._publish_if_not_there.called)
+
+    @async_test
+    async def test_aquire(self):
+        await self.mutex.create()
+        async with await self.mutex.aquire():
+            n_lock = await self.mutex.aquire(_timeout=100)
+
+        self.assertIsNone(n_lock)
+
+    @async_test
+    async def test_release(self):
+        await self.mutex.create()
+        async with await self.mutex.aquire():
+            pass
+
+        n_lock = await self.mutex.aquire(_timeout=100)
+
+        self.assertIsNotNone(n_lock)
