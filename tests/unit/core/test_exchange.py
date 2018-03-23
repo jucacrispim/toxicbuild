@@ -97,7 +97,8 @@ class ExchangeTest(TestCase):
 
     @async_test
     async def test_basic_exchange_routing_key(self):
-        await self.exchange.connection.disconnect()
+        if self.exchange:
+            await self.exchange.connection.disconnect()
         msg = {'key': 'value'}
 
         type(self).exchange = exchange.Exchange('test-exc', self.conn,

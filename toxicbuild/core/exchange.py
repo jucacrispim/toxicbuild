@@ -106,6 +106,7 @@ class Exchange(LoggerMixin):
         self._bound_rt = set()
         self.exclusive_consumer_queue = exclusive_consumer_queue
         self._declared_queues = set()
+        self._exclusive_queues = {}
 
     async def declare(self, queue_name=None):
         """Declares the exchange and queue.
@@ -125,11 +126,11 @@ class Exchange(LoggerMixin):
 
         if not self.is_declared(queue_name) and \
            not self.exclusive_consumer_queue:
-            await self._declare_queue(queue_name)
+            await self._declare_queue(queue_name, self.channel)
 
-    async def _declare_queue(self, queue_name):
+    async def _declare_queue(self, queue_name, channel):
 
-        self.queue_info = await self.channel.queue_declare(
+        self.queue_info = await channel.queue_declare(
             queue_name, durable=self.durable,
             exclusive=self.exclusive_consumer_queue)
         self._declared_queues.add(queue_name)
@@ -140,12 +141,14 @@ class Exchange(LoggerMixin):
     def is_declared(self, queue_name=None):
         return queue_name in self._declared_queues
 
-    async def bind(self, routing_key, queue_name=None):
+    async def bind(self, routing_key, queue_name=None, channel=None):
         """Binds the queue to the exchange.
 
         :param routing_key: Routing key to bind the queue.
         :param queue_name: The name of the queue to be bound. If not
-          self.queue_name will be used."""
+          self.queue_name will be used.
+        :param channel: Optional channel to use in the communication. If
+           no channel, the default one will be used."""
 
         if self.is_bound(routing_key):
             return
@@ -153,12 +156,15 @@ class Exchange(LoggerMixin):
         if not queue_name:
             queue_name = self.queue_name
 
-        if not self.is_declared(queue_name):
-            await self._declare_queue(queue_name)
+        if not channel:
+            channel = self.channel
 
-        r = await self.channel.queue_bind(exchange_name=self.name,
-                                          queue_name=queue_name,
-                                          routing_key=routing_key)
+        if not self.is_declared(queue_name):
+            await self._declare_queue(queue_name, channel)
+
+        r = await channel.queue_bind(exchange_name=self.name,
+                                     queue_name=queue_name,
+                                     routing_key=routing_key)
 
         self._bound_rt.add(routing_key)
         return r
@@ -205,18 +211,20 @@ class Exchange(LoggerMixin):
         """
 
         queue_name = self.queue_name
+        channel = self.channel
         if self.exclusive_consumer_queue:
+            channel = await self.connection.protocol.channel()
             queue_name = '{}-consumer-queue-{}'.format(self.name, str(uuid4()))
-            await self.bind(routing_key, queue_name)
+            await self.bind(routing_key, queue_name, channel)
 
         if self.durable:
-            await self.channel.basic_qos(prefetch_count=1, prefetch_size=0,
-                                         connection_global=False)
+            await channel.basic_qos(prefetch_count=1, prefetch_size=0,
+                                    connection_global=False)
 
-        consumer = await self.channel.basic_consume(queue_name=queue_name,
-                                                    no_ack=no_ack,
-                                                    wait_message=wait_message,
-                                                    timeout=timeout)
+        consumer = await channel.basic_consume(queue_name=queue_name,
+                                               no_ack=no_ack,
+                                               wait_message=wait_message,
+                                               timeout=timeout)
         # help on tests
         consumer.queue_name = queue_name
         return consumer
