@@ -9,7 +9,8 @@ Install
 +++++++
 
 ToxicBuild is written in Python, and runs in Python3.5 and later. It uses
-mongodb to store data and git as vcs. You must have these installed.
+mongodb to store data, rabbitmq for queues and git as vcs.
+You must have these installed.
 
 .. note::
 
@@ -90,7 +91,7 @@ Email
 ^^^^^
 
 If you want to be able to send emails containing information about builds,
-we need to configure the smpt options.
+you need to configure the smpt options.
 
 
 .. code-block:: python
@@ -132,6 +133,9 @@ example of a Dockerfile that installs and runs a toxicslave instance.
    # This must be done, otherwise the builds will end in exception
    RUN mkdir /opt/slave/src
    # preciso por a parte das configs aqui
+   # Here you copy the config for the container's slave, with
+   # the USE_DOCKER = False.
+   # The USE_DOCKER param is for the slave outside the container.
    CMD [ "/usr/bin/toxicslave", "start", "/opt/slave" ]
 
 After your image is ready, in the toxicslave config file you must set the

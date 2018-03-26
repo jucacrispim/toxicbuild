@@ -293,6 +293,7 @@ def stop_scheduler(workdir, pidfile=SCHEDULER_PIDFILE):
       ``toxicscheduler.pid``
     """
 
+    print('Stopping toxicscheduler')
     _kill_thing(workdir, pidfile)
 
 
@@ -306,6 +307,7 @@ def stop_poller(workdir, pidfile=POLLER_PIDFILE):
       ``toxicpoller.pid``
     """
 
+    print('Stopping toxicscheduler')
     _kill_thing(workdir, pidfile)
 
 
