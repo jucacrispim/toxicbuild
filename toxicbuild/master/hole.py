@@ -609,15 +609,12 @@ class HoleHandler:
     async def _get_repo_dict(self, repo):
         """Returns a dictionary for a given repository"""
 
-        repo_dict = json.loads(repo.to_json())
+        repo_dict = await repo.to_dict(id_as_str=True)
         repo_dict['id'] = str(repo.id)
         repo_dict['status'] = await repo.get_status()
         slaves = await repo.slaves
         repo_dict['slaves'] = [self._get_slave_dict(s) for s in slaves]
         repo_dict['parallel_builds'] = repo.parallel_builds or ''
-        for p in repo_dict['plugins']:
-            p['name'] = p['_name']
-
         return repo_dict
 
     def _get_slave_dict(self, slave):

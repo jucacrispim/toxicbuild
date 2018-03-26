@@ -915,7 +915,9 @@ class HoleHandlerTest(TestCase):
     async def test_get_repo_dict(self):
         await self._create_test_data()
         self.repo.slaves = [self.slave]
-        self.repo.plugins = [{'_name': 'myplugin'}]
+        plugin = Mock()
+        plugin.to_dict.return_value = {'name': 'myplugin'}
+        self.repo.plugins = [plugin]
 
         handler = hole.HoleHandler({}, 'action', MagicMock())
         repo_dict = await handler._get_repo_dict(self.repo)
