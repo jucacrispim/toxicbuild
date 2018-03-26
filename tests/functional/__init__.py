@@ -85,6 +85,42 @@ def start_master(sleep=0.5):
     time.sleep(sleep)
 
 
+def start_scheduler(sleep=0.5):
+    """Starts a master scheduler in a new process for tests"""
+
+    toxicmaster_conf = os.environ.get('TOXICMASTER_SETTINGS')
+
+    toxicmaster_cmd = os.path.join(SCRIPTS_DIR, 'toxicmaster')
+    pidfile = 'toxicscheduler{}.pid'.format(PYVERSION)
+    cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
+           toxicmaster_cmd, 'start_scheduler', MASTER_ROOT_DIR, '--daemonize',
+           '--pidfile', pidfile, '--loglevel', 'debug']
+
+    if toxicmaster_conf:
+        cmd += ['-c', toxicmaster_conf]
+
+    os.system(' '.join(cmd))
+    time.sleep(sleep)
+
+
+def start_poller(sleep=0.5):
+    """Starts a master poller in a new process for tests"""
+
+    toxicmaster_conf = os.environ.get('TOXICMASTER_SETTINGS')
+
+    toxicmaster_cmd = os.path.join(SCRIPTS_DIR, 'toxicmaster')
+    pidfile = 'toxicpoller{}.pid'.format(PYVERSION)
+    cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&', 'python',
+           toxicmaster_cmd, 'start_poller', MASTER_ROOT_DIR, '--daemonize',
+           '--pidfile', pidfile, '--loglevel', 'debug']
+
+    if toxicmaster_conf:
+        cmd += ['-c', toxicmaster_conf]
+
+    os.system(' '.join(cmd))
+    time.sleep(sleep)
+
+
 def stop_master():
     """Stops the master test server"""
 
@@ -93,6 +129,32 @@ def stop_master():
 
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', toxicmaster_cmd, 'stop', MASTER_ROOT_DIR,
+           '--pidfile', pidfile]
+
+    os.system(' '.join(cmd))
+
+
+def stop_scheduler():
+    """Stops the master's scheduler test server"""
+
+    toxicmaster_cmd = os.path.join(SCRIPTS_DIR, 'toxicmaster')
+    pidfile = 'toxicscheduler{}.pid'.format(PYVERSION)
+
+    cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
+           'python', toxicmaster_cmd, 'stop_scheduler', MASTER_ROOT_DIR,
+           '--pidfile', pidfile]
+
+    os.system(' '.join(cmd))
+
+
+def stop_poller():
+    """Stops the master's poller test server"""
+
+    toxicmaster_cmd = os.path.join(SCRIPTS_DIR, 'toxicmaster')
+    pidfile = 'toxicpoller{}.pid'.format(PYVERSION)
+
+    cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
+           'python', toxicmaster_cmd, 'stop_poller', MASTER_ROOT_DIR,
            '--pidfile', pidfile]
 
     os.system(' '.join(cmd))
@@ -184,9 +246,27 @@ class BaseFunctionalTest(TestCase):
         stop_customwebserver()
 
     @classmethod
+    def start_scheduler(cls):
+        start_scheduler()
+
+    @classmethod
+    def start_poller(cls):
+        start_poller()
+
+    @classmethod
+    def stop_scheduler(cls):
+        stop_scheduler()
+
+    @classmethod
+    def stop_poller(cls):
+        stop_poller()
+
+    @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.start_slave()
+        cls.start_poller()
+        cls.start_scheduler()
         cls.start_master()
         start_customwebserver()
         time.sleep(0.1)
@@ -195,7 +275,10 @@ class BaseFunctionalTest(TestCase):
     def tearDownClass(cls):
         super().tearDownClass()
         stop_customwebserver()
+        cls.stop_scheduler()
+        cls.stop_poller()
         cls.stop_master()
+
         cls.stop_slave()
 
     def get_new_ioloop(self):

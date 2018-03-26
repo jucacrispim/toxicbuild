@@ -134,12 +134,17 @@ class Mutex(Exchange):
         # that's why we use the _publish_if_not_there
         await self._publish_if_not_there(msg)
 
-    async def acquire(self, _timeout=None):
+    async def acquire(self, _timeout=None, _wait=True):
         # _timeout is only for tests
-        consumer = await self.consume(timeout=_timeout)
+        # _wait for try_acquire
+        consumer = await self.consume(wait_message=_wait, timeout=_timeout)
         try:
             msg = await consumer.fetch_message()
         except ConsumerTimeout:
             msg = None
         if msg:
             return Lock(msg, consumer)
+
+    async def try_acquire(self):
+        r = await self.acquire(_timeout=100)
+        return r

@@ -20,6 +20,7 @@
 import asyncio
 from unittest import TestCase
 from unittest.mock import patch, Mock
+from aioamqp.exceptions import ChannelClosed
 from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core import exchange
 from tests import async_test, AsyncMagicMock
@@ -70,12 +71,18 @@ class ExchangeTest(TestCase):
     @classmethod
     @async_test
     async def tearDownClass(cls):
-        await cls.exchange.channel.exchange_delete(cls.exchange.name)
+        try:
+            await cls.exchange.channel.exchange_delete(cls.exchange.name)
+        except ChannelClosed as e:
+            pass
         await cls.exchange.connection.disconnect()
 
     @async_test
     async def tearDown(self):
-        await self.exchange.channel.queue_delete(self.exchange.queue_name)
+        try:
+            await self.exchange.channel.queue_delete(self.exchange.queue_name)
+        except ChannelClosed as e:
+            pass
 
     @async_test
     async def test_basic_exchange(self):
@@ -125,9 +132,11 @@ class ExchangeTest(TestCase):
                     break
 
         self.assertEqual(msg_count, 1)
-        messages_on_queue = await self.exchange.get_queue_size(
-            queue_name=queue_name)
-        self.assertEqual(messages_on_queue, 0)
+        with self.assertRaises(ChannelClosed):
+            # It is an exclusive queue, is deleted when consumption is done
+            # 404 here
+            await self.exchange.get_queue_size(
+                queue_name=queue_name)
 
     @async_test
     async def test_basic_durable_exchange(self):

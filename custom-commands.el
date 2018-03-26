@@ -31,6 +31,12 @@
 (defcustom toxic:master-buffer-name "toxicmaster"
   "Toxicmaster buffer's name")
 
+(defcustom toxic:scheduler-buffer-name "toxicscheduler"
+  "Toxicmaster scheduler buffer's name")
+
+(defcustom toxic:poller-buffer-name "toxicpoller"
+  "Toxicmaster poller buffer's name")
+
 (defcustom toxic:webui-buffer-name "toxicwebui"
   "Toxicweb ui buffer's name")
 
@@ -215,6 +221,86 @@
 	(toxic:start-master)))))
 
 
+(defun toxic:start-poller ()
+  "Starts a master's poller instance in the test env"
+
+  (interactive)
+
+  (defvar toxic:--master-path nil)
+  (setq toxic:--master-path (concat toxic:test-env-path "master/"))
+  (defvar toxic:--start-poller-cmd
+    (format "%s %stoxicmaster start_poller %s --loglevel=debug"
+	    toxic:py-venv-exec toxic:test-env-dir toxic:--master-path))
+
+  (defvar toxic:--poller-buffer-name "toxicpoller")
+
+  (toxic:--run-in-env-on-test-dir
+   toxic:--start-poller-cmd toxic:--poller-buffer-name))
+
+
+(defun toxic:stop-poller ()
+  "Stops the poller test instance"
+
+  (interactive)
+
+  (toxic:--kill-buffer-shell-process toxic:--poller-buffer-name))
+
+
+(defun toxic:restart-poller ()
+  "Restarts the master' poller test instance"
+
+  (interactive)
+
+  (deferred:$
+    (deferred:next
+      (lambda ()
+	(toxic:stop-poller)))
+
+    (deferred:nextc it
+      (lambda ()
+	(toxic:start-poller)))))
+
+
+(defun toxic:start-scheduler ()
+  "Starts a master's scheduler instance in the test env"
+
+  (interactive)
+
+  (defvar toxic:--master-path nil)
+  (setq toxic:--master-path (concat toxic:test-env-path "master/"))
+  (defvar toxic:--start-scheduler-cmd
+    (format "%s %stoxicmaster start_scheduler %s --loglevel=debug"
+	    toxic:py-venv-exec toxic:test-env-dir toxic:--master-path))
+
+  (defvar toxic:--scheduler-buffer-name "toxicscheduler")
+
+  (toxic:--run-in-env-on-test-dir
+   toxic:--start-scheduler-cmd toxic:--scheduler-buffer-name))
+
+
+(defun toxic:stop-scheduler ()
+  "Stops the scheduler test instance"
+
+  (interactive)
+
+  (toxic:--kill-buffer-shell-process toxic:--scheduler-buffer-name))
+
+
+(defun toxic:restart-scheduler ()
+  "Restarts the master' scheduler test instance"
+
+  (interactive)
+
+  (deferred:$
+    (deferred:next
+      (lambda ()
+	(toxic:stop-scheduler)))
+
+    (deferred:nextc it
+      (lambda ()
+	(toxic:start-scheduler)))))
+
+
 (defun toxic:start-webui ()
   "Starts a web ui instance in the test env"
 
@@ -260,6 +346,8 @@
   (interactive)
 
   (toxic:start-slave)
+  (toxic:start-poller)
+  (toxic:start-scheduler)
   (toxic:start-master)
   (toxic:start-webui))
 
@@ -270,6 +358,8 @@
   (interactive)
 
   (toxic:stop-slave)
+  (toxic:stop-poller)
+  (toxic:stop-scheduler)
   (toxic:stop-master)
   (toxic:stop-webui))
 
@@ -296,7 +386,10 @@
   (if (eq toxic:--event-type 'changed)
       (if (string-match-p (regexp-quote "toxicbuild/master")
 			  toxic:--event-file)
-	  (toxic:restart-master)
+	  (progn
+	    (toxic:restart-master)
+	    (toxic:restart-poller)
+	    (toxic:restart-scheduler))
 	(if (string-match-p (regexp-quote "toxicbuild/slave")
 			    toxic:--event-file)
 	    (toxic:restart-slave)
@@ -406,6 +499,42 @@
 				      toxic:master-buffer-name)))))
 
   (define-key global-map [menu-bar toxic-menu toxic-second-separator]
+    '(menu-item "--"))
+
+  (define-key global-map [menu-bar toxic-menu toxic-restart-scheduler]
+    '(menu-item "Restart toxicscheduler" toxic:restart-scheduler
+		:visible (progn (toxic:--buffer-has-process
+				 toxic:scheduler-buffer-name))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-stop-scheduler]
+    '(menu-item "Stop toxicscheduler" toxic:stop-scheduler
+		:visible (progn (toxic:--buffer-has-process
+				 toxic:scheduler-buffer-name))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-start-scheduler]
+    '(menu-item "Start toxicscheduler" toxic:start-scheduler
+		:visible (progn (not (toxic:--buffer-has-process
+				      toxic:scheduler-buffer-name)))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-second-minus-separator]
+    '(menu-item "--"))
+
+  (define-key global-map [menu-bar toxic-menu toxic-restart-poller]
+    '(menu-item "Restart toxicpoller" toxic:restart-poller
+		:visible (progn (toxic:--buffer-has-process
+				 toxic:poller-buffer-name))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-stop-poller]
+    '(menu-item "Stop toxicpoller" toxic:stop-poller
+		:visible (progn (toxic:--buffer-has-process
+				 toxic:poller-buffer-name))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-start-poller]
+    '(menu-item "Start toxicpoller" toxic:start-poller
+		:visible (progn (not (toxic:--buffer-has-process
+				      toxic:poller-buffer-name)))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-second-minus-minus-separator]
     '(menu-item "--"))
 
   (define-key global-map [menu-bar toxic-menu toxic-restart-slave]

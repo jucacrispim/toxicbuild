@@ -130,13 +130,12 @@ class Exchange(LoggerMixin):
 
     async def _declare_queue(self, queue_name, channel):
 
+        durable = self.durable and not self.exclusive_consumer_queue
         self.queue_info = await channel.queue_declare(
-            queue_name, durable=self.durable,
-            exclusive=self.exclusive_consumer_queue)
+            queue_name, durable=durable,
+            exclusive=self.exclusive_consumer_queue,
+            auto_delete=self.exclusive_consumer_queue)
         self._declared_queues.add(queue_name)
-
-    def is_bound(self, routing_key):
-        return routing_key in self._bound_rt
 
     def is_declared(self, queue_name=None):
         return queue_name in self._declared_queues
@@ -150,8 +149,8 @@ class Exchange(LoggerMixin):
         :param channel: Optional channel to use in the communication. If
            no channel, the default one will be used."""
 
-        if self.is_bound(routing_key):
-            return
+        # if self.is_bound(routing_key):
+        #     return
 
         if not queue_name:
             queue_name = self.queue_name

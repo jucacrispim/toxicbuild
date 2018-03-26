@@ -146,6 +146,7 @@ class UIHoleTest(TestCase):
         self.assertTrue(hole.HoleHandler.user_authenticate.called)
 
 
+@patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
 @patch.object(repository.utils, 'log', Mock())
 class HoleHandlerTest(TestCase):
 
@@ -330,9 +331,11 @@ class HoleHandlerTest(TestCase):
             handler = hole.HoleHandler({}, 'action', MagicMock())
             await handler._get_owner(ObjectId())
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_repo_get_with_repo_name(self):
         await self._create_test_data()
+        await asyncio.sleep(0)
         repo_name = 'reponame'
         action = 'repo-get'
         protocol = MagicMock()
@@ -344,9 +347,11 @@ class HoleHandlerTest(TestCase):
         self.assertTrue(repo['id'])
         self.assertIn('status', repo.keys())
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_repo_get_with_repo_url(self):
         await self._create_test_data()
+        await asyncio.sleep(0.1)
         repo_url = 'git@somewhere.com'
         action = 'repo-get'
         protocol = MagicMock()
@@ -356,6 +361,7 @@ class HoleHandlerTest(TestCase):
 
         self.assertEqual(repo['url'], repo_url)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_repo_get_without_params(self):
         action = 'repo-get'
@@ -364,6 +370,9 @@ class HoleHandlerTest(TestCase):
         with self.assertRaises(TypeError):
             await handler.repo_get()
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.Repository, '_delete_locks', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository, 'shutil', Mock())
     @async_test
     async def test_repo_remove(self):
@@ -378,6 +387,7 @@ class HoleHandlerTest(TestCase):
         self.assertEqual((await hole.Repository.objects.count()),
                          1, allrepos)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_repo_enable_plugin(self):
 
@@ -396,9 +406,11 @@ class HoleHandlerTest(TestCase):
         handler = hole.HoleHandler({}, action, protocol)
         await handler.repo_enable_plugin(self.repo.name,
                                          'test-hole-plugin')
-        repo = await hole.Repository.get(id=self.repo.id)
+        repo = await hole.Repository.objects.get(id=self.repo.id)
         self.assertEqual(len(repo.plugins), 1)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @async_test
     async def test_repo_disable_plugin(self):
 
@@ -419,7 +431,7 @@ class HoleHandlerTest(TestCase):
                                          'test-hole-plugin')
         kw = {'name': 'test-hole-plugin'}
         await handler.repo_disable_plugin(self.repo.name, **kw)
-        repo = await hole.Repository.get(id=self.repo.id)
+        repo = await hole.Repository.objects.get(id=self.repo.id)
         self.assertEqual(len(repo.plugins), 0)
 
     @async_test
@@ -433,6 +445,7 @@ class HoleHandlerTest(TestCase):
         self.assertEqual(len(repo_list), 2)
         self.assertIn('status', repo_list[0].keys())
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_repo_update(self):
         await self._create_test_data()
@@ -445,10 +458,11 @@ class HoleHandlerTest(TestCase):
         handler = hole.HoleHandler(data, action, protocol)
         await handler.repo_update(repo_name=self.repo.name,
                                   update_seconds=60)
-        repo = await hole.Repository.get(name=self.repo.name)
+        repo = await hole.Repository.objects.get(name=self.repo.name)
 
         self.assertEqual(repo.update_seconds, 60)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_repo_update_with_slaves(self):
         await self._create_test_data()
@@ -463,9 +477,11 @@ class HoleHandlerTest(TestCase):
         slaves = ['name']
         await handler.repo_update(repo_name=self.repo.name,
                                   update_seconds=60, slaves=slaves)
-        repo = await hole.Repository.get(name=self.repo.name)
+        repo = await hole.Repository.objects.get(name=self.repo.name)
         self.assertEqual(repo.update_seconds, 60)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @async_test
     async def test_repo_add_slave(self):
         await self._create_test_data()
@@ -485,10 +501,12 @@ class HoleHandlerTest(TestCase):
         await handler.repo_add_slave(repo_name=repo_name,
                                      slave_name='name2')
 
-        repo = await hole.Repository.get(url=self.repo.url)
+        repo = await hole.Repository.objects.get(url=self.repo.url)
 
         self.assertEqual((await repo.slaves)[0].id, slave.id)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @async_test
     async def test_repo_remove_slave(self):
         await self._create_test_data()
@@ -504,10 +522,12 @@ class HoleHandlerTest(TestCase):
 
         await handler.repo_remove_slave(self.repo.name, slave.name)
 
-        repo = await hole.Repository.get(url=self.repo.url)
+        repo = await hole.Repository.objects.get(url=self.repo.url)
 
         self.assertEqual(len((await repo.slaves)), 0)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @async_test
     async def test_repo_add_branch(self):
         await self._create_test_data()
@@ -521,10 +541,12 @@ class HoleHandlerTest(TestCase):
                                       branch_name='release',
                                       notify_only_latest=True)
 
-        repo = await hole.Repository.get(url=self.repo.url)
+        repo = await hole.Repository.objects.get(url=self.repo.url)
 
         self.assertEqual(len(repo.branches), 1)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @async_test
     async def test_repo_remove_branch(self):
         await self._create_test_data()
@@ -537,7 +559,7 @@ class HoleHandlerTest(TestCase):
         await handler.repo_add_branch(repo_name=self.repo.name,
                                       branch_name='release',
                                       notify_only_latest=True)
-        repo = await hole.Repository.get(url=self.repo.url)
+        repo = await hole.Repository.objects.get(url=self.repo.url)
         branch_count = len(repo.branches)
         await handler.repo_remove_branch(repo_name=self.repo.name,
                                          branch_name='release')
@@ -545,6 +567,8 @@ class HoleHandlerTest(TestCase):
         await repo.reload('branches')
         self.assertEqual(len(repo.branches), branch_count - 1)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository, 'BuildManager', MagicMock(
         spec=repository.BuildManager))
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
@@ -567,6 +591,8 @@ class HoleHandlerTest(TestCase):
 
         self.assertEqual(len(add_builds_for_slave.call_args_list), 1)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(hole.HoleHandler, '_get_builders', MagicMock())
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
         spec=repository.Repository.add_builds_for_slave))
@@ -590,6 +616,8 @@ class HoleHandlerTest(TestCase):
         self.assertFalse(hole.HoleHandler._get_builders.called)
         self.assertEqual(len(add_builds_for_slave.call_args_list), 1)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository, 'BuildManager', MagicMock())
     @patch.object(hole.RepositoryRevision, 'get', MagicMock())
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
@@ -612,7 +640,7 @@ class HoleHandlerTest(TestCase):
         await self._create_test_data()
 
         hole.HoleHandler._get_builders = asyncio.coroutine(
-            lambda s, r, builders=None: {self.slave: self.builders[0]})
+            lambda repo, s, r, builders=None: {self.slave: self.builders[0]})
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler({}, 'repo-start-build', protocol)
@@ -624,6 +652,8 @@ class HoleHandlerTest(TestCase):
 
         self.assertTrue(get_mock.called)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository, 'BuildManager', MagicMock())
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
         spec=repository.Repository.add_builds_for_slave))
@@ -635,7 +665,7 @@ class HoleHandlerTest(TestCase):
             lambda *a, **kw: add_builds_for_slave(*a, **kw))
 
         hole.HoleHandler._get_builders = asyncio.coroutine(
-            lambda s, r, builders=None: {self.slave: self.builders[0]})
+            lambda repo, s, r, builders=None: {self.slave: self.builders[0]})
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler({}, 'repo-start-build', protocol)
@@ -723,6 +753,7 @@ class HoleHandlerTest(TestCase):
         slave = await hole.Slave.get(name=self.slave.name)
         self.assertEqual(slave.host, '10.0.0.1')
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_buildset_list(self):
         await self._create_test_data()
@@ -771,6 +802,7 @@ class HoleHandlerTest(TestCase):
         plugin = handler.plugin_get(name='slack-notification')
         self.assertTrue(plugin)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_builder_show(self):
         await self._create_test_data()
@@ -787,6 +819,7 @@ class HoleHandlerTest(TestCase):
         self.assertEqual(len(builder['buildsets']), 1)
         self.assertEqual(len(builder['buildsets'][0]['builds']), 3)
 
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_builder_show_with_skip_and_offset(self):
         await self._create_test_data()
@@ -831,7 +864,8 @@ class HoleHandlerTest(TestCase):
         expected = {self.slave: [self.builders[0]]}
         handler = hole.HoleHandler({}, 'action', self)
 
-        builders = await handler._get_builders(slaves, self.revision)
+        builders = await handler._get_builders(self.repo,
+                                               slaves, self.revision)
 
         self.assertEqual(builders, expected)
 
@@ -949,7 +983,10 @@ class HoleHandlerTest(TestCase):
             self.buildset.builds = builds
             await self.buildset.save()
 
+        await asyncio.sleep(0)
 
+
+@patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
 @patch.object(hole.UIStreamHandler, 'log', Mock())
 class UIStreamHandlerTest(TestCase):
 

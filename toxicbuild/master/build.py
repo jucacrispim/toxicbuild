@@ -33,7 +33,7 @@ from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
                                    format_timedelta, LoggerMixin)
 from toxicbuild.master.exceptions import DBError
-from toxicbuild.master.signals import revision_added, build_added
+from toxicbuild.master.signals import build_added
 
 # The statuses used in builds  ordered by priority.
 ORDERED_STATUSES = ['running', 'exception', 'fail',
@@ -370,7 +370,6 @@ class BuildManager(LoggerMixin):
         self.repository = repository
         self._is_getting_builders = False
         self._is_connected_to_signals = False
-        self.connect2signals()
 
     @property
     def build_queues(self):
@@ -433,16 +432,12 @@ class BuildManager(LoggerMixin):
           :class:`toxicbuild.master.repository.RepositoryRevision`.
         """
 
-        while self.repository.poller.is_polling() or self._is_getting_builders:
-            await asyncio.sleep(1)
-
-        self._is_getting_builders = True
-        log('checkout on {} to {}'.format(
-            self.repository.url, revision.commit), level='debug')
-        try:
-            await self.repository.poller.vcs.checkout(revision.commit)
+        async with await self.repository.toxicbuild_conf_lock.acquire():
+            log('checkout on {} to {}'.format(
+                self.repository.url, revision.commit), level='debug')
+            await self.repository.vcs.checkout(revision.commit)
             try:
-                conf = get_toxicbuildconf(self.repository.poller.vcs.workdir)
+                conf = get_toxicbuildconf(self.repository.workdir)
                 builders = list_builders_from_config(
                     conf, revision.branch, slave)
                 names = [b['name'] for b in builders]
@@ -457,8 +452,6 @@ class BuildManager(LoggerMixin):
                 builder = await Builder.get_or_create(
                     name=name, repository=self.repository)
                 builders.append(builder)
-        finally:
-            self._is_getting_builders = False
 
         return builders
 
@@ -487,19 +480,6 @@ class BuildManager(LoggerMixin):
 
                     self.build_queues[slave.name].append(buildset)
                     ensure_future(self._execute_builds(slave))
-
-    def connect2signals(self):
-        """ Connects the BuildManager to the revision_added signal."""
-
-        revision_added.connect(self._revadded, sender=self.repository)
-        self._is_connected_to_signals = True
-
-    def disconnect_from_signals(self):
-        revision_added.disconnect(self._revadded)
-        self._is_connected_to_signals = False
-
-    async def _revadded(self, sender, revisions):  # pragma no cover
-        await self.add_builds(revisions)
 
     async def _set_started_for_buildset(self, buildset):
         if not buildset.started:

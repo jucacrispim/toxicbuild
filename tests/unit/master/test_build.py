@@ -331,6 +331,11 @@ class BuildManagerTest(TestCase):
 
     @async_test
     async def tearDown(self):
+        if hasattr(self, 'repo') and self.repo.toxicbuild_conf_lock:
+            lock_name = self.repo.toxicbuild_conf_lock.queue_name
+            await self.repo.toxicbuild_conf_lock.channel.queue_delete(
+                lock_name)
+            await self.repo.toxicbuild_conf_lock.connection.disconnect()
         await slave.Slave.drop_collection()
         await build.BuildSet.drop_collection()
         await build.Builder.drop_collection()
@@ -391,51 +396,23 @@ class BuildManagerTest(TestCase):
     async def test_get_builders(self):
         await self._create_test_data()
         checkout = mock.MagicMock()
+        self.repo.schedule = mock.Mock()
+        await self.repo.bootstrap()
         self.manager.repository = self.repo
-        self.manager.repository.poller.vcs.checkout = asyncio.coroutine(
+        self.manager.repository.vcs.checkout = asyncio.coroutine(
             lambda *a, **kw: checkout())
 
         builders = await self.manager.get_builders(self.slave,
                                                    self.revision)
+        await self.repo.toxicbuild_conf_lock.channel.queue_delete(
+            self.repo.toxicbuild_conf_lock.queue_name)
+        await self.repo.update_code_lock.channel.queue_delete(
+            self.repo.update_code_lock.queue_name)
 
         for b in builders:
             self.assertTrue(isinstance(b, build.Document))
 
         self.assertEqual(len(builders), 2)
-
-    @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
-    @mock.patch.object(build, 'list_builders_from_config',
-                       mock.Mock(return_value=[{'name': 'builder-0'},
-                                               {'name': 'builder-1'}]))
-    @mock.patch.object(build.asyncio, 'sleep', mock.MagicMock)
-    @async_test
-    async def test_get_builders_polling(self):
-
-        sleep_mock = mock.Mock()
-
-        @asyncio.coroutine
-        def sleep(n):
-            sleep_mock()
-
-        build.asyncio.sleep = sleep
-        await self._create_test_data()
-        self.manager.repository = self.repo
-
-        self.manager.repository.poller.is_polling = mock.Mock(
-            side_effect=[True, False])
-
-        checkout = mock.MagicMock()
-        self.manager.repository.poller.vcs.checkout = asyncio.coroutine(
-            lambda *a, **kw: checkout())
-
-        builders = await self.manager.get_builders(self.slave,
-                                                   self.revision)
-
-        for b in builders:
-            self.assertTrue(isinstance(b, build.Document))
-
-        self.assertEqual(len(builders), 2)
-        self.assertTrue(sleep_mock.called)
 
     @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
     @mock.patch.object(build, 'list_builders_from_config',
@@ -445,12 +422,17 @@ class BuildManagerTest(TestCase):
     async def test_get_builders_with_bad_toxicbuildconf(self):
         await self._create_test_data()
         self.manager.repository = self.repo
+        self.repo.schedule = mock.Mock()
+        await self.repo.bootstrap()
         checkout = mock.MagicMock()
-        self.manager.repository.poller.vcs.checkout = asyncio.coroutine(
+        self.manager.repository.vcs.checkout = asyncio.coroutine(
             lambda *a, **kw: checkout())
 
         builders = await self.manager.get_builders(self.slave,
                                                    self.revision)
+        await self.repo.update_code_lock.channel.queue_delete(
+            self.repo.update_code_lock.queue_name)
+
         self.assertFalse(builders)
         self.assertTrue(build.log.called)
 
@@ -568,19 +550,6 @@ class BuildManagerTest(TestCase):
         self.assertEqual(buildset.total_time, 10)
         self.assertTrue(save_mock.called)
 
-    @async_test
-    async def test_add_builds_from_signal(self):
-        # ensures that builds are added when revision_added signal is sent.
-
-        await self._create_test_data()
-        add_builds = mock.MagicMock()
-        self.repo.build_manager.add_builds = asyncio.coroutine(
-            lambda *a, **kw: add_builds(*a, **kw))
-        ret = self.repo.poller.notify_change(*[self.revision])
-        futures = [r[1] for r in ret]
-        await asyncio.gather(*futures)
-        self.assertTrue(add_builds.called)
-
     @mock.patch.object(build, 'ensure_future', mock.Mock())
     @async_test
     async def test_start_pending(self):
@@ -633,12 +602,6 @@ class BuildManagerTest(TestCase):
         build.ensure_future = mock.Mock()
         await self.repo.build_manager.start_pending()
         self.assertFalse(build.ensure_future.called)
-
-    @async_test
-    async def test_test_disconnect_from_signals(self):
-        await self._create_test_data()
-        self.repo.build_manager.disconnect_from_signals()
-        self.assertFalse(self.repo.build_manager._is_connected_to_signals)
 
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asdf')
