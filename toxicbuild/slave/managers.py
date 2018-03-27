@@ -168,6 +168,7 @@ class BuildManager(LoggerMixin):
                 # this is executed when the named_tree does not  exist
                 # so we upate the code and then checkout again.
                 self.log('named_tree does not exist. updating...')
+                yield from self.vcs.get_remote_branches()
                 self.log('checking out to branch {}'.format(self.branch),
                          level='debug')
                 yield from self.vcs.checkout(self.branch)
