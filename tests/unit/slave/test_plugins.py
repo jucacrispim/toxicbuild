@@ -181,7 +181,8 @@ class AptInstallStepTest(TestCase):
     async def test_execute_everything_installed(self):
         self.step._is_everything_installed = AsyncMagicMock(return_value=True)
         await self.step.execute('.')
-        self.assertEqual(self.step.command, self.step.reconf_cmd)
+        self.assertEqual(self.step.command,
+                         'sudo dpkg-reconfigure somepkg otherpkg')
 
     @patch.object(plugins.BuildStep, 'execute', AsyncMagicMock())
     @async_test

@@ -144,7 +144,7 @@ class AptInstallStep(BuildStep):
         self.packages = packages
         packages_str = ' '.join(packages)
         self.install_cmd = ' '.join(['sudo apt-get install -y', packages_str])
-        self.reconf_cmd = ' '.join(['dpkg-reconfigure', packages_str])
+        self.reconf_cmd = ' '.join(['sudo dpkg-reconfigure', packages_str])
         name = 'Installing packages with apt-get'
         super().__init__(name, self.install_cmd, stop_on_fail=True,
                          timeout=timeout)
