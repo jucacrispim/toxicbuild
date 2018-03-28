@@ -145,6 +145,7 @@ class AptInstallStep(BuildStep):
         packages_str = ' '.join(packages)
         self.install_cmd = ' '.join(['sudo apt-get install -y', packages_str])
         self.reconf_cmd = ' '.join(['sudo dpkg-reconfigure', packages_str])
+        self._cmd = None
         name = 'Installing packages with apt-get'
         super().__init__(name, self.install_cmd, stop_on_fail=True,
                          timeout=timeout)
@@ -157,17 +158,17 @@ class AptInstallStep(BuildStep):
         installed = int(await exec_cmd(cmd, cwd='.'))
         return installed == len(self.packages)
 
-    async def execute(self, cwd,  out_fn=None, last_step_status=None,
-                      last_step_output=None, **envvars):
+    async def get_command(self):
+        if self._cmd:  # pragma no cover
+            return self._cmd
 
         if not await self._is_everything_installed():
-            self.command = self.install_cmd
+            self._cmd = self.install_cmd
         else:
-            self.command = self.reconf_cmd
-        return await super().execute(cwd, out_fn=out_fn,
-                                     last_step_status=last_step_status,
-                                     last_step_output=last_step_output,
-                                     **envvars)
+            self._cmd = self.reconf_cmd
+
+        self.command = self._cmd
+        return self._cmd
 
 
 class AptInstallPlugin(SlavePlugin):

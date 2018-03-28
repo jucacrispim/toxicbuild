@@ -81,10 +81,11 @@ class Builder(LoggerMixin):
         last_step_status = None
         last_step_output = None
         for index, step in enumerate(self.steps):
-            msg = 'Executing %s' % step.command
+            cmd = yield from step.get_command()
+            msg = 'Executing %s' % cmd
             self.log(msg, level='debug')
             local_now = localtime2utc(now())
-            step_info = {'status': 'running', 'cmd': step.command,
+            step_info = {'status': 'running', 'cmd': cmd,
                          'name': step.name,
                          'started': datetime2string(local_now),
                          'finished': None, 'index': index, 'output': '',
@@ -106,7 +107,7 @@ class Builder(LoggerMixin):
             status = step_info['status']
             last_step_output = step_exec_output
             last_step_status = status
-            msg = 'Finished {} with status {}'.format(step.command, status)
+            msg = 'Finished {} with status {}'.format(cmd, status)
             self.log(msg, level='debug')
 
             finished = localtime2utc(now())
@@ -192,6 +193,11 @@ class BuildStep:
         self.timeout = timeout
         self.stop_on_fail = stop_on_fail
 
+    async def get_command(self):
+        """Returns the command that will be executed."""
+
+        return self.command
+
     def __eq__(self, other):
         if not hasattr(other, 'command'):
             return False
@@ -222,7 +228,8 @@ class BuildStep:
 
         step_status = {}
         try:
-            output = yield from exec_cmd(self.command, cwd=cwd,
+            cmd = yield from self.get_command()
+            output = yield from exec_cmd(cmd, cwd=cwd,
                                          timeout=self.timeout,
                                          out_fn=out_fn, **envvars)
             status = 'success'
