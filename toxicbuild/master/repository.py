@@ -18,7 +18,6 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future
-import functools
 import os
 import re
 import shutil
@@ -29,31 +28,43 @@ from mongomotor.fields import (StringField, IntField, ReferenceField,
                                DateTimeField, ListField, BooleanField,
                                EmbeddedDocumentField)
 from toxicbuild.core import utils
+from toxicbuild.core.coordination import Mutex
+from toxicbuild.core.vcs import get_vcs
+from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder, BuildManager
-from toxicbuild.master.exceptions import CloneException
+from toxicbuild.master.exchanges import (update_code, poll_status,
+                                         revisions_added, locks_conn,
+                                         scheduler_action)
 from toxicbuild.master.plugins import MasterPlugin
-from toxicbuild.master.pollers import Poller
 from toxicbuild.master.signals import (build_started, build_finished,
                                        repo_status_changed, repo_added)
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.utils import OwnedDocument
 
-
 # The thing here is: When a repository poller is scheduled, I need to
 # keep track of the hashes so I can remove it from the scheduler
 # when needed.
-# The format is {repourl: hash} for update_code
-# and {repourl-start-pending: hash} for starting pending builds
+# The is {repourl-start-pending: hash} for starting pending builds
 _scheduler_hashes = {}
 
 
-async def _update_code(repo_id):
-    """Calls the update_code method of a repo. We must use this instead of
-    use reload() in the update_code method because the reload() causes a
-    massive memory leak."""
+async def _add_builds(msg):
+    body = msg.body
+    repo = await Repository.get(id=body['repository_id'])
+    revisions = await RepositoryRevision.objects.filter(
+        id__in=body['revisions_ids']).to_list()
 
-    repo = await Repository.get(id=repo_id)
-    await repo.update_code()
+    await repo.build_manager.add_builds(revisions)
+    await msg.acknowledge()
+
+
+async def wait_revisions():
+    """Waits for messages sent by pollers about new revisions."""
+
+    async with await revisions_added.consume() as consumer:
+        async for msg in consumer:
+            utils.log('Got msg from revisions_added', level='debug')
+            ensure_future(_add_builds(msg))
 
 
 class RepositoryBranch(EmbeddedDocument):
@@ -96,6 +107,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         self._poller_instance = None
         self.build_manager = BuildManager(self)
         self._old_status = None
+        self.toxicbuild_conf_lock = None
+        self.update_code_lock = None
+        self._vcs_instance = None
 
     async def to_dict(self, id_as_str=False):
         my_dict = {'id': self.id, 'name': self.name, 'url': self.url,
@@ -113,23 +127,22 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         return my_dict
 
     @property
+    def vcs(self):
+        if not self._vcs_instance:
+            self._vcs_instance = get_vcs(self.vcs_type)(self.workdir)
+
+        return self._vcs_instance
+
+    @property
     def workdir(self):
         """ The directory where the source code of this repository is
         cloned into
         """
-
+        base_dir = settings.SOURCE_CODE_DIR
         workdir = re.sub(re.compile('http(s|)://'), '', self.url)
         workdir = workdir.replace('/', '-').replace('@', '-').replace(':', '')
         workdir = workdir.strip()
-        return os.path.join('src', workdir)
-
-    @property
-    def poller(self):
-        if self._poller_instance is None:
-            vcs_type = self.vcs_type
-            self._poller_instance = Poller(self, vcs_type, self.workdir)
-
-        return self._poller_instance
+        return os.path.join(base_dir, workdir, str(self.id))
 
     async def get_status(self):
         """Returns the status for the repository. The status is the
@@ -208,11 +221,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         revisions = RepositoryRevision.objects.filter(repository=self)
         await revisions.delete()
 
+        sched_msg = {'type': 'rm-update-code', 'repository_id': str(self.id)}
+        await scheduler_action.publish(sched_msg)
         try:
-            sched_hash = _scheduler_hashes[self.url]
-            self.scheduler.remove_by_hash(sched_hash)
-            del _scheduler_hashes[self.url]
-
             pending_hash = _scheduler_hashes['{}-start-pending'.format(
                 self.url)]
             self.scheduler.remove_by_hash(pending_hash)
@@ -223,40 +234,101 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         # removes the repository from the file system.
         Thread(target=shutil.rmtree, args=[self.workdir]).start()
-
+        # creating locks just to declare the stuff...
+        await self._delete_locks()
         await self.delete()
 
     @classmethod
     async def get(cls, **kwargs):
-        """Returns a repository instance
+        """Returns a repository instance and create locks if needed
 
         :param kwargs: kwargs to match the repository."""
+
         repo = await cls.objects.get(**kwargs)
+        await repo._create_locks()
+        return repo
+
+    @classmethod
+    async def get_for_user(cls, user, **kwargs):
+        """Returns a repository if ``user`` has permission for it.
+        If not raises an error.
+
+        :param user: User who is requesting the repository.
+        :param kwargs: kwargs to match the repository.
+        """
+        repo = await super().get_for_user(user, **kwargs)
+        await repo._create_locks()
         return repo
 
     async def update_code(self):
-        """Updates the repository's code. It is just a wrapper for
-        self.poller.poll, so I can handle exceptions here."""
+        """Requests a code update to a poller and waits for its response.
+        This is done using ``update_code`` and ``poll_status`` exchanges."""
+        lock = await self.update_code_lock.try_acquire()
+        if not lock:
+            self.log('Repo already updating. Leaving.', level='debug')
+            return
 
-        with_clone = False
-        try:
-            with_clone = await self.poller.poll()
-            clone_status = 'ready'
-        except CloneException:
-            with_clone = True
-            clone_status = 'clone-exception'
+        async with lock:
+            self.log('Updating code.', level='debug')
 
-        self.clone_status = clone_status
+            msg = {'repo_id': str(self.id),
+                   'vcs_type': self.vcs_type,
+                   'url': self.url}
+
+            # Sends a message to the queue that is consumed by the pollers
+            await update_code.publish(msg)
+            async with await poll_status.consume(
+                    routing_key=str(self.id), no_ack=False) as consumer:
+
+                # wait for the message with the poll response.
+                msg = await consumer.fetch_message()
+                self.log('poll status received', level='debug')
+                await msg.acknowledge()
+
+        self.clone_status = msg.body['clone_status']
         await self.save()
 
-        if with_clone:
+        if msg.body['with_clone']:
             repo_status_changed.send(str(self.id), old_status='cloning',
                                      new_status=self.clone_status)
+
+    async def _create_locks(self):
+        self.toxicbuild_conf_lock = Mutex(
+            'toxicmaster-repo-toxicbuildconf-mutex-{}'.format(str(self.id)),
+            locks_conn)
+        await self.toxicbuild_conf_lock.create()
+        self.update_code_lock = Mutex(
+            'toxicmaster-repo-update-code-mutex-{}'.format(str(self.id)),
+            locks_conn)
+        await self.update_code_lock.create()
+
+    async def _delete_locks(self):
+        """For tests only"""
+        await self.toxicbuild_conf_lock.channel.queue_delete(
+            self.toxicbuild_conf_lock.queue_name)
+        await self.update_code_lock.channel.queue_delete(
+            self.update_code_lock.queue_name)
+
+    async def bootstrap(self):
+        """Initialise the needed stuff. Schedules updates for code,
+         start of pending builds, connect to signals and create the
+        needed locks.
+
+        The locks create here are:
+        * exclusive access for toxicbuild.conf of a repo."""
+
+        await self._create_locks()
+        self.schedule()
+
+    @classmethod
+    async def bootstrap_all(cls):
+        async for repo in cls.objects.all():
+            await repo.bootstrap()
 
     def schedule(self):
         """Schedules all needed actions for a repository. The actions are:
 
-        * Update source code using ``self.update_code``
+        * Sends an ``add-udpate-code`` to the scheduler server.
         * Starts builds that are pending using
           ``self.build_manager.start_pending``.
         * Connects to ``build_started`` and ``build_finished`` signals
@@ -264,17 +336,16 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         * Runs the enabled plugins."""
 
         self.log('Scheduling {url}'.format(url=self.url))
-        # we store this hashes so we can remove it from the scheduler when
-        # we remove the repository.
 
-        # adding update_code
-        update_fn = functools.partial(_update_code, self.id)
-        sched_hash = self.scheduler.add(update_fn, self.update_seconds)
-        _scheduler_hashes[self.url] = sched_hash
+        sched_msg = {'type': 'add-update-code',
+                     'repository_id': str(self.id)}
 
+        f = scheduler_action.publish(sched_msg)
+        ensure_future(f)
         # adding start_pending
         start_pending_hash = self.scheduler.add(
             self.build_manager.start_pending, 120)
+
         _scheduler_hashes['{}-start-pending'.format(
             self.url)] = start_pending_hash
 
@@ -484,3 +555,12 @@ class RepositoryRevision(Document):
     async def get(cls, **kwargs):
         ret = await cls.objects.get(**kwargs)
         return ret
+
+    async def to_dict(self):
+        repo = await self.repository
+        return {'repository_id': str(repo.id),
+                'commit': self.commit,
+                'branch': self.branch,
+                'author': self.author,
+                'title': self.title,
+                'commit_date': utils.datetime2string(self.commit_date)}

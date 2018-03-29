@@ -20,9 +20,12 @@
 
 import asyncio
 from unittest import TestCase
+from unittest.mock import Mock, patch
 from toxicbuild.master import scheduler
-from toxicbuild.master.scheduler import TaskScheduler
-from tests import async_test
+from toxicbuild.master.scheduler import (TaskScheduler, SchedulerServer,
+                                         UnknownSchedulerAction, Repository,
+                                         scheduler_action)
+from tests import async_test, AsyncMagicMock
 
 
 class SchedulerTest(TestCase):
@@ -103,3 +106,91 @@ class SchedulerTest(TestCase):
     @asyncio.coroutine
     def _coromethod2scheduler(self):
         return True
+
+
+class SchedulerServerTest(TestCase):
+
+    def setUp(self):
+        self.server = SchedulerServer()
+
+    @async_test
+    async def test_handle_request_add_update_code(self):
+        msg = Mock()
+        msg.acknowledge = AsyncMagicMock()
+        msg.body = {}
+        msg.body['type'] = 'add-update-code'
+        self.server.handle_add_update_code = AsyncMagicMock()
+        await self.server.handle_request(msg)
+        self.assertTrue(self.server.handle_add_update_code.called)
+
+    @async_test
+    async def test_handle_request_rm_update_code(self):
+        msg = Mock()
+        msg.acknowledge = AsyncMagicMock()
+        msg.body = {}
+        msg.body['type'] = 'rm-update-code'
+        self.server.handle_rm_update_code = AsyncMagicMock()
+        await self.server.handle_request(msg)
+        self.assertTrue(self.server.handle_rm_update_code.called)
+
+    @async_test
+    async def test_handle_request_unknown(self):
+        msg = Mock()
+        msg.acknowledge = AsyncMagicMock()
+        msg.body = {}
+        msg.body['type'] = 'unknown'
+        with self.assertRaises(UnknownSchedulerAction):
+            await self.server.handle_request(msg)
+
+    @async_test
+    async def test_handle_add_update_request_already_scheduled(self):
+        msg = Mock()
+        msg.body = {'repository_id': 'some-id'}
+        self.server._updates_scheduled.add('some-id')
+        r = await self.server.handle_add_update_code(msg)
+        self.assertFalse(r)
+
+    @patch.object(Repository, 'objects', AsyncMagicMock())
+    @async_test
+    async def test_handle_add_update_request(self, *a, **kw):
+        Repository.objects.get.return_value.update_code = lambda: None
+        Repository.objects.get.return_value.id = 'id'
+        msg = Mock()
+        msg.body = {'repository_id': 'some-id'}
+        r = await self.server.handle_add_update_code(msg)
+        self.assertTrue(r)
+
+    @async_test
+    async def test_handle_rm_update_code_not_scheduled(self):
+        msg = Mock()
+        msg.body = {'repository_id': 'some-id'}
+        r = await self.server.handle_rm_update_code(msg)
+        self.assertFalse(r)
+
+    @async_test
+    async def test_handle_rm_update_code(self):
+        msg = Mock()
+        msg.body = {'repository_id': 'some-id'}
+        self.server._sched_hashes['some-id'] = 'some-hash'
+        self.server.scheduler.remove_by_hash = Mock()
+        self.server._updates_scheduled.add('some-id')
+        r = await self.server.handle_rm_update_code(msg)
+        self.assertTrue(r)
+        self.assertTrue(self.server.scheduler.remove_by_hash.called)
+
+    @patch.object(scheduler_action, 'consume', AsyncMagicMock())
+    @async_test
+    async def test_run(self):
+        handle = Mock()
+        scheduler_action.consume.return_value.aiter_items = ['']
+
+        class Srv(SchedulerServer):
+
+            def handle_request(self, msg):
+                self.stop()
+                handle()
+                return AsyncMagicMock()()
+
+        server = Srv()
+        await server.run()
+        self.assertTrue(handle.called)

@@ -21,7 +21,7 @@ import asyncio
 import os
 from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.plugins import Plugin
-from toxicbuild.core.utils import run_in_thread
+from toxicbuild.core.utils import run_in_thread, exec_cmd
 from toxicbuild.slave import settings
 from toxicbuild.slave.build import BuildStep
 
@@ -141,10 +141,34 @@ class AptUpdateStep(BuildStep):
 class AptInstallStep(BuildStep):
 
     def __init__(self, packages, timeout=600):
-        packages = ' '.join(packages)
-        cmd = ' '.join(['sudo apt-get install -y', packages])
+        self.packages = packages
+        packages_str = ' '.join(packages)
+        self.install_cmd = ' '.join(['sudo apt-get install -y', packages_str])
+        self.reconf_cmd = ' '.join(['sudo dpkg-reconfigure', packages_str])
+        self._cmd = None
         name = 'Installing packages with apt-get'
-        super().__init__(name, cmd, stop_on_fail=True, timeout=timeout)
+        super().__init__(name, self.install_cmd, stop_on_fail=True,
+                         timeout=timeout)
+
+    async def _is_everything_installed(self):
+        """Checks if all the packages are installed"""
+
+        cmd = 'sudo dpkg -l | egrep \'{}\' | wc -l'.format('|'.join(
+            self.packages))
+        installed = int(await exec_cmd(cmd, cwd='.'))
+        return installed == len(self.packages)
+
+    async def get_command(self):
+        if self._cmd:  # pragma no cover
+            return self._cmd
+
+        if not await self._is_everything_installed():
+            self._cmd = self.install_cmd
+        else:
+            self._cmd = self.reconf_cmd
+
+        self.command = self._cmd
+        return self._cmd
 
 
 class AptInstallPlugin(SlavePlugin):

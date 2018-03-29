@@ -417,7 +417,7 @@ class HoleHandler:
                                                commit=named_tree)
 
         if not builder_name:
-            builders = await self._get_builders(slaves, rev)
+            builders = await self._get_builders(repo, slaves, rev)
         else:
             blist = [(await Builder.get(name=builder_name,
                                         repository=repo))]
@@ -609,15 +609,12 @@ class HoleHandler:
     async def _get_repo_dict(self, repo):
         """Returns a dictionary for a given repository"""
 
-        repo_dict = json.loads(repo.to_json())
+        repo_dict = await repo.to_dict(id_as_str=True)
         repo_dict['id'] = str(repo.id)
         repo_dict['status'] = await repo.get_status()
         slaves = await repo.slaves
         repo_dict['slaves'] = [self._get_slave_dict(s) for s in slaves]
         repo_dict['parallel_builds'] = repo.parallel_builds or ''
-        for p in repo_dict['plugins']:
-            p['name'] = p['_name']
-
         return repo_dict
 
     def _get_slave_dict(self, slave):
@@ -625,8 +622,7 @@ class HoleHandler:
         slave_dict['id'] = str(slave.id)
         return slave_dict
 
-    async def _get_builders(self, slaves, revision):
-        repo = await revision.repository
+    async def _get_builders(self, repo, slaves, revision):
         builders = {}
         for slave in slaves:
             builders[slave] = await repo.build_manager.get_builders(
@@ -738,7 +734,7 @@ class UIStreamHandler(LoggerMixin):
         :param old_status: The old status of the repository
         :param new_status: The new status of the repostiory."""
 
-        repo = await Repository.get(id=repo_id)
+        repo = await Repository.objects.get(id=repo_id)
         rdict = await repo.to_dict(id_as_str=True)
         rdict['status'] = new_status
         rdict['old_status'] = old_status

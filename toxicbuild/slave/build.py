@@ -78,12 +78,14 @@ class Builder(LoggerMixin):
                       'finished': None, 'info_type': 'build_info'}
 
         yield from self.manager.send_info(build_info)
-
+        last_step_status = None
+        last_step_output = None
         for index, step in enumerate(self.steps):
-            msg = 'Executing %s' % step.command
+            cmd = yield from step.get_command()
+            msg = 'Executing %s' % cmd
             self.log(msg, level='debug')
             local_now = localtime2utc(now())
-            step_info = {'status': 'running', 'cmd': step.command,
+            step_info = {'status': 'running', 'cmd': cmd,
                          'name': step.name,
                          'started': datetime2string(local_now),
                          'finished': None, 'index': index, 'output': '',
@@ -96,13 +98,16 @@ class Builder(LoggerMixin):
 
             out_fn = functools.partial(self._send_step_output_info, step_info)
 
-            step_exec_output = yield from step.execute(cwd=self.workdir,
-                                                       out_fn=out_fn,
-                                                       **envvars)
+            step_exec_output = yield from step.execute(
+                cwd=self.workdir, out_fn=out_fn,
+                last_step_status=last_step_status,
+                last_step_output=last_step_output, **envvars)
             step_info.update(step_exec_output)
 
             status = step_info['status']
-            msg = 'Finished {} with status {}'.format(step.command, status)
+            last_step_output = step_exec_output
+            last_step_status = status
+            msg = 'Finished {} with status {}'.format(cmd, status)
             self.log(msg, level='debug')
 
             finished = localtime2utc(now())
@@ -188,6 +193,11 @@ class BuildStep:
         self.timeout = timeout
         self.stop_on_fail = stop_on_fail
 
+    async def get_command(self):
+        """Returns the command that will be executed."""
+
+        return self.command
+
     def __eq__(self, other):
         if not hasattr(other, 'command'):
             return False
@@ -195,17 +205,31 @@ class BuildStep:
         return self.command == other.command
 
     @asyncio.coroutine
-    def execute(self, cwd,  out_fn=None, **envvars):
+    def execute(self, cwd,  out_fn=None, last_step_status=None,
+                last_step_output=None, **envvars):
         """Executes the step command.
+
         :param cwd: Directory where the command will be executed.
         :param out_fn: Function used to handle each line of the
           command output.
+        :param last_step_status: The status of the step before this one
+          in the build.
+        :param last_step_output: The output of the step before this one
+          in the build.
         :param envvars: Environment variables to be used on execution.
+
+        .. note::
+
+            In the case of this method, the params ``last_step_status`` and
+            ``last_step_output`` are not used. They are here for the use of
+            extentions that may need it. For example, run one command in case
+            of one status or another command in case of another status.
         """
 
         step_status = {}
         try:
-            output = yield from exec_cmd(self.command, cwd=cwd,
+            cmd = yield from self.get_command()
+            output = yield from exec_cmd(cmd, cwd=cwd,
                                          timeout=self.timeout,
                                          out_fn=out_fn, **envvars)
             status = 'success'

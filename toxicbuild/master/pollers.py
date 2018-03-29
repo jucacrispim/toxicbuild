@@ -17,11 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
 import traceback
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.core.utils import LoggerMixin, MatchKeysDict
 from toxicbuild.master.exceptions import CloneException
-from toxicbuild.master.signals import revision_added
+from toxicbuild.master.exchanges import update_code, poll_status
+from toxicbuild.master.repository import Repository
+from toxicbuild.master.exchanges import revisions_added
 
 
 class Poller(LoggerMixin):
@@ -50,7 +53,7 @@ class Poller(LoggerMixin):
         """
 
         with_clone = False
-        try:
+        async with await self.repository.toxicbuild_conf_lock.acquire():
             if self.is_polling():
                 self.log('alreay polling. leaving...'.format(
                     self.repository.url), level='debug')
@@ -82,8 +85,6 @@ class Poller(LoggerMixin):
                 msg = traceback.format_exc()
                 self.log(msg, level='error')
                 # but the show must go on
-        finally:
-            self._is_polling = False
 
         return with_clone
 
@@ -127,15 +128,19 @@ class Poller(LoggerMixin):
                                                  notify_only_latest,
                                                  revisions)
 
-        self.notify_change(*revisions)
+        if revisions:
+            await self.notify_change(*revisions)
 
-    def notify_change(self, *revisions):
+    async def notify_change(self, *revisions):
         """ Notify about new revisions added to the repository.
 
         :param revisions: A list of new revisions"""
 
-        # returning for testing purposes
-        return revision_added.send(self.repository, revisions=revisions)
+        msg = {'repository_id': str(self.repository.id),
+               'revisions_ids': [str(r.id) for r in revisions]}
+
+        self.log('publishing on revisions_added', level='debug')
+        await revisions_added.publish(msg)
 
     def log(self, msg, level='info'):
         msg = '[{}] {}'.format(self.repository.name, msg)
@@ -162,3 +167,47 @@ class Poller(LoggerMixin):
             msg = '{} new revisions for {} on branch {} added'
             self.log(msg.format(len(branch_revs), self.repository.url,
                                 branch))
+
+
+class PollerServer(LoggerMixin):
+    """A server for pollers. Uses Rabbitmq to publish/consume messages from
+    the master"""
+
+    def __init__(self):
+        self._stop = False
+
+    async def run(self):
+        """Starts the server"""
+
+        while not self._stop:
+            async with await update_code.consume() as consumer:
+                async for msg in consumer:
+                    asyncio.ensure_future(self.handle_update_request(msg))
+
+        self._stop = False
+
+    def stop(self):
+        self._stop = True
+
+    async def handle_update_request(self, msg):
+        """Handle an update code request sent by the master."""
+
+        body = msg.body
+        repo_id = body['repo_id']
+        repo = await Repository.get(id=repo_id)
+        vcs_type = body['vcs_type']
+        poller = Poller(repo, vcs_type, repo.workdir)
+        try:
+            with_clone = await poller.poll()
+            clone_status = 'ready'
+        except Exception:
+            tb = traceback.format_exc()
+            self.log(tb, level='error')
+            with_clone = False
+            clone_status = 'clone-exception'
+
+        await msg.acknowledge()
+        msg = {'with_clone': with_clone,
+               'clone_status': clone_status}
+
+        await poll_status.publish(msg, routing_key=str(repo.id))

@@ -19,13 +19,28 @@
 
 import asyncio
 import datetime
+import json
 from unittest import mock, TestCase
+from toxicbuild.core.exchange import JsonAckMessage as Message
 from toxicbuild.master import pollers, repository, users
 from toxicbuild.master.exceptions import CloneException
-from tests import async_test
+from toxicbuild.master.exchanges import connect_exchanges, disconnect_exchanges
+from tests import async_test, AsyncMagicMock
 
 
 class GitPollerTest(TestCase):
+
+    @classmethod
+    @async_test
+    async def setUpClass(cls):
+        await connect_exchanges()
+
+    @classmethod
+    @async_test
+    async def tearDownClass(cls):
+        await pollers.revisions_added.channel.queue_delete(
+            'toxicmaster.revisions_added_queue')
+        await disconnect_exchanges()
 
     @mock.patch.object(pollers, 'get_vcs', mock.MagicMock())
     @async_test
@@ -37,23 +52,38 @@ class GitPollerTest(TestCase):
             name='reponame', url='git@somewhere.org/project.git',
             owner=self.owner)
 
+        self.repo.schedule = mock.Mock()
+        await self.repo.bootstrap()
         self.poller = pollers.Poller(
             self.repo, vcs_type='git', workdir='workdir')
 
     @async_test
     def tearDown(self):
+        yield from self.repo._delete_locks()
+        yield from repository.scheduler_action.channel.queue_delete(
+            repository.scheduler_action.queue_name)
+        yield from repository.update_code.channel.queue_delete(
+            repository.update_code.queue_name)
         yield from repository.RepositoryRevision.drop_collection()
         yield from repository.Repository.drop_collection()
         yield from users.User.drop_collection()
         super(GitPollerTest, self).tearDown()
 
-    @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
-    def test_notify_changes(self):
-        self.poller.notify_change(mock.MagicMock())
+    @async_test
+    async def test_notify_changes(self):
+        rev = mock.MagicMock()
+        rev.id = 'asdf'
+        await self.poller.notify_change(*[rev])
+        consumer = await pollers.revisions_added.consume()
+        async with consumer:
+            msg = await consumer.fetch_message()
+            await msg.acknowledge()
 
-        self.assertTrue(pollers.revision_added.send.called)
+        has_msg = bool(msg)
 
-    @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
+        self.assertTrue(has_msg)
+
+    @mock.patch.object(pollers, 'revisions_added', AsyncMagicMock())
     @async_test
     async def test_process_changes(self):
         # now in the future, of course!
@@ -83,12 +113,31 @@ class GitPollerTest(TestCase):
 
         await self.poller.process_changes()
 
-        called_revs = pollers.revision_added.send.call_args[1]['revisions']
-        # call only 1 because self.poller.notify_only_latest is True
-        # for master and call 1 for last revision for dev
-        self.assertEqual(len(called_revs), 2)
+        self.assertTrue(pollers.revisions_added.publish.called)
 
-    @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
+    @mock.patch.object(pollers, 'revisions_added', AsyncMagicMock())
+    @async_test
+    async def test_process_changes_no_revisions(self):
+        # now in the future, of course!
+        branches = [
+            repository.RepositoryBranch(name='master',
+                                        notify_only_latest=True),
+            repository.RepositoryBranch(name='dev',
+                                        notify_only_latest=False)]
+        self.repo.branches = branches
+        await self.repo.save()
+        await self._create_db_revisions()
+
+        @asyncio.coroutine
+        def gr(*a, **kw):
+            return {}
+
+        self.poller.vcs.get_revisions = gr
+
+        await self.poller.process_changes()
+
+        self.assertFalse(pollers.revisions_added.publish.called)
+
     @async_test
     async def test_poll(self):
         await self._create_db_revisions()
@@ -127,7 +176,6 @@ class GitPollerTest(TestCase):
 
         self.assertTrue(self.CLONE_CALLED)
 
-    @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @async_test
     async def test_poll_with_clone_exception(self):
 
@@ -145,7 +193,6 @@ class GitPollerTest(TestCase):
         with self.assertRaises(CloneException):
             await self.poller.poll()
 
-    @mock.patch.object(pollers.revision_added, 'send', mock.Mock())
     @async_test
     async def test_poll_without_clone(self):
         await self._create_db_revisions()
@@ -237,3 +284,88 @@ class GitPollerTest(TestCase):
                 commit_date=now, author='tião', title='outro')
 
             await rev.save()
+
+
+class PollerServerTest(TestCase):
+
+    @classmethod
+    @async_test
+    async def setUpClass(cls):
+        await connect_exchanges()
+
+    @classmethod
+    @async_test
+    async def tearDownClass(cls):
+        await pollers.update_code.channel.queue_delete(
+            'toxicmaster.update_code_queue')
+        await pollers.revisions_added.channel.queue_delete(
+            'toxicmaster.revisions_added_queue')
+        await repository.scheduler_action.channel.queue_delete(
+            'toxicmaster.scheduler_action_queue')
+        await disconnect_exchanges()
+
+    def setUp(self):
+        self.server = pollers.PollerServer()
+
+    @mock.patch.object(pollers.update_code, 'consume', AsyncMagicMock())
+    @async_test
+    async def test_run(self):
+        handle = mock.Mock()
+        pollers.update_code.consume.return_value.aiter_items = ['']
+
+        class Srv(pollers.PollerServer):
+
+            def handle_update_request(self, msg):
+                self.stop()
+                handle()
+                return AsyncMagicMock()()
+
+        server = Srv()
+        await server.run()
+        self.assertTrue(handle.called)
+
+    @mock.patch.object(pollers.Repository, '_create_locks', AsyncMagicMock())
+    @mock.patch.object(pollers.Poller, 'poll', AsyncMagicMock(
+        return_value=True))
+    @async_test
+    async def test_handle_update_request(self):
+        user = users.User(email='a@a.com')
+        await user.save()
+        repo = pollers.Repository(url='http://someurl.com/repo.git',
+                                  owner=user, vcs_type='git',
+                                  name='bla-repo')
+        await repo.save()
+        channel, envelope, properties = AsyncMagicMock(), mock.Mock(), {}
+        repo_id = str(repo.id)
+        body = json.dumps({'repo_id': repo_id, 'vcs_type': 'git'}).encode()
+
+        async with await pollers.poll_status.consume(
+                routing_key=repo_id) as consumer:
+            message = Message(channel, body, envelope, properties)
+            await self.server.handle_update_request(message)
+            msg = await consumer.fetch_message()
+            self.assertTrue(msg)
+
+    @mock.patch.object(pollers.Repository, '_create_locks', AsyncMagicMock())
+    @mock.patch.object(pollers.Poller, 'poll', AsyncMagicMock(
+        side_effect=Exception))
+    @mock.patch.object(pollers.PollerServer, 'log', mock.Mock())
+    @async_test
+    async def test_handle_update_request_exception(self):
+        user = users.User(email='a@a.com')
+        await user.save()
+        repo = pollers.Repository(url='http://someurl.com/repo.git',
+                                  owner=user, vcs_type='git',
+                                  name='bla-repo')
+        await repo.save()
+        channel, envelope, properties = AsyncMagicMock(), mock.Mock(), {}
+        repo_id = str(repo.id)
+        body = json.dumps({'repo_id': repo_id, 'vcs_type': 'git'}).encode()
+
+        async with await pollers.poll_status.consume(
+                routing_key=repo_id) as consumer:
+
+            message = Message(channel, body, envelope, properties)
+            await self.server.handle_update_request(message)
+            msg = await consumer.fetch_message()
+            self.assertTrue(msg)

@@ -133,6 +133,26 @@ def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
         master_cmd_line.append('--loglevel')
         master_cmd_line.append(loglevel)
 
+    poller_cmd_line = sys.argv[:]
+    poller_cmd_line[0] = master_cmd
+    poller_cmd_line[1] = '{}_poller'.format(poller_cmd_line[1])
+    poller_cmd_line[2] = master_root
+    if daemonize:
+        poller_cmd_line.append('--daemonize')
+    if loglevel:
+        poller_cmd_line.append('--loglevel')
+        poller_cmd_line.append(loglevel)
+
+    scheduler_cmd_line = sys.argv[:]
+    scheduler_cmd_line[0] = master_cmd
+    scheduler_cmd_line[1] = '{}_scheduler'.format(scheduler_cmd_line[1])
+    scheduler_cmd_line[2] = master_root
+    if daemonize:
+        scheduler_cmd_line.append('--daemonize')
+    if loglevel:
+        scheduler_cmd_line.append('--loglevel')
+        scheduler_cmd_line.append(loglevel)
+
     web_cmd_line = sys.argv[:]
     web_cmd_line[0] = web_cmd
     web_cmd_line[2] = ui_root
@@ -143,6 +163,8 @@ def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
         web_cmd_line.append(loglevel)
 
     subprocess.call(slave_cmd_line)
+    subprocess.call(poller_cmd_line)
+    subprocess.call(scheduler_cmd_line)
     subprocess.call(master_cmd_line)
     subprocess.call(web_cmd_line)
 

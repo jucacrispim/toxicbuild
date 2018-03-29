@@ -252,9 +252,11 @@ class BuilderManagerTest(TestCase):
     def test_update_and_checkout_new_named_tree(self):
         self.manager.vcs.checkout = MagicMock(side_effect=[
             managers.ExecCmdError, MagicMock(), MagicMock()])
+        self.manager.vcs.get_remote_branches = AsyncMagicMock()
         yield from self.manager.update_and_checkout()
 
         self.assertEqual(len(self.manager.vcs.checkout.call_args_list), 3)
+        self.assertTrue(self.manager.vcs.get_remote_branches.called)
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
     @patch.object(managers.BuildManager, 'wait_all', MagicMock())

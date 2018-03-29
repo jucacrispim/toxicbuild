@@ -23,3 +23,7 @@ class OwnerDoesNotExist(Exception):
 
 class InvalidCredentials(Exception):
     pass
+
+
+class UnknownSchedulerAction(Exception):
+    pass

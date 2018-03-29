@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2016, 2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -138,7 +138,7 @@ class PythonVenvPluginTest(TestCase):
         self.assertEqual(expected, env_vars)
 
 
-class AptitudeInstallPluginTest(TestCase):
+class AptInstallPluginTest(TestCase):
 
     def setUp(self):
         packages = ['libawesome', 'libawesome-dev']
@@ -161,3 +161,32 @@ class AptitudeInstallPluginTest(TestCase):
 
         self.assertEqual(expected, steps_before)
         self.assertTrue(expected[0].command.startswith('sudo'))
+
+
+class AptInstallStepTest(TestCase):
+
+    def setUp(self):
+        self.step = plugins.AptInstallStep(['somepkg', 'otherpkg'])
+
+    @patch.object(plugins, 'exec_cmd', AsyncMagicMock(return_value='2'))
+    @async_test
+    async def test_is_everything_installed(self):
+        expected = 'sudo dpkg -l | egrep \'somepkg|otherpkg\' | wc -l'
+        await self.step._is_everything_installed()
+        called = plugins.exec_cmd.call_args[0][0]
+        self.assertEqual(called, expected)
+
+    @patch.object(build, 'exec_cmd', AsyncMagicMock())
+    @async_test
+    async def test_execute_everything_installed(self):
+        self.step._is_everything_installed = AsyncMagicMock(return_value=True)
+        await self.step.execute('.')
+        self.assertEqual(self.step.command,
+                         'sudo dpkg-reconfigure somepkg otherpkg')
+
+    @patch.object(build, 'exec_cmd', AsyncMagicMock())
+    @async_test
+    async def test_execute(self):
+        self.step._is_everything_installed = AsyncMagicMock(return_value=False)
+        await self.step.execute('.')
+        self.assertEqual(self.step.command, self.step.install_cmd)
