@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from toxicbuild.core.exchange import Exchange, AmqpConnection
+from toxicbuild.core.exchanges import create_exchanges
 from toxicbuild.master import settings
 
 conn_kw = settings.RABBITMQ_CONNECTION
@@ -29,30 +30,39 @@ locks_conn = AmqpConnection(**conn_kw)
 update_code = Exchange('toxicmaster.update_code', connection=conn,
                        exchange_type='direct', durable=True,
                        bind_publisher=True)
+
 poll_status = Exchange('toxicmaster.poll_status', connection=conn,
                        exchange_type='direct', bind_publisher=False,
                        exclusive_consumer_queue=True)
+
 revisions_added = Exchange('toxicmaster.revisions_added',
                            connection=conn,
                            bind_publisher=True,
                            durable=True,
                            exchange_type='direct')
+
 scheduler_action = Exchange('toxicmaster.scheduler_action',
                             connection=conn,
                             bind_publisher=True,
                             durable=True,
                             exchange_type='direct')
 
+core_exchanges = create_exchanges(conn)
+repo_status_changed = core_exchanges['repo_status_changed']
+repo_added = core_exchanges['repo_added']
+
 
 async def connect_exchanges():
 
     await conn.connect()
     await locks_conn.connect()
-    # connecting exchanges to rabbitmq
+
     await update_code.declare()
     await revisions_added.declare()
     await poll_status.declare()
     await scheduler_action.declare()
+    await repo_status_changed.declare()
+    await repo_added.declare()
 
 
 async def disconnect_exchanges():

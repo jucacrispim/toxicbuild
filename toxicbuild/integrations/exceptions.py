@@ -20,3 +20,7 @@
 
 class AppDoesNotExist(Exception):
     pass
+
+
+class AppExists(Exception):
+    pass

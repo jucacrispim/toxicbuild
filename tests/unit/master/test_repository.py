@@ -24,7 +24,8 @@ from unittest.mock import Mock, MagicMock, patch
 from asyncamqp.compat import aiter_compat
 from toxicbuild.core import utils, exchange
 from toxicbuild.master import (repository, build, slave, users)
-from toxicbuild.master.exchanges import connect_exchanges, disconnect_exchanges
+from toxicbuild.master.exchanges import (connect_exchanges,
+                                         disconnect_exchanges)
 from tests import async_test, AsyncMagicMock
 
 
@@ -145,6 +146,7 @@ class RepositoryTest(TestCase):
             self.repo.id))
         self.assertEqual(self.repo.workdir, expected)
 
+    @patch.object(repository, 'repo_added', AsyncMagicMock())
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
     async def test_create(self):
@@ -152,13 +154,15 @@ class RepositoryTest(TestCase):
                                               port=1234, token='123',
                                               owner=self.owner)
         repo = await repository.Repository.create(
-            'reponame', 'git@somewhere.com', self.owner,
-            300, 'git', slaves=[slave_inst])
+            name='reponame', url='git@somewhere.com', owner=self.owner,
+            update_seconds=300, vcs_type='git', slaves=[slave_inst])
 
         self.assertTrue(repo.id)
+        self.assertTrue(repository.repo_added.publish.called)
         slaves = await repo.slaves
         self.assertEqual(slaves[0], slave_inst)
 
+    @patch.object(repository, 'repo_added', AsyncMagicMock())
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
     async def test_create_with_branches(self):
@@ -170,19 +174,23 @@ class RepositoryTest(TestCase):
                     for i in range(3)]
 
         repo = await repository.Repository.create(
-            'reponame', 'git@somewhere.com', self.owner, 300, 'git',
-            slaves=[slave_inst], branches=branches)
+            name='reponame', url='git@somewhere.com', owner=self.owner,
+            update_seconds=300, vcs_type='git', slaves=[slave_inst],
+            branches=branches)
 
         self.assertTrue(repo.id)
         self.assertEqual(len(repo.branches), 3)
 
+    @patch.object(repository, 'repo_added', AsyncMagicMock())
     @patch.object(repository, 'shutil', Mock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
     async def test_remove(self):
         repo = await repository.Repository.create(
-            'reponame', 'git@somewhere.com', self.owner, 300, 'git')
+            name='reponame', url='git@somewhere.com', owner=self.owner,
+            update_seconds=300, vcs_type='git')
+
         repo.schedule()
         builder = repository.Builder(name='b1', repository=repo)
         await builder.save()
@@ -202,6 +210,7 @@ class RepositoryTest(TestCase):
             '{}-start-pending'.format(repo.url)))
         self.assertTrue(repository.scheduler_action.publish.called)
 
+    @patch.object(repository, 'repo_added', AsyncMagicMock())
     @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
@@ -210,8 +219,9 @@ class RepositoryTest(TestCase):
                                               port=1234, token='123',
                                               owner=self.owner)
         old_repo = await repository.Repository.create(
-            'reponame', 'git@somewhere.com', self.owner, 300, 'git',
-            slaves=[slave_inst])
+            name='reponame', url='git@somewhere.com', owner=self.owner,
+            update_seconds=300, vcs_type='git', slaves=[slave_inst])
+
         new_repo = await repository.Repository.get(url=old_repo.url)
 
         slaves = await new_repo.slaves
@@ -219,6 +229,7 @@ class RepositoryTest(TestCase):
         self.assertEqual(slaves[0], slave_inst)
 
     @patch.object(repository, 'update_code', AsyncMagicMock())
+    @patch.object(repository, 'repo_status_changed', AsyncMagicMock())
     @patch.object(exchange, 'uuid4', MagicMock())
     @async_test
     async def test_update_code_with_clone_exception(self, *args, **kwargs):
@@ -279,7 +290,7 @@ class RepositoryTest(TestCase):
 
     @patch.object(exchange, 'uuid4', MagicMock())
     @patch.object(repository, 'update_code', AsyncMagicMock())
-    @patch.object(repository, 'repo_status_changed', Mock())
+    @patch.object(repository, 'repo_status_changed', AsyncMagicMock())
     @async_test
     async def test_update_with_clone_sending_signal(self):
         self.repo.clone_status = 'cloning'
@@ -301,7 +312,7 @@ class RepositoryTest(TestCase):
         await self.repo._create_locks()
         await self.repo.update_code()
         await self.repo._delete_locks()
-        self.assertTrue(repository.repo_status_changed.send.called)
+        self.assertTrue(repository.repo_status_changed.publish.called)
 
     @patch.object(repository.Mutex, 'create', AsyncMagicMock())
     @async_test
@@ -330,6 +341,21 @@ class RepositoryTest(TestCase):
         self.assertTrue(self.repo.scheduler.add.called)
         self.assertTrue(self.repo.plugins[0].called)
         self.assertTrue(repository.scheduler_action.publish.called)
+
+    @patch.object(repository.utils, 'log', Mock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    def test_schedule_no_schedule_poller(self):
+        self.repo.scheduler = Mock(spec=self.repo.scheduler)
+        plugin = MagicMock
+        plugin.name = 'my-plugin'
+        plugin.run = AsyncMagicMock()
+        self.repo.plugins = [plugin]
+        self.repo.schedule_poller = False
+        self.repo.schedule()
+
+        self.assertTrue(self.repo.scheduler.add.called)
+        self.assertTrue(self.repo.plugins[0].called)
+        self.assertFalse(repository.scheduler_action.publish.called)
 
     @patch.object(repository.utils, 'log', Mock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
@@ -610,7 +636,7 @@ class RepositoryTest(TestCase):
         await self.repo._check_for_status_change(Mock(), Mock())
         self.assertFalse(repository.repo_status_changed.send.called)
 
-    @patch.object(repository, 'repo_status_changed', Mock())
+    @patch.object(repository, 'repo_status_changed', AsyncMagicMock())
     @async_test
     async def test_check_for_status_change_changing(self):
         self.repo._old_status = 'running'
@@ -622,7 +648,7 @@ class RepositoryTest(TestCase):
         self.repo.get_status = get_status
 
         await self.repo._check_for_status_change(Mock(), Mock())
-        self.assertTrue(repository.repo_status_changed.send.called)
+        self.assertTrue(repository.repo_status_changed.publish.called)
 
     async def _create_db_revisions(self):
         await self.repo.save()

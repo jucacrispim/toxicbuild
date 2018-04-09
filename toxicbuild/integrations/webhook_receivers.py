@@ -17,12 +17,18 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+from asyncio import ensure_future
+import base64
 import json
 from pyrocumulus.web.applications import PyroApplication
 from pyrocumulus.web.decorators import post, get
 from pyrocumulus.web.handlers import BasePyroHandler
 from pyrocumulus.web.urlmappers import URLSpec
+from tornado.web import HTTPError
 from toxicbuild.core.utils import LoggerMixin
+from toxicbuild.master.users import User
+from toxicbuild.integrations import settings
+from toxicbuild.integrations.github import GithubInstallation
 
 
 class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
@@ -31,6 +37,16 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         super().__init__(*args, **kwargs)
         self.event_type = None
         self.body = None
+        self.actions = {'ping': self._handle_ping}
+
+    async def _get_user_from_cookie(self):
+        cookie = self.get_secure_cookie(settings.TOXICUI_COOKIE)
+        if not cookie:
+            return
+
+        user_dict = json.loads(base64.decodebytes(cookie).decode('utf-8'))
+        user = await User.objects.get(id=user_dict['id'])
+        return user
 
     def prepare(self):
         super().prepare()
@@ -41,16 +57,30 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
     def hello(self):
         return {'code': 200, 'msg': 'Hi there!'}
 
-    @post('auth')
-    async def authenticate(self):  # pragma no cover
-        pass
+    @get('auth')
+    async def authenticate(self):
+        user = await self._get_user_from_cookie()
+        if not user:
+            url = '{}?redirect={}'.format(
+                settings.TOXICUI_LOGIN_URL, self.request.get_full_url())
+        else:
+            githubapp_id = self.params.get('installation_id')
+            if not githubapp_id:
+                raise HTTPError(400)
+            ensure_future(GithubInstallation.create(githubapp_id, user))
+            url = settings.TOXICUI_URL
+        return self.redirect(url)
+
+    def _handle_ping(self):
+        msg = 'Ping received. App id {}\n'.format(self.body['app_id'])
+        msg += 'zen: {}'.format(self.body['zen'])
+        self.log(msg, level='debug')
+        return 'Got it.'
 
     @post('webhooks')
     async def receive_webhook(self):
-        if self.event_type == 'zen':
-            msg = 'zen: {}'.format(self.body['zen'])
-            self.log(msg, level='debug')
-            msg = 'Got it'
+        if self.event_type == 'ping':
+            msg = self._handle_ping()
         else:
             msg = 'What was that?'
         return {'code': 200, 'msg': msg}
@@ -60,18 +90,13 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             self.body = json.loads(self.request.body.decode())
 
     def _check_event_type(self):
-        if not self.body:
-            self.log('No body on request.', level='warning')
-            return
+        event_type = self.request.headers.get('X-GitHub-Event')
 
-        if 'zen' in self.body.keys():
-            r = 'zen'
-        else:
-            msg = 'Unknow event type\n{}'.format(self.body)
+        if not event_type:
+            msg = 'No event type\n{}'.format(self.body)
             self.log(msg, level='warning')
-            r = 'unknown'
 
-        return r
+        return event_type
 
 
 url = URLSpec('/github/(.*)', GithubWebhookReceiver)

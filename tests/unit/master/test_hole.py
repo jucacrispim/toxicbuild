@@ -26,6 +26,7 @@ from toxicbuild.master import hole, build, repository, slave, plugins
 from tests import async_test, AsyncMagicMock
 
 
+@patch.object(repository, 'repo_added', AsyncMagicMock())
 class UIHoleTest(TestCase):
 
     @patch.object(hole.HoleHandler, 'handle', MagicMock())
@@ -146,6 +147,7 @@ class UIHoleTest(TestCase):
         self.assertTrue(hole.HoleHandler.user_authenticate.called)
 
 
+@patch.object(repository, 'repo_added', AsyncMagicMock())
 @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
 @patch.object(repository.utils, 'log', Mock())
 class HoleHandlerTest(TestCase):
@@ -943,9 +945,11 @@ class HoleHandlerTest(TestCase):
                                 token='123', owner=self.owner)
         await self.slave.save()
         self.repo = await hole.Repository.create(
-            'reponame', 'git@somewhere.com', self.owner, 300, 'git')
+            name='reponame', url='git@somewhere.com', owner=self.owner,
+            update_seconds=300, vcs_type='git')
         self.other_repo = await hole.Repository.create(
-            'other', 'git@bla.com', self.owner, 300, 'git')
+            name='other', url='git@bla.com', owner=self.owner,
+            update_seconds=300, vcs_type='git')
 
         self.builds = []
         now = datetime.now()
@@ -988,6 +992,7 @@ class HoleHandlerTest(TestCase):
         await asyncio.sleep(0)
 
 
+@patch.object(repository, 'repo_added', AsyncMagicMock())
 @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
 @patch.object(hole.UIStreamHandler, 'log', Mock())
 class UIStreamHandlerTest(TestCase):
@@ -1014,7 +1019,9 @@ class UIStreamHandlerTest(TestCase):
         spec=hole.Repository.get_for_user, side_effect=hole.NotEnoughPerms))
     @async_test
     async def test_check_repo_added_no_perms(self):
-        await self.handler.check_repo_added('some-id')
+        msg = AsyncMagicMock()
+        msg.body = {'id': 'some-id'}
+        await self.handler.check_repo_added(msg)
         self.assertFalse(self.handler._connect_repo.called)
 
     @patch.object(hole.UIStreamHandler, '_connect_repo', MagicMock())
@@ -1022,7 +1029,10 @@ class UIStreamHandlerTest(TestCase):
         spec=hole.Repository.get_for_user))
     @async_test
     async def test_check_repo_added(self):
-        await self.handler.check_repo_added('some-id')
+        msg = AsyncMagicMock()
+        msg.body = {'id': 'some-id'}
+        self.handler.protocol.send_response = AsyncMagicMock()
+        await self.handler.check_repo_added(msg)
         self.assertTrue(self.handler._connect_repo.called)
 
     @patch.object(hole, 'step_started', Mock())
@@ -1040,16 +1050,15 @@ class UIStreamHandlerTest(TestCase):
                              hole.step_finished.disconnect.called,
                              hole.build_started.disconnect.called,
                              hole.build_finished.disconnect.called,
-                             hole.repo_status_changed.disconnect.called,
                              hole.build_added.disconnect.called,
                              hole.step_output_arrived.disconnect.called,
                              hole.repo_added.disconnect.called]))
+        self.assertTrue(self.handler._stop_consuming)
 
     @patch.object(hole, 'step_started', Mock())
     @patch.object(hole, 'step_finished', Mock())
     @patch.object(hole, 'build_started', Mock())
     @patch.object(hole, 'build_finished', Mock())
-    @patch.object(hole, 'repo_status_changed', Mock())
     @patch.object(hole, 'build_added', Mock())
     @patch.object(hole, 'step_output_arrived', Mock())
     @patch.object(hole, 'repo_added', Mock())
@@ -1059,15 +1068,45 @@ class UIStreamHandlerTest(TestCase):
         repo = hole.Repository(url='https://bla.com/git', vcs_type='git',
                                owner=self.owner, name='my-repo')
         await repo.save()
+        self.handler._handle_repo_status_changed = AsyncMagicMock()
         await self.handler._connect2signals()
         self.assertTrue(all([hole.step_started.connect.called,
                              hole.step_finished.connect.called,
                              hole.build_started.connect.called,
                              hole.build_finished.connect.called,
-                             hole.repo_status_changed.connect.called,
                              hole.build_added.connect.called,
                              hole.step_output_arrived.connect.called,
                              hole.repo_added.connect.called]))
+        self.assertTrue(self.handler._handle_repo_status_changed.called)
+
+    @patch.object(hole, 'repo_status_changed', AsyncMagicMock())
+    @async_test
+    async def test_handle_repo_status_changed(self):
+        msg = Mock()
+        msg.body = {}
+        msg.acknowledge = AsyncMagicMock()
+        send_repo_status_info_mock = Mock()
+
+        def send_repo_status_info(*a, **kw):
+            send_repo_status_info_mock()
+            self.handler._stop_consuming = True
+            return AsyncMagicMock()()
+
+        consumer = hole.repo_status_changed.consume.return_value
+        consumer.fetch_message.side_effect = [hole.ConsumerTimeout, msg]
+        self.handler.send_repo_status_info = send_repo_status_info
+        await self.handler._handle_repo_status_changed('some-id')
+        self.assertTrue(send_repo_status_info_mock.called)
+
+    @patch.object(hole.repo_added, 'consume', AsyncMagicMock())
+    @async_test
+    async def test_handle_repo_added(self):
+        self.handler._consume_with_callback = AsyncMagicMock()
+        await self.handler._handle_repo_added()
+        consumer = hole.repo_added.consume.return_value
+        expected = (consumer, self.handler.check_repo_added)
+        called = self.handler._consume_with_callback.call_args[0]
+        self.assertEqual(expected, called)
 
     @async_test
     async def test_step_started(self):
@@ -1130,10 +1169,11 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
     @async_test
     async def test_send_info_step(self):
-        testrepo = await repository.Repository.create('name',
-                                                      'git@git.nada',
-                                                      self.owner,
-                                                      300, 'git')
+        testrepo = await repository.Repository.create(name='name',
+                                                      url='git@git.nada',
+                                                      owner=self.owner,
+                                                      update_seconds=300,
+                                                      vcs_type='git')
         testslave = await slave.Slave.create(name='name',
                                              host='localhost',
                                              owner=self.owner,
@@ -1181,10 +1221,11 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
     @async_test
     async def test_send_info_build(self):
-        testrepo = await repository.Repository.create('name',
-                                                      'git@git.nada',
-                                                      self.owner,
-                                                      300, 'git')
+        testrepo = await repository.Repository.create(name='name',
+                                                      url='git@git.nada',
+                                                      owner=self.owner,
+                                                      update_seconds=300,
+                                                      vcs_type='git')
         testslave = await slave.Slave.create(name='name',
                                              host='localhost',
                                              port=1234,
@@ -1232,10 +1273,11 @@ class UIStreamHandlerTest(TestCase):
                                              token='123',
                                              owner=self.owner)
 
-        testrepo = await repository.Repository.create('name',
-                                                      'git@git.nada',
-                                                      self.owner,
-                                                      300, 'git',
+        testrepo = await repository.Repository.create(name='name',
+                                                      url='git@git.nada',
+                                                      owner=self.owner,
+                                                      update_seconds=300,
+                                                      vcs_type='git',
                                                       slaves=[testslave])
         self.CODE = None
         self.BODY = None
@@ -1246,9 +1288,11 @@ class UIStreamHandlerTest(TestCase):
             self.BODY = body
 
         self.handler.send_response = sr
-        await self.handler.send_repo_status_info(repo_id=testrepo.id,
-                                                 old_status='running',
-                                                 new_status='fail')
+        msg = AsyncMagicMock()
+        msg.body = dict(repository_id=testrepo.id,
+                        old_status='running',
+                        new_status='fail')
+        await self.handler.send_repo_status_info(msg)
 
         await asyncio.sleep(0)
         self.assertEqual(self.BODY['status'], 'fail')
@@ -1262,10 +1306,11 @@ class UIStreamHandlerTest(TestCase):
                                              owner=self.owner,
                                              token='123')
 
-        testrepo = await repository.Repository.create('name',
-                                                      'git@git.nada',
-                                                      self.owner,
-                                                      300, 'git',
+        testrepo = await repository.Repository.create(name='name',
+                                                      url='git@git.nada',
+                                                      owner=self.owner,
+                                                      update_seconds=300,
+                                                      vcs_type='git',
                                                       slaves=[testslave])
 
         self.CODE = None

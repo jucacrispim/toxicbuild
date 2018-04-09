@@ -17,24 +17,38 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+from asyncio import ensure_future, gather
 import time
 import jwt
 from mongomotor import Document
 from mongomotor.fields import (StringField, DateTimeField, IntField,
-                               ReferenceField)
+                               ReferenceField, DictField)
 from toxicbuild.core import requests
 from toxicbuild.core.utils import string2datetime, now
 from toxicbuild.master import settings
 from toxicbuild.master.users import User
-from toxicbuild.master.integrations.exceptions import AppDoesNotExist
+from toxicbuild.master.repository import Repository, RepositoryBranch
+from toxicbuild.master.slave import Slave
+from toxicbuild.integrations.exceptions import (AppDoesNotExist,
+                                                AppExists)
 
 
 class GithubApp(Document):
-    """A GitHub App. Only one app per ToxicBuild installation. You cannot
-    have two different GitHub apps for the same ToxicBuild instance."""
+    """A GitHub App. Only one app per ToxicBuild installation."""
 
     private_key = settings.GITHUB_PRIVATE_KEY
     app_id = IntField(unique=True)
+
+    @classmethod
+    async def create_app(cls, app_id):
+        if await cls.app_exists():
+            msg = 'You already have a GitHubApp. You cannot have more than'
+            msg += ' one app per installation.'
+            raise AppExists(msg)
+
+        app = cls(app_id=app_id)
+        await app.save()
+        return app
 
     @classmethod
     async def _create_jwt(cls):
@@ -84,10 +98,26 @@ class GithubInstallation(Document):
 
     app = GithubApp
 
-    user = ReferenceField(User)
-    github_id = IntField()
+    user = ReferenceField(User, required=True)
+    # the id of the github app installation
+    github_id = IntField(required=True)
     auth_token = StringField()
     expires = DateTimeField()
+    # maps github_repo_ids/repo_ids
+    repositories = DictField()
+
+    @classmethod
+    async def create(cls, github_id, user):
+        """Creates a new github app installation. Imports
+        the repositories available to the installation.
+
+        :param github_id: The installation id on github
+        :param user: The user that owns the installation."""
+
+        installation = cls(github_id=github_id, user=user)
+        await installation.save()
+        await installation.import_repositories()
+        return installation
 
     @property
     def auth_token_url(self):
@@ -102,6 +132,44 @@ class GithubInstallation(Document):
         if n > self.expires:
             return True
         return False
+
+    async def import_repositories(self):
+        """Imports all repositories available to the installation."""
+
+        tasks = []
+        for repo in await self.list_repos():
+            t = ensure_future(self.import_repository(repo))
+            tasks.append(t)
+
+        return gather(*tasks)
+
+    async def import_repository(self, repo_info):
+        """Imports a repository from GitHub.
+
+        :param repo_info: A dictionary with the repository information."""
+
+        branches = [
+            RepositoryBranch(name='master', notify_only_latest=False),
+            RepositoryBranch(name='feature-*', notify_only_latest=True),
+            RepositoryBranch(name='bug-*', notify_only_latest=True)]
+        slaves = await Slave.list_for_user(await self.user).to_list()
+        # update_seconds=0 because it will not be scheduled in fact.
+        # note the schedule_poller=False.
+        # What triggers an update code is a message from github in the
+        # webhook receiver.
+        user = await self.user
+        repo = await Repository.create(name=repo_info['name'],
+                                       url=repo_info['clone_url'],
+                                       owner=user,
+                                       update_seconds=0,
+                                       vcs_type='git',
+                                       schedule_poller=False,
+                                       parallel_builds=1,
+                                       branches=branches,
+                                       slaves=slaves)
+        await repo.update_code()
+        self.repositories[repo_info['id']] = str(repo.id)
+        return repo
 
     async def _get_header(self):
         if not self.auth_token or self.token_is_expired:

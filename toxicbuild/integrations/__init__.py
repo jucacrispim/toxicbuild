@@ -17,12 +17,15 @@
 # You shoud have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
 import os
 import sys
 from pyrocumulus.commands.base import get_command
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import changedir
+from toxicbuild.core.exchanges import create_exchanges as create_core_exchanges
+from toxicbuild.master import create_settings_and_connect
 
 PIDFILE = 'toxicintegrations.pid'
 LOGFILE = './toxicintegrations.log'
@@ -90,7 +93,16 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
                 workdir, 'toxicintegrations.conf')
             os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicintegrations'
 
+        os.environ['TOXICMASTER_SETTINGS'] = os.environ[
+            'TOXICINTEGRATION_SETTINGS']
+
+        create_settings_and_connect()
         create_settings()
+        from toxicbuild.master.exchanges import connect_exchanges, conn
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(connect_exchanges())
+        loop.run_until_complete(create_core_exchanges(conn))
 
         sys.argv = ['pyromanager.py', '']
 

@@ -24,9 +24,10 @@ import os
 import time
 from unittest import TestCase
 from unittest.mock import Mock, patch, MagicMock
-from toxicbuild.master.integrations import github
+from toxicbuild.master import repository
+from toxicbuild.integrations import github
 from tests import async_test, AsyncMagicMock
-from tests.unit.master.integrations import INTEGRATIONS_DATA_PATH
+from tests.unit.integrations import INTEGRATIONS_DATA_PATH
 
 
 class GitHubAppTest(TestCase):
@@ -37,6 +38,20 @@ class GitHubAppTest(TestCase):
     @async_test
     async def tearDown(self):
         await github.GithubApp.drop_collection()
+
+    @patch.object(github.GithubApp, 'app_exists', AsyncMagicMock(
+        return_value=True))
+    @async_test
+    async def test_create_app_already_exists(self):
+        with self.assertRaises(github.AppExists):
+            await github.GithubApp.create_app('some-id')
+
+    @patch.object(github.GithubApp, 'app_exists', AsyncMagicMock(
+        return_value=False))
+    @async_test
+    async def test_create_app(self):
+        app = await github.GithubApp.create_app('123234')
+        self.assertTrue(app.id)
 
     @patch.object(github.jwt, 'encode', Mock(spec=github.jwt.encode))
     @patch.object(github.time, 'time', Mock(spec=github.time.time))
@@ -103,13 +118,24 @@ class GithubInstallationTest(TestCase):
         self.user = github.User(email='bla@bla.com')
         self.user.set_password('1234')
         await self.user.save()
-        self.installation = github.GithubInstallation(user=self.user)
+        self.installation = github.GithubInstallation(user=self.user,
+                                                      github_id=1234)
         await self.installation.save()
 
     @async_test
     async def tearDown(self):
         await github.User.drop_collection()
+        await github.Repository.drop_collection()
+        await github.Slave.drop_collection()
         await github.GithubInstallation.drop_collection()
+
+    @patch.object(github.GithubInstallation, 'import_repositories',
+                  AsyncMagicMock())
+    @async_test
+    async def test_create(self):
+        install = await github.GithubInstallation.create(1234, self.user)
+        self.assertTrue(install.id)
+        self.assertTrue(install.import_repositories.called)
 
     @patch.object(github, 'now', Mock())
     def test_token_is_expired_not_expired(self):
@@ -129,6 +155,29 @@ class GithubInstallationTest(TestCase):
         url = 'https://api.github.com/installations/{}/access_tokens'.format(
             str(self.installation.id))
         self.assertEqual(self.installation.auth_token_url, url)
+
+    @async_test
+    async def test_import_repositories(self):
+        self.installation.list_repos = AsyncMagicMock(return_value=[
+            Mock(), Mock()])
+        self.installation.import_repository = AsyncMagicMock()
+        await self.installation.import_repositories()
+        self.assertEqual(
+            len(self.installation.import_repository.call_args_list), 2)
+
+    @patch.object(repository.Repository, 'schedule', Mock())
+    @patch.object(repository.Repository, 'update_code', AsyncMagicMock())
+    @patch.object(repository, 'repo_added', AsyncMagicMock())
+    @async_test
+    async def test_import_repository(self):
+        await github.Slave.create(name='my-slave',
+                                  token='123', host='localhost',
+                                  port=123, owner=self.user)
+        repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
+                     'id': 1234}
+        repo = await self.installation.import_repository(repo_info)
+        self.assertTrue(repo.id)
+        self.assertTrue(repo.update_code.called)
 
     @patch.object(github.GithubApp, 'create_installation_token',
                   AsyncMagicMock())

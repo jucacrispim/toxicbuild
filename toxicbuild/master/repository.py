@@ -34,10 +34,10 @@ from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder, BuildManager
 from toxicbuild.master.exchanges import (update_code, poll_status,
                                          revisions_added, locks_conn,
-                                         scheduler_action)
+                                         scheduler_action, repo_status_changed,
+                                         repo_added)
 from toxicbuild.master.plugins import MasterPlugin
-from toxicbuild.master.signals import (build_started, build_finished,
-                                       repo_status_changed, repo_added)
+from toxicbuild.master.signals import (build_started, build_finished)
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.utils import OwnedDocument
 
@@ -88,6 +88,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     slaves = ListField(ReferenceField(Slave, reverse_delete_rule=PULL))
     clone_status = StringField(choices=('cloning', 'ready', 'clone-exception'),
                                default='cloning')
+    schedule_poller = BooleanField(default=True)
     plugins = ListField(EmbeddedDocumentField(MasterPlugin))
     # max number of builds in parallel that this repo exeutes
     # If None, there's no limit for parallel builds.
@@ -177,32 +178,18 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         return status
 
     @classmethod
-    async def create(cls, name, url, owner, update_seconds, vcs_type,
-                     slaves=None, branches=None, parallel_builds=None):
+    async def create(cls, **kwargs):
         """ Creates a new repository and schedule it.
 
-        :param name: Repository name.
-        :param url: Repository version control system url
-        :param owner: :class:`~toxicbuild.master.users.User` or
-          :class:`~toxicbuild.master.users.Organization` that owns the
-          repository.
-        :param update_seconds: How long we should wait until
-          poll the changes again.
-        :param vcs_type: Which type of version control system this
-          repository uses.
-        :param slaves: A list of slaves for this repository.
-        :param branches: A list of branches config for this repository.
-        :params parallel_builds: How many paralles builds this repository
-          executes. If None, there is no limit."""
+        :param kwargs: kwargs used to create the repository."""
 
-        slaves = slaves or []
-        branches = branches or []
+        slaves = kwargs.pop('slaves', [])
+        branches = kwargs.pop('branches', [])
 
-        repo = cls(url=url, update_seconds=update_seconds, vcs_type=vcs_type,
-                   slaves=slaves, name=name, branches=branches,
-                   parallel_builds=parallel_builds, owner=owner)
+        repo = cls(**kwargs, slaves=slaves, branches=branches)
         await repo.save()
-        repo_added.send(str(repo.id))
+        repo_added_msg = await repo.to_dict(id_as_str=True)
+        await repo_added.publish(repo_added_msg)
         repo.schedule()
         return repo
 
@@ -289,8 +276,12 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await self.save()
 
         if msg.body['with_clone']:
-            repo_status_changed.send(str(self.id), old_status='cloning',
-                                     new_status=self.clone_status)
+            status_msg = {'repository_id': str(self.id),
+                          'old_status': 'cloning',
+                          'new_status': self.clone_status}
+
+            await repo_status_changed.publish(status_msg,
+                                              routing_key=str(self.id))
 
     async def _create_locks(self):
         self.toxicbuild_conf_lock = Mutex(
@@ -340,8 +331,10 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         sched_msg = {'type': 'add-update-code',
                      'repository_id': str(self.id)}
 
-        f = scheduler_action.publish(sched_msg)
-        ensure_future(f)
+        if self.schedule_poller:
+            f = scheduler_action.publish(sched_msg)
+            ensure_future(f)
+
         # adding start_pending
         start_pending_hash = self.scheduler.add(
             self.build_manager.start_pending, 120)
@@ -528,16 +521,19 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     async def _check_for_status_change(self, sender, build):
         """Called when a build is started or finished. If this event
-        makes the repository change its status triggers a
-        ``repo_status_changed`` signal.
+        makes the repository change its status publishes in the
+        ``repo_status_changed`` exchange.
 
         :param sender: The object that sent the signal
         :param build: The build that was started or finished"""
 
         status = await self.get_status()
         if status != self._old_status:
-            repo_status_changed.send(str(self.id), old_status=self._old_status,
-                                     new_status=status)
+            status_msg = dict(repository_id=str(self.id),
+                              old_status=self._old_status,
+                              new_status=status)
+            await repo_status_changed.publish(status_msg,
+                                              routing_key=str(self.id))
             self._old_status = status
 
 
