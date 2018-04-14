@@ -37,6 +37,9 @@
 (defcustom toxic:poller-buffer-name "toxicpoller"
   "Toxicmaster poller buffer's name")
 
+(defcustom toxic:integrations-buffer-name "toxicintegrations"
+  "Toxicbuild integrations buffer's name")
+
 (defcustom toxic:webui-buffer-name "toxicwebui"
   "Toxicweb ui buffer's name")
 
@@ -64,6 +67,10 @@
     (format "ln -s %sscripts/toxicmaster %stoxicmaster"
 	    pdj:project-directory toxic:test-env-dir))
 
+  (setq toxic:--ln-toxicintegrations
+    (format "ln -s %sscripts/toxicintegrations %stoxicintegrations"
+	    pdj:project-directory toxic:test-env-dir))
+
   (setq toxic:--ln-toxicweb
     (format "ln -s %sscripts/toxicweb %stoxicweb"
 	    pdj:project-directory toxic:test-env-dir))
@@ -79,7 +86,7 @@
   (setq toxic:--link-everything
     (concat toxic:--ln-toxicslave " && " toxic:--ln-toxicmaster " && "
 	    toxic:--ln-toxicbuild-script " && " toxic:--ln-toxicbuild
-	    " && " toxic:--ln-toxicweb))
+	    " && " toxic:--ln-toxicweb " && " toxic:--ln-toxicintegrations))
 
   (pdj:run-in-term-on-project-directory toxic:--link-everything
 					toxic:bootstrap-buffer-name))
@@ -221,6 +228,46 @@
 	(toxic:start-master)))))
 
 
+(defun toxic:start-integrations ()
+  "Starts a toxicbuild integrations instance in the test env"
+
+  (interactive)
+
+  (defvar toxic:--integrations-path nil)
+  (setq toxic:--integrations-path (concat toxic:test-env-path "integrations/"))
+  (defvar toxic:--start-integrations-cmd
+    (format "%s %stoxicintegrations start %s --loglevel=debug"
+	    toxic:py-venv-exec toxic:test-env-dir toxic:--integrations-path))
+
+  (defvar toxic:--integrations-buffer-name "toxicintegrations")
+
+  (toxic:--run-in-env-on-test-dir
+   toxic:--start-integrations-cmd toxic:--integrations-buffer-name))
+
+
+(defun toxic:stop-integrations ()
+  "Stops the toxicbuild integrations test instance"
+
+  (interactive)
+
+  (toxic:--kill-buffer-shell-process toxic:--integrations-buffer-name))
+
+
+(defun toxic:restart-integrations ()
+  "Restarts the integrations test instance"
+
+  (interactive)
+
+  (deferred:$
+    (deferred:next
+      (lambda ()
+	(toxic:stop-integrations)))
+
+    (deferred:nextc it
+      (lambda ()
+	(toxic:start-integrations)))))
+
+
 (defun toxic:start-poller ()
   "Starts a master's poller instance in the test env"
 
@@ -349,6 +396,7 @@
   (toxic:start-poller)
   (toxic:start-scheduler)
   (toxic:start-master)
+  (toxic:start-integrations)
   (toxic:start-webui))
 
 
@@ -361,6 +409,7 @@
   (toxic:stop-poller)
   (toxic:stop-scheduler)
   (toxic:stop-master)
+  (toxic:stop-integrations)
   (toxic:stop-webui))
 
 
@@ -371,6 +420,9 @@
 
   (toxic:restart-slave)
   (toxic:restart-master)
+  (toxic:restart-poller)
+  (toxic:restart-scheduler)
+  (toxic:restart-integrations)
   (toxic:restart-webui))
 
 
@@ -395,7 +447,10 @@
 	    (toxic:restart-slave)
 	  (if (string-match-p (regexp-quote "toxicbuild/ui")
 			      toxic:--event-file)
-	      (toxic:restart-webui))))))
+	      (toxic:restart-webui)
+	    (if (string-match-p (regexp-quote "toxicbuild/integrations")
+				toxic:--event-file)
+		(toxic:restart-integrations)))))))
 
 
 (defun toxic:add-watcher ()
@@ -408,7 +463,12 @@
 
   (defvar toxic:--slave-path nil)
   (setq toxic:--slave-path (concat pdj:project-directory
-				    "toxicbuild/slave"))
+				   "toxicbuild/slave"))
+
+  (defvar toxic:--integrations-path nil)
+  (setq toxic:--integrations-path (concat pdj:project-directory
+					  "toxicbuild/integrations"))
+
 
   (defvar toxic:--ui-path nil)
   (setq toxic:--ui-path (concat pdj:project-directory
@@ -418,6 +478,9 @@
 			 'toxic:fs-watcher)
 
   (file-notify-add-watch toxic:--slave-path '(change change)
+			 'toxic:fs-watcher)
+
+  (file-notify-add-watch toxic:--integrations-path '(change change)
 			 'toxic:fs-watcher)
 
   (file-notify-add-watch toxic:--ui-path '(change change)
@@ -479,6 +542,24 @@
     '(menu-item "Start toxicweb" toxic:start-webui
 		:visible (progn (not (toxic:--buffer-has-process
 				      toxic:webui-buffer-name)))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-integrations-separator]
+    '(menu-item "--"))
+
+  (define-key global-map [menu-bar toxic-menu toxic-restart-integrations]
+    '(menu-item "Restart integrations" toxic:restart-integrations
+		:visible (progn (toxic:--buffer-has-process
+				 toxic:integrations-buffer-name))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-stop-integrations]
+    '(menu-item "Stop integrations" toxic:stop-integrations
+		:visible (progn (toxic:--buffer-has-process
+				 toxic:integrations-buffer-name))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-start-integrations]
+    '(menu-item "Start integrations" toxic:start-integrations
+		:visible (progn (not (toxic:--buffer-has-process
+				      toxic:integrations-buffer-name)))))
 
   (define-key global-map [menu-bar toxic-menu toxic-third-separator]
     '(menu-item "--"))

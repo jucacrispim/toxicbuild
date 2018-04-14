@@ -82,6 +82,7 @@ class Mutex(Exchange):
 
         if not self.connection._connected:
             await self.connection.connect()
+            self.channel = None
 
         if self.channel is None:
             self.channel = await self.connection.protocol.channel()
@@ -134,10 +135,14 @@ class Mutex(Exchange):
         # that's why we use the _publish_if_not_there
         await self._publish_if_not_there(msg)
 
-    async def acquire(self, _timeout=None, _wait=True):
+    async def acquire(self, routing_key=None, _timeout=None, _wait=True):
+        """Acquires the lock. Use it with the async context manager.
+
+        :param routing_key: Routing key of the lock."""
         # _timeout is only for tests
         # _wait for try_acquire
-        consumer = await self.consume(wait_message=_wait, timeout=_timeout)
+        consumer = await self.consume(routing_key=routing_key,
+                                      wait_message=_wait, timeout=_timeout)
         try:
             msg = await consumer.fetch_message()
         except ConsumerTimeout:
@@ -145,6 +150,6 @@ class Mutex(Exchange):
         if msg:
             return Lock(msg, consumer)
 
-    async def try_acquire(self):
-        r = await self.acquire(_timeout=100)
+    async def try_acquire(self, routing_key=None):
+        r = await self.acquire(routing_key=routing_key, _timeout=100)
         return r

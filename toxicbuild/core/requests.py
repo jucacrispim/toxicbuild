@@ -30,6 +30,7 @@ Usage:
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import json
 import aiohttp
 
 
@@ -43,6 +44,11 @@ class Response:
         :param text: The response text."""
         self.status = status
         self.text = text
+
+    def json(self):
+        """Loads the json in the response text."""
+
+        return json.loads(self.text)
 
 
 @asyncio.coroutine

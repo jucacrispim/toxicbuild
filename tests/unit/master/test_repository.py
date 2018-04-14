@@ -314,12 +314,10 @@ class RepositoryTest(TestCase):
         await self.repo._delete_locks()
         self.assertTrue(repository.repo_status_changed.publish.called)
 
-    @patch.object(repository.Mutex, 'create', AsyncMagicMock())
     @async_test
     async def test_bootstrap(self):
         self.repo.schedule = Mock()
         await self.repo.bootstrap()
-        self.assertTrue(self.repo.toxicbuild_conf_lock.create.called)
         self.assertTrue(self.repo.schedule.called)
 
     @patch.object(repository.Repository, 'bootstrap', AsyncMagicMock())
@@ -341,21 +339,6 @@ class RepositoryTest(TestCase):
         self.assertTrue(self.repo.scheduler.add.called)
         self.assertTrue(self.repo.plugins[0].called)
         self.assertTrue(repository.scheduler_action.publish.called)
-
-    @patch.object(repository.utils, 'log', Mock())
-    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
-    def test_schedule_no_schedule_poller(self):
-        self.repo.scheduler = Mock(spec=self.repo.scheduler)
-        plugin = MagicMock
-        plugin.name = 'my-plugin'
-        plugin.run = AsyncMagicMock()
-        self.repo.plugins = [plugin]
-        self.repo.schedule_poller = False
-        self.repo.schedule()
-
-        self.assertTrue(self.repo.scheduler.add.called)
-        self.assertTrue(self.repo.plugins[0].called)
-        self.assertFalse(repository.scheduler_action.publish.called)
 
     @patch.object(repository.utils, 'log', Mock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())

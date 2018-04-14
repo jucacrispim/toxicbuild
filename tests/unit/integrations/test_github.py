@@ -38,25 +38,14 @@ class GitHubAppTest(TestCase):
     @async_test
     async def tearDown(self):
         await github.GithubApp.drop_collection()
+        await github.GithubInstallation.drop_collection()
 
-    @patch.object(github.GithubApp, 'app_exists', AsyncMagicMock(
-        return_value=True))
-    @async_test
-    async def test_create_app_already_exists(self):
-        with self.assertRaises(github.AppExists):
-            await github.GithubApp.create_app('some-id')
-
-    @patch.object(github.GithubApp, 'app_exists', AsyncMagicMock(
-        return_value=False))
-    @async_test
-    async def test_create_app(self):
-        app = await github.GithubApp.create_app('123234')
-        self.assertTrue(app.id)
-
-    @patch.object(github.jwt, 'encode', Mock(spec=github.jwt.encode))
+    @patch.object(github.jwt, 'encode', Mock(spec=github.jwt.encode,
+                                             return_value=b'retval'))
     @patch.object(github.time, 'time', Mock(spec=github.time.time))
     @patch.object(github.GithubApp, 'private_key', 'some/path/to/pk')
     @patch.object(github, 'open', MagicMock())
+    @patch.object(github.GithubApp, 'app_id', 1234)
     @async_test
     async def test_create_jwt(self):
         github.time.time.return_value = self.now
@@ -64,31 +53,18 @@ class GitHubAppTest(TestCase):
         read.return_value = 'secret-key'
         expected_payload = {'iat': self.now, 'exp': self.now + (10 * 60),
                             'iss': 1234}
-        app = github.GithubApp(app_id=1234)
-        await app.save()
         await github.GithubApp._create_jwt()
         expected = (expected_payload, 'secret-key', 'RS256')
         called = github.jwt.encode.call_args[0]
         self.assertEqual(expected, called)
 
-    @async_test
-    async def test_app_exists_do_not_exist(self):
-        self.assertFalse(await github.GithubApp.app_exists())
-
-    @async_test
-    async def test_app_exists(self):
-        app = github.GithubApp(app_id=1234)
-        await app.save()
-        self.assertTrue(await github.GithubApp.app_exists())
-
-    @patch.object(github.GithubApp, '_create_jwt', AsyncMagicMock(
+    @patch.object(github.GithubApp, 'get_jwt_token', AsyncMagicMock(
         return_value='myjwt'))
+    @patch.object(github.GithubApp, 'app_id', 1234)
     @patch.object(github.requests, 'post', AsyncMagicMock(return_value=Mock()))
     @async_test
     async def test_create_installation_token(self):
-        app = github.GithubApp(app_id=1234)
-        await app.save()
-
+        github.requests.post.return_value.status = 201
         rdict = {"token": "v1.1f699f1069f60xxx",
                  "expires_at": "2016-07-11T22:14:10Z"}
         github.requests.post.return_value.json.return_value = rdict
@@ -97,10 +73,11 @@ class GitHubAppTest(TestCase):
             'Accept': 'application/vnd.github.machine-man-preview+json'}
 
         installation = AsyncMagicMock()
+        installation.id = 'someid'
         installation.github_id = 1234
         installation = await github.GithubApp.create_installation_token(
             installation)
-        called_header = github.requests.post.call_args[1]['header']
+        called_header = github.requests.post.call_args[1]['headers']
         self.assertEqual(expected_header, called_header)
         self.assertEqual(installation.token, rdict['token'])
 
@@ -109,6 +86,98 @@ class GitHubAppTest(TestCase):
         installation = Mock()
         with self.assertRaises(github.AppDoesNotExist):
             await github.GithubApp.create_installation_token(installation)
+
+    @patch.object(github.GithubApp, 'get_jwt_token', AsyncMagicMock(
+        return_value='myjwt'))
+    @patch.object(github.GithubApp, 'app_id', 1234)
+    @patch.object(github.requests, 'post', AsyncMagicMock(return_value=Mock()))
+    @async_test
+    async def test_create_installation_token_bad_response(self):
+        github.requests.post.return_value.status = 400
+        rdict = {"token": "v1.1f699f1069f60xxx",
+                 "expires_at": "2016-07-11T22:14:10Z"}
+        github.requests.post.return_value.json.return_value = rdict
+        installation = AsyncMagicMock()
+        installation.id = 'someid'
+        installation.github_id = 1234
+        with self.assertRaises(github.BadRequestToGithubAPI):
+            installation = await github.GithubApp.create_installation_token(
+                installation)
+
+    @async_test
+    async def test_is_expired_not_expired(self):
+        expires = github.localtime2utc(github.now()) + datetime.timedelta(
+            seconds=3600)
+        app = github.GithubApp(jwt_expires=expires)
+        await app.save()
+        self.assertFalse(await app.is_expired())
+
+    @async_test
+    async def test_is_expired_already_expired(self):
+        expires = github.localtime2utc(github.now()) - datetime.timedelta(
+            seconds=3600)
+        app = github.GithubApp(jwt_expires=expires)
+        await app.save()
+        self.assertTrue(await app.is_expired())
+
+    @async_test
+    async def test_get_jwt_token(self):
+        expires = github.localtime2utc(github.now()) + datetime.timedelta(
+            seconds=3600)
+        app = github.GithubApp(jwt_expires=expires, jwt_token='something')
+        await app.save()
+
+        token = await github.GithubApp.get_jwt_token()
+        self.assertEqual(token, 'something')
+
+    @patch.object(github.GithubApp, 'create_token', AsyncMagicMock(
+        spec=github.GithubApp.create_token))
+    @async_test
+    async def test_get_jwt_token_create(self):
+        expires = github.localtime2utc(github.now()) - datetime.timedelta(
+            seconds=3600)
+        app = github.GithubApp(jwt_expires=expires, jwt_token='something')
+        await app.save()
+
+        await github.GithubApp.get_jwt_token()
+        self.assertTrue(github.GithubApp.create_token.called)
+
+    @async_test
+    async def test_set_jwt_token(self):
+        app = github.GithubApp()
+        await app.save()
+        await github.GithubApp.set_jwt_token('sometoken')
+        await app.reload()
+        self.assertEqual(app.jwt_token, 'sometoken')
+
+    @async_test
+    async def test_set_expire_time(self):
+        app = github.GithubApp()
+        await app.save()
+        await github.GithubApp.set_expire_time(
+            github.localtime2utc(github.now()))
+
+        await app.reload()
+        self.assertTrue(app.jwt_expires)
+
+    def test_get_api_url(self):
+        self.assertEqual(github.GithubApp.get_api_url(),
+                         'https://api.github.com/app')
+
+    @patch.object(github.GithubApp, '_create_jwt', AsyncMagicMock(
+        return_value='somejwt', spec=github.GithubApp._create_jwt))
+    @patch.object(github.requests, 'post', AsyncMagicMock(
+        spec=github.requests.post))
+    @async_test
+    async def test_create_token(self):
+        app = github.GithubApp()
+        await app.save()
+        expected = {
+            'Authorization': 'Bearer somejwt',
+            'Accept': 'application/vnd.github.machine-man-preview+json'}
+        await github.GithubApp.create_token()
+        called = github.requests.post.call_args[1]['headers']
+        self.assertEqual(called, expected)
 
 
 class GithubInstallationTest(TestCase):
@@ -126,6 +195,7 @@ class GithubInstallationTest(TestCase):
     async def tearDown(self):
         await github.User.drop_collection()
         await github.Repository.drop_collection()
+        await github.GithubApp.drop_collection()
         await github.Slave.drop_collection()
         await github.GithubInstallation.drop_collection()
 
@@ -133,9 +203,17 @@ class GithubInstallationTest(TestCase):
                   AsyncMagicMock())
     @async_test
     async def test_create(self):
-        install = await github.GithubInstallation.create(1234, self.user)
+        install = await github.GithubInstallation.create(21234, self.user)
         self.assertTrue(install.id)
         self.assertTrue(install.import_repositories.called)
+
+    @patch.object(github.GithubInstallation, 'import_repositories',
+                  AsyncMagicMock())
+    @async_test
+    async def test_create_install_already_exists(self):
+        await github.GithubInstallation.create(21234, self.user)
+        install = await github.GithubInstallation.create(21234, self.user)
+        self.assertIsNone(install)
 
     @patch.object(github, 'now', Mock())
     def test_token_is_expired_not_expired(self):
@@ -153,7 +231,7 @@ class GithubInstallationTest(TestCase):
 
     def test_auth_token_url(self):
         url = 'https://api.github.com/installations/{}/access_tokens'.format(
-            str(self.installation.id))
+            str(self.installation.github_id))
         self.assertEqual(self.installation.auth_token_url, url)
 
     @async_test
@@ -166,6 +244,7 @@ class GithubInstallationTest(TestCase):
             len(self.installation.import_repository.call_args_list), 2)
 
     @patch.object(repository.Repository, 'schedule', Mock())
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.Repository, 'update_code', AsyncMagicMock())
     @patch.object(repository, 'repo_added', AsyncMagicMock())
     @async_test
@@ -221,16 +300,34 @@ class GithubInstallationTest(TestCase):
 
     @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
         return_value={}))
-    @patch.object(github.requests, 'post', AsyncMagicMock())
+    @patch.object(github.requests, 'get', AsyncMagicMock())
     @async_test
     async def test_list_repos(self):
-        ret = github.requests.post.return_value
+        ret = github.requests.get.return_value
         json_file = os.path.join(INTEGRATIONS_DATA_PATH,
                                  'github-list-repos.json')
         with open(json_file) as fd:
             contents = fd.read()
             json_contents = json.loads(contents)
 
+        ret.status = 200
         ret.json = Mock(return_value=json_contents)
         repos = await self.installation.list_repos()
         self.assertEqual(len(repos), 1)
+
+    @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
+        return_value={}))
+    @patch.object(github.requests, 'get', AsyncMagicMock())
+    @async_test
+    async def test_list_repos_bad_request(self):
+        ret = github.requests.get.return_value
+        json_file = os.path.join(INTEGRATIONS_DATA_PATH,
+                                 'github-list-repos.json')
+        with open(json_file) as fd:
+            contents = fd.read()
+            json_contents = json.loads(contents)
+
+        ret.status = 404
+        ret.json = Mock(return_value=json_contents)
+        with self.assertRaises(github.BadRequestToGithubAPI):
+            await self.installation.list_repos()

@@ -432,7 +432,8 @@ class BuildManager(LoggerMixin):
           :class:`toxicbuild.master.repository.RepositoryRevision`.
         """
 
-        async with await self.repository.toxicbuild_conf_lock.acquire():
+        async with await self.repository.toxicbuild_conf_lock.acquire(
+                routing_key=str(self.repository.id)):
             log('checkout on {} to {}'.format(
                 self.repository.url, revision.commit), level='debug')
             await self.repository.vcs.checkout(revision.commit)

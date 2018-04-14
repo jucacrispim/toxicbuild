@@ -53,7 +53,8 @@ class Poller(LoggerMixin):
         """
 
         with_clone = False
-        async with await self.repository.toxicbuild_conf_lock.acquire():
+        async with await self.repository.toxicbuild_conf_lock.acquire(
+                routing_key=str(self.repository.id)):
             if self.is_polling():
                 self.log('alreay polling. leaving...'.format(
                     self.repository.url), level='debug')
@@ -182,7 +183,10 @@ class PollerServer(LoggerMixin):
         while not self._stop:
             async with await update_code.consume() as consumer:
                 async for msg in consumer:
+                    self.log('Consuming update_code message for {}'.format(
+                        msg.body['repo_id']))
                     asyncio.ensure_future(self.handle_update_request(msg))
+                    await msg.acknowledge()
 
         self._stop = False
 
@@ -206,7 +210,6 @@ class PollerServer(LoggerMixin):
             with_clone = False
             clone_status = 'clone-exception'
 
-        await msg.acknowledge()
         msg = {'with_clone': with_clone,
                'clone_status': clone_status}
 

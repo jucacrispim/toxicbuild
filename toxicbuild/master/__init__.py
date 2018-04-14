@@ -419,6 +419,7 @@ def create_user(configfile, email=None, password=None, superuser=False):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(user.save())
     print('User {} created successfully'.format(user.username))
+    return user
 
 
 def _ask_thing(thing, opts=[]):

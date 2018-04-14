@@ -147,15 +147,19 @@ class ExchangeTest(TestCase):
 
         await self.exchange.channel.exchange_delete(self.exchange.name)
         await self.exchange.channel.queue_delete(self.exchange.queue_name)
-
         try:
             self.exchange.durable = True
+            old_pchannel = self.exchange.connection.protocol.channel
+            self.exchange.connection.protocol.channel = AsyncMagicMock()
+            channel = self.exchange.connection.protocol.channel.return_value
+
             old_channel = self.exchange.channel
             self.exchange.channel = AsyncMagicMock()
             await self.exchange.consume(timeout=100)
-            self.assertTrue(self.exchange.channel.basic_qos.called)
+            self.assertTrue(channel.basic_qos.called)
         finally:
             self.exchange.channel = old_channel
+            self.exchange.connection.protocol.channel = old_pchannel
             await self.exchange.channel.exchange_delete(self.exchange.name)
             await self.exchange.channel.queue_delete(self.exchange.queue_name)
             self.exchange.durable = False

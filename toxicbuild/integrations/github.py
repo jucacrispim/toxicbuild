@@ -18,56 +18,98 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future, gather
+from datetime import timedelta
 import time
 import jwt
 from mongomotor import Document
 from mongomotor.fields import (StringField, DateTimeField, IntField,
                                ReferenceField, DictField)
 from toxicbuild.core import requests
-from toxicbuild.core.utils import string2datetime, now
-from toxicbuild.master import settings
+from toxicbuild.core.utils import (string2datetime, now, localtime2utc,
+                                   LoggerMixin, utc2localtime)
+from toxicbuild.integrations import settings
 from toxicbuild.master.users import User
 from toxicbuild.master.repository import Repository, RepositoryBranch
 from toxicbuild.master.slave import Slave
 from toxicbuild.integrations.exceptions import (AppDoesNotExist,
-                                                AppExists)
+                                                BadRequestToGithubAPI)
 
 
-class GithubApp(Document):
+class GithubApp(LoggerMixin, Document):
     """A GitHub App. Only one app per ToxicBuild installation."""
 
     private_key = settings.GITHUB_PRIVATE_KEY
-    app_id = IntField(unique=True)
+    app_id = settings.GITHUB_APP_ID
+    jwt_expires = DateTimeField()
+    jwt_token = StringField()
 
     @classmethod
-    async def create_app(cls, app_id):
+    async def get_app(cls):
         if await cls.app_exists():
-            msg = 'You already have a GitHubApp. You cannot have more than'
-            msg += ' one app per installation.'
-            raise AppExists(msg)
-
-        app = cls(app_id=app_id)
+            return await cls.objects.first()
+        app = cls()
         await app.save()
         return app
 
     @classmethod
-    async def _create_jwt(cls):
+    async def app_exists(cls):
         app = await cls.objects.first()
-        now = int(time.time())
-        payload = {'iat': now,
-                   'exp': now + (10 * 60),
-                   'iss': app.app_id}
+        return bool(app)
+
+    @classmethod
+    async def is_expired(cls):
+        app = await cls.get_app()
+        if app.jwt_expires and utc2localtime(app.jwt_expires) < now():
+            return True
+        return False
+
+    @classmethod
+    async def get_jwt_token(cls):
+        app = await cls.get_app()
+        if app.jwt_token and not await cls.is_expired():
+            return app.jwt_token
+        return await cls.create_token()
+
+    @classmethod
+    async def set_jwt_token(cls, jwt_token):
+        app = await cls.get_app()
+        app.jwt_token = jwt_token
+        await app.save()
+
+    @classmethod
+    async def set_expire_time(cls, exp_time):
+        app = await cls.get_app()
+        app.jwt_expires = exp_time
+        await app.save()
+
+    @classmethod
+    def get_api_url(cls):
+        return 'https://api.github.com/app'
+
+    @classmethod
+    async def _create_jwt(cls):
+        exp_time = 10 * 60
+        dt_expires = localtime2utc(now() + timedelta(seconds=exp_time))
+        ts_now = int(time.time())
+        payload = {'iat': ts_now,
+                   'exp': ts_now + exp_time,
+                   'iss': cls.app_id}
+
         with open(cls.private_key) as fd:
             pk = fd.read()
 
-        return jwt.encode(payload, pk, "RS256")
+        jwt_token = jwt.encode(payload, pk, "RS256")
+        await cls.set_expire_time(dt_expires)
+        await cls.set_jwt_token(jwt_token.decode())
+        return jwt_token.decode()
 
     @classmethod
-    async def app_exists(cls):
-        """Checks if an app already exists in the system."""
-
-        count = await cls.objects.count()
-        return bool(count)
+    async def create_token(cls):
+        myjwt = await cls._create_jwt()
+        header = {'Authorization': 'Bearer {}'.format(myjwt),
+                  'Accept': 'application/vnd.github.machine-man-preview+json'}
+        await requests.post(cls.get_api_url(), headers=header)
+        return myjwt
 
     @classmethod
     async def create_installation_token(cls, installation):
@@ -76,14 +118,21 @@ class GithubApp(Document):
         :param installation: An instance of
         :class:`~toxicbuild.master.integrations.github.GitHubInstallation`"""
 
-        if not await cls.app_exists():
-            raise AppDoesNotExist
+        msg = 'Creating installation token for {}'.format(installation.id)
+        cls().log(msg, level='debug')
 
-        myjwt = await cls._create_jwt()
+        if not cls.app_id:
+            raise AppDoesNotExist('You don\'t have a github application.')
+
+        myjwt = await cls.get_jwt_token()
         header = {'Authorization': 'Bearer {}'.format(myjwt),
                   'Accept': 'application/vnd.github.machine-man-preview+json'}
 
-        ret = await requests.post(installation.auth_token_url, header=header)
+        ret = await requests.post(installation.auth_token_url, headers=header)
+
+        if ret.status != 201:
+            raise BadRequestToGithubAPI(ret.status, ret.text)
+
         ret = ret.json()
         installation.auth_token = ret['token']
         installation.expires = string2datetime(ret['expires_at'],
@@ -92,7 +141,7 @@ class GithubApp(Document):
         return installation
 
 
-class GithubInstallation(Document):
+class GithubInstallation(LoggerMixin, Document):
     """An installation of the GitHub App. Installations have access to
     repositories and events."""
 
@@ -100,7 +149,7 @@ class GithubInstallation(Document):
 
     user = ReferenceField(User, required=True)
     # the id of the github app installation
-    github_id = IntField(required=True)
+    github_id = IntField(required=True, unique=True)
     auth_token = StringField()
     expires = DateTimeField()
     # maps github_repo_ids/repo_ids
@@ -114,6 +163,13 @@ class GithubInstallation(Document):
         :param github_id: The installation id on github
         :param user: The user that owns the installation."""
 
+        if await cls.objects.filter(github_id=github_id).first():
+            msg = 'Installation {} already exists'.format(github_id)
+            cls().log(msg, level='error')
+            return
+
+        msg = 'Creating installation for github_id {}'.format(github_id)
+        cls().log(msg, level='debug')
         installation = cls(github_id=github_id, user=user)
         await installation.save()
         await installation.import_repositories()
@@ -124,7 +180,7 @@ class GithubInstallation(Document):
         """URL used to retrieve an access token for this installation."""
 
         return 'https://api.github.com/installations/{}/access_tokens'.format(
-            self.id)
+            self.github_id)
 
     @property
     def token_is_expired(self):
@@ -136,6 +192,8 @@ class GithubInstallation(Document):
     async def import_repositories(self):
         """Imports all repositories available to the installation."""
 
+        msg = 'Importing repos for {}'.format(self.github_id)
+        self.log(msg, level='debug')
         tasks = []
         for repo in await self.list_repos():
             t = ensure_future(self.import_repository(repo))
@@ -147,6 +205,8 @@ class GithubInstallation(Document):
         """Imports a repository from GitHub.
 
         :param repo_info: A dictionary with the repository information."""
+        msg = 'Importing repo {}'.format(repo_info['clone_url'])
+        self.log(msg, level='debug')
 
         branches = [
             RepositoryBranch(name='master', notify_only_latest=False),
@@ -185,6 +245,8 @@ class GithubInstallation(Document):
 
         header = await self._get_header()
         url = 'https://api.github.com/installation/repositories'
-        ret = await requests.post(url, header=header)
+        ret = await requests.get(url, headers=header)
+        if ret.status != 200:
+            raise BadRequestToGithubAPI(ret.status, ret.text, url)
         ret = ret.json()
         return ret['repositories']

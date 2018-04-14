@@ -24,3 +24,7 @@ class AppDoesNotExist(Exception):
 
 class AppExists(Exception):
     pass
+
+
+class BadRequestToGithubAPI(Exception):
+    pass

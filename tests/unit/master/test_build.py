@@ -23,7 +23,7 @@ import datetime
 from unittest import TestCase, mock
 from toxicbuild.core.utils import now
 from toxicbuild.master import build, repository, slave, users
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class BuildStepTest(TestCase):
@@ -336,6 +336,8 @@ class BuildManagerTest(TestCase):
             await self.repo.toxicbuild_conf_lock.channel.queue_delete(
                 lock_name)
             await self.repo.toxicbuild_conf_lock.connection.disconnect()
+            repository.toxicbuild_conf_mutex._declared_queues = set()
+            repository.update_code_mutex._declared_queues = set()
         await slave.Slave.drop_collection()
         await build.BuildSet.drop_collection()
         await build.Builder.drop_collection()
@@ -354,6 +356,13 @@ class BuildManagerTest(TestCase):
         self.assertTrue(hasattr(build.BuildManager, '_build_queues'))
         self.assertTrue(hasattr(build.BuildManager, '_is_building'))
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
+    @mock.patch.object(repository.toxicbuild_conf_mutex, 'publish',
+                       AsyncMagicMock())
+    @mock.patch.object(repository.update_code_mutex, 'publish',
+                       AsyncMagicMock())
     @async_test
     async def test_add_builds_for_slave(self):
         await self._create_test_data()
@@ -372,6 +381,9 @@ class BuildManagerTest(TestCase):
         # from .add_builds_for_slave
         self.assertEqual(len(buildset.builds), 4)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @async_test
     async def test_add_builds(self):
         await self._create_test_data()
@@ -388,6 +400,9 @@ class BuildManagerTest(TestCase):
 
         self.assertEqual(len(self.manager.build_queues[self.slave.name]), 1)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
     @mock.patch.object(build, 'list_builders_from_config',
                        mock.Mock(return_value=[{'name': 'builder-0'},
@@ -401,7 +416,6 @@ class BuildManagerTest(TestCase):
         self.manager.repository = self.repo
         self.manager.repository.vcs.checkout = asyncio.coroutine(
             lambda *a, **kw: checkout())
-
         builders = await self.manager.get_builders(self.slave,
                                                    self.revision)
         await self.repo.toxicbuild_conf_lock.channel.queue_delete(
@@ -414,6 +428,9 @@ class BuildManagerTest(TestCase):
 
         self.assertEqual(len(builders), 2)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
     @mock.patch.object(build, 'list_builders_from_config',
                        mock.Mock(side_effect=AttributeError))
@@ -436,6 +453,9 @@ class BuildManagerTest(TestCase):
         self.assertFalse(builders)
         self.assertTrue(build.log.called)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @async_test
     async def test_execute_build_without_build(self):
         await self._create_test_data()
@@ -448,6 +468,13 @@ class BuildManagerTest(TestCase):
         await self.manager._execute_builds(slave)
         self.assertFalse(self.manager._execute_in_parallel.called)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
+    @mock.patch.object(repository.toxicbuild_conf_mutex, 'publish',
+                       AsyncMagicMock())
+    @mock.patch.object(repository.update_code_mutex, 'publish',
+                       AsyncMagicMock())
     @async_test
     async def test_execute_build(self):
         await self._create_test_data()
@@ -460,6 +487,13 @@ class BuildManagerTest(TestCase):
         await self.manager._execute_builds(self.slave)
         self.assertTrue(run_in_parallel.called)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
+    @mock.patch.object(repository.toxicbuild_conf_mutex, 'publish',
+                       AsyncMagicMock())
+    @mock.patch.object(repository.update_code_mutex, 'publish',
+                       AsyncMagicMock())
     @async_test
     async def test_execute_in_parallel(self):
         await self._create_test_data()
@@ -473,6 +507,9 @@ class BuildManagerTest(TestCase):
         for f in fs:
             self.assertTrue(f.done())
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @async_test
     async def test_get_builds_chunks_with_limitless_parallels(self):
         await self._create_test_data()
@@ -481,6 +518,9 @@ class BuildManagerTest(TestCase):
                                                        mock.Mock()]))
         self.assertEqual(len(chunks), 1)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @async_test
     async def test_get_builds_chunks_with_limit(self):
         await self._create_test_data()
@@ -489,6 +529,9 @@ class BuildManagerTest(TestCase):
                                                        mock.Mock()]))
         self.assertEqual(len(chunks), 2)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @async_test
     async def test_set_started_for_buildset(self):
         await self._create_test_data()
@@ -500,6 +543,9 @@ class BuildManagerTest(TestCase):
         self.assertTrue(buildset.started)
         self.assertTrue(save_mock.called)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @async_test
     async def test_set_started_for_buildset_already_started(self):
         await self._create_test_data()
@@ -512,6 +558,9 @@ class BuildManagerTest(TestCase):
         self.assertTrue(buildset.started is just_now)
         self.assertFalse(save_mock.called)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @async_test
     async def test_set_finished_for_buildset(self):
         await self._create_test_data()
@@ -523,6 +572,9 @@ class BuildManagerTest(TestCase):
         self.assertTrue(buildset.finished)
         self.assertTrue(save_mock.called)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @async_test
     async def test_set_finished_for_buildset_already_finished(self):
         await self._create_test_data()
@@ -535,6 +587,9 @@ class BuildManagerTest(TestCase):
         self.assertTrue(buildset.finished is finished)
         self.assertFalse(save_mock.called)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @mock.patch.object(build, 'now', mock.Mock())
     @async_test
     async def test_set_finished_for_buildset_total_time(self):
@@ -550,6 +605,9 @@ class BuildManagerTest(TestCase):
         self.assertEqual(buildset.total_time, 10)
         self.assertTrue(save_mock.called)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @mock.patch.object(build, 'ensure_future', mock.Mock())
     @async_test
     async def test_start_pending(self):
@@ -567,6 +625,9 @@ class BuildManagerTest(TestCase):
         await self.other_repo.build_manager.start_pending()
         self.assertEqual(build.ensure_future.call_count, 1)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @mock.patch.object(build, 'ensure_future', mock.Mock)
     @async_test
     async def test_start_pending_with_queue(self):
@@ -585,6 +646,9 @@ class BuildManagerTest(TestCase):
         await self.repo.build_manager.start_pending()
         self.assertFalse(build.ensure_future.called)
 
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @mock.patch.object(build, 'ensure_future', mock.Mock)
     @async_test
     async def test_start_pending_with_working_slave(self):
@@ -610,11 +674,11 @@ class BuildManagerTest(TestCase):
                                  token='123', owner=self.owner)
         self.slave.build = asyncio.coroutine(lambda x: None)
         await self.slave.save()
-        self.repo = repository.Repository(
+        await repository.toxicbuild_conf_mutex.declare()
+        await repository.update_code_mutex.declare()
+        self.repo = await repository.Repository.create(
             name='reponame', url='git@somewhere', update_seconds=300,
             vcs_type='git', slaves=[self.slave], owner=self.owner)
-
-        await self.repo.save()
 
         self.revision = repository.RepositoryRevision(
             repository=self.repo, branch='master', commit='bgcdf3123',

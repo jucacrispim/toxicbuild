@@ -24,6 +24,7 @@ from pyrocumulus.web.applications import PyroApplication
 from pyrocumulus.web.decorators import post, get
 from pyrocumulus.web.handlers import BasePyroHandler
 from pyrocumulus.web.urlmappers import URLSpec
+from tornado import gen
 from tornado.web import HTTPError
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.users import User
@@ -58,8 +59,9 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         return {'code': 200, 'msg': 'Hi there!'}
 
     @get('auth')
-    async def authenticate(self):
-        user = await self._get_user_from_cookie()
+    @gen.coroutine
+    def authenticate(self):
+        user = yield from self._get_user_from_cookie()
         if not user:
             url = '{}?redirect={}'.format(
                 settings.TOXICUI_LOGIN_URL, self.request.get_full_url())
@@ -69,6 +71,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
                 raise HTTPError(400)
             ensure_future(GithubInstallation.create(githubapp_id, user))
             url = settings.TOXICUI_URL
+
         return self.redirect(url)
 
     def _handle_ping(self):

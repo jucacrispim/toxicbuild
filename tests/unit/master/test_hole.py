@@ -1051,8 +1051,7 @@ class UIStreamHandlerTest(TestCase):
                              hole.build_started.disconnect.called,
                              hole.build_finished.disconnect.called,
                              hole.build_added.disconnect.called,
-                             hole.step_output_arrived.disconnect.called,
-                             hole.repo_added.disconnect.called]))
+                             hole.step_output_arrived.disconnect.called]))
         self.assertTrue(self.handler._stop_consuming)
 
     @patch.object(hole, 'step_started', Mock())
@@ -1069,15 +1068,16 @@ class UIStreamHandlerTest(TestCase):
                                owner=self.owner, name='my-repo')
         await repo.save()
         self.handler._handle_repo_status_changed = AsyncMagicMock()
+        self.handler._handle_repo_added = AsyncMagicMock()
         await self.handler._connect2signals()
         self.assertTrue(all([hole.step_started.connect.called,
                              hole.step_finished.connect.called,
                              hole.build_started.connect.called,
                              hole.build_finished.connect.called,
                              hole.build_added.connect.called,
-                             hole.step_output_arrived.connect.called,
-                             hole.repo_added.connect.called]))
+                             hole.step_output_arrived.connect.called]))
         self.assertTrue(self.handler._handle_repo_status_changed.called)
+        self.assertTrue(self.handler._handle_repo_added.called)
 
     @patch.object(hole, 'repo_status_changed', AsyncMagicMock())
     @async_test

@@ -48,9 +48,9 @@ class GitPollerTest(TestCase):
         super(GitPollerTest, self).setUp()
         self.owner = users.User(email='a@a.com', password='adsf')
         await self.owner.save()
-        self.repo = repository.Repository(
+        self.repo = await repository.Repository.create(
             name='reponame', url='git@somewhere.org/project.git',
-            owner=self.owner)
+            owner=self.owner, schedule_poller=False)
 
         self.repo.schedule = mock.Mock()
         await self.repo.bootstrap()
@@ -238,7 +238,8 @@ class GitPollerTest(TestCase):
         self.poller.vcs.update_submodule = asyncio.coroutine(
             lambda *a, **kw: None)
         self.poller.log = mock.Mock()
-        self.poller.vcs.process_changes = mock.Mock(side_effect=Exception)
+        self.poller.vcs.clone = AsyncMagicMock()
+        self.poller.process_changes = AsyncMagicMock(side_effect=Exception)
         await self.poller.poll()
         log_level = self.poller.log.call_args[1]['level']
         self.assertEqual(log_level, 'error')
@@ -311,7 +312,10 @@ class PollerServerTest(TestCase):
     @async_test
     async def test_run(self):
         handle = mock.Mock()
-        pollers.update_code.consume.return_value.aiter_items = ['']
+        msg = mock.Mock()
+        msg.body = {'repo_id': 'someid'}
+        msg.acknowledge = AsyncMagicMock()
+        pollers.update_code.consume.return_value.aiter_items = [msg]
 
         class Srv(pollers.PollerServer):
 

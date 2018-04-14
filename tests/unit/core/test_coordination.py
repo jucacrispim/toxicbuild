@@ -62,6 +62,13 @@ class MutexTest(TestCase):
         self.assertTrue(r)
 
     @async_test
+    async def test_exists_disconnect(self):
+        await self.mutex.declare()
+        await self.mutex.connection.disconnect()
+        r = await self.mutex.exists()
+        self.assertTrue(r)
+
+    @async_test
     async def test_exists_exception(self):
         self.mutex.channel = MagicMock()
         self.mutex.channel.queue_declare = AsyncMagicMock(

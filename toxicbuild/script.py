@@ -23,6 +23,7 @@ import subprocess
 import sys
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import changedir
+from toxicbuild.integrations import create as create_integrations
 from toxicbuild.master import create as create_master
 from toxicbuild.master import create_user
 from toxicbuild.master import create_settings_and_connect
@@ -44,21 +45,23 @@ def create(root_dir):  # pragma no cover
 
     slave_root = os.path.join(root_dir, 'slave')
     master_root = os.path.join(root_dir, 'master')
+    integrations_root = os.path.join(root_dir, 'integrations')
     ui_root = os.path.join(root_dir, 'ui')
 
     # first we create a slave and a master
     slave_token = create_slave(slave_root)
     master_token = create_master(master_root)
+    create_integrations(integrations_root)
     # a super user to access stuff
     conffile = os.path.join(master_root, 'toxicmaster.conf')
-    create_user(conffile, superuser=True)
+    user = create_user(conffile, superuser=True)
 
     with changedir(master_root):
         create_settings_and_connect()
         loop = asyncio.get_event_loop()
         # now we add this slave to the master
         slave = Slave(name='LocalSlave', token=slave_token,
-                      host='localhost', port=7777)
+                      host='localhost', port=7777, owner=user)
 
         loop.run_until_complete(slave.save())
 

@@ -19,16 +19,20 @@
 
 import base64
 import json
-from unittest import TestCase
 from unittest.mock import Mock, patch
+import tornado
+from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.integrations import webhook_receivers
 from tests import async_test, AsyncMagicMock
 
 
-class GithubWebhookReceiverTest(TestCase):
+class GithubWebhookReceiverTest(AsyncTestCase):
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
 
     def setUp(self):
-
+        super().setUp()
         body = webhook_receivers.json.dumps({
             "zen": "Speak like a human.",
             "hook_id": 'ZZZZZ',
@@ -81,35 +85,35 @@ class GithubWebhookReceiverTest(TestCase):
             await user.delete()
 
     @patch.object(webhook_receivers, 'settings', Mock())
-    @async_test
-    async def test_authenticate_without_user(self):
+    @gen_test
+    def test_authenticate_without_user(self):
         self.webhook_receiver._get_user_from_cookie = AsyncMagicMock(
             return_value=None)
         self.webhook_receiver.redirect = Mock()
-        await self.webhook_receiver.authenticate()
+        yield self.webhook_receiver.authenticate()
         url = self.webhook_receiver.redirect.call_args[0][0]
         self.assertIn('redirect=', url)
 
     @patch.object(webhook_receivers, 'settings', Mock())
-    @async_test
-    async def test_authenticate_without_installation_id(self):
+    @gen_test
+    def test_authenticate_without_installation_id(self):
         self.webhook_receiver._get_user_from_cookie = AsyncMagicMock(
             return_value=Mock())
         self.webhook_receiver.params = {}
         self.webhook_receiver.redirect = Mock()
         with self.assertRaises(webhook_receivers.HTTPError):
-            await self.webhook_receiver.authenticate()
+            yield self.webhook_receiver.authenticate()
 
     @patch.object(
         webhook_receivers.GithubInstallation, 'create', AsyncMagicMock())
     @patch.object(webhook_receivers, 'settings', Mock())
-    @async_test
-    async def test_authenticate(self):
+    @gen_test
+    def test_authenticate(self):
         self.webhook_receiver._get_user_from_cookie = AsyncMagicMock(
             return_value=Mock())
         self.webhook_receiver.params = {'installation_id': 1234}
         self.webhook_receiver.redirect = Mock()
-        await self.webhook_receiver.authenticate()
+        yield self.webhook_receiver.authenticate()
         self.assertTrue(webhook_receivers.GithubInstallation.create.called)
 
     def test_parse_body(self):

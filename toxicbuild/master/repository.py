@@ -47,6 +47,11 @@ from toxicbuild.master.utils import OwnedDocument
 # The is {repourl-start-pending: hash} for starting pending builds
 _scheduler_hashes = {}
 
+toxicbuild_conf_mutex = Mutex('toxicmaster-repo-toxicbuildconf-mutex',
+                              locks_conn)
+update_code_mutex = Mutex('toxicmaster-repo-update-code-mutex',
+                          locks_conn)
+
 
 async def _add_builds(msg):
     body = msg.body
@@ -108,8 +113,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         self._poller_instance = None
         self.build_manager = BuildManager(self)
         self._old_status = None
-        self.toxicbuild_conf_lock = None
-        self.update_code_lock = None
+        self.toxicbuild_conf_lock = toxicbuild_conf_mutex
+        self.update_code_lock = update_code_mutex
         self._vcs_instance = None
 
     async def to_dict(self, id_as_str=False):
@@ -190,7 +195,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await repo.save()
         repo_added_msg = await repo.to_dict(id_as_str=True)
         await repo_added.publish(repo_added_msg)
-        repo.schedule()
+        if repo.schedule_poller:
+            repo.schedule()
+        await repo._create_locks()
         return repo
 
     async def remove(self):
@@ -232,7 +239,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         :param kwargs: kwargs to match the repository."""
 
         repo = await cls.objects.get(**kwargs)
-        await repo._create_locks()
         return repo
 
     @classmethod
@@ -244,13 +250,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         :param kwargs: kwargs to match the repository.
         """
         repo = await super().get_for_user(user, **kwargs)
-        await repo._create_locks()
         return repo
 
     async def update_code(self):
         """Requests a code update to a poller and waits for its response.
         This is done using ``update_code`` and ``poll_status`` exchanges."""
-        lock = await self.update_code_lock.try_acquire()
+        lock = await self.update_code_lock.try_acquire(routing_key=str(
+            self.id))
         if not lock:
             self.log('Repo already updating. Leaving.', level='debug')
             return
@@ -284,21 +290,30 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                                               routing_key=str(self.id))
 
     async def _create_locks(self):
-        self.toxicbuild_conf_lock = Mutex(
-            'toxicmaster-repo-toxicbuildconf-mutex-{}'.format(str(self.id)),
-            locks_conn)
-        await self.toxicbuild_conf_lock.create()
-        self.update_code_lock = Mutex(
-            'toxicmaster-repo-update-code-mutex-{}'.format(str(self.id)),
-            locks_conn)
-        await self.update_code_lock.create()
+        # we publish a message in the queue
+        # using the repo id as the routing key so we can fetch the message
+        # based in the id.
+
+        await self.toxicbuild_conf_lock.declare()
+        await self.toxicbuild_conf_lock.publish({'mutex_for': str(self.id)},
+                                                routing_key=str(self.id))
+        await self.update_code_lock.declare()
+        await self.update_code_lock.publish({'mutex_for': str(self.id)},
+                                            routing_key=str(self.id))
+
+    async def _ack_msg_for(self, consumer):
+        async with consumer:
+            msg = await consumer.fetch_message()
+            await msg.acknowledge()
 
     async def _delete_locks(self):
         """For tests only"""
-        await self.toxicbuild_conf_lock.channel.queue_delete(
-            self.toxicbuild_conf_lock.queue_name)
-        await self.update_code_lock.channel.queue_delete(
-            self.update_code_lock.queue_name)
+        consumer = await self.toxicbuild_conf_lock.consume(routing_key=str(
+            self.id))
+        await self._ack_msg_for(consumer)
+        consumer = await self.update_code_lock.consume(routing_key=str(
+            self.id))
+        await self._ack_msg_for(consumer)
 
     async def bootstrap(self):
         """Initialise the needed stuff. Schedules updates for code,
@@ -308,8 +323,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         The locks create here are:
         * exclusive access for toxicbuild.conf of a repo."""
 
-        await self._create_locks()
-        self.schedule()
+        if self.schedule_poller:
+            self.schedule()
 
     @classmethod
     async def bootstrap_all(cls):
@@ -331,9 +346,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         sched_msg = {'type': 'add-update-code',
                      'repository_id': str(self.id)}
 
-        if self.schedule_poller:
-            f = scheduler_action.publish(sched_msg)
-            ensure_future(f)
+        f = scheduler_action.publish(sched_msg)
+        ensure_future(f)
 
         # adding start_pending
         start_pending_hash = self.scheduler.add(
@@ -535,6 +549,10 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             await repo_status_changed.publish(status_msg,
                                               routing_key=str(self.id))
             self._old_status = status
+
+    def log(self, msg, level='info'):
+        msg = '{} [{}]'.format(msg, self.name)
+        super().log(msg, level=level)
 
 
 class RepositoryRevision(Document):

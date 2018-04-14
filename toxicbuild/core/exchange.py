@@ -117,16 +117,21 @@ class Exchange(LoggerMixin):
         if not self.connection._connected:
             await self.connection.connect()
 
+        # a default channel, mainly for tests
+        self.channel = await self.connection.protocol.channel()
+        # but we use a new channel everytime to avoid waiter already
+        # exists stuff.
+        channel = await self.connection.protocol.channel()
+        self.channel = await self.connection.protocol.channel()
         if not queue_name:
             queue_name = self.queue_name
 
-        self.channel = await self.connection.protocol.channel()
-        self.exchange_declared = await self.channel.exchange_declare(
+        self.exchange_declared = await channel.exchange_declare(
             self.name, self.exchange_type, durable=self.durable)
 
         if not self.is_declared(queue_name) and \
            not self.exclusive_consumer_queue:
-            await self._declare_queue(queue_name, self.channel)
+            await self._declare_queue(queue_name, channel)
 
     async def _declare_queue(self, queue_name, channel):
 
@@ -183,8 +188,9 @@ class Exchange(LoggerMixin):
           exchange. Must be something that can be serialized into a json.
         :param routing_key: The routing key to pdublish the message."""
 
+        channel = await self.connection.protocol.channel()
         if self.bind_publisher:
-            await self.bind(routing_key)
+            await self.bind(routing_key, channel=channel)
 
         message = json.dumps(message)
 
@@ -196,7 +202,7 @@ class Exchange(LoggerMixin):
         kw = {'payload': message, 'exchange_name': self.name,
               'properties': properties, 'routing_key': routing_key}
 
-        await self.channel.publish(**kw)
+        await channel.publish(**kw)
 
     async def consume(self, wait_message=True, timeout=0,
                       routing_key='', no_ack=False):
@@ -210,9 +216,8 @@ class Exchange(LoggerMixin):
         """
 
         queue_name = self.queue_name
-        channel = self.channel
+        channel = await self.connection.protocol.channel()
         if self.exclusive_consumer_queue:
-            channel = await self.connection.protocol.channel()
             queue_name = '{}-consumer-queue-{}'.format(self.name, str(uuid4()))
             await self.bind(routing_key, queue_name, channel)
 

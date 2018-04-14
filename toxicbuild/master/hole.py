@@ -668,6 +668,7 @@ class UIStreamHandler(LoggerMixin):
         repos = Repository.list_for_user(self.protocol.user)
         async for repo in repos:
             self._connect_repo(repo)
+        ensure_future(self._handle_repo_added())
 
     def _connect_repo(self, repo):
         step_started.connect(self.step_started, sender=str(repo.id))
@@ -675,21 +676,19 @@ class UIStreamHandler(LoggerMixin):
         build_started.connect(self.build_started, sender=str(repo.id))
         build_finished.connect(self.build_finished, sender=str(repo.id))
         ensure_future(self._handle_repo_status_changed(repo.id))
-        ensure_future(self._handle_repo_added())
         build_added.connect(self.build_added, sender=str(repo.id))
         step_output_arrived.connect(self.send_step_output_info,
                                     sender=str(repo.id))
 
-    async def _consume_with_callback(self, consumer, callback, _debug_id=''):
-        # _debug_id? What a shame...
+    async def _consume_with_callback(self, consumer, callback, _debug_msg):
+        # _debug_msg? What a shame...
 
         # this is quite ridiculous but the idea is that when a client
         # disconnects we need to be able to stop the consumption of
         # messages and to delete the queue, so we use the _stop_consuming
         # stuff with a timeout in fetch_message
         async with consumer:
-            self.log('Handling repo_status_changed for {}'.format(_debug_id),
-                     level='debug')
+            self.log(_debug_msg, level='debug')
 
             # we change it here so the consumption is not canceled when
             # a timout happens
@@ -700,7 +699,7 @@ class UIStreamHandler(LoggerMixin):
                 except ConsumerTimeout:
                     continue
 
-                self.log('Got msg {} for {}'.format(msg.body, _debug_id),
+                self.log('Got msg {} for {}'.format(msg.body, _debug_msg),
                          level='debug')
                 ensure_future(callback(msg))
             else:
@@ -711,12 +710,15 @@ class UIStreamHandler(LoggerMixin):
     async def _handle_repo_status_changed(self, repo_id):
         consumer = await repo_status_changed.consume(
             routing_key=str(repo_id), timeout=500)
+        debug_msg = 'Handling repo_status_changed for {}'.format(repo_id)
         await self._consume_with_callback(consumer, self.send_repo_status_info,
-                                          _debug_id=str(repo_id))
+                                          _debug_msg=debug_msg)
 
     async def _handle_repo_added(self):
         consumer = await repo_added.consume(timeout=500)
-        await self._consume_with_callback(consumer, self.check_repo_added)
+        debug_msg = 'Handling repo_added'
+        await self._consume_with_callback(consumer, self.check_repo_added,
+                                          _debug_msg=debug_msg)
 
     async def check_repo_added(self, msg):
         try:
