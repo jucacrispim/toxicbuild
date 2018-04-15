@@ -356,7 +356,7 @@
   (defvar toxic:--webui-path nil)
   (setq toxic:--webui-path (concat toxic:test-env-path "ui/"))
   (defvar toxic:--start-webui-cmd
-    (format "%s %stoxicweb start %s"
+    (format "%s %stoxicweb start %s --loglevel=debug"
 	    toxic:py-venv-exec toxic:test-env-dir toxic:--webui-path))
 
   (defvar toxic:--webui-buffer-name "webui")

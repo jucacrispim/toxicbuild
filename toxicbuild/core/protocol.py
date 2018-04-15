@@ -79,7 +79,10 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
     def connection_lost(self, exc):
         self.close_connection()
         super().connection_lost(exc)
+        self.log('Connection lost', level='debug')
+
         if self.connection_lost_cb:
+            self.log('Executing connection_lost_cb', level='debug')
             self.connection_lost_cb(exc)
 
     @asyncio.coroutine

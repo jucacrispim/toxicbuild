@@ -27,7 +27,6 @@ from asyncio import ensure_future
 import inspect
 import json
 import traceback
-from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
@@ -35,7 +34,7 @@ from toxicbuild.master.build import BuildSet, Builder
 from toxicbuild.master.repository import Repository, RepositoryRevision
 from toxicbuild.master.exceptions import (UIFunctionNotFound,
                                           OwnerDoesNotExist, NotEnoughPerms)
-from toxicbuild.master.exchanges import repo_status_changed, repo_added
+from toxicbuild.master.exchanges import ui_notifications
 from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.signals import (step_started, step_finished,
@@ -642,7 +641,6 @@ class UIStreamHandler(LoggerMixin):
 
     def __init__(self, protocol):
         self.protocol = protocol
-        self._stop_consuming = False
 
         def connection_lost_cb(exc):  # pragma no cover
             self._disconnectfromsignals()
@@ -668,57 +666,40 @@ class UIStreamHandler(LoggerMixin):
         repos = Repository.list_for_user(self.protocol.user)
         async for repo in repos:
             self._connect_repo(repo)
-        ensure_future(self._handle_repo_added())
+        ensure_future(self._handle_ui_notifications())
 
     def _connect_repo(self, repo):
         step_started.connect(self.step_started, sender=str(repo.id))
         step_finished.connect(self.step_finished, sender=str(repo.id))
         build_started.connect(self.build_started, sender=str(repo.id))
         build_finished.connect(self.build_finished, sender=str(repo.id))
-        ensure_future(self._handle_repo_status_changed(repo.id))
         build_added.connect(self.build_added, sender=str(repo.id))
         step_output_arrived.connect(self.send_step_output_info,
                                     sender=str(repo.id))
 
-    async def _consume_with_callback(self, consumer, callback, _debug_msg):
-        # _debug_msg? What a shame...
+    async def _handle_ui_notifications(self):
+        async with await ui_notifications.consume(routing_key=str(
+                self.protocol.user.id)) as consumer:
 
-        # this is quite ridiculous but the idea is that when a client
-        # disconnects we need to be able to stop the consumption of
-        # messages and to delete the queue, so we use the _stop_consuming
-        # stuff with a timeout in fetch_message
-        async with consumer:
-            self.log(_debug_msg, level='debug')
+            while True:
+                msg = await consumer.fetch_message()
+                self.log('Got msg type {}'.format(msg.body['msg_type']))
+                if msg.body['msg_type'] == 'stop_consumption':
+                    await msg.acknowledge()
+                    self.log('stop consumption', level='debug')
+                    break
+                ensure_future(self._handle_ui_message(msg))
+                await msg.acknowledge()
 
-            # we change it here so the consumption is not canceled when
-            # a timout happens
-            consumer._canceled = True
-            while not self._stop_consuming:
-                try:
-                    msg = await consumer.fetch_message()
-                except ConsumerTimeout:
-                    continue
-
-                self.log('Got msg {} for {}'.format(msg.body, _debug_msg),
-                         level='debug')
-                ensure_future(callback(msg))
-            else:
-                # now we change it back so we can properly cancel the
-                # consumption.
-                consumer._canceled = False
-
-    async def _handle_repo_status_changed(self, repo_id):
-        consumer = await repo_status_changed.consume(
-            routing_key=str(repo_id), timeout=500)
-        debug_msg = 'Handling repo_status_changed for {}'.format(repo_id)
-        await self._consume_with_callback(consumer, self.send_repo_status_info,
-                                          _debug_msg=debug_msg)
-
-    async def _handle_repo_added(self):
-        consumer = await repo_added.consume(timeout=500)
-        debug_msg = 'Handling repo_added'
-        await self._consume_with_callback(consumer, self.check_repo_added,
-                                          _debug_msg=debug_msg)
+    async def _handle_ui_message(self, msg):
+        msg_type = msg.body['msg_type']
+        if msg_type == 'repo_added':
+            await self.check_repo_added(msg)
+        elif msg_type == 'repo_status_changed':
+            await self.send_repo_status_info(msg)
+        else:
+            msg = 'Unknown message type {}'.format(msg_type)
+            self.log(msg, level='warning')
 
     async def check_repo_added(self, msg):
         try:
@@ -731,7 +712,10 @@ class UIStreamHandler(LoggerMixin):
         self._connect_repo(repo)
 
     def _disconnectfromsignals(self):
-        self._stop_consuming = True
+        self.log('Disconnecting from signals', level='debug')
+
+        ensure_future(ui_notifications.publish(
+            {'msg_type': 'stop_consumption'}))
         step_output_arrived.disconnect(self.send_step_output_info)
         step_started.disconnect(self.step_started)
         step_finished.disconnect(self.step_finished)
@@ -780,8 +764,10 @@ class UIStreamHandler(LoggerMixin):
         rdict['status'] = message.body['new_status']
         rdict['old_status'] = message.body['old_status']
         rdict['event_type'] = 'repo_status_changed'
+        self.log('sending response for send_repo_status_info',
+                 level='debug')
+
         f = ensure_future(self.send_response(code=0, body=rdict))
-        await message.acknowledge()
         return f
 
     async def send_repo_added_info(self, message):
@@ -791,8 +777,9 @@ class UIStreamHandler(LoggerMixin):
 
         rdict = message.body
         rdict['event_type'] = 'repo_added'
+        self.log('sending response for send_repo_added_info',
+                 level='debug')
         f = ensure_future(self.send_response(code=0, body=rdict))
-        await message.acknowledge()
         return f
 
     def send_step_output_info(self, repo, step_info):

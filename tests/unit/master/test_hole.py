@@ -148,7 +148,9 @@ class UIHoleTest(TestCase):
 
 
 @patch.object(repository, 'repo_added', AsyncMagicMock())
+@patch.object(repository, 'ui_notifications', AsyncMagicMock())
 @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+@patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
 @patch.object(repository.utils, 'log', Mock())
 class HoleHandlerTest(TestCase):
 
@@ -939,6 +941,10 @@ class HoleHandlerTest(TestCase):
 
         self.assertEqual(type(slave_dict['id']), str)
 
+    @patch.object(repository.Repository, 'schedule', Mock())
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.Repository, '_notify_repo_creation',
+                  AsyncMagicMock())
     @patch.object(repository.utils, 'log', Mock())
     async def _create_test_data(self):
         self.slave = hole.Slave(name='name', host='127.0.0.1', port=7777,
@@ -992,7 +998,9 @@ class HoleHandlerTest(TestCase):
         await asyncio.sleep(0)
 
 
+@patch.object(repository, 'ui_notifications', AsyncMagicMock())
 @patch.object(repository, 'repo_added', AsyncMagicMock())
+@patch.object(repository, 'repo_status_changed', AsyncMagicMock())
 @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
 @patch.object(hole.UIStreamHandler, 'log', Mock())
 class UIStreamHandlerTest(TestCase):
@@ -1040,6 +1048,7 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'build_started', Mock())
     @patch.object(hole, 'build_finished', Mock())
     @patch.object(hole, 'repo_status_changed', Mock())
+    @patch.object(hole, 'ui_notifications', AsyncMagicMock())
     @patch.object(hole, 'build_added', Mock())
     @patch.object(hole, 'step_output_arrived', Mock())
     @patch.object(hole, 'repo_added', Mock())
@@ -1052,7 +1061,7 @@ class UIStreamHandlerTest(TestCase):
                              hole.build_finished.disconnect.called,
                              hole.build_added.disconnect.called,
                              hole.step_output_arrived.disconnect.called]))
-        self.assertTrue(self.handler._stop_consuming)
+        self.assertTrue(hole.ui_notifications.publish.called)
 
     @patch.object(hole, 'step_started', Mock())
     @patch.object(hole, 'step_finished', Mock())
@@ -1069,6 +1078,8 @@ class UIStreamHandlerTest(TestCase):
         await repo.save()
         self.handler._handle_repo_status_changed = AsyncMagicMock()
         self.handler._handle_repo_added = AsyncMagicMock()
+        self.handler._handle_ui_notifications = AsyncMagicMock(
+            spec=self.handler._handle_ui_notifications)
         await self.handler._connect2signals()
         self.assertTrue(all([hole.step_started.connect.called,
                              hole.step_finished.connect.called,
@@ -1076,37 +1087,45 @@ class UIStreamHandlerTest(TestCase):
                              hole.build_finished.connect.called,
                              hole.build_added.connect.called,
                              hole.step_output_arrived.connect.called]))
-        self.assertTrue(self.handler._handle_repo_status_changed.called)
-        self.assertTrue(self.handler._handle_repo_added.called)
+        self.assertTrue(self.handler._handle_ui_notifications.called)
 
-    @patch.object(hole, 'repo_status_changed', AsyncMagicMock())
+    @patch.object(hole, 'ui_notifications', AsyncMagicMock())
     @async_test
-    async def test_handle_repo_status_changed(self):
-        msg = Mock()
-        msg.body = {}
-        msg.acknowledge = AsyncMagicMock()
-        send_repo_status_info_mock = Mock()
+    async def test_handle_ui_notifications(self):
+        consumer = hole.ui_notifications.consume.return_value
+        msg0 = AsyncMagicMock()
+        msg0.body = {'msg_type': 'repo_added'}
+        msg1 = AsyncMagicMock()
+        msg1.body = {'msg_type': 'stop_consumption'}
+        consumer.fetch_message.side_effect = [msg0, msg1]
+        self.handler._handle_ui_message = AsyncMagicMock()
+        await self.handler._handle_ui_notifications()
+        self.assertTrue(self.handler._handle_ui_message.called)
 
-        def send_repo_status_info(*a, **kw):
-            send_repo_status_info_mock()
-            self.handler._stop_consuming = True
-            return AsyncMagicMock()()
-
-        consumer = hole.repo_status_changed.consume.return_value
-        consumer.fetch_message.side_effect = [hole.ConsumerTimeout, msg]
-        self.handler.send_repo_status_info = send_repo_status_info
-        await self.handler._handle_repo_status_changed('some-id')
-        self.assertTrue(send_repo_status_info_mock.called)
-
-    @patch.object(hole.repo_added, 'consume', AsyncMagicMock())
     @async_test
-    async def test_handle_repo_added(self):
-        self.handler._consume_with_callback = AsyncMagicMock()
-        await self.handler._handle_repo_added()
-        consumer = hole.repo_added.consume.return_value
-        expected = (consumer, self.handler.check_repo_added)
-        called = self.handler._consume_with_callback.call_args[0]
-        self.assertEqual(expected, called)
+    async def test_handle_ui_message_repo_added(self):
+        msg = AsyncMagicMock()
+        msg.body = {'msg_type': 'repo_added'}
+        self.handler.check_repo_added = AsyncMagicMock()
+        await self.handler._handle_ui_message(msg)
+        self.assertTrue(self.handler.check_repo_added.called)
+
+    @async_test
+    async def test_handle_ui_message_repo_status_changed(self):
+        msg = AsyncMagicMock()
+        msg.body = {'msg_type': 'repo_status_changed'}
+        self.handler.send_repo_status_info = AsyncMagicMock()
+        await self.handler._handle_ui_message(msg)
+        self.assertTrue(self.handler.send_repo_status_info.called)
+
+    @async_test
+    async def test_handle_ui_message_unknown(self):
+        msg = AsyncMagicMock()
+        msg.body = {'msg_type': 'something'}
+        self.handler.check_repo_added = AsyncMagicMock()
+        self.handler.log = Mock()
+        await self.handler._handle_ui_message(msg)
+        self.assertTrue(self.handler.log.called)
 
     @async_test
     async def test_step_started(self):
@@ -1166,6 +1185,9 @@ class UIStreamHandlerTest(TestCase):
         self.assertTrue(send_response.called)
 
     @patch.object(repository.Repository, 'schedule', Mock())
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.Repository, '_notify_repo_creation',
+                  AsyncMagicMock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
     @async_test
     async def test_send_info_step(self):
@@ -1218,6 +1240,10 @@ class UIStreamHandlerTest(TestCase):
         self.assertIn('build', self.BODY.keys())
 
     @patch.object(repository.Repository, 'schedule', Mock())
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.Repository, '_notify_repo_creation',
+                  AsyncMagicMock())
+    @patch.object(repository.Repository, 'schedule', Mock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
     @async_test
     async def test_send_info_build(self):
@@ -1265,6 +1291,10 @@ class UIStreamHandlerTest(TestCase):
         self.assertIsInstance(self.BODY['slave']['id'], str)
         self.assertIsInstance(self.BODY['repository']['id'], str)
 
+    @patch.object(repository.Repository, 'schedule', Mock())
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.Repository, '_notify_repo_creation',
+                  AsyncMagicMock())
     @async_test
     async def test_send_repo_status_info(self):
         testslave = await slave.Slave.create(name='name',
@@ -1298,6 +1328,10 @@ class UIStreamHandlerTest(TestCase):
         self.assertEqual(self.BODY['status'], 'fail')
         self.assertIsInstance(self.BODY['id'], str)
 
+    @patch.object(repository.Repository, 'schedule', Mock())
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.Repository, '_notify_repo_creation',
+                  AsyncMagicMock())
     @async_test
     async def test_send_step_output_info(self):
         testslave = await slave.Slave.create(name='name',

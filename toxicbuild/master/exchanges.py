@@ -50,6 +50,7 @@ scheduler_action = Exchange('toxicmaster.scheduler_action',
 core_exchanges = create_exchanges(conn)
 repo_status_changed = core_exchanges['repo_status_changed']
 repo_added = core_exchanges['repo_added']
+ui_notifications = core_exchanges['ui_notifications']
 
 
 async def connect_exchanges():
@@ -63,6 +64,7 @@ async def connect_exchanges():
     await scheduler_action.declare()
     await repo_status_changed.declare()
     await repo_added.declare()
+    await ui_notifications.declare()
 
 
 async def disconnect_exchanges():

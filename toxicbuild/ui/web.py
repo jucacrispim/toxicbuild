@@ -316,7 +316,8 @@ class StreamHandler(LoggerMixin, LoggedTemplateHandler, WebSocketHandler):
     def initialize(self):
         self.action = None
         self.repo_id = None
-        self.events = {'repo_status_changed': self._send_repo_status_info,
+        self.events = {'repo_status_changed': self._send_raw_info,
+                       'repo_added': self._send_raw_info,
                        'build_started': self._send_build_info,
                        'build_finished': self._send_build_info,
                        'build_added': self._send_build_info,
@@ -324,7 +325,8 @@ class StreamHandler(LoggerMixin, LoggedTemplateHandler, WebSocketHandler):
                        'step_finished': self._send_build_info,
                        'step_output_info': self._send_step_output_info}
         # maps actions to message (event) types
-        self.action_messages = {'repo-status': ['repo_status_changed'],
+        self.action_messages = {'repo-status': ['repo_status_changed',
+                                                'repo_added'],
                                 'builds': ['build_started', 'build_finished',
                                            'build_added', 'step_started',
                                            'step_finished'],
@@ -402,17 +404,19 @@ class StreamHandler(LoggerMixin, LoggedTemplateHandler, WebSocketHandler):
         if buildset:
             self._format_info_dt(buildset)
 
-    def _send_repo_status_info(self, info):
+    def _send_raw_info(self, info):
         self.write2sock(info)
 
     def on_close(self):
+        self.log('connection closed', level='debug')
         StreamConnector.unplug(self.user, self.repo_id, self.receiver)
 
     def write2sock(self, body):
         try:
             self.write_message(body)
         except WebSocketError:
-            self.log('WebSocketError', level='debug')
+            tb = traceback.format_exc()
+            self.log('WebSocketError: {}'.format(tb), level='debug')
 
 
 class MainHandler(LoggedTemplateHandler):

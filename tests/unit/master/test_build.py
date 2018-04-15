@@ -319,6 +319,9 @@ class BuildSetTest(TestCase):
         await self.buildset.save()
 
 
+@mock.patch.object(repository.Repository, 'schedule', mock.Mock())
+@mock.patch.object(repository.Repository, '_notify_repo_creation',
+                   AsyncMagicMock())
 class BuildManagerTest(TestCase):
 
     def setUp(self):

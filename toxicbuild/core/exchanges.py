@@ -42,8 +42,15 @@ def create_exchanges(conn):
                               exclusive_consumer_queue=True,
                               exchange_type='direct')
 
+    ui_notifications = Exchange('toxicbuild.ui_notifications',
+                                connection=conn,
+                                bind_publisher=False,
+                                exclusive_consumer_queue=True,
+                                exchange_type='direct')
+
     return {'repo_status_changed': repo_status_changed,
-            'repo_added': repo_added}
+            'repo_added': repo_added,
+            'ui_notifications': ui_notifications}
 
 
 async def disconnect_exchanges():  # pragma no cover

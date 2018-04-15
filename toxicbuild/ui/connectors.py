@@ -109,9 +109,7 @@ class StreamConnector(LoggerMixin):
                 break
 
             repo_id = self._get_repo_id(body)
-            event = body.get('event_type')
-            if repo_id == self.repo_id or event == 'repo_status_changed':
-                message_arrived.send(repo_id, **body)
+            message_arrived.send(repo_id, **body)
 
     @classmethod
     @asyncio.coroutine
@@ -138,12 +136,13 @@ class StreamConnector(LoggerMixin):
 
     @classmethod
     def _release_instance(cls, user, repo_id):
-
         if repo_id is None:
             repo_id = cls.NONE_REPO_ID
 
         conn = cls._instances[(user.id, repo_id)]
         conn.clients_connected -= 1
+        conn.log('Releasing instance. Connected clients {}'.format(
+            conn.clients_connected), level='debug')
 
         if conn.clients_connected < 1:
             conn._disconnect()

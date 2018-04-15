@@ -23,10 +23,10 @@ from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
 from toxicbuild.core.utils import string2datetime, LoggerMixin, now
 from toxicbuild.master.build import BuildStep, Builder
 from toxicbuild.master.client import get_build_client
+from toxicbuild.master.document import OwnedDocument
 from toxicbuild.master.signals import (build_started, build_finished,
                                        step_started, step_finished,
                                        step_output_arrived)
-from toxicbuild.master.utils import OwnedDocument
 
 
 class Slave(OwnedDocument, LoggerMixin):

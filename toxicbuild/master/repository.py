@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future
+from copy import copy
 import os
 import re
 import shutil
@@ -32,14 +33,14 @@ from toxicbuild.core.coordination import Mutex
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder, BuildManager
+from toxicbuild.master.document import OwnedDocument
 from toxicbuild.master.exchanges import (update_code, poll_status,
                                          revisions_added, locks_conn,
                                          scheduler_action, repo_status_changed,
-                                         repo_added)
+                                         repo_added, ui_notifications)
 from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.signals import (build_started, build_finished)
 from toxicbuild.master.slave import Slave
-from toxicbuild.master.utils import OwnedDocument
 
 # The thing here is: When a repository poller is scheduled, I need to
 # keep track of the hashes so I can remove it from the scheduler
@@ -183,6 +184,24 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         return status
 
     @classmethod
+    async def _notify_repo_creation(cls, repo):
+        repo_added_msg = await repo.to_dict(id_as_str=True)
+        await repo_added.publish(repo_added_msg)
+        repo_added_msg['msg_type'] = 'repo_added'
+        async for user in repo.get_allowed_users():
+            ensure_future(ui_notifications.publish(
+                repo_added_msg, routing_key=str(user.id)))
+
+    async def _notify_status_changed(self, status_msg):
+        self.log('Notify status changed {}'.format(status_msg, level='debug'))
+        await repo_status_changed.publish(status_msg,
+                                          routing_key=str(self.id))
+        status_msg['msg_type'] = 'repo_status_changed'
+        async for user in self.get_allowed_users():
+            ensure_future(ui_notifications.publish(
+                status_msg, routing_key=str(user.id)))
+
+    @classmethod
     async def create(cls, **kwargs):
         """ Creates a new repository and schedule it.
 
@@ -193,8 +212,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         repo = cls(**kwargs, slaves=slaves, branches=branches)
         await repo.save()
-        repo_added_msg = await repo.to_dict(id_as_str=True)
-        await repo_added.publish(repo_added_msg)
+        await cls._notify_repo_creation(repo)
         if repo.schedule_poller:
             repo.schedule()
         await repo._create_locks()
@@ -286,8 +304,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                           'old_status': 'cloning',
                           'new_status': self.clone_status}
 
-            await repo_status_changed.publish(status_msg,
-                                              routing_key=str(self.id))
+            await self._notify_status_changed(status_msg)
 
     async def _create_locks(self):
         # we publish a message in the queue
@@ -546,8 +563,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             status_msg = dict(repository_id=str(self.id),
                               old_status=self._old_status,
                               new_status=status)
-            await repo_status_changed.publish(status_msg,
-                                              routing_key=str(self.id))
+            await self._notify_status_changed(status_msg)
             self._old_status = status
 
     def log(self, msg, level='info'):
