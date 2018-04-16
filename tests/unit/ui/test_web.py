@@ -630,12 +630,12 @@ class StreamHandlerTest(AsyncTestCase):
         self.assertTrue(self.handler.write2sock.called)
 
     @gen_test
-    def test_send_repo_status_info(self):
+    def test_send_raw_info(self):
         info = {'event_type': 'repo_status_changed',
                 'status': 'other'}
 
         self.handler.write2sock = MagicMock()
-        self.handler._send_repo_status_info(info)
+        self.handler._send_raw_info(info)
         self.assertTrue(self.handler.write2sock.called)
 
 
