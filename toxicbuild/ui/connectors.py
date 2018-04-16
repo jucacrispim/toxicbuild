@@ -95,7 +95,7 @@ class StreamConnector(LoggerMixin):
     def _get_repo_id(self, body):
         if 'build' in body.keys():
             return body.get('build').get('repository').get('id')
-        return body.get('repository', {}).get('id')
+        return body.get('repository', {}).get('id') or self.NONE_REPO_ID
 
     @asyncio.coroutine
     def _listen(self):
@@ -109,7 +109,10 @@ class StreamConnector(LoggerMixin):
                 break
 
             repo_id = self._get_repo_id(body)
-            message_arrived.send(repo_id, **body)
+            event = body.get('event_type')
+            allowed_events = ['repo_status_changed']
+            if repo_id == self.repo_id or event in allowed_events:
+                message_arrived.send(repo_id, **body)
 
     @classmethod
     @asyncio.coroutine
