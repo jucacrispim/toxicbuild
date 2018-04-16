@@ -170,6 +170,8 @@ class GitPollerTest(TestCase):
             lambda *a, **kw: None)
         self.poller.vcs.workdir_exists = workdir_exists
         self.poller.vcs.clone = clone
+        self.poller.vcs.get_remote = AsyncMagicMock(
+            return_value=self.poller.repository.url)
         self.poller.vcs.has_changes = has_changes
 
         await self.poller.poll()

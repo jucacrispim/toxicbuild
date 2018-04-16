@@ -143,13 +143,24 @@ class GithubWebhookReceiverTest(AsyncTestCase):
 
     @patch.object(webhook_receivers.LoggerMixin, 'log', Mock())
     @async_test
-    async def test_receive_webhook_zen(self):
+    async def test_receive_webhook_ping(self):
         self.webhook_receiver.request.headers = {'X-GitHub-Event': 'ping'}
         self.webhook_receiver.prepare()
         self.webhook_receiver.body['app_id'] = 'some-app-id'
         msg = await self.webhook_receiver.receive_webhook()
         self.assertEqual(msg['code'], 200)
         self.assertEqual(msg['msg'], 'Got it.')
+
+    @patch.object(webhook_receivers.GithubInstallation, 'objects',
+                  AsyncMagicMock())
+    @async_test
+    async def test_handle_push(self):
+        body = {'installation': {'id': '123'},
+                'repository': {'id': '1234'}}
+        self.webhook_receiver.body = body
+        await self.webhook_receiver._handle_push()
+        install = webhook_receivers.GithubInstallation.objects.get.return_value
+        self.assertTrue(install.update_repository.called)
 
     @patch.object(webhook_receivers.LoggerMixin, 'log', Mock())
     @async_test

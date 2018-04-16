@@ -175,6 +175,17 @@ class GithubInstallation(LoggerMixin, Document):
         await installation.import_repositories()
         return installation
 
+    async def update_repository(self, github_repo_id):
+        """Updates a repository code.
+
+        :param github_repo_id: The id of the repository on github.
+        """
+
+        repo_id = self.repositories[github_repo_id]
+        repo = await Repository.get(id=repo_id)
+        url = await self._get_auth_url(repo.url)
+        await repo.update_code(url)
+
     @property
     def auth_token_url(self):
         """URL used to retrieve an access token for this installation."""

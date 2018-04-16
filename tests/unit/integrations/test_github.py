@@ -267,6 +267,21 @@ class GithubInstallationTest(TestCase):
         self.assertTrue(repo.id)
         self.assertTrue(repo.update_code.called)
 
+    @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
+        spec=repository.Repository.update_code))
+    @patch.object(github.GithubInstallation, '_get_auth_url', AsyncMagicMock(
+        spec=github.GithubInstallation._get_auth_url))
+    @async_test
+    async def test_update_repository(self):
+        repo = repository.Repository(name='myrepo', url='git@bla.com/bla.git',
+                                     update_seconds=10, schedule_poller=False,
+                                     vcs_type='git',
+                                     owner=self.user)
+        await repo.save()
+        self.installation.repositories['1234'] = str(repo.id)
+        await self.installation.update_repository('1234')
+        self.assertTrue(repository.Repository.update_code.called)
+
     @patch.object(github.GithubApp, 'create_installation_token',
                   AsyncMagicMock())
     @async_test

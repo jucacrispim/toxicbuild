@@ -38,7 +38,8 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         super().__init__(*args, **kwargs)
         self.event_type = None
         self.body = None
-        self.actions = {'ping': self._handle_ping}
+        self.events = {'ping': self._handle_ping,
+                       'push': self._handle_push}
 
     async def _get_user_from_cookie(self):
         cookie = self.get_secure_cookie(settings.TOXICUI_COOKIE)
@@ -74,18 +75,27 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
 
         return self.redirect(url)
 
-    def _handle_ping(self):
+    async def _handle_ping(self):
         msg = 'Ping received. App id {}\n'.format(self.body['app_id'])
         msg += 'zen: {}'.format(self.body['zen'])
         self.log(msg, level='debug')
         return 'Got it.'
 
+    async def _handle_push(self):
+        install_id = self.body['installation']['id']
+        repo_github_id = self.body['repository']['id']
+        install = await GithubInstallation.objects.get(github_id=install_id)
+        ensure_future(install.update_repository(repo_github_id))
+        return 'updating repo'
+
     @post('webhooks')
     async def receive_webhook(self):
-        if self.event_type == 'ping':
-            msg = self._handle_ping()
-        else:
-            msg = 'What was that?'
+
+        async def default_call():
+            return 'What was that?'
+
+        call = self.events.get(self.event_type, default_call)
+        msg = await call()
         return {'code': 200, 'msg': msg}
 
     def _parse_body(self):
