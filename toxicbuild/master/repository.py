@@ -18,7 +18,6 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future
-from copy import copy
 import os
 import re
 import shutil
@@ -193,7 +192,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                 repo_added_msg, routing_key=str(user.id)))
 
     async def _notify_status_changed(self, status_msg):
-        self.log('Notify status changed {}'.format(status_msg, level='debug'))
+        self.log('Notify status changed {}'.format(status_msg),
+                 level='debug')
         await repo_status_changed.publish(status_msg,
                                           routing_key=str(self.id))
         status_msg['msg_type'] = 'repo_status_changed'
@@ -270,9 +270,12 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         repo = await super().get_for_user(user, **kwargs)
         return repo
 
-    async def update_code(self):
+    async def update_code(self, url=None):
         """Requests a code update to a poller and waits for its response.
-        This is done using ``update_code`` and ``poll_status`` exchanges."""
+        This is done using ``update_code`` and ``poll_status`` exchanges.
+
+        :param url: An url to use as the remote url to update the code."""
+
         lock = await self.update_code_lock.try_acquire(routing_key=str(
             self.id))
         if not lock:
@@ -280,11 +283,12 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             return
 
         async with lock:
-            self.log('Updating code.', level='debug')
+            url = url or self.url
+            self.log('Updating code with url {}.'.format(url), level='debug')
 
             msg = {'repo_id': str(self.id),
                    'vcs_type': self.vcs_type,
-                   'url': self.url}
+                   'url': url}
 
             # Sends a message to the queue that is consumed by the pollers
             await update_code.publish(msg)

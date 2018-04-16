@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016, 2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -36,6 +36,12 @@ class VCSTest(TestCase):
                 pass
 
             def clone(self, name):
+                pass
+
+            def set_remote(self, url, remote_name):
+                pass
+
+            def get_remote(self):
                 pass
 
             def fetch(self):
@@ -111,6 +117,22 @@ class GitTest(TestCase):
         called_cmd = vcs.exec_cmd.call_args[0][0]
         self.assertEqual(called_cmd, 'git clone %s %s --recursive' % (
             url, self.vcs.workdir))
+
+    @async_test
+    def test_set_remote(self):
+        url = 'git@otherplace.com/myproject.git'
+        yield from self.vcs.set_remote(url)
+        called_cmd = vcs.exec_cmd.call_args[0][0]
+        self.assertEqual(called_cmd, 'git remote set-url origin {}'.format(
+            url))
+
+    @async_test
+    def test_get_remote(self):
+        expected = "git remote -v | grep -m1 origin | "
+        expected += "sed -e 's/origin\s*//g' -e 's/(.*)//g'"
+        yield from self.vcs.get_remote()
+        called_cmd = vcs.exec_cmd.call_args[0][0]
+        self.assertEqual(called_cmd, expected)
 
     @async_test
     def test_fetch(self):

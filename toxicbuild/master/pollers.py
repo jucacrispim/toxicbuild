@@ -47,9 +47,20 @@ class Poller(LoggerMixin):
     def is_polling(self):
         return self._is_polling
 
-    async def poll(self):
+    async def poll(self, url=None):
         """ Check for changes on repository and if there are changes, notify
         about it.
+
+        :param url: An url to use as the repo url. If None, self.repository.url
+          will be used.
+
+        .. note::
+
+            This url param is basically used by external integrations. The
+            full url the integrations repository uses a token on it, and
+            when the token expires a new one is needed, changing the
+            url we need to use as the repo url. This is why the url param
+            exists here.
         """
 
         with_clone = False
@@ -60,19 +71,27 @@ class Poller(LoggerMixin):
                     self.repository.url), level='debug')
                 return
 
+            url = url or self.repository.url
+            self.log('Polling with url {}'.format(url))
             self._is_polling = True
             self.log('Polling changes')
 
             if not self.vcs.workdir_exists():
                 self.log('clonning repo')
                 try:
-                    await self.vcs.clone(self.repository.url)
+                    await self.vcs.clone(url)
                     with_clone = True
                 except Exception as e:
                     msg = traceback.format_exc()
                     self.log(msg, level='error')
                     raise CloneException(str(e))
 
+            # here we change the remote url if needed.
+            current_remote = await self.vcs.get_remote()
+            if not with_clone and current_remote != url:
+                self.log('Setting remote from {} to {}'.format(current_remote,
+                                                               url))
+                await self.vcs.set_remote(url)
             # for git.
             # remove no branch when hg is implemented
             if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
@@ -200,9 +219,10 @@ class PollerServer(LoggerMixin):
         repo_id = body['repo_id']
         repo = await Repository.get(id=repo_id)
         vcs_type = body['vcs_type']
+        url = body.get('url')
         poller = Poller(repo, vcs_type, repo.workdir)
         try:
-            with_clone = await poller.poll()
+            with_clone = await poller.poll(url)
             clone_status = 'ready'
         except Exception:
             tb = traceback.format_exc()

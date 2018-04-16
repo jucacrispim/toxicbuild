@@ -1047,11 +1047,9 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'step_finished', Mock())
     @patch.object(hole, 'build_started', Mock())
     @patch.object(hole, 'build_finished', Mock())
-    @patch.object(hole, 'repo_status_changed', Mock())
     @patch.object(hole, 'ui_notifications', AsyncMagicMock())
     @patch.object(hole, 'build_added', Mock())
     @patch.object(hole, 'step_output_arrived', Mock())
-    @patch.object(hole, 'repo_added', Mock())
     def test_disconnectfromsignals(self):
 
         self.handler._disconnectfromsignals()
@@ -1069,7 +1067,6 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'build_finished', Mock())
     @patch.object(hole, 'build_added', Mock())
     @patch.object(hole, 'step_output_arrived', Mock())
-    @patch.object(hole, 'repo_added', Mock())
     @async_test
     async def test_connect2signals(self):
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -68,6 +68,21 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
     def fetch(self):
         """ Fetch changes from remote repository
         """
+
+    @abstractmethod  # pragma no branch
+    @asyncio.coroutine
+    def set_remote(self, url, remote_name):
+        """Sets the remote url of the repository.
+
+        :param url: The new remote url.
+        :param remote_name: The name of the remote url to change."""
+
+    @abstractmethod  # pragma no branch
+    @asyncio.coroutine
+    def get_remote(self, remote_name):
+        """Returns the remote url used in the repo.
+
+        :param remote_name: The name of the remote url to change."""
 
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
@@ -142,6 +157,19 @@ class Git(VCS):
         cmd = '%s clone %s %s --recursive' % (self.vcsbin, url, self.workdir)
         # we can't go to self.workdir while we do not clone the repo
         yield from self.exec_cmd(cmd, cwd='.')
+
+    @asyncio.coroutine
+    def set_remote(self, url, remote_name='origin'):
+        cmd = '{} remote set-url {} {}'.format(self.vcsbin, remote_name, url)
+        yield from self.exec_cmd(cmd, cwd='.')
+
+    @asyncio.coroutine
+    def get_remote(self, remote_name='origin'):
+        cmd = '{} remote -v | grep -m1 {} | sed -e \'s/{}\s*//g\' '
+        cmd += '-e \'s/(.*)//g\''
+        cmd = cmd.format(self.vcsbin, remote_name, remote_name)
+        remote = yield from self.exec_cmd(cmd, cwd='.')
+        return remote
 
     @asyncio.coroutine
     def fetch(self):

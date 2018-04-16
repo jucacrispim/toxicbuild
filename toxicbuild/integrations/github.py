@@ -185,7 +185,7 @@ class GithubInstallation(LoggerMixin, Document):
     @property
     def token_is_expired(self):
         n = now()
-        if n > self.expires:
+        if n > utc2localtime(self.expires):
             return True
         return False
 
@@ -227,7 +227,8 @@ class GithubInstallation(LoggerMixin, Document):
                                        parallel_builds=1,
                                        branches=branches,
                                        slaves=slaves)
-        await repo.update_code()
+        url = await self._get_auth_url(repo.url)
+        await repo.update_code(url=url)
         self.repositories[repo_info['id']] = str(repo.id)
         return repo
 
@@ -238,6 +239,19 @@ class GithubInstallation(LoggerMixin, Document):
         header = {'Authorization': 'token {}'.format(self.auth_token),
                   'Accept': 'application/vnd.github.machine-man-preview+json'}
         return header
+
+    async def _get_auth_url(self, url):
+        """Returns the repo url with the acces token for authentication.
+
+        :param url: The https repo url"""
+
+        if not self.auth_token or self.token_is_expired:
+            await self.app.create_installation_token(self)
+
+        new_url = url.replace('https://', '')
+        new_url = '{}x-access-token:{}@{}'.format('https://',
+                                                  self.auth_token, new_url)
+        return new_url
 
     async def list_repos(self):
         """Lists all respositories available to an installation.

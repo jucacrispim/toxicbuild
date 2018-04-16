@@ -240,6 +240,8 @@ class GitPollerTest(TestCase):
         self.poller.log = mock.Mock()
         self.poller.vcs.clone = AsyncMagicMock()
         self.poller.process_changes = AsyncMagicMock(side_effect=Exception)
+        self.poller.vcs.get_remote = AsyncMagicMock(
+            return_value=self.poller.repository.url)
         await self.poller.poll()
         log_level = self.poller.log.call_args[1]['level']
         self.assertEqual(log_level, 'error')
@@ -254,9 +256,28 @@ class GitPollerTest(TestCase):
         self.poller.vcs.update_submodule = asyncio.coroutine(
             lambda *a, **kw: update_submodule(*a, **kw))
 
+        self.poller.vcs.get_remote = AsyncMagicMock(
+            return_value=self.poller.repository.url)
         await self.poller.poll()
 
         self.assertTrue(update_submodule.called)
+
+    @async_test
+    async def test_poll_setting_remote(self):
+        self.poller.process_changes = asyncio.coroutine(
+            lambda *a, **kw: None)
+        self.poller.vcs.workdir_exists = lambda: True
+        update_submodule = mock.MagicMock(
+            spec=self.poller.vcs.update_submodule)
+        self.poller.vcs.update_submodule = asyncio.coroutine(
+            lambda *a, **kw: update_submodule(*a, **kw))
+
+        self.poller.vcs.get_remote = AsyncMagicMock(
+            return_value=self.poller.repository.url)
+        self.poller.vcs.set_remote = AsyncMagicMock(
+            spec=self.poller.vcs.set_remote)
+        await self.poller.poll(url='git@otherplace.net/bla.git')
+        self.assertTrue(self.poller.vcs.set_remote.called)
 
     @async_test
     async def test_poll_already_polling(self):
