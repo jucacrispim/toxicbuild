@@ -44,6 +44,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
     async def _get_user_from_cookie(self):
         cookie = self.get_secure_cookie(settings.TOXICUI_COOKIE)
         if not cookie:
+            self.log('No cookie found.', level='debug')
             return
 
         user_dict = json.loads(base64.decodebytes(cookie).decode('utf-8'))

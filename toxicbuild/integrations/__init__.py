@@ -194,6 +194,14 @@ def stop(workdir, pidfile=PIDFILE):
                                                       'toxicintegrations.conf')
         os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicintegrations'
 
+        os.environ['TOXICMASTER_SETTINGS'] = os.environ[
+            'TOXICINTEGRATION_SETTINGS']
+
+        from toxicbuild.master import (create_settings_and_connect,
+                                       create_scheduler)
+
+        create_settings_and_connect()
+        create_scheduler()
         create_settings()
 
         sys.argv = ['pyromanager.py', '']
