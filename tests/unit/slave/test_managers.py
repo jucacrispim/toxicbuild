@@ -212,10 +212,12 @@ class BuilderManagerTest(TestCase):
     def test_update_and_checkout_with_clone(self):
         self.manager.vcs.workdir_exists.return_value = False
         self.manager.vcs.checkout = MagicMock()
+        self.manager.vcs.try_set_remote = AsyncMagicMock()
         yield from self.manager.update_and_checkout()
 
         self.assertTrue(self.manager.vcs.clone.called)
         self.assertTrue(self.manager.vcs.checkout.called)
+        self.assertTrue(self.manager.vcs.try_set_remote.called)
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
     @patch.object(managers.BuildManager, 'wait_all', MagicMock())

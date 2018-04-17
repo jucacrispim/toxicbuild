@@ -158,6 +158,9 @@ class BuildManager(LoggerMixin):
                 self.log('cloning {}'.format(self.repo_url))
                 yield from self.vcs.clone(self.repo_url)
 
+            # we need to try_set_remote so if the url has changed, we
+            # change it before trying fetch/checkout stuff
+            yield from self.vcs.try_set_remote(self.repo_url)
             # first we try to checkout to the named_tree because if if
             # already exists here we don't need to update the code.
             try:
