@@ -63,7 +63,7 @@ setup(name='toxicbuild',
               'toxicmaster=toxicbuild.master:main',
               'toxicslave=toxicbuild.slave:main',
               'toxicweb=toxicbuild.ui:main',
-              'toxicintegrations=toxicbuild.master.integrations:main']
+              'toxicintegrations=toxicbuild.integrations:main']
       },
       test_suite='tests',
       provides=['toxicbuild'],)
