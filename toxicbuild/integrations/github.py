@@ -184,7 +184,10 @@ class GithubInstallation(LoggerMixin, Document):
         repo_id = self.repositories[github_repo_id]
         repo = await Repository.get(id=repo_id)
         url = await self._get_auth_url(repo.url)
-        await repo.update_code(url)
+        if repo.fetch_url != url:
+            repo.fetch_url = url
+            await repo.save()
+        await repo.update_code()
 
     @property
     def auth_token_url(self):

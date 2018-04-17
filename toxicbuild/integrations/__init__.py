@@ -68,35 +68,35 @@ def create(root_dir):
     shutil.copyfile(template_file, dest_file)
 
 
-@command
-def create_github_app(workdir):
-    """Creates a new :class:`~toxicbuild.integrations.github.GithubApp`.
+# @command
+# def create_github_app(workdir):
+#     """Creates a new :class:`~toxicbuild.integrations.github.GithubApp`.
 
-    To create a new app you must have a GITHUB_APP_ID in your settings file.
+#     To create a new app you must have a GITHUB_APP_ID in your settings file.
 
-    :param workdir: Work directory for server."""
+#     :param workdir: Work directory for server."""
 
-    if not os.path.exists(workdir):
-        print('Workdir `{}` does not exist'.format(workdir))
-        sys.exit(1)
+#     if not os.path.exists(workdir):
+#         print('Workdir `{}` does not exist'.format(workdir))
+#         sys.exit(1)
 
-    workdir = os.path.abspath(workdir)
-    with changedir(workdir):
-        sys.path.append(workdir)
+#     workdir = os.path.abspath(workdir)
+#     with changedir(workdir):
+#         sys.path.append(workdir)
 
-        os.environ['TOXICINTEGRATION_SETTINGS'] = os.path.join(
-            workdir, 'toxicintegrations.conf')
-        os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicintegrations'
+#         os.environ['TOXICINTEGRATION_SETTINGS'] = os.path.join(
+#             workdir, 'toxicintegrations.conf')
+#         os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicintegrations'
 
-    from toxicbuild.integrations import (
-        create_settings, create_settings_and_connect)
-    loop = asyncio.get_event_loop()
-    create_settings()
-    loop.run_until_complete(create_settings_and_connect())
+#     from toxicbuild.integrations import (
+#         create_settings, create_settings_and_connect)
+#     loop = asyncio.get_event_loop()
+#     create_settings()
+#     loop.run_until_complete(create_settings_and_connect())
 
-    from toxicbuild.integrations.github import GithubApp
+#     from toxicbuild.integrations.github import GithubApp
 
-    loop.run_until_complete(GithubApp)
+#     loop.run_until_complete(GithubApp)
 
 
 @command

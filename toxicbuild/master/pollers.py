@@ -47,20 +47,9 @@ class Poller(LoggerMixin):
     def is_polling(self):
         return self._is_polling
 
-    async def poll(self, url=None):
+    async def poll(self):
         """ Check for changes on repository and if there are changes, notify
         about it.
-
-        :param url: An url to use as the repo url. If None, self.repository.url
-          will be used.
-
-        .. note::
-
-            This url param is basically used by external integrations. The
-            full url the integrations repository uses a token on it, and
-            when the token expires a new one is needed, changing the
-            url we need to use as the repo url. This is why the url param
-            exists here.
         """
 
         with_clone = False
@@ -71,7 +60,7 @@ class Poller(LoggerMixin):
                     self.repository.url), level='debug')
                 return
 
-            url = url or self.repository.url
+            url = self.repository.get_url()
             self.log('Polling with url {}'.format(url))
             self._is_polling = True
             self.log('Polling changes')
@@ -219,10 +208,9 @@ class PollerServer(LoggerMixin):
         repo_id = body['repo_id']
         repo = await Repository.get(id=repo_id)
         vcs_type = body['vcs_type']
-        url = body.get('url')
         poller = Poller(repo, vcs_type, repo.workdir)
         try:
-            with_clone = await poller.poll(url)
+            with_clone = await poller.poll()
             clone_status = 'ready'
         except Exception:
             tb = traceback.format_exc()

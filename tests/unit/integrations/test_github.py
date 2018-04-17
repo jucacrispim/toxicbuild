@@ -270,10 +270,28 @@ class GithubInstallationTest(TestCase):
     @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
         spec=repository.Repository.update_code))
     @patch.object(github.GithubInstallation, '_get_auth_url', AsyncMagicMock(
-        spec=github.GithubInstallation._get_auth_url))
+        spec=github.GithubInstallation._get_auth_url,
+        return_value='https://someurl.bla/bla.git'))
     @async_test
     async def test_update_repository(self):
         repo = repository.Repository(name='myrepo', url='git@bla.com/bla.git',
+                                     update_seconds=10, schedule_poller=False,
+                                     vcs_type='git',
+                                     owner=self.user)
+        await repo.save()
+        self.installation.repositories['1234'] = str(repo.id)
+        await self.installation.update_repository('1234')
+        self.assertTrue(repository.Repository.update_code.called)
+
+    @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
+        spec=repository.Repository.update_code))
+    @patch.object(github.GithubInstallation, '_get_auth_url', AsyncMagicMock(
+        spec=github.GithubInstallation._get_auth_url,
+        return_value='git@bla.com/bla.git'))
+    @async_test
+    async def test_update_repository_same_url(self):
+        repo = repository.Repository(name='myrepo', url='git@bla.com/bla.git',
+                                     fetch_url='git@bla.com/bla.git',
                                      update_seconds=10, schedule_poller=False,
                                      vcs_type='git',
                                      owner=self.user)

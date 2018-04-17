@@ -278,7 +278,8 @@ class GitPollerTest(TestCase):
             return_value=self.poller.repository.url)
         self.poller.vcs.set_remote = AsyncMagicMock(
             spec=self.poller.vcs.set_remote)
-        await self.poller.poll(url='git@otherplace.net/bla.git')
+        self.poller.repository.fetch_url = 'git@otherplace.net/bla.git'
+        await self.poller.poll()
         self.assertTrue(self.poller.vcs.set_remote.called)
 
     @async_test

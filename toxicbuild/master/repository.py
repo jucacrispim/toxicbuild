@@ -87,6 +87,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     name = StringField(required=True, unique=True)
     url = StringField(required=True, unique=True)
+    # A url used to actually fetch the code. If using some
+    # kind of authentication based in a url, this may change often.
+    fetch_url = StringField()
     update_seconds = IntField(default=300, required=True)
     vcs_type = StringField(required=True, default='git')
     branches = ListField(EmbeddedDocumentField(RepositoryBranch))
@@ -270,11 +273,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         repo = await super().get_for_user(user, **kwargs)
         return repo
 
-    async def update_code(self, url=None):
+    def get_url(self):
+        return self.fetch_url or self.url
+
+    async def update_code(self):
         """Requests a code update to a poller and waits for its response.
         This is done using ``update_code`` and ``poll_status`` exchanges.
-
-        :param url: An url to use as the remote url to update the code."""
+        """
 
         lock = await self.update_code_lock.try_acquire(routing_key=str(
             self.id))
@@ -283,12 +288,11 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             return
 
         async with lock:
-            url = url or self.url
+            url = self.get_url()
             self.log('Updating code with url {}.'.format(url), level='debug')
 
             msg = {'repo_id': str(self.id),
-                   'vcs_type': self.vcs_type,
-                   'url': url}
+                   'vcs_type': self.vcs_type}
 
             # Sends a message to the queue that is consumed by the pollers
             await update_code.publish(msg)

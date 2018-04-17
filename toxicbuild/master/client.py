@@ -69,7 +69,7 @@ class BuildClient(BaseToxicClient):
         slave = await build.slave
         data = {'action': 'build',
                 'token': slave.token,
-                'body': {'repo_url': repository.url,
+                'body': {'repo_url': repository.get_url(),
                          'vcs_type': repository.vcs_type,
                          'branch': build.branch,
                          'named_tree': build.named_tree,
