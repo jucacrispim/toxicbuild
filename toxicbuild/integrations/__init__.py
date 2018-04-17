@@ -190,6 +190,9 @@ def stop(workdir, pidfile=PIDFILE):
     with changedir(workdir):
         sys.path.append(workdir)
 
+        os.environ['TOXICINTEGRATION_SETTINGS'] = os.path.join(
+            workdir, 'toxicintegrations.conf')
+
         os.environ['TOXICUI_SETTINGS'] = os.path.join(workdir,
                                                       'toxicintegrations.conf')
         os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicintegrations'
