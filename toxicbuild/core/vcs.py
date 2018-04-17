@@ -84,6 +84,14 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
 
         :param remote_name: The name of the remote url to change."""
 
+    @abstractmethod
+    @asyncio.coroutine
+    def try_set_remote(self, url, remote_name):  # pragma no branch
+        """Sets the remote url if the remote is not equal as url.
+
+        :param url: The new url for the remote.
+        :param remote_name: The name of the remote url to change."""
+
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
     def checkout(self, named_tree):
@@ -170,6 +178,14 @@ class Git(VCS):
         cmd = cmd.format(self.vcsbin, remote_name, remote_name)
         remote = yield from self.exec_cmd(cmd, cwd='.')
         return remote
+
+    @asyncio.coroutine
+    def try_set_remote(self, url, remote_name='origin'):
+        current_remote = yield from self.get_remote(remote_name)
+        if current_remote != url:
+            self.log('Changing remote from {} to {}'.format(
+                current_remote, url), level='debug')
+            yield from self.set_remote(url, remote_name)
 
     @asyncio.coroutine
     def fetch(self):

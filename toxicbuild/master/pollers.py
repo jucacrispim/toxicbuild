@@ -76,11 +76,8 @@ class Poller(LoggerMixin):
                     raise CloneException(str(e))
 
             # here we change the remote url if needed.
-            current_remote = await self.vcs.get_remote()
-            if not with_clone and current_remote != url:
-                self.log('Setting remote from {} to {}'.format(current_remote,
-                                                               url))
-                await self.vcs.set_remote(url)
+            await self.vcs.try_set_remote(url)
+
             # for git.
             # remove no branch when hg is implemented
             if hasattr(self.vcs, 'update_submodule'):  # pragma no branch

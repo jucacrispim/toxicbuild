@@ -56,6 +56,7 @@ class GitPollerTest(TestCase):
         await self.repo.bootstrap()
         self.poller = pollers.Poller(
             self.repo, vcs_type='git', workdir='workdir')
+        self.poller.vcs.try_set_remote = AsyncMagicMock()
 
     @async_test
     def tearDown(self):
@@ -280,7 +281,7 @@ class GitPollerTest(TestCase):
             spec=self.poller.vcs.set_remote)
         self.poller.repository.fetch_url = 'git@otherplace.net/bla.git'
         await self.poller.poll()
-        self.assertTrue(self.poller.vcs.set_remote.called)
+        self.assertTrue(self.poller.vcs.try_set_remote.called)
 
     @async_test
     async def test_poll_already_polling(self):

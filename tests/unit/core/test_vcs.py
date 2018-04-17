@@ -44,6 +44,9 @@ class VCSTest(TestCase):
             def get_remote(self):
                 pass
 
+            def try_set_remote(self, url, remote_name):
+                pass
+
             def fetch(self):
                 pass
 
@@ -133,6 +136,26 @@ class GitTest(TestCase):
         yield from self.vcs.get_remote()
         called_cmd = vcs.exec_cmd.call_args[0][0]
         self.assertEqual(called_cmd, expected)
+
+    @mock.patch.object(vcs.Git, 'get_remote', AsyncMagicMock(
+        spec=vcs.Git.get_remote, return_value='git@bla.com/bla.git'))
+    @mock.patch.object(vcs.Git, 'set_remote', AsyncMagicMock(
+        spec=vcs.Git.set_remote))
+    @async_test
+    def test_try_set_remote_same_url(self):
+        url = 'git@bla.com/bla.git'
+        yield from self.vcs.try_set_remote(url)
+        self.assertFalse(self.vcs.set_remote.called)
+
+    @mock.patch.object(vcs.Git, 'get_remote', AsyncMagicMock(
+        spec=vcs.Git.get_remote, return_value='git@bla.com/bla.git'))
+    @mock.patch.object(vcs.Git, 'set_remote', AsyncMagicMock(
+        spec=vcs.Git.set_remote))
+    @async_test
+    def test_try_set_remote_other_url(self):
+        url = 'git@bla.com/other.git'
+        yield from self.vcs.try_set_remote(url)
+        self.assertTrue(self.vcs.set_remote.called)
 
     @async_test
     def test_fetch(self):
