@@ -98,6 +98,7 @@ class GithubApp(LoggerMixin, Document):
         with open(cls.private_key) as fd:
             pk = fd.read()
 
+        cls().log('creating jwt_token with payload {}'.format(payload))
         jwt_token = jwt.encode(payload, pk, "RS256")
         await cls.set_expire_time(dt_expires)
         await cls.set_jwt_token(jwt_token.decode())
