@@ -32,7 +32,8 @@ from tests.unit.integrations import INTEGRATIONS_DATA_PATH
 class GitHubAppTest(TestCase):
 
     def setUp(self):
-        self.now = int(github.now().timestamp())
+        self.dt_now = github.now()
+        self.now = int(self.dt_now.timestamp())
 
     @async_test
     async def tearDown(self):
@@ -41,13 +42,13 @@ class GitHubAppTest(TestCase):
 
     @patch.object(github.jwt, 'encode', Mock(spec=github.jwt.encode,
                                              return_value=b'retval'))
-    @patch.object(github.time, 'time', Mock(spec=github.time.time))
+    @patch.object(github, 'now', Mock(spec=github.now))
     @patch.object(github.GithubApp, 'private_key', 'some/path/to/pk')
     @patch.object(github, 'open', MagicMock())
     @patch.object(github.GithubApp, 'app_id', 1234)
     @async_test
     async def test_create_jwt(self):
-        github.time.time.return_value = self.now
+        github.now.return_value = self.dt_now
         read = github.open.return_value.__enter__.return_value.read
         read.return_value = 'secret-key'
         expected_payload = {'iat': self.now, 'exp': self.now + (10 * 60),

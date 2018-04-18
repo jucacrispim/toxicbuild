@@ -19,7 +19,6 @@
 
 from asyncio import ensure_future, gather
 from datetime import timedelta
-import time
 import jwt
 from mongomotor import Document
 from mongomotor.fields import (StringField, DateTimeField, IntField,
@@ -89,8 +88,9 @@ class GithubApp(LoggerMixin, Document):
     @classmethod
     async def _create_jwt(cls):
         exp_time = 10 * 60
-        dt_expires = localtime2utc(now() + timedelta(seconds=exp_time))
-        ts_now = int(localtime2utc(now()).timestamp())
+        n = now()
+        dt_expires = localtime2utc(n + timedelta(seconds=exp_time))
+        ts_now = int(localtime2utc(n).timestamp())
         payload = {'iat': ts_now,
                    'exp': ts_now + exp_time,
                    'iss': cls.app_id}
@@ -98,7 +98,8 @@ class GithubApp(LoggerMixin, Document):
         with open(cls.private_key) as fd:
             pk = fd.read()
 
-        cls().log('creating jwt_token with payload {}'.format(payload))
+        cls().log('creating jwt_token with payload {}'.format(payload),
+                  level='debug')
         jwt_token = jwt.encode(payload, pk, "RS256")
         await cls.set_expire_time(dt_expires)
         await cls.set_jwt_token(jwt_token.decode())
