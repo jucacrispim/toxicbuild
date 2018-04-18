@@ -90,7 +90,7 @@ class GithubApp(LoggerMixin, Document):
     async def _create_jwt(cls):
         exp_time = 10 * 60
         dt_expires = localtime2utc(now() + timedelta(seconds=exp_time))
-        ts_now = int(time.time())
+        ts_now = int(now().timestamp())
         payload = {'iat': ts_now,
                    'exp': ts_now + exp_time,
                    'iss': cls.app_id}

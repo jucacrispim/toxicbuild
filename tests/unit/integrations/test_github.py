@@ -21,7 +21,6 @@ import asyncio
 import datetime
 import json
 import os
-import time
 from unittest import TestCase
 from unittest.mock import Mock, patch, MagicMock
 from toxicbuild.master import repository
@@ -33,7 +32,7 @@ from tests.unit.integrations import INTEGRATIONS_DATA_PATH
 class GitHubAppTest(TestCase):
 
     def setUp(self):
-        self.now = int(time.time())
+        self.now = int(github.now().timestamp())
 
     @async_test
     async def tearDown(self):
