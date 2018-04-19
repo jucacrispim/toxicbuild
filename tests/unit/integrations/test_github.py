@@ -252,7 +252,8 @@ class GithubInstallationTest(TestCase):
     @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.Repository, '_notify_repo_creation',
                   AsyncMagicMock())
-    @patch.object(repository.Repository, 'update_code', AsyncMagicMock())
+    @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
+        spec=repository.Repository.update_code))
     @patch.object(repository, 'repo_added', AsyncMagicMock())
     @patch.object(github.GithubApp, 'create_installation_token',
                   AsyncMagicMock())

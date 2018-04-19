@@ -87,7 +87,7 @@ class GithubApp(LoggerMixin, Document):
 
     @classmethod
     async def _create_jwt(cls):
-        exp_time = 10 * 60
+        exp_time = 10 * 59
         n = now()
         dt_expires = localtime2utc(n + timedelta(seconds=exp_time))
         ts_now = int(localtime2utc(n).timestamp())
@@ -234,17 +234,18 @@ class GithubInstallation(LoggerMixin, Document):
         # What triggers an update code is a message from github in the
         # webhook receiver.
         user = await self.user
+        fetch_url = await self._get_auth_url(repo_info['clone_url'])
         repo = await Repository.create(name=repo_info['name'],
                                        url=repo_info['clone_url'],
                                        owner=user,
+                                       fetch_url=fetch_url,
                                        update_seconds=0,
                                        vcs_type='git',
                                        schedule_poller=False,
                                        parallel_builds=1,
                                        branches=branches,
                                        slaves=slaves)
-        url = await self._get_auth_url(repo.url)
-        await repo.update_code(url=url)
+        await repo.update_code()
         self.repositories[repo_info['id']] = str(repo.id)
         return repo
 
