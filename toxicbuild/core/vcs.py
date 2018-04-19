@@ -169,14 +169,14 @@ class Git(VCS):
     @asyncio.coroutine
     def set_remote(self, url, remote_name='origin'):
         cmd = '{} remote set-url {} {}'.format(self.vcsbin, remote_name, url)
-        yield from self.exec_cmd(cmd, cwd='.')
+        yield from self.exec_cmd(cmd)
 
     @asyncio.coroutine
     def get_remote(self, remote_name='origin'):
         cmd = '{} remote -v | grep -m1 {} | sed -e \'s/{}\s*//g\' '
         cmd += '-e \'s/(.*)//g\''
         cmd = cmd.format(self.vcsbin, remote_name, remote_name)
-        remote = yield from self.exec_cmd(cmd, cwd='.')
+        remote = yield from self.exec_cmd(cmd)
         return remote
 
     @asyncio.coroutine
