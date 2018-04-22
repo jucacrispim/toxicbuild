@@ -49,8 +49,8 @@ class Lock(LoggerMixin):
         return self
 
     async def __aexit__(self, exc, exc_type, exc_tb):
-        await self.consumer.__aexit__(exc, exc_type, exc_tb)
         await self.reject()
+        await self.consumer.__aexit__(exc, exc_type, exc_tb)
 
     async def reject(self):
         await self.consumer.channel.basic_reject(

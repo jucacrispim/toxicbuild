@@ -97,7 +97,8 @@ class ExchangeTest(TestCase):
         self.assertEqual(messages_on_queue, 1)
         consumer = await self.exchange.consume(timeout=100)
         async with consumer:
-            await consumer.fetch_message()
+            msg = await consumer.fetch_message()
+            await msg.acknowledge()
 
         messages_on_queue = await self.exchange.get_queue_size()
         self.assertEqual(messages_on_queue, 0)
@@ -178,10 +179,14 @@ class ExchangeTest(TestCase):
         await asyncio.sleep(0.1)
         messages_on_queue = await self.exchange.get_queue_size()
         self.assertEqual(messages_on_queue, 2)
-        consumer = await self.exchange.consume(wait_message=False)
+        consumer = await self.exchange.consume(timeout=100)
         async with consumer:
-            async for message in consumer:
+            n = 0
+            while n < 2:
+                n += 1
+                message = await consumer.fetch_message()
                 self.assertEqual(message.body, msg)
+                await message.acknowledge()
 
         messages_on_queue = await self.exchange.get_queue_size()
         self.assertEqual(messages_on_queue, 0)

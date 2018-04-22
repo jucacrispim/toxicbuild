@@ -34,6 +34,14 @@ class JsonAckMessage(asyncamqp.consumer.Message):
             delivery_tag=self.envelope.delivery_tag)
 
 
+class Consumer(asyncamqp.consumer.Consumer, LoggerMixin):
+
+    async def __aexit__(self, *args, **kwargs):
+        await super().__aexit__(*args, **kwargs)
+        await self.channel.close()
+
+
+asyncamqp.channel.Channel.CONSUMER_CLASS = Consumer
 asyncamqp.consumer.Consumer.MESSAGE_CLASS = JsonAckMessage
 
 
@@ -118,7 +126,7 @@ class Exchange(LoggerMixin):
             await self.connection.connect()
 
         # a default channel, mainly for tests
-        self.channel = await self.connection.protocol.channel()
+        # self.channel = await self.connection.protocol.channel()
         # but we use a new channel everytime to avoid waiter already
         # exists stuff.
         channel = await self.connection.protocol.channel()
@@ -132,6 +140,8 @@ class Exchange(LoggerMixin):
         if not self.is_declared(queue_name) and \
            not self.exclusive_consumer_queue:
             await self._declare_queue(queue_name, channel)
+
+        await channel.close()
 
     async def _declare_queue(self, queue_name, channel):
 
@@ -189,20 +199,23 @@ class Exchange(LoggerMixin):
         :param routing_key: The routing key to pdublish the message."""
 
         channel = await self.connection.protocol.channel()
-        if self.bind_publisher:
-            await self.bind(routing_key, channel=channel)
+        try:
+            if self.bind_publisher:
+                await self.bind(routing_key, channel=channel)
 
-        message = json.dumps(message)
+            message = json.dumps(message)
 
-        properties = {}
+            properties = {}
 
-        if self.durable:
-            properties['delivery_mode'] = 2
+            if self.durable:
+                properties['delivery_mode'] = 2
 
-        kw = {'payload': message, 'exchange_name': self.name,
-              'properties': properties, 'routing_key': routing_key}
+            kw = {'payload': message, 'exchange_name': self.name,
+                  'properties': properties, 'routing_key': routing_key}
 
-        await channel.publish(**kw)
+            await channel.publish(**kw)
+        finally:
+            await channel.close()
 
     async def consume(self, wait_message=True, timeout=0,
                       routing_key='', no_ack=False):
@@ -237,9 +250,14 @@ class Exchange(LoggerMixin):
         if not queue_name:
             queue_name = self.queue_name
 
-        info = await self.channel.queue_declare(queue_name,
-                                                durable=self.durable,
-                                                passive=True,
-                                                exclusive=False,
-                                                auto_delete=False)
+        channel = await self.connection.protocol.channel()
+        try:
+            info = await channel.queue_declare(queue_name,
+                                               durable=self.durable,
+                                               passive=True,
+                                               exclusive=False,
+                                               auto_delete=False)
+        finally:
+            await channel.close()
+
         return int(info['message_count'])

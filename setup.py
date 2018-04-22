@@ -45,7 +45,7 @@ setup(name='toxicbuild',
                         'asyncblink>=0.1.1', 'mando>=0.3.2',
                         'pyrocumulus>=0.9.2', 'pytz==2014.10',
                         'aiohttp>=1.0.5', 'aiosmtplib>=1.0.2',
-                        'asyncamqp>=0.1.3'],
+                        'asyncamqp>=0.1.4'],
       classifiers=[
           'Development Status :: 3 - Alpha',
           'Environment :: No Input/Output (Daemon)',

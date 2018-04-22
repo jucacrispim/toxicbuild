@@ -51,7 +51,7 @@ class GitHubAppTest(TestCase):
         github.now.return_value = self.dt_now
         read = github.open.return_value.__enter__.return_value.read
         read.return_value = 'secret-key'
-        expected_payload = {'iat': self.now, 'exp': self.now + (10 * 60),
+        expected_payload = {'iat': self.now, 'exp': self.now + (10 * 59),
                             'iss': 1234}
         await github.GithubApp._create_jwt()
         expected = (expected_payload, 'secret-key', 'RS256')
