@@ -72,7 +72,8 @@ class ExchangeTest(TestCase):
     @async_test
     async def tearDownClass(cls):
         try:
-            await cls.exchange.channel.exchange_delete(cls.exchange.name)
+            channel = await cls.exchange.connection.protocol.channel()
+            await channel.exchange_delete(cls.exchange.name)
         except ChannelClosed as e:
             pass
         await cls.exchange.connection.disconnect()
@@ -80,7 +81,8 @@ class ExchangeTest(TestCase):
     @async_test
     async def tearDown(self):
         try:
-            await self.exchange.channel.queue_delete(self.exchange.queue_name)
+            channel = await self.exchange.connection.protocol.channel()
+            await channel.queue_delete(self.exchange.queue_name)
         except ChannelClosed as e:
             pass
 
@@ -146,8 +148,9 @@ class ExchangeTest(TestCase):
                                                 'direct', bind_publisher=False)
         await type(self).exchange.declare()
 
-        await self.exchange.channel.exchange_delete(self.exchange.name)
-        await self.exchange.channel.queue_delete(self.exchange.queue_name)
+        channel = await self.exchange.connection.protocol.channel()
+        await channel.exchange_delete(self.exchange.name)
+        await channel.queue_delete(self.exchange.queue_name)
         try:
             self.exchange.durable = True
             old_pchannel = self.exchange.connection.protocol.channel
@@ -161,10 +164,11 @@ class ExchangeTest(TestCase):
         finally:
             self.exchange.channel = old_channel
             self.exchange.connection.protocol.channel = old_pchannel
-            await self.exchange.channel.exchange_delete(self.exchange.name)
-            await self.exchange.channel.queue_delete(self.exchange.queue_name)
+            await channel.exchange_delete(self.exchange.name)
+            await channel.queue_delete(self.exchange.queue_name)
             self.exchange.durable = False
             await self.exchange.declare()
+            await channel.close()
 
     @async_test
     async def test_sequencial_messages(self):
@@ -197,7 +201,9 @@ class ExchangeTest(TestCase):
                                                 'direct', bind_publisher=True)
         await type(self).exchange.declare(self.exchange.queue_name)
 
-        self.exchange.channel.queue_unbind = AsyncMagicMock()
+        channel = Mock()
+        channel.queue_unbind = AsyncMagicMock()
+        channel.close = AsyncMagicMock()
         self.exchange._bound_rt.add('routing-key')
-        await self.exchange.unbind('routing-key')
-        self.assertTrue(self.exchange.channel.queue_unbind.called)
+        await self.exchange.unbind('routing-key', channel)
+        self.assertTrue(channel.queue_unbind.called)

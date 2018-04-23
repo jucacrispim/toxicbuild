@@ -38,7 +38,8 @@ class GitPollerTest(TestCase):
     @classmethod
     @async_test
     async def tearDownClass(cls):
-        await pollers.revisions_added.channel.queue_delete(
+        channel = await pollers.revisions_added.connection.protocol.channel()
+        await channel.queue_delete(
             'toxicmaster.revisions_added_queue')
         await disconnect_exchanges()
 
@@ -61,9 +62,11 @@ class GitPollerTest(TestCase):
     @async_test
     def tearDown(self):
         yield from self.repo._delete_locks()
-        yield from repository.scheduler_action.channel.queue_delete(
+        channel = yield from repository.\
+            scheduler_action.connection.protocol.channel()
+        yield from channel.queue_delete(
             repository.scheduler_action.queue_name)
-        yield from repository.update_code.channel.queue_delete(
+        yield from channel.queue_delete(
             repository.update_code.queue_name)
         yield from repository.RepositoryRevision.drop_collection()
         yield from repository.Repository.drop_collection()
@@ -322,11 +325,12 @@ class PollerServerTest(TestCase):
     @classmethod
     @async_test
     async def tearDownClass(cls):
-        await pollers.update_code.channel.queue_delete(
+        channel = await pollers.update_code.connection.protocol.channel()
+        await channel.queue_delete(
             'toxicmaster.update_code_queue')
-        await pollers.revisions_added.channel.queue_delete(
+        await channel.queue_delete(
             'toxicmaster.revisions_added_queue')
-        await repository.scheduler_action.channel.queue_delete(
+        await channel.queue_delete(
             'toxicmaster.scheduler_action_queue')
         await disconnect_exchanges()
 

@@ -488,6 +488,7 @@ class ToxicCliTest(unittest.TestCase):
         with self.assertRaises(cli.urwid.ExitMainLoop):
             self.cli.quit()
 
+    @async_test
     def test_keypress_with_enter(self):
         self.cli.input.set_edit_text('repo-list')
 
@@ -499,19 +500,12 @@ class ToxicCliTest(unittest.TestCase):
 
         self.cli.execute_and_show = exec_and_show
 
-        self.cli.keypress((10, 10), 'enter')
-
-        loop = asyncio.get_event_loop()
-        try:
-            loop.run_until_complete(
-                asyncio.gather(*asyncio.Task.all_tasks()))
-
-        except concurrent.futures._base.CancelledError:
-            pass
+        f = self.cli.keypress((10, 10), 'enter')
+        yield from f
 
         self.assertEqual(self.cmdline, 'repo-list')
 
-    def test_keypree_with_enter_and_no_data(self):
+    def test_keypress_with_enter_and_no_data(self):
         self.cli.input.set_edit_text('')
 
         self.cmdline = None
@@ -522,15 +516,9 @@ class ToxicCliTest(unittest.TestCase):
 
         self.cli.execute_and_show = exec_and_show
 
-        self.cli.keypress((10, 10), 'enter')
+        f = self.cli.keypress((10, 10), 'enter')
 
-        loop = asyncio.get_event_loop()
-        try:
-            loop.run_until_complete(
-                asyncio.gather(*asyncio.Task.all_tasks()))
-        except concurrent.futures._base.CancelledError:
-            pass
-
+        self.assertIsNone(f)
         self.assertEqual(self.cmdline, None)
 
     def test_key_press(self):
@@ -544,14 +532,8 @@ class ToxicCliTest(unittest.TestCase):
 
         self.cli.execute_and_show = exec_and_show
 
-        self.cli.keypress((10, 10), ' ')
-
-        try:
-            self.loop.run_until_complete(
-                asyncio.gather(*asyncio.Task.all_tasks()))
-        except concurrent.futures._base.CancelledError:
-            pass
-
+        f = self.cli.keypress((10, 10), ' ')
+        self.assertIsNone(f)
         self.assertEqual(self.cmdline, None)
 
     def test_execute_and_show_with_exception(self):

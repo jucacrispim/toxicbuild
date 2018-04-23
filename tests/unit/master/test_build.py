@@ -335,8 +335,10 @@ class BuildManagerTest(TestCase):
     @async_test
     async def tearDown(self):
         if hasattr(self, 'repo') and self.repo.toxicbuild_conf_lock:
+            channel = await self.repo.toxicbuild_conf_lock.\
+                connection.protocol.channel()
             lock_name = self.repo.toxicbuild_conf_lock.queue_name
-            await self.repo.toxicbuild_conf_lock.channel.queue_delete(
+            await channel.queue_delete(
                 lock_name)
             await self.repo.toxicbuild_conf_lock.connection.disconnect()
             repository.toxicbuild_conf_mutex._declared_queues = set()
@@ -421,9 +423,11 @@ class BuildManagerTest(TestCase):
             lambda *a, **kw: checkout())
         builders = await self.manager.get_builders(self.slave,
                                                    self.revision)
-        await self.repo.toxicbuild_conf_lock.channel.queue_delete(
+        channel = await self.repo.\
+            toxicbuild_conf_lock.connection.protocol.channel()
+        await channel.queue_delete(
             self.repo.toxicbuild_conf_lock.queue_name)
-        await self.repo.update_code_lock.channel.queue_delete(
+        await channel.queue_delete(
             self.repo.update_code_lock.queue_name)
 
         for b in builders:
@@ -450,7 +454,9 @@ class BuildManagerTest(TestCase):
 
         builders = await self.manager.get_builders(self.slave,
                                                    self.revision)
-        await self.repo.update_code_lock.channel.queue_delete(
+        channel = await self.repo.\
+            update_code_lock.connection.protocol.channel()
+        await channel.queue_delete(
             self.repo.update_code_lock.queue_name)
 
         self.assertFalse(builders)

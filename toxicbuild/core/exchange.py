@@ -130,7 +130,7 @@ class Exchange(LoggerMixin):
         # but we use a new channel everytime to avoid waiter already
         # exists stuff.
         channel = await self.connection.protocol.channel()
-        self.channel = await self.connection.protocol.channel()
+        # self.channel = await self.connection.protocol.channel()
         if not queue_name:
             queue_name = self.queue_name
 
@@ -170,8 +170,10 @@ class Exchange(LoggerMixin):
         if not queue_name:
             queue_name = self.queue_name
 
+        local_channel = False
         if not channel:
-            channel = self.channel
+            channel = await self.connection.protocol.channel()
+            local_channel = True
 
         if not self.is_declared(queue_name):
             await self._declare_queue(queue_name, channel)
@@ -181,14 +183,20 @@ class Exchange(LoggerMixin):
                                      routing_key=routing_key)
 
         self._bound_rt.add(routing_key)
+        if local_channel:
+            await channel.close()
         return r
 
-    async def unbind(self, routing_key):
-        r = await self.channel.queue_unbind(exchange_name=self.name,
-                                            queue_name=self.queue_name,
-                                            routing_key=routing_key)
+    async def unbind(self, routing_key, channel=None):
+        channel = channel or await self.connection.protocol.channel()
+        try:
+            r = await channel.queue_unbind(exchange_name=self.name,
+                                           queue_name=self.queue_name,
+                                           routing_key=routing_key)
 
-        self._bound_rt.remove(routing_key)
+            self._bound_rt.remove(routing_key)
+        finally:
+            await channel.close()
         return r
 
     async def publish(self, message, routing_key=''):
