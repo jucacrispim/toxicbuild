@@ -183,7 +183,7 @@ class GithubInstallation(LoggerMixin, Document):
         :param github_repo_id: The id of the repository on github.
         """
 
-        repo_id = self.repositories[github_repo_id]
+        repo_id = self.repositories[str(github_repo_id)]
         repo = await Repository.get(id=repo_id)
         url = await self._get_auth_url(repo.url)
         if repo.fetch_url != url:
