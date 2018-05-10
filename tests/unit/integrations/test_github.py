@@ -267,6 +267,9 @@ class GithubInstallationTest(TestCase):
         repo = await self.installation.import_repository(repo_info)
         self.assertTrue(repo.id)
         self.assertTrue(repo.update_code.called)
+        install = await type(self.installation).objects.get(
+            id=self.installation.id)
+        self.assertTrue(install.repositories)
 
     @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
         spec=repository.Repository.update_code))

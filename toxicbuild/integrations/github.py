@@ -246,7 +246,8 @@ class GithubInstallation(LoggerMixin, Document):
                                        branches=branches,
                                        slaves=slaves)
         await repo.update_code()
-        self.repositories[repo_info['id']] = str(repo.id)
+        self.repositories[str(repo_info['id'])] = str(repo.id)
+        await self.save()
         return repo
 
     async def _get_header(self):

@@ -20,7 +20,6 @@
 import asyncio
 from unittest import TestCase
 import mongomotor
-from mongomotor.queryset import _delete_futures
 from toxicbuild.master import users
 from tests import async_test
 
@@ -102,7 +101,6 @@ class OrganizationTest(TestCase):
         org = users.Organization(name='org', owner=owner)
         await org.save()
         await org.delete()
-        await asyncio.gather(*_delete_futures)
         await owner.reload()
         orgs = await owner.organizations
         self.assertFalse(orgs)
@@ -141,7 +139,6 @@ class UserTest(TestCase):
         await owner.save()
         org = users.Organization(name='org', owner=owner)
         await org.save()
-        await asyncio.gather(*_delete_futures)
         await owner.delete()
         orgs = await users.Organization.objects.count()
         self.assertEqual(orgs, 0)
