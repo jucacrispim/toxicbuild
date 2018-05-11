@@ -134,6 +134,14 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         r = self.webhook_receiver._check_event_type()
         self.assertEqual(r, 'ping')
 
+    def test_check_event_with_action(self):
+        self.webhook_receiver.request.headers = {
+            'X-GitHub-Event': 'repository'}
+        self.webhook_receiver.prepare()
+        self.webhook_receiver.body = {'action': 'created'}
+        r = self.webhook_receiver._check_event_type()
+        self.assertEqual(r, 'repository-created')
+
     @patch.object(webhook_receivers.LoggerMixin, 'log', Mock())
     def test_check_event_type_None(self):
         self.webhook_receiver.request.headers = {'X-GitHub-Event': None}
@@ -161,6 +169,28 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         await self.webhook_receiver._handle_push()
         install = webhook_receivers.GithubInstallation.objects.get.return_value
         self.assertTrue(install.update_repository.called)
+
+    @patch.object(webhook_receivers.GithubInstallation, 'objects',
+                  AsyncMagicMock())
+    @async_test
+    async def test_handle_install_repo_added(self):
+        body = {'installation': {'id': '123'},
+                'repositories_added': [{}]}
+        self.webhook_receiver.body = body
+        await self.webhook_receiver._handle_install_repo_added()
+        install = webhook_receivers.GithubInstallation.objects.get.return_value
+        self.assertTrue(install.import_repository.called)
+
+    @patch.object(webhook_receivers.GithubInstallation, 'objects',
+                  AsyncMagicMock())
+    @async_test
+    async def test_handle_install_repo_removed(self):
+        body = {'installation': {'id': '123'},
+                'repositories_removed': [{'id': '4321'}]}
+        self.webhook_receiver.body = body
+        await self.webhook_receiver._handle_install_repo_removed()
+        install = webhook_receivers.GithubInstallation.objects.get.return_value
+        self.assertTrue(install.remove_repository.called)
 
     @patch.object(webhook_receivers.LoggerMixin, 'log', Mock())
     @async_test

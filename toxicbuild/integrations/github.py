@@ -250,6 +250,14 @@ class GithubInstallation(LoggerMixin, Document):
         await self.save()
         return repo
 
+    async def remove_repository(self, github_repo_id):
+        """Removes a repository from the system.
+
+        :param github_repo_id: The id of the repository in github."""
+
+        repo = await Repository.get(id=self.repositories[github_repo_id])
+        await repo.remove()
+
     async def _get_header(self):
         if not self.auth_token or self.token_is_expired:
             await self.app.create_installation_token(self)

@@ -39,7 +39,8 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         self.event_type = None
         self.body = None
         self.events = {'ping': self._handle_ping,
-                       'push': self._handle_push}
+                       'push': self._handle_push,
+                       'repository-create': self._handle_install_repo_added}
 
     async def _get_user_from_cookie(self):
         cookie = self.get_secure_cookie(settings.TOXICUI_COOKIE)
@@ -89,6 +90,18 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         ensure_future(install.update_repository(repo_github_id))
         return 'updating repo'
 
+    async def _handle_install_repo_added(self):
+        install_id = self.body['installation']['id']
+        install = await GithubInstallation.objects.get(github_id=install_id)
+        for repo_info in self.body['repositories_added']:
+            ensure_future(install.import_repository(repo_info))
+
+    async def _handle_install_repo_removed(self):
+        install_id = self.body['installation']['id']
+        install = await GithubInstallation.objects.get(github_id=install_id)
+        for repo_info in self.body['repositories_removed']:
+            ensure_future(install.remove_repository(repo_info['id']))
+
     @post('webhooks')
     async def receive_webhook(self):
 
@@ -110,6 +123,9 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             msg = 'No event type\n{}'.format(self.body)
             self.log(msg, level='warning')
 
+        action = self.body.get('action')
+        if action:
+            event_type = '{}-{}'.format(event_type, action)
         return event_type
 
 
