@@ -110,7 +110,6 @@ async def poller_server_init():
     """Starts a poller server."""
 
     create_settings_and_connect()
-
     from toxicbuild.master.exchanges import connect_exchanges
 
     await connect_exchanges()

@@ -221,7 +221,7 @@ class Build(EmbeddedDocument):
         """Does an atomic update in this embedded document."""
 
         result = await BuildSet.objects(
-            builds__uuid=self.uuid).update_one(set__builds__S=self)
+            builds__uuid=self.uuid).update(set__builds__S=self)
 
         if not result:
             msg = 'This EmbeddedDocument was not save to database.'
@@ -244,6 +244,17 @@ class Build(EmbeddedDocument):
             output.append(step.output)
 
         return ''.join(output)
+
+    @classmethod
+    async def get(cls, uuid):
+        """Returns a build based on a uuid.
+
+        :param uuid: The uuid of the build."""
+
+        buildset = await BuildSet.objects.get(builds__uuid=uuid)
+        for build in buildset.builds:  # pragma no branch
+            if str(build.uuid) == uuid:  # pragma no branch
+                return build
 
 
 class BuildSet(SerializeMixin, Document):

@@ -51,6 +51,8 @@ core_exchanges = create_exchanges(conn)
 repo_status_changed = core_exchanges['repo_status_changed']
 repo_added = core_exchanges['repo_added']
 ui_notifications = core_exchanges['ui_notifications']
+repo_notifications = core_exchanges['repo_notifications']
+build_notifications = core_exchanges['build_notifications']
 
 
 async def connect_exchanges():

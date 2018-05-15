@@ -68,7 +68,7 @@ class SlaveTest(BaseUITest):
                                               'test-slave-list', 'localhost',
                                               123, '123', self.user)
             slave_list = yield from Slave.list(self.user)
-            self.assertEqual(len(slave_list), 1)
+            self.assertEqual(len(slave_list), 1, slave_list)
         finally:
             yield from self.slave.delete()
 
@@ -130,7 +130,7 @@ class RepositoryTest(BaseUITest):
             update_seconds=200)
 
         repo_list = yield from Repository.list(self.user)
-        self.assertEqual(len(repo_list), 1)
+        self.assertEqual(len(repo_list), 1, repo_list)
 
     @async_test
     def test_update(self):

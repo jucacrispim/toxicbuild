@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 """This module implements plugins meant to be used in reaction
-to some signal sent by the master in the build process.
+to some notification sent by the master, usually in the build process.
 
 To implement your own plugins you must to subclass
-:class:`toxicbuild.master.plugins.MasterPlugin` and implement a run() method.
+:class:`toxicbuild.master.plugins.MasterPlugin` and implement a ``run``
+method.
 
-The class :class:`toxicbuild.master.plugins.MasterPlugin` is a mongomotor's
+The class :class:`~toxicbuild.master.plugins.MasterPlugin` is a mongomotor's
 document that you can subclass and create your own fields to store the
 plugin's config params. It already has the following fields:
 
-- repository: A reference field to a
-  :class:`toxicbuild.master.repository.Repository`
 - branches: A list of branch names that triggers the plugin.
 - statuses: A list of statuses that triggers the plugin.
 
@@ -30,15 +29,19 @@ Example:
         # optionally you may define pretty_name and description
         pretty_name = "My Plugin"
         description = "A very cool plugin"
+
         something_to_store_on_database = PrettyStringField()
 
-        async def run(self, sender):
-            '''Here is where you implement your stuff. Sender is a
-               repository instance.'''
+        async def run(self, sender, info):
+            '''Here is where you implement your stuff.
+
+            :param sender: A repository instance.
+            :param info: A dictionary with some information for the
+              plugin to handle.'''
 
 """
 
-# Copyright 2016, 2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -67,6 +70,7 @@ from mongomotor.fields import (StringField, URLField, ListField, UUIDField,
 from toxicbuild.core import requests
 from toxicbuild.core.plugins import Plugin, PluginMeta
 from toxicbuild.core.utils import datetime2string, LoggerMixin
+from toxicbuild.master.build import Build
 from toxicbuild.master.mail import MailSender
 from toxicbuild.master.signals import build_started, build_finished
 
@@ -123,6 +127,8 @@ class MetaMasterPlugin(PluginMeta, DocumentMetaclass):
             'description'))
 
         new_cls = super().__new__(cls, name, bases, attrs)
+        if getattr(new_cls, 'events', None) is None:
+            setattr(new_cls, 'events', [])
         return new_cls
 
 
@@ -197,6 +203,25 @@ class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
             fields = cls._translate_schema(fields)
         return fields
 
+    @classmethod
+    def list_for_event_type(cls, event_type, no_events=False):
+        """Lists the plugins that react for a given event.
+
+        :param event_type. The event type to match against.
+        :param no_events: Indicates if the plugins with no events
+          should be listed. That may be used to make plugins without events
+          react to all events.
+        """
+
+        plugins = []
+        for plugin in cls.__subclasses__():
+            plugins += plugin.list_for_event_type(event_type=event_type,
+                                                  no_events=no_events)
+
+        return plugins + [p for p in cls.__subclasses__()
+                          if not p.no_list and event_type in p.events or
+                          (no_events and not p.events)]
+
     def to_dict(self):
         schema = type(self).get_schema()
         objdict = {k: getattr(self, k) for k in schema.keys()}
@@ -205,7 +230,7 @@ class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
         objdict['repository'] = str(self._instance.id)
         return objdict
 
-    async def run(self, sender):
+    async def run(self, sender, info):
         """Runs the plugin. You must implement this in your plugin."""
 
         msg = 'You must implement a run() method in your plugin'
@@ -222,6 +247,7 @@ class NotificationPlugin(MasterPlugin):
     pretty_name = ''
     description = 'Base plugin for notifications'
     type = 'notification'
+    events = ['build-started', 'build-finished']
 
     branches = PrettyListField(StringField(), pretty_name="Branches")
     # statuses that trigger the plugin
@@ -231,32 +257,48 @@ class NotificationPlugin(MasterPlugin):
     no_list = True
     sender = None
 
-    async def run(self, sender):
+    async def run(self, sender, info):
+        """Executed when a notification about a build arrives. Reacts
+        to builds that started or finished.
+
+        :param sender: An instance of
+          :class:`~toxicbuild.master.repository.Repository`.
+        :param info: A dictionary with information about a build."""
+
         self.sender = sender
-        msg = 'running {} for'.format(self.name)
+
+        status = info['status']
+        msg = 'running {} for {} with status {}'.format(self.name,
+                                                        self.sender.id,
+                                                        status)
         self.log(msg, level='info')
 
-        if 'running' in self.statuses:
-            build_started.connect(self._build_started)
+        if status not in self.statuses:
+            return
 
-        build_finished.connect(self._build_finished)
+        build = await Build.get(uuid=info['uuid'])
+
+        if status == 'running':
+            self._build_started(build)
+        else:
+            self._build_finished(build)
 
     async def stop(self):
         build_started.disconnect(self._build_started)
         build_finished.disconnect(self._build_finished)
 
-    def _build_started(self, repo_id, build):
-        ensure_future(self._check_build('started', repo_id, build))
+    def _build_started(self, build):
+        ensure_future(self._check_build('started', build))
 
-    def _build_finished(self, repo_id, build):
-        ensure_future(self._check_build('finished', repo_id, build))
+    def _build_finished(self, build):
+        ensure_future(self._check_build('finished', build))
 
-    async def _check_build(self, sig_type, repo_id, build):
+    async def _check_build(self, sig_type, build):
         sigs = {'started': self.send_started_message,
                 'finished': self.send_finished_message}
 
         buildset = await build.get_buildset()
-        if repo_id == str(self.sender.id) and buildset.branch in self.branches:
+        if buildset.branch in self.branches:
             coro = sigs[sig_type]
             ensure_future(coro(self.sender, build))
 
@@ -389,6 +431,7 @@ class CustomWebhookPlugin(NotificationPlugin):
     webhook_url = PrettyURLField(required=True, pretty_name='Webhook URL')
 
     async def _send_message(self, repo, build):
+        self.log('sending message for {}'.format(repo.id), level='debug')
         buildset = await build.get_buildset()
         build_dict = build.to_dict(id_as_str=True)
         buildset_dict = buildset.to_dict(id_as_str=True)

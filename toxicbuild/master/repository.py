@@ -342,11 +342,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     async def bootstrap(self):
         """Initialise the needed stuff. Schedules updates for code,
-         start of pending builds, connect to signals and create the
-        needed locks.
-
-        The locks create here are:
-        * exclusive access for toxicbuild.conf of a repo."""
+         start of pending builds, connect to signals.
+        """
 
         if self.schedule_poller:
             self.schedule()
@@ -384,10 +381,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         # connecting to build signals
         build_started.connect(self._check_for_status_change)
         build_finished.connect(self._check_for_status_change)
-
-        # starting plugins
-        for plugin in self.plugins:
-            self._run_plugin(plugin)
 
     @classmethod
     async def schedule_all(cls):
@@ -495,17 +488,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await revision.save()
         return revision
 
-    def _run_plugin(self, plugin):
-        key = '{}-plugin-{}'.format(self.url, plugin.name)
-        type(self)._plugins_instances[key] = plugin
-        ensure_future(plugin.run(self))
-
-    def _stop_plugin(self, plugin):
-        key = '{}-plugin-{}'.format(self.url, plugin.name)
-        plugin = type(self)._plugins_instances[key]
-        ensure_future(plugin.stop())
-        del type(self)._plugins_instances[key]
-
     async def enable_plugin(self, plugin_name, **plugin_config):
         """Enables a plugin to this repository.
 
@@ -517,7 +499,12 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         plugin = plugin_cls(**plugin_config)
         self.plugins.append(plugin)
         await self.save()
-        self._run_plugin(plugin)
+
+    def get_plugins_for_event(self, event):
+        """Returns the plugins that react for a given event.
+
+        :param event: The event for the plugins to react"""
+        return [p for p in self.plugins if event in p.events or not p.events]
 
     def _match_kw(self, plugin, **kwargs):
         """True if the plugin's attributes match the
@@ -544,7 +531,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         matched = [p for p in self.plugins if self._match_kw(p, **kwargs)]
         for p in matched:
             self.plugins.remove(p)
-            self._stop_plugin(p)
         await self.save()
 
     async def add_builds_for_slave(self, buildset, slave, builders=[]):

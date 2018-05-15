@@ -19,28 +19,25 @@
 
 from toxicbuild.core.exchange import Exchange
 
-
-repo_status_changed = None
-repo_added = None
+gconn = None
 
 
 def create_exchanges(conn):
-    global repo_status_changed
-    global repo_added
+    global gconn
 
-    if not repo_status_changed:  # pragma no branch
-        repo_status_changed = Exchange('toxicbuild.repo_status_changed',
-                                       connection=conn,
-                                       bind_publisher=False,
-                                       exclusive_consumer_queue=True,
-                                       exchange_type='direct')
+    gconn = conn
 
-    if not repo_added:  # pragma no branch
-        repo_added = Exchange('toxicbuild.repo_added',
-                              connection=conn,
-                              bind_publisher=False,
-                              exclusive_consumer_queue=True,
-                              exchange_type='direct')
+    repo_status_changed = Exchange('toxicbuild.repo_status_changed',
+                                   connection=conn,
+                                   bind_publisher=False,
+                                   exclusive_consumer_queue=True,
+                                   exchange_type='direct')
+
+    repo_added = Exchange('toxicbuild.repo_added',
+                          connection=conn,
+                          bind_publisher=False,
+                          exclusive_consumer_queue=True,
+                          exchange_type='direct')
 
     ui_notifications = Exchange('toxicbuild.ui_notifications',
                                 connection=conn,
@@ -48,10 +45,24 @@ def create_exchanges(conn):
                                 exclusive_consumer_queue=True,
                                 exchange_type='direct')
 
+    repo_notifications = Exchange('toxicbuild.repo_notifications',
+                                  connection=conn,
+                                  bind_publisher=True,
+                                  exclusive_consumer_queue=False,
+                                  exchange_type='direct')
+
+    build_notifications = Exchange('toxicbuild.build_notifications',
+                                   connection=conn,
+                                   bind_publisher=True,
+                                   exclusive_consumer_queue=False,
+                                   exchange_type='direct')
+
     return {'repo_status_changed': repo_status_changed,
             'repo_added': repo_added,
-            'ui_notifications': ui_notifications}
+            'ui_notifications': ui_notifications,
+            'repo_notifications': repo_notifications,
+            'build_notifications': build_notifications}
 
 
 async def disconnect_exchanges():  # pragma no cover
-    await repo_status_changed.connection.disconnect()
+    await gconn.connection.disconnect()

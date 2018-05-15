@@ -186,6 +186,8 @@ class SlaveTest(TestCase):
         self.assertEqual(len(build_info['steps']), 1)
 
     @patch.object(slave, 'build_started', Mock())
+    @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
+        spec=slave.build_notifications.publish))
     @async_test
     async def test_process_info_with_build_started(self):
         await self._create_test_data()
@@ -198,8 +200,11 @@ class SlaveTest(TestCase):
 
         await self.slave._process_info(self.build, build_info)
         self.assertTrue(slave.build_started.send.called)
+        self.assertTrue(slave.build_notifications.publish.called)
 
     @patch.object(slave, 'build_finished', Mock())
+    @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
+        spec=slave.build_notifications.publish))
     @async_test
     async def test_process_info_with_build_finished(self):
         await self._create_test_data()
@@ -217,6 +222,7 @@ class SlaveTest(TestCase):
         await self.slave._process_info(self.build, build_info)
         self.assertEqual(self.build.total_time, 2)
         self.assertTrue(slave.build_finished.send.called)
+        self.assertTrue(slave.build_notifications.publish.called)
 
     @async_test
     async def test_process_info_with_step(self):
@@ -246,6 +252,8 @@ class SlaveTest(TestCase):
         await self.slave._process_info(self.build, info)
         self.assertTrue(process_step_info.called)
 
+    @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
+        spec=slave.build_notifications.publish))
     @async_test
     async def test_process_step_info_new(self):
         await self._create_test_data()
@@ -259,7 +267,10 @@ class SlaveTest(TestCase):
                      'index': 0, 'uuid': uuid4()}
         await self.slave._process_step_info(self.build, step_info)
         self.assertEqual(len(self.build.steps), 1)
+        self.assertTrue(slave.build_notifications.publish.called)
 
+    @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
+        spec=slave.build_notifications.publish))
     @async_test
     async def test_process_step_info(self):
         await self._create_test_data()
@@ -268,8 +279,8 @@ class SlaveTest(TestCase):
         started = now.strftime('%a %b %d %H:%M:%S %Y %z')
         finished = (now + datetime.timedelta(seconds=2)).strftime(
             '%a %b %d %H:%M:%S %Y %z')
-        a_uuid = uuid4()
-        other_uuid = uuid4()
+        a_uuid = str(uuid4())
+        other_uuid = str(uuid4())
 
         info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
                 'output': '', 'started': started, 'finished': None,
@@ -293,7 +304,10 @@ class SlaveTest(TestCase):
         self.assertEqual(self.build.steps[0].status, 'success')
         self.assertEqual(len(self.build.steps), 2)
         self.assertTrue(self.build.steps[0].total_time)
+        self.assertTrue(slave.build_notifications.publish.called)
 
+    @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
+        spec=slave.build_notifications.publish))
     @async_test
     async def test_process_step_output_info(self):
         await self._create_test_data()
@@ -301,7 +315,7 @@ class SlaveTest(TestCase):
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
         started = now.strftime('%a %b %d %H:%M:%S %Y %z')
-        a_uuid = uuid4()
+        a_uuid = str(uuid4())
 
         info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
                 'output': '', 'started': started, 'finished': None,
@@ -313,6 +327,7 @@ class SlaveTest(TestCase):
         await self.slave._process_step_output_info(self.build, info)
         step = self.slave._get_step(self.build, a_uuid)
         self.assertTrue(step.output)
+        self.assertTrue(slave.build_notifications.publish.called)
 
     async def _create_test_data(self):
         await self.slave.save()

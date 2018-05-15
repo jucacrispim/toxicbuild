@@ -32,6 +32,7 @@ from tests import async_test, AsyncMagicMock
 class RepoPlugin(repository.MasterPlugin):
     name = 'repo-plugin'
     type = 'test'
+    events = ['repo-event']
 
     @asyncio.coroutine
     def run(self, sender):
@@ -439,31 +440,18 @@ class RepositoryTest(TestCase):
         self.assertTrue(rev.id)
         self.assertEqual('uhuuu!!', rev.title)
 
-    def test_run_plugin(self):
-        plugin = MagicMock()
-        plugin.name = 'my-plugin'
-        plugin.run = AsyncMagicMock()
-        expected_key = '{}-plugin-{}'.format(self.repo.url, plugin.name)
-        self.repo._run_plugin(plugin)
-        self.assertTrue(plugin.run.called)
-        self.assertIn(
-            expected_key, repository.Repository._plugins_instances.keys())
-
-    def test_stop_plugin(self):
-        plugin = MagicMock()
-        plugin.name = 'my-plugin'
-        plugin.run = AsyncMagicMock()
-        plugin.stop = AsyncMagicMock()
-        self.repo._run_plugin(plugin)
-        self.repo._stop_plugin(plugin)
-        self.assertTrue(plugin.stop.called)
-        self.assertFalse(repository.Repository._plugins_instances)
-
     @async_test
     async def test_enable_plugin(self):
         await self.repo.save()
         await self.repo.enable_plugin('repo-plugin')
         self.assertEqual(len(self.repo.plugins), 1)
+
+    @async_test
+    async def test_get_plugins_for_event(self):
+        await self.repo.save()
+        await self.repo.enable_plugin('repo-plugin')
+        plugins = self.repo.get_plugins_for_event('repo-event')
+        self.assertEqual(len(plugins), 1)
 
     def test_match_kw(self):
         plugin = repository.MasterPlugin()

@@ -24,6 +24,7 @@ from toxicbuild.core.utils import string2datetime, LoggerMixin, now
 from toxicbuild.master.build import BuildStep, Builder
 from toxicbuild.master.client import get_build_client
 from toxicbuild.master.document import OwnedDocument
+from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import (build_started, build_finished,
                                        step_started, step_finished,
                                        step_output_arrived)
@@ -170,11 +171,19 @@ class Slave(OwnedDocument, LoggerMixin):
             msg = 'build started at {}'.format(build_info['started'])
             self.log(msg)
             build_started.send(str(repo.id), build=build)
+            msg = build.to_dict()
+            msg.update({'repository_id': str(repo.id),
+                        'event_type': 'build-started'})
+            await build_notifications.publish(msg)
         else:
             msg = 'build finished at {} with status {}'.format(
                 build_info['finished'], build.status)
             self.log(msg)
             build_finished.send(str(repo.id), build=build)
+            msg = build.to_dict()
+            msg.update({'repository_id': str(repo.id),
+                        'event_type': 'build-finished'})
+            await build_notifications.publish(msg)
 
     async def _process_step_info(self, build, step_info):
 
@@ -199,6 +208,10 @@ class Slave(OwnedDocument, LoggerMixin):
                 requested_step.command, finished, requested_step.status)
             self.log(msg, level='debug')
             step_finished.send(str(repo.id), build=build, step=requested_step)
+            msg = requested_step.to_dict()
+            msg.update({'repository_id': str(repo.id),
+                        'event_type': 'step-finished'})
+            await build_notifications.publish(msg)
 
         else:
             requested_step = BuildStep(name=name, command=cmd,
@@ -209,6 +222,11 @@ class Slave(OwnedDocument, LoggerMixin):
                                                  started)
             self.log(msg, level='debug')
             step_started.send(str(repo.id), build=build, step=requested_step)
+            msg = requested_step.to_dict()
+            msg.update({'repository_id': str(repo.id),
+                        'event_type': 'step-started'})
+            await build_notifications.publish(msg)
+
             build.steps.append(requested_step)
 
         await build.update()
@@ -235,5 +253,5 @@ class Slave(OwnedDocument, LoggerMixin):
         """
 
         for step in build.steps:
-            if step.uuid == step_uuid:
+            if str(step.uuid) == step_uuid:
                 return step

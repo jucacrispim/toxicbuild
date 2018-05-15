@@ -122,6 +122,13 @@ class BuildTest(TestCase):
         expected = 'some command\nsome output'
         self.assertEqual(expected, build.output)
 
+    @async_test
+    async def test_get(self):
+        await self._create_test_data()
+        b = self.buildset.builds[0]
+        r = await build.Build.get(str(b.uuid))
+        self.assertEqual(b, r)
+
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asfd')
         await self.owner.save()

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016, 2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -117,7 +117,38 @@ class MasterPluginTest(TestCase):
         await self._create_test_data()
         sender = MagicMock()
         with self.assertRaises(NotImplementedError):
-            await self.plugin.run(sender)
+            await self.plugin.run(sender, {})
+
+    def test_list_for_event_type_no_plugins(self):
+
+        self.assertFalse(plugins.MasterPlugin.list_for_event_type(
+            'some-random-event'))
+
+    def test_list_for_event_type_no_events(self):
+
+        try:
+            class EventPlugin(plugins.MasterPlugin):
+                name = 'event-plugin'
+                type = 'test'
+                events = []
+
+            self.assertTrue(plugins.MasterPlugin.list_for_event_type(
+                'some-event', no_events=True))
+        finally:
+            del EventPlugin
+
+    def test_list_for_event_type(self):
+
+        try:
+            class EventPlugin(plugins.MasterPlugin):
+                name = 'event-plugin'
+                type = 'test'
+                events = ['some-event']
+
+            self.assertTrue(plugins.MasterPlugin.list_for_event_type(
+                'some-event'))
+        finally:
+            del EventPlugin
 
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asdf')
@@ -139,27 +170,47 @@ class NotificationPlugin(TestCase):
         await Repository.drop_collection()
         await users.User.drop_collection()
 
-    @patch.object(plugins.build_started, 'connect', MagicMock())
-    @patch.object(plugins.build_finished, 'connect', MagicMock())
+    @patch.object(plugins.Build, 'get',
+                  AsyncMagicMock(spec=plugins.Build.get))
     @async_test
     async def test_run_with_build_started(self):
         await self._create_test_data()
         self.plugin.statuses = ['running']
+        self.plugin._build_started = MagicMock()
+        self.plugin._build_finished = MagicMock()
+        await self.plugin.run(sender=MagicMock(), info={
+            'status': 'running',
+            'uuid': 'some-uuid'})
+        self.assertTrue(self.plugin._build_started.called)
+        self.assertFalse(self.plugin._build_finished.called)
 
-        await self.plugin.run(sender=MagicMock())
-        self.assertTrue(plugins.build_started.connect.called)
-        self.assertTrue(plugins.build_finished.connect.called)
-
-    @patch.object(plugins.build_started, 'connect', MagicMock())
-    @patch.object(plugins.build_finished, 'connect', MagicMock())
+    @patch.object(plugins.Build, 'get',
+                  AsyncMagicMock(spec=plugins.Build.get))
     @async_test
     async def test_run_without_build_started(self):
         await self._create_test_data()
         self.plugin.statuses = ['fail']
 
-        await self.plugin.run(sender=MagicMock())
-        self.assertFalse(plugins.build_started.connect.called)
-        self.assertTrue(plugins.build_finished.connect.called)
+        self.plugin._build_started = MagicMock()
+        self.plugin._build_finished = MagicMock()
+        await self.plugin.run(sender=MagicMock(), info={
+            'status': 'fail',
+            'uuid': 'some-uuid'})
+        self.assertFalse(self.plugin._build_started.called)
+        self.assertTrue(self.plugin._build_finished.called)
+
+    @async_test
+    async def test_run_bad_status(self):
+        await self._create_test_data()
+        self.plugin.statuses = ['fail']
+
+        self.plugin._build_started = MagicMock()
+        self.plugin._build_finished = MagicMock()
+        await self.plugin.run(sender=MagicMock(), info={
+            'status': 'success',
+            'uuid': 'some-uuid'})
+        self.assertFalse(self.plugin._build_started.called)
+        self.assertFalse(self.plugin._build_finished.called)
 
     @patch.object(plugins.build_started, 'disconnect', MagicMock())
     @patch.object(plugins.build_finished, 'disconnect', MagicMock())
@@ -182,8 +233,8 @@ class NotificationPlugin(TestCase):
     async def test_build_started(self):
         await self._create_test_data()
         self.plugin._check_build = AsyncMagicMock()
-        repo, build = MagicMock(), MagicMock()
-        self.plugin._build_started(repo, build)
+        build = MagicMock()
+        self.plugin._build_started(build)
         sig_type = self.plugin._check_build.call_args[0][0]
         self.assertEqual(sig_type, 'started')
 
@@ -192,7 +243,7 @@ class NotificationPlugin(TestCase):
         await self._create_test_data()
         self.plugin._check_build = AsyncMagicMock()
         repo, build = MagicMock(), MagicMock()
-        self.plugin._build_finished(repo, build)
+        self.plugin._build_finished(build)
         sig_type = self.plugin._check_build.call_args[0][0]
         self.assertEqual(sig_type, 'finished')
 
@@ -208,7 +259,7 @@ class NotificationPlugin(TestCase):
         self.plugin.sender = self.repo
         self.plugin.send_started_message = AsyncMagicMock()
         self.plugin.send_finished_message = AsyncMagicMock()
-        await self.plugin._check_build(sig, str(self.repo.id), build)
+        await self.plugin._check_build(sig, build)
         self.assertTrue(self.plugin.send_started_message.called)
 
     @async_test
@@ -223,7 +274,7 @@ class NotificationPlugin(TestCase):
         self.plugin.sender = self.repo
         self.plugin.send_started_message = AsyncMagicMock()
         self.plugin.send_finished_message = AsyncMagicMock()
-        await self.plugin._check_build(sig, str(self.repo.id), build)
+        await self.plugin._check_build(sig, build)
         self.assertTrue(self.plugin.send_finished_message.called)
 
     @async_test
@@ -238,22 +289,7 @@ class NotificationPlugin(TestCase):
         self.plugin.sender = self.repo
         self.plugin.send_started_message = AsyncMagicMock()
         self.plugin.send_finished_message = AsyncMagicMock()
-        await self.plugin._check_build(sig, self.repo, build)
-        self.assertFalse(self.plugin.send_finished_message.called)
-
-    @async_test
-    async def test_check_build_finished_wrong_repo(self):
-        await self._create_test_data()
-        sig = 'finished'
-        build = MagicMock()
-        buildset = MagicMock()
-        buildset.branch = 'master'
-        build.get_buildset = AsyncMagicMock(return_value=buildset)
-        self.plugin.branches = ['master', 'release']
-        self.plugin.sender = MagicMock()
-        self.plugin.send_started_message = AsyncMagicMock()
-        self.plugin.send_finished_message = AsyncMagicMock()
-        await self.plugin._check_build(sig, self.repo, build)
+        await self.plugin._check_build(sig, build)
         self.assertFalse(self.plugin.send_finished_message.called)
 
     @async_test
