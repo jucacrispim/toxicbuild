@@ -19,7 +19,6 @@
 
 from unittest import TestCase
 from toxicbuild.master import utils, users
-from tests import async_test
 
 
 class UtilsTest(TestCase):
