@@ -40,6 +40,9 @@
 (defcustom toxic:integrations-buffer-name "toxicintegrations"
   "Toxicbuild integrations buffer's name")
 
+(defcustom toxic:output-buffer-name "toxicoutput"
+  "Toxicbuild output buffer's name")
+
 (defcustom toxic:webui-buffer-name "toxicwebui"
   "Toxicweb ui buffer's name")
 
@@ -71,6 +74,10 @@
     (format "ln -s %sscripts/toxicintegrations %stoxicintegrations"
 	    pdj:project-directory toxic:test-env-dir))
 
+  (setq toxic:--ln-toxicoutput
+    (format "ln -s %sscripts/toxicoutput %stoxicoutput"
+	    pdj:project-directory toxic:test-env-dir))
+
   (setq toxic:--ln-toxicweb
     (format "ln -s %sscripts/toxicweb %stoxicweb"
 	    pdj:project-directory toxic:test-env-dir))
@@ -86,7 +93,8 @@
   (setq toxic:--link-everything
     (concat toxic:--ln-toxicslave " && " toxic:--ln-toxicmaster " && "
 	    toxic:--ln-toxicbuild-script " && " toxic:--ln-toxicbuild
-	    " && " toxic:--ln-toxicweb " && " toxic:--ln-toxicintegrations))
+	    " && " toxic:--ln-toxicweb " && " toxic:--ln-toxicintegrations
+	    " && " toxic:--ln-toxicoutput))
 
   (pdj:run-in-term-on-project-directory toxic:--link-everything
 					toxic:bootstrap-buffer-name))
@@ -143,12 +151,14 @@
   (setq toxic:--process2kill (get-buffer-process toxic:--buffer-name))
   (kill-process toxic:--process2kill))
 
+
 (defun toxic:--buffer-has-process (process-buffer-name)
 
   (defvar toxic:--buffer-name nil)
 
   (setq toxic:--buffer-name (concat "*" process-buffer-name "*"))
   (get-buffer-process toxic:--buffer-name))
+
 
 (defun toxic:start-slave ()
   "Starts a slave instance in the test env"
@@ -226,6 +236,46 @@
     (deferred:nextc it
       (lambda ()
 	(toxic:start-master)))))
+
+
+(defun toxic:start-output ()
+  "Starts a toxicbuild output instance in the test env"
+
+  (interactive)
+
+  (defvar toxic:--output-path nil)
+  (setq toxic:--output-path (concat toxic:test-env-path "output/"))
+  (defvar toxic:--start-output-cmd
+    (format "%s %stoxicoutput start %s --loglevel=debug"
+	    toxic:py-venv-exec toxic:test-env-dir toxic:--output-path))
+
+  (defvar toxic:--output-buffer-name "toxicoutput")
+
+  (toxic:--run-in-env-on-test-dir
+   toxic:--start-output-cmd toxic:--output-buffer-name))
+
+
+(defun toxic:stop-output ()
+  "Stops the toxicoutput test instance"
+
+  (interactive)
+
+  (toxic:--kill-buffer-shell-process toxic:--output-buffer-name))
+
+
+(defun toxic:restart-output ()
+  "Restarts the toxicoutput test instance"
+
+  (interactive)
+
+  (deferred:$
+    (deferred:next
+      (lambda ()
+	(toxic:stop-output)))
+
+    (deferred:nextc it
+      (lambda ()
+	(toxic:start-output)))))
 
 
 (defun toxic:start-integrations ()
@@ -397,6 +447,7 @@
   (toxic:start-scheduler)
   (toxic:start-master)
   (toxic:start-integrations)
+  (toxic:stop-output)
   (toxic:start-webui))
 
 
@@ -410,6 +461,7 @@
   (toxic:stop-scheduler)
   (toxic:stop-master)
   (toxic:stop-integrations)
+  (toxic:stop-output)
   (toxic:stop-webui))
 
 
@@ -423,6 +475,7 @@
   (toxic:restart-poller)
   (toxic:restart-scheduler)
   (toxic:restart-integrations)
+  (toxic:restart-output)
   (toxic:restart-webui))
 
 
@@ -450,7 +503,10 @@
 	      (toxic:restart-webui)
 	    (if (string-match-p (regexp-quote "toxicbuild/integrations")
 				toxic:--event-file)
-		(toxic:restart-integrations)))))))
+		(toxic:restart-integrations)
+	      (if (string-match-p (regexp-quote "toxicbuild/output")
+				  toxic:--event-file)
+		  (toxic:restart-output))))))))
 
 
 (defun toxic:add-watcher ()
@@ -469,6 +525,9 @@
   (setq toxic:--integrations-path (concat pdj:project-directory
 					  "toxicbuild/integrations"))
 
+  (defvar toxic:--output-path nil)
+  (setq toxic:--output-path (concat pdj:project-directory
+				    "toxicbuild/output"))
 
   (defvar toxic:--ui-path nil)
   (setq toxic:--ui-path (concat pdj:project-directory
@@ -481,6 +540,9 @@
 			 'toxic:fs-watcher)
 
   (file-notify-add-watch toxic:--integrations-path '(change change)
+			 'toxic:fs-watcher)
+
+  (file-notify-add-watch toxic:--output-path '(change change)
 			 'toxic:fs-watcher)
 
   (file-notify-add-watch toxic:--ui-path '(change change)
@@ -560,6 +622,24 @@
     '(menu-item "Start integrations" toxic:start-integrations
 		:visible (progn (not (toxic:--buffer-has-process
 				      toxic:integrations-buffer-name)))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-output-separator]
+    '(menu-item "--"))
+
+  (define-key global-map [menu-bar toxic-menu toxic-restart-output]
+    '(menu-item "Restart output" toxic:restart-output
+		:visible (progn (toxic:--buffer-has-process
+				 toxic:output-buffer-name))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-stop-output]
+    '(menu-item "Stop output" toxic:stop-output
+		:visible (progn (toxic:--buffer-has-process
+				 toxic:output-buffer-name))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-start-output]
+    '(menu-item "Start output" toxic:start-output
+		:visible (progn (not (toxic:--buffer-has-process
+				      toxic:output-buffer-name)))))
 
   (define-key global-map [menu-bar toxic-menu toxic-third-separator]
     '(menu-item "--"))
