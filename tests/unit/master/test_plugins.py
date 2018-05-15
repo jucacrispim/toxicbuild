@@ -242,7 +242,7 @@ class NotificationPlugin(TestCase):
     async def test_build_finished(self):
         await self._create_test_data()
         self.plugin._check_build = AsyncMagicMock()
-        repo, build = MagicMock(), MagicMock()
+        build = MagicMock(), MagicMock()
         self.plugin._build_finished(build)
         sig_type = self.plugin._check_build.call_args[0][0]
         self.assertEqual(sig_type, 'finished')
