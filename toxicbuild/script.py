@@ -104,19 +104,10 @@ def restart(workdir):
     start(workdir)
 
 
-def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
-
-    # just pretend you didnt' see this function
-
+def _run_slave(workdir, loglevel, daemonize):
     slave_root = os.path.join(workdir, 'slave')
-    master_root = os.path.join(workdir, 'master')
-    ui_root = os.path.join(workdir, 'ui')
-
     cmd = sys.argv[0].replace('-script', '')
     slave_cmd = cmd.replace('build', 'slave')
-    master_cmd = cmd.replace('build', 'master')
-    web_cmd = cmd.replace('build', 'web')
-
     slave_cmd_line = sys.argv[:]
     slave_cmd_line[0] = slave_cmd
     slave_cmd_line[2] = slave_root
@@ -127,6 +118,14 @@ def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
         slave_cmd_line.append('--loglevel')
         slave_cmd_line.append(loglevel)
 
+    subprocess.call(slave_cmd_line)
+
+
+def _run_master(workdir, loglevel, daemonize):
+    master_root = os.path.join(workdir, 'master')
+    cmd = sys.argv[0].replace('-script', '')
+    master_cmd = cmd.replace('build', 'master')
+
     master_cmd_line = sys.argv[:]
     master_cmd_line[0] = master_cmd
     master_cmd_line[2] = master_root
@@ -136,6 +135,13 @@ def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
         master_cmd_line.append('--loglevel')
         master_cmd_line.append(loglevel)
 
+    subprocess.call(master_cmd_line)
+
+
+def _run_poller(workdir, loglevel, daemonize):
+    master_root = os.path.join(workdir, 'master')
+    cmd = sys.argv[0].replace('-script', '')
+    master_cmd = cmd.replace('build', 'master')
     poller_cmd_line = sys.argv[:]
     poller_cmd_line[0] = master_cmd
     poller_cmd_line[1] = '{}_poller'.format(poller_cmd_line[1])
@@ -145,6 +151,14 @@ def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
     if loglevel:
         poller_cmd_line.append('--loglevel')
         poller_cmd_line.append(loglevel)
+
+    subprocess.call(poller_cmd_line)
+
+
+def _run_scheduler(workdir, loglevel, daemonize):
+    master_root = os.path.join(workdir, 'master')
+    cmd = sys.argv[0].replace('-script', '')
+    master_cmd = cmd.replace('build', 'master')
 
     scheduler_cmd_line = sys.argv[:]
     scheduler_cmd_line[0] = master_cmd
@@ -156,6 +170,14 @@ def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
         scheduler_cmd_line.append('--loglevel')
         scheduler_cmd_line.append(loglevel)
 
+    subprocess.call(scheduler_cmd_line)
+
+
+def _run_webui(workdir, loglevel, daemonize):
+    ui_root = os.path.join(workdir, 'ui')
+    cmd = sys.argv[0].replace('-script', '')
+    web_cmd = cmd.replace('build', 'web')
+
     web_cmd_line = sys.argv[:]
     web_cmd_line[0] = web_cmd
     web_cmd_line[2] = ui_root
@@ -165,11 +187,36 @@ def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
         web_cmd_line.append('--loglevel')
         web_cmd_line.append(loglevel)
 
-    subprocess.call(slave_cmd_line)
-    subprocess.call(poller_cmd_line)
-    subprocess.call(scheduler_cmd_line)
-    subprocess.call(master_cmd_line)
     subprocess.call(web_cmd_line)
+
+
+def _run_output(workdir, loglevel, daemonize):
+    output_root = os.path.join(workdir, 'output')
+    cmd = sys.argv[0].replace('-script', '')
+    output_cmd = cmd.replace('build', 'output')
+
+    output_cmd_line = sys.argv[:]
+    output_cmd_line[0] = output_cmd
+    output_cmd_line[2] = output_root
+
+    if daemonize:
+        output_cmd_line.append('--daemonize')
+
+    if loglevel:
+        output_cmd_line.append('--loglevel')
+        output_cmd_line.append(loglevel)
+
+    subprocess.call(output_cmd_line)
+
+
+def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
+
+    _run_slave(workdir, loglevel, daemonize)
+    _run_master(workdir, loglevel, daemonize)
+    _run_poller(workdir, loglevel, daemonize)
+    _run_scheduler(workdir, loglevel, daemonize)
+    _run_output(workdir, loglevel, daemonize)
+    _run_webui(workdir, loglevel, daemonize)
 
 
 if __name__ == '__main__':  # pragma no cover
