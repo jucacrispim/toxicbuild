@@ -201,6 +201,37 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         with self.assertRaises(webhook_receivers.HTTPError):
             await self.webhook_receiver.receive_webhook()
 
+    @patch.object(
+        webhook_receivers.GithubWebhookReceiver, '_get_install',
+        AsyncMagicMock(
+            spec=webhook_receivers.GithubWebhookReceiver._get_install))
+    @async_test
+    async def test_handle_pull_request_opended_different_repos(self):
+        body = {
+            'pull_request': {
+                'head': {'repo': {'id': 'some-id'}},
+                'base': {'repo': {'id': 'other-id'}}}}
+
+        self.webhook_receiver.body = body
+        with self.assertRaises(webhook_receivers.HTTPError):
+            await self.webhook_receiver._handle_pull_request_opened()
+
+    @patch.object(
+        webhook_receivers.GithubWebhookReceiver, '_get_install',
+        AsyncMagicMock(
+            spec=webhook_receivers.GithubWebhookReceiver._get_install))
+    @async_test
+    async def test_handle_pull_request_opended_same_repo(self):
+        body = {
+            'pull_request': {
+                'head': {'repo': {'id': 'some-id'}, 'ref': 'some-branch'},
+                'base': {'repo': {'id': 'some-id'}}}}
+
+        self.webhook_receiver.body = body
+        await self.webhook_receiver._handle_pull_request_opened()
+        install = self.webhook_receiver._get_install.return_value
+        self.assertTrue(install.update_repository.called)
+
     def test_hello(self):
         expected = {'code': 200, 'msg': 'Hi there!'}
         r = self.webhook_receiver.hello()

@@ -177,10 +177,12 @@ class GithubInstallation(LoggerMixin, Document):
         await installation.import_repositories()
         return installation
 
-    async def update_repository(self, github_repo_id):
+    async def update_repository(self, github_repo_id, repo_branches=None):
         """Updates a repository code.
 
         :param github_repo_id: The id of the repository on github.
+        :param repo_branches: Param to be passed to
+          :meth:`~toxicbuild.master.repository.Repository.update_code`.
         """
 
         repo_id = self.repositories[str(github_repo_id)]
@@ -189,7 +191,7 @@ class GithubInstallation(LoggerMixin, Document):
         if repo.fetch_url != url:
             repo.fetch_url = url
             await repo.save()
-        await repo.update_code()
+        await repo.update_code(repo_branches=repo_branches)
 
     @property
     def auth_token_url(self):

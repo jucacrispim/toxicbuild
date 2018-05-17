@@ -40,7 +40,8 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         self.body = None
         self.events = {'ping': self._handle_ping,
                        'push': self._handle_push,
-                       'repository-create': self._handle_install_repo_added}
+                       'repository-create': self._handle_install_repo_added,
+                       'pull_request-opened': self._handle_pull_request_opened}
 
     async def _get_user_from_cookie(self):
         cookie = self.get_secure_cookie(settings.TOXICUI_COOKIE)
@@ -83,24 +84,41 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         self.log(msg, level='debug')
         return 'Got it.'
 
-    async def _handle_push(self):
+    async def _get_install(self):
         install_id = self.body['installation']['id']
-        repo_github_id = self.body['repository']['id']
         install = await GithubInstallation.objects.get(github_id=install_id)
+        return install
+
+    async def _handle_push(self):
+        repo_github_id = self.body['repository']['id']
+        install = await self._get_install()
         ensure_future(install.update_repository(repo_github_id))
         return 'updating repo'
 
     async def _handle_install_repo_added(self):
-        install_id = self.body['installation']['id']
-        install = await GithubInstallation.objects.get(github_id=install_id)
+        install = await self._get_install()
         for repo_info in self.body['repositories_added']:
             ensure_future(install.import_repository(repo_info))
 
     async def _handle_install_repo_removed(self):
-        install_id = self.body['installation']['id']
-        install = await GithubInstallation.objects.get(github_id=install_id)
+        install = await self._get_install()
         for repo_info in self.body['repositories_removed']:
             ensure_future(install.remove_repository(repo_info['id']))
+
+    async def _handle_pull_request_opened(self):
+        install = await self._get_install()
+        head = self.body['pull_request']['head']
+        head_id = head['repo']['id']
+        base = self.body['pull_request']['base']
+        base_id = base['repo']['id']
+        if not head_id == base_id:
+            raise HTTPError(
+                400, 'pull_request for different repos not yet implemented')
+
+        head_branch = head['ref']
+        # branch_name: notify_only_latest
+        repo_branches = {head_branch: True}
+        await install.update_repository(repo_branches=repo_branches)
 
     @post('webhooks')
     async def receive_webhook(self):
