@@ -143,7 +143,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             msg = 'No event type\n{}'.format(self.body)
             self.log(msg, level='warning')
 
-        action = self.body.get('action')
+        action = self.body.get('action') if self.body else None
         if action:
             event_type = '{}-{}'.format(event_type, action)
         return event_type
