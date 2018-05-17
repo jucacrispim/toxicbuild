@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -47,9 +47,12 @@ class Poller(LoggerMixin):
     def is_polling(self):
         return self._is_polling
 
-    async def poll(self):
+    async def poll(self, repo_branches=None):
         """ Check for changes on repository and if there are changes, notify
         about it.
+
+        :param repo_branches: Param to be passed to
+          :meth:`~toxicbuild.master.pollers.Poller.process_changes`.
         """
 
         with_clone = False
@@ -75,7 +78,8 @@ class Poller(LoggerMixin):
                     self.log(msg, level='error')
                     raise CloneException(str(e))
 
-            # here we change the remote url if needed.
+            # here we change the remote url if needed. eg: a new token
+            # is beeing used to authenticate, so a new url is used.
             await self.vcs.try_set_remote(url)
 
             # for git.
@@ -85,7 +89,7 @@ class Poller(LoggerMixin):
                 await self.vcs.update_submodule()
 
             try:
-                await self.process_changes()
+                await self.process_changes(repo_branches)
             except Exception as e:
                 # shit happends
                 msg = traceback.format_exc()
@@ -94,8 +98,17 @@ class Poller(LoggerMixin):
 
         return with_clone
 
-    async def process_changes(self):
+    async def process_changes(self, repo_branches=None):
         """ Process all changes since the last revision in db
+
+        :param repo_branches: The branches to look for incomming changes. If no
+          branches, all branches in repo config will be used. It is a
+          dictionary with the following format:
+
+          .. code block:: python
+
+             {'branch-name': notify_only_latest}
+
         """
         self.log('processing changes', level='debug')
 
@@ -104,10 +117,15 @@ class Poller(LoggerMixin):
         since = dict((branch, r.commit_date) for branch, r
                      in dbrevisions.items() if r)
 
-        repo_branches = MatchKeysDict(
-            **{b.name: b for b in self.repository.branches})
+        if not repo_branches:
+            repo_branches = MatchKeysDict(
+                **{b.name: b.notify_only_latest
+                   for b in self.repository.branches})
+
+        branches = repo_branches.keys()
+
         newer_revisions = await self.vcs.get_revisions(
-            since=since, branches=repo_branches.keys())
+            since=since, branches=branches)
 
         known_branches = dbrevisions.keys()
 
@@ -127,8 +145,8 @@ class Poller(LoggerMixin):
                 revisions.append(revision)
                 continue
 
-            notify_only_latest = repo_branches.get(branch).notify_only_latest \
-                if repo_branches.get(branch) else False
+            notify_only_latest = repo_branches.get(branch) \
+                if repo_branches.get(branch) is not None else True
 
             await self._process_branch_revisions(branch, revs,
                                                  notify_only_latest,
@@ -205,9 +223,10 @@ class PollerServer(LoggerMixin):
         repo_id = body['repo_id']
         repo = await Repository.get(id=repo_id)
         vcs_type = body['vcs_type']
+        repo_branches = body.get('repo_branches')
         poller = Poller(repo, vcs_type, repo.workdir)
         try:
-            with_clone = await poller.poll()
+            with_clone = await poller.poll(repo_branches)
             clone_status = 'ready'
         except Exception:
             tb = traceback.format_exc()

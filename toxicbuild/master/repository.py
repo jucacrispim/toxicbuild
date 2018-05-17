@@ -276,9 +276,20 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     def get_url(self):
         return self.fetch_url or self.url
 
-    async def update_code(self):
+    async def update_code(self, repo_branches=None):
         """Requests a code update to a poller and waits for its response.
         This is done using ``update_code`` and ``poll_status`` exchanges.
+
+        :param repo_branches: A dictionary with information about the branches
+          to be updated. If no ``repo_branches`` all branches in the repo
+          config will be updated.
+
+          The dictionary has the following format.
+
+          .. code-block:: python
+
+             {'branch-name': notify_only_latest}
+
         """
 
         lock = await self.update_code_lock.try_acquire(routing_key=str(
@@ -292,7 +303,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             self.log('Updating code with url {}.'.format(url), level='debug')
 
             msg = {'repo_id': str(self.id),
-                   'vcs_type': self.vcs_type}
+                   'vcs_type': self.vcs_type,
+                   'repo_branches': repo_branches}
 
             # Sends a message to the queue that is consumed by the pollers
             await update_code.publish(msg)

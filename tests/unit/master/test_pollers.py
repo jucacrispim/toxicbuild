@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -118,6 +118,40 @@ class GitPollerTest(TestCase):
         await self.poller.process_changes()
 
         self.assertTrue(pollers.revisions_added.publish.called)
+
+    @mock.patch.object(pollers, 'revisions_added', AsyncMagicMock())
+    @mock.patch.object(pollers, 'MatchKeysDict', mock.MagicMock())
+    @async_test
+    async def test_process_changes_with_branches(self):
+        # now in the future, of course!
+        now = datetime.datetime.now() + datetime.timedelta(100)
+        branches = [
+            repository.RepositoryBranch(name='master',
+                                        notify_only_latest=True),
+            repository.RepositoryBranch(name='dev',
+                                        notify_only_latest=False)]
+        self.repo.branches = branches
+        await self.repo.save()
+        await self._create_db_revisions()
+
+        @asyncio.coroutine
+        def gr(*a, **kw):
+            return {'master': [{'commit': '123sdf', 'commit_date': now,
+                                'author': 'zé', 'title': 'sometitle'},
+                               {'commit': 'asdf213', 'commit_date': now,
+                                'author': 'tião', 'title': 'other'}],
+                    'dev': [{'commit': 'sdfljfew', 'commit_date': now,
+                             'author': 'mariazinha', 'title': 'bla'},
+                            {'commit': 'sdlfjslfer3', 'commit_date': now,
+                             'author': 'jc', 'title': 'Our lord John Cleese'}],
+                    'other': []}
+
+        self.poller.vcs.get_revisions = gr
+
+        await self.poller.process_changes(repo_branches={'master': True})
+
+        self.assertTrue(pollers.revisions_added.publish.called)
+        self.assertFalse(pollers.MatchKeysDict.called)
 
     @mock.patch.object(pollers, 'revisions_added', AsyncMagicMock())
     @async_test
