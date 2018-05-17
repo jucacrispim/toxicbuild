@@ -263,7 +263,7 @@ class GithubInstallationTest(TestCase):
                                   token='123', host='localhost',
                                   port=123, owner=self.user)
         repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
-                     'id': 1234}
+                     'id': 1234, 'full_name': 'ze/my-repo'}
         repo = await self.installation.import_repository(repo_info)
         self.assertTrue(repo.id)
         self.assertTrue(repo.update_code.called)
@@ -283,8 +283,11 @@ class GithubInstallationTest(TestCase):
                                      vcs_type='git',
                                      owner=self.user)
         await repo.save()
-        self.installation.repositories['1234'] = str(repo.id)
-        await self.installation.update_repository('1234')
+        install_repo = github.GithubInstallationRepository(github_id=1234,
+                                                           repository=repo,
+                                                           full_name='a/b')
+        self.installation.repositories.append(install_repo)
+        await self.installation.update_repository(1234)
         self.assertTrue(repository.Repository.update_code.called)
 
     @patch.object(repository, 'scheduler_action', AsyncMagicMock(
@@ -300,8 +303,11 @@ class GithubInstallationTest(TestCase):
                                      vcs_type='git',
                                      owner=self.user)
         await repo.save()
-        self.installation.repositories['1234'] = str(repo.id)
-        await self.installation.remove_repository('1234')
+        install_repo = github.GithubInstallationRepository(github_id=1234,
+                                                           repository=repo,
+                                                           full_name='a/b')
+        self.installation.repositories.append(install_repo)
+        await self.installation.remove_repository(1234)
         with self.assertRaises(repository.Repository.DoesNotExist):
             await repository.Repository.objects.get(id=repo.id)
 
@@ -318,9 +324,21 @@ class GithubInstallationTest(TestCase):
                                      vcs_type='git',
                                      owner=self.user)
         await repo.save()
-        self.installation.repositories['1234'] = str(repo.id)
-        await self.installation.update_repository('1234')
+        install_repo = github.GithubInstallationRepository(github_id=12345,
+                                                           repository=repo,
+                                                           full_name='a/b')
+        self.installation.repositories.append(install_repo)
+        install_repo = github.GithubInstallationRepository(github_id=1234,
+                                                           repository=repo,
+                                                           full_name='a/b')
+        self.installation.repositories.append(install_repo)
+        await self.installation.update_repository(1234)
         self.assertTrue(repository.Repository.update_code.called)
+
+    @async_test
+    async def test_get_repo_by_github_id_bad_repo(self):
+        with self.assertRaises(github.BadRepository):
+            await self.installation._get_repo_by_github_id(123)
 
     @patch.object(github.GithubApp, 'create_installation_token',
                   AsyncMagicMock())

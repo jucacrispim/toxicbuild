@@ -20,9 +20,9 @@
 from asyncio import ensure_future, gather
 from datetime import timedelta
 import jwt
-from mongomotor import Document
+from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, DateTimeField, IntField,
-                               ReferenceField, DictField)
+                               ReferenceField, EmbeddedDocumentListField)
 from toxicbuild.core import requests
 from toxicbuild.core.utils import (string2datetime, now, localtime2utc,
                                    LoggerMixin, utc2localtime)
@@ -31,7 +31,8 @@ from toxicbuild.master.users import User
 from toxicbuild.master.repository import Repository, RepositoryBranch
 from toxicbuild.master.slave import Slave
 from toxicbuild.integrations.exceptions import (AppDoesNotExist,
-                                                BadRequestToGithubAPI)
+                                                BadRequestToGithubAPI,
+                                                BadRepository)
 
 
 class GithubApp(LoggerMixin, Document):
@@ -143,6 +144,12 @@ class GithubApp(LoggerMixin, Document):
         return installation
 
 
+class GithubInstallationRepository(LoggerMixin, EmbeddedDocument):
+    github_id = IntField(required=True)
+    repository = ReferenceField(Repository, required=True)
+    full_name = StringField(required=True)
+
+
 class GithubInstallation(LoggerMixin, Document):
     """An installation of the GitHub App. Installations have access to
     repositories and events."""
@@ -155,7 +162,7 @@ class GithubInstallation(LoggerMixin, Document):
     auth_token = StringField()
     expires = DateTimeField()
     # maps github_repo_ids/repo_ids
-    repositories = DictField()
+    repositories = EmbeddedDocumentListField(GithubInstallationRepository)
 
     @classmethod
     async def create(cls, github_id, user):
@@ -177,6 +184,15 @@ class GithubInstallation(LoggerMixin, Document):
         await installation.import_repositories()
         return installation
 
+    async def _get_repo_by_github_id(self, github_repo_id):
+        for repo in self.repositories:
+            if repo.github_id == github_repo_id:
+                repo_inst = await repo.repository
+                return repo_inst
+
+        raise BadRepository('Github repository {} does not exist here.'.format(
+            github_repo_id))
+
     async def update_repository(self, github_repo_id, repo_branches=None):
         """Updates a repository code.
 
@@ -185,8 +201,7 @@ class GithubInstallation(LoggerMixin, Document):
           :meth:`~toxicbuild.master.repository.Repository.update_code`.
         """
 
-        repo_id = self.repositories[str(github_repo_id)]
-        repo = await Repository.get(id=repo_id)
+        repo = await self._get_repo_by_github_id(github_repo_id)
         url = await self._get_auth_url(repo.url)
         if repo.fetch_url != url:
             repo.fetch_url = url
@@ -247,9 +262,13 @@ class GithubInstallation(LoggerMixin, Document):
                                        parallel_builds=1,
                                        branches=branches,
                                        slaves=slaves)
-        await repo.update_code()
-        self.repositories[str(repo_info['id'])] = str(repo.id)
+        gh_repo = GithubInstallationRepository(
+            github_id=repo_info['id'],
+            repository=repo,
+            full_name=repo_info['full_name'])
+        self.repositories.append(gh_repo)
         await self.save()
+        await repo.update_code()
         return repo
 
     async def remove_repository(self, github_repo_id):
@@ -257,7 +276,7 @@ class GithubInstallation(LoggerMixin, Document):
 
         :param github_repo_id: The id of the repository in github."""
 
-        repo = await Repository.get(id=self.repositories[github_repo_id])
+        repo = await self._get_repo_by_github_id(github_repo_id)
         await repo.remove()
 
     async def _get_header(self):
