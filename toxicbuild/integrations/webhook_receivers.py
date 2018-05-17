@@ -106,7 +106,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
     async def receive_webhook(self):
 
         async def default_call():
-            return 'What was that?'
+            raise HTTPError(400)
 
         call = self.events.get(self.event_type, default_call)
         msg = await call()

@@ -198,9 +198,8 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver.request.headers = {
             'X-GitHub-Event': 'I-dont-know'}
         self.webhook_receiver.prepare()
-        msg = await self.webhook_receiver.receive_webhook()
-        self.assertEqual(msg['code'], 200)
-        self.assertEqual(msg['msg'], 'What was that?')
+        with self.assertRaises(webhook_receivers.HTTPError):
+            await self.webhook_receiver.receive_webhook()
 
     def test_hello(self):
         expected = {'code': 200, 'msg': 'Hi there!'}
