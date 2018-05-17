@@ -22,6 +22,7 @@ import os
 import re
 import shutil
 from threading import Thread
+from asyncamqp.exceptions import ConsumerTimeout
 from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, IntField, ReferenceField,
@@ -103,7 +104,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     parallel_builds = IntField()
 
     meta = {
-        'ordering': ['name']
+        'ordering': ['name'],
     }
 
     _plugins_instances = {}
@@ -344,13 +345,15 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             await msg.acknowledge()
 
     async def _delete_locks(self):
-        """For tests only"""
-        consumer = await self.toxicbuild_conf_lock.consume(routing_key=str(
-            self.id))
-        await self._ack_msg_for(consumer)
-        consumer = await self.update_code_lock.consume(routing_key=str(
-            self.id))
-        await self._ack_msg_for(consumer)
+        locks = [self.toxicbuild_conf_lock, self.update_code_lock]
+        for lock in locks:
+            try:
+                consumer = await lock.consume(routing_key=str(self.id),
+                                              timeout=5)
+                await self._ack_msg_for(consumer)
+            except ConsumerTimeout:
+                self.log('lock not find for {}'.format(str(self.id)),
+                         level='warning')
 
     async def bootstrap(self):
         """Initialise the needed stuff. Schedules updates for code,

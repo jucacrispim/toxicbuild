@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -250,6 +250,18 @@ class RepositoryTest(TestCase):
         await self.repo._delete_locks()
         await self.repo.reload()
         self.assertEqual(self.repo.clone_status, 'clone-exception')
+
+    @async_test
+    async def test_delete_locks_timeout(self):
+        await self.repo.save()
+        self.repo.log = Mock()
+        self.repo.toxicbuild_conf_lock = AsyncMagicMock()
+        self.repo.update_code_lock = AsyncMagicMock()
+        self.repo.toxicbuild_conf_lock.consume.\
+            side_effect = repository.ConsumerTimeout
+
+        await self.repo._delete_locks()
+        self.assertTrue(self.repo.log.called)
 
     @patch.object(repository, 'update_code', AsyncMagicMock())
     @patch.object(exchange, 'uuid4', MagicMock())
