@@ -22,6 +22,7 @@ import os
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.master import settings
 from toxicbuild.master.plugins import MasterPlugin
+from toxicbuild.master.repository import Repository
 from toxicbuild.master.users import User
 from tests import async_test
 from tests.functional import BaseFunctionalTest, REPO_DIR
@@ -175,6 +176,7 @@ class ToxicMasterTest(BaseFunctionalTest):
             pass
 
         await User.drop_collection()
+        await Repository.drop_collection()
         super().tearDownClass()
 
     @async_test
