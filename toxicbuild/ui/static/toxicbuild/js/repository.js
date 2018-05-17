@@ -76,8 +76,8 @@ var RepositoryModel = function(attrs){
     vcs_type: null,
     update_seconds: null,
     branches: null,
-    slaves: null,
-  }
+    slaves: null
+  };
 
   var instance_attrs = {};
   jQuery.extend(instance_attrs, default_attrs, attrs);
@@ -125,12 +125,12 @@ var RepositoryModel = function(attrs){
       var my_success_cb = function(response){
 	utils.log(response);
 	success_cb(response);
-      }
+      };
 
       var my_error_cb = function(response){
 	utils.log(response);
 	error_cb(response);
-      }
+      };
 
       // false means this will be a sync request.
       utils.sendAjax(type, url, data, my_success_cb, my_error_cb, false);
@@ -147,12 +147,12 @@ var RepositoryModel = function(attrs){
       var my_success_cb = function(response){
 	utils.log(response);
 	success_cb(response);
-      }
+      };
 
       var my_error_cb = function(response){
 	utils.log(response);
 	error_cb(response);
-      }
+      };
       utils.sendAjax(type, url, data, my_success_cb, my_error_cb);
     },
 
@@ -164,7 +164,7 @@ var RepositoryModel = function(attrs){
 
       var type = 'delete';
       var url = '/api/repo/';
-      var data = {name: self.name}
+      var data = {name: self.name};
       var my_success_cb = function(response){
 	utils.log(response);
 	success_cb(response);
@@ -280,10 +280,10 @@ var RepositoryModel = function(attrs){
       }
     }
 
-  }
+  };
 
-  jQuery.extend(instance, instance_attrs)
-  return instance
+  jQuery.extend(instance, instance_attrs);
+  return instance;
 }
 
 
@@ -359,12 +359,12 @@ var RepositoryView = function (model){
 
     removeBranchFromModal: function(branch_form){
       branch_form.remove();
-    },
+    }
 
-  }
+  };
 
-  return instance
-}
+  return instance;
+};
 
 var RepositoryManager = {
 
@@ -532,10 +532,10 @@ var RepositoryManager = {
 
       utils.showSuccessMessage(success_msg);
       self.modal.modal('hide');
-      if(add_row){
-	response = jQuery.parseJSON(response);
-	self._insertRepoRow(response)
-      };
+      // if(add_row){
+      // 	response = jQuery.parseJSON(response);
+      // 	self._insertRepoRow(response)
+      // };
     };
     var error_cb = function(response){
       utils.showErrorMessage(response.statusText);
