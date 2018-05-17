@@ -1,21 +1,52 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import os
 from toxicbuild.master import create_settings_and_connect
 from toxicbuild.slave import create_settings
 from toxicbuild.ui import create_settings as create_settings_ui
+from toxicbuild.output import (
+    create_settings_and_connect as create_settings_output)
+from tests.functional import (REPO_DIR,
+                              SLAVE_ROOT_DIR, MASTER_ROOT_DIR, UI_ROOT_DIR,
+                              OUTPUT_ROOT_DIR)
 
 # settings needed to the test data. This needs to be before the
 # import from ui.models
+
+toxicmaster_conf = os.environ.get('TOXICMASTER_SETTINGS')
+if not toxicmaster_conf:
+    toxicmaster_conf = os.path.join(MASTER_ROOT_DIR, 'toxicmaster.conf')
+    os.environ['TOXICMASTER_SETTINGS'] = toxicmaster_conf
+
+toxicslave_conf = os.environ.get('TOXICSLAVE_SETTINGS')
+if not toxicslave_conf:
+    toxicslave_conf = os.path.join(SLAVE_ROOT_DIR, 'toxicslave.conf')
+    os.environ['TOXICSLAVE_SETTINGS'] = toxicslave_conf
+
+toxicweb_conf = os.environ.get('TOXICUI_SETTINGS')
+if not toxicweb_conf:
+    toxicweb_conf = os.path.join(UI_ROOT_DIR, 'toxicui.conf')
+    os.environ['TOXICUI_SETTINGS'] = toxicweb_conf
+
+toxicoutput_conf = os.environ.get('TOXICOUTPUT_SETTINGS')
+if not toxicoutput_conf:
+    toxicoutput_conf = os.path.join(OUTPUT_ROOT_DIR, 'toxicoutput.conf')
+    os.environ['TOXICOUTPUT_SETTINGS'] = toxicoutput_conf
+
 create_settings()
 create_settings_ui()
 create_settings_and_connect()
+create_settings_output()
 
 from toxicbuild.master.users import User  # noqa f402
 from toxicbuild.ui.models import Slave, Repository  # noqa 402
 from tests.functional import (start_slave, stop_slave,  # noqa 402
-                              start_master,
-                              stop_master, start_webui, stop_webui,
+                              start_master, stop_master,
+                              start_poller, stop_poller,
+                              start_scheduler, stop_scheduler,
+                              start_output, stop_output,
+                              start_webui, stop_webui,
                               REPO_DIR)
 from tests.functional.webui import SeleniumBrowser  # noqa 402
 
@@ -97,6 +128,9 @@ def before_feature(context, feature):
 
     start_slave()
     start_master()
+    start_poller()
+    start_scheduler()
+    start_output()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.sleep(0.5))
     loop.run_until_complete(create_user(context))
@@ -122,5 +156,8 @@ def after_feature(context, feature):
 
     quit_browser(context)
     stop_webui()
+    stop_output()
+    stop_scheduler()
+    stop_poller()
     stop_master()
     stop_slave()
