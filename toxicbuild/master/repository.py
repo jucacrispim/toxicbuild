@@ -38,6 +38,8 @@ from toxicbuild.master.exchanges import (update_code, poll_status,
                                          revisions_added, locks_conn,
                                          scheduler_action, repo_status_changed,
                                          repo_added, ui_notifications)
+from toxicbuild.master.fields import (IgnoreUnknownListField,
+                                      HandleUnknownEmbeddedDocumentField)
 from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.signals import (build_started, build_finished)
 from toxicbuild.master.slave import Slave
@@ -98,7 +100,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     clone_status = StringField(choices=('cloning', 'ready', 'clone-exception'),
                                default='cloning')
     schedule_poller = BooleanField(default=True)
-    plugins = ListField(EmbeddedDocumentField(MasterPlugin))
+    plugins = IgnoreUnknownListField(
+        HandleUnknownEmbeddedDocumentField(MasterPlugin))
     # max number of builds in parallel that this repo exeutes
     # If None, there's no limit for parallel builds.
     parallel_builds = IntField()
