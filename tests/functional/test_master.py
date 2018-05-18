@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -293,13 +293,13 @@ class ToxicMasterTest(BaseFunctionalTest):
 
     @async_test
     def test_11_list_plugins(self):
-        plugins_count = len([p for p in MasterPlugin.list_plugins()
-                             if 'test' not in p.__module__])
-
         with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server('plugins-list', {})
 
-        self.assertEqual(len(resp), plugins_count, MasterPlugin.list_plugins())
+        # - slack plugin
+        # - email plugin
+        # - custom_webhook plugin
+        self.assertEqual(len(resp), 3, resp)
 
     @async_test
     async def test_12_enable_plugin(self):
