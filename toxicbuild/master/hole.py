@@ -429,8 +429,7 @@ class HoleHandler:
 
         builds_count = 0
 
-        buildset = await BuildSet.create(repository=repo, revision=rev,
-                                         save=False)
+        buildset = await BuildSet.create(repository=repo, revision=rev)
         for slave in slaves:
             await repo.add_builds_for_slave(buildset, slave,
                                             builders[slave])

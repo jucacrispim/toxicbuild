@@ -21,7 +21,7 @@ import asyncio
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 from toxicbuild.core.utils import now
-from toxicbuild.master import users
+from toxicbuild.master import users, build
 from toxicbuild.master.build import BuildSet, Build, Builder, BuildStep
 from toxicbuild.master.repository import Repository, RepositoryRevision
 from toxicbuild.master.slave import Slave
@@ -292,6 +292,8 @@ class NotificationPlugin(TestCase):
         await self.plugin._check_build(sig, build)
         self.assertFalse(self.plugin.send_finished_message.called)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_send_started_message(self):
         repo, build = MagicMock(), MagicMock()
@@ -299,6 +301,8 @@ class NotificationPlugin(TestCase):
         with self.assertRaises(NotImplementedError):
             await p.send_started_message(repo, build)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_send_finished_message(self):
         repo, build = MagicMock(), MagicMock()
@@ -343,6 +347,8 @@ class SlackPluginTest(TestCase):
         self.assertEqual(called[1]['headers'],
                          {'Content-Type': 'application/json'})
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_send_started_message(self):
         await self._create_test_data()
@@ -357,6 +363,8 @@ class SlackPluginTest(TestCase):
         called = self.plugin._send_message.call_args[0][0]
         self.assertEqual(called, expected, called)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_send_finished_message(self):
         await self._create_test_data()
@@ -376,6 +384,8 @@ class SlackPluginTest(TestCase):
         called = send_msg.call_args[0][0]
         self.assertEqual(called, expected, called)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_send_finished_message_with_bad_status(self):
         await self._create_test_data()
@@ -410,6 +420,8 @@ class EmailPluginTest(TestCase):
         await Repository.drop_collection()
         await users.User.drop_collection()
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @patch.object(mail, 'settings', mock_settings)
     @patch.object(plugins.MailSender, 'connect', AsyncMagicMock())
     @patch.object(plugins.MailSender, 'disconnect', AsyncMagicMock())
@@ -472,6 +484,8 @@ class CustomWebhookPluginTest(TestCase):
         await Builder.drop_collection()
         await users.User.drop_collection()
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @patch.object(plugins.requests, 'post', AsyncMagicMock())
     @async_test
     async def test_send_message(self):
@@ -480,6 +494,8 @@ class CustomWebhookPluginTest(TestCase):
         called_url = plugins.requests.post.call_args[0][0]
         self.assertEqual(called_url, self.plugin.webhook_url)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @patch.object(plugins.CustomWebhookPlugin, '_send_message',
                   AsyncMagicMock())
     @async_test
@@ -489,6 +505,8 @@ class CustomWebhookPluginTest(TestCase):
             self.repo, self.buildset.builds[0])
         self.assertTrue(self.plugin._send_message.called)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @patch.object(plugins.CustomWebhookPlugin, '_send_message',
                   AsyncMagicMock())
     @async_test

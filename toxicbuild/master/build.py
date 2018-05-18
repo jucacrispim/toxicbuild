@@ -33,6 +33,7 @@ from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
                                    format_timedelta, LoggerMixin)
 from toxicbuild.master.exceptions import DBError
+from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import build_added
 
 # The statuses used in builds  ordered by priority.
@@ -290,8 +291,18 @@ class BuildSet(SerializeMixin, Document):
     def objects(doc_cls, queryset):
         return queryset.order_by('created')
 
+    async def notify(self, event_type):
+        """Notifies an event to the build_notifications exchange.
+
+        :param event_type: The event type to notify about"""
+
+        msg = self.to_dict(id_as_str=True)
+        msg['event_type'] = event_type
+        msg['status'] = self.get_status()
+        await build_notifications.publish(msg)
+
     @classmethod
-    async def create(cls, repository, revision, save=True):
+    async def create(cls, repository, revision):
         """Creates a new buildset.
 
         :param repository: An instance of `toxicbuild.master.Repository`.
@@ -304,8 +315,8 @@ class BuildSet(SerializeMixin, Document):
                        commit_date=revision.commit_date,
                        branch=revision.branch, author=revision.author,
                        title=revision.title)
-        if save:
-            await buildset.save()
+        await buildset.save()
+        ensure_future(buildset.notify('builset-added'))
         return buildset
 
     def to_dict(self, id_as_str=False):
@@ -337,7 +348,12 @@ class BuildSet(SerializeMixin, Document):
         build_statuses = set([b.status for b in self.builds])
         ordered_statuses = sorted(build_statuses,
                                   key=lambda i: ORDERED_STATUSES.index(i))
-        return ordered_statuses[0]
+        try:
+            status = ordered_statuses[0]
+        except IndexError:
+            status = 'pending'
+
+        return status
 
     def get_pending_builds(self):
         return [b for b in self.builds if b.status == Build.PENDING]
@@ -399,8 +415,7 @@ class BuildManager(LoggerMixin):
 
         for revision in revisions:
             buildset = await BuildSet.create(repository=self.repository,
-                                             revision=revision,
-                                             save=False)
+                                             revision=revision)
 
             slaves = await self.repository.slaves
             for slave in slaves:
@@ -497,6 +512,7 @@ class BuildManager(LoggerMixin):
         if not buildset.started:
             buildset.started = now()
             await buildset.save()
+            await buildset.notify('buildset-started')
 
     async def _set_finished_for_buildset(self, buildset):
         just_now = now()
@@ -505,6 +521,7 @@ class BuildManager(LoggerMixin):
             buildset.total_time = int((buildset.finished -
                                        buildset.started).seconds)
             await buildset.save()
+            await buildset.notify('buildset-finished')
 
     async def _execute_builds(self, slave):
         """ Execute the buildsets in the queue of a given slave.

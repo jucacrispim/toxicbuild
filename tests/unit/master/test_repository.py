@@ -512,6 +512,8 @@ class RepositoryTest(TestCase):
         called_kw = add_builds_for_slave.call_args[1]
         self.assertEqual(called_kw['builders'], builders)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_with_running_build(self):
         await self._create_db_revisions()
@@ -527,6 +529,8 @@ class RepositoryTest(TestCase):
         await buildset.save()
         self.assertEqual((await self.repo.get_status()), 'running')
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_with_success_build(self):
         await self._create_db_revisions()
@@ -548,6 +552,8 @@ class RepositoryTest(TestCase):
 
         self.assertEqual((await self.repo.get_status()), 'success')
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_with_fail_build(self):
         await self._create_db_revisions()
@@ -583,6 +589,8 @@ class RepositoryTest(TestCase):
 
         self.assertEqual((await self.repo.get_status()), 'ready')
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_only_pending(self):
         await self._create_db_revisions()

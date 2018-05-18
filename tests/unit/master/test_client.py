@@ -85,6 +85,8 @@ class BuildClientTest(TestCase):
 
         self.assertEqual(expected, builders)
 
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_build(self):
         write = mock.MagicMock()
@@ -151,6 +153,8 @@ class BuildClientTest(TestCase):
         await self.client.build(buildinstance, process_coro=process_coro)
         self.assertEqual(len(process.call_args_list), 3)
 
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_build_without_out_fn(self):
         write = mock.MagicMock()
