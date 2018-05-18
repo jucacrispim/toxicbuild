@@ -179,6 +179,10 @@ class ToxicMasterTest(BaseFunctionalTest):
         super().tearDownClass()
 
     @async_test
+    async def tearDown(self):
+        await Repository.objects(name__not__exists=1).delete()
+
+    @async_test
     def test_01_create_slave(self):
         with (yield from get_dummy_client(self.user)) as client:
             response = yield from client.create_slave()

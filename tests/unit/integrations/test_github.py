@@ -468,6 +468,12 @@ class GithubCheckRunTest(TestCase):
         self.check_run = github.GithubCheckRun(installation=self.installation)
 
     @async_test
+    async def tearDown(self):
+        await User.drop_collection()
+        await repository.Repository.drop_collection()
+        await github.GithubInstallation.drop_collection()
+
+    @async_test
     async def test_get_repo_full_name(self):
 
         expected = 'a/a'
