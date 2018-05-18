@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future, gather
+from collections import defaultdict
 from datetime import timedelta
 import jwt
 from mongomotor import Document, EmbeddedDocument
@@ -25,11 +26,14 @@ from mongomotor.fields import (StringField, DateTimeField, IntField,
                                ReferenceField, EmbeddedDocumentListField)
 from toxicbuild.core import requests
 from toxicbuild.core.utils import (string2datetime, now, localtime2utc,
-                                   LoggerMixin, utc2localtime)
+                                   LoggerMixin, utc2localtime,
+                                   datetime2string)
 from toxicbuild.integrations import settings
-from toxicbuild.master.users import User
+from toxicbuild.master.build import BuildSet
+from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.repository import Repository, RepositoryBranch
 from toxicbuild.master.slave import Slave
+from toxicbuild.master.users import User
 from toxicbuild.integrations.exceptions import (AppDoesNotExist,
                                                 BadRequestToGithubAPI,
                                                 BadRepository)
@@ -138,8 +142,9 @@ class GithubApp(LoggerMixin, Document):
 
         ret = ret.json()
         installation.auth_token = ret['token']
-        installation.expires = string2datetime(ret['expires_at'],
-                                               dtformat="%Y-%m-%dT%H:%M:%SZ")
+        expires_at = ret['expires_at'].replace('Z', '+0000')
+        installation.expires = string2datetime(expires_at,
+                                               dtformat="%Y-%m-%dT%H:%M:%S%z")
         await installation.save()
         return installation
 
@@ -279,12 +284,14 @@ class GithubInstallation(LoggerMixin, Document):
         repo = await self._get_repo_by_github_id(github_repo_id)
         await repo.remove()
 
-    async def _get_header(self):
+    async def _get_header(
+            self, accept='application/vnd.github.machine-man-preview+json'):
+
         if not self.auth_token or self.token_is_expired:
             await self.app.create_installation_token(self)
 
         header = {'Authorization': 'token {}'.format(self.auth_token),
-                  'Accept': 'application/vnd.github.machine-man-preview+json'}
+                  'Accept': accept}
         return header
 
     async def _get_auth_url(self, url):
@@ -311,3 +318,81 @@ class GithubInstallation(LoggerMixin, Document):
             raise BadRequestToGithubAPI(ret.status, ret.text, url)
         ret = ret.json()
         return ret['repositories']
+
+
+class GithubCheckRun(MasterPlugin):
+    """A plugin that creates a check run reacting to a buildset that
+    was added, started or finished."""
+
+    type = 'notification'
+    name = 'github-check-run'
+    events = ['buildset-added', 'buildset-started', 'buildset-finished']
+
+    run_name = 'continuous-integration'
+
+    installation = ReferenceField(GithubInstallation, required=True)
+
+    async def _get_repo_full_name(self, repo):
+        full_name = None
+        installation = await self.installation
+        for inst_repo in installation.repositories:
+            try:
+                auto_deref = inst_repo._fields['repository']._auto_dereference
+                inst_repo._fields['repository']._auto_dereference = False
+                if inst_repo.repository.id == repo.id:
+                    full_name = inst_repo.full_name
+                    break
+            finally:
+                inst_repo._fields['repository']._auto_dereference = auto_deref
+
+        if not full_name:
+            raise BadRepository
+
+        return full_name
+
+    async def run(self, sender, info):
+        self.sender = sender
+
+        status = info['status']
+        status_tb = defaultdict(lambda: 'completed')
+        status_tb.update({'pending': 'queued',
+                          'running': 'in_progress'})
+        run_status = status_tb[status]
+
+        conclusion_tb = defaultdict(lambda: 'failure')
+        conclusion_tb.update({'success': 'success'})
+        conclusion = conclusion_tb[status]
+
+        buildset = await BuildSet.objects.get(id=info['id'])
+        await self._send_message(buildset, run_status, conclusion)
+
+    def _get_payload(self, buildset, run_status, conclusion):
+
+        payload = {'name': self.run_name,
+                   'head_branch': buildset.branch,
+                   'head_sha': buildset.commit,
+                   'started_at': datetime2string(
+                       buildset.started,
+                       dtformat="%Y-%m-%dT%H:%M:%S%z"),
+                   'status': run_status}
+
+        if run_status == 'completed':
+            payload.update(
+                {'completed_at': datetime2string(
+                    buildset.finished,
+                    dtformat="%Y-%m-%dT%H:%M:%S%z"),
+                 'conclusion': conclusion})
+
+        return payload
+
+    async def _send_message(self, buildset, run_status, conclusion):
+        self.log('senging check run to github', level='debug')
+        repo = await buildset.repository
+        full_name = await self._get_repo_full_name(repo)
+        url = 'https://api.github.com/repos/{}/check-runs'.format(full_name)
+        payload = self._get_payload(buildset, run_status, conclusion)
+        install = await self.installation
+        header = await install._get_header(
+            accept='application/vnd.github.antiope-preview+json')
+        r = await requests.post(url, headers=header, json=payload)
+        self.log(r.text, level='debug')

@@ -23,7 +23,9 @@ import json
 import os
 from unittest import TestCase
 from unittest.mock import Mock, patch, MagicMock
+from toxicbuild.core.utils import now, datetime2string
 from toxicbuild.master import repository
+from toxicbuild.master.users import User
 from toxicbuild.integrations import github
 from tests import async_test, AsyncMagicMock
 from tests.unit.integrations import INTEGRATIONS_DATA_PATH
@@ -438,3 +440,109 @@ class GithubInstallationTest(TestCase):
         ret.json = Mock(return_value=json_contents)
         with self.assertRaises(github.BadRequestToGithubAPI):
             await self.installation.list_repos()
+
+
+class GithubCheckRunTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.user = User(email='a@a.com')
+        await self.user.save()
+        self.installation = github.GithubInstallation(
+            github_id=1234, user=self.user)
+        await self.installation.save()
+
+        self.repo = repository.Repository(
+            name='myrepo', url='git@bla.com/bla.git',
+            update_seconds=10, schedule_poller=False,
+            vcs_type='git',
+            owner=self.user)
+        await self.repo.save()
+        install_repo = github.GithubInstallationRepository(
+            github_id=1234,
+            repository=self.repo,
+            full_name='a/a')
+
+        self.installation.repositories.append(install_repo)
+        await self.installation.save()
+        self.check_run = github.GithubCheckRun(installation=self.installation)
+
+    @async_test
+    async def test_get_repo_full_name(self):
+
+        expected = 'a/a'
+        full_name = await self.check_run._get_repo_full_name(self.repo)
+        self.assertEqual(full_name, expected)
+
+    @async_test
+    async def test_get_repo_full_name_bad_repo(self):
+        with self.assertRaises(github.BadRepository):
+            await self.check_run._get_repo_full_name(Mock())
+
+    @patch.object(github.BuildSet, 'objects', AsyncMagicMock())
+    @async_test
+    async def test_run(self):
+        sender = MagicMock()
+        info = {'status': 'fail', 'id': 'some-id'}
+        self.check_run._send_message = AsyncMagicMock(
+            spec=self.check_run._send_message)
+
+        await self.check_run.run(sender, info)
+        self.assertTrue(self.check_run._send_message.called)
+
+    def test_get_payload(self):
+        buildset = Mock()
+        buildset.branch = 'master'
+        buildset.commit = '123asdf'
+        buildset.started = now()
+        run_status = 'pending'
+        conclusion = None
+        expected = {'name': self.check_run.run_name,
+                    'head_branch': buildset.branch,
+                    'head_sha': buildset.commit,
+                    'started_at': datetime2string(
+                        buildset.started,
+                        dtformat="%Y-%m-%dT%H:%M:%S%z"),
+                    'status': run_status}
+        payload = self.check_run._get_payload(buildset, run_status, conclusion)
+        self.assertEqual(payload, expected)
+
+    def test_get_payload_completed(self):
+        buildset = Mock()
+        buildset.branch = 'master'
+        buildset.commit = '123asdf'
+        buildset.started = now()
+        buildset.finished = now()
+        run_status = 'completed'
+        conclusion = None
+        expected = {'name': self.check_run.run_name,
+                    'head_branch': buildset.branch,
+                    'head_sha': buildset.commit,
+                    'started_at': datetime2string(
+                        buildset.started,
+                        dtformat="%Y-%m-%dT%H:%M:%S%z"),
+                    'status': run_status,
+                    'completed_at': datetime2string(
+                        buildset.finished,
+                        dtformat="%Y-%m-%dT%H:%M:%S%z"),
+                    'conclusion': conclusion}
+        payload = self.check_run._get_payload(buildset, run_status, conclusion)
+        self.assertEqual(payload, expected)
+
+    @patch.object(github.requests, 'post', AsyncMagicMock(
+        spec=github.requests.post))
+    @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
+        spec=github.GithubInstallation._get_header))
+    @async_test
+    async def test_send_message(self):
+        buildset = github.BuildSet(repository=self.repo)
+        buildset.branch = 'master'
+        buildset.commit = '123asdf'
+        buildset.started = now()
+        buildset.finished = now()
+        run_status = 'completed'
+        conclusion = None
+        github.requests.post.return_value.text = ''
+
+        await self.check_run._send_message(buildset, run_status, conclusion)
+        self.assertTrue(github.requests.post.called)
