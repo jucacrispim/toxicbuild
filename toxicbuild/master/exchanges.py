@@ -66,6 +66,8 @@ async def connect_exchanges():
     await scheduler_action.declare()
     await repo_status_changed.declare()
     await repo_added.declare()
+    await build_notifications.declare()
+    await repo_notifications.declare()
     await ui_notifications.declare()
 
 
