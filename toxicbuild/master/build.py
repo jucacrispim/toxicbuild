@@ -221,8 +221,8 @@ class Build(EmbeddedDocument):
     async def update(self):
         """Does an atomic update in this embedded document."""
 
-        result = await BuildSet.objects(
-            builds__uuid=self.uuid).update(set__builds__S=self)
+        qs = BuildSet.objects(builds__uuid=self.uuid).no_cache()
+        result = await qs.update(set__builds__S=self)
 
         if not result:
             msg = 'This EmbeddedDocument was not save to database.'
