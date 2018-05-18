@@ -34,16 +34,15 @@ from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.repository import Repository, RepositoryBranch
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.users import User
-from toxicbuild.integrations.exceptions import (AppDoesNotExist,
-                                                BadRequestToGithubAPI,
+from toxicbuild.integrations.exceptions import (BadRequestToGithubAPI,
                                                 BadRepository)
 
 
 class GithubApp(LoggerMixin, Document):
     """A GitHub App. Only one app per ToxicBuild installation."""
 
-    private_key = settings.GITHUB_PRIVATE_KEY
-    app_id = settings.GITHUB_APP_ID
+    private_key = StringField(required=True)
+    app_id = IntField(required=True)
     jwt_expires = DateTimeField()
     jwt_token = StringField()
 
@@ -51,7 +50,12 @@ class GithubApp(LoggerMixin, Document):
     async def get_app(cls):
         if await cls.app_exists():
             return await cls.objects.first()
-        app = cls()
+
+        with open(settings.GITHUB_PRIVATE_KEY) as fd:
+            pk = fd.read()
+
+        app = cls(private_key=pk)
+        app.app_id = settings.GITHUB_APP_ID
         await app.save()
         return app
 
@@ -92,20 +96,18 @@ class GithubApp(LoggerMixin, Document):
 
     @classmethod
     async def _create_jwt(cls):
+        app = await cls.get_app()
         exp_time = 10 * 59
         n = now()
         dt_expires = localtime2utc(n + timedelta(seconds=exp_time))
         ts_now = int(localtime2utc(n).timestamp())
         payload = {'iat': ts_now,
                    'exp': ts_now + exp_time,
-                   'iss': cls.app_id}
+                   'iss': app.app_id}
 
-        with open(cls.private_key) as fd:
-            pk = fd.read()
-
-        cls().log('creating jwt_token with payload {}'.format(payload),
-                  level='debug')
-        jwt_token = jwt.encode(payload, pk, "RS256")
+        app.log('creating jwt_token with payload {}'.format(payload),
+                level='debug')
+        jwt_token = jwt.encode(payload, app.private_key, "RS256")
         await cls.set_expire_time(dt_expires)
         await cls.set_jwt_token(jwt_token.decode())
         return jwt_token.decode()
@@ -128,9 +130,6 @@ class GithubApp(LoggerMixin, Document):
         msg = 'Creating installation token for {}'.format(installation.id)
         cls().log(msg, level='debug')
 
-        if not cls.app_id:
-            raise AppDoesNotExist('You don\'t have a github application.')
-
         myjwt = await cls.get_jwt_token()
         header = {'Authorization': 'Bearer {}'.format(myjwt),
                   'Accept': 'application/vnd.github.machine-man-preview+json'}
@@ -147,6 +146,9 @@ class GithubApp(LoggerMixin, Document):
                                                dtformat="%Y-%m-%dT%H:%M:%S%z")
         await installation.save()
         return installation
+
+
+GithubApp.ensure_indexes()
 
 
 class GithubInstallationRepository(LoggerMixin, EmbeddedDocument):
@@ -273,6 +275,7 @@ class GithubInstallation(LoggerMixin, Document):
             full_name=repo_info['full_name'])
         self.repositories.append(gh_repo)
         await self.save()
+        await repo.enable_plugin('github-check-run', installation=self)
         await repo.update_code()
         return repo
 
@@ -327,6 +330,7 @@ class GithubCheckRun(MasterPlugin):
     type = 'notification'
     name = 'github-check-run'
     events = ['buildset-added', 'buildset-started', 'buildset-finished']
+    no_list = True
 
     run_name = 'continuous-integration'
 

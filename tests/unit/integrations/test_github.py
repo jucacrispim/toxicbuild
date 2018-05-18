@@ -45,11 +45,12 @@ class GitHubAppTest(TestCase):
     @patch.object(github.jwt, 'encode', Mock(spec=github.jwt.encode,
                                              return_value=b'retval'))
     @patch.object(github, 'now', Mock(spec=github.now))
-    @patch.object(github.GithubApp, 'private_key', 'some/path/to/pk')
     @patch.object(github, 'open', MagicMock())
-    @patch.object(github.GithubApp, 'app_id', 1234)
+    @patch.object(github, 'settings', Mock())
     @async_test
     async def test_create_jwt(self):
+        github.settings.GITHUB_PRIVATE_KEY = 'some/path/to/pk'
+        github.settings.GITHUB_APP_ID = 1234
         github.now.return_value = self.dt_now
         read = github.open.return_value.__enter__.return_value.read
         read.return_value = 'secret-key'
@@ -83,12 +84,6 @@ class GitHubAppTest(TestCase):
         self.assertEqual(expected_header, called_header)
         self.assertEqual(installation.token, rdict['token'])
 
-    @async_test
-    async def test_create_installation_token_no_app(self):
-        installation = Mock()
-        with self.assertRaises(github.AppDoesNotExist):
-            await github.GithubApp.create_installation_token(installation)
-
     @patch.object(github.GithubApp, 'get_jwt_token', AsyncMagicMock(
         return_value='myjwt'))
     @patch.object(github.GithubApp, 'app_id', 1234)
@@ -110,7 +105,8 @@ class GitHubAppTest(TestCase):
     async def test_is_expired_not_expired(self):
         expires = github.localtime2utc(github.now()) + datetime.timedelta(
             seconds=3600)
-        app = github.GithubApp(jwt_expires=expires)
+        app = github.GithubApp(jwt_expires=expires, private_key='bla',
+                               app_id=123)
         await app.save()
         self.assertFalse(await app.is_expired())
 
@@ -118,7 +114,8 @@ class GitHubAppTest(TestCase):
     async def test_is_expired_already_expired(self):
         expires = github.localtime2utc(github.now()) - datetime.timedelta(
             seconds=3600)
-        app = github.GithubApp(jwt_expires=expires)
+        app = github.GithubApp(jwt_expires=expires, private_key='bla',
+                               app_id=123)
         await app.save()
         self.assertTrue(await app.is_expired())
 
@@ -126,7 +123,8 @@ class GitHubAppTest(TestCase):
     async def test_get_jwt_token(self):
         expires = github.localtime2utc(github.now()) + datetime.timedelta(
             seconds=3600)
-        app = github.GithubApp(jwt_expires=expires, jwt_token='something')
+        app = github.GithubApp(jwt_expires=expires, jwt_token='something',
+                               private_key='bla', app_id=123)
         await app.save()
 
         token = await github.GithubApp.get_jwt_token()
@@ -138,7 +136,8 @@ class GitHubAppTest(TestCase):
     async def test_get_jwt_token_create(self):
         expires = github.localtime2utc(github.now()) - datetime.timedelta(
             seconds=3600)
-        app = github.GithubApp(jwt_expires=expires, jwt_token='something')
+        app = github.GithubApp(jwt_expires=expires, jwt_token='something',
+                               private_key='pk', app_id=123)
         await app.save()
 
         await github.GithubApp.get_jwt_token()
@@ -146,7 +145,7 @@ class GitHubAppTest(TestCase):
 
     @async_test
     async def test_set_jwt_token(self):
-        app = github.GithubApp()
+        app = github.GithubApp(private_key='pk', app_id=123)
         await app.save()
         await github.GithubApp.set_jwt_token('sometoken')
         await app.reload()
@@ -154,7 +153,7 @@ class GitHubAppTest(TestCase):
 
     @async_test
     async def test_set_expire_time(self):
-        app = github.GithubApp()
+        app = github.GithubApp(private_key='pk', app_id=123)
         await app.save()
         await github.GithubApp.set_expire_time(
             github.localtime2utc(github.now()))
@@ -172,7 +171,7 @@ class GitHubAppTest(TestCase):
         spec=github.requests.post))
     @async_test
     async def test_create_token(self):
-        app = github.GithubApp()
+        app = github.GithubApp(private_key='bla', app_id=123)
         await app.save()
         expected = {
             'Authorization': 'Bearer somejwt',
