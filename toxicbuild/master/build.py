@@ -35,6 +35,8 @@ from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
 from toxicbuild.master.exceptions import DBError
 from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import build_added
+from toxicbuild.master.utils import as_db_ref
+
 
 # The statuses used in builds  ordered by priority.
 ORDERED_STATUSES = ['running', 'exception', 'fail',
@@ -296,9 +298,11 @@ class BuildSet(SerializeMixin, Document):
 
         :param event_type: The event type to notify about"""
 
+        repo_id = str(as_db_ref(self, 'repository').id)
         msg = self.to_dict(id_as_str=True)
         msg['event_type'] = event_type
         msg['status'] = self.get_status()
+        msg['repository_id'] = repo_id
         await build_notifications.publish(msg)
 
     @classmethod

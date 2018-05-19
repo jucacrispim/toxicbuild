@@ -64,60 +64,48 @@ class GithubApp(LoggerMixin, Document):
         app = await cls.objects.first()
         return bool(app)
 
-    @classmethod
-    async def is_expired(cls):
-        app = await cls.get_app()
-        if app.jwt_expires and utc2localtime(app.jwt_expires) < now():
+    async def is_expired(self):
+        if self.jwt_expires and utc2localtime(self.jwt_expires) < now():
             return True
         return False
 
-    @classmethod
-    async def get_jwt_token(cls):
-        app = await cls.get_app()
-        if app.jwt_token and not await cls.is_expired():
-            return app.jwt_token
-        return await cls.create_token()
+    async def get_jwt_token(self):
+        if self.jwt_token and not await self.is_expired():
+            return self.jwt_token
+        return await self.create_token()
 
-    @classmethod
-    async def set_jwt_token(cls, jwt_token):
-        app = await cls.get_app()
-        app.jwt_token = jwt_token
-        await app.save()
+    async def set_jwt_token(self, jwt_token):
+        self.jwt_token = jwt_token
+        await self.save()
 
-    @classmethod
-    async def set_expire_time(cls, exp_time):
-        app = await cls.get_app()
-        app.jwt_expires = exp_time
-        await app.save()
+    async def set_expire_time(self, exp_time):
+        self.jwt_expires = exp_time
+        await self.save()
 
-    @classmethod
-    def get_api_url(cls):
+    def get_api_url(self):
         return 'https://api.github.com/app'
 
-    @classmethod
-    async def _create_jwt(cls):
-        app = await cls.get_app()
+    async def _create_jwt(self):
         exp_time = 10 * 59
         n = now()
         dt_expires = localtime2utc(n + timedelta(seconds=exp_time))
         ts_now = int(localtime2utc(n).timestamp())
         payload = {'iat': ts_now,
                    'exp': ts_now + exp_time,
-                   'iss': app.app_id}
+                   'iss': self.app_id}
 
-        app.log('creating jwt_token with payload {}'.format(payload),
-                level='debug')
-        jwt_token = jwt.encode(payload, app.private_key, "RS256")
-        await cls.set_expire_time(dt_expires)
-        await cls.set_jwt_token(jwt_token.decode())
+        self.log('creating jwt_token with payload {}'.format(payload),
+                 level='debug')
+        jwt_token = jwt.encode(payload, self.private_key, "RS256")
+        await self.set_expire_time(dt_expires)
+        await self.set_jwt_token(jwt_token.decode())
         return jwt_token.decode()
 
-    @classmethod
-    async def create_token(cls):
-        myjwt = await cls._create_jwt()
+    async def create_token(self):
+        myjwt = await self._create_jwt()
         header = {'Authorization': 'Bearer {}'.format(myjwt),
                   'Accept': 'application/vnd.github.machine-man-preview+json'}
-        await requests.post(cls.get_api_url(), headers=header)
+        await requests.post(self.get_api_url(), headers=header)
         return myjwt
 
     @classmethod
@@ -127,10 +115,11 @@ class GithubApp(LoggerMixin, Document):
         :param installation: An instance of
         :class:`~toxicbuild.master.integrations.github.GitHubInstallation`"""
 
+        app = await cls.get_app()
         msg = 'Creating installation token for {}'.format(installation.id)
-        cls().log(msg, level='debug')
+        app.log(msg, level='debug')
 
-        myjwt = await cls.get_jwt_token()
+        myjwt = await app.get_jwt_token()
         header = {'Authorization': 'Bearer {}'.format(myjwt),
                   'Accept': 'application/vnd.github.machine-man-preview+json'}
 
