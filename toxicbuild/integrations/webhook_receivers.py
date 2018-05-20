@@ -120,7 +120,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         head_branch = head['ref']
         # branch_name: notify_only_latest
         repo_branches = {head_branch: True}
-        await install.update_repository(repo_branches=repo_branches)
+        await install.update_repository(base_id, repo_branches=repo_branches)
 
     @post('webhooks')
     async def receive_webhook(self):

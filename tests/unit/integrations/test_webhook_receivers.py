@@ -23,7 +23,7 @@ from unittest.mock import Mock, patch
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.integrations import webhook_receivers
-from tests import async_test, AsyncMagicMock
+from tests import async_test, AsyncMagicMock, create_autospec
 
 
 class GithubWebhookReceiverTest(AsyncTestCase):
@@ -228,8 +228,12 @@ class GithubWebhookReceiverTest(AsyncTestCase):
                 'base': {'repo': {'id': 'some-id'}}}}
 
         self.webhook_receiver.body = body
+        install = create_autospec(
+            spec=webhook_receivers.GithubInstallation,
+            mock_cls=AsyncMagicMock)
+
+        self.webhook_receiver._get_install.return_value = install
         await self.webhook_receiver._handle_pull_request_opened()
-        install = self.webhook_receiver._get_install.return_value
         self.assertTrue(install.update_repository.called)
 
     def test_hello(self):
