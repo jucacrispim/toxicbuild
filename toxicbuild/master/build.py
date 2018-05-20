@@ -293,15 +293,18 @@ class BuildSet(SerializeMixin, Document):
     def objects(doc_cls, queryset):
         return queryset.order_by('created')
 
-    async def notify(self, event_type):
+    async def notify(self, event_type, status=None):
         """Notifies an event to the build_notifications exchange.
 
-        :param event_type: The event type to notify about"""
+        :param event_type: The event type to notify about
+        :param status: The status of the buildset. If None, the return
+          of :meth:`~toxicbuild.master.build.Buildset.get_status` will be
+          used."""
 
         repo_id = str(as_db_ref(self, 'repository').id)
         msg = self.to_dict(id_as_str=True)
         msg['event_type'] = event_type
-        msg['status'] = self.get_status()
+        msg['status'] = status or self.get_status()
         msg['repository_id'] = repo_id
         await build_notifications.publish(msg)
 
@@ -320,7 +323,7 @@ class BuildSet(SerializeMixin, Document):
                        branch=revision.branch, author=revision.author,
                        title=revision.title)
         await buildset.save()
-        ensure_future(buildset.notify('builset-added'))
+        ensure_future(buildset.notify('buildset-added'))
         return buildset
 
     def to_dict(self, id_as_str=False):
@@ -516,7 +519,7 @@ class BuildManager(LoggerMixin):
         if not buildset.started:
             buildset.started = now()
             await buildset.save()
-            await buildset.notify('buildset-started')
+            await buildset.notify('buildset-started', status='running')
 
     async def _set_finished_for_buildset(self, buildset):
         just_now = now()

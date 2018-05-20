@@ -141,6 +141,7 @@ class BuildTest(TestCase):
         await self._create_test_data()
         b = self.buildset.builds[0]
         r = await build.Build.get(str(b.uuid))
+        mbuild = self.buildset.builds[0]
         self.assertEqual(b, r)
 
     async def _create_test_data(self):
