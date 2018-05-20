@@ -310,9 +310,8 @@ class GithubInstallationTest(TestCase):
                                      vcs_type='git',
                                      owner=self.user)
         await repo.save()
-        install_repo = github.GithubInstallationRepository(github_id=1234,
-                                                           repository=repo,
-                                                           full_name='a/b')
+        install_repo = github.GithubInstallationRepository(
+            github_id=1234, repository_id=str(repo.id), full_name='a/b')
         self.installation.repositories.append(install_repo)
         await self.installation.update_repository(1234)
         self.assertTrue(repository.Repository.update_code.called)
@@ -330,9 +329,8 @@ class GithubInstallationTest(TestCase):
                                      vcs_type='git',
                                      owner=self.user)
         await repo.save()
-        install_repo = github.GithubInstallationRepository(github_id=1234,
-                                                           repository=repo,
-                                                           full_name='a/b')
+        install_repo = github.GithubInstallationRepository(
+            github_id=1234, repository_id=str(repo.id), full_name='a/b')
         self.installation.repositories.append(install_repo)
         await self.installation.remove_repository(1234)
         with self.assertRaises(repository.Repository.DoesNotExist):
@@ -351,13 +349,11 @@ class GithubInstallationTest(TestCase):
                                      vcs_type='git',
                                      owner=self.user)
         await repo.save()
-        install_repo = github.GithubInstallationRepository(github_id=12345,
-                                                           repository=repo,
-                                                           full_name='a/b')
+        install_repo = github.GithubInstallationRepository(
+            github_id=12345, repository_id=repo.id, full_name='a/b')
         self.installation.repositories.append(install_repo)
-        install_repo = github.GithubInstallationRepository(github_id=1234,
-                                                           repository=repo,
-                                                           full_name='a/b')
+        install_repo = github.GithubInstallationRepository(
+            github_id=1234, repository_id=repo.id, full_name='a/b')
         self.installation.repositories.append(install_repo)
         await self.installation.update_repository(1234)
         self.assertTrue(repository.Repository.update_code.called)
@@ -485,7 +481,7 @@ class GithubCheckRunTest(TestCase):
         await self.repo.save()
         install_repo = github.GithubInstallationRepository(
             github_id=1234,
-            repository=self.repo,
+            repository_id=str(self.repo.id),
             full_name='a/a')
 
         self.installation.repositories.append(install_repo)
@@ -525,15 +521,12 @@ class GithubCheckRunTest(TestCase):
         buildset = Mock()
         buildset.branch = 'master'
         buildset.commit = '123asdf'
-        buildset.started = now()
+        buildset.started = None
         run_status = 'pending'
         conclusion = None
         expected = {'name': self.check_run.run_name,
                     'head_branch': buildset.branch,
                     'head_sha': buildset.commit,
-                    'started_at': datetime2string(
-                        buildset.started,
-                        dtformat="%Y-%m-%dT%H:%M:%S%z"),
                     'status': run_status}
         payload = self.check_run._get_payload(buildset, run_status, conclusion)
         self.assertEqual(payload, expected)

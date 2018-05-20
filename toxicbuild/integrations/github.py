@@ -20,6 +20,7 @@
 from asyncio import ensure_future, gather
 from collections import defaultdict
 from datetime import timedelta
+import json
 import jwt
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, DateTimeField, IntField,
@@ -142,7 +143,7 @@ GithubApp.ensure_indexes()
 
 class GithubInstallationRepository(LoggerMixin, EmbeddedDocument):
     github_id = IntField(required=True)
-    repository = ReferenceField(Repository, required=True)
+    repository_id = StringField(required=True)
     full_name = StringField(required=True)
 
 
@@ -157,7 +158,6 @@ class GithubInstallation(LoggerMixin, Document):
     github_id = IntField(required=True, unique=True)
     auth_token = StringField()
     expires = DateTimeField()
-    # maps github_repo_ids/repo_ids
     repositories = EmbeddedDocumentListField(GithubInstallationRepository)
 
     @classmethod
@@ -183,7 +183,7 @@ class GithubInstallation(LoggerMixin, Document):
     async def _get_repo_by_github_id(self, github_repo_id):
         for repo in self.repositories:
             if repo.github_id == github_repo_id:
-                repo_inst = await repo.repository
+                repo_inst = await Repository.objects.get(id=repo.repository_id)
                 return repo_inst
 
         raise BadRepository('Github repository {} does not exist here.'.format(
@@ -260,7 +260,7 @@ class GithubInstallation(LoggerMixin, Document):
                                        slaves=slaves)
         gh_repo = GithubInstallationRepository(
             github_id=repo_info['id'],
-            repository=repo,
+            repository_id=str(repo.id),
             full_name=repo_info['full_name'])
         self.repositories.append(gh_repo)
         await self.save()
@@ -312,6 +312,9 @@ class GithubInstallation(LoggerMixin, Document):
         return ret['repositories']
 
 
+GithubInstallation.ensure_indexes()
+
+
 class GithubCheckRun(MasterPlugin):
     """A plugin that creates a check run reacting to a buildset that
     was added, started or finished."""
@@ -323,20 +326,17 @@ class GithubCheckRun(MasterPlugin):
 
     run_name = 'continuous-integration'
 
-    installation = ReferenceField(GithubInstallation, required=True)
+    installation = ReferenceField(GithubInstallation)
 
     async def _get_repo_full_name(self, repo):
         full_name = None
+
         installation = await self.installation
+
         for inst_repo in installation.repositories:
-            try:
-                auto_deref = inst_repo._fields['repository']._auto_dereference
-                inst_repo._fields['repository']._auto_dereference = False
-                if inst_repo.repository.id == repo.id:
-                    full_name = inst_repo.full_name
-                    break
-            finally:
-                inst_repo._fields['repository']._auto_dereference = auto_deref
+            if str(repo.id) == inst_repo.repository_id:
+                full_name = inst_repo.full_name
+                break
 
         if not full_name:
             raise BadRepository
@@ -364,28 +364,33 @@ class GithubCheckRun(MasterPlugin):
         payload = {'name': self.run_name,
                    'head_branch': buildset.branch,
                    'head_sha': buildset.commit,
-                   'started_at': datetime2string(
-                       buildset.started,
-                       dtformat="%Y-%m-%dT%H:%M:%S%z"),
                    'status': run_status}
 
+        if buildset.started:
+            started_at = datetime2string(buildset.started,
+                                         dtformat="%Y-%m-%dT%H:%M:%S%z")
+            started_at = started_at.replace('+0000', 'Z')
+            payload.update({'started_at': started_at})
+
         if run_status == 'completed':
+            completed_at = datetime2string(buildset.finished,
+                                           dtformat="%Y-%m-%dT%H:%M:%S%z")
+            completed_at = completed_at.replace('+0000', 'Z')
             payload.update(
-                {'completed_at': datetime2string(
-                    buildset.finished,
-                    dtformat="%Y-%m-%dT%H:%M:%S%z"),
+                {'completed_at': completed_at,
                  'conclusion': conclusion})
 
         return payload
 
     async def _send_message(self, buildset, run_status, conclusion):
-        self.log('senging check run to github', level='debug')
+        self.log('sending check run to github', level='debug')
         repo = await buildset.repository
         full_name = await self._get_repo_full_name(repo)
+        install = await self.installation
         url = 'https://api.github.com/repos/{}/check-runs'.format(full_name)
         payload = self._get_payload(buildset, run_status, conclusion)
-        install = await self.installation
         header = await install._get_header(
             accept='application/vnd.github.antiope-preview+json')
-        r = await requests.post(url, headers=header, json=payload)
+        data = json.dumps(payload)
+        r = await requests.post(url, headers=header, data=data)
         self.log(r.text, level='debug')
