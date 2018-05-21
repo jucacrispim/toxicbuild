@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+from toxicbuild.core.utils import log
 from toxicbuild.master import create_settings_and_connect
 from toxicbuild.slave import create_settings
 from toxicbuild.ui import create_settings as create_settings_ui
@@ -82,7 +83,10 @@ def del_slave(context):
 
     slaves = yield from Slave.list(context.user)
     for slave in slaves:
-        yield from slave.delete()
+        try:
+            yield from slave.delete()
+        except Exception as e:
+            log('Error deleting slave ' + str(e), level='warning')
 
 
 @asyncio.coroutine
@@ -116,7 +120,10 @@ def del_repo(context):
 
     repos = yield from Repository.list(context.user)
     for repo in repos:
-        yield from repo.delete()
+        try:
+            yield from repo.delete()
+        except Exception as e:
+            log('Error deleting repo ' + str(e), level='warning')
 
 
 def before_all(context):
