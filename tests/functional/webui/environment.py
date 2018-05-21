@@ -119,6 +119,23 @@ def del_repo(context):
         yield from repo.delete()
 
 
+def before_all(context):
+    start_slave()
+    start_master()
+    start_poller()
+    start_scheduler()
+    start_output()
+    start_webui()
+
+    create_browser(context)
+
+    async def create(context):
+        await create_user(context)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(create(context))
+
+
 def before_feature(context, feature):
     """Executed before every feature. It starts a slave, a master,
     a webui and creates a selenium browser.
@@ -126,19 +143,14 @@ def before_feature(context, feature):
     :param context: Behave's context.
     :param feature: The feature being executed."""
 
-    start_slave()
-    start_master()
-    start_poller()
-    start_scheduler()
-    start_output()
+    async def create(context):
+        await create_slave(context)
+
+        if 'waterfall.feature' in feature.filename:
+            await create_repo(context)
+
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(asyncio.sleep(0.5))
-    loop.run_until_complete(create_user(context))
-    loop.run_until_complete(create_slave(context))
-    start_webui()
-    create_browser(context)
-    if 'waterfall.feature' in feature.filename:
-        loop.run_until_complete(create_repo(context))
+    loop.run_until_complete(create(context))
 
 
 def after_feature(context, feature):
@@ -149,15 +161,27 @@ def after_feature(context, feature):
     :param context: Behave's context.
     :param feature: The feature that was executed."""
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(del_slave(context))
-    loop.run_until_complete(del_repo(context))
-    loop.run_until_complete(del_user(context))
+    async def delete(context):
+        await del_slave(context)
+        await del_repo(context)
 
-    quit_browser(context)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(delete(context))
+
+
+def after_all(context):
+
     stop_webui()
     stop_output()
     stop_scheduler()
     stop_poller()
     stop_master()
     stop_slave()
+
+    async def delete(context):
+        await del_user(context)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(delete(context))
+
+    quit_browser(context)
