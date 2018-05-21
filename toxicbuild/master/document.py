@@ -63,7 +63,7 @@ class OwnedDocument(Document):
                 Q(__raw__={'owner._ref.$id': {'$in': organizations}}) |
                 Q(__raw__={'owner._ref.$id': {'$in': member_of}}))
 
-        return qs.filter(**kwargs)
+        return qs.no_cache().filter(**kwargs)
 
     def get_allowed_users(self):
         """Returns a queryset of users that have read permission."""
