@@ -574,7 +574,8 @@ class BuildManager(LoggerMixin):
                 f = ensure_future(slave.build(build))
                 chunk_fs.append(f)
                 fs.append(f)
-                await asyncio.wait(chunk_fs)
+
+            await asyncio.wait(chunk_fs)
 
         return fs
 

@@ -322,7 +322,7 @@ class ToxicMasterTest(BaseFunctionalTest):
                 response = await client.get_response()
                 body = response['body'] if response else {}
                 if body.get('event_type') == 'build_finished':
-                    sleep_time = os.environ.get('TOXICSLEEP_TIME') or 0.5
+                    sleep_time = os.environ.get('TOXICSLEEP_TIME') or 1
                     sleep_time = float(sleep_time)
                     await asyncio.sleep(sleep_time)
                     break
