@@ -23,7 +23,7 @@ import json
 import os
 from unittest import TestCase
 from unittest.mock import Mock, patch, MagicMock
-from toxicbuild.core.utils import now, datetime2string
+from toxicbuild.core.utils import now, datetime2string, localtime2utc
 from toxicbuild.master import repository
 from toxicbuild.master.users import User
 from toxicbuild.integrations import github
@@ -535,20 +535,22 @@ class GithubCheckRunTest(TestCase):
         buildset = Mock()
         buildset.branch = 'master'
         buildset.commit = '123asdf'
-        buildset.started = now()
-        buildset.finished = now()
+        buildset.started = localtime2utc(now())
+        buildset.finished = localtime2utc(now())
         run_status = 'completed'
+        started_at = datetime2string(
+            buildset.started,
+            dtformat="%Y-%m-%dT%H:%M:%S%z").replace('+0000', 'Z')
+        completed_at = datetime2string(
+            buildset.finished,
+            dtformat="%Y-%m-%dT%H:%M:%S%z").replace('+0000', 'Z')
         conclusion = None
         expected = {'name': self.check_run.run_name,
                     'head_branch': buildset.branch,
                     'head_sha': buildset.commit,
-                    'started_at': datetime2string(
-                        buildset.started,
-                        dtformat="%Y-%m-%dT%H:%M:%S%z"),
+                    'started_at': started_at,
                     'status': run_status,
-                    'completed_at': datetime2string(
-                        buildset.finished,
-                        dtformat="%Y-%m-%dT%H:%M:%S%z"),
+                    'completed_at': completed_at,
                     'conclusion': conclusion}
         payload = self.check_run._get_payload(buildset, run_status, conclusion)
         self.assertEqual(payload, expected)
