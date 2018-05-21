@@ -181,6 +181,8 @@ class ToxicMasterTest(BaseFunctionalTest):
     @async_test
     async def tearDown(self):
         await Repository.objects(name__not__exists=1).delete()
+        await Repository.objects(name=None).delete()
+        await Repository.objects(url=None).delete()
 
     @async_test
     def test_01_create_slave(self):
