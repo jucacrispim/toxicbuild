@@ -794,7 +794,7 @@ class UIStreamHandler(LoggerMixin):
     async def send_response(self, code, body):
         try:
             await self.protocol.send_response(code=code, body=body)
-        except ConnectionResetError:
+        except (ConnectionResetError, AttributeError):
             self.protocol._transport.close()
             self._disconnectfromsignals()
 
