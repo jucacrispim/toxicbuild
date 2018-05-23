@@ -223,7 +223,7 @@ class Build(EmbeddedDocument):
     async def update(self):
         """Does an atomic update in this embedded document."""
 
-        qs = BuildSet.objects(builds__uuid=self.uuid).no_cache()
+        qs = BuildSet.objects.no_cache().filter(builds__uuid=self.uuid)
         result = await qs.update(set__builds__S=self)
 
         if not result:
@@ -235,7 +235,8 @@ class Build(EmbeddedDocument):
 
     async def get_buildset(self):
         """Returns the buildset that 'owns' this build."""
-        buildset = await BuildSet.objects.get(builds__uuid=self.uuid)
+        buildset = await BuildSet.objects.no_cache().get(
+            builds__uuid=self.uuid)
         return buildset
 
     @property
