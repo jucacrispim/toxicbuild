@@ -139,8 +139,6 @@ class Mutex(Exchange):
         """Acquires the lock. Use it with the async context manager.
 
         :param routing_key: Routing key of the lock."""
-        # _timeout is only for tests
-        # _wait for try_acquire
         consumer = await self.consume(routing_key=routing_key,
                                       wait_message=_wait, timeout=_timeout)
         try:
