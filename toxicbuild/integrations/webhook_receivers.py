@@ -117,18 +117,21 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             raise HTTPError(
                 400, 'pull_request for different repos not yet implemented')
 
-        head_branch = head['ref']
-        # branch_name: notify_only_latest
-        repo_branches = {head_branch: True}
-        await install.update_repository(base_id, repo_branches=repo_branches)
+        else:
+            head_branch = head['ref']
+            # branch_name: notify_only_latest
+            repo_branches = {head_branch: True}
+            await install.update_repository(base_id,
+                                            repo_branches=repo_branches)
 
     @post('webhooks')
     async def receive_webhook(self):
 
         async def default_call():
-            raise HTTPError(400, 'What was that?')
+            raise HTTPError(400, 'What was that? {}'.format(self.event_type))
 
         call = self.events.get(self.event_type, default_call)
+        self.log('event_type {} received'.format(self.event_type))
         msg = await call()
         return {'code': 200, 'msg': msg}
 
