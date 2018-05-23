@@ -65,6 +65,15 @@ class VCSTest(TestCase):
             def get_remote_branches(self):
                 pass
 
+            def create_local_branch(self, branch_name, base_name):
+                pass
+
+            def delete_local_branch(self, branch_name):
+                pass
+
+            def add_remote(self, remote_url, remote_name):
+                pass
+
         super(VCSTest, self).setUp()
         self.vcs = DummyVcs('/some/workdir')
 

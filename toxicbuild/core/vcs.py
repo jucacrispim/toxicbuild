@@ -77,6 +77,13 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
         :param branch_name: The name for the new branch
         :param base_name: The name of the base branch."""
 
+    @abstractmethod
+    @asyncio.coroutine
+    def delete_local_branch(self, branch_name):
+        """Deletes a local branch.
+
+        :param branch_name: The name of the branch to be deleted."""
+
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
     def set_remote(self, url, remote_name):
