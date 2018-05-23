@@ -137,6 +137,14 @@ class GitTest(TestCase):
         called_cmd = vcs.exec_cmd.call_args[0][0]
         self.assertEqual(called_cmd, expected)
 
+    @async_test
+    async def test_add_remote(self):
+        expected = 'git remote add new-origin http://someurl.net/bla.git'
+        self.vcs.exec_cmd = AsyncMagicMock(spec=self.vcs.exec_cmd)
+        await self.vcs.add_remote('new-origin', 'http://someurl.net/bla.git')
+        called = self.vcs.exec_cmd.call_args[0][0]
+        self.assertEqual(expected, called)
+
     @mock.patch.object(vcs.Git, 'get_remote', AsyncMagicMock(
         spec=vcs.Git.get_remote, return_value='git@bla.com/bla.git'))
     @mock.patch.object(vcs.Git, 'set_remote', AsyncMagicMock(
@@ -169,6 +177,36 @@ class GitTest(TestCase):
 
         cmd = yield from self.vcs.fetch()
         self.assertEqual(cmd, expected_cmd)
+
+    @async_test
+    def test_create_local_branch(self):
+        expected_cmd = 'git branch new-branch'
+
+        @asyncio.coroutine
+        def e(cmd, cwd):
+            return cmd
+
+        vcs.exec_cmd = e
+
+        self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
+        cmd = yield from self.vcs.create_local_branch('new-branch', 'master')
+        self.assertEqual(cmd, expected_cmd)
+        self.assertTrue(self.vcs.checkout.called)
+
+    @async_test
+    def test_delete_local_branch(self):
+        expected_cmd = 'git branch -D new-branch'
+
+        @asyncio.coroutine
+        def e(cmd, cwd):
+            return cmd
+
+        vcs.exec_cmd = e
+
+        self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
+        cmd = yield from self.vcs.delete_local_branch('new-branch')
+        self.assertEqual(cmd, expected_cmd)
+        self.assertTrue(self.vcs.checkout.called)
 
     @async_test
     def test_checkout(self):

@@ -71,6 +71,14 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
 
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
+    def create_local_branch(self, branch_name, base_name):
+        """Creates a branch new in the local repository
+
+        :param branch_name: The name for the new branch
+        :param base_name: The name of the base branch."""
+
+    @abstractmethod  # pragma no branch
+    @asyncio.coroutine
     def set_remote(self, url, remote_name):
         """Sets the remote url of the repository.
 
@@ -94,6 +102,14 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
 
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
+    def add_remote(self, remote_url, remote_name):
+        """Adds a new remote to the repository.
+
+        :param remote_url: The url of the remote repository.
+        :param remote_name: The name of the remote."""
+
+    @abstractmethod  # pragma no branch
+    @asyncio.coroutine
     def checkout(self, named_tree):
         """ Checkout to ``named_tree``
         :param named_tree: A commit, branch, tag...
@@ -101,10 +117,11 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
 
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
-    def pull(self, branch_name):
+    def pull(self, branch_name, remote_name='origin'):
         """ Pull changes from ``branch_name`` on remote repo.
 
         :param branch_name: A branch name, like 'master'.
+        :param remote_name: The remote repository to push from.
         """
 
     @abstractmethod  # pragma no branch
@@ -180,6 +197,13 @@ class Git(VCS):
         return remote
 
     @asyncio.coroutine
+    def add_remote(self, remote_url, remote_name):
+        cmd = '{} remote add {} {}'.format(self.vcsbin,
+                                           remote_url, remote_name)
+        r = yield from self.exec_cmd(cmd)
+        return r
+
+    @asyncio.coroutine
     def try_set_remote(self, url, remote_name='origin'):
         current_remote = yield from self.get_remote(remote_name)
         if current_remote != url:
@@ -195,15 +219,31 @@ class Git(VCS):
         return fetched
 
     @asyncio.coroutine
+    def create_local_branch(self, branch_name, base_name):
+
+        yield from self.checkout(base_name)
+        cmd = '{} branch {}'.format(self.vcsbin, branch_name)
+        r = yield from self.exec_cmd(cmd)
+        return r
+
+    @asyncio.coroutine
+    def delete_local_branch(self, branch_name):
+        yield from self.checkout('master')
+        cmd = '{} branch -D {}'.format(self.vcsbin, branch_name)
+        r = yield from self.exec_cmd(cmd)
+        return r
+
+    @asyncio.coroutine
     def checkout(self, named_tree):
 
         cmd = '{} checkout {}'.format(self.vcsbin, named_tree)
         yield from self.exec_cmd(cmd)
 
     @asyncio.coroutine
-    def pull(self, branch_name):
+    def pull(self, branch_name, remote_name='origin'):
 
-        cmd = '{} pull --no-edit origin {}'.format(self.vcsbin, branch_name)
+        cmd = '{} pull --no-edit {} {}'.format(self.vcsbin, remote_name,
+                                               branch_name)
 
         ret = yield from self.exec_cmd(cmd)
         return ret
