@@ -137,6 +137,18 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
         """ Informs if there are new revisions in the repository
         """
 
+    @abstractmethod
+    @asyncio.coroutine  # pragma no branch
+    def import_external_branch(self, external_url, external_name,
+                               external_branch, into):
+        """Imports a branch from an external (not the origin one)
+        repository into a local branch.
+
+        :param external_url: The url of the external repository.
+        :param external_name: Name to idenfity the remote url.
+        :param external_branch: The name of the branch in the external repo.
+        :param into: The name of the local branch."""
+
     @classmethod  # pragma no branch
     @asyncio.coroutine
     def branch_exists(self, branch_name):
@@ -266,6 +278,17 @@ class Git(VCS):
     def has_changes(self):
         ret = yield from self.fetch()
         return bool(ret)
+
+    @asyncio.coroutine
+    async def import_external_branch(self, external_url, external_name,
+                                     external_branch, into):
+        exists = await self.branch_exists(into)
+        if not exists:
+            await self.create_local_branch(into, 'master')
+
+        await self.add_remote(external_url, external_name)
+        await self.checkout(into)
+        await self.pull(external_branch, external_name)
 
     @asyncio.coroutine
     def branch_exists(self, branch_name):
