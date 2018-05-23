@@ -242,6 +242,19 @@ class GitTest(TestCase):
         yield from self.vcs.pull('master')
 
     @async_test
+    async def test_branch_exists(self):
+        self.vcs.exec_cmd = AsyncMagicMock(spec=self.vcs.exec_cmd)
+        r = await self.vcs.branch_exists('some-branch')
+        self.assertTrue(r)
+
+    @async_test
+    async def test_branch_exists_doenst_exist(self):
+        self.vcs.exec_cmd = AsyncMagicMock(spec=self.vcs.exec_cmd,
+                                           side_effect=vcs.ExecCmdError)
+        r = await self.vcs.branch_exists('some-branch')
+        self.assertFalse(r)
+
+    @async_test
     def test_has_changes(self):
         @asyncio.coroutine
         def e(cmd, cwd):

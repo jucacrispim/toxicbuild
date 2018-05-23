@@ -20,7 +20,7 @@
 from abc import ABCMeta, abstractmethod
 import asyncio
 import os
-from toxicbuild.core.exceptions import VCSError
+from toxicbuild.core.exceptions import VCSError, ExecCmdError
 from toxicbuild.core.utils import (exec_cmd, inherit_docs, string2datetime,
                                    datetime2string, utc2localtime,
                                    localtime2utc, LoggerMixin, match_string)
@@ -136,6 +136,13 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
     def has_changes(self):
         """ Informs if there are new revisions in the repository
         """
+
+    @classmethod  # pragma no branch
+    @asyncio.coroutine
+    def branch_exists(self, branch_name):
+        """Checks if a local branch exists.
+
+        :param branch name: The name of the branch to check."""
 
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
@@ -259,6 +266,17 @@ class Git(VCS):
     def has_changes(self):
         ret = yield from self.fetch()
         return bool(ret)
+
+    @asyncio.coroutine
+    def branch_exists(self, branch_name):
+        cmd = '{} rev-parse --verify {}'.format(self.vcsbin, branch_name)
+        try:
+            yield from self.exec_cmd(cmd)
+            exists = True
+        except ExecCmdError:
+            exists = False
+
+        return exists
 
     @asyncio.coroutine
     def update_submodule(self):
