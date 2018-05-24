@@ -280,7 +280,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     def get_url(self):
         return self.fetch_url or self.url
 
-    async def update_code(self, repo_branches=None):
+    async def update_code(self, repo_branches=None, external=None):
         """Requests a code update to a poller and waits for its response.
         This is done using ``update_code`` and ``poll_status`` exchanges.
 
@@ -293,6 +293,10 @@ class Repository(OwnedDocument, utils.LoggerMixin):
           .. code-block:: python
 
              {'branch-name': notify_only_latest}
+
+        :param external: If we should update code from an external
+          (not the origin) repository, `external` is the information about
+          this remote repo.
 
         """
 
@@ -308,7 +312,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
             msg = {'repo_id': str(self.id),
                    'vcs_type': self.vcs_type,
-                   'repo_branches': repo_branches}
+                   'repo_branches': repo_branches,
+                   'external': external}
 
             # Sends a message to the queue that is consumed by the pollers
             await update_code.publish(msg)
