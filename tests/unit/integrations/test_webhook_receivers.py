@@ -207,14 +207,23 @@ class GithubWebhookReceiverTest(AsyncTestCase):
             spec=webhook_receivers.GithubWebhookReceiver._get_install))
     @async_test
     async def test_handle_pull_request_opended_different_repos(self):
+        install = create_autospec(
+            spec=webhook_receivers.GithubInstallation,
+            mock_cls=AsyncMagicMock)
+
+        self.webhook_receiver._get_install.return_value = install
+
         body = {
             'pull_request': {
-                'head': {'repo': {'id': 'some-id'}},
+                'head': {'repo': {'id': 'some-id'},
+                         'label': 'someone:repo', 'ref': 'some-branch',
+                         'clone_url': 'http://somewhere.com/repo.git'},
                 'base': {'repo': {'id': 'other-id'}}}}
 
         self.webhook_receiver.body = body
-        with self.assertRaises(webhook_receivers.HTTPError):
-            await self.webhook_receiver._handle_pull_request_opened()
+        await self.webhook_receiver._handle_pull_request_opened()
+        called = install.update_repository.call_args[1]
+        self.assertEqual(list(called.keys()), ['external'])
 
     @patch.object(
         webhook_receivers.GithubWebhookReceiver, '_get_install',

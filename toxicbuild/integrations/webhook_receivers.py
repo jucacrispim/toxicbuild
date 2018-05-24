@@ -108,15 +108,18 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             ensure_future(install.remove_repository(repo_info['id']))
 
     async def _handle_pull_request_opened(self):
+        # in fact, hand pull requests opened and synchronized
         install = await self._get_install()
         head = self.body['pull_request']['head']
         head_id = head['repo']['id']
         base = self.body['pull_request']['base']
         base_id = base['repo']['id']
         if not head_id == base_id:
-            raise HTTPError(
-                400, 'pull_request for different repos not yet implemented')
-
+            external = {'url': head['clone_url'],
+                        'name': head['label'],
+                        'branch': head['ref'],
+                        'into': head['label']}
+            await install.update_repository(base_id, external=external)
         else:
             head_branch = head['ref']
             # branch_name: notify_only_latest

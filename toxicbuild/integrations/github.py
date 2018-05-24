@@ -189,12 +189,14 @@ class GithubInstallation(LoggerMixin, Document):
         raise BadRepository('Github repository {} does not exist here.'.format(
             github_repo_id))
 
-    async def update_repository(self, github_repo_id, repo_branches=None):
+    async def update_repository(self, github_repo_id, repo_branches=None,
+                                external=None):
         """Updates a repository code.
 
         :param github_repo_id: The id of the repository on github.
         :param repo_branches: Param to be passed to
           :meth:`~toxicbuild.master.repository.Repository.update_code`.
+        :param external: Information about an external repository.
         """
 
         repo = await self._get_repo_by_github_id(github_repo_id)
@@ -202,7 +204,7 @@ class GithubInstallation(LoggerMixin, Document):
         if repo.fetch_url != url:
             repo.fetch_url = url
             await repo.save()
-        await repo.update_code(repo_branches=repo_branches)
+        await repo.update_code(repo_branches=repo_branches, external=external)
 
     @property
     def auth_token_url(self):
