@@ -219,6 +219,24 @@ class BuilderManagerTest(TestCase):
         self.assertTrue(self.manager.vcs.checkout.called)
         self.assertTrue(self.manager.vcs.try_set_remote.called)
 
+    @async_test
+    def test_update_and_checkout_external(self):
+        self.manager.vcs.workdir_exists.return_value = True
+        self.manager.vcs.checkout = MagicMock()
+        self.manager.vcs.try_set_remote = AsyncMagicMock()
+        self.manager.vcs.import_external_branch = AsyncMagicMock(
+            spec=self.manager.vcs.import_external_branch)
+
+        external = {'url': 'http://bla.com/bla.git',
+                    'name': 'remote', 'branch': 'master',
+                    'into': 'into'}
+        yield from self.manager.update_and_checkout(external=external)
+
+        self.assertFalse(self.manager.vcs.clone.called)
+        self.assertTrue(self.manager.vcs.checkout.called)
+        self.assertFalse(self.manager.vcs.try_set_remote.called)
+        self.assertTrue(self.manager.vcs.import_external_branch.called)
+
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
     @patch.object(managers.BuildManager, 'wait_all', MagicMock())
     @async_test
