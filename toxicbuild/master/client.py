@@ -74,6 +74,8 @@ class BuildClient(BaseToxicClient):
                          'branch': build.branch,
                          'named_tree': build.named_tree,
                          'builder_name': builder_name}}
+        if build.external:
+            data['body']['external'] = build.external.to_dict()
 
         await self.write(data)
         futures = []

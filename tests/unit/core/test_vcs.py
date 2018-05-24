@@ -74,6 +74,10 @@ class VCSTest(TestCase):
             def add_remote(self, remote_url, remote_name):
                 pass
 
+            def import_external_branch(self, external_url, external_name,
+                                       external_branch, into):
+                pass
+
         super(VCSTest, self).setUp()
         self.vcs = DummyVcs('/some/workdir')
 

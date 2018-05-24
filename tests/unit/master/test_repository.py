@@ -453,6 +453,21 @@ class RepositoryTest(TestCase):
         self.assertEqual('uhuuu!!', rev.title)
 
     @async_test
+    async def test_add_revision_external(self):
+        await self.repo.save()
+        branch = 'master'
+        commit = 'asdf213'
+        commit_date = datetime.datetime.now()
+        kw = {'commit': commit, 'commit_date': commit_date,
+              'author': 'someone', 'title': 'uhuuu!!'}
+        external = {'url': 'http://bla.com/bla.git', 'name': 'remote',
+                    'branch': 'master', 'into': 'bla'}
+        rev = await self.repo.add_revision(branch, external=external, **kw)
+        self.assertTrue(rev.id)
+        self.assertEqual('uhuuu!!', rev.title)
+        self.assertTrue(rev.external)
+
+    @async_test
     async def test_enable_plugin(self):
         await self.repo.save()
         await self.repo.enable_plugin('repo-plugin')
@@ -741,5 +756,37 @@ class RepositoryRevisionTest(TestCase):
                     'title': rev.title,
                     'commit_date': repository.utils.datetime2string(
                         rev.commit_date)}
+        returned = await rev.to_dict()
+        self.assertEqual(expected, returned)
+
+    @async_test
+    async def test_to_dict_external(self):
+        user = users.User(email='a@a.com', password='bla')
+        await user.save()
+        repo = repository.Repository(name='bla', url='bla@bl.com/aaa',
+                                     owner=user)
+        await repo.save()
+        ext = repository.RepositoryRevisionExternal(
+            url='http://someurl.com/bla.git', name='other-remote',
+            branch='master', into='other-remote:master')
+        rev = repository.RepositoryRevision(repository=repo,
+                                            commit='asdfasf',
+                                            branch='master',
+                                            author='ze',
+                                            title='bla',
+                                            commit_date=utils.now(),
+                                            external=ext)
+        await rev.save()
+        expected = {'repository_id': str(repo.id),
+                    'commit': rev.commit,
+                    'branch': rev.branch,
+                    'author': rev.author,
+                    'title': rev.title,
+                    'commit_date': repository.utils.datetime2string(
+                        rev.commit_date),
+                    'external': {'branch': 'master',
+                                 'name': 'other-remote',
+                                 'url': 'http://someurl.com/bla.git',
+                                 'into': 'other-remote:master'}}
         returned = await rev.to_dict()
         self.assertEqual(expected, returned)

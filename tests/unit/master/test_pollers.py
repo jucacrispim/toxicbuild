@@ -177,6 +177,21 @@ class GitPollerTest(TestCase):
         self.assertFalse(pollers.revisions_added.publish.called)
 
     @async_test
+    async def test_external_poll(self):
+        await self._create_db_revisions()
+        external_url = 'http://some-url.com/bla.git'
+        external_name = 'other-repo'
+        external_branch = 'master'
+        into = 'external:master'
+        self.poller.vcs.import_external_branch = AsyncMagicMock(
+            spec=self.poller.vcs.import_external_branch)
+        self.poller.poll = AsyncMagicMock(spec=self.poller.poll)
+        await self.poller.external_poll(external_url, external_name,
+                                        external_branch, into)
+        self.assertTrue(self.poller.vcs.import_external_branch.called)
+        self.assertTrue(self.poller.poll.called)
+
+    @async_test
     async def test_poll(self):
         await self._create_db_revisions()
 
@@ -432,6 +447,32 @@ class PollerServerTest(TestCase):
         async with await pollers.poll_status.consume(
                 routing_key=repo_id) as consumer:
 
+            message = Message(channel, body, envelope, properties)
+            await self.server.handle_update_request(message)
+            msg = await consumer.fetch_message()
+            self.assertTrue(msg)
+
+    @mock.patch.object(pollers.Repository, '_create_locks', AsyncMagicMock())
+    @mock.patch.object(pollers.Poller, 'poll', AsyncMagicMock(
+        return_value=True))
+    @async_test
+    async def test_handle_update_request_external(self):
+        user = users.User(email='a@a.com')
+        await user.save()
+        repo = pollers.Repository(url='http://someurl.com/repo.git',
+                                  owner=user, vcs_type='git',
+                                  name='bla-repo')
+        await repo.save()
+        channel, envelope, properties = AsyncMagicMock(), mock.Mock(), {}
+        repo_id = str(repo.id)
+        body = json.dumps({'repo_id': repo_id, 'vcs_type': 'git',
+                           'external': {'url': 'http://someurl.com/git.bla',
+                                        'name': 'other-repo',
+                                        'branch': 'master',
+                                        'into': 'other-repo:master'}}).encode()
+
+        async with await pollers.poll_status.consume(
+                routing_key=repo_id) as consumer:
             message = Message(channel, body, envelope, properties)
             await self.server.handle_update_request(message)
             msg = await consumer.fetch_message()

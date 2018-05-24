@@ -178,6 +178,20 @@ class BuildStep(EmbeddedDocument):
         return json.dumps(self.to_dict())
 
 
+class BuildExternalInfo(EmbeddedDocument):
+    """Information about an external remote if the build was created
+    from a revision that came from an external repo."""
+
+    url = StringField(required=True)
+    name = StringField(required=True)
+    branch = StringField(required=True)
+    into = StringField(required=True)
+
+    def to_dict(self):
+        return {'url': self.url, 'name': self.name,
+                'branch': self.branch, 'into': self.into}
+
+
 class Build(EmbeddedDocument):
 
     """ A set of steps for a repository. This is the object that stores
@@ -198,6 +212,7 @@ class Build(EmbeddedDocument):
     status = StringField(default=PENDING, choices=STATUSES)
     steps = ListField(EmbeddedDocumentField(BuildStep))
     total_time = IntField()
+    external = EmbeddedDocumentField(BuildExternalInfo)
 
     def to_dict(self, id_as_str=False):
         steps = [s.to_dict() for s in self.steps]
@@ -214,6 +229,11 @@ class Build(EmbeddedDocument):
             objdict['total_time'] = format_timedelta(td)
         else:
             objdict['total_time'] = ''
+
+        if self.external:
+            objdict['external'] = self.external.to_dict()
+        else:
+            objdict['external'] = {}
         return objdict
 
     def to_json(self):

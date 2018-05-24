@@ -94,6 +94,27 @@ class BuildTest(TestCase):
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
+    async def test_to_dict_external(self):
+        await self._create_test_data()
+        bs = build.BuildStep(name='bla',
+                             command='ls',
+                             started=now(),
+                             finished=now(),
+                             total_time=1,
+                             status='finished')
+        external = build.BuildExternalInfo(url='http://somewhere.com/bla.git',
+                                           name='somerepo', branch='master',
+                                           into='into')
+        self.buildset.builds[0].external = external
+        self.buildset.builds[0].steps.append(bs)
+        self.buildset.builds[0].total_time = 1
+        bd = self.buildset.builds[0].to_dict()
+        self.assertEqual(bd['total_time'], '0:00:01')
+        self.assertTrue(bd.get('external'))
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
     async def test_update(self):
         await self._create_test_data()
         b = self.buildset.builds[0]

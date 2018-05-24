@@ -493,16 +493,25 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         return branches
 
-    async def add_revision(self, branch, commit, commit_date, author, title):
+    async def add_revision(self, branch, commit, commit_date, author, title,
+                           external=None):
         """ Adds a revision to the repository.
 
         :param commit: commit uuid
         :param branch: branch name
         :param commit_date: commit's date (on authors time)
+        :param external: Information about an external remote if the revision
+          came from an external.
         """
-        revision = RepositoryRevision(repository=self, commit=commit,
-                                      branch=branch, commit_date=commit_date,
-                                      author=author, title=title)
+
+        kw = dict(repository=self, commit=commit,
+                  branch=branch, commit_date=commit_date,
+                  author=author, title=title)
+        if external:
+            external_rev = RepositoryRevisionExternal(**external)
+            kw['external'] = external_rev
+
+        revision = RepositoryRevision(**kw)
         await revision.save()
         return revision
 
@@ -583,6 +592,22 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         super().log(msg, level=level)
 
 
+class RepositoryRevisionExternal(EmbeddedDocument):
+    """The information about the external repository that generated
+    a revision."""
+
+    url = StringField(required=True)
+    name = StringField(required=True)
+    branch = StringField(required=True)
+    into = StringField(required=True)
+
+    def to_dict(self):
+        return {'url': self.url,
+                'name': self.name,
+                'branch': self.branch,
+                'into': self.into}
+
+
 class RepositoryRevision(Document):
     """A commit in the code tree."""
 
@@ -592,6 +617,7 @@ class RepositoryRevision(Document):
     author = StringField(required=True)
     title = StringField(required=True)
     commit_date = DateTimeField(required=True)
+    external = EmbeddedDocumentField(RepositoryRevisionExternal)
 
     @classmethod
     async def get(cls, **kwargs):
@@ -600,9 +626,12 @@ class RepositoryRevision(Document):
 
     async def to_dict(self):
         repo = await self.repository
-        return {'repository_id': str(repo.id),
-                'commit': self.commit,
-                'branch': self.branch,
-                'author': self.author,
-                'title': self.title,
-                'commit_date': utils.datetime2string(self.commit_date)}
+        rev_dict = {'repository_id': str(repo.id),
+                    'commit': self.commit,
+                    'branch': self.branch,
+                    'author': self.author,
+                    'title': self.title,
+                    'commit_date': utils.datetime2string(self.commit_date)}
+        if self.external:
+            rev_dict.update({'external': self.external.to_dict()})
+        return rev_dict

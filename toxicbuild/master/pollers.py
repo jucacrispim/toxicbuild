@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from functools import partial
 import traceback
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.core.utils import LoggerMixin, MatchKeysDict
@@ -43,9 +44,27 @@ class Poller(LoggerMixin):
         self.repository = repository
         self.vcs = get_vcs(vcs_type)(workdir)
         self._is_polling = False
+        self._external_info = None
 
     def is_polling(self):
         return self._is_polling
+
+    async def external_poll(self, external_url, external_name,
+                            external_branch, into):
+        """Fetches the changes of a external (not the origin) repository
+        into a local branch.
+
+        :param external_url: The url of the external remote repository.
+        :param external_name: The name to identiry the external repo.
+        :param external_branch: The name of the branch in the external repo.
+        :param into: The name of the local repository."""
+
+        await self.vcs.import_external_branch(external_url, external_name,
+                                              external_branch, into)
+        repo_branches = {into: True}
+        self._external_info = {'name': external_name, 'url': external_url,
+                               'branch': external_branch, 'into': into}
+        await self.poll(repo_branches)
 
     async def poll(self, repo_branches=None):
         """ Check for changes on repository and if there are changes, notify
@@ -138,8 +157,8 @@ class Poller(LoggerMixin):
             # revisions, but the last one only.
             if branch not in known_branches:
                 rev = revs[-1]
-                revision = await self.repository.add_revision(branch,
-                                                              **rev)
+                revision = await self.repository.add_revision(
+                    branch, external=self._external_info, **rev)
                 msg = 'Last revision added for branch {} '
                 self.log(msg.format(branch), level='debug')
                 revisions.append(revision)
@@ -176,7 +195,8 @@ class Poller(LoggerMixin):
 
         branch_revs = []
         for rev in revisions:
-            revision = await self.repository.add_revision(branch, **rev)
+            revision = await self.repository.add_revision(
+                branch, external=self._external_info, **rev)
             # the thing here is: if notify_only_latest, we only
             # add the most recent revision, the last one of the revisions
             # list to the revisionset
@@ -223,10 +243,20 @@ class PollerServer(LoggerMixin):
         repo_id = body['repo_id']
         repo = await Repository.get(id=repo_id)
         vcs_type = body['vcs_type']
-        repo_branches = body.get('repo_branches')
+        external = body.get('external')
         poller = Poller(repo, vcs_type, repo.workdir)
+        if external:
+            external_url = external.get('url')
+            external_name = external.get('name')
+            external_branch = external.get('branch')
+            into = external.get('into')
+            pollfn = partial(poller.external_poll, external_url, external_name,
+                             external_branch, into)
+        else:
+            repo_branches = body.get('repo_branches')
+            pollfn = partial(poller.poll, repo_branches)
         try:
-            with_clone = await poller.poll(repo_branches)
+            with_clone = await pollfn()
             clone_status = 'ready'
         except Exception:
             tb = traceback.format_exc()
