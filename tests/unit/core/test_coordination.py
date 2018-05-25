@@ -130,7 +130,7 @@ class MutexTest(TestCase):
     async def test_try_acquire_locked(self):
 
         await self.mutex.create()
-        async with await self.mutex.acquire():
+        async with await self.mutex.try_acquire():
             n_lock = await self.mutex.try_acquire()
 
         self.assertIsNone(n_lock)

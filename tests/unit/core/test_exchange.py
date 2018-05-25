@@ -207,3 +207,23 @@ class ExchangeTest(TestCase):
         self.exchange._bound_rt.add('routing-key')
         await self.exchange.unbind('routing-key', channel)
         self.assertTrue(channel.queue_unbind.called)
+
+    @async_test
+    async def test_consume_routing_key(self):
+        type(self).exchange = exchange.Exchange('test-exc', self.conn,
+                                                exchange_type='direct',
+                                                durable=True,
+                                                bind_publisher=True,
+                                                exclusive_consumer_queue=False)
+        await self.exchange.declare()
+        await self.exchange.publish({'a': 'b'}, routing_key='1')
+        consumer = await self.exchange.consume(routing_key='2', timeout=100)
+        async with consumer:
+            with self.assertRaises(ConsumerTimeout):
+                await consumer.fetch_message()
+
+        consumer = await self.exchange.consume(routing_key='1', timeout=100)
+        async with consumer:
+            msg = await consumer.fetch_message()
+
+        self.assertTrue(msg)

@@ -155,21 +155,28 @@ class Exchange(LoggerMixin):
     def is_declared(self, queue_name=None):
         return queue_name in self._declared_queues
 
+    def _get_queue_name_for_routing_key(self, routing_key, queue_name=None):
+        queue_name = queue_name or self.queue_name
+
+        if routing_key:
+            queue_name = '{}-{}'.format(queue_name, routing_key)
+
+        return queue_name
+
     async def bind(self, routing_key, queue_name=None, channel=None):
         """Binds the queue to the exchange.
 
         :param routing_key: Routing key to bind the queue.
         :param queue_name: The name of the queue to be bound. If not
           self.queue_name will be used.
-        :param channel: Optional channel to use in the communication. If
-           no channel, the default one will be used."""
-
-        # if self.is_bound(routing_key):
-        #     return
+        :param channel: Optional channel to use in the communication. A new
+          one will be used."""
 
         if not queue_name:
             queue_name = self.queue_name
 
+        queue_name = self._get_queue_name_for_routing_key(routing_key,
+                                                          queue_name)
         local_channel = False
         if not channel:
             channel = await self.connection.protocol.channel()
@@ -231,7 +238,6 @@ class Exchange(LoggerMixin):
 
         :param wait_message: Should we wait for new messages in the queue?
         :param timeout: Timeout for waiting messages.
-        :param routing_key: Routing key to consume messages.
         :param no_ack: Indicates if we should send a ack response to the
           server. The ack must be sent by the consumer.
         """
@@ -241,6 +247,11 @@ class Exchange(LoggerMixin):
         if self.exclusive_consumer_queue:
             queue_name = '{}-consumer-queue-{}'.format(self.name, str(uuid4()))
             await self.bind(routing_key, queue_name, channel)
+
+        elif routing_key:
+            queue_name = self._get_queue_name_for_routing_key(routing_key,
+                                                              queue_name)
+            await self.bind(routing_key, channel=channel)
 
         if self.durable:
             await channel.basic_qos(prefetch_count=1, prefetch_size=0,
