@@ -227,3 +227,31 @@ class ExchangeTest(TestCase):
             msg = await consumer.fetch_message()
 
         self.assertTrue(msg)
+
+    @async_test
+    async def test_queue_delete(self):
+        type(self).exchange = exchange.Exchange('test-exc-durable', self.conn,
+                                                exchange_type='direct',
+                                                durable=True,
+                                                bind_publisher=True,
+                                                exclusive_consumer_queue=False)
+
+        channel = await self.exchange.connection.protocol.channel()
+        queue_name = 'bla'
+        self.queue_info = await channel.queue_declare(
+            queue_name, durable=False,
+            exclusive=False,
+            auto_delete=False)
+
+        await self.exchange.queue_delete('bla')
+
+        try:
+            await channel.queue_declare(
+                queue_name, durable=False,
+                exclusive=False,
+                passive=True)
+            exists = True
+        except ChannelClosed as e:
+            exists = False
+
+        self.assertFalse(exists)

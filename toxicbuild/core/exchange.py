@@ -282,3 +282,16 @@ class Exchange(LoggerMixin):
             await channel.close()
 
         return int(info['message_count'])
+
+    async def queue_delete(self, queue_name=None):
+        """Deletes a queue. If not queue_name, `self.queue_name` will be
+        used.
+
+        :param queue_name: The name of the queue to be deleted."""
+
+        queue_name = queue_name or self.queue_name
+        try:
+            channel = await self.connection.protocol.channel()
+            await channel.queue_delete(queue_name)
+        finally:
+            await channel.close()
