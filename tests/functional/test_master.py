@@ -92,7 +92,7 @@ class DummyUIClient(BaseToxicClient):
 
         action = 'repo-start-build'
         body = {'repo_name': 'test-repo',
-                # 'builder_name': 'builder-1',
+                'builder_name': 'builder-1',
                 'branch': 'master'}
         resp = yield from self.request2server(action, body)
 
@@ -324,9 +324,12 @@ class ToxicMasterTest(BaseFunctionalTest):
                 response = await client.get_response()
                 body = response['body'] if response else {}
                 if body.get('event_type') == 'build_finished':
-                    sleep_time = os.environ.get('TOXICSLEEP_TIME') or 1
+                    sleep_time = os.environ.get('TOXICSLEEP_TIME') or 2
                     sleep_time = float(sleep_time)
-                    await asyncio.sleep(sleep_time)
+                    t = 0
+                    while t <= sleep_time:
+                        await asyncio.sleep(0.1)
+                        t += .1
                     break
 
         has_msg = await WebHookMessage.objects.count()

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -317,6 +317,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
             # Sends a message to the queue that is consumed by the pollers
             await update_code.publish(msg)
+
             async with await poll_status.consume(
                     routing_key=str(self.id), no_ack=False) as consumer:
 
@@ -359,6 +360,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                 consumer = await lock.consume(routing_key=str(self.id),
                                               timeout=5)
                 await self._ack_msg_for(consumer)
+                queue_name = lock._get_queue_name_for_routing_key(
+                    str(self.id), lock.queue_name)
+                await lock.queue_delete(queue_name)
             except ConsumerTimeout:
                 self.log('lock not find for {}'.format(str(self.id)),
                          level='warning')
@@ -595,6 +599,43 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     def log(self, msg, level='info'):
         msg = '{} [{}]'.format(msg, self.name)
         super().log(msg, level=level)
+
+    async def start_build(self, branch, builder_name=None, named_tree=None,
+                          slaves=None):
+        """ Starts a (some) build(s) in the repository. """
+
+        if not slaves:
+            slaves = await self.slaves
+
+        if not named_tree:
+            rev = await self.get_latest_revision_for_branch(branch)
+            named_tree = rev.commit
+        else:
+            rev = await RepositoryRevision.get(repository=self,
+                                               branch=branch,
+                                               commit=named_tree)
+
+        if not builder_name:
+            builders = await self._get_builders(slaves, rev)
+        else:
+            blist = [(await Builder.get(name=builder_name,
+                                        repository=self))]
+            builders = {}
+            for slave in slaves:
+                builders.update({slave: blist})
+
+        buildset = await BuildSet.create(repository=self, revision=rev)
+        for slave in slaves:
+            await self.add_builds_for_slave(buildset, slave,
+                                            builders[slave])
+
+    async def _get_builders(self, slaves, revision):
+        builders = {}
+        for slave in slaves:
+            builders[slave] = await self.build_manager.get_builders(
+                slave, revision)
+
+        return builders
 
 
 class RepositoryRevisionExternal(EmbeddedDocument):

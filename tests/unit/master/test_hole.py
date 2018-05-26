@@ -23,7 +23,7 @@ from unittest import TestCase
 from unittest.mock import MagicMock, Mock, patch
 from bson import ObjectId
 from toxicbuild.master import hole, build, repository, slave, plugins
-from tests import async_test, AsyncMagicMock
+from tests import async_test, AsyncMagicMock, create_autospec
 
 
 @patch.object(repository, 'repo_added', AsyncMagicMock())
@@ -631,7 +631,6 @@ class HoleHandlerTest(TestCase):
         spec=build.BuildSet.notify))
     @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
-    @patch.object(hole.HoleHandler, '_get_builders', MagicMock())
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
         spec=repository.Repository.add_builds_for_slave))
     @async_test
@@ -640,29 +639,25 @@ class HoleHandlerTest(TestCase):
         hole.Repository.add_builds_for_slave = asyncio.coroutine(
             lambda *a, **kw: add_builds_for_slave(*a, **kw))
         await self._create_test_data()
-        hole.HoleHandler._get_builders = MagicMock(
-            spec=hole.HoleHandler._get_builders)
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler({}, 'repo-start-build', protocol)
         self.repo.slaves = [self.slave]
         await self.repo.save()
-
         await handler.repo_start_build(self.repo.name, 'master',
                                        builder_name='b00')
 
-        self.assertFalse(hole.HoleHandler._get_builders.called)
         self.assertEqual(len(add_builds_for_slave.call_args_list), 1)
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
-    @patch.object(repository, 'BuildManager', MagicMock())
+    @patch.object(repository, 'BuildManager', MagicMock(
+        spec=repository.BuildManager, autospec=True))
     @patch.object(hole.RepositoryRevision, 'get', MagicMock())
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
         spec=repository.Repository.add_builds_for_slave))
-    @patch.object(hole.HoleHandler, '_get_builders', MagicMock())
     @async_test
     async def test_repo_start_build_with_named_tree(self):
         add_builds_for_slave = MagicMock()
@@ -679,14 +674,14 @@ class HoleHandlerTest(TestCase):
         hole.RepositoryRevision.get = get
         await self._create_test_data()
 
-        hole.HoleHandler._get_builders = asyncio.coroutine(
-            lambda repo, s, r, builders=None: {self.slave: self.builders[0]})
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler({}, 'repo-start-build', protocol)
+        self.repo.build_manager.get_builders = create_autospec(
+            spec=self.repo.build_manager.get_bulders, autospec=True,
+            mock_cls=AsyncMagicMock)
         self.repo.slaves = [self.slave]
         await self.repo.save()
-
         await handler.repo_start_build(self.repo.name, 'master',
                                        named_tree='123qewad')
 
@@ -713,6 +708,10 @@ class HoleHandlerTest(TestCase):
         handler = hole.HoleHandler({}, 'repo-start-build', protocol)
         self.repo.slaves = [self.slave]
         await self.repo.save()
+
+        self.repo.build_manager.get_builders = create_autospec(
+            spec=self.repo.build_manager.get_bulders, autospec=True,
+            mock_cls=AsyncMagicMock)
 
         await handler.repo_start_build(self.repo.name, 'master',
                                        slaves=['name'])
@@ -916,24 +915,6 @@ class HoleHandlerTest(TestCase):
         returned = handler._get_method_signature(target)
 
         self.assertEqual(returned, expected, returned)
-
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
-        spec=build.BuildSet.notify))
-    @patch.object(repository, 'BuildManager', MagicMock())
-    @async_test
-    async def test_get_builders(self):
-        await self._create_test_data()
-        (await self.revision.repository).build_manager\
-            .get_builders = asyncio.coroutine(
-            lambda s, r: [self.builders[0]])
-        slaves = [self.slave]
-        expected = {self.slave: [self.builders[0]]}
-        handler = hole.HoleHandler({}, 'action', self)
-
-        builders = await handler._get_builders(self.repo,
-                                               slaves, self.revision)
-
-        self.assertEqual(builders, expected)
 
     def test_list_funcs(self):
         handler = hole.HoleHandler({}, 'action', MagicMock())

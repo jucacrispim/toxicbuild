@@ -77,9 +77,9 @@ class Builder(SerializeMixin, Document):
         """Creates a new Builder.
 
         :param kwargs: kwargs passed to the builder constructor"""
-        repo = cls(**kwargs)
-        await repo.save()
-        return repo
+        builder = cls(**kwargs)
+        await builder.save()
+        return builder
 
     @classmethod
     async def get(cls, **kwargs):
