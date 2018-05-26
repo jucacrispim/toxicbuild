@@ -247,6 +247,8 @@ class Exchange(LoggerMixin):
         if self.exclusive_consumer_queue:
             queue_name = '{}-consumer-queue-{}'.format(self.name, str(uuid4()))
             await self.bind(routing_key, queue_name, channel)
+            queue_name = self._get_queue_name_for_routing_key(routing_key,
+                                                              queue_name)
 
         elif routing_key:
             queue_name = self._get_queue_name_for_routing_key(routing_key,

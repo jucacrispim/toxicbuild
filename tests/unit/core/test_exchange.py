@@ -210,7 +210,7 @@ class ExchangeTest(TestCase):
 
     @async_test
     async def test_consume_routing_key(self):
-        type(self).exchange = exchange.Exchange('test-exc', self.conn,
+        type(self).exchange = exchange.Exchange('test-exc-durable', self.conn,
                                                 exchange_type='direct',
                                                 durable=True,
                                                 bind_publisher=True,
