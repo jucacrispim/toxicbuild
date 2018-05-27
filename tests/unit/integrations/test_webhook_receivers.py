@@ -258,8 +258,8 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver._get_install.return_value = install
 
         body = {'repository': {'id': 123},
-                'check_suite': {'head_branch': 'master',
-                                'head_sha': 'asdf123'}}
+                'check_run': {'check_suite': {'head_branch': 'master',
+                                              'head_sha': 'asdf123'}}}
 
         self.webhook_receiver.body = body
         await self.webhook_receiver._handle_check_run_rerequested()

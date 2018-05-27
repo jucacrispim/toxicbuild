@@ -130,7 +130,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
 
     async def _handle_check_run_rerequested(self):
         install = await self._get_install()
-        check_suite = self.body['check_suite']
+        check_suite = self.body['check_run']['check_suite']
         repo_id = self.body['repository']['id']
         branch = check_suite['head_branch']
         named_tree = check_suite['head_sha']
