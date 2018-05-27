@@ -298,6 +298,30 @@ class GithubInstallationTest(TestCase):
             id=self.installation.id)
         self.assertTrue(install.repositories)
 
+    @patch.object(repository.Repository, 'schedule', Mock())
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.Repository, '_notify_repo_creation',
+                  AsyncMagicMock())
+    @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
+        spec=repository.Repository.update_code))
+    @patch.object(repository, 'repo_added', AsyncMagicMock())
+    @patch.object(github.GithubApp, 'create_installation_token',
+                  AsyncMagicMock())
+    @async_test
+    async def test_import_repository_no_clone(self):
+        await github.Slave.create(name='my-slave',
+                                  token='123', host='localhost',
+                                  port=123, owner=self.user)
+        repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
+                     'id': 1234, 'full_name': 'ze/my-repo'}
+        repo = await self.installation.import_repository(repo_info,
+                                                         clone=False)
+        self.assertTrue(repo.id)
+        self.assertFalse(repo.update_code.called)
+        install = await type(self.installation).objects.get(
+            id=self.installation.id)
+        self.assertTrue(install.repositories)
+
     @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
         spec=repository.Repository.update_code))
     @patch.object(github.GithubInstallation, '_get_auth_url', AsyncMagicMock(
@@ -461,6 +485,13 @@ class GithubInstallationTest(TestCase):
         ret.json = Mock(return_value=json_contents)
         with self.assertRaises(github.BadRequestToGithubAPI):
             await self.installation.list_repos()
+
+    @patch.object(github, 'settings', Mock())
+    def test_get_import_chunks(self):
+        github.settings.PARALLEL_IMPORTS = 1
+        repos = [Mock(), Mock()]
+        chunks = self.installation._get_import_chunks(repos)
+        self.assertEqual(len(list(chunks)), 2)
 
 
 class GithubCheckRunTest(TestCase):

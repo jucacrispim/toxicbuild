@@ -26,6 +26,7 @@ from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, DateTimeField, IntField,
                                ReferenceField, EmbeddedDocumentListField)
 from toxicbuild.core import requests
+from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import (string2datetime, now, localtime2utc,
                                    LoggerMixin, utc2localtime,
                                    datetime2string)
@@ -225,17 +226,40 @@ class GithubInstallation(LoggerMixin, Document):
 
         msg = 'Importing repos for {}'.format(self.github_id)
         self.log(msg, level='debug')
-        tasks = []
-        for repo in await self.list_repos():
-            t = ensure_future(self.import_repository(repo))
-            tasks.append(t)
+        repos = []
+        for repo_info in await self.list_repos():
+            repo = await self.import_repository(repo_info, clone=False)
+            repos.append(repo)
 
-        return gather(*tasks)
+        for chunk in self._get_import_chunks(repos):
+            tasks = []
+            for repo in chunk:
+                t = ensure_future(repo.update_code())
+                tasks.append(t)
 
-    async def import_repository(self, repo_info):
+            await gather(*tasks)
+
+        return repos
+
+    def _get_import_chunks(self, repos):
+
+        try:
+            parallel_imports = settings.PARALLEL_IMPORTS
+        except ConfigError:
+            parallel_imports = None
+
+        if not parallel_imports:
+            yield repos
+            return
+
+        for i in range(0, len(repos), parallel_imports):
+            yield repos[i:i + parallel_imports]
+
+    async def import_repository(self, repo_info, clone=True):
         """Imports a repository from GitHub.
 
         :param repo_info: A dictionary with the repository information."""
+
         msg = 'Importing repo {}'.format(repo_info['clone_url'])
         self.log(msg, level='debug')
 
@@ -267,7 +291,9 @@ class GithubInstallation(LoggerMixin, Document):
         self.repositories.append(gh_repo)
         await self.save()
         await repo.enable_plugin('github-check-run', installation=self)
-        await repo.update_code()
+
+        if clone:
+            await repo.update_code()
         return repo
 
     async def remove_repository(self, github_repo_id):
