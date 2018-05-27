@@ -93,6 +93,24 @@ class RepositoryTest(TestCase):
         self.assertTrue(to_list.called)
         self.assertTrue(msg.acknowledge.called)
 
+    @patch.object(repository.Repository, 'get', AsyncMagicMock())
+    @patch.object(repository.RepositoryRevision, 'objects', Mock())
+    @patch.object(repository.utils, 'log', Mock())
+    @async_test
+    async def test_add_builds_fn_exception(self):
+        msg = AsyncMagicMock()
+        to_list = AsyncMagicMock(side_effect=Exception)
+        repository.RepositoryRevision\
+                  .objects.filter.return_value.to_list = to_list
+        repo = AsyncMagicMock()
+        repo.id = 'some-repo'
+        repository.Repository.get.return_value = repo
+        await repository._add_builds(msg)
+        self.assertTrue(repository.Repository.get.called)
+        self.assertTrue(to_list.called)
+        self.assertFalse(msg.acknowledge.called)
+        self.assertTrue(msg.reject.called)
+
     @patch.object(repository.Repository, 'get', AsyncMagicMock(
         side_effect=repository.Repository.DoesNotExist))
     @patch.object(repository.RepositoryRevision, 'objects', Mock())

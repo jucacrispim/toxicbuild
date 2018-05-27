@@ -67,11 +67,17 @@ async def _add_builds(msg):
         await msg.acknowledge()
         return
 
-    revisions = await RepositoryRevision.objects.filter(
-        id__in=body['revisions_ids']).to_list()
+    try:
+        revisions = await RepositoryRevision.objects.filter(
+            id__in=body['revisions_ids']).to_list()
 
-    await repo.build_manager.add_builds(revisions)
-    await msg.acknowledge()
+        await repo.build_manager.add_builds(revisions)
+        await msg.acknowledge()
+    except Exception:
+        log_msg = '[_add_builds] error adding builds for repo {}'.format(
+            repo.id)
+        utils.log(log_msg, level='error')
+        await msg.reject()
 
 
 async def wait_revisions():
