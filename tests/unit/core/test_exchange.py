@@ -57,6 +57,15 @@ class JsonAckMessageTest(TestCase):
         await msg.acknowledge()
         self.assertTrue(msg.channel.basic_client_ack.called)
 
+    @async_test
+    async def test_reject(self):
+        b = exchange.json.dumps({}).encode('utf-8')
+        channel, envelope, properties = AsyncMagicMock(), Mock(), {}
+        msg = exchange.JsonAckMessage(channel, b, envelope, properties)
+        msg.channel = AsyncMagicMock()
+        await msg.reject()
+        self.assertTrue(msg.channel.basic_reject.called)
+
 
 class ExchangeTest(TestCase):
 

@@ -33,6 +33,10 @@ class JsonAckMessage(asyncamqp.consumer.Message):
         await self.channel.basic_client_ack(
             delivery_tag=self.envelope.delivery_tag)
 
+    async def reject(self, requeue=True):
+        await self.channel.basic_reject(
+            self.envelope.delivery_tag, requeue=requeue)
+
 
 class Consumer(asyncamqp.consumer.Consumer, LoggerMixin):
 
