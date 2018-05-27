@@ -43,7 +43,8 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             'push': self._handle_push,
             'repository-create': self._handle_install_repo_added,
             'pull_request-opened': self._handle_pull_request_opened,
-            'pull_request-synchronize': self._handle_pull_request_opened}
+            'pull_request-synchronize': self._handle_pull_request_opened,
+            'check_run-rerequested': self._handle_check_run_rerequested}
 
     async def _get_user_from_cookie(self):
         cookie = self.get_secure_cookie(settings.TOXICUI_COOKIE)
@@ -126,6 +127,14 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             repo_branches = {head_branch: True}
             await install.update_repository(base_id,
                                             repo_branches=repo_branches)
+
+    async def _handle_check_run_rerequested(self):
+        install = await self._get_install()
+        check_suite = self.body['check_suite']
+        repo_id = self.body['repository']['id']
+        branch = check_suite['head_branch']
+        named_tree = check_suite['head_sha']
+        ensure_future(install.repo_start_build(repo_id, branch, named_tree))
 
     @post('webhooks')
     async def receive_webhook(self):

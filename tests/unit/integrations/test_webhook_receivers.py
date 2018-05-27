@@ -245,6 +245,26 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         await self.webhook_receiver._handle_pull_request_opened()
         self.assertTrue(install.update_repository.called)
 
+    @patch.object(
+        webhook_receivers.GithubWebhookReceiver, '_get_install',
+        AsyncMagicMock(
+            spec=webhook_receivers.GithubWebhookReceiver._get_install))
+    @async_test
+    async def test_handle_check_run_rerequested(self):
+        install = create_autospec(
+            spec=webhook_receivers.GithubInstallation,
+            mock_cls=AsyncMagicMock)
+
+        self.webhook_receiver._get_install.return_value = install
+
+        body = {'repository': {'id': 123},
+                'check_suite': {'head_branch': 'master',
+                                'head_sha': 'asdf123'}}
+
+        self.webhook_receiver.body = body
+        await self.webhook_receiver._handle_check_run_rerequested()
+        self.assertTrue(install.repo_start_build.called)
+
     def test_hello(self):
         expected = {'code': 200, 'msg': 'Hi there!'}
         r = self.webhook_receiver.hello()

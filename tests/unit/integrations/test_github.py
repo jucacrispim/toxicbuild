@@ -27,7 +27,7 @@ from toxicbuild.core.utils import now, datetime2string, localtime2utc
 from toxicbuild.master import repository
 from toxicbuild.master.users import User
 from toxicbuild.integrations import github
-from tests import async_test, AsyncMagicMock
+from tests import async_test, AsyncMagicMock, create_autospec
 from tests.unit.integrations import INTEGRATIONS_DATA_PATH
 
 
@@ -492,6 +492,23 @@ class GithubInstallationTest(TestCase):
         repos = [Mock(), Mock()]
         chunks = self.installation._get_import_chunks(repos)
         self.assertEqual(len(list(chunks)), 2)
+
+    @async_test
+    async def test_repo_start_build(self):
+        github_repo_id = 'some-repo'
+        branch = 'master'
+        named_tree = '123adf'
+        repo = AsyncMagicMock(spec=github.Repository)
+        repo.start_build = create_autospec(
+            spec=github.Repository().start_build, mock_cls=AsyncMagicMock)
+        self.installation._get_repo_by_github_id = create_autospec(
+            spec=self.installation._get_repo_by_github_id,
+            mock_cls=AsyncMagicMock)
+        self.installation._get_repo_by_github_id.return_value = repo
+        await self.installation.repo_start_build(github_repo_id, branch,
+                                                 named_tree)
+
+        self.assertTrue(repo.start_build.called)
 
 
 class GithubCheckRunTest(TestCase):
