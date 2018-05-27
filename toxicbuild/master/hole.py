@@ -31,7 +31,7 @@ from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder
-from toxicbuild.master.repository import Repository, RepositoryRevision
+from toxicbuild.master.repository import Repository
 from toxicbuild.master.exceptions import (UIFunctionNotFound,
                                           OwnerDoesNotExist, NotEnoughPerms)
 from toxicbuild.master.exchanges import ui_notifications
