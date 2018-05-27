@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -367,3 +367,9 @@ class BuilderManagerTest(TestCase):
 
         self.assertEqual(type(returned[0]), plugins.AptInstallPlugin)
         self.assertFalse(returned[0].create_data_dir.called)
+
+    @async_test
+    async def test_load_plugins_no_name(self):
+        plugins_conf = [{'pyversion': '/usr/bin/python3.4'}]
+        with self.assertRaises(managers.BadPluginConfig):
+            await self.manager._load_plugins(plugins_conf)

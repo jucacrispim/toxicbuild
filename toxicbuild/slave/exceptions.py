@@ -19,3 +19,7 @@ class BusyRepository(Exception):
 
 class NotConnected(Exception):
     pass
+
+
+class BadPluginConfig(Exception):
+    pass

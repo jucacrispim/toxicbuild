@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -28,7 +28,7 @@ from toxicbuild.slave import settings
 from toxicbuild.slave.build import Builder, BuildStep
 from toxicbuild.slave.docker import DockerContainerBuilder
 from toxicbuild.slave.exceptions import (BuilderNotFound, BadBuilderConfig,
-                                         BusyRepository)
+                                         BusyRepository, BadPluginConfig)
 from toxicbuild.slave.plugins import SlavePlugin
 
 
@@ -290,7 +290,12 @@ class BuildManager(LoggerMixin):
 
         plist = []
         for pdict in plugins_config:
-            plugin_class = SlavePlugin.get_plugin(pdict['name'])
+            try:
+                plugin_class = SlavePlugin.get_plugin(pdict['name'])
+            except KeyError:
+                msg = 'Your plugin config {} does not have a name'.format(
+                    pdict)
+                raise BadPluginConfig(msg)
             del pdict['name']
             plugin = plugin_class(**pdict)
             if getattr(plugin, 'uses_data_dir', False):
