@@ -289,6 +289,30 @@ class RepositoryTest(TestCase):
         await self.repo.reload()
         self.assertEqual(self.repo.clone_status, 'ready')
 
+    @patch.object(repository, 'update_code', AsyncMagicMock())
+    @patch.object(exchange, 'uuid4', MagicMock())
+    @async_test
+    async def test_update_code_waiting_lock(self):
+        self.repo.clone_status = 'cloning'
+        uuid4_ret = exchange.uuid4()
+        exchange.uuid4.return_value = uuid4_ret
+        queue_name = '{}-consumer-queue-{}'.format(repository.poll_status.name,
+                                                   str(uuid4_ret))
+        await repository.poll_status.bind(routing_key=str(self.repo.id),
+                                          queue_name=queue_name)
+
+        await repository.poll_status.publish(
+            {'with_clone': False,
+             'clone_status': 'ready'},
+            routing_key=str(self.repo.id))
+        await self.repo.save()
+        # await self.repo._create_locks()
+        await self.repo.update_code(wait_for_lock=True)
+        # await self.repo._delete_locks()
+        await asyncio.sleep(0.1)
+        await self.repo.reload()
+        self.assertEqual(self.repo.clone_status, 'ready')
+
     @patch.object(exchange, 'uuid4', MagicMock())
     @async_test
     async def test_update_code_locked(self):

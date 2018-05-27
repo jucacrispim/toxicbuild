@@ -280,7 +280,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     def get_url(self):
         return self.fetch_url or self.url
 
-    async def update_code(self, repo_branches=None, external=None):
+    async def update_code(self, repo_branches=None, external=None,
+                          wait_for_lock=False):
         """Requests a code update to a poller and waits for its response.
         This is done using ``update_code`` and ``poll_status`` exchanges.
 
@@ -297,14 +298,20 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         :param external: If we should update code from an external
           (not the origin) repository, `external` is the information about
           this remote repo.
+        :param wait_for_lock: Indicates if we should wait for the release of
+          the lock or simply return if we cannot get a lock.
 
         """
 
-        lock = await self.update_code_lock.try_acquire(routing_key=str(
-            self.id))
-        if not lock:
-            self.log('Repo already updating. Leaving.', level='debug')
-            return
+        if wait_for_lock:
+            lock = await self.update_code_lock.acquire(routing_key=str(
+                self.id))
+        else:
+            lock = await self.update_code_lock.try_acquire(routing_key=str(
+                self.id))
+            if not lock:
+                self.log('Repo already updating. Leaving.', level='debug')
+                return
 
         async with lock:
             url = self.get_url()
