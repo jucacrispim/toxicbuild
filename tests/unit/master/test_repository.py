@@ -93,6 +93,22 @@ class RepositoryTest(TestCase):
         self.assertTrue(to_list.called)
         self.assertTrue(msg.acknowledge.called)
 
+    @patch.object(repository.Repository, 'get', AsyncMagicMock(
+        side_effect=repository.Repository.DoesNotExist))
+    @patch.object(repository.RepositoryRevision, 'objects', Mock())
+    @patch.object(repository.utils, 'log', Mock())
+    @async_test
+    async def test_add_builds_fn_repo_dont_exist(self):
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf'}
+        to_list = AsyncMagicMock()
+        repository.RepositoryRevision\
+                  .objects.filter.return_value.to_list = to_list
+        await repository._add_builds(msg)
+        self.assertTrue(repository.Repository.get.called)
+        self.assertFalse(to_list.called)
+        self.assertTrue(msg.acknowledge.called)
+
     @patch.object(repository, '_add_builds', AsyncMagicMock())
     @patch.object(repository.revisions_added, 'consume', AsyncMagicMock())
     @async_test

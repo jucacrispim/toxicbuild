@@ -58,7 +58,15 @@ update_code_mutex = Mutex('toxicmaster-repo-update-code-mutex',
 
 async def _add_builds(msg):
     body = msg.body
-    repo = await Repository.get(id=body['repository_id'])
+    try:
+        repo = await Repository.get(id=body['repository_id'])
+    except Repository.DoesNotExist:
+        log_msg = '[_add_builds] repo {} does not exist'.format(
+            body['repository_id'])
+        utils.log(log_msg, level='warning')
+        await msg.acknowledge()
+        return
+
     revisions = await RepositoryRevision.objects.filter(
         id__in=body['revisions_ids']).to_list()
 
