@@ -655,7 +655,7 @@ class HoleHandlerTest(TestCase):
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository, 'BuildManager', MagicMock(
         spec=repository.BuildManager, autospec=True))
-    @patch.object(hole.RepositoryRevision, 'get', MagicMock())
+    @patch.object(repository.RepositoryRevision, 'get', MagicMock())
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
         spec=repository.Repository.add_builds_for_slave))
     @async_test
@@ -671,7 +671,7 @@ class HoleHandlerTest(TestCase):
             get_mock()
             return self.revision
 
-        hole.RepositoryRevision.get = get
+        repository.RepositoryRevision.get = get
         await self._create_test_data()
 
         protocol = MagicMock()
