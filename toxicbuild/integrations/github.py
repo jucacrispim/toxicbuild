@@ -339,9 +339,15 @@ class GithubInstallation(LoggerMixin, Document):
         ret = ret.json()
         return ret['repositories']
 
-    async def repo_start_build(self, github_repo_id, branch, named_tree):
+    async def repo_request_build(self, github_repo_id, branch, named_tree):
+        """Requests a new build.
+
+        :param github_repo_id: The id of the repository in github.
+        :param branch: The name of the branch to build.
+        :param named_tree: The named tree to build."""
+
         repo = await self._get_repo_by_github_id(github_repo_id)
-        await repo.start_build(branch, named_tree=named_tree)
+        await repo.request_build(branch, named_tree=named_tree)
 
 
 GithubInstallation.ensure_indexes()

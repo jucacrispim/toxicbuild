@@ -494,7 +494,7 @@ class GithubInstallationTest(TestCase):
         self.assertEqual(len(list(chunks)), 2)
 
     @async_test
-    async def test_repo_start_build(self):
+    async def test_repo_request_build(self):
         github_repo_id = 'some-repo'
         branch = 'master'
         named_tree = '123adf'
@@ -505,10 +505,10 @@ class GithubInstallationTest(TestCase):
             spec=self.installation._get_repo_by_github_id,
             mock_cls=AsyncMagicMock)
         self.installation._get_repo_by_github_id.return_value = repo
-        await self.installation.repo_start_build(github_repo_id, branch,
-                                                 named_tree)
+        await self.installation.repo_request_build(github_repo_id, branch,
+                                                   named_tree)
 
-        self.assertTrue(repo.start_build.called)
+        self.assertTrue(repo.request_build.called)
 
 
 class GithubCheckRunTest(TestCase):

@@ -263,7 +263,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
 
         self.webhook_receiver.body = body
         await self.webhook_receiver._handle_check_run_rerequested()
-        self.assertTrue(install.repo_start_build.called)
+        self.assertTrue(install.repo_request_build.called)
 
     def test_hello(self):
         expected = {'code': 200, 'msg': 'Hi there!'}

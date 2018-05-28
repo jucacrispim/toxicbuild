@@ -134,7 +134,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         repo_id = self.body['repository']['id']
         branch = check_suite['head_branch']
         named_tree = check_suite['head_sha']
-        ensure_future(install.repo_start_build(repo_id, branch, named_tree))
+        ensure_future(install.repo_request_build(repo_id, branch, named_tree))
 
     @post('webhooks')
     async def receive_webhook(self):
