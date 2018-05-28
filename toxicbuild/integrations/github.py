@@ -49,7 +49,7 @@ class GithubApp(LoggerMixin, Document):
     app_id = IntField(required=True)
     jwt_expires = DateTimeField()
     jwt_token = StringField()
-    webhook_token = settings.GITHUB_WEBHOOK_TOKEN
+    webhook_token = StringField()
 
     @classmethod
     async def get_app(cls):
@@ -59,7 +59,8 @@ class GithubApp(LoggerMixin, Document):
         with open(settings.GITHUB_PRIVATE_KEY) as fd:
             pk = fd.read()
 
-        app = cls(private_key=pk)
+        webhook_token = settings.GITHUB_WEBHOOK_TOKEN
+        app = cls(private_key=pk, webhook_token=webhook_token)
         app.app_id = settings.GITHUB_APP_ID
         await app.save()
         return app

@@ -51,6 +51,7 @@ class GitHubAppTest(TestCase):
     async def test_create_jwt(self):
         github.settings.GITHUB_PRIVATE_KEY = 'some/path/to/pk'
         github.settings.GITHUB_APP_ID = 1234
+        github.settings.GITHUB_WEBHOOK_TOKEN = 'secret'
         github.now.return_value = self.dt_now
         read = github.open.return_value.__enter__.return_value.read
         read.return_value = 'secret-key'
@@ -72,6 +73,7 @@ class GitHubAppTest(TestCase):
         github.requests.post.return_value.status = 201
         github.settings.GITHUB_APP_ID = 123
         github.settings.GITHUB_PRIVATE_KEY = '/some/pk'
+        github.settings.GITHUB_WEBHOOK_TOKEN = 'secret'
         rdict = {"token": "v1.1f699f1069f60xxx",
                  "expires_at": "2016-07-11T22:14:10Z"}
         github.requests.post.return_value.json.return_value = rdict
@@ -100,6 +102,7 @@ class GitHubAppTest(TestCase):
         github.requests.post.return_value.status = 400
         github.settings.GITHUB_APP_ID = 123
         github.settings.GITHUB_PRIVATE_KEY = '/some/pk'
+        github.settings.GITHUB_WEBHOOK_TOKEN = 'secret'
         rdict = {"token": "v1.1f699f1069f60xxx",
                  "expires_at": "2016-07-11T22:14:10Z"}
         github.requests.post.return_value.json.return_value = rdict
@@ -178,6 +181,7 @@ class GitHubAppTest(TestCase):
     async def test_get_app_already_exists(self):
         github.settings.GITHUB_APP_ID = 123
         github.settings.GITHUB_PRIVATE_KEY = '/some/pk'
+        github.settings.GITHUB_WEBHOOK_TOKEN = 'secret'
         read = github.open.return_value.__enter__.return_value.read
         read.return_value = 'pk'
         app = await github.GithubApp.get_app()
@@ -210,21 +214,21 @@ class GitHubAppTest(TestCase):
     async def test_validate_token_bad_sig(self):
         sig = b'invalid'
         data = json.dumps({'some': 'payload'})
-        app = github.GithubApp(private_key='bla', app_id=123)
+        app = github.GithubApp(private_key='bla', app_id=123,
+                               webhook_token='bla')
         await app.save()
         with self.assertRaises(github.BadSignature):
             app.validate_token(sig, data)
 
     @async_test
     async def test_validate_token(self):
-        app = github.GithubApp(private_key='bla', app_id=123)
+        app = github.GithubApp(private_key='bla', app_id=123,
+                               webhook_token='wht')
         await app.save()
         data = json.dumps({'some': 'payload'})
         sig = b'sha1=' + github.hmac.new(
             app.webhook_token.encode(), data.encode(),
             github.hashlib.sha256).digest()
-        app = github.GithubApp(private_key='bla', app_id=123)
-        await app.save()
         eq = app.validate_token(sig, data)
         self.assertTrue(eq)
 
