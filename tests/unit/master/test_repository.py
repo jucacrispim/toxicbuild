@@ -84,7 +84,13 @@ class RepositoryTest(TestCase):
     @patch.object(repository.RepositoryRevision, 'objects', Mock())
     @async_test
     async def test_add_builds_fn(self):
+        repo = create_autospec(spec=repository.Repository,
+                               mock_cls=AsyncMagicMock)
+        repo.build_manager = AsyncMagicMock()
+        repository.Repository.get.return_value = repo
         msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf',
+                    'revisions_ids': []}
         to_list = AsyncMagicMock()
         repository.RepositoryRevision\
                   .objects.filter.return_value.to_list = to_list
@@ -98,18 +104,18 @@ class RepositoryTest(TestCase):
     @patch.object(repository.utils, 'log', Mock())
     @async_test
     async def test_add_builds_fn_exception(self):
+        repo = create_autospec(spec=repository.Repository,
+                               mock_cls=AsyncMagicMock)
+        repository.Repository.get.return_value = repo
         msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf', 'revisions_ids': []}
         to_list = AsyncMagicMock(side_effect=Exception)
         repository.RepositoryRevision\
                   .objects.filter.return_value.to_list = to_list
-        repo = AsyncMagicMock()
-        repo.id = 'some-repo'
-        repository.Repository.get.return_value = repo
         await repository._add_builds(msg)
         self.assertTrue(repository.Repository.get.called)
         self.assertTrue(to_list.called)
-        self.assertFalse(msg.acknowledge.called)
-        self.assertTrue(msg.reject.called)
+        self.assertTrue(msg.acknowledge.called)
 
     @patch.object(repository.Repository, 'get', AsyncMagicMock(
         side_effect=repository.Repository.DoesNotExist))
@@ -126,6 +132,60 @@ class RepositoryTest(TestCase):
         self.assertTrue(repository.Repository.get.called)
         self.assertFalse(to_list.called)
         self.assertTrue(msg.acknowledge.called)
+
+    @patch.object(repository.Repository, 'get', AsyncMagicMock())
+    @patch.object(repository.Slave, 'objects', Mock())
+    @async_test
+    async def test_add_requested_build(self):
+        repo = create_autospec(spec=repository.Repository,
+                               mock_cls=AsyncMagicMock)
+        repository.Repository.get.return_value = repo
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf',
+                    'branch': 'master',
+                    'slaves_ids': [str(self.slave.id)]}
+        to_list = AsyncMagicMock()
+        repository.Slave.objects.filter.return_value.to_list = to_list
+        await repository._add_requested_build(msg)
+        self.assertTrue(repo.start_build.called)
+
+    @patch.object(repository.Repository, 'get', AsyncMagicMock(
+        return_value=None))
+    @patch.object(repository.Slave, 'objects', Mock())
+    @async_test
+    async def test_add_requested_build_no_repo(self):
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf',
+                    'branch': 'master',
+                    'slave_ids': [str(self.slave.id)]}
+        await repository._add_requested_build(msg)
+        self.assertFalse(repository.Slave.objects.filter.called)
+
+    @patch.object(repository.Repository, 'get', AsyncMagicMock())
+    @patch.object(repository.Slave, 'objects', Mock())
+    @async_test
+    async def test_add_requested_build_no_slaves(self):
+        repo = create_autospec(spec=repository.Repository,
+                               mock_cls=AsyncMagicMock)
+        repository.Repository.get.return_value = repo
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf',
+                    'branch': 'master'}
+        await repository._add_requested_build(msg)
+        self.assertTrue(repo.start_build.called)
+
+    @patch.object(repository.Repository, 'get', AsyncMagicMock())
+    @patch.object(repository.utils, 'log', Mock())
+    @async_test
+    async def test_add_requested_build_exception(self):
+        repo = create_autospec(spec=repository.Repository,
+                               mock_cls=AsyncMagicMock)
+        repository.Repository.get.return_value = repo
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf'}
+        await repository._add_requested_build(msg)
+        self.assertFalse(repo.start_build.called)
+        self.assertTrue(repository.utils.log.called)
 
     @patch.object(repository, '_add_builds', AsyncMagicMock())
     @patch.object(repository.revisions_added, 'consume', AsyncMagicMock())
@@ -154,6 +214,17 @@ class RepositoryTest(TestCase):
         repository.revisions_added.consume.return_value = FakeConsumer()
         await repository.wait_revisions()
         self.assertTrue(repository._add_builds.called)
+
+    @patch.object(repository.repo_notifications, 'consume',
+                  AsyncMagicMock(spec=repository.repo_notifications.consume))
+    @patch.object(repository, '_add_requested_build',
+                  AsyncMagicMock(spec=repository._add_requested_build))
+    @async_test
+    async def test_wait_build_requests(self):
+        consumer = AsyncMagicMock(aiter_items=[{}])
+        repository.repo_notifications.consume.return_value = consumer
+        await repository.wait_build_requests()
+        self.assertTrue(repository._add_requested_build.called)
 
     @async_test
     async def test_to_dict(self):
@@ -756,6 +827,16 @@ class RepositoryTest(TestCase):
         self.assertTrue(self.repo.add_builds_for_slave.called)
         self.assertFalse(self.repo.get_latest_revision_for_branch.called)
         self.assertFalse(self.repo._get_builders.called)
+
+    @patch.object(repository, 'repo_notifications', AsyncMagicMock(
+        spec=repository.repo_notifications))
+    @async_test
+    async def test_request_build(self):
+        branch = 'master'
+        named_tree = 'asfd1234'
+
+        await self.repo.request_build(branch, named_tree=named_tree)
+        self.assertTrue(repository.repo_notifications.publish.called)
 
     async def _create_db_revisions(self):
         self.owner = users.User(email='zezinho@nada.co', password='123')

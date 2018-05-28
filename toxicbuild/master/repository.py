@@ -37,7 +37,8 @@ from toxicbuild.master.document import OwnedDocument
 from toxicbuild.master.exchanges import (update_code, poll_status,
                                          revisions_added, locks_conn,
                                          scheduler_action, repo_status_changed,
-                                         repo_added, ui_notifications)
+                                         repo_added, ui_notifications,
+                                         repo_notifications)
 from toxicbuild.master.fields import (IgnoreUnknownListField,
                                       HandleUnknownEmbeddedDocumentField)
 from toxicbuild.master.plugins import MasterPlugin
@@ -56,28 +57,36 @@ update_code_mutex = Mutex('toxicmaster-repo-update-code-mutex',
                           locks_conn)
 
 
-async def _add_builds(msg):
-    body = msg.body
+async def _get_repo_from_msg(msg):
     try:
-        repo = await Repository.get(id=body['repository_id'])
+        repo = await Repository.get(id=msg.body['repository_id'])
     except Repository.DoesNotExist:
         log_msg = '[_add_builds] repo {} does not exist'.format(
-            body['repository_id'])
+            msg.body['repository_id'])
         utils.log(log_msg, level='warning')
         await msg.acknowledge()
         return
 
+    return repo
+
+
+async def _add_builds(msg):
+    repo = await _get_repo_from_msg(msg)
+    if not repo:
+        return
+
+    body = msg.body
     try:
         revisions = await RepositoryRevision.objects.filter(
             id__in=body['revisions_ids']).to_list()
 
         await repo.build_manager.add_builds(revisions)
-        await msg.acknowledge()
-    except Exception:
-        log_msg = '[_add_builds] error adding builds for repo {}'.format(
-            repo.id)
+    except Exception as e:
+        log_msg = '[_add_builds] error adding builds for repo {}. '
+        log_msg += 'Exception was {}'.format(repo.id, str(e))
         utils.log(log_msg, level='error')
-        await msg.reject()
+    finally:
+        await msg.acknowledge()
 
 
 async def wait_revisions():
@@ -85,8 +94,49 @@ async def wait_revisions():
 
     async with await revisions_added.consume() as consumer:
         async for msg in consumer:
-            utils.log('Got msg from revisions_added', level='debug')
+            utils.log('[wait_revisions] Got msg from revisions_added',
+                      level='debug')
             ensure_future(_add_builds(msg))
+
+
+async def _add_requested_build(msg):
+    repo = await _get_repo_from_msg(msg)
+    if not repo:
+        return
+
+    body = msg.body
+    try:
+
+        branch = body['branch']
+        builder_name = body.get('builder_name')
+        named_tree = body.get('named_tree')
+        slaves_ids = body.get('slaves_ids')
+        if slaves_ids:
+            slaves = await Slave.objects.filter(
+                id__in=body['slaves_ids']).to_list()
+        else:
+            slaves = []
+
+        await repo.start_build(branch, builder_name=builder_name,
+                               named_tree=named_tree, slaves=slaves)
+    except Exception as e:
+        log_msg = '[_add_requested_build] error starting builds for repo {}. '
+        log_msg += 'Exception was {}'.format(repo.id, str(e))
+        utils.log(log_msg, level='error')
+    finally:
+        await msg.acknowledge()
+
+
+async def wait_build_requests():
+    """Waits for build requests that arrive  in the `repo_notifications`
+    exchange with the routing key `build-requested`"""
+
+    async with await repo_notifications.consume(
+            routing_key='build-requested') as consumer:
+        async for msg in consumer:
+            utils.log('[wait_build_requests] Got a new build requested',
+                      level='debug')
+            ensure_future(_add_requested_build(msg))
 
 
 class RepositoryBranch(EmbeddedDocument):
@@ -649,6 +699,18 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         for slave in slaves:
             await self.add_builds_for_slave(buildset, slave,
                                             builders[slave])
+
+    async def request_build(self, branch, builder_name=None, named_tree=None,
+                            slaves=None):
+        """Publishes a message in the `repo_notifications` exchange requesting
+        a build. Uses the routing_key `build-requested`"""
+        slaves = slaves or []
+        msg = {'repository_id': str(self.id),
+               'branch': branch, 'builder_name': builder_name,
+               'named_tree': named_tree,
+               'slaves_ids': [str(s.id) for s in slaves]}
+
+        await repo_notifications.publish(msg, routing_key='build-requested')
 
     async def _get_builders(self, slaves, revision):
         builders = {}
