@@ -120,13 +120,15 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
                         'name': head['label'],
                         'branch': head['ref'],
                         'into': head['label']}
-            await install.update_repository(base_id, external=external)
+            await install.update_repository(base_id, external=external,
+                                            wait_for_lock=True)
         else:
             head_branch = head['ref']
             # branch_name: notify_only_latest
             repo_branches = {head_branch: True}
             await install.update_repository(base_id,
-                                            repo_branches=repo_branches)
+                                            repo_branches=repo_branches,
+                                            wait_for_lock=True)
 
     async def _handle_check_run_rerequested(self):
         install = await self._get_install()

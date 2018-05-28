@@ -191,13 +191,15 @@ class GithubInstallation(LoggerMixin, Document):
             github_repo_id))
 
     async def update_repository(self, github_repo_id, repo_branches=None,
-                                external=None):
+                                external=None, wait_for_lock=False):
         """Updates a repository code.
 
         :param github_repo_id: The id of the repository on github.
         :param repo_branches: Param to be passed to
           :meth:`~toxicbuild.master.repository.Repository.update_code`.
         :param external: Information about an external repository.
+        :param wait_for_lock: Indicates if we should wait for the release of
+          the lock or simply return if we cannot get a lock.
         """
 
         repo = await self._get_repo_by_github_id(github_repo_id)
@@ -205,7 +207,8 @@ class GithubInstallation(LoggerMixin, Document):
         if repo.fetch_url != url:
             repo.fetch_url = url
             await repo.save()
-        await repo.update_code(repo_branches=repo_branches, external=external)
+        await repo.update_code(repo_branches=repo_branches, external=external,
+                               wait_for_lock=wait_for_lock)
 
     @property
     def auth_token_url(self):

@@ -223,7 +223,8 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver.body = body
         await self.webhook_receiver._handle_pull_request_opened()
         called = install.update_repository.call_args[1]
-        self.assertEqual(list(called.keys()), ['external'])
+        self.assertEqual(sorted(list(called.keys())), [
+                         'external', 'wait_for_lock'])
 
     @patch.object(
         webhook_receivers.GithubWebhookReceiver, '_get_install',
