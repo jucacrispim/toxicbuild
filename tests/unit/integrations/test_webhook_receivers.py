@@ -155,6 +155,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver.request.headers = {'X-GitHub-Event': 'ping'}
         self.webhook_receiver.prepare()
         self.webhook_receiver.body['app_id'] = 'some-app-id'
+        self.webhook_receiver._validate = AsyncMagicMock()
         msg = await self.webhook_receiver.receive_webhook()
         self.assertEqual(msg['code'], 200)
         self.assertEqual(msg['msg'], 'Got it.')
@@ -198,6 +199,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver.request.headers = {
             'X-GitHub-Event': 'I-dont-know'}
         self.webhook_receiver.prepare()
+        self.webhook_receiver._validate = AsyncMagicMock()
         with self.assertRaises(webhook_receivers.HTTPError):
             await self.webhook_receiver.receive_webhook()
 
@@ -265,6 +267,29 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver.body = body
         await self.webhook_receiver._handle_check_run_rerequested()
         self.assertTrue(install.repo_request_build.called)
+
+    @patch.object(webhook_receivers.GithubApp, 'get_app', AsyncMagicMock(
+        spec=webhook_receivers.GithubApp.get_app,
+        return_value=create_autospec(
+            spec=webhook_receivers.GithubApp,
+            mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_validate(self):
+        app = webhook_receivers.GithubApp.get_app.return_value
+        await self.webhook_receiver._validate()
+        self.assertTrue(app.validate_token.called)
+
+    @patch.object(webhook_receivers.GithubApp, 'get_app', AsyncMagicMock(
+        spec=webhook_receivers.GithubApp.get_app,
+        return_value=create_autospec(
+            spec=webhook_receivers.GithubApp,
+            mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_validate_bad(self):
+        app = webhook_receivers.GithubApp.get_app.return_value
+        app.validate_token.side_effect = webhook_receivers.BadSignature
+        with self.assertRaises(webhook_receivers.HTTPError):
+            await self.webhook_receiver._validate()
 
     def test_hello(self):
         expected = {'code': 200, 'msg': 'Hi there!'}

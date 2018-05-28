@@ -32,3 +32,7 @@ class BadRequestToGithubAPI(Exception):
 
 class BadRepository(Exception):
     pass
+
+
+class BadSignature(Exception):
+    pass

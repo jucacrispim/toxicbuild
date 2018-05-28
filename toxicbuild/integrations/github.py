@@ -20,6 +20,8 @@
 from asyncio import ensure_future, gather
 from collections import defaultdict
 from datetime import timedelta
+import hashlib
+import hmac
 import json
 import jwt
 from mongomotor import Document, EmbeddedDocument
@@ -37,7 +39,7 @@ from toxicbuild.master.repository import Repository, RepositoryBranch
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.users import User
 from toxicbuild.integrations.exceptions import (BadRequestToGithubAPI,
-                                                BadRepository)
+                                                BadRepository, BadSignature)
 
 
 class GithubApp(LoggerMixin, Document):
@@ -47,6 +49,7 @@ class GithubApp(LoggerMixin, Document):
     app_id = IntField(required=True)
     jwt_expires = DateTimeField()
     jwt_token = StringField()
+    webhook_token = settings.GITHUB_WEBHOOK_TOKEN
 
     @classmethod
     async def get_app(cls):
@@ -65,6 +68,14 @@ class GithubApp(LoggerMixin, Document):
     async def app_exists(cls):
         app = await cls.objects.first()
         return bool(app)
+
+    def validate_token(self, signature, data):
+        sig = b'sha1=' + hmac.new(self.webhook_token.encode(), data.encode(),
+                                  digestmod=hashlib.sha256).digest()
+        eq = hmac.compare_digest(sig, signature)
+        if not eq:
+            raise BadSignature
+        return True
 
     async def is_expired(self):
         if self.jwt_expires and utc2localtime(self.jwt_expires) < now():

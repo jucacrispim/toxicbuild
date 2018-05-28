@@ -29,7 +29,8 @@ from tornado.web import HTTPError
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.users import User
 from toxicbuild.integrations import settings
-from toxicbuild.integrations.github import GithubInstallation
+from toxicbuild.integrations.github import (GithubInstallation, GithubApp,
+                                            BadSignature)
 
 
 class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
@@ -141,6 +142,8 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
     @post('webhooks')
     async def receive_webhook(self):
 
+        await self._validate()
+
         async def default_call():
             raise HTTPError(400, 'What was that? {}'.format(self.event_type))
 
@@ -148,6 +151,14 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         self.log('event_type {} received'.format(self.event_type))
         msg = await call()
         return {'code': 200, 'msg': msg}
+
+    async def _validate(self):
+        signature = self.request.headers.get('X-Hub-Signature')
+        app = await GithubApp.get_app()
+        try:
+            await app.validate_token(signature, self.request.body)
+        except BadSignature:
+            raise HTTPError(403, 'Bad signature')
 
     def _parse_body(self):
         if self.request.body:

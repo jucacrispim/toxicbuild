@@ -206,6 +206,28 @@ class GitHubAppTest(TestCase):
         called = github.requests.post.call_args[1]['headers']
         self.assertEqual(called, expected)
 
+    @async_test
+    async def test_validate_token_bad_sig(self):
+        sig = b'invalid'
+        data = json.dumps({'some': 'payload'})
+        app = github.GithubApp(private_key='bla', app_id=123)
+        await app.save()
+        with self.assertRaises(github.BadSignature):
+            app.validate_token(sig, data)
+
+    @async_test
+    async def test_validate_token(self):
+        app = github.GithubApp(private_key='bla', app_id=123)
+        await app.save()
+        data = json.dumps({'some': 'payload'})
+        sig = b'sha1=' + github.hmac.new(
+            app.webhook_token.encode(), data.encode(),
+            github.hashlib.sha256).digest()
+        app = github.GithubApp(private_key='bla', app_id=123)
+        await app.save()
+        eq = app.validate_token(sig, data)
+        self.assertTrue(eq)
+
 
 class GithubInstallationTest(TestCase):
 
