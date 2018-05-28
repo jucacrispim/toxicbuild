@@ -213,7 +213,7 @@ class GitHubAppTest(TestCase):
     @async_test
     async def test_validate_token_bad_sig(self):
         sig = b'invalid'
-        data = json.dumps({'some': 'payload'})
+        data = json.dumps({'some': 'payload'}).encode()
         app = github.GithubApp(private_key='bla', app_id=123,
                                webhook_token='bla')
         await app.save()
@@ -225,9 +225,9 @@ class GitHubAppTest(TestCase):
         app = github.GithubApp(private_key='bla', app_id=123,
                                webhook_token='wht')
         await app.save()
-        data = json.dumps({'some': 'payload'})
+        data = json.dumps({'some': 'payload'}).encode()
         sig = b'sha1=' + github.hmac.new(
-            app.webhook_token.encode(), data.encode(),
+            app.webhook_token.encode(), data,
             github.hashlib.sha256).digest()
         eq = app.validate_token(sig, data)
         self.assertTrue(eq)

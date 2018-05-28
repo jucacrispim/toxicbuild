@@ -71,7 +71,7 @@ class GithubApp(LoggerMixin, Document):
         return bool(app)
 
     def validate_token(self, signature, data):
-        sig = b'sha1=' + hmac.new(self.webhook_token.encode(), data.encode(),
+        sig = b'sha1=' + hmac.new(self.webhook_token.encode(), data,
                                   digestmod=hashlib.sha256).digest()
         eq = hmac.compare_digest(sig, signature)
         if not eq:
