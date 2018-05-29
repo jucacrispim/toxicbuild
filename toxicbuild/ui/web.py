@@ -33,7 +33,9 @@ from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
 from pyrocumulus.web.handlers import TemplateHandler, PyroRequest
 from pyrocumulus.web.urlmappers import URLSpec
 
+from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import LoggerMixin, string2datetime
+from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
 from toxicbuild.ui.models import (Repository, Slave, BuildSet, Builder, Plugin,
                                   User)
@@ -428,10 +430,17 @@ class MainHandler(LoggedTemplateHandler):
         slaves = yield from Slave.list(self.user)
         plugins = yield from Plugin.list(self.user)
 
+        github_import_url = self._get_settings('GITHUB_IMPORT_URL') or '#'
         context = {'repos': repos, 'slaves': slaves,
                    'get_btn_class': self._get_btn_class,
-                   'plugins': plugins}
+                   'plugins': plugins, 'github_import_url': github_import_url}
         self.render_template(self.main_template, context)
+
+    def _get_settings(self, key):
+        try:
+            return getattr(settings, key)
+        except ConfigError:
+            return None
 
     def _get_btn_class(self, status):
         return {'success': 'success', 'fail': 'danger',

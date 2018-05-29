@@ -665,7 +665,8 @@ class MainHandlerTest(AsyncTestCase):
             web.COOKIE_NAME] = self.handler._new_cookie[web.COOKIE_NAME]
 
         expected_context = {'repos': None, 'slaves': None, 'plugins': None,
-                            'get_btn_class': self.handler._get_btn_class}
+                            'get_btn_class': self.handler._get_btn_class,
+                            'github_import_url': '#'}
         self.handler.prepare()
         yield self.handler.get()
         context = self.handler.render_template.call_args[0][1]
