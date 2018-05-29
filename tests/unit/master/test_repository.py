@@ -250,7 +250,7 @@ class RepositoryTest(TestCase):
                                      mock_cls=AsyncMagicMock)))
     @patch.object(repository.utils, 'log', Mock())
     @async_test
-    async def test_remove_repo(self):
+    async def test_remove_repo_exception(self):
         repo = repository._get_repo_from_msg.return_value
         repo.remove.side_effect = Exception
         r = await repository._remove_repo({})
@@ -268,7 +268,6 @@ class RepositoryTest(TestCase):
         repository.repo_notifications.consume.return_value = consumer
         await repository.wait_removal_request()
         self.assertTrue(repository._remove_repo.called)
-
 
     @async_test
     async def test_to_dict(self):
