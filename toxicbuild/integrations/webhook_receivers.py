@@ -156,7 +156,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         signature = self.request.headers.get('X-Hub-Signature')
         app = await GithubApp.get_app()
         try:
-            await app.validate_token(signature, self.request.body)
+            app.validate_token(signature, self.request.body)
         except BadSignature:
             raise HTTPError(403, 'Bad signature')
 

@@ -276,6 +276,8 @@ class GithubWebhookReceiverTest(AsyncTestCase):
     @async_test
     async def test_validate(self):
         app = webhook_receivers.GithubApp.get_app.return_value
+        app.validate_token = Mock(
+            spec=webhook_receivers.GithubApp.validate_token)
         await self.webhook_receiver._validate()
         self.assertTrue(app.validate_token.called)
 
