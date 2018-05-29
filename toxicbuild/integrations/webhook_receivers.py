@@ -139,6 +139,10 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         named_tree = check_suite['head_sha']
         ensure_future(install.repo_request_build(repo_id, branch, named_tree))
 
+    async def _handle_install_deleted(self):
+        install = await self._get_install()
+        await install.delete()
+
     @post('webhooks')
     async def receive_webhook(self):
 

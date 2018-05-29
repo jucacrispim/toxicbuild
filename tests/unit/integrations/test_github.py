@@ -229,6 +229,7 @@ class GitHubAppTest(TestCase):
         sig = 'sha1=' + github.hmac.new(
             app.webhook_token.encode(), data,
             github.hashlib.sha1).hexdigest()
+        sig = sig.encode()
         eq = app.validate_token(sig, data)
         self.assertTrue(eq)
 
@@ -535,6 +536,22 @@ class GithubInstallationTest(TestCase):
                                                    named_tree)
 
         self.assertTrue(repo.request_build.called)
+
+    @patch.object(github.Repository, 'objects', AsyncMagicMock())
+    @async_test
+    async def test_delete(self):
+        repo = create_autospec(spec=github.Repository,
+                               mock_cls=AsyncMagicMock)
+        repo.id = 'asdf'
+        gh_repo = github.GithubInstallationRepository(
+            github_id=123,
+            repository_id=repo.id,
+            full_name='some/name')
+
+        self.installation.repositories.append(gh_repo)
+        github.Repository.objects.get.return_value = repo
+        await self.installation.delete()
+        self.assertTrue(repo.request_removal.called)
 
 
 class GithubCheckRunTest(TestCase):

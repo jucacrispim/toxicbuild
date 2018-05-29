@@ -368,6 +368,16 @@ class GithubInstallation(LoggerMixin, Document):
         repo = await self._get_repo_by_github_id(github_repo_id)
         await repo.request_build(branch, named_tree=named_tree)
 
+    async def delete(self, *args, **kwargs):
+        """Deletes the installation from the system"""
+
+        for install_repo in self.repositories:
+            repo = await Repository.objects.get(id=install_repo.repository_id)
+            await repo.request_removal()
+
+        r = await super().delete(*args, **kwargs)
+        return r
+
 
 GithubInstallation.ensure_indexes()
 

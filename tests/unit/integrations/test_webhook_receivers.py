@@ -268,6 +268,16 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         await self.webhook_receiver._handle_check_run_rerequested()
         self.assertTrue(install.repo_request_build.called)
 
+    @patch.object(
+        webhook_receivers.GithubWebhookReceiver, '_get_install',
+        AsyncMagicMock(
+            spec=webhook_receivers.GithubWebhookReceiver._get_install))
+    @async_test
+    async def test_handle_install_deleted(self):
+        await self.webhook_receiver._handle_install_deleted()
+        install = self.webhook_receiver._get_install.return_value
+        self.assertTrue(install.delete.called)
+
     @patch.object(webhook_receivers.GithubApp, 'get_app', AsyncMagicMock(
         spec=webhook_receivers.GithubApp.get_app,
         return_value=create_autospec(
