@@ -226,6 +226,50 @@ class RepositoryTest(TestCase):
         await repository.wait_build_requests()
         self.assertTrue(repository._add_requested_build.called)
 
+    @patch.object(repository, '_get_repo_from_msg', AsyncMagicMock(
+        spec=repository._get_repo_from_msg, return_value=None))
+    @async_test
+    async def test_remove_repo_no_repo(self):
+        r = await repository._remove_repo({})
+        self.assertFalse(r)
+
+    @patch.object(repository, '_get_repo_from_msg', AsyncMagicMock(
+        spec=repository._get_repo_from_msg,
+        return_value=create_autospec(spec=repository.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_remove_repo(self):
+        r = await repository._remove_repo({})
+        repo = repository._get_repo_from_msg.return_value
+        self.assertTrue(repo.remove.called)
+        self.assertTrue(r)
+
+    @patch.object(repository, '_get_repo_from_msg', AsyncMagicMock(
+        spec=repository._get_repo_from_msg,
+        return_value=create_autospec(spec=repository.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @patch.object(repository.utils, 'log', Mock())
+    @async_test
+    async def test_remove_repo(self):
+        repo = repository._get_repo_from_msg.return_value
+        repo.remove.side_effect = Exception
+        r = await repository._remove_repo({})
+        self.assertTrue(repo.remove.called)
+        self.assertTrue(repository.utils.log.called)
+        self.assertTrue(r)
+
+    @patch.object(repository.repo_notifications, 'consume',
+                  AsyncMagicMock(spec=repository.repo_notifications.consume))
+    @patch.object(repository, '_remove_repo',
+                  AsyncMagicMock(spec=repository._remove_repo))
+    @async_test
+    async def test_wait_removal_request(self):
+        consumer = AsyncMagicMock(aiter_items=[{}])
+        repository.repo_notifications.consume.return_value = consumer
+        await repository.wait_removal_request()
+        self.assertTrue(repository._remove_repo.called)
+
+
     @async_test
     async def test_to_dict(self):
         # await self._create_db_revisions()
@@ -238,6 +282,13 @@ class RepositoryTest(TestCase):
         # await self._create_db_revisions()
         d = await self.repo.to_dict(True)
         self.assertIsInstance(d['id'], str)
+
+    @patch.object(repository, 'repo_notifications', AsyncMagicMock(
+        spec=repository.repo_notifications))
+    @async_test
+    async def test_request_removal(self):
+        await self.repo.request_removal()
+        self.assertTrue(repository.repo_notifications.publish.called)
 
     # @patch.object(repository.Repository, 'objects', AsyncMagicMock())
     # @async_test

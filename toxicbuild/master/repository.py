@@ -61,7 +61,7 @@ async def _get_repo_from_msg(msg):
     try:
         repo = await Repository.get(id=msg.body['repository_id'])
     except Repository.DoesNotExist:
-        log_msg = '[_add_builds] repo {} does not exist'.format(
+        log_msg = '[_get_repo_from_msg] repo {} does not exist'.format(
             msg.body['repository_id'])
         utils.log(log_msg, level='warning')
         await msg.acknowledge()
@@ -106,7 +106,6 @@ async def _add_requested_build(msg):
 
     body = msg.body
     try:
-
         branch = body['branch']
         builder_name = body.get('builder_name')
         named_tree = body.get('named_tree')
@@ -137,6 +136,32 @@ async def wait_build_requests():
             utils.log('[wait_build_requests] Got a new build requested',
                       level='debug')
             ensure_future(_add_requested_build(msg))
+
+
+async def _remove_repo(msg):
+    repo = await _get_repo_from_msg(msg)
+    if not repo:
+        return False
+    try:
+        await repo.remove()
+    except Exception as e:
+        log_msg = '[_remove_repo] Error removing repo {}'.format(repo.id)
+        log_msg += '\nOriginal exception was {}'.format(str(e))
+        utils.log(log_msg, level='error')
+
+    return True
+
+
+async def wait_removal_request():
+    """Waits for removal requests in the `repo_notifications` exchange with the
+    routing key `removal-requested`"""
+
+    async with await repo_notifications.consume(
+            routing_key='removal-requested') as consumer:
+        async for msg in consumer:
+            utils.log('[wait_removal_request] Got a new removal request',
+                      level='debug')
+            ensure_future(_remove_repo(msg))
 
 
 class RepositoryBranch(EmbeddedDocument):
@@ -320,6 +345,15 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         # creating locks just to declare the stuff...
         await self._delete_locks()
         await self.delete()
+
+    async def request_removal(self):
+        """Request the removal of a repository by publishing a message in the
+        `repo_notifications` queue with the routing key
+        `repo-removal-requested`."""
+
+        msg = {'repository_id': str(self.id)}
+        await repo_notifications.publish(
+            msg, routing_key='repo-removal-requested')
 
     @classmethod
     async def get(cls, **kwargs):
