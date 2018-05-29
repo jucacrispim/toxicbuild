@@ -226,9 +226,9 @@ class GitHubAppTest(TestCase):
                                webhook_token='wht')
         await app.save()
         data = json.dumps({'some': 'payload'}).encode()
-        sig = b'sha1=' + github.hmac.new(
+        sig = 'sha1=' + github.hmac.new(
             app.webhook_token.encode(), data,
-            github.hashlib.sha256).digest()
+            github.hashlib.sha256).hexdigest()
         eq = app.validate_token(sig, data)
         self.assertTrue(eq)
 
