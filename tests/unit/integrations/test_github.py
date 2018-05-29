@@ -212,7 +212,7 @@ class GitHubAppTest(TestCase):
 
     @async_test
     async def test_validate_token_bad_sig(self):
-        sig = b'invalid'
+        sig = 'invalid'
         data = json.dumps({'some': 'payload'}).encode()
         app = github.GithubApp(private_key='bla', app_id=123,
                                webhook_token='bla')

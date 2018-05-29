@@ -73,6 +73,9 @@ class GithubApp(LoggerMixin, Document):
     def validate_token(self, signature, data):
         sig = b'sha1=' + hmac.new(self.webhook_token.encode(), data,
                                   digestmod=hashlib.sha256).digest()
+        if isinstance(signature, str):
+            signature = signature.encode()
+
         eq = hmac.compare_digest(sig, signature)
         if not eq:
             raise BadSignature
