@@ -283,7 +283,7 @@ class GithubInstallation(LoggerMixin, Document):
         self.log(msg, level='debug')
 
         branches = [
-            RepositoryBranch(name='master', notify_only_latest=False),
+            RepositoryBranch(name='master', notify_only_latest=True),
             RepositoryBranch(name='feature-*', notify_only_latest=True),
             RepositoryBranch(name='bug-*', notify_only_latest=True)]
         slaves = await Slave.list_for_user(await self.user).to_list()
@@ -391,7 +391,7 @@ class GithubCheckRun(MasterPlugin):
     events = ['buildset-added', 'buildset-started', 'buildset-finished']
     no_list = True
 
-    run_name = 'continuous-integration'
+    run_name = 'ToxicBuild CI'
 
     installation = ReferenceField(GithubInstallation)
 

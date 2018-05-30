@@ -65,6 +65,18 @@ Toxicmaster config values
 The configuration file for toxicmaster is located at
 `~/ci/master/toxicmaster.conf`.
 
+General configs
+^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   # Address from which address the master should accept connections.
+   # If '0.0.0.0' accepts connections from everywhere.
+   HOLE_ADDR = '127.0.0.1'
+   # Port for the master to listen.
+   HOLE_PORT = 1111
+
+
 Database
 ^^^^^^^^
 
@@ -87,6 +99,32 @@ For authentication, add the `username` and `password` keys:
 	       'username': 'db-user',
 	       'password': 'db-password'}
 
+Queue Manager
+^^^^^^^^^^^^^
+
+ToxicBuild uses Rabbitmq as queue manager. Use the `RABBITMQ_CONNECTION`
+settings to configure it:
+
+.. code-block:: python
+
+   RABBITMQ_CONNECTION = {'host': 'localhost', 'port': 5672}
+
+
+
+ToxicOutput config values
+--------------------------
+
+The configuration file for toxicmaster is located at
+`~/ci/output/toxicoutput.conf`.
+
+
+Database and Queue Manager
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The database and queue manager configurations MUST be the same as the ones
+used in the master configuration
+
+
 Email
 ^^^^^
 
@@ -106,11 +144,47 @@ you need to configure the smpt options.
    SMTP_VALIDATE_CERTS = True
    SMTP_STARTTLS = False
 
+ToxicIntegrations config values
+-------------------------------
+
+General configs
+^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   # indicates which port the integrations server listens.
+   TORNADO_PORT = 9999
+   # how many repos will be imported at the same time by the same user
+   PARALLEL_IMPORTS = 1
+
+
+Database and queue managers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The database and queue manager configurations MUST be the same as the ones
+used in the master configuration
+
+
+
+Toxicweb config values
+----------------------
+The configuration file for toxicui is located at
+`~/ci/ui/toxicui.conf`.
+
+By default, all dates and times are displayed using the UTC timezone in the
+following format: ``'%a %b %d %H:%M:%S %Y %z'``. You can change it using the
+``TIMEZONE`` and ``DTFORMAT`` variables.
+
+A list with the format codes can be found `here <http://strftime.org/>`_
+and a list of timezones can be found
+`here <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`_.
+
 
 Toxicslave config values
 -------------------------
 The configuration file for toxicslave is located at
 `~/ci/slave/toxicslave.conf`.
+
 
 Running builds in docker containers
 ++++++++++++++++++++++++++++++++++++
@@ -156,20 +230,60 @@ following variables:
 And thats it. Your builds will run inside docker containers.
 
 
-Toxicweb config values
-----------------------
-The configuration file for toxicui is located at
-`~/ci/ui/toxicui.conf`.
+Integration with Github
++++++++++++++++++++++++
 
-By default, all dates and times are displayed using the UTC timezone in the
-following format: ``'%a %b %d %H:%M:%S %Y %z'``. You can change it using the
-``TIMEZONE`` and ``DTFORMAT`` variables.
+Create a Github app on Github
+-----------------------------
 
-A list with the format codes can be found `here <http://strftime.org/>`_
-and a list of timezones can be found
-`here <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`_.
+To integrate with Github you first need to create a Github App. To do so, go to
+`https://github.com/settings/apps` and click in `New GitHub App`. In the app
+page, fill the `User authorization callback URL` and the `setup URL` to
+`<your-integrations-server>:9999/github/auth`. Set the `Webhook URL` to
+`<your-integrations-server>:9999/github/webhooks`. Fill the `Webhook secret`
+with a unique random string.
+
+Generate a private key in the Github interface and save the file.
+
+In the permissions page, give the following permissions to your app.
+
+* read-only to Repository contents
+* read-only to Repository metadata
+* read-only to Pull requests
+* read & write to Checks
+
+Subscribe to the following events:
+
+* Push
+* Repository
+* Pull request
+* Status
+* Check run
+
+Now we're done in the Github side. Let's configure ToxicBuild.
 
 
+Toxicbuild Configuration
+------------------------
+
+In your `toxicintegrations.conf` set the following parameters.
+
+.. code-block:: python
+
+   GITHUB_PRIVATE_KEY = '/the/path/to/your/github-private.key'
+   # The id of your github. You can see it in your app page on github
+   GITHUB_APP_ID = 666
+   # The secret string you put in the Webhook secret field in github
+   GITHUB_WEBHOOK_TOKEN = 'secret-token'
+   TOXICUI_LOGIN_URL = '<your-toxicui-sever>/login/'
+   TOXICUI_URL = '<your-toxicui-sever>'
+
+
+In your `toxicui.conf` set the following parameters:
+
+.. code-block:: python
+
+   GITHUB_IMPORT_URL = 'https://github.com/apps/<app-name>/installations/new'
 
 
 Starting toxicbuild
