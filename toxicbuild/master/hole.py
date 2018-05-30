@@ -50,7 +50,6 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
         super().__init__(*args, **kwargs)
         self.user = None
 
-    salt = settings.BCRYPT_SALT
     encrypted_token = settings.ACCESS_TOKEN
 
     async def client_connected(self):

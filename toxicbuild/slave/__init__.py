@@ -134,15 +134,13 @@ def create(root_dir):
     shutil.copyfile(template_file, dest_file)
 
     # here we create a bcrypt salt and a access token for authentication.
-    salt = bcrypt.gensalt(8)
     access_token = str(uuid4())
-    encrypted_token = bcrypt_string(access_token, salt)
+    encrypted_token = bcrypt_string(access_token)
 
     # and finally update the config file content with the new generated
     # salt and access token
     with open(dest_file, 'r+') as fd:
         content = fd.read()
-        content = content.replace('{{BCRYPT_SALT}}', salt.decode())
         content = content.replace('{{ACCESS_TOKEN}}', encrypted_token)
         fd.seek(0)
         fd.write(content)

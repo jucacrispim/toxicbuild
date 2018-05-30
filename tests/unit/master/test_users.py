@@ -109,8 +109,7 @@ class OrganizationTest(TestCase):
         user = users.User(email='a@a.com')
         user.set_password('asdf')
         await user.save()
-        bpasswd = users.bcrypt_string('asdf', users.settings.BCRYPT_SALT)
-        self.assertEqual(user.password, bpasswd)
+        self.assertTrue(users.compare_bcrypt_string('asdf', user.password))
 
 
 class UserTest(TestCase):

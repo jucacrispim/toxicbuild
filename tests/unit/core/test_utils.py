@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -284,6 +284,16 @@ class UtilsTest(TestCase):
         passwd = 'somepasswd'
         encrypted = utils.bcrypt_string(passwd, salt)
         self.assertIsInstance(encrypted, str)
+
+    def test_bcript_no_salt(self):
+        passwd = 'somepasswd'
+        encrypted = utils.bcrypt_string(passwd)
+        self.assertIsInstance(encrypted, str)
+
+    def test_compare_bcrypt_string(self):
+        passwd = 'somepasswd'
+        encrypted = utils.bcrypt_string(passwd)
+        self.assertTrue(utils.compare_bcrypt_string(passwd, encrypted))
 
     def test_create_random_string(self):
         length = 10

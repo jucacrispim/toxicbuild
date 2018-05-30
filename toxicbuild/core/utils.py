@@ -334,12 +334,25 @@ def write_stream(writer, data):
     yield from writer.drain()
 
 
-def bcrypt_string(src_string, salt):
+def bcrypt_string(src_string, salt=None):
     encoding = sys.getdefaultencoding()
+    if not salt:
+        salt = bcrypt.gensalt(12)
+
     if isinstance(salt, str):
         salt = salt.encode(encoding)
+
     encrypted = bcrypt.hashpw(src_string.encode(encoding), salt)
     return encrypted.decode()
+
+
+def compare_bcrypt_string(original, encrypted):
+    """Compares if a un-encrypted string matches an encrypted one.
+
+    :param original: An un-encrypted string.
+    :param encrypted: An bcrypt encrypted string."""
+
+    return bcrypt.checkpw(original.encode(), encrypted.encode())
 
 
 def create_random_string(length):

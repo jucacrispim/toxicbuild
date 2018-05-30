@@ -30,7 +30,6 @@ class BuildServerProtocol(BaseToxicProtocol):
 
     """ A simple server for build requests.
     """
-    salt = settings.BCRYPT_SALT
     encrypted_token = settings.ACCESS_TOKEN
 
     @asyncio.coroutine

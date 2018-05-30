@@ -22,7 +22,7 @@ from mongomotor.fields import (StringField, UUIDField, ListField,
                                ReferenceField, EmbeddedDocumentListField,
                                BooleanField, EmailField)
 from mongomotor.queryset import PULL
-from toxicbuild.core.utils import bcrypt_string
+from toxicbuild.core.utils import bcrypt_string, compare_bcrypt_string
 from toxicbuild.master import settings
 from toxicbuild.master.exceptions import InvalidCredentials
 from toxicbuild.master.utils import as_db_ref
@@ -83,14 +83,13 @@ class User(Document):
         :param username_or_email: Username or email to use to authenticate.
         :param password: Not encrypted password."""
 
-        salt = settings.BCRYPT_SALT
-        password = bcrypt_string(password, salt)
         fields = ['username', 'email']
         for field in fields:
-            kw = {field: username_or_email, 'password': password}
+            kw = {field: username_or_email}
             try:
                 user = await cls.objects.get(**kw)
-                return user
+                if compare_bcrypt_string(password, user.password):
+                    return user
             except cls.DoesNotExist:
                 pass
 
@@ -115,8 +114,7 @@ class User(Document):
         return r
 
     def set_password(self, password):
-        salt = settings.BCRYPT_SALT
-        self.password = bcrypt_string(password, salt)
+        self.password = bcrypt_string(password)
 
 
 class Team(EmbeddedDocument):
