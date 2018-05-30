@@ -35,7 +35,8 @@ class BuildServer(LoggerMixin):
             self.loop.run_until_complete(self.shutdown())
 
     async def shutdown(self):
-        self.log('shuting down')
+        self.log('Shutting down')
+        self.protocol._is_shuting_down = True
         while self.protocol._clients_connected > 0:
             self.log('Clients connected: {}'.format(
                 self.protocol._clients_connected), level='debug')

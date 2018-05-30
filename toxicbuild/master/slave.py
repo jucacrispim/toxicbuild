@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -81,8 +81,6 @@ class Slave(OwnedDocument, LoggerMixin):
             alive = await client.healthcheck()
 
         self.is_alive = alive
-        # using yield instead of await because mongomotor's
-        # save returns a tornado Future, not a asyncio Future
         await self.save()
         return self.is_alive
 

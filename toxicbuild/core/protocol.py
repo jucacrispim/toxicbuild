@@ -75,6 +75,9 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         self._check_data_future.add_done_callback(self._check_data_cb)
 
     def connection_lost(self, exc):
+        """Called once, when the connection is lost.
+
+        :param exc: The exception, if some."""
         self.close_connection()
         super().connection_lost(exc)
         self.log('Connection lost', level='debug')
