@@ -72,6 +72,7 @@ def step_impl(context):
 @when('he clicks in the step details button')  # noqa f401
 def step_impl(context):
     browser = context.browser
+    time.sleep(1)
     btn = browser.find_element_by_class_name('btn-step-details')
     browser.click(btn)
 

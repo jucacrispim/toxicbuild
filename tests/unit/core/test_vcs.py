@@ -65,6 +65,19 @@ class VCSTest(TestCase):
             def get_remote_branches(self):
                 pass
 
+            def create_local_branch(self, branch_name, base_name):
+                pass
+
+            def delete_local_branch(self, branch_name):
+                pass
+
+            def add_remote(self, remote_url, remote_name):
+                pass
+
+            def import_external_branch(self, external_url, external_name,
+                                       external_branch, into):
+                pass
+
         super(VCSTest, self).setUp()
         self.vcs = DummyVcs('/some/workdir')
 
@@ -137,6 +150,14 @@ class GitTest(TestCase):
         called_cmd = vcs.exec_cmd.call_args[0][0]
         self.assertEqual(called_cmd, expected)
 
+    @async_test
+    async def test_add_remote(self):
+        expected = 'git remote add new-origin http://someurl.net/bla.git'
+        self.vcs.exec_cmd = AsyncMagicMock(spec=self.vcs.exec_cmd)
+        await self.vcs.add_remote('new-origin', 'http://someurl.net/bla.git')
+        called = self.vcs.exec_cmd.call_args[0][0]
+        self.assertEqual(expected, called)
+
     @mock.patch.object(vcs.Git, 'get_remote', AsyncMagicMock(
         spec=vcs.Git.get_remote, return_value='git@bla.com/bla.git'))
     @mock.patch.object(vcs.Git, 'set_remote', AsyncMagicMock(
@@ -171,6 +192,36 @@ class GitTest(TestCase):
         self.assertEqual(cmd, expected_cmd)
 
     @async_test
+    def test_create_local_branch(self):
+        expected_cmd = 'git branch new-branch'
+
+        @asyncio.coroutine
+        def e(cmd, cwd):
+            return cmd
+
+        vcs.exec_cmd = e
+
+        self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
+        cmd = yield from self.vcs.create_local_branch('new-branch', 'master')
+        self.assertEqual(cmd, expected_cmd)
+        self.assertTrue(self.vcs.checkout.called)
+
+    @async_test
+    def test_delete_local_branch(self):
+        expected_cmd = 'git branch -D new-branch'
+
+        @asyncio.coroutine
+        def e(cmd, cwd):
+            return cmd
+
+        vcs.exec_cmd = e
+
+        self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
+        cmd = yield from self.vcs.delete_local_branch('new-branch')
+        self.assertEqual(cmd, expected_cmd)
+        self.assertTrue(self.vcs.checkout.called)
+
+    @async_test
     def test_checkout(self):
         expected_cmd = 'git checkout master'
 
@@ -193,6 +244,72 @@ class GitTest(TestCase):
         vcs.exec_cmd = e
 
         yield from self.vcs.pull('master')
+
+    @async_test
+    async def test_branch_exists(self):
+        self.vcs.exec_cmd = AsyncMagicMock(spec=self.vcs.exec_cmd)
+        r = await self.vcs.branch_exists('some-branch')
+        self.assertTrue(r)
+
+    @async_test
+    async def test_branch_exists_doenst_exist(self):
+        self.vcs.exec_cmd = AsyncMagicMock(spec=self.vcs.exec_cmd,
+                                           side_effect=vcs.ExecCmdError)
+        r = await self.vcs.branch_exists('some-branch')
+        self.assertFalse(r)
+
+    @async_test
+    async def test_import_external_branch(self):
+        external_url = 'http://other-place.net/bla.git'
+        external_name = 'other-repo'
+        external_branch = 'master'
+        into = 'other-repo:master'
+        self.vcs.branch_exists = AsyncMagicMock(spec=self.vcs.branch_exists,
+                                                return_value=True)
+        self.vcs.add_remote = AsyncMagicMock(spec=self.vcs.add_remote)
+        self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
+        self.vcs.pull = AsyncMagicMock(spec=self.vcs.pull)
+        await self.vcs.import_external_branch(external_url, external_name,
+                                              external_branch, into)
+        remote_added = self.vcs.add_remote.call_args[0]
+        remote_expected = (external_url, external_name)
+        checkout = self.vcs.checkout.call_args[0][0]
+        checkout_expected = 'other-repo:master'
+        pull = self.vcs.pull.call_args[0]
+        pull_expected = (external_branch, external_name)
+        self.assertEqual(remote_added, remote_expected)
+        self.assertEqual(checkout, checkout_expected)
+        self.assertEqual(pull, pull_expected)
+
+    @async_test
+    async def test_import_external_branch_dont_exist(self):
+        external_url = 'http://other-place.net/bla.git'
+        external_name = 'other-repo'
+        external_branch = 'master'
+        into = 'other-repo:master'
+        self.vcs.branch_exists = AsyncMagicMock(spec=self.vcs.branch_exists,
+                                                return_value=False)
+        self.vcs.create_local_branch = AsyncMagicMock(
+            spec=self.vcs.create_local_branch)
+        self.vcs.add_remote = AsyncMagicMock(spec=self.vcs.add_remote)
+        self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
+        self.vcs.pull = AsyncMagicMock(spec=self.vcs.pull)
+        await self.vcs.import_external_branch(external_url, external_name,
+                                              external_branch, into)
+
+        branch_created = self.vcs.create_local_branch.call_args[0]
+        branch_expected = (into, 'master')
+        remote_added = self.vcs.add_remote.call_args[0]
+        remote_expected = (external_url, external_name)
+        checkout = self.vcs.checkout.call_args[0][0]
+        checkout_expected = 'other-repo:master'
+        pull = self.vcs.pull.call_args[0]
+        pull_expected = (external_branch, external_name)
+
+        self.assertEqual(branch_created, branch_expected)
+        self.assertEqual(remote_added, remote_expected)
+        self.assertEqual(checkout, checkout_expected)
+        self.assertEqual(pull, pull_expected)
 
     @async_test
     def test_has_changes(self):

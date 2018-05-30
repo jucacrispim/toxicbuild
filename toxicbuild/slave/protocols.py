@@ -100,7 +100,9 @@ class BuildServerProtocol(BaseToxicProtocol):
         in the request data
         """
         with (yield from self.get_buildmanager()) as manager:
-            yield from manager.update_and_checkout(work_after_wait=False)
+            external = self.data['body'].get('external')
+            yield from manager.update_and_checkout(work_after_wait=False,
+                                                   external=external)
 
             try:
                 builder_name = self.data['body']['builder_name']

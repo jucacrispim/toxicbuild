@@ -71,8 +71,7 @@ class OutputMethodServerTest(TestCase):
         server.repo_notifications.consume.return_value = AsyncMagicMock(
             aiter_items=[msg])
 
-        t = await self.server._handle_repo_notifications()
-        await t
+        await self.server._handle_repo_notifications()
         self.assertTrue(self.server.run_plugins.called)
 
     @patch.object(server, 'build_notifications', AsyncMagicMock(
@@ -87,8 +86,7 @@ class OutputMethodServerTest(TestCase):
         server.build_notifications.consume.return_value = AsyncMagicMock(
             aiter_items=[msg])
 
-        t = await self.server._handle_build_notifications()
-        await t
+        await self.server._handle_build_notifications()
         self.assertTrue(self.server.run_plugins.called)
 
     @async_test

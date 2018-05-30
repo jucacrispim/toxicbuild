@@ -123,6 +123,8 @@ class SlaveTest(TestCase):
 
         self.assertTrue(self.slave.is_alive)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_list_builders(self):
         await self._create_test_data()
@@ -144,6 +146,8 @@ class SlaveTest(TestCase):
 
         self.assertEqual(builders, [self.builder, self.other_builder])
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_build(self):
         await self._create_test_data()
@@ -164,6 +168,8 @@ class SlaveTest(TestCase):
         await self.slave.build(self.build)
         self.assertTrue(client.build.called)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_build_with_exception(self):
         await self._create_test_data()
@@ -185,6 +191,8 @@ class SlaveTest(TestCase):
         self.assertTrue(self.build.finished)
         self.assertEqual(len(build_info['steps']), 1)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @patch.object(slave, 'build_started', Mock())
     @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
         spec=slave.build_notifications.publish))
@@ -202,6 +210,8 @@ class SlaveTest(TestCase):
         self.assertTrue(slave.build_started.send.called)
         self.assertTrue(slave.build_notifications.publish.called)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @patch.object(slave, 'build_finished', Mock())
     @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
         spec=slave.build_notifications.publish))
@@ -224,6 +234,8 @@ class SlaveTest(TestCase):
         self.assertTrue(slave.build_finished.send.called)
         self.assertTrue(slave.build_notifications.publish.called)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_process_info_with_step(self):
         await self._create_test_data()
@@ -240,6 +252,8 @@ class SlaveTest(TestCase):
         await self.slave._process_info(self.build, build_info)
         self.assertTrue(process_step_info.called)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_process_info_with_step_output(self):
         await self._create_test_data()

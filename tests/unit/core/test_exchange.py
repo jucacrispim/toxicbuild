@@ -57,6 +57,15 @@ class JsonAckMessageTest(TestCase):
         await msg.acknowledge()
         self.assertTrue(msg.channel.basic_client_ack.called)
 
+    @async_test
+    async def test_reject(self):
+        b = exchange.json.dumps({}).encode('utf-8')
+        channel, envelope, properties = AsyncMagicMock(), Mock(), {}
+        msg = exchange.JsonAckMessage(channel, b, envelope, properties)
+        msg.channel = AsyncMagicMock()
+        await msg.reject()
+        self.assertTrue(msg.channel.basic_reject.called)
+
 
 class ExchangeTest(TestCase):
 
@@ -207,3 +216,51 @@ class ExchangeTest(TestCase):
         self.exchange._bound_rt.add('routing-key')
         await self.exchange.unbind('routing-key', channel)
         self.assertTrue(channel.queue_unbind.called)
+
+    @async_test
+    async def test_consume_routing_key(self):
+        type(self).exchange = exchange.Exchange('test-exc-durable', self.conn,
+                                                exchange_type='direct',
+                                                durable=True,
+                                                bind_publisher=True,
+                                                exclusive_consumer_queue=False)
+        await self.exchange.declare()
+        await self.exchange.publish({'a': 'b'}, routing_key='1')
+        consumer = await self.exchange.consume(routing_key='2', timeout=100)
+        async with consumer:
+            with self.assertRaises(ConsumerTimeout):
+                await consumer.fetch_message()
+
+        consumer = await self.exchange.consume(routing_key='1', timeout=100)
+        async with consumer:
+            msg = await consumer.fetch_message()
+
+        self.assertTrue(msg)
+
+    @async_test
+    async def test_queue_delete(self):
+        type(self).exchange = exchange.Exchange('test-exc-durable', self.conn,
+                                                exchange_type='direct',
+                                                durable=True,
+                                                bind_publisher=True,
+                                                exclusive_consumer_queue=False)
+
+        channel = await self.exchange.connection.protocol.channel()
+        queue_name = 'bla'
+        self.queue_info = await channel.queue_declare(
+            queue_name, durable=False,
+            exclusive=False,
+            auto_delete=False)
+
+        await self.exchange.queue_delete('bla')
+
+        try:
+            await channel.queue_declare(
+                queue_name, durable=False,
+                exclusive=False,
+                passive=True)
+            exists = True
+        except ChannelClosed as e:
+            exists = False
+
+        self.assertFalse(exists)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -120,6 +120,40 @@ class GitPollerTest(TestCase):
         self.assertTrue(pollers.revisions_added.publish.called)
 
     @mock.patch.object(pollers, 'revisions_added', AsyncMagicMock())
+    @mock.patch.object(pollers, 'MatchKeysDict', mock.MagicMock())
+    @async_test
+    async def test_process_changes_with_branches(self):
+        # now in the future, of course!
+        now = datetime.datetime.now() + datetime.timedelta(100)
+        branches = [
+            repository.RepositoryBranch(name='master',
+                                        notify_only_latest=True),
+            repository.RepositoryBranch(name='dev',
+                                        notify_only_latest=False)]
+        self.repo.branches = branches
+        await self.repo.save()
+        await self._create_db_revisions()
+
+        @asyncio.coroutine
+        def gr(*a, **kw):
+            return {'master': [{'commit': '123sdf', 'commit_date': now,
+                                'author': 'zé', 'title': 'sometitle'},
+                               {'commit': 'asdf213', 'commit_date': now,
+                                'author': 'tião', 'title': 'other'}],
+                    'dev': [{'commit': 'sdfljfew', 'commit_date': now,
+                             'author': 'mariazinha', 'title': 'bla'},
+                            {'commit': 'sdlfjslfer3', 'commit_date': now,
+                             'author': 'jc', 'title': 'Our lord John Cleese'}],
+                    'other': []}
+
+        self.poller.vcs.get_revisions = gr
+
+        await self.poller.process_changes(repo_branches={'master': True})
+
+        self.assertTrue(pollers.revisions_added.publish.called)
+        self.assertFalse(pollers.MatchKeysDict.called)
+
+    @mock.patch.object(pollers, 'revisions_added', AsyncMagicMock())
     @async_test
     async def test_process_changes_no_revisions(self):
         # now in the future, of course!
@@ -141,6 +175,21 @@ class GitPollerTest(TestCase):
         await self.poller.process_changes()
 
         self.assertFalse(pollers.revisions_added.publish.called)
+
+    @async_test
+    async def test_external_poll(self):
+        await self._create_db_revisions()
+        external_url = 'http://some-url.com/bla.git'
+        external_name = 'other-repo'
+        external_branch = 'master'
+        into = 'external:master'
+        self.poller.vcs.import_external_branch = AsyncMagicMock(
+            spec=self.poller.vcs.import_external_branch)
+        self.poller.poll = AsyncMagicMock(spec=self.poller.poll)
+        await self.poller.external_poll(external_url, external_name,
+                                        external_branch, into)
+        self.assertTrue(self.poller.vcs.import_external_branch.called)
+        self.assertTrue(self.poller.poll.called)
 
     @async_test
     async def test_poll(self):
@@ -398,6 +447,32 @@ class PollerServerTest(TestCase):
         async with await pollers.poll_status.consume(
                 routing_key=repo_id) as consumer:
 
+            message = Message(channel, body, envelope, properties)
+            await self.server.handle_update_request(message)
+            msg = await consumer.fetch_message()
+            self.assertTrue(msg)
+
+    @mock.patch.object(pollers.Repository, '_create_locks', AsyncMagicMock())
+    @mock.patch.object(pollers.Poller, 'poll', AsyncMagicMock(
+        return_value=True))
+    @async_test
+    async def test_handle_update_request_external(self):
+        user = users.User(email='a@a.com')
+        await user.save()
+        repo = pollers.Repository(url='http://someurl.com/repo.git',
+                                  owner=user, vcs_type='git',
+                                  name='bla-repo')
+        await repo.save()
+        channel, envelope, properties = AsyncMagicMock(), mock.Mock(), {}
+        repo_id = str(repo.id)
+        body = json.dumps({'repo_id': repo_id, 'vcs_type': 'git',
+                           'external': {'url': 'http://someurl.com/git.bla',
+                                        'name': 'other-repo',
+                                        'branch': 'master',
+                                        'into': 'other-repo:master'}}).encode()
+
+        async with await pollers.poll_status.consume(
+                routing_key=repo_id) as consumer:
             message = Message(channel, body, envelope, properties)
             await self.server.handle_update_request(message)
             msg = await consumer.fetch_message()

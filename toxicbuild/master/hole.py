@@ -31,7 +31,7 @@ from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder
-from toxicbuild.master.repository import Repository, RepositoryRevision
+from toxicbuild.master.repository import Repository
 from toxicbuild.master.exceptions import (UIFunctionNotFound,
                                           OwnerDoesNotExist, NotEnoughPerms)
 from toxicbuild.master.exchanges import ui_notifications
@@ -407,35 +407,8 @@ class HoleHandler:
 
         slaves = slave_instances
 
-        if not slaves:
-            slaves = await repo.slaves
-
-        if not named_tree:
-            rev = await repo.get_latest_revision_for_branch(branch)
-            named_tree = rev.commit
-        else:
-            rev = await RepositoryRevision.get(repository=repo,
-                                               branch=branch,
-                                               commit=named_tree)
-
-        if not builder_name:
-            builders = await self._get_builders(repo, slaves, rev)
-        else:
-            blist = [(await Builder.get(name=builder_name,
-                                        repository=repo))]
-            builders = {}
-            for slave in slaves:
-                builders.update({slave: blist})
-
-        builds_count = 0
-
-        buildset = await BuildSet.create(repository=repo, revision=rev,
-                                         save=False)
-        for slave in slaves:
-            await repo.add_builds_for_slave(buildset, slave,
-                                            builders[slave])
-
-        return {'repo-start-build': '{} builds added'.format(builds_count)}
+        await repo.start_build(branch, builder_name, named_tree, slaves=slaves)
+        return {'repo-start-build': 'builds added'}
 
     async def slave_add(self, slave_name, slave_host, slave_port, slave_token,
                         owner_id):
@@ -624,14 +597,6 @@ class HoleHandler:
         slave_dict['id'] = str(slave.id)
         return slave_dict
 
-    async def _get_builders(self, repo, slaves, revision):
-        builders = {}
-        for slave in slaves:
-            builders[slave] = await repo.build_manager.get_builders(
-                slave, revision)
-
-        return builders
-
 
 class UIStreamHandler(LoggerMixin):
 
@@ -795,7 +760,7 @@ class UIStreamHandler(LoggerMixin):
     async def send_response(self, code, body):
         try:
             await self.protocol.send_response(code=code, body=body)
-        except ConnectionResetError:
+        except (ConnectionResetError, AttributeError):
             self.protocol._transport.close()
             self._disconnectfromsignals()
 

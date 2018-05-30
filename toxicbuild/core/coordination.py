@@ -77,7 +77,7 @@ class Mutex(Exchange):
                          durable=True, bind_publisher=True,
                          exclusive_consumer_queue=False)
 
-    async def exists(self):
+    async def exists(self, queue_name=None):
         """Checks if the queue for this mutex exists."""
 
         if not self.connection._connected:
@@ -86,9 +86,10 @@ class Mutex(Exchange):
 
         if self.channel is None:
             self.channel = await self.connection.protocol.channel()
+        queue_name = queue_name or self.queue_name
         try:
             await self.channel.queue_declare(
-                self.queue_name, durable=self.durable,
+                queue_name, durable=self.durable,
                 exclusive=self.exclusive_consumer_queue,
                 passive=True)
             exists = True
@@ -139,8 +140,6 @@ class Mutex(Exchange):
         """Acquires the lock. Use it with the async context manager.
 
         :param routing_key: Routing key of the lock."""
-        # _timeout is only for tests
-        # _wait for try_acquire
         consumer = await self.consume(routing_key=routing_key,
                                       wait_message=_wait, timeout=_timeout)
         try:

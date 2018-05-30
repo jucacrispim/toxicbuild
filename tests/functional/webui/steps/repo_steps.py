@@ -158,6 +158,7 @@ def step_impl(context):
 @when('clicks in the delete repo button')  # noqa f401
 def step_impl(context):
     browser = context.browser
+    time.sleep(0.5)
     btn = browser.find_element_by_id('btn-delete-repo')
     browser.click(btn)
 

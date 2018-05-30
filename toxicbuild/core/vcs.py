@@ -20,7 +20,7 @@
 from abc import ABCMeta, abstractmethod
 import asyncio
 import os
-from toxicbuild.core.exceptions import VCSError
+from toxicbuild.core.exceptions import VCSError, ExecCmdError
 from toxicbuild.core.utils import (exec_cmd, inherit_docs, string2datetime,
                                    datetime2string, utc2localtime,
                                    localtime2utc, LoggerMixin, match_string)
@@ -71,6 +71,21 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
 
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
+    def create_local_branch(self, branch_name, base_name):
+        """Creates a branch new in the local repository
+
+        :param branch_name: The name for the new branch
+        :param base_name: The name of the base branch."""
+
+    @abstractmethod
+    @asyncio.coroutine
+    def delete_local_branch(self, branch_name):
+        """Deletes a local branch.
+
+        :param branch_name: The name of the branch to be deleted."""
+
+    @abstractmethod  # pragma no branch
+    @asyncio.coroutine
     def set_remote(self, url, remote_name):
         """Sets the remote url of the repository.
 
@@ -94,6 +109,14 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
 
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
+    def add_remote(self, remote_url, remote_name):
+        """Adds a new remote to the repository.
+
+        :param remote_url: The url of the remote repository.
+        :param remote_name: The name of the remote."""
+
+    @abstractmethod  # pragma no branch
+    @asyncio.coroutine
     def checkout(self, named_tree):
         """ Checkout to ``named_tree``
         :param named_tree: A commit, branch, tag...
@@ -101,10 +124,11 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
 
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
-    def pull(self, branch_name):
+    def pull(self, branch_name, remote_name='origin'):
         """ Pull changes from ``branch_name`` on remote repo.
 
         :param branch_name: A branch name, like 'master'.
+        :param remote_name: The remote repository to push from.
         """
 
     @abstractmethod  # pragma no branch
@@ -112,6 +136,25 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
     def has_changes(self):
         """ Informs if there are new revisions in the repository
         """
+
+    @abstractmethod
+    @asyncio.coroutine  # pragma no branch
+    def import_external_branch(self, external_url, external_name,
+                               external_branch, into):
+        """Imports a branch from an external (not the origin one)
+        repository into a local branch.
+
+        :param external_url: The url of the external repository.
+        :param external_name: Name to idenfity the remote url.
+        :param external_branch: The name of the branch in the external repo.
+        :param into: The name of the local branch."""
+
+    @classmethod  # pragma no branch
+    @asyncio.coroutine
+    def branch_exists(self, branch_name):
+        """Checks if a local branch exists.
+
+        :param branch name: The name of the branch to check."""
 
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
@@ -180,6 +223,13 @@ class Git(VCS):
         return remote
 
     @asyncio.coroutine
+    def add_remote(self, remote_url, remote_name):
+        cmd = '{} remote add {} {}'.format(self.vcsbin,
+                                           remote_url, remote_name)
+        r = yield from self.exec_cmd(cmd)
+        return r
+
+    @asyncio.coroutine
     def try_set_remote(self, url, remote_name='origin'):
         current_remote = yield from self.get_remote(remote_name)
         if current_remote != url:
@@ -195,15 +245,31 @@ class Git(VCS):
         return fetched
 
     @asyncio.coroutine
+    def create_local_branch(self, branch_name, base_name):
+
+        yield from self.checkout(base_name)
+        cmd = '{} branch {}'.format(self.vcsbin, branch_name)
+        r = yield from self.exec_cmd(cmd)
+        return r
+
+    @asyncio.coroutine
+    def delete_local_branch(self, branch_name):
+        yield from self.checkout('master')
+        cmd = '{} branch -D {}'.format(self.vcsbin, branch_name)
+        r = yield from self.exec_cmd(cmd)
+        return r
+
+    @asyncio.coroutine
     def checkout(self, named_tree):
 
         cmd = '{} checkout {}'.format(self.vcsbin, named_tree)
         yield from self.exec_cmd(cmd)
 
     @asyncio.coroutine
-    def pull(self, branch_name):
+    def pull(self, branch_name, remote_name='origin'):
 
-        cmd = '{} pull --no-edit origin {}'.format(self.vcsbin, branch_name)
+        cmd = '{} pull --no-edit {} {}'.format(self.vcsbin, remote_name,
+                                               branch_name)
 
         ret = yield from self.exec_cmd(cmd)
         return ret
@@ -212,6 +278,28 @@ class Git(VCS):
     def has_changes(self):
         ret = yield from self.fetch()
         return bool(ret)
+
+    @asyncio.coroutine
+    async def import_external_branch(self, external_url, external_name,
+                                     external_branch, into):
+        exists = await self.branch_exists(into)
+        if not exists:
+            await self.create_local_branch(into, 'master')
+
+        await self.add_remote(external_url, external_name)
+        await self.checkout(into)
+        await self.pull(external_branch, external_name)
+
+    @asyncio.coroutine
+    def branch_exists(self, branch_name):
+        cmd = '{} rev-parse --verify {}'.format(self.vcsbin, branch_name)
+        try:
+            yield from self.exec_cmd(cmd)
+            exists = True
+        except ExecCmdError:
+            exists = False
+
+        return exists
 
     @asyncio.coroutine
     def update_submodule(self):

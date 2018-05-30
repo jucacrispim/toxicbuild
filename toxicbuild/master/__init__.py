@@ -64,7 +64,8 @@ def toxicinit():
     # importing here to avoid circular imports
     from toxicbuild.master.build import BuildSet
     from toxicbuild.master.hole import HoleServer
-    from toxicbuild.master.repository import Repository, wait_revisions
+    from toxicbuild.master.repository import (Repository, wait_revisions,
+                                              wait_build_requests)
     from toxicbuild.master.slave import Slave
     from toxicbuild.master.users import User, Organization
 
@@ -78,6 +79,8 @@ def toxicinit():
 
     log('[init] Waiting revisions', level='debug')
     ensure_future(wait_revisions())
+    log('[init] Waiting build requests')
+    ensure_future(wait_build_requests())
 
     log('[init] Boostrap for everyone', level='debug')
     yield from Repository.bootstrap_all()

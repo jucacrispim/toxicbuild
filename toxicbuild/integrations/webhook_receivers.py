@@ -29,7 +29,8 @@ from tornado.web import HTTPError
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.users import User
 from toxicbuild.integrations import settings
-from toxicbuild.integrations.github import GithubInstallation
+from toxicbuild.integrations.github import (GithubInstallation, GithubApp,
+                                            BadSignature)
 
 
 class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
@@ -38,9 +39,14 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         super().__init__(*args, **kwargs)
         self.event_type = None
         self.body = None
-        self.events = {'ping': self._handle_ping,
-                       'push': self._handle_push,
-                       'repository-create': self._handle_install_repo_added}
+        self.events = {
+            'ping': self._handle_ping,
+            'push': self._handle_push,
+            'repository-create': self._handle_install_repo_added,
+            'pull_request-opened': self._handle_pull_request_opened,
+            'pull_request-synchronize': self._handle_pull_request_opened,
+            'check_run-rerequested': self._handle_check_run_rerequested,
+            'installation-deleted': self._handle_install_deleted}
 
     async def _get_user_from_cookie(self):
         cookie = self.get_secure_cookie(settings.TOXICUI_COOKIE)
@@ -83,34 +89,81 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         self.log(msg, level='debug')
         return 'Got it.'
 
-    async def _handle_push(self):
+    async def _get_install(self):
         install_id = self.body['installation']['id']
-        repo_github_id = self.body['repository']['id']
         install = await GithubInstallation.objects.get(github_id=install_id)
+        return install
+
+    async def _handle_push(self):
+        repo_github_id = self.body['repository']['id']
+        install = await self._get_install()
         ensure_future(install.update_repository(repo_github_id))
         return 'updating repo'
 
     async def _handle_install_repo_added(self):
-        install_id = self.body['installation']['id']
-        install = await GithubInstallation.objects.get(github_id=install_id)
+        install = await self._get_install()
         for repo_info in self.body['repositories_added']:
             ensure_future(install.import_repository(repo_info))
 
     async def _handle_install_repo_removed(self):
-        install_id = self.body['installation']['id']
-        install = await GithubInstallation.objects.get(github_id=install_id)
+        install = await self._get_install()
         for repo_info in self.body['repositories_removed']:
             ensure_future(install.remove_repository(repo_info['id']))
+
+    async def _handle_pull_request_opened(self):
+        # in fact, hand pull requests opened and synchronized
+        install = await self._get_install()
+        head = self.body['pull_request']['head']
+        head_id = head['repo']['id']
+        base = self.body['pull_request']['base']
+        base_id = base['repo']['id']
+        if not head_id == base_id:
+            external = {'url': head['clone_url'],
+                        'name': head['label'],
+                        'branch': head['ref'],
+                        'into': head['label']}
+            await install.update_repository(base_id, external=external,
+                                            wait_for_lock=True)
+        else:
+            head_branch = head['ref']
+            # branch_name: notify_only_latest
+            repo_branches = {head_branch: True}
+            await install.update_repository(base_id,
+                                            repo_branches=repo_branches,
+                                            wait_for_lock=True)
+
+    async def _handle_check_run_rerequested(self):
+        install = await self._get_install()
+        check_suite = self.body['check_run']['check_suite']
+        repo_id = self.body['repository']['id']
+        branch = check_suite['head_branch']
+        named_tree = check_suite['head_sha']
+        ensure_future(install.repo_request_build(repo_id, branch, named_tree))
+
+    async def _handle_install_deleted(self):
+        install = await self._get_install()
+        await install.delete()
 
     @post('webhooks')
     async def receive_webhook(self):
 
+        await self._validate()
+
         async def default_call():
-            return 'What was that?'
+            raise HTTPError(400, 'What was that? {}'.format(self.event_type))
 
         call = self.events.get(self.event_type, default_call)
+        self.log('event_type {} received'.format(self.event_type))
         msg = await call()
         return {'code': 200, 'msg': msg}
+
+    async def _validate(self):
+        signature = self.request.headers.get('X-Hub-Signature')
+        app = await GithubApp.get_app()
+        try:
+            app.validate_token(signature, self.request.body)
+        except BadSignature:
+            raise HTTPError(403, 'Bad signature')
 
     def _parse_body(self):
         if self.request.body:
@@ -123,7 +176,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             msg = 'No event type\n{}'.format(self.body)
             self.log(msg, level='warning')
 
-        action = self.body.get('action')
+        action = self.body.get('action') if self.body else None
         if action:
             event_type = '{}-{}'.format(event_type, action)
         return event_type

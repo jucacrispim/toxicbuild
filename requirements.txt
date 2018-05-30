@@ -12,7 +12,7 @@ greenlet==0.4.5
 docutils==0.12
 sphinx-pdj-theme==0.1.2
 pytz==2014.10
-mongomotor==0.11.3
+mongomotor==0.12.0
 motor==1.2.1
 mongoengine==0.15.0
 asyncblink==0.3.1

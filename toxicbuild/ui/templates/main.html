@@ -4,13 +4,25 @@
 
 <div class="page-header">
   <h4 class="main-section-title">Repositories</h4>
-  <!-- Button trigger modal add repository -->
-  <span data-toggle="tooltip" title="Add new repository" data-placement="right">
-    <button type="button" class="btn btn-primary btn-xs btn-main-add"
-	    id="add-repo-btn" data-toggle="modal" data-target="#repoModal">
-      <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-    </button>
-  </span>
+  <!-- add and import container -->
+  <div id="add-import-repository-container" class="add-import-container">
+    <div id="add-repo-container">
+      <span data-toggle="tooltip" title="Add new repository"
+	    data-placement="right">
+	<button type="button" class="btn btn-primary btn-xs btn-main-add"
+		id="add-repo-btn" data-toggle="modal" data-target="#repoModal">
+	  <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+	</button>
+      </span>
+    </div>
+    <div id="import-github-container">
+	<a href="{{github_import_url}}">
+	  <div data-toggle="tooltip" title="Import from Github"
+	       data-placement="right" id="github-import-container"></div>
+	</a>
+    </div>
+  </div>
+
 </div>
 
 {% include "repository_modal.html" %}

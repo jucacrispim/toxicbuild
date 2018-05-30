@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -28,7 +28,7 @@ from toxicbuild.slave import settings
 from toxicbuild.slave.build import Builder, BuildStep
 from toxicbuild.slave.docker import DockerContainerBuilder
 from toxicbuild.slave.exceptions import (BuilderNotFound, BadBuilderConfig,
-                                         BusyRepository)
+                                         BusyRepository, BadPluginConfig)
 from toxicbuild.slave.plugins import SlavePlugin
 
 
@@ -141,10 +141,13 @@ class BuildManager(LoggerMixin):
             yield from asyncio.sleep(1)
 
     @asyncio.coroutine
-    def update_and_checkout(self, work_after_wait=True):
+    def update_and_checkout(self, work_after_wait=True, external=None):
         """ Updates ``self.branch`` and checkout to ``self.named_tree``.
+
         :param work_after_wait: Indicates if we should update and checkout
           after waiting for other instance finishes its job.
+        :param external: Info about a remote repository if the build should
+          be executed with changes from a remote repo.
         """
 
         if self.is_working:
@@ -158,9 +161,18 @@ class BuildManager(LoggerMixin):
                 self.log('cloning {}'.format(self.repo_url))
                 yield from self.vcs.clone(self.repo_url)
 
-            # we need to try_set_remote so if the url has changed, we
-            # change it before trying fetch/checkout stuff
-            yield from self.vcs.try_set_remote(self.repo_url)
+            if external:
+                url = external['url']
+                name = external['name']
+                branch = external['branch']
+                into = external['into']
+                yield from self.vcs.import_external_branch(url, name, branch,
+                                                           into)
+            else:
+                # we need to try_set_remote so if the url has changed, we
+                # change it before trying fetch/checkout stuff
+                yield from self.vcs.try_set_remote(self.repo_url)
+
             # first we try to checkout to the named_tree because if if
             # already exists here we don't need to update the code.
             try:
@@ -278,7 +290,12 @@ class BuildManager(LoggerMixin):
 
         plist = []
         for pdict in plugins_config:
-            plugin_class = SlavePlugin.get_plugin(pdict['name'])
+            try:
+                plugin_class = SlavePlugin.get_plugin(pdict['name'])
+            except KeyError:
+                msg = 'Your plugin config {} does not have a name'.format(
+                    pdict)
+                raise BadPluginConfig(msg)
             del pdict['name']
             plugin = plugin_class(**pdict)
             if getattr(plugin, 'uses_data_dir', False):

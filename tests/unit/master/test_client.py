@@ -85,6 +85,8 @@ class BuildClientTest(TestCase):
 
         self.assertEqual(expected, builders)
 
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_build(self):
         write = mock.MagicMock()
@@ -151,6 +153,8 @@ class BuildClientTest(TestCase):
         await self.client.build(buildinstance, process_coro=process_coro)
         self.assertEqual(len(process.call_args_list), 3)
 
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_build_without_out_fn(self):
         write = mock.MagicMock()
@@ -207,6 +211,75 @@ class BuildClientTest(TestCase):
         buildinstance = build.Build(repository=repo, slave=slave_inst,
                                     builder=builder, branch='master',
                                     named_tree='123sdf09')
+        buildset = await build.BuildSet.create(repository=repo,
+                                               revision=revision)
+
+        await buildset.save()
+
+        await self.client.build(buildinstance, process_coro=None)
+        self.assertEqual(len(process.call_args_list), 0)
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_build_without_out_fn_external(self):
+        write = mock.MagicMock()
+        self.client.write = asyncio.coroutine(lambda *a, **kw: write(*a, **kw))
+
+        self.GR_COUNT = -1
+
+        self.GR_RETURNS = [
+            {'code': 0,
+             'body': {'status': 'running',
+                      'cmd': 'ls', 'name': 'run ls',
+                      'output': ''}},
+
+            {'code': 0,
+             'body': {'status': 'success',
+                      'cmd': 'ls', 'name': 'run ls',
+                      'output': 'somefile.txt\n'}},
+
+            {'code': 0,
+             'body': {'status': 'success', 'total_steps': 1,
+                      'steps': {'cmd': 'ls', 'status': 'success',
+                                'name': 'run ls',
+                                'output': 'somefile.txt\n'}}},
+            {},
+        ]
+
+        async def gr():
+            # I need this sleep here so I can test the exact
+            # behavior of the get_response method. No, it does not
+            # sleep, but pass the control to the select thing.
+            await asyncio.sleep(0.001)
+            self.GR_COUNT += 1
+            return self.GR_RETURNS[self.GR_COUNT]
+
+        self.client.get_response = gr
+
+        slave_inst = slave.Slave(name='slv', host='localhost', port=1234,
+                                 token='123', owner=self.owner)
+        await slave_inst.save()
+        process = mock.Mock()
+
+        repo = repository.Repository(name='repo', url='git@somewhere.com',
+                                     slaves=[slave_inst], update_seconds=300,
+                                     vcs_type='git', owner=self.owner)
+        await repo.save()
+        revision = repository.RepositoryRevision(
+            commit='sdafj', repository=repo, branch='master', commit_date=now,
+            author='ze', title='huehue')
+
+        await revision.save()
+        builder = build.Builder(repository=repo, name='b1')
+        await builder.save()
+
+        external = build.BuildExternalInfo(url='http://bla.com/bla.git',
+                                           name='remote', branch='master',
+                                           into='into')
+        buildinstance = build.Build(repository=repo, slave=slave_inst,
+                                    builder=builder, branch='master',
+                                    named_tree='123sdf09', external=external)
         buildset = await build.BuildSet.create(repository=repo,
                                                revision=revision)
 

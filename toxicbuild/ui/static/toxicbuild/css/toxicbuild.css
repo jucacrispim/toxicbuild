@@ -52,6 +52,22 @@ tr:nth-child(even) {
     float:left;
 }
 
+#add-import-repository-container div{
+    float: left;
+}
+
+#import-github-container{
+    margin-top: 8px;
+}
+
+#github-import-container{
+    background-image: url("/static/toxicbuild/img/GitHub-Mark-Light-32px.png");
+    background-size: 20px 20px;
+    width: 20px;
+    height: 20px;
+    margin-left: 5px;
+}
+
 .modal-content{
     background-color: #4c4a49;
 }

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -219,6 +219,24 @@ class BuilderManagerTest(TestCase):
         self.assertTrue(self.manager.vcs.checkout.called)
         self.assertTrue(self.manager.vcs.try_set_remote.called)
 
+    @async_test
+    def test_update_and_checkout_external(self):
+        self.manager.vcs.workdir_exists.return_value = True
+        self.manager.vcs.checkout = MagicMock()
+        self.manager.vcs.try_set_remote = AsyncMagicMock()
+        self.manager.vcs.import_external_branch = AsyncMagicMock(
+            spec=self.manager.vcs.import_external_branch)
+
+        external = {'url': 'http://bla.com/bla.git',
+                    'name': 'remote', 'branch': 'master',
+                    'into': 'into'}
+        yield from self.manager.update_and_checkout(external=external)
+
+        self.assertFalse(self.manager.vcs.clone.called)
+        self.assertTrue(self.manager.vcs.checkout.called)
+        self.assertFalse(self.manager.vcs.try_set_remote.called)
+        self.assertTrue(self.manager.vcs.import_external_branch.called)
+
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
     @patch.object(managers.BuildManager, 'wait_all', MagicMock())
     @async_test
@@ -349,3 +367,9 @@ class BuilderManagerTest(TestCase):
 
         self.assertEqual(type(returned[0]), plugins.AptInstallPlugin)
         self.assertFalse(returned[0].create_data_dir.called)
+
+    @async_test
+    async def test_load_plugins_no_name(self):
+        plugins_conf = [{'pyversion': '/usr/bin/python3.4'}]
+        with self.assertRaises(managers.BadPluginConfig):
+            await self.manager._load_plugins(plugins_conf)

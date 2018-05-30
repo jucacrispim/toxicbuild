@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -21,7 +21,7 @@ import asyncio
 import os
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.master import settings
-from toxicbuild.master.plugins import MasterPlugin
+from toxicbuild.master.repository import Repository
 from toxicbuild.master.users import User
 from tests import async_test
 from tests.functional import BaseFunctionalTest, REPO_DIR
@@ -92,7 +92,7 @@ class DummyUIClient(BaseToxicClient):
 
         action = 'repo-start-build'
         body = {'repo_name': 'test-repo',
-                # 'builder_name': 'builder-1',
+                'builder_name': 'builder-1',
                 'branch': 'master'}
         resp = yield from self.request2server(action, body)
 
@@ -175,7 +175,14 @@ class ToxicMasterTest(BaseFunctionalTest):
             pass
 
         await User.drop_collection()
+        await Repository.drop_collection()
         super().tearDownClass()
+
+    @async_test
+    async def tearDown(self):
+        await Repository.objects(name__not__exists=1).delete()
+        await Repository.objects(name=None).delete()
+        await Repository.objects(url=None).delete()
 
     @async_test
     def test_01_create_slave(self):
@@ -291,13 +298,13 @@ class ToxicMasterTest(BaseFunctionalTest):
 
     @async_test
     def test_11_list_plugins(self):
-        plugins_count = len([p for p in MasterPlugin.list_plugins()
-                             if 'test' not in p.__module__])
-
         with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server('plugins-list', {})
 
-        self.assertEqual(len(resp), plugins_count, MasterPlugin.list_plugins())
+        # - slack plugin
+        # - email plugin
+        # - custom_webhook plugin
+        self.assertEqual(len(resp), 3, resp)
 
     @async_test
     async def test_12_enable_plugin(self):
@@ -317,9 +324,12 @@ class ToxicMasterTest(BaseFunctionalTest):
                 response = await client.get_response()
                 body = response['body'] if response else {}
                 if body.get('event_type') == 'build_finished':
-                    sleep_time = os.environ.get('TOXICSLEEP_TIME') or 0.5
+                    sleep_time = os.environ.get('TOXICSLEEP_TIME') or 2
                     sleep_time = float(sleep_time)
-                    await asyncio.sleep(sleep_time)
+                    t = 0
+                    while t <= sleep_time:
+                        await asyncio.sleep(0.1)
+                        t += .1
                     break
 
         has_msg = await WebHookMessage.objects.count()

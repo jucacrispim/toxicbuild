@@ -21,7 +21,7 @@ User Guide
 If you are interested in using toxicbuild in your ci process read:
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
    install
    repo_config

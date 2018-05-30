@@ -33,7 +33,10 @@ from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
                                    format_timedelta, LoggerMixin)
 from toxicbuild.master.exceptions import DBError
+from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import build_added
+from toxicbuild.master.utils import as_db_ref
+
 
 # The statuses used in builds  ordered by priority.
 ORDERED_STATUSES = ['running', 'exception', 'fail',
@@ -74,9 +77,9 @@ class Builder(SerializeMixin, Document):
         """Creates a new Builder.
 
         :param kwargs: kwargs passed to the builder constructor"""
-        repo = cls(**kwargs)
-        await repo.save()
-        return repo
+        builder = cls(**kwargs)
+        await builder.save()
+        return builder
 
     @classmethod
     async def get(cls, **kwargs):
@@ -175,6 +178,20 @@ class BuildStep(EmbeddedDocument):
         return json.dumps(self.to_dict())
 
 
+class BuildExternalInfo(EmbeddedDocument):
+    """Information about an external remote if the build was created
+    from a revision that came from an external repo."""
+
+    url = StringField(required=True)
+    name = StringField(required=True)
+    branch = StringField(required=True)
+    into = StringField(required=True)
+
+    def to_dict(self):
+        return {'url': self.url, 'name': self.name,
+                'branch': self.branch, 'into': self.into}
+
+
 class Build(EmbeddedDocument):
 
     """ A set of steps for a repository. This is the object that stores
@@ -195,6 +212,7 @@ class Build(EmbeddedDocument):
     status = StringField(default=PENDING, choices=STATUSES)
     steps = ListField(EmbeddedDocumentField(BuildStep))
     total_time = IntField()
+    external = EmbeddedDocumentField(BuildExternalInfo)
 
     def to_dict(self, id_as_str=False):
         steps = [s.to_dict() for s in self.steps]
@@ -211,6 +229,11 @@ class Build(EmbeddedDocument):
             objdict['total_time'] = format_timedelta(td)
         else:
             objdict['total_time'] = ''
+
+        if self.external:
+            objdict['external'] = self.external.to_dict()
+        else:
+            objdict['external'] = {}
         return objdict
 
     def to_json(self):
@@ -220,8 +243,8 @@ class Build(EmbeddedDocument):
     async def update(self):
         """Does an atomic update in this embedded document."""
 
-        result = await BuildSet.objects(
-            builds__uuid=self.uuid).update(set__builds__S=self)
+        qs = BuildSet.objects.no_cache().filter(builds__uuid=self.uuid)
+        result = await qs.update(set__builds__S=self)
 
         if not result:
             msg = 'This EmbeddedDocument was not save to database.'
@@ -232,7 +255,8 @@ class Build(EmbeddedDocument):
 
     async def get_buildset(self):
         """Returns the buildset that 'owns' this build."""
-        buildset = await BuildSet.objects.get(builds__uuid=self.uuid)
+        buildset = await BuildSet.objects.no_cache().get(
+            builds__uuid=self.uuid)
         return buildset
 
     @property
@@ -290,8 +314,23 @@ class BuildSet(SerializeMixin, Document):
     def objects(doc_cls, queryset):
         return queryset.order_by('created')
 
+    async def notify(self, event_type, status=None):
+        """Notifies an event to the build_notifications exchange.
+
+        :param event_type: The event type to notify about
+        :param status: The status of the buildset. If None, the return
+          of :meth:`~toxicbuild.master.build.Buildset.get_status` will be
+          used."""
+
+        repo_id = str(as_db_ref(self, 'repository').id)
+        msg = self.to_dict(id_as_str=True)
+        msg['event_type'] = event_type
+        msg['status'] = status or self.get_status()
+        msg['repository_id'] = repo_id
+        await build_notifications.publish(msg)
+
     @classmethod
-    async def create(cls, repository, revision, save=True):
+    async def create(cls, repository, revision):
         """Creates a new buildset.
 
         :param repository: An instance of `toxicbuild.master.Repository`.
@@ -304,8 +343,8 @@ class BuildSet(SerializeMixin, Document):
                        commit_date=revision.commit_date,
                        branch=revision.branch, author=revision.author,
                        title=revision.title)
-        if save:
-            await buildset.save()
+        await buildset.save()
+        ensure_future(buildset.notify('buildset-added'))
         return buildset
 
     def to_dict(self, id_as_str=False):
@@ -337,7 +376,12 @@ class BuildSet(SerializeMixin, Document):
         build_statuses = set([b.status for b in self.builds])
         ordered_statuses = sorted(build_statuses,
                                   key=lambda i: ORDERED_STATUSES.index(i))
-        return ordered_statuses[0]
+        try:
+            status = ordered_statuses[0]
+        except IndexError:
+            status = 'pending'
+
+        return status
 
     def get_pending_builds(self):
         return [b for b in self.builds if b.status == Build.PENDING]
@@ -399,8 +443,7 @@ class BuildManager(LoggerMixin):
 
         for revision in revisions:
             buildset = await BuildSet.create(repository=self.repository,
-                                             revision=revision,
-                                             save=False)
+                                             revision=revision)
 
             slaves = await self.repository.slaves
             for slave in slaves:
@@ -497,6 +540,7 @@ class BuildManager(LoggerMixin):
         if not buildset.started:
             buildset.started = now()
             await buildset.save()
+            await buildset.notify('buildset-started', status='running')
 
     async def _set_finished_for_buildset(self, buildset):
         just_now = now()
@@ -505,6 +549,7 @@ class BuildManager(LoggerMixin):
             buildset.total_time = int((buildset.finished -
                                        buildset.started).seconds)
             await buildset.save()
+            await buildset.notify('buildset-finished')
 
     async def _execute_builds(self, slave):
         """ Execute the buildsets in the queue of a given slave.
@@ -550,7 +595,8 @@ class BuildManager(LoggerMixin):
                 f = ensure_future(slave.build(build))
                 chunk_fs.append(f)
                 fs.append(f)
-                await asyncio.wait(chunk_fs)
+
+            await asyncio.wait(chunk_fs)
 
         return fs
 

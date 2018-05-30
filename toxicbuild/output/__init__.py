@@ -28,6 +28,7 @@ from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import changedir, log, daemonize as daemon
 
+
 PIDFILE = 'toxicoutput.pid'
 LOGFILE = './toxicoutput.log'
 ENVVAR = 'TOXICOUTPUT_SETTINGS'
@@ -147,6 +148,9 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         from toxicbuild.output.exchanges import connect_exchanges
         loop.run_until_complete(connect_exchanges())
 
+        # this one must be imported so the plugin can run in the
+        # output process
+        from toxicbuild.integrations.github import GithubCheckRun  # noqa F401
         if daemonize:
             daemon(call=run_toxicoutput, cargs=(loglevel,), ckwargs={},
                    stdout=stdout, stderr=stderr, workdir=workdir,

@@ -28,3 +28,11 @@ class AppExists(Exception):
 
 class BadRequestToGithubAPI(Exception):
     pass
+
+
+class BadRepository(Exception):
+    pass
+
+
+class BadSignature(Exception):
+    pass

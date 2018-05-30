@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-from asyncio import ensure_future, gather
+from asyncio import ensure_future
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.repository import Repository
 from toxicbuild.output.exchanges import (repo_notifications,
@@ -29,23 +29,21 @@ class OutputMethodServer(LoggerMixin):
     needed output methods."""
 
     async def run(self):
-        fs = [self._handle_build_notifications(),
-              self._handle_repo_notifications()]
-
-        await gather(*fs)
+        ensure_future(self._handle_build_notifications())
+        ensure_future(self._handle_repo_notifications())
 
     async def _handle_build_notifications(self):
-        t = ensure_future(self._handle_notifications(build_notifications))
-        return t
+        await self._handle_notifications(build_notifications)
 
     async def _handle_repo_notifications(self):
-        t = ensure_future(self._handle_notifications(repo_notifications))
-        return t
+        await self._handle_notifications(repo_notifications)
 
     async def _handle_notifications(self, exchange):
         async with await exchange.consume() as consumer:
             async for msg in consumer:
-                self.log('Got msg {}'.format(msg.body), level='debug')
+                self.log('Got msg {} from {}'.format(
+                    msg.body['event_type'], msg.body['repository_id']),
+                    level='debug')
                 ensure_future(self.run_plugins(msg.body))
                 await msg.acknowledge()
 
