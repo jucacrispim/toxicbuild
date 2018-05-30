@@ -8,7 +8,7 @@ import sys
 from uuid import uuid4
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
-from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string, bcrypt,
+from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string,
                                    changedir)
 
 
