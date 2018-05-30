@@ -72,7 +72,7 @@ def stop_slave():
     pidfile = 'toxicslave{}.pid'.format(PYVERSION)
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', toxicslave_cmd, 'stop', SLAVE_ROOT_DIR,
-           '--pidfile', pidfile]
+           '--pidfile', pidfile, '--kill']
 
     os.system(' '.join(cmd))
 
