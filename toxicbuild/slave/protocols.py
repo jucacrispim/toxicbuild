@@ -31,9 +31,11 @@ class BuildServerProtocol(BaseToxicProtocol):
     """ A simple server for build requests.
     """
     encrypted_token = settings.ACCESS_TOKEN
+    _clients_connected = 0
 
     @asyncio.coroutine
     def client_connected(self):
+        type(self)._clients_connected += 1
         try:
             self.log('executing {} for {}'.format(self.action, self.peername))
             status = 0
@@ -72,6 +74,7 @@ class BuildServerProtocol(BaseToxicProtocol):
 
         finally:
             self.close_connection()
+            type(self)._clients_connected -= 1
 
         return status
 

@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-from toxicbuild.core.utils import log
+import signal
+from toxicbuild.core.utils import log, LoggerMixin
 from toxicbuild.slave.protocols import BuildServerProtocol
 
 
-class BuildServer:
+class BuildServer(LoggerMixin):
 
     def __init__(self, addr='0.0.0.0', port=7777):
         self.protocol = BuildServerProtocol
@@ -14,6 +15,7 @@ class BuildServer:
         self.port = port
         coro = self.loop.create_server(self.get_protocol_instance, addr,  port)
         self.server = self.loop.run_until_complete(coro)
+        signal.signal(signal.SIGTERM, self.sync_shutdown)
 
     def get_protocol_instance(self):
         return self.protocol(self.loop)
@@ -27,7 +29,20 @@ class BuildServer:
         self.loop.close()
 
     def start(self):
-        self.loop.run_forever()
+        try:
+            self.loop.run_forever()
+        finally:
+            self.loop.run_until_complete(self.shutdown())
+
+    async def shutdown(self):
+        self.log('shuting down')
+        while self.protocol._clients_connected > 0:
+            self.log('Clients connected: {}'.format(
+                self.protocol._clients_connected), level='debug')
+            await asyncio.sleep(0.5)
+
+    def sync_shutdown(self, signum=None, frame=None):
+        self.loop.run_until_complete(self.shutdown())
 
 
 def run_server(addr='0.0.0.0', port=7777):
