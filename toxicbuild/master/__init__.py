@@ -11,7 +11,7 @@ from uuid import uuid4
 from mongomotor import connect
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
-from toxicbuild.core.utils import (log, daemonize as daemon, bcrypt,
+from toxicbuild.core.utils import (log, daemonize as daemon,
                                    bcrypt_string, changedir)
 
 settings = None

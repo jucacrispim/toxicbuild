@@ -23,7 +23,6 @@ from mongomotor.fields import (StringField, UUIDField, ListField,
                                BooleanField, EmailField)
 from mongomotor.queryset import PULL
 from toxicbuild.core.utils import bcrypt_string, compare_bcrypt_string
-from toxicbuild.master import settings
 from toxicbuild.master.exceptions import InvalidCredentials
 from toxicbuild.master.utils import as_db_ref
 
