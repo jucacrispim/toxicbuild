@@ -67,6 +67,24 @@ def run_toxicoutput(loglevel):
     loglevel = getattr(logging, loglevel.upper())
     logging.basicConfig(level=loglevel)
 
+    from toxicbuild.master import (
+        create_settings_and_connect as create_settings_and_connect_master)
+    create_settings_and_connect_master()
+    create_settings_and_connect()
+
+    from toxicbuild.master.exchanges import (
+        connect_exchanges as connect_master_exchanges)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(connect_master_exchanges())
+
+    from toxicbuild.output.exchanges import connect_exchanges
+    loop.run_until_complete(connect_exchanges())
+
+    # this one must be imported so the plugin can run in the
+    # output process
+    from toxicbuild.integrations.github import GithubCheckRun  # noqa F401
+
     from toxicbuild.output.server import OutputMethodServer
 
     server = OutputMethodServer()
@@ -139,23 +157,6 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         os.environ['TOXICMASTER_SETTINGS'] = os.environ[
             'TOXICOUTPUT_SETTINGS']
 
-        from toxicbuild.master import (
-            create_settings_and_connect as create_settings_and_connect_master)
-        create_settings_and_connect_master()
-        create_settings_and_connect()
-
-        from toxicbuild.master.exchanges import (
-            connect_exchanges as connect_master_exchanges)
-
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(connect_master_exchanges())
-
-        from toxicbuild.output.exchanges import connect_exchanges
-        loop.run_until_complete(connect_exchanges())
-
-        # this one must be imported so the plugin can run in the
-        # output process
-        from toxicbuild.integrations.github import GithubCheckRun  # noqa F401
         if daemonize:
             daemon(call=run_toxicoutput, cargs=(loglevel,), ckwargs={},
                    stdout=stdout, stderr=stderr, workdir=workdir,
