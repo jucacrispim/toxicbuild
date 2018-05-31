@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -592,7 +592,10 @@ class BuildManager(LoggerMixin):
         for chunk in self._get_builds_chunks(builds):
             chunk_fs = []
             for build in chunk:
+                type(self.repository).add_running_build()
                 f = ensure_future(slave.build(build))
+                f.add_done_callback(
+                    lambda r: type(self.repository).remove_running_build())
                 chunk_fs.append(f)
                 fs.append(f)
 

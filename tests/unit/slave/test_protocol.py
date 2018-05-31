@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -37,6 +37,7 @@ class ProtocolTest(TestCase):
         super().setUp()
         loop = mock.MagicMock()
         self.protocol = protocols.BuildServerProtocol(loop)
+        type(self.protocol)._is_shuting_down = False
         self.transport = mock.Mock()
         # self.protocol.connection_made(transport)
         self.protocol._stream_reader = mock.MagicMock()
@@ -180,6 +181,15 @@ class ProtocolTest(TestCase):
         yield from self.protocol.client_connected()
 
         self.assertEqual(self.response['code'], 1)
+
+    @async_test
+    async def test_client_connected_shutting_down(self):
+        type(self.protocol)._is_shuting_down = True
+        self.protocol.close_connection = mock.MagicMock(
+            spec=self.protocol.close_connection)
+        r = await self.protocol.client_connected()
+        self.assertTrue(self.protocol.close_connection.called)
+        self.assertIsNone(r)
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))

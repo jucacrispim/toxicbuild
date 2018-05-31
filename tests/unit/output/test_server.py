@@ -68,11 +68,36 @@ class OutputMethodServerTest(TestCase):
         msg = AsyncMagicMock(spec=JsonAckMessage)
         msg.body = {'event_type': 'repo-added',
                     'repository_id': str(self.repo.id)}
-        server.repo_notifications.consume.return_value = AsyncMagicMock(
-            aiter_items=[msg])
+        consumer = server.repo_notifications.consume.return_value
+
+        async def fm(cancel_on_timeout):
+            self.server._stop_consuming_messages = True
+            return msg
+
+        consumer.fetch_message = fm
 
         await self.server._handle_repo_notifications()
         self.assertTrue(self.server.run_plugins.called)
+
+    @patch.object(server, 'repo_notifications', AsyncMagicMock(
+        spec=server.repo_notifications))
+    @patch.object(server.OutputMethodServer, 'run_plugins', AsyncMagicMock(
+        spec=server.OutputMethodServer.run_plugins))
+    @async_test
+    async def test_handle_repo_notifications_timeout(self):
+        msg = AsyncMagicMock(spec=JsonAckMessage)
+        msg.body = {'event_type': 'repo-added',
+                    'repository_id': str(self.repo.id)}
+        consumer = server.repo_notifications.consume.return_value
+
+        async def fm(cancel_on_timeout):
+            self.server._stop_consuming_messages = True
+            raise server.ConsumerTimeout
+
+        consumer.fetch_message = fm
+
+        await self.server._handle_repo_notifications()
+        self.assertFalse(self.server.run_plugins.called)
 
     @patch.object(server, 'build_notifications', AsyncMagicMock(
         spec=server.build_notifications))
@@ -83,11 +108,33 @@ class OutputMethodServerTest(TestCase):
         msg = AsyncMagicMock(spec=JsonAckMessage)
         msg.body = {'event_type': 'build-added',
                     'repository_id': str(self.repo.id)}
-        server.build_notifications.consume.return_value = AsyncMagicMock(
-            aiter_items=[msg])
+
+        consumer = server.build_notifications.consume.return_value
+
+        async def fm(cancel_on_timeout):
+            self.server._stop_consuming_messages = True
+            return msg
+
+        consumer.fetch_message = fm
 
         await self.server._handle_build_notifications()
         self.assertTrue(self.server.run_plugins.called)
+
+    @patch.object(server, 'sleep', AsyncMagicMock())
+    @async_test
+    async def test_shutdown(self):
+
+        sleep_mock = AsyncMagicMock()
+
+        self.server.add_running_task()
+
+        async def sleep(t):
+            self.server.remove_running_task()
+            await sleep_mock()
+
+        server.sleep = sleep
+        await self.server.shutdown()
+        self.assertTrue(sleep_mock.called)
 
     @async_test
     async def test_run(self):
@@ -100,3 +147,8 @@ class OutputMethodServerTest(TestCase):
         await self.server.run()
         self.assertTrue(self.server._handle_repo_notifications.called)
         self.assertTrue(self.server._handle_build_notifications.called)
+
+    def test_sync_shutdown(self):
+        self.server.shutdown = AsyncMagicMock()
+        self.server.sync_shutdown()
+        self.assertTrue(self.server.shutdown.called)

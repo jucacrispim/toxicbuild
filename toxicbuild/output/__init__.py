@@ -23,6 +23,7 @@ import os
 import pkg_resources
 import shutil
 import sys
+from time import sleep
 from mongomotor import connect
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
@@ -55,12 +56,9 @@ def _check_conffile(workdir, conffile):
     return absconffile.startswith(absworkdir)
 
 
-def output_server_init():
+def output_server_init(server):
     """Starts the output server"""
 
-    from toxicbuild.output.server import OutputMethodServer
-
-    server = OutputMethodServer()
     asyncio.ensure_future(server.run())
     log('ToxicOutput is running.')
 
@@ -69,9 +67,34 @@ def run_toxicoutput(loglevel):
     loglevel = getattr(logging, loglevel.upper())
     logging.basicConfig(level=loglevel)
 
+    from toxicbuild.master import (
+        create_settings_and_connect as create_settings_and_connect_master)
+    create_settings_and_connect_master()
+    create_settings_and_connect()
+
+    from toxicbuild.master.exchanges import (
+        connect_exchanges as connect_master_exchanges)
+
     loop = asyncio.get_event_loop()
-    output_server_init()
-    loop.run_forever()
+    loop.run_until_complete(connect_master_exchanges())
+
+    from toxicbuild.output.exchanges import connect_exchanges
+    loop.run_until_complete(connect_exchanges())
+
+    # this one must be imported so the plugin can run in the
+    # output process
+    from toxicbuild.integrations.github import GithubCheckRun  # noqa F401
+
+    from toxicbuild.output.server import OutputMethodServer
+
+    server = OutputMethodServer()
+
+    loop = asyncio.get_event_loop()
+    output_server_init(server)
+    try:
+        loop.run_forever()
+    finally:
+        server.sync_shutdown()
 
 
 @command
@@ -134,23 +157,6 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         os.environ['TOXICMASTER_SETTINGS'] = os.environ[
             'TOXICOUTPUT_SETTINGS']
 
-        from toxicbuild.master import (
-            create_settings_and_connect as create_settings_and_connect_master)
-        create_settings_and_connect_master()
-        create_settings_and_connect()
-
-        from toxicbuild.master.exchanges import (
-            connect_exchanges as connect_master_exchanges)
-
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(connect_master_exchanges())
-
-        from toxicbuild.output.exchanges import connect_exchanges
-        loop.run_until_complete(connect_exchanges())
-
-        # this one must be imported so the plugin can run in the
-        # output process
-        from toxicbuild.integrations.github import GithubCheckRun  # noqa F401
         if daemonize:
             daemon(call=run_toxicoutput, cargs=(loglevel,), ckwargs={},
                    stdout=stdout, stderr=stderr, workdir=workdir,
@@ -160,12 +166,23 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
                 run_toxicoutput(loglevel)
 
 
+def _process_exist(pid):
+    try:
+        os.kill(pid, 0)
+        r = True
+    except OSError:
+        r = False
+
+    return r
+
+
 @command
-def stop(workdir, pidfile=PIDFILE):
+def stop(workdir, pidfile=PIDFILE, kill=False):
     """ Stops toxicbuid output.
 
     :param workdir: Work directory for the ui to be killed.
     :param --pidfile: pid file for the process.
+    :param kill: If true, send signum 9, otherwise, 15.
     """
 
     if not os.path.exists(workdir):
@@ -192,8 +209,15 @@ def stop(workdir, pidfile=PIDFILE):
             with open(pidfile) as fd:
                 pid = int(fd.read())
 
-            os.kill(pid, 9)
-            os.remove(pidfile)
+        sig = 9 if kill else 15
+        os.kill(pid, sig)
+
+        if sig != 9:
+            print('Waiting for the process shutdown')
+            while _process_exist(pid):
+                sleep(0.5)
+
+        os.remove(pidfile)
 
 
 @command

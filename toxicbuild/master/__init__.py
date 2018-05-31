@@ -7,6 +7,7 @@ import os
 import pkg_resources
 import shutil
 import sys
+from time import sleep
 from uuid import uuid4
 from mongomotor import connect
 from toxicbuild.core.cmd import command, main
@@ -56,16 +57,12 @@ def create_scheduler():
 
 
 @asyncio.coroutine
-def toxicinit():
+def toxicinit(server):
     """ Initialize services. """
-
-    create_settings_and_connect()
 
     # importing here to avoid circular imports
     from toxicbuild.master.build import BuildSet
-    from toxicbuild.master.hole import HoleServer
-    from toxicbuild.master.repository import (Repository, wait_revisions,
-                                              wait_build_requests)
+    from toxicbuild.master.repository import Repository
     from toxicbuild.master.slave import Slave
     from toxicbuild.master.users import User, Organization
 
@@ -78,48 +75,31 @@ def toxicinit():
     yield from connect_exchanges()
 
     log('[init] Waiting revisions', level='debug')
-    ensure_future(wait_revisions())
+    ensure_future(Repository.wait_revisions())
     log('[init] Waiting build requests')
-    ensure_future(wait_build_requests())
+    ensure_future(Repository.wait_build_requests())
+    log('[init] Waiting removal requests')
+    ensure_future(Repository.wait_removal_request())
 
     log('[init] Boostrap for everyone', level='debug')
     yield from Repository.bootstrap_all()
     if settings.ENABLE_HOLE:
-        hole_host = settings.HOLE_ADDR
-        hole_port = settings.HOLE_PORT
-        server = HoleServer(hole_host, hole_port)
         log('[init] Serving UIHole at {}'.format(settings.HOLE_PORT))
         server.serve()
 
     log('[init] Toxicmaster is running!')
 
 
-async def scheduler_server_init():
+async def scheduler_server_init(server):
     """Starts the scheduler server"""
 
-    create_settings_and_connect()
-    from toxicbuild.master.exchanges import connect_exchanges
-
-    await connect_exchanges()
-
-    from toxicbuild.master.scheduler import SchedulerServer
-
-    server = SchedulerServer()
     ensure_future(server.run())
     log('[init] Toxicscheduler is running!')
 
 
-async def poller_server_init():
+async def poller_server_init(server):
     """Starts a poller server."""
 
-    create_settings_and_connect()
-    from toxicbuild.master.exchanges import connect_exchanges
-
-    await connect_exchanges()
-
-    from toxicbuild.master.pollers import PollerServer
-
-    server = PollerServer()
     ensure_future(server.run())
     log('[init] Toxicpoller is running!')
 
@@ -130,9 +110,20 @@ def run(loglevel):
     loglevel = getattr(logging, loglevel.upper())
     logging.basicConfig(level=loglevel)
 
+    create_settings_and_connect()
+
+    from toxicbuild.master.hole import HoleServer
+
+    hole_host = settings.HOLE_ADDR
+    hole_port = settings.HOLE_PORT
+    server = HoleServer(hole_host, hole_port)
+
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(toxicinit())
-    loop.run_forever()
+    loop.run_until_complete(toxicinit(server))
+    try:
+        loop.run_forever()
+    finally:
+        loop.run_until_complete(server.shutdown())
 
 
 def run_scheduler(loglevel):
@@ -142,7 +133,16 @@ def run_scheduler(loglevel):
     logging.basicConfig(level=loglevel)
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(scheduler_server_init())
+    create_settings_and_connect()
+    from toxicbuild.master.exchanges import connect_exchanges
+
+    loop.run_until_complete(connect_exchanges())
+
+    from toxicbuild.master.scheduler import SchedulerServer
+
+    server = SchedulerServer()
+
+    loop.run_until_complete(scheduler_server_init(server))
     loop.run_forever()
 
 
@@ -153,8 +153,18 @@ def run_poller(loglevel):
     logging.basicConfig(level=loglevel)
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(poller_server_init())
-    loop.run_forever()
+    create_settings_and_connect()
+    from toxicbuild.master.exchanges import connect_exchanges
+    from toxicbuild.master.pollers import PollerServer
+    loop.run_until_complete(connect_exchanges())
+
+    server = PollerServer()
+
+    loop.run_until_complete(poller_server_init(server))
+    try:
+        loop.run_forever()
+    finally:
+        server.sync_shutdown()
 
 
 # console commands
@@ -182,12 +192,29 @@ def _set_toxicmaster_conf(conffile):
         os.environ['TOXICMASTER_SETTINGS'] = DEFAULT_SETTINGS
 
 
-def _kill_thing(workdir, pidfile):
+def _process_exist(pid):
+    try:
+        os.kill(pid, 0)
+        r = True
+    except OSError:
+        r = False
+
+    return r
+
+
+def _kill_thing(workdir, pidfile, kill=True):
     with changedir(workdir):
         with open(pidfile) as fd:
             pid = int(fd.read())
 
-        os.kill(pid, 9)
+        sig = 9 if kill else 15
+        os.kill(pid, sig)
+
+        if sig != 9:
+            print('Waiting for the process shutdown')
+            while _process_exist(pid):
+                sleep(0.5)
+
         os.remove(pidfile)
 
 
@@ -268,45 +295,48 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
 
 
 @command
-def stop(workdir, pidfile=PIDFILE):
+def stop(workdir, pidfile=PIDFILE, kill=False):
     """ Kills toxicmaster.
 
     :param --workdir: Workdir for master to be killed. Looks for a file
       ``toxicmaster.pid`` inside ``workdir``.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
       ``toxicmaster.pid``
+    :param kill: If true, send signum 9, otherwise, 15.
     """
 
     print('Stopping toxicmaster')
-    _kill_thing(workdir, pidfile)
+    _kill_thing(workdir, pidfile, kill)
 
 
 @command
-def stop_scheduler(workdir, pidfile=SCHEDULER_PIDFILE):
+def stop_scheduler(workdir, pidfile=SCHEDULER_PIDFILE, kill=False):
     """Kills toxicmaster scheduler.
 
     :param --workdir: Workdir for master to be killed. Looks for a file
       ``toxicmaster.pid`` inside ``workdir``.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
-      ``toxicscheduler.pid``
+      ``toxicscheduler.pid``.
+    :param kill: If true, send signum 9, otherwise, 15.
     """
 
     print('Stopping toxicscheduler')
-    _kill_thing(workdir, pidfile)
+    _kill_thing(workdir, pidfile, kill)
 
 
 @command
-def stop_poller(workdir, pidfile=POLLER_PIDFILE):
+def stop_poller(workdir, pidfile=POLLER_PIDFILE, kill=False):
     """Kills toxicmaster poller.
 
     :param --workdir: Workdir for master to be killed. Looks for a file
       ``toxicmaster.pid`` inside ``workdir``.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
       ``toxicpoller.pid``
+    :param kill: If true, send signum 9, otherwise, 15.
     """
 
-    print('Stopping toxicscheduler')
-    _kill_thing(workdir, pidfile)
+    print('Stopping toxicpoller')
+    _kill_thing(workdir, pidfile, kill)
 
 
 @command

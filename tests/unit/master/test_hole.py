@@ -29,6 +29,9 @@ from tests import async_test, AsyncMagicMock, create_autospec
 @patch.object(repository, 'repo_added', AsyncMagicMock())
 class UIHoleTest(TestCase):
 
+    def setUp(self):
+        hole.UIHole._shutting_down = False
+
     @patch.object(hole.HoleHandler, 'handle', MagicMock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
     @async_test
@@ -46,6 +49,22 @@ class UIHoleTest(TestCase):
         uihole.data = {'user_id': str(user.id)}
         status = await uihole.client_connected()
         self.assertEqual(status, 0)
+
+    @patch.object(hole.HoleHandler, 'handle', MagicMock())
+    @patch.object(hole.BaseToxicProtocol, 'close_connection', MagicMock())
+    @async_test
+    async def test_client_connected_shutting_down(self):
+        handle = MagicMock()
+        hole.HoleHandler.handle = asyncio.coroutine(lambda *a, **kw: handle())
+        uihole = hole.UIHole(Mock())
+        uihole._stream_writer = Mock()
+        # no exception means ok
+        user = hole.User(email='ze@ze.con', password='asdf')
+        await user.save()
+        uihole.data = {'user_id': str(user.id)}
+        uihole.set_shutting_down()
+        status = await uihole.client_connected()
+        self.assertIsNone(status)
 
     @patch.object(hole.HoleHandler, 'handle', MagicMock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
@@ -161,6 +180,7 @@ class HoleHandlerTest(TestCase):
                                                 'add_slave', 'remove_user'])
         self.owner.set_password('asdf')
         await self.owner.save()
+        hole.UIHole._shutting_down = False
 
     @async_test
     async def tearDown(self):
@@ -1457,3 +1477,25 @@ class HoleServerTest(TestCase):
         self.server.serve()
 
         self.assertTrue(hole.ensure_future.called)
+
+    @patch.object(hole.asyncio, 'sleep',
+                  AsyncMagicMock(spec=hole.asyncio.sleep))
+    @async_test
+    async def test_shutdown(self):
+
+        sleep_mock = MagicMock()
+
+        async def sleep(t):
+            sleep_mock()
+            hole.Repository.remove_running_build()
+
+        hole.asyncio.sleep = sleep
+        hole.Repository.add_running_build()
+        await self.server.shutdown()
+
+        self.assertTrue(sleep_mock.called)
+
+    def test_sync_shutdown(self):
+        self.server.shutdown = AsyncMagicMock()
+        self.server.sync_shutdown()
+        self.assertTrue(self.server.shutdown.called)

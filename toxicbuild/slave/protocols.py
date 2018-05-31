@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -31,9 +31,18 @@ class BuildServerProtocol(BaseToxicProtocol):
     """ A simple server for build requests.
     """
     encrypted_token = settings.ACCESS_TOKEN
+    _clients_connected = 0
+    _is_shuting_down = False
 
     @asyncio.coroutine
     def client_connected(self):
+        if type(self)._is_shuting_down:
+            self.log('Rejecting connection. Shutting down',
+                     level='warning')
+            self.close_connection()
+            return None
+
+        type(self)._clients_connected += 1
         try:
             self.log('executing {} for {}'.format(self.action, self.peername))
             status = 0
@@ -72,6 +81,7 @@ class BuildServerProtocol(BaseToxicProtocol):
 
         finally:
             self.close_connection()
+            type(self)._clients_connected -= 1
 
         return status
 
@@ -79,7 +89,10 @@ class BuildServerProtocol(BaseToxicProtocol):
     def healthcheck(self):
         """ Informs that the server is up and running
         """
-        yield from self.send_response(code=0, body='I\'m alive!')
+        code = 0
+        body = "I'm alive!"
+
+        yield from self.send_response(code=code, body=body)
 
     @asyncio.coroutine
     def list_builders(self):

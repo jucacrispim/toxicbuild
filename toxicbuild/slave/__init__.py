@@ -5,6 +5,7 @@ import os
 import pkg_resources
 import shutil
 import sys
+from time import sleep
 from uuid import uuid4
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
@@ -79,8 +80,18 @@ def start(workdir, daemonize=False, stdout=LOGFILE,
             server.run_server(addr, port)
 
 
+def _process_exist(pid):
+    try:
+        os.kill(pid, 0)
+        r = True
+    except OSError:
+        r = False
+
+    return r
+
+
 @command
-def stop(workdir, pidfile=PIDFILE):
+def stop(workdir, pidfile=PIDFILE, kill=False):
     """ Stops toxicslave.
 
     The instance of toxicslave in ``workdir`` will be stopped.
@@ -88,6 +99,7 @@ def stop(workdir, pidfile=PIDFILE):
     :param workdir: Workdir for master to be killed.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
       ``toxicslave.pid``
+    :param kill: If true, send signum 9, otherwise, 15.
     """
 
     print('Stopping toxicslave')
@@ -95,7 +107,14 @@ def stop(workdir, pidfile=PIDFILE):
         with open(pidfile) as fd:
             pid = int(fd.read())
 
-        os.kill(pid, 9)
+        sig = 9 if kill else 15
+
+        os.kill(pid, sig)
+        if sig != 9:
+            print('Waiting for the process shutdown')
+            while _process_exist(pid):
+                sleep(0.5)
+
         os.remove(pidfile)
 
 

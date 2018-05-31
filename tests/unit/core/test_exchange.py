@@ -264,3 +264,37 @@ class ExchangeTest(TestCase):
             exists = False
 
         self.assertFalse(exists)
+
+    @async_test
+    async def test_fetch_message_no_cancel(self):
+        type(self).exchange = exchange.Exchange('test-exc', self.conn,
+                                                'direct', bind_publisher=True)
+        await type(self).exchange.declare()
+        consumer = await self.exchange.consume(timeout=100)
+        consumer.cancel = AsyncMagicMock(spec=consumer.cancel)
+        asserted = False
+        async with consumer:
+            try:
+                await consumer.fetch_message(cancel_on_timeout=False)
+            except exchange.asyncamqp.exceptions.ConsumerTimeout:
+                pass
+            asserted = True
+            self.assertFalse(consumer.cancel.called)
+
+        self.assertTrue(asserted)
+
+    @async_test
+    async def test_fetch_message_no_wait(self):
+        type(self).exchange = exchange.Exchange('test-exc', self.conn,
+                                                'direct', bind_publisher=True)
+        await type(self).exchange.declare()
+        consumer = await self.exchange.consume(timeout=100)
+        consumer.cancel = AsyncMagicMock(spec=consumer.cancel)
+        asserted = False
+        consumer.nowait = True
+        async with consumer:
+            await consumer.fetch_message()
+            asserted = True
+            self.assertTrue(consumer.cancel.called)
+
+        self.assertTrue(asserted)

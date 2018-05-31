@@ -72,7 +72,7 @@ def stop_slave():
     pidfile = 'toxicslave{}.pid'.format(PYVERSION)
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', toxicslave_cmd, 'stop', SLAVE_ROOT_DIR,
-           '--pidfile', pidfile]
+           '--pidfile', pidfile, '--kill']
 
     os.system(' '.join(cmd))
 
@@ -157,7 +157,7 @@ def stop_output():
 
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', cmd, 'stop', OUTPUT_ROOT_DIR,
-           '--pidfile', pidfile]
+           '--pidfile', pidfile, '--kill']
 
     os.system(' '.join(cmd))
 
@@ -170,7 +170,7 @@ def stop_master():
 
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', toxicmaster_cmd, 'stop', MASTER_ROOT_DIR,
-           '--pidfile', pidfile]
+           '--pidfile', pidfile, '--kill']
 
     os.system(' '.join(cmd))
 
@@ -183,7 +183,7 @@ def stop_scheduler():
 
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', toxicmaster_cmd, 'stop_scheduler', MASTER_ROOT_DIR,
-           '--pidfile', pidfile]
+           '--pidfile', pidfile, '--kill']
 
     os.system(' '.join(cmd))
 
@@ -196,7 +196,7 @@ def stop_poller():
 
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', toxicmaster_cmd, 'stop_poller', MASTER_ROOT_DIR,
-           '--pidfile', pidfile]
+           '--pidfile', pidfile, '--kill']
 
     os.system(' '.join(cmd))
 
