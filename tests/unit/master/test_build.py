@@ -801,6 +801,25 @@ class BuildManagerTest(TestCase):
         await self.repo.build_manager.start_pending()
         self.assertFalse(build.ensure_future.called)
 
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_cancel_build(self):
+        await self._create_test_data()
+        build = self.buildset.builds[0]
+        await self.repo.build_manager.cancel_build(build.uuid)
+        bs = await type(self.buildset).objects.get(id=self.buildset.id)
+        self.assertEqual(bs.builds[0].status, 'canceled')
+
+    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
+        spec=build.build_notifications.publish))
+    @async_test
+    async def test_notify(self):
+        await self._create_test_data()
+        build_inst = self.buildset.builds[0]
+        await build_inst.notify('build-added')
+        self.assertTrue(build.build_notifications.publish.called)
+
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asdf')
         await self.owner.save()

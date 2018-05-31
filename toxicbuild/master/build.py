@@ -199,7 +199,8 @@ class Build(EmbeddedDocument):
     """
 
     PENDING = 'pending'
-    STATUSES = BuildStep.STATUSES + [PENDING]
+    CANCELED = 'canceled'
+    STATUSES = BuildStep.STATUSES + [PENDING, CANCELED]
 
     uuid = UUIDField(required=True, default=lambda: uuid4())
     repository = ReferenceField('toxicbuild.master.Repository', required=True)
@@ -277,8 +278,19 @@ class Build(EmbeddedDocument):
 
         buildset = await BuildSet.objects.get(builds__uuid=uuid)
         for build in buildset.builds:  # pragma no branch
-            if str(build.uuid) == uuid:  # pragma no branch
+            if str(build.uuid) == str(uuid):  # pragma no branch
                 return build
+
+    async def notify(self, event_type):
+        """Send a notification to the `build_notification` exchange
+        informing about `event_type`
+
+        :param event_type: The name of the event."""
+        msg = self.to_dict()
+        repo = await self.repository
+        msg.update({'repository_id': str(repo.id),
+                    'event_type': event_type})
+        await build_notifications.publish(msg)
 
 
 class BuildSet(SerializeMixin, Document):
@@ -509,6 +521,15 @@ class BuildManager(LoggerMixin):
                 builders.append(builder)
 
         return builders
+
+    async def cancel_build(self, build_uuid):
+        """Cancel a given build.
+
+        :param build_uuid: The uuid that indentifies the build to be canceled.
+        """
+        build = await Build.get(build_uuid)
+        build.status = 'canceled'
+        await build.update()
 
     async def start_pending(self):
         """Starts all pending buildsets that are not already scheduled for
