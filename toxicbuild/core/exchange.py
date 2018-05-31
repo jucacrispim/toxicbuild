@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
 import json
 from uuid import uuid4
 import asyncamqp
@@ -43,6 +44,29 @@ class Consumer(asyncamqp.consumer.Consumer, LoggerMixin):
     async def __aexit__(self, *args, **kwargs):
         await super().__aexit__(*args, **kwargs)
         await self.channel.close()
+
+    async def fetch_message(self, cancel_on_timeout=True):
+        if self.nowait and self.queue.empty():
+            await self.cancel()
+            return None
+
+        elif self.timeout and self.queue.empty():
+            t = 0
+            while t <= self.timeout:
+                await asyncio.sleep(0.001)
+                if not self.queue.empty():
+                    break
+                t += 1
+            else:
+                if cancel_on_timeout:
+                    await self.cancel()
+                raise asyncamqp.exceptions.ConsumerTimeout(
+                    'Could not get a message in {} ms'.format(self.timeout))
+
+        msg = await self.queue.get()
+
+        self.message = self.MESSAGE_CLASS(*msg)
+        return self.message
 
 
 asyncamqp.channel.Channel.CONSUMER_CLASS = Consumer
