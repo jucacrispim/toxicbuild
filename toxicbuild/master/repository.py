@@ -508,8 +508,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
          start of pending builds, connect to signals.
         """
 
-        if self.schedule_poller:
-            self.schedule()
+        self.schedule()
 
     @classmethod
     async def bootstrap_all(cls):
@@ -528,11 +527,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         self.log('Scheduling {url}'.format(url=self.url))
 
-        sched_msg = {'type': 'add-update-code',
-                     'repository_id': str(self.id)}
+        if self.schedule_poller:
 
-        f = scheduler_action.publish(sched_msg)
-        ensure_future(f)
+            sched_msg = {'type': 'add-update-code',
+                         'repository_id': str(self.id)}
+
+            f = scheduler_action.publish(sched_msg)
+            ensure_future(f)
 
         # adding start_pending
         start_pending_hash = self.scheduler.add(

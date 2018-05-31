@@ -576,6 +576,21 @@ class RepositoryTest(TestCase):
 
     @patch.object(repository.utils, 'log', Mock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    def test_schedule_no_poller(self):
+        self.repo.scheduler = Mock(spec=self.repo.scheduler)
+        plugin = MagicMock
+        plugin.name = 'my-plugin'
+        plugin.run = AsyncMagicMock()
+        self.repo.plugins = [plugin]
+        self.repo.schedule_poller = False
+        self.repo.schedule()
+
+        self.assertTrue(self.repo.scheduler.add.called)
+        self.assertTrue(self.repo.plugins[0].called)
+        self.assertFalse(repository.scheduler_action.publish.called)
+
+    @patch.object(repository.utils, 'log', Mock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch('toxicbuild.master.scheduler')
     @async_test
     async def test_schedule_all(self, *a, **kw):
