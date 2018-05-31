@@ -306,7 +306,7 @@ def stop(workdir, pidfile=PIDFILE, kill=False):
     """
 
     print('Stopping toxicmaster')
-    _kill_thing(workdir, pidfile)
+    _kill_thing(workdir, pidfile, kill)
 
 
 @command

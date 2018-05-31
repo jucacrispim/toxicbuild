@@ -157,7 +157,7 @@ def stop_output():
 
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', cmd, 'stop', OUTPUT_ROOT_DIR,
-           '--pidfile', pidfile]
+           '--pidfile', pidfile, '--kill']
 
     os.system(' '.join(cmd))
 
