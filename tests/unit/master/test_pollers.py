@@ -429,7 +429,7 @@ class PollerServerTest(TestCase):
 
         server = Srv()
 
-        async def fm():
+        async def fm(cancel_on_timeout=True):
             server.stop()
             raise pollers.ConsumerTimeout
 

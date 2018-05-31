@@ -196,7 +196,7 @@ def stop_poller():
 
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', toxicmaster_cmd, 'stop_poller', MASTER_ROOT_DIR,
-           '--pidfile', pidfile]
+           '--pidfile', pidfile, '--kill']
 
     os.system(' '.join(cmd))
 
