@@ -17,9 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import time
 import asyncio
 from asyncio import ensure_future
+import signal
+import time
+from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.exceptions import UnknownSchedulerAction
 from toxicbuild.master.exchanges import scheduler_action
@@ -122,28 +124,43 @@ class TaskScheduler(LoggerMixin):
 class SchedulerServer(LoggerMixin):
     """Simple server to add or remove something from the scheduler."""
 
-    def __init__(self):
+    def __init__(self, loop=None):
+        self.loop = loop or asyncio.get_event_loop()
         self.scheduler = TaskScheduler()
         self._stop = False
         self._sched_hashes = {}
         self._updates_scheduled = set()
+        self._running_tasks = 0
+        signal.signal(signal.SIGTERM, self.sync_shutdown)
 
     async def run(self):
         ensure_future(self.scheduler.start())
-        while not self._stop:
-            async with await scheduler_action.consume() as consumer:
-                async for msg in consumer:
-                    ensure_future(self.handle_request(msg))
+        async with await scheduler_action.consume(timeout=1000) as consumer:
+            while not self._stop:
+                try:
+                    msg = await consumer.fetch_message(cancel_on_timeout=False)
+                except ConsumerTimeout:
+                    continue
 
-        self.scheduler.stop()
-        self._stop = True
+                ensure_future(self.handle_request(msg))
+
+            self.scheduler.stop()
+            self._stop = False
 
     def stop(self):
         self._stop = True
 
+    async def shutdown(self):
+        while self._running_tasks > 0:
+            await asyncio.sleep(0.5)
+
+    def sync_shutdown(self, signum=None, frame=None):
+        self.loop.run_until_complete(self.shutdown())
+
     async def handle_request(self, msg):
         req_type = msg.body['type']
         self.log('Received {} message'.format(req_type), level='debug')
+        self._running_tasks += 1
         try:
             if req_type == 'add-update-code':
                 await self.handle_add_update_code(msg)
@@ -152,6 +169,7 @@ class SchedulerServer(LoggerMixin):
             else:
                 raise UnknownSchedulerAction(req_type)
         finally:
+            self._running_tasks -= 1
             await msg.acknowledge()
 
     async def handle_add_update_code(self, msg):

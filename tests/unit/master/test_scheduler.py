@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016, 2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,13 +18,13 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
-import asyncio
 from unittest import TestCase
 from unittest.mock import Mock, patch
 from toxicbuild.master import scheduler
 from toxicbuild.master.scheduler import (TaskScheduler, SchedulerServer,
                                          UnknownSchedulerAction, Repository,
-                                         scheduler_action)
+                                         scheduler_action, asyncio,
+                                         ConsumerTimeout)
 from tests import async_test, AsyncMagicMock
 
 
@@ -194,3 +194,53 @@ class SchedulerServerTest(TestCase):
         server = Srv()
         await server.run()
         self.assertTrue(handle.called)
+
+    @patch.object(scheduler_action, 'consume', AsyncMagicMock())
+    @async_test
+    async def test_run_timeout(self):
+        handle = Mock()
+        consumer = scheduler_action.consume.return_value
+
+        class Srv(SchedulerServer):
+
+            def handle_request(self, msg):
+                self.stop()
+                handle()
+                return AsyncMagicMock()()
+
+        server = Srv()
+        self.t = 0
+
+        async def fm(cancel_on_timeout):
+            try:
+                if self.t > 0:
+                    server.stop()
+                else:
+                    raise ConsumerTimeout
+            finally:
+                self.t += 1
+
+        consumer.fetch_message = fm
+
+        await server.run()
+        self.assertTrue(handle.called)
+
+    @patch.object(asyncio, 'sleep', AsyncMagicMock(spec=asyncio.sleep))
+    @async_test
+    async def test_shutdown(self):
+        self.server._running_tasks = 1
+
+        sleep_mock = AsyncMagicMock()
+
+        async def sleep(t):
+            await sleep_mock()
+            self.server._running_tasks = 0
+
+        asyncio.sleep = sleep
+        await self.server.shutdown()
+        self.assertTrue(sleep_mock.called)
+
+    def test_sync_shutdown(self):
+        self.server.shutdown = AsyncMagicMock()
+        self.server.sync_shutdown()
+        self.assertTrue(self.server.shutdown.called)

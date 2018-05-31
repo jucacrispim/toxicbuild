@@ -95,17 +95,9 @@ def toxicinit():
     log('[init] Toxicmaster is running!')
 
 
-async def scheduler_server_init():
+async def scheduler_server_init(server):
     """Starts the scheduler server"""
 
-    create_settings_and_connect()
-    from toxicbuild.master.exchanges import connect_exchanges
-
-    await connect_exchanges()
-
-    from toxicbuild.master.scheduler import SchedulerServer
-
-    server = SchedulerServer()
     ensure_future(server.run())
     log('[init] Toxicscheduler is running!')
 
@@ -135,7 +127,16 @@ def run_scheduler(loglevel):
     logging.basicConfig(level=loglevel)
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(scheduler_server_init())
+    create_settings_and_connect()
+    from toxicbuild.master.exchanges import connect_exchanges
+
+    loop.run_until_complete(connect_exchanges())
+
+    from toxicbuild.master.scheduler import SchedulerServer
+
+    server = SchedulerServer()
+
+    loop.run_until_complete(scheduler_server_init(server))
     loop.run_forever()
 
 
@@ -302,17 +303,18 @@ def stop(workdir, pidfile=PIDFILE):
 
 
 @command
-def stop_scheduler(workdir, pidfile=SCHEDULER_PIDFILE):
+def stop_scheduler(workdir, pidfile=SCHEDULER_PIDFILE, kill=False):
     """Kills toxicmaster scheduler.
 
     :param --workdir: Workdir for master to be killed. Looks for a file
       ``toxicmaster.pid`` inside ``workdir``.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
-      ``toxicscheduler.pid``
+      ``toxicscheduler.pid``.
+    :param kill: If true, send signum 9, otherwise, 15.
     """
 
     print('Stopping toxicscheduler')
-    _kill_thing(workdir, pidfile)
+    _kill_thing(workdir, pidfile, kill)
 
 
 @command
