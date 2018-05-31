@@ -57,113 +57,6 @@ update_code_mutex = Mutex('toxicmaster-repo-update-code-mutex',
                           locks_conn)
 
 
-async def _get_repo_from_msg(msg):
-    try:
-        repo = await Repository.get(id=msg.body['repository_id'])
-    except Repository.DoesNotExist:
-        log_msg = '[_get_repo_from_msg] repo {} does not exist'.format(
-            msg.body['repository_id'])
-        utils.log(log_msg, level='warning')
-        await msg.acknowledge()
-        return
-
-    return repo
-
-
-async def _add_builds(msg):
-    repo = await _get_repo_from_msg(msg)
-    if not repo:
-        return
-
-    body = msg.body
-    try:
-        revisions = await RepositoryRevision.objects.filter(
-            id__in=body['revisions_ids']).to_list()
-
-        await repo.build_manager.add_builds(revisions)
-    except Exception as e:
-        log_msg = '[_add_builds] error adding builds for repo {}. '
-        log_msg += 'Exception was {}'.format(repo.id, str(e))
-        utils.log(log_msg, level='error')
-    finally:
-        await msg.acknowledge()
-
-
-async def wait_revisions():
-    """Waits for messages sent by pollers about new revisions."""
-
-    async with await revisions_added.consume() as consumer:
-        async for msg in consumer:
-            utils.log('[wait_revisions] Got msg from revisions_added',
-                      level='debug')
-            ensure_future(_add_builds(msg))
-
-
-async def _add_requested_build(msg):
-    repo = await _get_repo_from_msg(msg)
-    if not repo:
-        return
-
-    body = msg.body
-    try:
-        branch = body['branch']
-        builder_name = body.get('builder_name')
-        named_tree = body.get('named_tree')
-        slaves_ids = body.get('slaves_ids')
-        if slaves_ids:
-            slaves = await Slave.objects.filter(
-                id__in=body['slaves_ids']).to_list()
-        else:
-            slaves = []
-
-        await repo.start_build(branch, builder_name=builder_name,
-                               named_tree=named_tree, slaves=slaves)
-    except Exception as e:
-        log_msg = '[_add_requested_build] error starting builds for repo {}. '
-        log_msg += 'Exception was {}'.format(repo.id, str(e))
-        utils.log(log_msg, level='error')
-    finally:
-        await msg.acknowledge()
-
-
-async def wait_build_requests():
-    """Waits for build requests that arrive  in the `repo_notifications`
-    exchange with the routing key `build-requested`"""
-
-    async with await repo_notifications.consume(
-            routing_key='build-requested') as consumer:
-        async for msg in consumer:
-            utils.log('[wait_build_requests] Got a new build requested',
-                      level='debug')
-            ensure_future(_add_requested_build(msg))
-
-
-async def _remove_repo(msg):
-    repo = await _get_repo_from_msg(msg)
-    if not repo:
-        return False
-    try:
-        await repo.remove()
-    except Exception as e:
-        log_msg = '[_remove_repo] Error removing repo {}'.format(repo.id)
-        log_msg += '\nOriginal exception was {}'.format(str(e))
-        utils.log(log_msg, level='error')
-
-    return True
-
-
-async def wait_removal_request():
-    """Waits for removal requests in the `repo_notifications` exchange with the
-    routing key `removal-requested`"""
-
-    async with await repo_notifications.consume(
-            routing_key='removal-requested') as consumer:
-        async for msg in consumer:
-            utils.log('[wait_removal_request] Got a new removal request',
-                      level='debug')
-            ensure_future(_remove_repo(msg))
-
-
 class RepositoryBranch(EmbeddedDocument):
     name = StringField(required=True)
     notify_only_latest = BooleanField(default=False)
@@ -212,6 +105,114 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         self.toxicbuild_conf_lock = toxicbuild_conf_mutex
         self.update_code_lock = update_code_mutex
         self._vcs_instance = None
+
+    @classmethod
+    async def _get_repo_from_msg(cls, msg):
+        try:
+            repo = await cls.get(id=msg.body['repository_id'])
+        except Repository.DoesNotExist:
+            log_msg = '[_get_repo_from_msg] repo {} does not exist'.format(
+                msg.body['repository_id'])
+            utils.log(log_msg, level='warning')
+
+            await msg.acknowledge()
+            return
+
+        return repo
+
+    @classmethod
+    async def _add_builds(cls, msg):
+        repo = await cls._get_repo_from_msg(msg)
+        if not repo:
+            return
+
+        body = msg.body
+        try:
+            revisions = await RepositoryRevision.objects.filter(
+                id__in=body['revisions_ids']).to_list()
+
+            await repo.build_manager.add_builds(revisions)
+        except Exception as e:
+            log_msg = '[_add_builds] error adding builds for repo {}. '
+            log_msg += 'Exception was {}'.format(repo.id, str(e))
+            utils.log(log_msg, level='error')
+        finally:
+            await msg.acknowledge()
+
+    @classmethod
+    async def wait_revisions(cls):
+        """Waits for messages sent by pollers about new revisions."""
+
+        async with await revisions_added.consume() as consumer:
+            async for msg in consumer:
+                utils.log('[wait_revisions] Got msg from revisions_added',
+                          level='debug')
+                ensure_future(cls._add_builds(msg))
+
+    @classmethod
+    async def _add_requested_build(cls, msg):
+        repo = await cls._get_repo_from_msg(msg)
+        if not repo:
+            return
+
+        body = msg.body
+        try:
+            branch = body['branch']
+            builder_name = body.get('builder_name')
+            named_tree = body.get('named_tree')
+            slaves_ids = body.get('slaves_ids')
+            if slaves_ids:
+                slaves = await Slave.objects.filter(
+                    id__in=body['slaves_ids']).to_list()
+            else:
+                slaves = []
+
+            await repo.start_build(branch, builder_name=builder_name,
+                                   named_tree=named_tree, slaves=slaves)
+        except Exception as e:
+            log_msg = '[_add_requested_build] error starting builds for {}. '
+            log_msg += 'Exception was {}'.format(repo.id, str(e))
+            utils.log(log_msg, level='error')
+        finally:
+            await msg.acknowledge()
+
+    @classmethod
+    async def wait_build_requests(cls):
+        """Waits for build requests that arrive  in the `repo_notifications`
+        exchange with the routing key `build-requested`"""
+
+        async with await repo_notifications.consume(
+                routing_key='build-requested') as consumer:
+            async for msg in consumer:
+                utils.log('[wait_build_requests] Got a new build requested',
+                          level='debug')
+                ensure_future(cls._add_requested_build(msg))
+
+    @classmethod
+    async def _remove_repo(cls, msg):
+        repo = await cls._get_repo_from_msg(msg)
+        if not repo:
+            return False
+        try:
+            await repo.remove()
+        except Exception as e:
+            log_msg = '[_remove_repo] Error removing repo {}'.format(repo.id)
+            log_msg += '\nOriginal exception was {}'.format(str(e))
+            utils.log(log_msg, level='error')
+
+        return True
+
+    @classmethod
+    async def wait_removal_request(cls):
+        """Waits for removal requests in the `repo_notifications`
+        exchange with the routing key `removal-requested`"""
+
+        async with await repo_notifications.consume(
+                routing_key='removal-requested') as consumer:
+            async for msg in consumer:
+                utils.log('[wait_removal_request] Got a new removal request',
+                          level='debug')
+                ensure_future(cls._remove_repo(msg))
 
     async def to_dict(self, id_as_str=False):
         my_dict = {'id': self.id, 'name': self.name, 'url': self.url,

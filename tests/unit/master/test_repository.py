@@ -94,7 +94,7 @@ class RepositoryTest(TestCase):
         to_list = AsyncMagicMock()
         repository.RepositoryRevision\
                   .objects.filter.return_value.to_list = to_list
-        await repository._add_builds(msg)
+        await repository.Repository._add_builds(msg)
         self.assertTrue(repository.Repository.get.called)
         self.assertTrue(to_list.called)
         self.assertTrue(msg.acknowledge.called)
@@ -112,7 +112,7 @@ class RepositoryTest(TestCase):
         to_list = AsyncMagicMock(side_effect=Exception)
         repository.RepositoryRevision\
                   .objects.filter.return_value.to_list = to_list
-        await repository._add_builds(msg)
+        await repository.Repository._add_builds(msg)
         self.assertTrue(repository.Repository.get.called)
         self.assertTrue(to_list.called)
         self.assertTrue(msg.acknowledge.called)
@@ -128,7 +128,7 @@ class RepositoryTest(TestCase):
         to_list = AsyncMagicMock()
         repository.RepositoryRevision\
                   .objects.filter.return_value.to_list = to_list
-        await repository._add_builds(msg)
+        await repository.Repository._add_builds(msg)
         self.assertTrue(repository.Repository.get.called)
         self.assertFalse(to_list.called)
         self.assertTrue(msg.acknowledge.called)
@@ -146,7 +146,7 @@ class RepositoryTest(TestCase):
                     'slaves_ids': [str(self.slave.id)]}
         to_list = AsyncMagicMock()
         repository.Slave.objects.filter.return_value.to_list = to_list
-        await repository._add_requested_build(msg)
+        await repository.Repository._add_requested_build(msg)
         self.assertTrue(repo.start_build.called)
 
     @patch.object(repository.Repository, 'get', AsyncMagicMock(
@@ -158,7 +158,7 @@ class RepositoryTest(TestCase):
         msg.body = {'repository_id': 'asdf',
                     'branch': 'master',
                     'slave_ids': [str(self.slave.id)]}
-        await repository._add_requested_build(msg)
+        await repository.Repository._add_requested_build(msg)
         self.assertFalse(repository.Slave.objects.filter.called)
 
     @patch.object(repository.Repository, 'get', AsyncMagicMock())
@@ -171,7 +171,7 @@ class RepositoryTest(TestCase):
         msg = AsyncMagicMock()
         msg.body = {'repository_id': 'asdf',
                     'branch': 'master'}
-        await repository._add_requested_build(msg)
+        await repository.Repository._add_requested_build(msg)
         self.assertTrue(repo.start_build.called)
 
     @patch.object(repository.Repository, 'get', AsyncMagicMock())
@@ -183,11 +183,11 @@ class RepositoryTest(TestCase):
         repository.Repository.get.return_value = repo
         msg = AsyncMagicMock()
         msg.body = {'repository_id': 'asdf'}
-        await repository._add_requested_build(msg)
+        await repository.Repository._add_requested_build(msg)
         self.assertFalse(repo.start_build.called)
         self.assertTrue(repository.utils.log.called)
 
-    @patch.object(repository, '_add_builds', AsyncMagicMock())
+    @patch.object(repository.Repository, '_add_builds', AsyncMagicMock())
     @patch.object(repository.revisions_added, 'consume', AsyncMagicMock())
     @async_test
     async def test_wait_revisions(self):
@@ -212,62 +212,63 @@ class RepositoryTest(TestCase):
                 return {}
 
         repository.revisions_added.consume.return_value = FakeConsumer()
-        await repository.wait_revisions()
-        self.assertTrue(repository._add_builds.called)
+        await repository.Repository.wait_revisions()
+        self.assertTrue(repository.Repository._add_builds.called)
 
     @patch.object(repository.repo_notifications, 'consume',
                   AsyncMagicMock(spec=repository.repo_notifications.consume))
-    @patch.object(repository, '_add_requested_build',
-                  AsyncMagicMock(spec=repository._add_requested_build))
+    @patch.object(repository.Repository, '_add_requested_build',
+                  AsyncMagicMock(
+                      spec=repository.Repository._add_requested_build))
     @async_test
     async def test_wait_build_requests(self):
         consumer = AsyncMagicMock(aiter_items=[{}])
         repository.repo_notifications.consume.return_value = consumer
-        await repository.wait_build_requests()
-        self.assertTrue(repository._add_requested_build.called)
+        await repository.Repository.wait_build_requests()
+        self.assertTrue(repository.Repository._add_requested_build.called)
 
-    @patch.object(repository, '_get_repo_from_msg', AsyncMagicMock(
-        spec=repository._get_repo_from_msg, return_value=None))
+    @patch.object(repository.Repository, '_get_repo_from_msg', AsyncMagicMock(
+        spec=repository.Repository._get_repo_from_msg, return_value=None))
     @async_test
     async def test_remove_repo_no_repo(self):
-        r = await repository._remove_repo({})
+        r = await repository.Repository._remove_repo({})
         self.assertFalse(r)
 
-    @patch.object(repository, '_get_repo_from_msg', AsyncMagicMock(
-        spec=repository._get_repo_from_msg,
+    @patch.object(repository.Repository, '_get_repo_from_msg', AsyncMagicMock(
+        spec=repository.Repository._get_repo_from_msg,
         return_value=create_autospec(spec=repository.Repository,
                                      mock_cls=AsyncMagicMock)))
     @async_test
     async def test_remove_repo(self):
-        r = await repository._remove_repo({})
-        repo = repository._get_repo_from_msg.return_value
+        r = await repository.Repository._remove_repo({})
+        repo = repository.Repository._get_repo_from_msg.return_value
         self.assertTrue(repo.remove.called)
         self.assertTrue(r)
 
-    @patch.object(repository, '_get_repo_from_msg', AsyncMagicMock(
-        spec=repository._get_repo_from_msg,
+    @patch.object(repository.Repository, '_get_repo_from_msg', AsyncMagicMock(
+        spec=repository.Repository._get_repo_from_msg,
         return_value=create_autospec(spec=repository.Repository,
                                      mock_cls=AsyncMagicMock)))
     @patch.object(repository.utils, 'log', Mock())
     @async_test
     async def test_remove_repo_exception(self):
-        repo = repository._get_repo_from_msg.return_value
+        repo = repository.Repository._get_repo_from_msg.return_value
         repo.remove.side_effect = Exception
-        r = await repository._remove_repo({})
+        r = await repository.Repository._remove_repo({})
         self.assertTrue(repo.remove.called)
         self.assertTrue(repository.utils.log.called)
         self.assertTrue(r)
 
     @patch.object(repository.repo_notifications, 'consume',
                   AsyncMagicMock(spec=repository.repo_notifications.consume))
-    @patch.object(repository, '_remove_repo',
-                  AsyncMagicMock(spec=repository._remove_repo))
+    @patch.object(repository.Repository, '_remove_repo',
+                  AsyncMagicMock(spec=repository.Repository._remove_repo))
     @async_test
     async def test_wait_removal_request(self):
         consumer = AsyncMagicMock(aiter_items=[{}])
         repository.repo_notifications.consume.return_value = consumer
-        await repository.wait_removal_request()
-        self.assertTrue(repository._remove_repo.called)
+        await repository.Repository.wait_removal_request()
+        self.assertTrue(repository.Repository._remove_repo.called)
 
     @async_test
     async def test_to_dict(self):
