@@ -19,7 +19,9 @@
 
 import asyncio
 from functools import partial
+import signal
 import traceback
+from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.core.utils import LoggerMixin, MatchKeysDict
 from toxicbuild.master.exceptions import CloneException
@@ -217,24 +219,48 @@ class PollerServer(LoggerMixin):
     """A server for pollers. Uses Rabbitmq to publish/consume messages from
     the master"""
 
-    def __init__(self):
+    def __init__(self, loop=None):
+        self.loop = loop or asyncio.get_event_loop()
         self._stop = False
+        self._running_tasks = 0
+        signal.signal(signal.SIGTERM, self.sync_shutdown)
+
+    async def _handler_counter(self, msg):
+        self._running_tasks += 1
+        try:
+            await self.handle_update_request(msg)
+        finally:
+            self._running_tasks -= 1
 
     async def run(self):
         """Starts the server"""
 
-        while not self._stop:
-            async with await update_code.consume() as consumer:
-                async for msg in consumer:
-                    self.log('Consuming update_code message for {}'.format(
-                        msg.body['repo_id']))
-                    asyncio.ensure_future(self.handle_update_request(msg))
-                    await msg.acknowledge()
+        async with await update_code.consume(timeout=1000) as consumer:
+            while not self._stop:
+                try:
+                    msg = await consumer.fetch_message(cancel_on_timeout=False)
+                except ConsumerTimeout:
+                    continue
+                self.log('Consuming update_code message for {}'.format(
+                    msg.body['repo_id']))
 
-        self._stop = False
+                asyncio.ensure_future(self._handler_counter(msg))
+                await msg.acknowledge()
+
+            self._stop = False
 
     def stop(self):
         self._stop = True
+
+    async def shutdown(self):
+        self.log('Shutting down')
+        self.stop()
+        while self._running_tasks > 0:
+            self.log('Waiting for tasks')
+            await asyncio.sleep(0.5)
+
+    def sync_shutdown(self, signum=None, frame=None):
+        self.loop.run_until_complete(self.shutdown())
 
     async def handle_update_request(self, msg):
         """Handle an update code request sent by the master."""
