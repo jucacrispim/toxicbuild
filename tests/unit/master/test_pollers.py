@@ -396,19 +396,23 @@ class PollerServerTest(TestCase):
         msg.acknowledge = AsyncMagicMock()
         consumer = pollers.update_code.consume.return_value
         consumer.fetch_message.return_value = msg
+        tasks = []
 
         class Srv(pollers.PollerServer):
 
             def _handler_counter(self, msg):
-                return self.handle_update_request(msg)
+                t = asyncio.ensure_future(super()._handler_counter(msg))
+                tasks.append(t)
+                self.stop()
+                return t
 
             def handle_update_request(self, msg):
-                self.stop()
                 handle()
                 return AsyncMagicMock()()
 
         server = Srv()
         await server.run()
+        await asyncio.gather(*tasks)
         self.assertTrue(handle.called)
 
     @mock.patch.object(pollers.update_code, 'consume', AsyncMagicMock(
