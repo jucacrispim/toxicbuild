@@ -93,6 +93,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     }
 
     _plugins_instances = {}
+    _running_builds = 0
+    _stop_consuming_messages = False
 
     def __init__(self, *args, **kwargs):
         from toxicbuild.master import scheduler
@@ -105,6 +107,18 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         self.toxicbuild_conf_lock = toxicbuild_conf_mutex
         self.update_code_lock = update_code_mutex
         self._vcs_instance = None
+
+    @classmethod
+    def add_running_build(cls):
+        cls._running_builds += 1
+
+    @classmethod
+    def remove_running_build(cls):
+        cls._running_builds -= 1
+
+    @classmethod
+    def get_running_builds(cls):
+        return cls._running_builds
 
     @classmethod
     async def _get_repo_from_msg(cls, msg):
@@ -143,8 +157,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     async def wait_revisions(cls):
         """Waits for messages sent by pollers about new revisions."""
 
-        async with await revisions_added.consume() as consumer:
-            async for msg in consumer:
+        async with await revisions_added.consume(timeout=1000) as consumer:
+            while not cls._stop_consuming_messages:
+                try:
+                    msg = await consumer.fetch_message(cancel_on_timeout=False)
+                except ConsumerTimeout:
+                    continue
+
                 utils.log('[wait_revisions] Got msg from revisions_added',
                           level='debug')
                 ensure_future(cls._add_builds(msg))
@@ -182,8 +201,12 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         exchange with the routing key `build-requested`"""
 
         async with await repo_notifications.consume(
-                routing_key='build-requested') as consumer:
-            async for msg in consumer:
+                routing_key='build-requested', timeout=1000) as consumer:
+            while not cls._stop_consuming_messages:
+                try:
+                    msg = await consumer.fetch_message(cancel_on_timeout=False)
+                except ConsumerTimeout:
+                    continue
                 utils.log('[wait_build_requests] Got a new build requested',
                           level='debug')
                 ensure_future(cls._add_requested_build(msg))
@@ -208,11 +231,18 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         exchange with the routing key `removal-requested`"""
 
         async with await repo_notifications.consume(
-                routing_key='removal-requested') as consumer:
-            async for msg in consumer:
-                utils.log('[wait_removal_request] Got a new removal request',
-                          level='debug')
+                routing_key='removal-requested', timeout=1000) as consumer:
+
+            while not cls._stop_consuming_messages:
+                try:
+                    msg = await consumer.fetch_message(cancel_on_timeout=False)
+                except ConsumerTimeout:
+                    continue
                 ensure_future(cls._remove_repo(msg))
+
+    @classmethod
+    def stop_consuming_messages(cls):
+        cls._stop_consuming_messages = True
 
     async def to_dict(self, id_as_str=False):
         my_dict = {'id': self.id, 'name': self.name, 'url': self.url,

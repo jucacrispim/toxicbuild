@@ -26,6 +26,7 @@ import asyncio
 from asyncio import ensure_future
 import inspect
 import json
+import signal
 import traceback
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import LoggerMixin
@@ -46,13 +47,24 @@ from toxicbuild.master.users import User, Organization
 
 class UIHole(BaseToxicProtocol, LoggerMixin):
 
+    encrypted_token = settings.ACCESS_TOKEN
+    _shutting_down = False
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = None
 
-    encrypted_token = settings.ACCESS_TOKEN
+    @classmethod
+    def set_shutting_down(cls):
+        cls._shutting_down = True
 
     async def client_connected(self):
+
+        if type(self)._shutting_down:
+            self.log('Hole is shutting down. Rejecting connection',
+                     level='warning')
+            self.close_connection()
+            return None
 
         data = self.data.get('body') or {}
 
@@ -771,6 +783,7 @@ class HoleServer:
         self.loop = asyncio.get_event_loop()
         self.addr = addr
         self.port = port
+        signal.signal(signal.SIGTERM, self.sync_shutdown)
 
     def serve(self):
 
@@ -778,6 +791,15 @@ class HoleServer:
             self.get_protocol_instance, self.addr,  self.port)
 
         ensure_future(coro)
+
+    async def shutdown(self):
+        self.protocol.set_shutting_down()
+        Repository.stop_consuming_messages()
+        while Repository.get_running_builds() > 0:
+            await asyncio.sleep(0.5)
+
+    def sync_shutdown(self, signum=None, frame=None):
+        self.loop.run_until_complete(self.shutdown())
 
     def get_protocol_instance(self):
         return self.protocol(self.loop)

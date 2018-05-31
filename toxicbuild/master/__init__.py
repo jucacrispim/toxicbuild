@@ -57,14 +57,11 @@ def create_scheduler():
 
 
 @asyncio.coroutine
-def toxicinit():
+def toxicinit(server):
     """ Initialize services. """
-
-    create_settings_and_connect()
 
     # importing here to avoid circular imports
     from toxicbuild.master.build import BuildSet
-    from toxicbuild.master.hole import HoleServer
     from toxicbuild.master.repository import Repository
     from toxicbuild.master.slave import Slave
     from toxicbuild.master.users import User, Organization
@@ -81,13 +78,12 @@ def toxicinit():
     ensure_future(Repository.wait_revisions())
     log('[init] Waiting build requests')
     ensure_future(Repository.wait_build_requests())
+    log('[init] Waiting removal requests')
+    ensure_future(Repository.wait_removal_request())
 
     log('[init] Boostrap for everyone', level='debug')
     yield from Repository.bootstrap_all()
     if settings.ENABLE_HOLE:
-        hole_host = settings.HOLE_ADDR
-        hole_port = settings.HOLE_PORT
-        server = HoleServer(hole_host, hole_port)
         log('[init] Serving UIHole at {}'.format(settings.HOLE_PORT))
         server.serve()
 
@@ -114,9 +110,20 @@ def run(loglevel):
     loglevel = getattr(logging, loglevel.upper())
     logging.basicConfig(level=loglevel)
 
+    create_settings_and_connect()
+
+    from toxicbuild.master.hole import HoleServer
+
+    hole_host = settings.HOLE_ADDR
+    hole_port = settings.HOLE_PORT
+    server = HoleServer(hole_host, hole_port)
+
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(toxicinit())
-    loop.run_forever()
+    loop.run_until_complete(toxicinit(server))
+    try:
+        loop.run_forever()
+    finally:
+        loop.run_until_complete(server.shutdown())
 
 
 def run_scheduler(loglevel):
@@ -288,13 +295,14 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
 
 
 @command
-def stop(workdir, pidfile=PIDFILE):
+def stop(workdir, pidfile=PIDFILE, kill=False):
     """ Kills toxicmaster.
 
     :param --workdir: Workdir for master to be killed. Looks for a file
       ``toxicmaster.pid`` inside ``workdir``.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
       ``toxicmaster.pid``
+    :param kill: If true, send signum 9, otherwise, 15.
     """
 
     print('Stopping toxicmaster')

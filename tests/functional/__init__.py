@@ -170,7 +170,7 @@ def stop_master():
 
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', toxicmaster_cmd, 'stop', MASTER_ROOT_DIR,
-           '--pidfile', pidfile]
+           '--pidfile', pidfile, '--kill']
 
     os.system(' '.join(cmd))
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -588,6 +588,7 @@ class BuildManagerTest(TestCase):
         builds = [self.build, self.consumed_build, build.Build()]
 
         self.slave.build = asyncio.coroutine(lambda x: None)
+        self.manager.repository = self.repo
         self.manager.repository.parallel_builds = 0
         await self.manager._execute_in_parallel(self.slave, builds)
 
@@ -610,6 +611,7 @@ class BuildManagerTest(TestCase):
         builds = [self.build, self.consumed_build, build.Build()]
 
         self.slave.build = asyncio.coroutine(lambda x: None)
+        self.manager.repository = self.repo
         self.manager.repository.parallel_builds = 1
         await self.manager._execute_in_parallel(self.slave, builds)
 

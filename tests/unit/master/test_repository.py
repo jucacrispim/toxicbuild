@@ -22,7 +22,6 @@ import datetime
 from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch
 from uuid import uuid4
-from asyncamqp.compat import aiter_compat
 from toxicbuild.core import utils, exchange
 from toxicbuild.master import (repository, build, slave, users)
 from toxicbuild.master.exchanges import (connect_exchanges,
@@ -67,6 +66,8 @@ class RepositoryTest(TestCase):
     async def setUp(self):
         super(RepositoryTest, self).setUp()
         await self._create_db_revisions()
+        repository.Repository._running_builds = 0
+        repository.Repository._stop_consuming_messages = False
 
     @async_test
     async def tearDown(self):
@@ -192,28 +193,29 @@ class RepositoryTest(TestCase):
     @async_test
     async def test_wait_revisions(self):
 
-        class FakeConsumer:
-            c = 0
+        consumer = repository.revisions_added.consume.return_value
 
-            async def __aenter__(self):
-                return self
+        async def fm(cancel_on_timeout=False):
+            repository.Repository._stop_consuming_messages = True
 
-            async def __aexit__(self, exc, exc_type, exc_tb):
-                pass
-
-            @aiter_compat
-            def __aiter__(self):
-                return self
-
-            async def __anext__(self):
-                if self.c > 0:
-                    raise StopAsyncIteration
-                self.c += 1
-                return {}
-
-        repository.revisions_added.consume.return_value = FakeConsumer()
+        consumer.fetch_message = fm
         await repository.Repository.wait_revisions()
         self.assertTrue(repository.Repository._add_builds.called)
+
+    @patch.object(repository.Repository, '_add_builds', AsyncMagicMock())
+    @patch.object(repository.revisions_added, 'consume', AsyncMagicMock())
+    @async_test
+    async def test_wait_revisions_timeout(self):
+
+        consumer = repository.revisions_added.consume.return_value
+
+        async def fm(cancel_on_timeout=False):
+            repository.Repository._stop_consuming_messages = True
+            raise repository.ConsumerTimeout
+
+        consumer.fetch_message = fm
+        await repository.Repository.wait_revisions()
+        self.assertFalse(repository.Repository._add_builds.called)
 
     @patch.object(repository.repo_notifications, 'consume',
                   AsyncMagicMock(spec=repository.repo_notifications.consume))
@@ -222,10 +224,31 @@ class RepositoryTest(TestCase):
                       spec=repository.Repository._add_requested_build))
     @async_test
     async def test_wait_build_requests(self):
-        consumer = AsyncMagicMock(aiter_items=[{}])
-        repository.repo_notifications.consume.return_value = consumer
+        consumer = repository.repo_notifications.consume.return_value
+
+        async def fm(cancel_on_timeout=False):
+            repository.Repository._stop_consuming_messages = True
+
+        consumer.fetch_message = fm
         await repository.Repository.wait_build_requests()
         self.assertTrue(repository.Repository._add_requested_build.called)
+
+    @patch.object(repository.repo_notifications, 'consume',
+                  AsyncMagicMock(spec=repository.repo_notifications.consume))
+    @patch.object(repository.Repository, '_add_requested_build',
+                  AsyncMagicMock(
+                      spec=repository.Repository._add_requested_build))
+    @async_test
+    async def test_wait_build_requests_timeout(self):
+        consumer = repository.repo_notifications.consume.return_value
+
+        async def fm(cancel_on_timeout=False):
+            repository.Repository._stop_consuming_messages = True
+            raise repository.ConsumerTimeout
+
+        consumer.fetch_message = fm
+        await repository.Repository.wait_build_requests()
+        self.assertFalse(repository.Repository._add_requested_build.called)
 
     @patch.object(repository.Repository, '_get_repo_from_msg', AsyncMagicMock(
         spec=repository.Repository._get_repo_from_msg, return_value=None))
@@ -265,21 +288,39 @@ class RepositoryTest(TestCase):
                   AsyncMagicMock(spec=repository.Repository._remove_repo))
     @async_test
     async def test_wait_removal_request(self):
-        consumer = AsyncMagicMock(aiter_items=[{}])
-        repository.repo_notifications.consume.return_value = consumer
+        consumer = repository.repo_notifications.consume.return_value
+
+        async def fm(cancel_on_timeout=False):
+            repository.Repository._stop_consuming_messages = True
+
+        consumer.fetch_message = fm
         await repository.Repository.wait_removal_request()
         self.assertTrue(repository.Repository._remove_repo.called)
 
+    @patch.object(repository.repo_notifications, 'consume',
+                  AsyncMagicMock(spec=repository.repo_notifications.consume))
+    @patch.object(repository.Repository, '_remove_repo',
+                  AsyncMagicMock(spec=repository.Repository._remove_repo))
+    @async_test
+    async def test_wait_removal_request_timeout(self):
+        consumer = repository.repo_notifications.consume.return_value
+
+        async def fm(cancel_on_timeout=False):
+            repository.Repository.stop_consuming_messages()
+            raise repository.ConsumerTimeout
+
+        consumer.fetch_message = fm
+        await repository.Repository.wait_removal_request()
+        self.assertFalse(repository.Repository._remove_repo.called)
+
     @async_test
     async def test_to_dict(self):
-        # await self._create_db_revisions()
         d = await self.repo.to_dict()
         self.assertTrue(d['id'])
         self.assertTrue('plugins' in d.keys())
 
     @async_test
     async def test_to_dict_id_as_str(self):
-        # await self._create_db_revisions()
         d = await self.repo.to_dict(True)
         self.assertIsInstance(d['id'], str)
 
@@ -888,6 +929,15 @@ class RepositoryTest(TestCase):
 
         await self.repo.request_build(branch, named_tree=named_tree)
         self.assertTrue(repository.repo_notifications.publish.called)
+
+    def test_add_running_build(self):
+        repository.Repository.add_running_build()
+        self.assertEqual(repository.Repository.get_running_builds(), 1)
+
+    def test_remove_running_build(self):
+        repository.Repository.add_running_build()
+        repository.Repository.remove_running_build()
+        self.assertEqual(repository.Repository.get_running_builds(), 0)
 
     async def _create_db_revisions(self):
         self.owner = users.User(email='zezinho@nada.co', password='123')
