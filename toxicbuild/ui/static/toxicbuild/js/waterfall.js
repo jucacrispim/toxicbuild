@@ -230,15 +230,15 @@ var BUILD_TEMPLATE = `
     Build - {{build.status}}
     <i class="fa fa-3x fa-fw toxic-spinner-running" id="spinner-build-{{build.uuid}}" style="display:none"></i>
 
-	    <span data-toggle="tooltip" title="Cancel build" data-placement="right" id="cancel-build-btn-{{build.uuid}">
+	    <span data-toggle="tooltip" title="Cancel build" data-placement="right" id="cancel-build-btn-{{build.uuid}}">
 	      <button type="button" class="btn btn-default btn-cancel-build btn-transparent btn-sm"
 		      data-repository-id="{{repository.id}}"
-		      data-buid-uuid="{{build.uuid}}">
+		      data-build-uuid="{{build.uuid}}">
 		<span class="glyphicon glyphicon-remove-sign" aria-hidden="true"></span>
 	      </button>
 	    </span>
 
-    <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" style="display:none" class="rebuild-icon">
+    <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" style="display:none" class="rebuild-icon" id="reschedule-build-btn-{{build.uuid}}">
       <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-build btn-sm"
         data-buildset-commit="{{buildset.commit}}"
         data-buildset-branch="{{buildset.branch}}"
@@ -510,7 +510,7 @@ function WaterfallManager(){
 
       build_el.removeClass('step-running').addClass('step-' + build.status);
 
-      var builder_input = jQuery('#builder-' + build.builder.id)
+      var builder_input = jQuery('#builder-' + build.builder.id);
       var builder_status = builder_input.val();
       builder_input.parent().removeClass('builder-running');
       builder_input.parent().removeClass('builder-pending');
@@ -533,6 +533,9 @@ function WaterfallManager(){
     handleBuildCancelled: function(build){
       var self = this;
       var build_el = jQuery('#build-info-' + build.uuid);
+      var build_btn = jQuery('#cancel-build-btn-' + build.uuid);
+      build_btn.hide();
+      jQuery('#reschedule-build-btn-' + build.uuid).show();
       var html = build_el.html().replace(/pending/, 'cancelled');
       html = html.replace(/{{build.uuid}}/g, build.uuid);
       build_el.html(html);
@@ -655,7 +658,7 @@ function WaterfallManager(){
     _addBuild: function(build){
       var self = this;
       var builder = self._getBuilder(build.builder.id);
-      var buildset = build.buildset
+      var buildset = build.buildset;
       var build_el = jQuery('#build-builder-' + build.builder.id);
 
       if (!build_el.length){
@@ -674,11 +677,20 @@ function WaterfallManager(){
       template = template.replace(/{{build.started}}/g, build.started);
       template = template.replace(/{{build.finished}}/g, build.finished);
       template = template.replace(/{{build.total_time}}/g, build.total_time);
+      template = template.replace(/{{build.uuid}}/g, build.uuid);
+      var repo_id = jQuery('#waterfall-repo-id').val();
+      template = template.replace(/{{repository.id}}/g, repo_id);
       var builder_name = builder ? builder.name : 'new-builder';
       template = template.replace(/{{build.builder.name}}/g, builder_name);
       jQuery(build_el).append(template);
       self._handleBuildQueue(build);
       self._handleStepQueue(build);
+
+      jQuery('.btn-cancel-build', build_el).on('click', function(event){
+	var button = jQuery(this);
+	cancelBuild(button);
+      });
+
     },
 
     _getBuilder: function(builder_id){

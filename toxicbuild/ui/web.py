@@ -337,6 +337,7 @@ class StreamHandler(LoggerMixin, LoggedTemplateHandler, WebSocketHandler):
                        'build_started': self._send_build_info,
                        'build_finished': self._send_build_info,
                        'build_added': self._send_build_info,
+                       'build_cancelled': self._send_build_info,
                        'step_started': self._send_build_info,
                        'step_finished': self._send_build_info,
                        'step_output_info': self._send_step_output_info}
@@ -345,7 +346,7 @@ class StreamHandler(LoggerMixin, LoggedTemplateHandler, WebSocketHandler):
                                                 'repo_added'],
                                 'builds': ['build_started', 'build_finished',
                                            'build_added', 'step_started',
-                                           'step_finished'],
+                                           'step_finished', 'build_cancelled'],
                                 'step-output': ['step_output_info']}
 
     def _bad_message_type_logger(self, message):
