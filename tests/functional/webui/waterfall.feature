@@ -30,4 +30,4 @@ Feature:
         Given the user is already in the waterfall
         When he clicks in the reschedule build button
         And cancels the newly added build
-        Then he sees the build cancelled
+        Then he sees the "Build cancelled" message

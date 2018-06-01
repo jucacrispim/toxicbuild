@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from toxicbuild.ui import settings
-from behave import given
+from behave import given, then
 
 
 def logged_in_webui(context):
@@ -19,3 +19,12 @@ def logged_in_webui(context):
 
 given_logged_in_webui = given('the user is logged in the web interface')(
     logged_in_webui)
+
+
+def sees_message(context, msg):
+    browser = context.browser
+    is_present = browser.wait_text_become_present(msg)
+    assert is_present
+
+
+then_sees_message = then('he sees the "{msg}" message')(sees_message)
