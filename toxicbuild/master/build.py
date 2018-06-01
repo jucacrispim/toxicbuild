@@ -32,9 +32,9 @@ from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
 from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
                                    format_timedelta, LoggerMixin)
-from toxicbuild.master.exceptions import DBError
+from toxicbuild.master.exceptions import DBError, ImpossibleCancellation
 from toxicbuild.master.exchanges import build_notifications
-from toxicbuild.master.signals import build_added
+from toxicbuild.master.signals import build_added, build_cancelled
 from toxicbuild.master.utils import as_db_ref
 
 
@@ -199,8 +199,8 @@ class Build(EmbeddedDocument):
     """
 
     PENDING = 'pending'
-    CANCELED = 'canceled'
-    STATUSES = BuildStep.STATUSES + [PENDING, CANCELED]
+    CANCELLED = 'cancelled'
+    STATUSES = BuildStep.STATUSES + [PENDING, CANCELLED]
 
     uuid = UUIDField(required=True, default=lambda: uuid4())
     repository = ReferenceField('toxicbuild.master.Repository', required=True)
@@ -291,6 +291,16 @@ class Build(EmbeddedDocument):
         msg.update({'repository_id': str(repo.id),
                     'event_type': event_type})
         await build_notifications.publish(msg)
+
+    async def cancel(self):
+        """Cancel the build if it is not started yet."""
+        if self.status != type(self).PENDING:
+            raise ImpossibleCancellation
+
+        self.status = 'cancelled'
+        repo = await self.repository
+        await self.update()
+        build_cancelled.send(str(repo.id), build=self)
 
 
 class BuildSet(SerializeMixin, Document):
@@ -525,11 +535,15 @@ class BuildManager(LoggerMixin):
     async def cancel_build(self, build_uuid):
         """Cancel a given build.
 
-        :param build_uuid: The uuid that indentifies the build to be canceled.
+        :param build_uuid: The uuid that indentifies the build to be cancelled.
         """
         build = await Build.get(build_uuid)
-        build.status = 'canceled'
-        await build.update()
+        try:
+            await build.cancel()
+            await build.notify('build-cancelled')
+        except ImpossibleCancellation:
+            self.log('Could not cancel build {}'.format(build_uuid),
+                     level='warning')
 
     async def start_pending(self):
         """Starts all pending buildsets that are not already scheduled for
@@ -613,6 +627,9 @@ class BuildManager(LoggerMixin):
         for chunk in self._get_builds_chunks(builds):
             chunk_fs = []
             for build in chunk:
+                if not build.status == Build.PENDING:
+                    continue
+
                 type(self.repository).add_running_build()
                 f = ensure_future(slave.build(build))
                 f.add_done_callback(

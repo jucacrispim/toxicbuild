@@ -954,6 +954,13 @@ class RepositoryTest(TestCase):
         repository.Repository.remove_running_build()
         self.assertEqual(repository.Repository.get_running_builds(), 0)
 
+    @async_test
+    async def test_cancel_build(self):
+        self.repo.build_manager.cancel_build = AsyncMagicMock(
+            spec=self.repo.build_manager.cancel_build)
+        await self.repo.cancel_build('some-uuid')
+        self.assertTrue(self.repo.build_manager.cancel_build.called)
+
     async def _create_db_revisions(self):
         self.owner = users.User(email='zezinho@nada.co', password='123')
         await self.owner.save()

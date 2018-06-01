@@ -27,3 +27,7 @@ class InvalidCredentials(Exception):
 
 class UnknownSchedulerAction(Exception):
     pass
+
+
+class ImpossibleCancellation(Exception):
+    pass

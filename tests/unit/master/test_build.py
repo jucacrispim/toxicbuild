@@ -165,6 +165,34 @@ class BuildTest(TestCase):
         self.buildset.builds[0]
         self.assertEqual(b, r)
 
+    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
+        spec=build.build_notifications.publish))
+    @async_test
+    async def test_notify(self):
+        await self._create_test_data()
+        build_inst = self.buildset.builds[0]
+        await build_inst.notify('build-added')
+        self.assertTrue(build.build_notifications.publish.called)
+
+    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
+        spec=build.build_notifications.publish))
+    @async_test
+    async def test_cancel(self):
+        await self._create_test_data()
+        build_inst = self.buildset.builds[0]
+        await build_inst.cancel()
+        self.assertEqual(build_inst.status, 'cancelled')
+
+    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
+        spec=build.build_notifications.publish))
+    @async_test
+    async def test_cancel_impossible(self):
+        await self._create_test_data()
+        build_inst = self.buildset.builds[0]
+        build_inst.status = 'running'
+        with self.assertRaises(build.ImpossibleCancellation):
+            await build_inst.cancel()
+
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asfd')
         await self.owner.save()
@@ -803,13 +831,29 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
+    @mock.patch.object(build.Build, 'notify', AsyncMagicMock(
+        spec=build.Build.notify))
     @async_test
     async def test_cancel_build(self):
         await self._create_test_data()
         build = self.buildset.builds[0]
         await self.repo.build_manager.cancel_build(build.uuid)
         bs = await type(self.buildset).objects.get(id=self.buildset.id)
-        self.assertEqual(bs.builds[0].status, 'canceled')
+        self.assertEqual(bs.builds[0].status, 'cancelled')
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @mock.patch.object(build.Build, 'notify', AsyncMagicMock(
+        spec=build.Build.notify))
+    @async_test
+    async def test_cancel_build_impossible(self):
+        await self._create_test_data()
+        build = self.buildset.builds[0]
+        build.status = 'running'
+        await build.update()
+        self.repo.build_manager.log = mock.Mock()
+        await self.repo.build_manager.cancel_build(build.uuid)
+        self.assertTrue(self.repo.build_manager.log.called)
 
     @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
         spec=build.build_notifications.publish))

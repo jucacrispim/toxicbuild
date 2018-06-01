@@ -740,6 +740,40 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @patch.object(repository, 'BuildManager', MagicMock())
+    @patch.object(hole.Repository, 'get_for_user', AsyncMagicMock(
+        spec=hole.Repository.get_for_user))
+    @async_test
+    async def test_repo_cancel_build(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-cancel-build', protocol)
+        await handler.repo_cancel_build('some-repo-id', 'some-build-uuid')
+        repo = hole.Repository.get_for_user.return_value
+        self.assertTrue(repo.cancel_build.called)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @patch.object(repository, 'BuildManager', MagicMock())
+    @patch.object(hole.Repository, 'get_for_user', AsyncMagicMock(
+        spec=hole.Repository.get_for_user))
+    @async_test
+    async def test_repo_cancel_build_repo_id(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-cancel-build', protocol)
+        await handler.repo_cancel_build(str(self.repo.id), 'some-build-uuid')
+        repo = hole.Repository.get_for_user.return_value
+        self.assertTrue(repo.cancel_build.called)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_slave_add(self):
         data = {'host': '127.0.0.1', 'port': 1234}
@@ -960,6 +994,7 @@ class HoleHandlerTest(TestCase):
                     'repo_enable_plugin': handler.repo_enable_plugin,
                     'repo_start_build': handler.repo_start_build,
                     'repo_disable_plugin': handler.repo_disable_plugin,
+                    'repo_cancel_build': handler.repo_cancel_build,
                     'slave_add': handler.slave_add,
                     'slave_get': handler.slave_get,
                     'slave_list': handler.slave_list,
@@ -1235,6 +1270,14 @@ class UIStreamHandlerTest(TestCase):
         await self.handler.build_added(Mock())
         called = send_info.call_args[0][0]
         self.assertEqual(called, 'build_added')
+
+    @async_test
+    async def test_build_cancelled_fn(self):
+        send_info = AsyncMagicMock()
+        self.handler.send_info = send_info
+        await self.handler.build_cancelled_fn(Mock())
+        called = send_info.call_args[0][0]
+        self.assertEqual(called, 'build_cancelled')
 
     @async_test
     async def test_handle(self):

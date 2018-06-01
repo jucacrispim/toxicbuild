@@ -778,6 +778,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         await repo_notifications.publish(msg, routing_key='build-requested')
 
+    async def cancel_build(self, build_uuid):
+        """Cancels a build.
+
+        :param build_uuid: The uuid of the build."""
+
+        await self.build_manager.cancel_build(build_uuid)
+
     async def _get_builders(self, slaves, revision):
         builders = {}
         for slave in slaves:

@@ -28,6 +28,7 @@ import inspect
 import json
 import signal
 import traceback
+from bson.objectid import ObjectId
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
@@ -40,7 +41,7 @@ from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,
-                                       build_added,
+                                       build_added, build_cancelled,
                                        step_output_arrived)
 from toxicbuild.master.users import User, Organization
 
@@ -126,6 +127,7 @@ class HoleHandler:
     * `repo-enable-plugin`
     * `repo-disable-plugin`
     * `repo-start-build`
+    * `repo-cancel-build`
     * `slave-add`
     * `slave-get`
     * `slave-list`
@@ -421,6 +423,20 @@ class HoleHandler:
         await repo.start_build(branch, builder_name, named_tree, slaves=slaves)
         return {'repo-start-build': 'builds added'}
 
+    async def repo_cancel_build(self, repo_name_or_id, build_uuid):
+        """Cancels  a build if possible.
+
+        :param repo_name_or_id: The name or the id of the repository.
+        :param buid_uuid: The uuid of the build to be cancelled."""
+
+        if ObjectId.is_valid(repo_name_or_id):
+            kw = {'id': repo_name_or_id}
+        else:
+            kw = {'name': repo_name_or_id}
+
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.cancel_build(build_uuid)
+
     async def slave_add(self, slave_name, slave_host, slave_port, slave_token,
                         owner_id):
         """ Adds a new slave to toxicbuild.
@@ -638,6 +654,9 @@ class UIStreamHandler(LoggerMixin):
     async def build_added(self, sender, **kw):
         await self.send_info('build_added', **kw)
 
+    async def build_cancelled_fn(self, sender, **kw):
+        await self.send_info('build_cancelled', **kw)
+
     async def _connect2signals(self):
         repos = Repository.list_for_user(self.protocol.user)
         async for repo in repos:
@@ -650,6 +669,7 @@ class UIStreamHandler(LoggerMixin):
         build_started.connect(self.build_started, sender=str(repo.id))
         build_finished.connect(self.build_finished, sender=str(repo.id))
         build_added.connect(self.build_added, sender=str(repo.id))
+        build_cancelled.connect(self.build_cancelled_fn, sender=str(repo.id))
         step_output_arrived.connect(self.send_step_output_info,
                                     sender=str(repo.id))
 
@@ -698,6 +718,7 @@ class UIStreamHandler(LoggerMixin):
         build_started.disconnect(self.build_started)
         build_finished.disconnect(self.build_finished)
         build_added.disconnect(self.build_added)
+        build_cancelled.disconnect(self.build_cancelled_fn)
 
     async def handle(self):
         await self._connect2signals()
