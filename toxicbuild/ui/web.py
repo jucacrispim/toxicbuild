@@ -181,7 +181,7 @@ class RepositoryHandler(BaseModelHandler):
     @asyncio.coroutine
     def cancel_build(self):
         repo = yield from self.get_item(repo_name=self.params.get('name'))
-        build_uuid = self.params['build_uuid']
+        build_uuid = self.params.get('build_uuid')
         r = yield from repo.cancel_build(build_uuid)
         return r
 
