@@ -167,12 +167,23 @@ class RepositoryHandler(BaseModelHandler):
             yield from self.disable_plugin()
             return
 
+        elif 'cancel-build' in self.request.uri:
+            yield from self.cancel_build()
+            return
+
         elif'start-build' not in args:
             yield super().post(*args)
             return
 
         ret = yield from self.start_build()
         self.write(ret)
+
+    @asyncio.coroutine
+    def cancel_build(self):
+        repo = yield from self.get_item(repo_name=self.params.get('name'))
+        build_uuid = self.params.get('build_uuid')
+        r = yield from repo.cancel_build(build_uuid)
+        return r
 
     @asyncio.coroutine
     def enable_plugin(self):
@@ -240,6 +251,9 @@ class RepositoryHandler(BaseModelHandler):
         elif ('enable-plugin' in self.request.uri or
               'disable-plugin' in self.request.uri):
             yield from self._prepare_for_plugin()
+
+        elif 'cancel-build' in self.request.uri:
+            pass
 
         else:
             kw = {}
@@ -323,6 +337,7 @@ class StreamHandler(LoggerMixin, LoggedTemplateHandler, WebSocketHandler):
                        'build_started': self._send_build_info,
                        'build_finished': self._send_build_info,
                        'build_added': self._send_build_info,
+                       'build_cancelled': self._send_build_info,
                        'step_started': self._send_build_info,
                        'step_finished': self._send_build_info,
                        'step_output_info': self._send_step_output_info}
@@ -331,7 +346,7 @@ class StreamHandler(LoggerMixin, LoggedTemplateHandler, WebSocketHandler):
                                                 'repo_added'],
                                 'builds': ['build_started', 'build_finished',
                                            'build_added', 'step_started',
-                                           'step_finished'],
+                                           'step_finished', 'build_cancelled'],
                                 'step-output': ['step_output_info']}
 
     def _bad_message_type_logger(self, message):

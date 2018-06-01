@@ -378,6 +378,7 @@ class Repository(BaseModel):
         d['plugins'] = [p.to_dict() for p in d['plugins']]
         return d
 
+    @asyncio.coroutine
     def enable_plugin(self, plugin_name, **kwargs):
         """Enables a plugin to a repository.
 
@@ -391,6 +392,7 @@ class Repository(BaseModel):
 
         return resp
 
+    @asyncio.coroutine
     def disable_plugin(self, **kwargs):
         """Disables a plugin from a repository.
 
@@ -399,6 +401,17 @@ class Repository(BaseModel):
         with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_disable_plugin(
                 repo_name=self.name, **kwargs)
+
+        return resp
+
+    async def cancel_build(self, build_uuid):
+        """Cancels a build from the repository.
+
+        :param build_uuid: The uuid of the build."""
+
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_cancel_build(repo_name_or_id=self.id,
+                                                  build_uuid=build_uuid)
 
         return resp
 

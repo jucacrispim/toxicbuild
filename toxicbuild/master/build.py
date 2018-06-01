@@ -32,14 +32,14 @@ from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
 from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
                                    format_timedelta, LoggerMixin)
-from toxicbuild.master.exceptions import DBError
+from toxicbuild.master.exceptions import DBError, ImpossibleCancellation
 from toxicbuild.master.exchanges import build_notifications
-from toxicbuild.master.signals import build_added
+from toxicbuild.master.signals import build_added, build_cancelled
 from toxicbuild.master.utils import as_db_ref
 
 
 # The statuses used in builds  ordered by priority.
-ORDERED_STATUSES = ['running', 'exception', 'fail',
+ORDERED_STATUSES = ['running', 'cancelled', 'exception', 'fail',
                     'warning', 'success', 'pending']
 
 
@@ -199,7 +199,8 @@ class Build(EmbeddedDocument):
     """
 
     PENDING = 'pending'
-    STATUSES = BuildStep.STATUSES + [PENDING]
+    CANCELLED = 'cancelled'
+    STATUSES = BuildStep.STATUSES + [PENDING, CANCELLED]
 
     uuid = UUIDField(required=True, default=lambda: uuid4())
     repository = ReferenceField('toxicbuild.master.Repository', required=True)
@@ -277,8 +278,29 @@ class Build(EmbeddedDocument):
 
         buildset = await BuildSet.objects.get(builds__uuid=uuid)
         for build in buildset.builds:  # pragma no branch
-            if str(build.uuid) == uuid:  # pragma no branch
+            if str(build.uuid) == str(uuid):  # pragma no branch
                 return build
+
+    async def notify(self, event_type):
+        """Send a notification to the `build_notification` exchange
+        informing about `event_type`
+
+        :param event_type: The name of the event."""
+        msg = self.to_dict()
+        repo = await self.repository
+        msg.update({'repository_id': str(repo.id),
+                    'event_type': event_type})
+        await build_notifications.publish(msg)
+
+    async def cancel(self):
+        """Cancel the build if it is not started yet."""
+        if self.status != type(self).PENDING:
+            raise ImpossibleCancellation
+
+        self.status = 'cancelled'
+        repo = await self.repository
+        await self.update()
+        build_cancelled.send(str(repo.id), build=self)
 
 
 class BuildSet(SerializeMixin, Document):
@@ -441,13 +463,18 @@ class BuildManager(LoggerMixin):
           :class:`toxicbuild.master.RepositoryRevision`
           instances for the build."""
 
+        last_bs = None
         for revision in revisions:
             buildset = await BuildSet.create(repository=self.repository,
                                              revision=revision)
 
+            last_bs = buildset
             slaves = await self.repository.slaves
             for slave in slaves:
                 await self.add_builds_for_slave(buildset, slave)
+
+        if last_bs and self.repository.notify_only_latest(buildset.branch):
+            await self.cancel_previous_pending(buildset)
 
     async def add_builds_for_slave(self, buildset, slave, builders=[]):
         """Adds builds for a given slave on a given buildset.
@@ -510,6 +537,39 @@ class BuildManager(LoggerMixin):
 
         return builders
 
+    async def cancel_build(self, build_uuid):
+        """Cancel a given build.
+
+        :param build_uuid: The uuid that indentifies the build to be cancelled.
+        """
+
+        build = await Build.get(build_uuid)
+        try:
+            await build.cancel()
+            await build.notify('build-cancelled')
+            build_cancelled.send(str(self.repository.id), build=build)
+        except ImpossibleCancellation:
+            self.log('Could not cancel build {}'.format(build_uuid),
+                     level='warning')
+
+    async def cancel_previous_pending(self, buildset):
+        """Cancels the builds previous to ``buildset``.
+
+        :param buildset: An instance of
+        :class:`~toxicbuild.master.build.BuildSet`."""
+
+        repo = await buildset.repository
+        to_cancel = type(buildset).objects(
+            repository=repo, branch=buildset.branch,
+            builds__status=Build.PENDING, created__lt=buildset.created)
+
+        async for buildset in to_cancel:
+            for build in buildset.builds:
+                try:
+                    await build.cancel()
+                except ImpossibleCancellation:
+                    pass
+
     async def start_pending(self):
         """Starts all pending buildsets that are not already scheduled for
         ``self.repository``."""
@@ -569,8 +629,12 @@ class BuildManager(LoggerMixin):
 
                 builds = []
                 for build in buildset.builds:
+                    # we need to reload it here so we can get the
+                    # updated status of the build (ie cancelled)
+                    build = await type(build).get(build.uuid)
                     build_slave = await build.slave
-                    if slave == build_slave:
+                    if slave == build_slave and build.status == type(
+                            build).PENDING:
                         builds.append(build)
                 if builds:
                     await self._set_started_for_buildset(buildset)

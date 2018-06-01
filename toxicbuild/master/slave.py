@@ -169,19 +169,13 @@ class Slave(OwnedDocument, LoggerMixin):
             msg = 'build started at {}'.format(build_info['started'])
             self.log(msg)
             build_started.send(str(repo.id), build=build)
-            msg = build.to_dict()
-            msg.update({'repository_id': str(repo.id),
-                        'event_type': 'build-started'})
-            await build_notifications.publish(msg)
+            await build.notify('build-started')
         else:
             msg = 'build finished at {} with status {}'.format(
                 build_info['finished'], build.status)
             self.log(msg)
             build_finished.send(str(repo.id), build=build)
-            msg = build.to_dict()
-            msg.update({'repository_id': str(repo.id),
-                        'event_type': 'build-finished'})
-            await build_notifications.publish(msg)
+            await build.notify('build-finished')
 
     async def _process_step_info(self, build, step_info):
 

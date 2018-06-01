@@ -4,7 +4,7 @@ import time
 from behave import when, then, given
 from selenium.common.exceptions import NoSuchElementException
 from tests.functional.webui.steps.base_steps import (  # noqa f811
-    given_logged_in_webui)
+    given_logged_in_webui, then_sees_message)
 from tests.functional import REPO_DIR
 
 
@@ -27,7 +27,9 @@ def step_impl(context):
 def step_impl(context, repo_name):
     browser = context.browser
     input_element = browser.find_element_by_id('repo_name')
-    input_element.send_keys(repo_name)
+    for l in repo_name:
+        browser.click(input_element)
+        input_element.send_keys(l)
 
 
 @when('clicks in the save repo button')  # noqa f401
@@ -63,13 +65,6 @@ def step_impl(context, slave_name):
     select = browser.find_element_by_id('repo_slaves')
     select.find_element_by_xpath(
         "//select/option[@value='{}']".format(slave_name)).click()
-
-
-@then('he sees the "{msg}" message')  # noqa f401
-def step_impl(context, msg):
-    browser = context.browser
-    is_present = browser.wait_text_become_present(msg)
-    assert is_present
 
 
 @then('the repo status "{status}"')  # noqa f401

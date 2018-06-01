@@ -372,6 +372,11 @@ tr:nth-child(even) .toxic-spinner-main{
     background-color: #3caf3c;
 }
 
+.builder-cancelled,
+.step-cancelled{
+    background-color: #7f7f7f;
+}
+
 .btn-pending,
 .builder-pending,
 .step-pending{

@@ -176,6 +176,19 @@ def after_feature(context, feature):
     loop.run_until_complete(delete(context))
 
 
+def before_scenario(context, scenario):
+    if scenario.name == 'A user cancels a build':
+        # we stop the slave so we can be sure the build is pending
+        # when we try to cancel it
+        stop_slave()
+
+
+def after_scenario(context, scenario):
+    if scenario.name == 'A user cancels a build':
+        # starting it for the other tests, if any
+        start_slave()
+
+
 def after_all(context):
 
     stop_webui()

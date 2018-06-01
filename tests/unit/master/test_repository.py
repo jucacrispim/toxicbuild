@@ -954,6 +954,25 @@ class RepositoryTest(TestCase):
         repository.Repository.remove_running_build()
         self.assertEqual(repository.Repository.get_running_builds(), 0)
 
+    @async_test
+    async def test_cancel_build(self):
+        self.repo.build_manager.cancel_build = AsyncMagicMock(
+            spec=self.repo.build_manager.cancel_build)
+        await self.repo.cancel_build('some-uuid')
+        self.assertTrue(self.repo.build_manager.cancel_build.called)
+
+    def test_notify_only_latest(self):
+        self.repo.branches = [repository.RepositoryBranch(
+            name='master', notify_only_latest=False)]
+        only_latest = self.repo.notify_only_latest('master')
+        self.assertFalse(only_latest)
+
+    def test_notify_only_latest_not_known(self):
+        self.repo.branches = [repository.RepositoryBranch(
+            name='master', notify_only_latest=False)]
+        only_latest = self.repo.notify_only_latest('dont-know')
+        self.assertTrue(only_latest)
+
     async def _create_db_revisions(self):
         self.owner = users.User(email='zezinho@nada.co', password='123')
         await self.owner.save()

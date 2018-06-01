@@ -11,10 +11,10 @@ jQuery('#stepDetailsModal').on('show.bs.modal', function (event) {
   var status = button.data('step-status');
   var start = button.data('step-start');
   var end = button.data('step-end');
-  var uuid = button.data('step-uuid')
+  var uuid = button.data('step-uuid');
   var total = button.data('step-total-time');
 
-  var modal = jQuery(this)
+  var modal = jQuery(this);
   modal.find('#step-command').text(command);
   modal.find('#step-output').text(output);
   modal.find('#step-status').text(status);
@@ -37,7 +37,7 @@ jQuery('#buildsetDetailsModal').on('show.bs.modal', function (event) {
   var finished = button.data('buildset-finished');
   var total = button.data('buildset-total-time');
 
-  var modal = jQuery(this)
+  var modal = jQuery(this);
   modal.find('#buildset-commit').text(commit);
   modal.find('#buildset-commit-author').text(author);
   modal.find('#buildset-commit-title').text(title);
@@ -59,7 +59,7 @@ jQuery('#buildDetailsModal').on('show.bs.modal', function (event) {
   var finished = button.data('build-finished');
   var total = button.data('build-total-time');
 
-  var modal = jQuery(this)
+  var modal = jQuery(this);
   modal.find('#buildset-commit').text(commit);
   modal.find('#buildset-commit-author').text(author);
   modal.find('#buildset-commit-title').text(title);
@@ -115,19 +115,42 @@ function rebuildBuild(button){
   var data = {name: repo_name, named_tree: named_tree, branch: branch,
 	      builder_name: builder_name};
   var success_cb = function(response){
-    utils.showSuccessMessage('Build re-scheduled.')
+    utils.showSuccessMessage('Build re-scheduled.');
   };
 
   var error_cb = function(response){
-    utils.showErrorMessage('Error re-scheduling build!')
+    utils.showErrorMessage('Error re-scheduling build!');
   };
 
   utils.sendAjax('post', url, data, success_cb, error_cb);
 }
+
 jQuery('.btn-rebuild-build').on('click', function(event){
   var button = jQuery(this);
   rebuildBuild(button);
 });
+
+function cancelBuild(button){
+  var url = '/api/repo/cancel-build';
+  var repo_name = jQuery('#waterfall-repo-name').val();
+  var build_uuid = button.data('build-uuid');
+  var data = {'name': repo_name, 'build_uuid': build_uuid};
+  var success_cb = function(response){
+    utils.showSuccessMessage('Build cancelled.');
+  };
+
+  var error_cb = function(response){
+    utils.showErrorMessage('Error cancelling build!');
+  };
+
+  utils.sendAjax('post', url, data, success_cb, error_cb);
+}
+
+jQuery('.btn-cancel-build').on('click', function(event){
+  var button = jQuery(this);
+  cancelBuild(button);
+});
+
 
 
 function sticky_relocate() {
@@ -135,7 +158,7 @@ function sticky_relocate() {
   jQuery('.builder').each(function (){
     BUILDER_SIZE.push(jQuery(this).outerWidth());
   });
-  var i = 0
+  var i = 0;
   jQuery('.builder').each(function(){
     var window_top = jQuery(window).scrollTop();
     var div_top = jQuery(this).offset().top;
@@ -199,14 +222,23 @@ var BUILDSET_TEMPLATE  = `
 	</ul>
       </td>
     </tr>
-  `
+  `;
 
 var BUILD_TEMPLATE = `
 <ul>
   <li class="step step-{{build.status}}" id="build-info-{{build.id}}">
     Build - {{build.status}}
     <i class="fa fa-3x fa-fw toxic-spinner-running" id="spinner-build-{{build.uuid}}" style="display:none"></i>
-    <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" style="display:none" class="rebuild-icon">
+
+	    <span data-toggle="tooltip" title="Cancel build" data-placement="right" id="cancel-build-btn-{{build.uuid}}">
+	      <button type="button" class="btn btn-default btn-cancel-build btn-transparent btn-sm"
+		      data-repository-id="{{repository.id}}"
+		      data-build-uuid="{{build.uuid}}">
+		<span class="glyphicon glyphicon-remove-sign" aria-hidden="true"></span>
+	      </button>
+	    </span>
+
+    <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" style="display:none" class="rebuild-icon" id="reschedule-build-btn-{{build.uuid}}">
       <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-build btn-sm"
         data-buildset-commit="{{buildset.commit}}"
         data-buildset-branch="{{buildset.branch}}"
@@ -330,6 +362,7 @@ function WaterfallManager(){
 
     handleEvent: function(self, event){
       var data = jQuery.parseJSON(event.data);
+      console.log(data.event_type);
       if (data.event_type == 'build_added'){
 	self.handleBuildAdded(data);
       }else if (data.event_type == 'build_started'){
@@ -340,6 +373,8 @@ function WaterfallManager(){
 	self.handleStepStarted(data);
       }else if (data.event_type == 'step_finished'){
 	self.handleStepFinished(data);
+      }else if (data.event_type == 'build_cancelled'){
+	self.handleBuildCancelled(data);
       }
     },
 
@@ -383,11 +418,12 @@ function WaterfallManager(){
       build_el.parent().append(template);
       template.slideDown('slow');
       self._step_sentinels[step.uuid] = StepOutputSentinel(step.uuid,
-							   self._repository_id)
+							   self._repository_id);
       self._build_last_step[build.uuid] = step.index;
       if (!from_queue){
 	self._handleStepQueue(build);
       }
+      return true;
     },
 
     handleStepFinished: function(step){
@@ -396,7 +432,7 @@ function WaterfallManager(){
       var step_el = jQuery('#step-' + step.uuid);
       if (!step_el.length){
 	self._step_finished_queue.push(step);
-	return false
+	return false;
       };
 
       try{
@@ -413,6 +449,7 @@ function WaterfallManager(){
       html = html.replace('{{step.output}}', step.output.replace(/"/g, "'"));
       html = html.replace(/running/g, step.status);
       step_el.html(html);
+      return true;
     },
 
     handleBuildStarted: function(build){
@@ -421,7 +458,8 @@ function WaterfallManager(){
       var build_el = jQuery('#build-info-' + build.uuid);
       var details_btn = jQuery(jQuery('.btn-build-details', build_el)[0]);
       details_btn.attr('data-build-started', build.started);
-
+      var cancel_btn = jQuery('#cancel-build-btn-' + build.uuid);
+      cancel_btn.hide();
       if (build_el.length == 0){
 	self._build_started_queue.push(build);
 	return false;
@@ -435,7 +473,7 @@ function WaterfallManager(){
       var spinner = jQuery('#spinner-build-' + build.uuid);
       spinner.show();
 
-      var builder_input = jQuery('#builder-' + build.builder.id)
+      var builder_input = jQuery('#builder-' + build.builder.id);
       var builder_status = builder_input.val();
       if (builder_status != 'running'){
 	builder_input.parent().removeClass('builder-' + builder_status);
@@ -472,13 +510,14 @@ function WaterfallManager(){
 
       build_el.removeClass('step-running').addClass('step-' + build.status);
 
-      var builder_input = jQuery('#builder-' + build.builder.id)
+      var builder_input = jQuery('#builder-' + build.builder.id);
       var builder_status = builder_input.val();
       builder_input.parent().removeClass('builder-running');
       builder_input.parent().removeClass('builder-pending');
       builder_input.parent().addClass('builder-' + build.status);
       builder_input.val(build.status);
       self._handleBuildSetFinished(build.buildset);
+      return true;
     },
 
     handleBuildAdded: function(build){
@@ -489,6 +528,18 @@ function WaterfallManager(){
 	self._addBuildSet(buildset);
       };
       self._addBuild(build);
+    },
+
+    handleBuildCancelled: function(build){
+      var self = this;
+      var build_el = jQuery('#build-info-' + build.uuid);
+      var build_btn = jQuery('#cancel-build-btn-' + build.uuid);
+      build_btn.hide();
+      jQuery('#reschedule-build-btn-' + build.uuid).show();
+      var html = build_el.html().replace(/pending/, 'cancelled');
+      html = html.replace(/{{build.uuid}}/g, build.uuid);
+      build_el.html(html);
+      build_el.removeClass('step-pending').addClass('step-cancelled');
     },
 
     _handleBuildQueue: function(build){
@@ -607,7 +658,7 @@ function WaterfallManager(){
     _addBuild: function(build){
       var self = this;
       var builder = self._getBuilder(build.builder.id);
-      var buildset = build.buildset
+      var buildset = build.buildset;
       var build_el = jQuery('#build-builder-' + build.builder.id);
 
       if (!build_el.length){
@@ -626,11 +677,20 @@ function WaterfallManager(){
       template = template.replace(/{{build.started}}/g, build.started);
       template = template.replace(/{{build.finished}}/g, build.finished);
       template = template.replace(/{{build.total_time}}/g, build.total_time);
+      template = template.replace(/{{build.uuid}}/g, build.uuid);
+      var repo_id = jQuery('#waterfall-repo-id').val();
+      template = template.replace(/{{repository.id}}/g, repo_id);
       var builder_name = builder ? builder.name : 'new-builder';
       template = template.replace(/{{build.builder.name}}/g, builder_name);
       jQuery(build_el).append(template);
       self._handleBuildQueue(build);
       self._handleStepQueue(build);
+
+      jQuery('.btn-cancel-build', build_el).on('click', function(event){
+	var button = jQuery(this);
+	cancelBuild(button);
+      });
+
     },
 
     _getBuilder: function(builder_id){

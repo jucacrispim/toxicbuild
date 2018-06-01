@@ -34,6 +34,7 @@ from toxicbuild.core.vcs import get_vcs
 from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder, BuildManager
 from toxicbuild.master.document import OwnedDocument
+from toxicbuild.master.exceptions import RepoBranchDoesNotExist
 from toxicbuild.master.exchanges import (update_code, poll_status,
                                          revisions_added, locks_conn,
                                          scheduler_action, repo_status_changed,
@@ -777,6 +778,35 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                'slaves_ids': [str(s.id) for s in slaves]}
 
         await repo_notifications.publish(msg, routing_key='build-requested')
+
+    async def cancel_build(self, build_uuid):
+        """Cancels a build.
+
+        :param build_uuid: The uuid of the build."""
+
+        await self.build_manager.cancel_build(build_uuid)
+
+    def get_branch(self, branch_name):
+        """Returns an instance of
+        :class:`~toxicbuild.master.repository.RepositoryBranch`"""
+
+        for branch in self.branches:
+            if branch.name == branch_name:
+                return branch
+
+        raise RepoBranchDoesNotExist(branch_name)
+
+    def notify_only_latest(self, branch_name):
+        """Indicates if a branch notifies only the latest revision.
+
+        :param branch_name: The name of the branch."""
+        try:
+            branch = self.get_branch(branch_name)
+            only_latest = branch.notify_only_latest
+        except RepoBranchDoesNotExist:
+            only_latest = True
+
+        return only_latest
 
     async def _get_builders(self, slaves, revision):
         builders = {}
