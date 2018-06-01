@@ -21,7 +21,7 @@ Feature:
         And clicks in the save repo button
         Then he sees the "Repository is being created. Please wait." message
         And the repo status "pending"
-        And the repo status "success"
+        And the repo status "running"
 
     Scenario:
         The user enables an output method plugin

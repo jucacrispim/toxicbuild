@@ -10,15 +10,14 @@ from tests.functional.webui.steps.base_steps import (  # noqa f811
 def step_impl(context):
     browser = context.browser
     btn = browser.find_element_by_id('btn-status-repo-bla')
-    time.sleep(1)
     browser.click(btn)
 
 
 @then('he sees a list of builds in the waterfall')  # noqa f401
 def step_impl(context):
     browser = context.browser
-    elements = browser.find_elements_by_class_name('builder')
-    assert len(elements) == 3
+    elements = browser.find_elements_by_class_name('builder-column')
+    assert bool(elements)
 
 
 @given('the user is already in the waterfall')  # noqa f401
@@ -53,6 +52,7 @@ def step_impl(context):
     time.sleep(1)
     btn = browser.find_element_by_class_name('btn-buildset-details')
     browser.click(btn)
+    time.sleep(0.2)
 
 
 @then('he sees the buildset details modal')  # noqa 401
@@ -75,6 +75,7 @@ def step_impl(context):
     browser = context.browser
     btn = browser.find_element_by_class_name('btn-step-details')
     browser.click(btn)
+    time.sleep(0.2)
 
 
 @then('he sees the step details modal')  # noqa f401
@@ -88,6 +89,7 @@ def step_impl(context):
 @when('he clicks in the reschedule build button')  # noqa f401
 def step_impl(context):
     browser = context.browser
+    browser.get(browser.current_url)
     btn = browser.find_element_by_class_name('btn-rebuild-build')
     browser.click(btn)
     time.sleep(0.5)

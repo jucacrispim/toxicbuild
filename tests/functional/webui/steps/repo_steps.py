@@ -13,6 +13,7 @@ def step_impl(context):
     browser = context.browser
     btn = browser.find_element_by_id('add-repo-btn')
     browser.click(btn)
+    time.sleep(0.2)
 
 
 @when('sees the repo modal')  # noqa f401
@@ -70,6 +71,8 @@ def step_impl(context, slave_name):
 @then('the repo status "{status}"')  # noqa f401
 def step_impl(context, status):
     browser = context.browser
+    statuses = {'running': 'info'}
+    status = statuses.get(status) or status
     cls_name = 'btn-{}'.format(status)
     el = browser.find_element_by_class_name(cls_name)
     assert el
@@ -85,6 +88,7 @@ def step_impl(context):
     browser = context.browser
     btn = browser.find_element_by_class_name('btn-edit-plugin')
     browser.click(btn)
+    time.sleep(0.2)
 
 
 @when('sees the output methods modal')  # noqa f401
@@ -148,6 +152,7 @@ def step_impl(context):
     browser = context.browser
     btn = browser.find_element_by_class_name('btn-edit-repo')
     browser.click(btn)
+    time.sleep(0.2)
 
 
 @when('clicks in the delete repo button')  # noqa f401
