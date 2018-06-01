@@ -167,12 +167,23 @@ class RepositoryHandler(BaseModelHandler):
             yield from self.disable_plugin()
             return
 
+        elif 'cancel-build' in self.request.uri:
+            yield from self.cancel_build()
+            return
+
         elif'start-build' not in args:
             yield super().post(*args)
             return
 
         ret = yield from self.start_build()
         self.write(ret)
+
+    @asyncio.coroutine
+    def cancel_build(self):
+        repo = yield from self.get_item(repo_name=self.params.get('name'))
+        build_uuid = self.params['build_uuid']
+        r = yield from repo.cancel_build(build_uuid)
+        return r
 
     @asyncio.coroutine
     def enable_plugin(self):
@@ -240,6 +251,9 @@ class RepositoryHandler(BaseModelHandler):
         elif ('enable-plugin' in self.request.uri or
               'disable-plugin' in self.request.uri):
             yield from self._prepare_for_plugin()
+
+        elif 'cancel-build' in self.request.uri:
+            pass
 
         else:
             kw = {}

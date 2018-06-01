@@ -235,6 +235,19 @@ class RepositoryHandlerTest(AsyncTestCase):
         self.assertTrue(get_item_mock.called)
 
     @gen_test
+    def test_cancel_build(self):
+        kwargs = {'name': [b'some-repo'],
+                  'build_uuid': [b'some-uuid']}
+        self.handler.request.arguments = kwargs
+        self.handler.request.uri = 'http://bla.com/cancel-build'
+        self.handler.get_item = AsyncMagicMock()
+        self.handler._get_user_from_cookie = MagicMock()
+        self.handler.prepare()
+        yield from self.handler.post()
+        repo = self.handler.get_item.return_value
+        self.assertTrue(repo.cancel_build.called)
+
+    @gen_test
     def test_enable_plugin(self):
         kwargs = {'name': [b'some-repo'],
                   'plugin_name': [b'my-plugin'],

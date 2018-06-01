@@ -343,6 +343,14 @@ class RepositoryTest(TestCase):
 
         self.assertEqual(resp, 'ok')
 
+    @async_test
+    async def test_cancel_build(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'build-cancelled')
+
+        resp = await self.repository.cancel_build('some-build-uuid')
+        self.assertEqual(resp, 'build-cancelled')
+
 
 class SlaveTest(TestCase):
 
