@@ -90,7 +90,7 @@ def step_impl(context):
     browser = context.browser
     btn = browser.find_element_by_class_name('btn-rebuild-build')
     browser.click(btn)
-    time.sleep(0.2)
+    time.sleep(0.5)
 
 
 @when('cancels the newly added build')  # noqa f401

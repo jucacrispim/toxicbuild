@@ -27,7 +27,9 @@ def step_impl(context):
 def step_impl(context, repo_name):
     browser = context.browser
     input_element = browser.find_element_by_id('repo_name')
-    input_element.send_keys(repo_name)
+    for l in repo_name:
+        browser.click(input_element)
+        input_element.send_keys(l)
 
 
 @when('clicks in the save repo button')  # noqa f401
