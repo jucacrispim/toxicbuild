@@ -656,6 +656,7 @@ class UIStreamHandler(LoggerMixin):
         await self.send_info('build_added', **kw)
 
     async def build_cancelled_fn(self, sender, **kw):
+        self.log('Got build-cancelled signal', level='debug')
         await self.send_info('build_cancelled', **kw)
 
     async def _connect2signals(self):
@@ -798,7 +799,7 @@ class UIStreamHandler(LoggerMixin):
             self._disconnectfromsignals()
 
 
-class HoleServer:
+class HoleServer(LoggerMixin):
 
     def __init__(self, addr='127.0.0.1', port=6666):
         self.protocol = UIHole
@@ -815,9 +816,12 @@ class HoleServer:
         ensure_future(coro)
 
     async def shutdown(self):
+        self.log('Shutting down')
         self.protocol.set_shutting_down()
         Repository.stop_consuming_messages()
         while Repository.get_running_builds() > 0:
+            self.log('Waiting for {} build to finish'.format(
+                Repository.get_running_builds()))
             await asyncio.sleep(0.5)
 
     def sync_shutdown(self, signum=None, frame=None):

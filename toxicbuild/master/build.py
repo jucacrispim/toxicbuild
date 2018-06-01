@@ -606,8 +606,12 @@ class BuildManager(LoggerMixin):
 
                 builds = []
                 for build in buildset.builds:
+                    # we need to reload it here so we can get the
+                    # updated status of the build (ie cancelled)
+                    build = await type(build).get(build.uuid)
                     build_slave = await build.slave
-                    if slave == build_slave:
+                    if slave == build_slave and build.status == type(
+                            build).PENDING:
                         builds.append(build)
                 if builds:
                     await self._set_started_for_buildset(buildset)
@@ -629,9 +633,6 @@ class BuildManager(LoggerMixin):
         for chunk in self._get_builds_chunks(builds):
             chunk_fs = []
             for build in chunk:
-                if not build.status == Build.PENDING:
-                    continue
-
                 type(self.repository).add_running_build()
                 f = ensure_future(slave.build(build))
                 f.add_done_callback(
