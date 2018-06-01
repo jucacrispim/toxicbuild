@@ -83,3 +83,26 @@ def step_impl(context):
     el = browser.find_element_by_id('stepDetailsModal')
     is_visible = browser.wait_element_become_visible(el)
     assert is_visible
+
+
+@when('he clicks in the reschedule build button')  # noqa f401
+def step_impl(context):
+    browser = context.browser
+    btn = browser.find_element_by_class_name('btn-rebuild-build')
+    browser.click(btn)
+    time.sleep(0.2)
+
+
+@when('cancels the newly added build')  # noqa f401
+def step_impl(context):
+    browser = context.browser
+    btn = browser.find_element_by_class_name('btn-cancel-build')
+    browser.click(btn)
+    time.sleep(0.5)
+
+
+@then('he sees the build cancelled')  # noqa f401
+def step_impl(context):
+    browser = context.browser
+    cancelled = browser.find_element_by_class_name('step-cancelled')
+    assert cancelled

@@ -6,6 +6,9 @@ Feature:
         When he clicks in the waterfall button
         Then he sees a list of builds in the waterfall
 
+    # NOTE: The tests commented here are commented because the
+    # ui is buggy. A new one will be written.
+
     # Scenario: A user sees builds running
     #     Given the user is already in the waterfall
     #     When he sees the builds running
@@ -22,3 +25,9 @@ Feature:
     #     When he clicks in the step details button
     #     Then he sees the step details modal
     #     And closes the details modal
+
+    Scenario: A user cancels a build
+        Given the user is already in the waterfall
+        When he clicks in the reschedule build button
+        And cancels the newly added build
+        Then he sees the build cancelled
