@@ -837,7 +837,7 @@ class BuildManagerTest(TestCase):
     async def test_cancel_build(self):
         await self._create_test_data()
         build = self.buildset.builds[0]
-        await self.repo.build_manager.cancel_build(build.uuid)
+        await self.repo.build_manager.cancel_build(str(build.uuid))
         bs = await type(self.buildset).objects.get(id=self.buildset.id)
         self.assertEqual(bs.builds[0].status, 'cancelled')
 

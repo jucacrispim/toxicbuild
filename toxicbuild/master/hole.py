@@ -436,6 +436,7 @@ class HoleHandler:
 
         repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.cancel_build(build_uuid)
+        return {'repo-cancel-build': 'ok'}
 
     async def slave_add(self, slave_name, slave_host, slave_port, slave_token,
                         owner_id):

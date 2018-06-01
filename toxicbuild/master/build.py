@@ -39,7 +39,7 @@ from toxicbuild.master.utils import as_db_ref
 
 
 # The statuses used in builds  ordered by priority.
-ORDERED_STATUSES = ['running', 'exception', 'fail',
+ORDERED_STATUSES = ['running', 'cancelled', 'exception', 'fail',
                     'warning', 'success', 'pending']
 
 
@@ -537,10 +537,12 @@ class BuildManager(LoggerMixin):
 
         :param build_uuid: The uuid that indentifies the build to be cancelled.
         """
+
         build = await Build.get(build_uuid)
         try:
             await build.cancel()
             await build.notify('build-cancelled')
+            build_cancelled.send(str(self.repository.id), build=build)
         except ImpossibleCancellation:
             self.log('Could not cancel build {}'.format(build_uuid),
                      level='warning')
