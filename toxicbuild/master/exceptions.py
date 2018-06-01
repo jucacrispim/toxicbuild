@@ -31,3 +31,7 @@ class UnknownSchedulerAction(Exception):
 
 class ImpossibleCancellation(Exception):
     pass
+
+
+class RepoBranchDoesNotExist(Exception):
+    pass

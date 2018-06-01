@@ -463,13 +463,18 @@ class BuildManager(LoggerMixin):
           :class:`toxicbuild.master.RepositoryRevision`
           instances for the build."""
 
+        last_bs = None
         for revision in revisions:
             buildset = await BuildSet.create(repository=self.repository,
                                              revision=revision)
 
+            last_bs = buildset
             slaves = await self.repository.slaves
             for slave in slaves:
                 await self.add_builds_for_slave(buildset, slave)
+
+        if last_bs and self.repository.notify_only_latest(buildset.branch):
+            await self.cancel_previous_pending(buildset)
 
     async def add_builds_for_slave(self, buildset, slave, builders=[]):
         """Adds builds for a given slave on a given buildset.
@@ -546,6 +551,24 @@ class BuildManager(LoggerMixin):
         except ImpossibleCancellation:
             self.log('Could not cancel build {}'.format(build_uuid),
                      level='warning')
+
+    async def cancel_previous_pending(self, buildset):
+        """Cancels the builds previous to ``buildset``.
+
+        :param buildset: An instance of
+        :class:`~toxicbuild.master.build.BuildSet`."""
+
+        repo = await buildset.repository
+        to_cancel = type(buildset).objects(
+            repository=repo, branch=buildset.branch,
+            builds__status=Build.PENDING, created__lt=buildset.created)
+
+        async for buildset in to_cancel:
+            for build in buildset.builds:
+                try:
+                    await build.cancel()
+                except ImpossibleCancellation:
+                    pass
 
     async def start_pending(self):
         """Starts all pending buildsets that are not already scheduled for

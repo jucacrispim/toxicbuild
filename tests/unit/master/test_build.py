@@ -500,6 +500,33 @@ class BuildManagerTest(TestCase):
 
         self.assertEqual(len(self.manager.build_queues[self.slave.name]), 1)
 
+    @async_test
+    async def test_add_builds_no_bs(self):
+        self.manager.cancel_previous_pending = AsyncMagicMock(
+            spec=self.manager.cancel_previous_pending)
+        await self.manager.add_builds([])
+        self.assertFalse(self.manager.cancel_previous_pending.called)
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
+    @async_test
+    async def test_add_builds_not_only_latest(self):
+        await self._create_test_data()
+        self.manager._execute_builds = AsyncMagicMock(
+            spec=self.manager._execute_builds)
+        self.manager.get_builders = AsyncMagicMock(
+            spec=self.manager.get_builders, return_value=[self.builder])
+        self.manager.cancel_previous_pending = AsyncMagicMock(
+            spec=self.manager.cancel_previous_pending)
+        self.manager.repository = self.repo
+        self.repo.branches = [repository.RepositoryBranch(
+            name='master', notify_only_latest=False)]
+        await self.manager.add_builds([self.revision])
+        self.assertFalse(self.manager.cancel_previous_pending.called)
+
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
@@ -863,6 +890,18 @@ class BuildManagerTest(TestCase):
         build_inst = self.buildset.builds[0]
         await build_inst.notify('build-added')
         self.assertTrue(build.build_notifications.publish.called)
+
+    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
+        spec=build.build_notifications.publish))
+    @async_test
+    async def test_cancel_previous_pending(self):
+        await self._create_test_data()
+        bs = await build.BuildSet.create(repository=self.repo,
+                                         revision=self.revision)
+        await self.repo.build_manager.cancel_previous_pending(bs)
+        old_bs = await build.BuildSet.objects.get(id=self.buildset.id)
+        self.assertEqual(old_bs.builds[0].status, 'cancelled')
+        self.assertEqual(old_bs.get_status(), 'running')
 
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asdf')
