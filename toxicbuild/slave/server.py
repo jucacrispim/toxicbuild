@@ -17,7 +17,7 @@ class BuildServer(LoggerMixin):
         requests. If ``0.0.0.0``, receives requests from all addresses.
         :param port: The port for the slave to listen.
         :param loop: A main loop. If none, ``asyncio.get_event_loop()``
-        will be used.
+          will be used.
         :param use_ssl: Indicates is the connection uses ssl or not.
         :param cafile: The path for the CA file. Only used if use_ssl=True.
         """
@@ -58,7 +58,7 @@ class BuildServer(LoggerMixin):
         self.loop.run_until_complete(self.shutdown())
 
 
-def run_server(addr='0.0.0.0', port=7777):
+def run_server(addr='0.0.0.0', port=7777, use_ssl=False, cafile=None):
     log('Serving at {}'.format(port))
-    with BuildServer(addr, port) as server:
+    with BuildServer(addr, port, use_ssl, cafile) as server:
         server.start()

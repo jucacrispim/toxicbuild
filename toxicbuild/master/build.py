@@ -69,8 +69,12 @@ class Builder(SerializeMixin, Document):
     """ The entity responsible for executing the build steps.
     """
 
-    name = StringField()
+    name = StringField(required=True)
+    """The name of the builder."""
+
     repository = ReferenceField('toxicbuild.master.Repository')
+    """A referece to the :class:`~toxicbuild.master.repository.Repository` that
+    owns the builder"""
 
     @classmethod
     async def create(cls, **kwargs):
@@ -144,17 +148,36 @@ class BuildStep(EmbeddedDocument):
                 'warning']
 
     uuid = UUIDField(required=True, default=lambda: uuid4())
+    """The uuid that indentifies the build step"""
+
     name = StringField(required=True)
+    """The name of the step. Will be displayed in the ui."""
+
     command = StringField(required=True)
+    """The command that executes the step"""
+
     status = StringField(choices=STATUSES)
+    """The current status of the step. May be one of the values in STATUSES`"""
+
     output = StringField()
+    """The output of the step"""
+
     started = DateTimeField(default=None)
+    """When the step stated. It msut be in UTC."""
+
     finished = DateTimeField(default=None)
+    """When the step finished. It msut be in UTC."""
+
     # the index of the step in the build.
     index = IntField(requred=True)
+    """The index of the step in the build."""
+
     total_time = IntField()
+    """The total time spen in the step."""
 
     def to_dict(self):
+        """Returns a dict representation of the BuildStep."""
+
         objdict = json.loads(super().to_json())
         objdict['uuid'] = str(self.uuid)
         keys = objdict.keys()
@@ -175,6 +198,8 @@ class BuildStep(EmbeddedDocument):
         return objdict
 
     def to_json(self):
+        """Returns a json representation of the BuildStep."""
+
         return json.dumps(self.to_dict())
 
 
@@ -183,11 +208,20 @@ class BuildExternalInfo(EmbeddedDocument):
     from a revision that came from an external repo."""
 
     url = StringField(required=True)
+    """The url of the external repository"""
+
     name = StringField(required=True)
+    """A name for the remote repository."""
+
     branch = StringField(required=True)
+    """The name of the branch in the external repo."""
+
     into = StringField(required=True)
+    """A name for a local branch to clone the external branch into."""
 
     def to_dict(self):
+        """Returns a dict representation of the object."""
+
         return {'url': self.url, 'name': self.name,
                 'branch': self.branch, 'into': self.into}
 
@@ -203,19 +237,52 @@ class Build(EmbeddedDocument):
     STATUSES = BuildStep.STATUSES + [PENDING, CANCELLED]
 
     uuid = UUIDField(required=True, default=lambda: uuid4())
+    """An uuid that identifies the build"""
+
     repository = ReferenceField('toxicbuild.master.Repository', required=True)
+    """A referece to the :class:`~toxicbuild.master.repository.Repository` that
+    owns the build"""
+
     slave = ReferenceField('Slave', required=True)
+    """A reference to the :class:`~toxicbuild.master.slave.Slave` that will
+    execute the build."""
+
     branch = StringField(required=True)
+    """The branch of the code that will be tested."""
+
     named_tree = StringField(required=True)
+    """A identifies of the commit, a sha, a tag name, etc..."""
+
     started = DateTimeField()
+    """When the build was started. It must be in UTC."""
+
     finished = DateTimeField()
+    """When the build was finished. It must be in UTC."""
+
     builder = ReferenceField(Builder, required=True)
+    """A reference to an instance of
+    :class:`~toxicbuild.master.build.Builder`."""
+
     status = StringField(default=PENDING, choices=STATUSES)
+    """The current status of the build. May be on of the values in
+    :attr:`~toxicbuild.master.build.Build.STATUSES`.
+    """
+
     steps = ListField(EmbeddedDocumentField(BuildStep))
+    """A list of :class:`~toxicbuild.master.build.BuildStep`"""
+
     total_time = IntField()
+    """The total time of the build execution."""
+
     external = EmbeddedDocumentField(BuildExternalInfo)
+    """A reference to :class:`~toxicbuild.master.build.BuildExternalInfo`"""
 
     def to_dict(self, id_as_str=False):
+        """Transforms the object into a dictionary.
+
+        :param id_as_str: Indicates if the id should be a string or an
+          ObjectId instance."""
+
         steps = [s.to_dict() for s in self.steps]
         objdict = json.loads(super().to_json())
         objdict['builder']['id'] = objdict['builder']['$oid']
@@ -238,6 +305,8 @@ class Build(EmbeddedDocument):
         return objdict
 
     def to_json(self):
+        """Returns a json representation of the buld."""
+
         objdict = self.to_dict(id_as_str=True)
         return json.dumps(objdict)
 
@@ -311,20 +380,44 @@ class BuildSet(SerializeMixin, Document):
 
     repository = ReferenceField('toxicbuild.master.Repository',
                                 required=True)
+    """A referece to the :class:`~toxicbuild.master.repository.Repository` that
+    owns the buildset"""
+
     revision = ReferenceField('toxicbuild.master.RepositoryRevision',
                               required=True)
+    """A reference to the
+    :class:`~toxicbuild.master.repository.RepositoryRevision` that generated
+    this buildset."""
+
     commit = StringField(required=True)
+    """The identifier of the commit that generated the buildset."""
+
     commit_date = DateTimeField(required=True)
+    """The date of the commit"""
+
     branch = StringField(required=True)
+    """The branch of the commit"""
+
     author = StringField()
+    """Commit author's name."""
+
     title = StringField()
+    """Commit title"""
+
     builds = ListField(EmbeddedDocumentField(Build))
-    # when this buildset was first created.
+    """A list of :class:`~toxicbuild.master.build.Build` intances."""
+
     created = DateTimeField(default=now)
-    # when it actually started the builds
+    """When the BuildSet was first created. It must be in UTC."""
+
     started = DateTimeField()
+    """When the BuildSet started to run. It must be in UTC."""
+
     finished = DateTimeField()
+    """When the buildset finished. It must be in UTC."""
+
     total_time = IntField()
+    """The total time spent in the buildset"""
 
     meta = {
         'indexes': [
@@ -334,6 +427,8 @@ class BuildSet(SerializeMixin, Document):
 
     @queryset_manager
     def objects(doc_cls, queryset):
+        """The default querymanager for BuildSet"""
+
         return queryset.order_by('created')
 
     async def notify(self, event_type, status=None):
@@ -370,6 +465,8 @@ class BuildSet(SerializeMixin, Document):
         return buildset
 
     def to_dict(self, id_as_str=False):
+        """Returns a dict representation of the object"""
+
         objdict = super().to_dict(id_as_str=id_as_str)
         objdict['commit_date'] = datetime2string(self.commit_date)
         objdict['created'] = datetime2string(self.created)
@@ -391,10 +488,13 @@ class BuildSet(SerializeMixin, Document):
         return objdict
 
     def to_json(self):
+        """Returns a json representation of the object."""
         objdict = self.to_dict(id_as_str=True)
         return json.dumps(objdict)
 
     def get_status(self):
+        """Returns the status of the BuildSet"""
+
         build_statuses = set([b.status for b in self.builds])
         ordered_statuses = sorted(build_statuses,
                                   key=lambda i: ORDERED_STATUSES.index(i))
@@ -406,9 +506,16 @@ class BuildSet(SerializeMixin, Document):
         return status
 
     def get_pending_builds(self):
+        """Returns the pending builds of the buildset."""
+
         return [b for b in self.builds if b.status == Build.PENDING]
 
     async def get_builds_for(self, builder=None, branch=None):
+        """Returns the builds for a specific builder and/or branch.
+
+        :param builder: An instance of
+          :class:`~toxicbuild.master.build.Builder`.
+        :param branch: The name of the branch."""
 
         async def match_builder(b):
             if not builder or (builder and (await b.builder).id == builder.id):
@@ -444,16 +551,22 @@ class BuildManager(LoggerMixin):
     _is_building = defaultdict(lambda: defaultdict(lambda: False))
 
     def __init__(self, repository):
+        """:param repository: An instance of
+          :class:`~toxicbuild.master.repository.Repository.`"""
         self.repository = repository
         self._is_getting_builders = False
         self._is_connected_to_signals = False
 
     @property
     def build_queues(self):
+        """Returns the build queues for a repository."""
+
         return self._build_queues[self.repository.name]
 
     @property
     def is_building(self):
+        """Indicates if has some active build for a repository."""
+
         return self._is_building[self.repository.name]
 
     async def add_builds(self, revisions):

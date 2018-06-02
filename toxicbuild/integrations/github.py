@@ -41,18 +41,56 @@ from toxicbuild.master.users import User
 from toxicbuild.integrations.exceptions import (BadRequestToGithubAPI,
                                                 BadRepository, BadSignature)
 
+__doc__ = """This module implements the integration with Github. It is
+a `GithubApp <https://developer.github.com/apps/>`_  that reacts to events
+sent by github webhooks and informs about build statuses using
+`checks <https://developer.github.com/v3/checks/>`_.
+
+Usage:
+``````
+
+.. code-block:: python
+
+    # When a new installation is created on github we must create a
+    # installation here.
+
+    install = await GithubInstallation.create(github_install_id, user)
+
+    # When a push happens or a pull request is created or synchronized
+    # we update the code here.
+
+    await install.update_repository(github_repo_id)
+
+    # When a check is rerequested we request a build
+    await install.repo_request_build(github_repo_id, branch, named_tree)
+
+For information on how to setup the integration, see
+:ref:`github-integration-config`"""
+
 
 class GithubApp(LoggerMixin, Document):
     """A GitHub App. Only one app per ToxicBuild installation."""
 
     private_key = StringField(required=True)
+    """The private key you generated in github."""
+
     app_id = IntField(required=True)
+    """The id of the app in github."""
+
     jwt_expires = DateTimeField()
+    """When auth token for the github api. expires. It must be in UTC"""
+
     jwt_token = StringField()
+    """The auth token for the github api."""
+
     webhook_token = StringField()
+    """The token used to sign the incomming request in the webhook. This must
+    be set in the github app creation page."""
 
     @classmethod
     async def get_app(cls):
+        """Returns the app instance. If it does not exist, create it."""
+
         if await cls.app_exists():
             return await cls.objects.first()
 
@@ -67,10 +105,14 @@ class GithubApp(LoggerMixin, Document):
 
     @classmethod
     async def app_exists(cls):
+        """Informs if a github app already exists in the system."""
+
         app = await cls.objects.first()
         return bool(app)
 
     def validate_token(self, signature, data):
+        """Validates the incomming data in the webhook, sent by github."""
+
         sig = 'sha1=' + hmac.new(self.webhook_token.encode(), data,
                                  digestmod=hashlib.sha1).hexdigest()
         sig = sig.encode()
@@ -83,24 +125,33 @@ class GithubApp(LoggerMixin, Document):
         return True
 
     async def is_expired(self):
+        """Informs if the jwt token is expired."""
+
         if self.jwt_expires and utc2localtime(self.jwt_expires) < now():
             return True
         return False
 
     async def get_jwt_token(self):
+        """Returns the jwt token for authentication on the github api."""
+
         if self.jwt_token and not await self.is_expired():
             return self.jwt_token
         return await self.create_token()
 
     async def set_jwt_token(self, jwt_token):
+        """Sets the jwt auth token."""
+
         self.jwt_token = jwt_token
         await self.save()
 
     async def set_expire_time(self, exp_time):
+        """Sets the expire time for the jwt token"""
         self.jwt_expires = exp_time
         await self.save()
 
     def get_api_url(self):
+        """Returns the url for the github api."""
+
         return 'https://api.github.com/app'
 
     async def _create_jwt(self):
@@ -120,6 +171,8 @@ class GithubApp(LoggerMixin, Document):
         return jwt_token.decode()
 
     async def create_token(self):
+        """Creates a new token for the github api."""
+
         myjwt = await self._create_jwt()
         header = {'Authorization': 'Bearer {}'.format(myjwt),
                   'Accept': 'application/vnd.github.machine-man-preview+json'}
@@ -131,7 +184,8 @@ class GithubApp(LoggerMixin, Document):
         """Creates a auth token for a given github installation
 
         :param installation: An instance of
-        :class:`~toxicbuild.master.integrations.github.GitHubInstallation`"""
+          :class:`~toxicbuild.master.integrations.github.GitHubInstallation`
+        """
 
         app = await cls.get_app()
         msg = 'Creating installation token for {}'.format(installation.id)
@@ -159,9 +213,16 @@ GithubApp.ensure_indexes()
 
 
 class GithubInstallationRepository(LoggerMixin, EmbeddedDocument):
+    """External (github) information about a repository."""
+
     github_id = IntField(required=True)
+    """The id of the repository on github."""
+
     repository_id = StringField(required=True)
+    """The id of the repository on ToxicBuild."""
+
     full_name = StringField(required=True)
+    """Full name of the repository on github."""
 
 
 class GithubInstallation(LoggerMixin, Document):
@@ -171,6 +232,9 @@ class GithubInstallation(LoggerMixin, Document):
     app = GithubApp
 
     user = ReferenceField(User, required=True)
+    """A reference to the :class:`~toxicbuild.master.users.User` that owns
+      the installation"""
+
     # the id of the github app installation
     github_id = IntField(required=True, unique=True)
     auth_token = StringField()
@@ -179,8 +243,8 @@ class GithubInstallation(LoggerMixin, Document):
 
     @classmethod
     async def create(cls, github_id, user):
-        """Creates a new github app installation. Imports
-        the repositories available to the installation.
+        """Creates a new github app installation. Imports the repositories
+        available to the installation.
 
         :param github_id: The installation id on github
         :param user: The user that owns the installation."""
@@ -235,6 +299,7 @@ class GithubInstallation(LoggerMixin, Document):
 
     @property
     def token_is_expired(self):
+        """Informs if the installation auth token is expired."""
         n = now()
         if n > utc2localtime(self.expires):
             return True
@@ -387,13 +452,22 @@ class GithubCheckRun(MasterPlugin):
     was added, started or finished."""
 
     type = 'notification'
+    """The type of the plugin. This is a notification plugin."""
+
     name = 'github-check-run'
+    """The name of the plugin"""
+
     events = ['buildset-added', 'buildset-started', 'buildset-finished']
+    """Events that trigger the plugin."""
+
     no_list = True
 
     run_name = 'ToxicBuild CI'
+    """The name displayed on github."""
 
     installation = ReferenceField(GithubInstallation)
+    """The :class:`~toxicbuild.integrations.github.GithubInstallation`
+      that owns the plugin"""
 
     async def _get_repo_full_name(self, repo):
         full_name = None
@@ -411,6 +485,11 @@ class GithubCheckRun(MasterPlugin):
         return full_name
 
     async def run(self, sender, info):
+        """Runs the plugin.
+
+        :param sender: The :class:`~toxicbuild.master.repository.Repository`
+          that is running the plugin.
+        :param info: The information that is being sent."""
         self.sender = sender
 
         status = info['status']

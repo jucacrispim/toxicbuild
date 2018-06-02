@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2017-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -26,7 +26,7 @@ from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
 
 
 __doc__ = """This module implements a base client for basic
-comunication tcp communication, reading and writing json data.
+tcp communication, reading and writing json data.
 
 Usage:
 ``````
@@ -37,7 +37,7 @@ Usage:
     port = 1234
     async with BaseToxicClient(host, port):
         await client.write({'hello': 'world'})
-        response = await client.get_response()
+        json_response = await client.get_response()
 
 """
 
@@ -89,22 +89,20 @@ class BaseToxicClient(utils.LoggerMixin):
         self.writer.close()
         self._connected = False
 
-    @asyncio.coroutine
-    def write(self, data):
+    async def write(self, data):
         """ Writes ``data`` to the server.
 
         :param data: Data to be sent to the server. Will be converted to
           json and enconded using utf-8.
         """
         data = json.dumps(data)
-        yield from utils.write_stream(self.writer, data)
+        await utils.write_stream(self.writer, data)
 
-    @asyncio.coroutine
-    def read(self):
+    async def read(self):
         """Reads data from the server. Expects a json."""
         # '{}' is decoded as an empty dict, so in json
         # context we can consider it as being a False json
-        data = yield from utils.read_stream(self.reader)
+        data = await utils.read_stream(self.reader)
         data = data.decode() or '{}'
 
         try:
@@ -116,11 +114,10 @@ class BaseToxicClient(utils.LoggerMixin):
 
         return json_data
 
-    @asyncio.coroutine
-    def get_response(self):
+    async def get_response(self):
         """Reads data from the server and raises and exception in case of
         error"""
-        response = yield from self.read()
+        response = await self.read()
 
         if 'code' in response and int(response['code']) != 0:
             raise ToxicClientException(response['body']['error'])

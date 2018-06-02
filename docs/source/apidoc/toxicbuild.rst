@@ -7,7 +7,9 @@ Subpackages
 .. toctree::
 
     toxicbuild.core
+    toxicbuild.integrations
     toxicbuild.master
+    toxicbuild.output
     toxicbuild.slave
     toxicbuild.ui
 
