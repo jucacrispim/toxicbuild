@@ -91,13 +91,14 @@ def _kill_group(process):
 def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
     """ Executes a shell command. Raises with the command output
     if return code > 0.
+
     :param cmd: command to run.
     :param cwd: Directory to execute the command.
     :param timeout: How long we should wait some output. Default
-    is 3600.
+      is 3600.
     :param out_fn: A coroutine that receives each line of the step
-    output. The coroutine signature must be in the form:
-    mycoro(line_index, line).
+      output. The coroutine signature must be in the form:
+      mycoro(line_index, line).
     :param envvars: Environment variables to be used in the command.
     """
 

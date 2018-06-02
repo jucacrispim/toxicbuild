@@ -556,7 +556,8 @@ class BuildManager(LoggerMixin):
         """Cancels the builds previous to ``buildset``.
 
         :param buildset: An instance of
-        :class:`~toxicbuild.master.build.BuildSet`."""
+          :class:`~toxicbuild.master.build.BuildSet`.
+        """
 
         repo = await buildset.repository
         to_cancel = type(buildset).objects(

@@ -138,8 +138,10 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
     def send_response(self, code, body):
         """ Send a response to client formated by the (unknown) toxicbuild
         remote build specs.
+
         :param code: code for this message. code == 0 is success and
           code > 0 is error.
+
         :param body: response body. It has to be a serializable object.
         """
         response = OrderedDict()

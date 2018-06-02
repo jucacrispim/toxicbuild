@@ -3,7 +3,7 @@
 http requests.
 
 Usage:
-------
+``````
 
 .. code-block:: python
 

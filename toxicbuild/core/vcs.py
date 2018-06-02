@@ -154,7 +154,7 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
     def branch_exists(self, branch_name):
         """Checks if a local branch exists.
 
-        :param branch name: The name of the branch to check."""
+        :param branch_name: The name of the branch to check."""
 
     @abstractmethod  # pragma no branch
     @asyncio.coroutine

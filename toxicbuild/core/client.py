@@ -25,14 +25,31 @@ from toxicbuild.core import utils
 from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
 
 
+__doc__ = """This module implements a base client for basic
+comunication tcp communication, reading and writing json data.
+
+Usage:
+``````
+
+.. code-block:: python
+
+    host = 'somehost.net'
+    port = 1234
+    async with BaseToxicClient(host, port):
+        await client.write({'hello': 'world'})
+        response = await client.get_response()
+
+"""
+
+
 class BaseToxicClient(utils.LoggerMixin):
 
-    """ Base client for access toxicbuild servers. """
+    """ Base client for communication with toxicbuild servers. """
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, loop=None):
         self.host = host
         self.port = port
-        self.loop = asyncio.get_event_loop()
+        self.loop = loop or asyncio.get_event_loop()
         self.reader = None
         self.writer = None
         self._connected = False
@@ -54,13 +71,20 @@ class BaseToxicClient(utils.LoggerMixin):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.__exit__(exc_type, exc_val, exc_tb)
 
-    @asyncio.coroutine
-    def connect(self):
-        self.reader, self.writer = yield from asyncio.open_connection(
+    async def connect(self):
+        """Connects to the server.
+
+        .. note::
+
+            This is called the the asynchronous context manager
+            (aka ``async with``)"""
+
+        self.reader, self.writer = await asyncio.open_connection(
             self.host, self.port, loop=self.loop)
         self._connected = True
 
     def disconnect(self):
+        """Disconnects from the server"""
         self.log('disconecting...', level='debug')
         self.writer.close()
         self._connected = False
@@ -77,6 +101,7 @@ class BaseToxicClient(utils.LoggerMixin):
 
     @asyncio.coroutine
     def read(self):
+        """Reads data from the server. Expects a json."""
         # '{}' is decoded as an empty dict, so in json
         # context we can consider it as being a False json
         data = yield from utils.read_stream(self.reader)
@@ -93,6 +118,8 @@ class BaseToxicClient(utils.LoggerMixin):
 
     @asyncio.coroutine
     def get_response(self):
+        """Reads data from the server and raises and exception in case of
+        error"""
         response = yield from self.read()
 
         if 'code' in response and int(response['code']) != 0:

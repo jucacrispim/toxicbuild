@@ -7,10 +7,22 @@ from toxicbuild.slave.protocols import BuildServerProtocol
 
 
 class BuildServer(LoggerMixin):
+    """A server that receives build requests from a toxicmaster instance."""
 
-    def __init__(self, addr='0.0.0.0', port=7777):
+    def __init__(self, addr='0.0.0.0', port=7777, loop=None,
+                 use_ssl=False, cafile=None):
+        """Constructor for BuildServer.
+
+        :param addr: Address from which the server is allowed to receive
+        requests. If ``0.0.0.0``, receives requests from all addresses.
+        :param port: The port for the slave to listen.
+        :param loop: A main loop. If none, ``asyncio.get_event_loop()``
+        will be used.
+        :param use_ssl: Indicates is the connection uses ssl or not.
+        :param cafile: The path for the CA file. Only used if use_ssl=True.
+        """
         self.protocol = BuildServerProtocol
-        self.loop = asyncio.get_event_loop()
+        self.loop = loop or asyncio.get_event_loop()
         self.addr = addr
         self.port = port
         coro = self.loop.create_server(self.get_protocol_instance, addr,  port)

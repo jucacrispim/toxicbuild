@@ -361,7 +361,7 @@ def restart_scheduler(workdir, pidfile=SCHEDULER_PIDFILE, loglevel='info'):
 
     :param workdir: Workdir for the scheduler to be killed.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
-    ``toxicscheduler.pid``
+      ``toxicscheduler.pid``
     :param --loglevel: Level for logging messages. Defaults to `info`.
     """
 
@@ -377,7 +377,7 @@ def restart_poller(workdir, pidfile=POLLER_PIDFILE, loglevel='info'):
 
     :param workdir: Workdir for the poller to be killed.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
-    ``toxicpoller.pid``
+      ``toxicpoller.pid``
     :param --loglevel: Level for logging messages. Defaults to `info`.
     """
 
