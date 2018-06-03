@@ -60,6 +60,7 @@ def step_impl(context):
     btn = browser.find_element_by_class_name('btn-buildset-details')
     browser.click(btn)
     time.sleep(0.2)
+    browser.click(btn)
 
 
 @then('he sees the buildset details modal')  # noqa 401
