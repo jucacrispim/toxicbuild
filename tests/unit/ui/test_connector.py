@@ -123,7 +123,8 @@ class StreamConnectorTest(TestCase):
         client = MagicMock()
 
         @asyncio.coroutine
-        def get_hole_client(requester, host, port):
+        def get_hole_client(requester, host, port, use_ssl=True,
+                            validate_cert=True):
             return client
 
         connectors.get_hole_client = get_hole_client
