@@ -209,8 +209,8 @@ class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
 
         :param event_type. The event type to match against.
         :param no_events: Indicates if the plugins with no events
-          should be listed. That may be used to make plugins without events
-          react to all events.
+        should be listed. That may be used to make plugins without events
+        react to all events.
         """
 
         plugins = []

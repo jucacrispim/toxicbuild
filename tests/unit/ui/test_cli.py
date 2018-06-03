@@ -427,7 +427,8 @@ class ToxicCliActionsTest(unittest.TestCase):
         client.request2server = r2s
 
         @asyncio.coroutine
-        def ghc(requester, host, port, hole_token):
+        def ghc(requester, host, port, hole_token,
+                use_ssl, validate_cert):
             client.__enter__.return_value = client
             return client
 

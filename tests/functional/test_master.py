@@ -31,6 +31,8 @@ from tests.functional.custom_webhook import WebHookMessage
 class DummyUIClient(BaseToxicClient):
 
     def __init__(self, user, *args, **kwargs):
+        kwargs['use_ssl'] = True
+        kwargs['validate_cert'] = False
         super().__init__(*args, **kwargs)
         self.user = user
 
@@ -51,7 +53,9 @@ class DummyUIClient(BaseToxicClient):
                 'slave_host': 'localhost',
                 'slave_port': settings.SLAVE_PORT,
                 'slave_token': '123',
-                'owner_id': str(self.user.id)}
+                'owner_id': str(self.user.id),
+                'use_ssl': True,
+                'validate_cert': False}
 
         resp = yield from self.request2server(action, body)
         return resp
@@ -367,6 +371,7 @@ class ToxicMasterTest(BaseFunctionalTest):
             # this ugly part here it to wait for the right message
             # If we don't use this we may read the wrong message and
             # the test will fail.
+
             while True:
                 response = yield from client.get_response()
                 body = response['body'] if response else {}

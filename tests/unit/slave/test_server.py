@@ -76,3 +76,15 @@ class BuildServerTest(unittest.TestCase):
         self.buildserver.shutdown = MagicMock()
         self.buildserver.sync_shutdown()
         self.assertTrue(self.buildserver.shutdown.called)
+
+    @patch.object(asyncio, 'get_event_loop', MagicMock(
+        spec=asyncio.get_event_loop))
+    @patch.object(server.ssl, 'create_default_context', MagicMock(
+        spec=server.ssl.create_default_context))
+    def test_create_ssl(self):
+        server.BuildServer(use_ssl=True, certfile='', keyfile='')
+        loop = asyncio.get_event_loop.return_value
+        kw = loop.create_server.call_args[1]
+        ssl_context = server.ssl.create_default_context.return_value
+        self.assertTrue(ssl_context.load_cert_chain.called)
+        self.assertIn('ssl', kw.keys())

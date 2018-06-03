@@ -74,7 +74,9 @@ def create_slave(context):
     yield from Slave.add(context.user, name='repo-slave', host='localhost',
                          owner=context.user,
                          port=2222,
-                         token='123')
+                         token='123',
+                         use_ssl=True,
+                         validate_cert=False)
 
 
 @asyncio.coroutine

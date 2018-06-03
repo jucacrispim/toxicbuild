@@ -59,10 +59,18 @@ update_code_mutex = Mutex('toxicmaster-repo-update-code-mutex',
 
 
 class RepositoryBranch(EmbeddedDocument):
+    """The configuration for a branch of a repository."""
+
     name = StringField(required=True)
+    """The name of the branch."""
+
     notify_only_latest = BooleanField(default=False)
+    """If True, only the latest revision will be notified and only
+    the last revision will generate a buildset."""
 
     def to_dict(self):
+        """Returns a dict representation of the obj."""
+
         return {'name': self.name,
                 'notify_only_latest': self.notify_only_latest}
 
@@ -72,22 +80,48 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     looks for incomming changes."""
 
     name = StringField(required=True, unique=True)
+    """The name of the repository."""
+
     url = StringField(required=True, unique=True)
-    # A url used to actually fetch the code. If using some
-    # kind of authentication based in a url, this may change often.
+    """The url of the repository."""
+
     fetch_url = StringField()
+    """A url used to actually fetch the code. If using some
+    kind of authentication based in a url, this may change often."""
+
     update_seconds = IntField(default=300, required=True)
+    """If the repository added manually (not imported), indicates the inteval
+    for polling for new revisions."""
+
     vcs_type = StringField(required=True, default='git')
+    """The type of vcs used in this repo."""
+
     branches = ListField(EmbeddedDocumentField(RepositoryBranch))
+    """A list of :class:`~toxicbuild.master.repository.RepositoryBranch`.
+    These branches are the ones that trigger builds. If no branches,
+    all branches will trigger builds."""
+
     slaves = ListField(ReferenceField(Slave, reverse_delete_rule=PULL))
+    """A list of :class:`~toxicbuild.master.slave.Slave`. The slaves here
+    are the slaves allowed to run builds for this repo."""
+
     clone_status = StringField(choices=('cloning', 'ready', 'clone-exception'),
                                default='cloning')
+    """The status of the clone."""
+
     schedule_poller = BooleanField(default=True)
+    """Indicates if we should schedule periodical polls for changes in code. If
+    the repo was imported from an external service that sends webhooks
+    (or something else) this should be False."""
+
     plugins = IgnoreUnknownListField(
         HandleUnknownEmbeddedDocumentField(MasterPlugin))
-    # max number of builds in parallel that this repo exeutes
-    # If None, there's no limit for parallel builds.
+    """The list of plugins enabled for this reposiory."""
+
     parallel_builds = IntField()
+    """Max number of builds in parallel that this repo exeutes
+    If None, there's no limit for parallel builds.
+    """
 
     meta = {
         'ordering': ['name'],
@@ -111,14 +145,20 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     @classmethod
     def add_running_build(cls):
+        """Add a running build to the count of running builds among all
+        repositories."""
         cls._running_builds += 1
 
     @classmethod
     def remove_running_build(cls):
+        """Removes a running build from the count of running builds among all
+        repositories."""
+
         cls._running_builds -= 1
 
     @classmethod
     def get_running_builds(cls):
+        """Returns the number of running builds among all the repos."""
         return cls._running_builds
 
     @classmethod
@@ -243,9 +283,14 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     @classmethod
     def stop_consuming_messages(cls):
+        """Informs that :class:`~toxicbuild.master.repository.Repository`
+        should stop consumming messages from exchanges."""
+
         cls._stop_consuming_messages = True
 
     async def to_dict(self, id_as_str=False):
+        """Returns a dict representation of the object."""
+
         my_dict = {'id': self.id, 'name': self.name, 'url': self.url,
                    'update_seconds': self.update_seconds,
                    'vcs_type': self.vcs_type,
@@ -262,6 +307,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     @property
     def vcs(self):
+        """An instance of a subclass of :class:`~toxicbuild.core.vcs.VCS`."""
+
         if not self._vcs_instance:
             self._vcs_instance = get_vcs(self.vcs_type)(self.workdir)
 
@@ -822,11 +869,19 @@ class RepositoryRevisionExternal(EmbeddedDocument):
     a revision."""
 
     url = StringField(required=True)
+    """The url of the external repo"""
+
     name = StringField(required=True)
+    """A name to indentify the external repo."""
+
     branch = StringField(required=True)
+    """The name of the branch in the external repo."""
+
     into = StringField(required=True)
+    """A name for a local branch to clone the external branch into."""
 
     def to_dict(self):
+        """Returns a dict representations of the object"""
         return {'url': self.url,
                 'name': self.name,
                 'branch': self.branch,
@@ -837,19 +892,36 @@ class RepositoryRevision(Document):
     """A commit in the code tree."""
 
     repository = ReferenceField(Repository, required=True)
+    """A referece to :class:`~toxicbuild.master.repository.Repository`."""
+
     commit = StringField(required=True)
+    """The identifier of the revision, a sha, a tag name, etc..."""
+
     branch = StringField(required=True)
+    """The name of the revison branch."""
+
     author = StringField(required=True)
+    """The author of the commit."""
+
     title = StringField(required=True)
+    """The title of the commit."""
+
     commit_date = DateTimeField(required=True)
+    """Commit's date."""
+
     external = EmbeddedDocumentField(RepositoryRevisionExternal)
+    """A list of :class:`~toxicbuild.master.bulid.RepositoryRevisionExternal`.
+    """
 
     @classmethod
     async def get(cls, **kwargs):
+        """Returs a RepositoryRevision object."""
+
         ret = await cls.objects.get(**kwargs)
         return ret
 
     async def to_dict(self):
+        """Returns a dict representation of the object."""
         repo = await self.repository
         rev_dict = {'repository_id': str(repo.id),
                     'commit': self.commit,

@@ -22,6 +22,7 @@ import asyncio
 from collections import OrderedDict
 import json
 from toxicbuild.ui import settings
+from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import string2datetime
 from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui.utils import is_datetime
@@ -73,7 +74,19 @@ class BaseModel:
 
         host = settings.HOLE_HOST
         port = settings.HOLE_PORT
-        client = yield from get_hole_client(requester, host, port)
+        try:
+            use_ssl = settings.MASTER_USES_SSL
+        except ConfigError:
+            use_ssl = False
+
+        try:
+            validate_cert = settings.VALIDATE_CERT_MASTER
+        except ConfigError:
+            validate_cert = False
+
+        client = yield from get_hole_client(requester, host, port,
+                                            use_ssl=use_ssl,
+                                            validate_cert=validate_cert)
         return client
 
     def to_dict(self):
@@ -137,7 +150,8 @@ class Slave(BaseModel):
 
     @classmethod
     @asyncio.coroutine
-    def add(cls, requester, name, host, port, token, owner):
+    def add(cls, requester, name, host, port, token, owner,
+            use_ssl=True, validate_cert=True):
         """Adds a new slave.
 
         :param name: Slave name.
@@ -145,11 +159,14 @@ class Slave(BaseModel):
         :param port: Slave port.
         :param token: Authentication token.
         :param owner: The slave owner
+        :param use_ssl: Indicates if the slave uses a ssl connection.
+        :pram validate_cert: Should the slave certificate be validated?
         """
 
         kw = {'slave_name': name, 'slave_host': host,
               'slave_port': port, 'slave_token': token,
-              'owner_id': str(owner.id)}
+              'owner_id': str(owner.id), 'use_ssl': use_ssl,
+              'validate_cert': validate_cert}
 
         with (yield from cls.get_client(requester)) as client:
             slave_dict = yield from client.slave_add(**kw)
@@ -192,6 +209,7 @@ class Slave(BaseModel):
     @asyncio.coroutine
     def update(self, **kwargs):
         """Updates a slave"""
+
         with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.slave_update(slave_name=self.name,
                                                   **kwargs)

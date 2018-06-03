@@ -93,11 +93,13 @@ class BuildClient(BaseToxicClient):
         return futures
 
 
-async def get_build_client(slave, addr, port):
+async def get_build_client(slave, addr, port, use_ssl=True,
+                           validate_cert=True):
     """ Instanciate :class:`toxicbuild.master.client.BuildClient` and
     connects it to a build server
     """
 
-    client = BuildClient(slave, addr, port)
+    client = BuildClient(slave, addr, port, use_ssl=use_ssl,
+                         validate_cert=validate_cert)
     await client.connect()
     return client

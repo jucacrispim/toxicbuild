@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
+import time
 from tests.functional import BaseFunctionalTest
 from toxicbuild.master.users import User as UserDBModel
 from toxicbuild.ui.models import Slave, Repository, BuildSet, User
@@ -25,6 +26,11 @@ from tests import async_test
 
 
 class BaseUITest(BaseFunctionalTest):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        time.sleep(1)
 
     @async_test
     async def setUp(self):

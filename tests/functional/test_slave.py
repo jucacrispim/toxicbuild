@@ -27,6 +27,8 @@ from tests.functional import REPO_DIR, BaseFunctionalTest
 class DummyBuildClient(BaseToxicClient):
 
     def __init__(self, *args, **kwargs):
+        kwargs['use_ssl'] = True
+        kwargs['validate_cert'] = False
         super().__init__(*args, **kwargs)
         self.repo_url = REPO_DIR
 

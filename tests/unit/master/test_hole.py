@@ -1521,6 +1521,21 @@ class HoleServerTest(TestCase):
 
         self.assertTrue(hole.ensure_future.called)
 
+    @patch.object(hole.ssl, 'create_default_context', MagicMock(
+        spec=hole.ssl.create_default_context))
+    @patch.object(hole.asyncio, 'get_event_loop', Mock())
+    @patch.object(hole, 'ensure_future', Mock())
+    def test_serve_ssl(self):
+        loop = MagicMock()
+        self.server.use_ssl = True
+        self.server.loop = loop
+        self.server.serve()
+        kw = loop.create_server.call_args[1]
+        ssl_context = hole.ssl.create_default_context.return_value
+        self.assertTrue(ssl_context.load_cert_chain.called)
+        self.assertIn('ssl', kw.keys())
+        self.assertTrue(hole.ensure_future.called)
+
     @patch.object(hole.asyncio, 'sleep',
                   AsyncMagicMock(spec=hole.asyncio.sleep))
     @async_test

@@ -31,7 +31,26 @@
 	    <input type="text" name="slave_token" id="slave_token" class="form-control" required /><br/>
 	  </div>
 
+	  <div class="form-group">
+	    <div class="checks-container" id="slave-checks-container">
 
+	      <div id="slave_use_ssl_container">
+		<label for="name" class="control-label">Use ssl:</label>
+		<input type="checkbox" name="slave_use_ssl" id="slave_use_ssl"
+		       class="form-control" /><br/>
+	      </div>
+
+	      <div id="slave_validate_cert_container">
+		<label for="name" class="control-label">
+		  Validate Certificate:
+		</label>
+		<input type="checkbox" name="slave_validate_cert"
+		     id="slave_validate_cert"
+		       class="form-control" /><br/>
+	      </div>
+
+	    </div>
+	  </div>
 	</div>
 
 	<!-- modal footer -->

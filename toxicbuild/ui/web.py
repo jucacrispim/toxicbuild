@@ -314,6 +314,10 @@ class SlaveHandler(BaseModelHandler):
         kw['host'] = self.params.get('host')
         kw['port'] = self.params.get('port')
         kw['token'] = self.params.get('token')
+        kw['use_ssl'] = True if self.params.get('use_ssl') == 'true' else False
+        kw['validate_cert'] = True if self.params.get(
+            'validate_cert') == 'true' else False
+
         self.params = kw
 
     @gen.coroutine

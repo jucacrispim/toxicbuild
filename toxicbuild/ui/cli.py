@@ -196,6 +196,7 @@ class ToxicCliActions:
 
     def __init__(self, username_or_email, password, *args,
                  host='localhost', port=6666, token=None,
+                 use_ssl=True, validate_cert=True,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.username_or_email = username_or_email
@@ -204,6 +205,8 @@ class ToxicCliActions:
         self.port = port
         self.token = token
         self.user = None
+        self.use_ssl = use_ssl
+        self.validate_cert = validate_cert
         self._loop = asyncio.get_event_loop()
         self.actions = self.get_actions()
 
@@ -223,7 +226,9 @@ class ToxicCliActions:
         """ Returns a client connected to a toxicbuild master"""
 
         client = yield from get_hole_client(self.user, self.host, self.port,
-                                            hole_token=self.token)
+                                            hole_token=self.token,
+                                            use_ssl=self.use_ssl,
+                                            validate_cert=self.validate_cert)
         return client
 
     def get_actions(self):

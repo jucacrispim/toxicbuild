@@ -43,7 +43,7 @@ setup(name='toxicbuild',
       include_package_data=True,
       install_requires=['tornado>=5.0.2', 'mongomotor>=0.12.0',
                         'asyncblink>=0.3.1', 'mando>=0.3.2',
-                        'pyrocumulus>=0.11.4', 'pytz==2014.10',
+                        'pyrocumulus>=0.11.4', 'pytz==2018.04',
                         'aiohttp>=1.0.5', 'aiosmtplib>=1.0.2',
                         'asyncamqp>=0.1.4'],
       classifiers=[

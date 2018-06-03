@@ -57,16 +57,26 @@ This is done using the command ``toxicbuild create``.
    Here a super user was created. If you want create more users you can use
    the ``toxicmaster create_user`` command.
 
+
+General configs
+----------------
+
 There are some config values you may want to change. They are:
 
+.. note::
+
+   If you installed mongodb and rabbitmq on localhost with default configs
+   you may not need to change these general configs. You may skip to
+   :ref:`docker-config`.
+
 Toxicmaster config values
--------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The configuration file for toxicmaster is located at
 `~/ci/master/toxicmaster.conf`.
 
-General configs
-^^^^^^^^^^^^^^^
+Basic stuff
+~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -78,7 +88,7 @@ General configs
 
 
 Database
-^^^^^^^^
+~~~~~~~~
 
 You can change the database connection parameters changing the
 `DATABASE` parameter:
@@ -100,7 +110,7 @@ For authentication, add the `username` and `password` keys:
 	       'password': 'db-password'}
 
 Queue Manager
-^^^^^^^^^^^^^
+~~~~~~~~~~~~~
 
 ToxicBuild uses Rabbitmq as queue manager. Use the `RABBITMQ_CONNECTION`
 settings to configure it:
@@ -110,23 +120,35 @@ settings to configure it:
    RABBITMQ_CONNECTION = {'host': 'localhost', 'port': 5672}
 
 
+Secure connections
+~~~~~~~~~~~~~~~~~~
+
+To use secure connections, you must set the following parameters:
+
+.. code-block:: python
+
+   USE_SSL = True
+   CERTFILE = '/path/to/a/file.cert'
+   KEYFILE = '/path/to/a/file.key'
+
+
 
 ToxicOutput config values
---------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The configuration file for toxicmaster is located at
 `~/ci/output/toxicoutput.conf`.
 
 
 Database and Queue Manager
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The database and queue manager configurations MUST be the same as the ones
 used in the master configuration
 
 
 Email
-^^^^^
+~~~~~
 
 If you want to be able to send emails containing information about builds,
 you need to configure the smpt options.
@@ -145,10 +167,10 @@ you need to configure the smpt options.
    SMTP_STARTTLS = False
 
 ToxicIntegrations config values
--------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 General configs
-^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -159,7 +181,7 @@ General configs
 
 
 Database and queue managers
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The database and queue manager configurations MUST be the same as the ones
 used in the master configuration
@@ -167,7 +189,7 @@ used in the master configuration
 
 
 Toxicweb config values
-----------------------
+^^^^^^^^^^^^^^^^^^^^^^
 The configuration file for toxicui is located at
 `~/ci/ui/toxicui.conf`.
 
@@ -179,15 +201,33 @@ A list with the format codes can be found `here <http://strftime.org/>`_
 and a list of timezones can be found
 `here <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`_.
 
+If the master uses ssl connection, you must set following parameters
+
+.. code-block:: python
+
+   MASTER_USES_SSL = True
+   VALIDATE_CERT_MASTER = True
+
 
 Toxicslave config values
--------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^
 The configuration file for toxicslave is located at
 `~/ci/slave/toxicslave.conf`.
 
 
+If you want to use a ssl connection, set the following config params:
+
+.. code-block:: python
+
+   USE_SSL = True
+   CERTFILE = '/path/to/a/file.cert'
+   KEYFILE = '/path/to/a/file.key'
+
+
+.. _docker-config:
+
 Running builds in docker containers
-++++++++++++++++++++++++++++++++++++
+-----------------------------------
 
 It is possible to run builds inside docker containers so each time we
 run a build it is executed in a new environment. The most important thing
@@ -229,12 +269,13 @@ following variables:
 
 And thats it. Your builds will run inside docker containers.
 
+.. _github-integration-config:
 
 Integration with Github
-+++++++++++++++++++++++
+-----------------------
 
 Create a Github app on Github
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To integrate with Github you first need to create a Github App. To do so, go to
 `https://github.com/settings/apps` and click in `New GitHub App`. In the app
@@ -264,7 +305,7 @@ Now we're done in the Github side. Let's configure ToxicBuild.
 
 
 Toxicbuild Configuration
-------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 In your `toxicintegrations.conf` set the following parameters.
 

@@ -30,6 +30,7 @@ except ImportError:  # pragma no cover
 
 from asyncblink import signal
 from toxicbuild.core.utils import LoggerMixin
+from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.ui import settings
 from toxicbuild.ui.client import get_hole_client
 
@@ -83,7 +84,19 @@ class StreamConnector(LoggerMixin):
 
         host = settings.HOLE_HOST
         port = settings.HOLE_PORT
-        client = yield from get_hole_client(self.user, host, port)
+        try:
+            use_ssl = settings.MASTER_USES_SSL
+        except ConfigError:
+            use_ssl = False
+
+        try:
+            validate_cert = settings.VALIDATE_CERT_MASTER
+        except ConfigError:
+            validate_cert = False
+
+        client = yield from get_hole_client(self.user, host, port,
+                                            use_ssl=use_ssl,
+                                            validate_cert=validate_cert)
         yield from client.connect2stream()
         self.client = client
         self._connected = True

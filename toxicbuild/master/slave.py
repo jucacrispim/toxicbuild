@@ -38,10 +38,26 @@ class Slave(OwnedDocument, LoggerMixin):
     The steps are actually decided by the slave.
     """
     name = StringField(required=True, unique=True)
+    """The name of the slave"""
+
     host = StringField(required=True)
+    """Slave's host."""
+
     port = IntField(required=True)
+    """Port for the slave to listen."""
+
     token = StringField(required=True)
+    """Token for authentication."""
+
     is_alive = BooleanField(default=False)
+    """Indicates if the slave is up and running."""
+
+    use_ssl = BooleanField(default=True)
+    """Indicates if the build server in uses ssl connection."""
+
+    validate_cert = BooleanField(default=True)
+    """Indicates if the certificate from the build server should be validated.
+    """
 
     meta = {
         'ordering': ['name']
@@ -49,11 +65,14 @@ class Slave(OwnedDocument, LoggerMixin):
 
     @classmethod
     async def create(cls, **kwargs):
+        """Creates a new slave"""
+
         slave = cls(**kwargs)
         await slave.save()
         return slave
 
     def to_dict(self, id_as_str=False):
+        """Returns a dict representation of the object."""
         my_dict = {'name': self.name, 'host': self.host,
                    'port': self.port, 'token': self.token,
                    'is_alive': self.is_alive, 'id': self.id}
@@ -63,15 +82,18 @@ class Slave(OwnedDocument, LoggerMixin):
 
     @classmethod
     async def get(cls, **kwargs):
+        """Returns a slave instance."""
+
         slave = await cls.objects.get(**kwargs)
         return slave
 
     async def get_client(self):
-        """ Returns a :class:`toxicbuild.master.client.BuildClient` instance
+        """ Returns a :class:`~toxicbuild.master.client.BuildClient` instance
         already connected to the server.
         """
-        connected_client = await get_build_client(self, self.host,
-                                                  self.port)
+        connected_client = await get_build_client(
+            self, self.host, self.port, use_ssl=self.use_ssl,
+            validate_cert=self.validate_cert)
         return connected_client
 
     async def healthcheck(self):
