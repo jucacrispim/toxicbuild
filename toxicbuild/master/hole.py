@@ -27,6 +27,7 @@ from asyncio import ensure_future
 import inspect
 import json
 import signal
+import ssl
 import traceback
 from bson.objectid import ObjectId
 from toxicbuild.core import BaseToxicProtocol
@@ -804,18 +805,39 @@ class UIStreamHandler(LoggerMixin):
 
 
 class HoleServer(LoggerMixin):
+    """A server that uses the :class:`~toxicbuild.master.hole.UIHole`
+    protocol."""
 
-    def __init__(self, addr='127.0.0.1', port=6666):
+    def __init__(self, addr='127.0.0.1', port=6666, loop=None, use_ssl=False,
+                 **ssl_kw):
+        """:param addr: Address from which the server is allowed to receive
+        requests. If ``0.0.0.0``, receives requests from all addresses.
+        :param port: The port for the master to listen.
+        :param loop: A main loop. If none, ``asyncio.get_event_loop()``
+          will be used.
+        :param use_ssl: Indicates is the connection uses ssl or not.
+        :param ssl_kw: Named arguments passed to
+          ``ssl.SSLContext.load_cert_chain()``
+        """
         self.protocol = UIHole
-        self.loop = asyncio.get_event_loop()
+        self.loop = loop or asyncio.get_event_loop()
         self.addr = addr
         self.port = port
+        self.use_ssl = use_ssl
+        self.ssl_kw = ssl_kw
         signal.signal(signal.SIGTERM, self.sync_shutdown)
 
     def serve(self):
+        if self.use_ssl:
+            ssl_context = ssl.create_default_context(
+                ssl.Purpose.CLIENT_AUTH)
+            ssl_context.load_cert_chain(**self.ssl_kw)
+            kw = {'ssl': ssl_context}
+        else:
+            kw = {}
 
         coro = self.loop.create_server(
-            self.get_protocol_instance, self.addr,  self.port)
+            self.get_protocol_instance, self.addr,  self.port, **kw)
 
         ensure_future(coro)
 

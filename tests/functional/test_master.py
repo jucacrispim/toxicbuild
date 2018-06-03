@@ -31,6 +31,8 @@ from tests.functional.custom_webhook import WebHookMessage
 class DummyUIClient(BaseToxicClient):
 
     def __init__(self, user, *args, **kwargs):
+        kwargs['use_ssl'] = True
+        kwargs['validate_cert'] = False
         super().__init__(*args, **kwargs)
         self.user = user
 

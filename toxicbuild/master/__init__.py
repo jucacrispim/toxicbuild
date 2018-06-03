@@ -12,6 +12,7 @@ from uuid import uuid4
 from mongomotor import connect
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
+from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import (log, daemonize as daemon,
                                    bcrypt_string, changedir)
 
@@ -116,7 +117,25 @@ def run(loglevel):
 
     hole_host = settings.HOLE_ADDR
     hole_port = settings.HOLE_PORT
-    server = HoleServer(hole_host, hole_port)
+    try:
+        use_ssl = settings.USE_SSL
+    except ConfigError:
+        use_ssl = False
+
+    try:
+        certfile = settings.CERTFILE
+    except ConfigError:
+        certfile = None
+
+    try:
+        keyfile = settings.KEYFILE
+    except ConfigError:
+        keyfile = None
+
+    server = HoleServer(hole_host, hole_port,
+                        use_ssl=use_ssl,
+                        certfile=certfile,
+                        keyfile=keyfile)
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(toxicinit(server))
