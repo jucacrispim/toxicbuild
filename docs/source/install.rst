@@ -120,6 +120,18 @@ settings to configure it:
    RABBITMQ_CONNECTION = {'host': 'localhost', 'port': 5672}
 
 
+Secure connections
+~~~~~~~~~~~~~~~~~~
+
+To use secure connections, you must set the following parameters:
+
+.. code-block:: python
+
+   USE_SSL = True
+   CERTFILE = '/path/to/a/file.cert'
+   KEYFILE = '/path/to/a/file.key'
+
+
 
 ToxicOutput config values
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -188,6 +200,13 @@ following format: ``'%a %b %d %H:%M:%S %Y %z'``. You can change it using the
 A list with the format codes can be found `here <http://strftime.org/>`_
 and a list of timezones can be found
 `here <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`_.
+
+If the master uses ssl connection, you must set following parameters
+
+.. code-block:: python
+
+   MASTER_USES_SSL = True
+   VALIDATE_CERT_MASTER = True
 
 
 Toxicslave config values
