@@ -54,8 +54,6 @@ def get_coro_attr(cls, name, *defargs):
     has_coroutine_annotation = getattr(attr, 'coroutine_annotation', False)
     is_async_method = inspect.iscoroutinefunction(attr)
 
-    # attr.doc is set by statement like 'error = AsyncRead(doc="OBSOLETE")'.
-
     _parse_info[full_name] = {
         'is_async_method': is_async_method or has_coroutine_annotation,
     }

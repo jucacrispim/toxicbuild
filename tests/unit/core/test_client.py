@@ -82,6 +82,43 @@ class BuildClientTest(TestCase):
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @async_test
+    def test_connect_ssl(self):
+
+        self.has_ssl = False
+
+        @asyncio.coroutine
+        def oc(*a, **kw):
+            self.has_ssl = 'ssl' in kw
+            return mock.MagicMock(), mock.MagicMock()
+
+        client.asyncio.open_connection = oc
+
+        self.client.use_ssl = True
+        yield from self.client.connect()
+        self.assertTrue(self.client._connected)
+        self.assertTrue(self.has_ssl)
+
+    @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
+    @async_test
+    def test_connect_ssl_no_validate(self):
+
+        self.ssl_context = None
+
+        @asyncio.coroutine
+        def oc(*a, **kw):
+            self.ssl_context = kw.get('ssl')
+            return mock.MagicMock(), mock.MagicMock()
+
+        client.asyncio.open_connection = oc
+
+        self.client.use_ssl = True
+        self.client.validate_cert = False
+        yield from self.client.connect()
+        self.assertTrue(self.client._connected)
+        self.assertEqual(self.ssl_context.verify_mode, client.ssl.CERT_NONE)
+
+    @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
+    @async_test
     def test_disconnect(self):
 
         @asyncio.coroutine

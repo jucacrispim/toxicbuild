@@ -20,6 +20,7 @@
 import asyncio
 from collections import OrderedDict
 import json
+import ssl
 import traceback
 from toxicbuild.core import utils
 from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
@@ -46,18 +47,30 @@ class BaseToxicClient(utils.LoggerMixin):
 
     """ Base client for communication with toxicbuild servers. """
 
-    def __init__(self, host, port, loop=None):
+    def __init__(self, host, port, loop=None, use_ssl=False,
+                 validate_cert=True, **ssl_kw):
+        """:para host: The host to connect
+        :param port: The port that the server is listening.
+        :param loop: A async loop. If None, ``asyncio.get_event_loop()``
+          will be used.
+        :param use_ssl: Indicates if we should use a secure connection.
+        :param validate_cert: Indicates if we should validate the ssl cert
+          used by the server.
+        :param ssl_kw: Named arguments to ``ssl.create_default_context()``
+        """
         self.host = host
         self.port = port
         self.loop = loop or asyncio.get_event_loop()
+        self.use_ssl = use_ssl
+        self.validate_cert = validate_cert
+        self.ssl_kw = ssl_kw
         self.reader = None
         self.writer = None
         self._connected = False
 
     def __enter__(self):
         if not self._connected:
-            msg = 'You must connect with "yield from client.connect()" '
-            msg += 'before you can __enter__ on it. Sorry.'
+            msg = "Use ``async with``"
             raise ToxicClientException(msg)
         return self
 
@@ -76,11 +89,22 @@ class BaseToxicClient(utils.LoggerMixin):
 
         .. note::
 
-            This is called the the asynchronous context manager
+            This is called by the asynchronous context manager
             (aka ``async with``)"""
 
+        if self.use_ssl:
+            ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH,
+                                                     **self.ssl_kw)
+            if not self.validate_cert:
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+
+            kw = {'ssl': ssl_context}
+        else:
+            kw = {}
+
         self.reader, self.writer = await asyncio.open_connection(
-            self.host, self.port, loop=self.loop)
+            self.host, self.port, loop=self.loop, **kw)
         self._connected = True
 
     def disconnect(self):
@@ -104,7 +128,6 @@ class BaseToxicClient(utils.LoggerMixin):
         # context we can consider it as being a False json
         data = await utils.read_stream(self.reader)
         data = data.decode() or '{}'
-
         try:
             json_data = json.loads(data, object_pairs_hook=OrderedDict)
         except Exception:

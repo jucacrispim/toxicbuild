@@ -9,6 +9,7 @@ from time import sleep
 from uuid import uuid4
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
+from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string,
                                    changedir)
 
@@ -68,16 +69,33 @@ def start(workdir, daemonize=False, stdout=LOGFILE,
 
     addr = settings.ADDR
     port = settings.PORT
+    try:
+        use_ssl = settings.USE_SSL
+    except ConfigError:
+        use_ssl = False
+
+    try:
+        certfile = settings.CERTFILE
+    except ConfigError:
+        certfile = None
+
+    try:
+        keyfile = settings.KEYFILE
+    except ConfigError:
+        keyfile = None
 
     if daemonize:
-        daemon(call=server.run_server, cargs=(addr, port), ckwargs={},
+        daemon(call=server.run_server, cargs=(addr, port),
+               ckwargs={'use_ssl': use_ssl, 'certfile': certfile,
+                        'keyfile': keyfile},
                stdout=stdout, stderr=stderr, workdir=workdir, pidfile=pidfile)
     else:
         loglevel = getattr(logging, loglevel.upper())
         logging.basicConfig(level=loglevel)
 
         with changedir(workdir):
-            server.run_server(addr, port)
+            server.run_server(addr, port, use_ssl=use_ssl,
+                              certfile=certfile, keyfile=keyfile)
 
 
 def _process_exist(pid):

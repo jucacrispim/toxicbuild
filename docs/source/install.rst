@@ -196,6 +196,15 @@ The configuration file for toxicslave is located at
 `~/ci/slave/toxicslave.conf`.
 
 
+If you want to use a ssl connection, set the following config params:
+
+.. code-block:: python
+
+   USE_SSL = True
+   CERTFILE = '/path/to/a/file.cert'
+   KEYFILE = '/path/to/a/file.key'
+
+
 .. _docker-config:
 
 Running builds in docker containers
