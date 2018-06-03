@@ -25,11 +25,18 @@ from toxicbuild.ui.exceptions import UserDoesNotExist, NotEnoughPerms
 
 
 class UIHoleClient(BaseToxicClient):
+    """Client for the master's hole. """
 
-    def __init__(self, requester, *args, hole_token=None):
+    def __init__(self, requester, *args, hole_token=None, **kwargs):
+        """:param requester: The users who is willing to talk to the
+        master.
+        :param args: List arguments passed to super() constructor.
+        :param hole_token: The token for access on the master.
+        :param kwargs: Named arguments passed to super() constructor."""
+
         self.hole_token = hole_token or settings.HOLE_TOKEN
         self.requester = requester
-        super().__init__(*args)
+        super().__init__(*args, **kwargs)
 
     def __getattr__(self, name):
         action = name.replace('_', '-')
@@ -42,6 +49,11 @@ class UIHoleClient(BaseToxicClient):
 
     @asyncio.coroutine
     def request2server(self, action, body):
+        """Performs a request to a hole server.
+
+        :param action: The action to perform on the server.
+        :param body: The body of the request, with the actions parameters.
+        """
 
         data = {'action': action, 'body': body,
                 'token': self.hole_token}
@@ -80,7 +92,9 @@ class UIHoleClient(BaseToxicClient):
 
 
 @asyncio.coroutine
-def get_hole_client(requester, host, port, hole_token=None):
-    client = UIHoleClient(requester, host, port, hole_token=hole_token)
+def get_hole_client(requester, host, port, hole_token=None,
+                    **kwargs):
+    client = UIHoleClient(requester, host, port, hole_token=hole_token,
+                          **kwargs)
     yield from client.connect()
     return client

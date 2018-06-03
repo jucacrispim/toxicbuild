@@ -22,6 +22,7 @@ import asyncio
 from collections import OrderedDict
 import json
 from toxicbuild.ui import settings
+from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import string2datetime
 from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui.utils import is_datetime
@@ -73,7 +74,19 @@ class BaseModel:
 
         host = settings.HOLE_HOST
         port = settings.HOLE_PORT
-        client = yield from get_hole_client(requester, host, port)
+        try:
+            use_ssl = settings.MASTER_USES_SSL
+        except ConfigError:
+            use_ssl = False
+
+        try:
+            validate_cert = settings.VALIDATE_CERT_MASTER
+        except ConfigError:
+            validate_cert = False
+
+        client = yield from get_hole_client(requester, host, port,
+                                            use_ssl=use_ssl,
+                                            validate_cert=validate_cert)
         return client
 
     def to_dict(self):
