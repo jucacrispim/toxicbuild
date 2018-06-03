@@ -52,6 +52,13 @@ class Slave(OwnedDocument, LoggerMixin):
     is_alive = BooleanField(default=False)
     """Indicates if the slave is up and running."""
 
+    use_ssl = BooleanField(default=True)
+    """Indicates if the build server in uses ssl connection."""
+
+    validate_cert = BooleanField(default=True)
+    """Indicates if the certificate from the build server should be validated.
+    """
+
     meta = {
         'ordering': ['name']
     }
@@ -84,8 +91,9 @@ class Slave(OwnedDocument, LoggerMixin):
         """ Returns a :class:`~toxicbuild.master.client.BuildClient` instance
         already connected to the server.
         """
-        connected_client = await get_build_client(self, self.host,
-                                                  self.port)
+        connected_client = await get_build_client(
+            self, self.host, self.port, use_ssl=self.use_ssl,
+            validate_cert=self.validate_cert)
         return connected_client
 
     async def healthcheck(self):

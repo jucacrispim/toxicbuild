@@ -439,14 +439,17 @@ class HoleHandler:
         return {'repo-cancel-build': 'ok'}
 
     async def slave_add(self, slave_name, slave_host, slave_port, slave_token,
-                        owner_id):
+                        owner_id, use_ssl=True, validate_cert=True):
         """ Adds a new slave to toxicbuild.
 
         :param slave_name: A name for the slave,
         :param slave_host: Host where the slave is.
         :param slave_port: Port to connect to the slave
         :param slave_token: Auth token for the slave.
-        :param owner_id: Slave's owner id."""
+        :param owner_id: Slave's owner id.
+        :param use_ssl: Indicates if the slave uses a ssl connection.
+        :pram validate_cert: Should the slave certificate be validated?
+        """
 
         if not self._user_is_allowed('add_slave'):
             raise NotEnoughPerms
@@ -454,7 +457,8 @@ class HoleHandler:
         owner = await self._get_owner(owner_id)
         slave = await Slave.create(name=slave_name, host=slave_host,
                                    port=slave_port, token=slave_token,
-                                   owner=owner)
+                                   owner=owner, use_ssl=use_ssl,
+                                   validate_cert=validate_cert)
 
         slave_dict = self._get_slave_dict(slave)
         return {'slave-add': slave_dict}
