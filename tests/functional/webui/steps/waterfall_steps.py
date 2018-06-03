@@ -17,6 +17,13 @@ def step_impl(context):
 def step_impl(context):
     browser = context.browser
     elements = browser.find_elements_by_class_name('builder-column')
+    timeout = 5
+    c = 0
+    while not bool(elements) and c < timeout:
+        time.sleep(1)
+        elements = browser.find_elements_by_class_name('step-running')
+        c += 1
+
     assert bool(elements)
 
 
