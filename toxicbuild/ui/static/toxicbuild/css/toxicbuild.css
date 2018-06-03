@@ -120,6 +120,37 @@ tr:nth-child(even) {
     cursor: pointer;
 }
 
+.checks-container{
+    min-height: 30px;
+}
+
+#slave_validate_cert_container label,
+#slave_validate_cert_container input,
+#slave_use_ssl_container label,
+#slave_use_ssl_container input {
+    float: left;
+}
+
+#slave_validate_cert_container label,
+#slave_use_ssl_container label{
+    margin-right: 10px;
+}
+
+#slave_use_ssl_container{
+    float: left;
+    margin-right: 20px;
+}
+
+#slave_validate_cert_container{
+    float: left;
+}
+
+#slave_validate_cert,
+#slave_use_ssl{
+    width: 15px;
+    margin-top: -5px;
+}
+
 .form-group-slave-host-port .left-container{
     float:left;
     width: 65%;

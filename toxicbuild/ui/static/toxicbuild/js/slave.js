@@ -26,7 +26,9 @@ var SLAVE_ROW_TEMPLATE = `
 	    data-obj-id="{{slave.id}}"
 	    data-slave-name="{{slave.name}}"
 	    data-slave-host="{{slave.host}}"
-	    data-slave-port="{{slave.port}}">
+	    data-slave-port="{{slave.port}}"
+	    data-slave-use-ssl="{{slave.use_ssl}}"
+	    data-slave-validate-cert="{{slave.validate_cert}}">
       <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
     </button>
   </td>
@@ -79,6 +81,9 @@ var SlaveView = function (model){
 	self.modal.find('#slave_host').val(self.model.host);
 	self.modal.find('#slave_port').val(self.model.port);
 	self.modal.find('#slave_token').val(self.model.token);
+	self.modal.find('#slave_use_ssl').prop('checked', self.model.use_ssl);
+	self.modal.find('#slave_validate_cert').prop('checked',
+						     self.model.validate_cert);
 	self.modal.find('#btn-delete-slave').show();
       }
     },
@@ -90,8 +95,12 @@ var SlaveView = function (model){
       var host = self.modal.find('#slave_host').val();
       var port = self.modal.find('#slave_port').val();
       var token = self.modal.find('#slave_token').val();
+      var use_ssl = self.modal.find('#slave_use_ssl').prop('checked');
+      var validate_cert = self.modal.find('#slave_validate_cert').prop(
+	'checked');
       return {name: name, port: port, host: host,
-	      token: token};
+	      token: token, 'use_ssl': use_ssl,
+	      'validate_cert': validate_cert};
     },
 
     insertObjRow: function(data){
@@ -103,6 +112,9 @@ var SlaveView = function (model){
       obj_row = obj_row.replace(/{{slave.host}}/g, self.model.host);
       obj_row = obj_row.replace(/{{slave.port}}/g, self.model.port);
       obj_row = obj_row.replace(/{{slave.token}}/g, self.model.token);
+      obj_row = obj_row.replace(/{{slave.use_token}}/g, self.model.use_token);
+      obj_row = obj_row.replace(/{{slave.validate_cert}}/g,
+				self.model.validate_cert);
       $('#tbody-slaves').append(obj_row);
     },
   };
