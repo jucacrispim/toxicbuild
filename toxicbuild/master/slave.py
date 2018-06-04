@@ -20,7 +20,8 @@
 import traceback
 from mongomotor.fields import (StringField, IntField, BooleanField)
 from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
-from toxicbuild.core.utils import string2datetime, LoggerMixin, now
+from toxicbuild.core.utils import (string2datetime, LoggerMixin, now,
+                                   localtime2utc)
 from toxicbuild.master.build import BuildStep, Builder
 from toxicbuild.master.client import get_build_client
 from toxicbuild.master.document import OwnedDocument
@@ -144,10 +145,12 @@ class Slave(OwnedDocument, LoggerMixin):
             except (ToxicClientException, BadJsonData):
                 output = traceback.format_exc()
                 build.status = 'exception'
-                build.started = build.started or now()
-                build.finished = build.finished or now()
-                exception_step = BuildStep(output=output, started=now(),
-                                           finished=now(), status='exception',
+                build.started = build.started or localtime2utc(now())
+                build.finished = build.finished or localtime2utc(now())
+                exception_step = BuildStep(output=output,
+                                           started=localtime2utc(now()),
+                                           finished=localtime2utc(now()),
+                                           status='exception',
                                            command='', name='exception')
                 build.steps.append(exception_step)
 

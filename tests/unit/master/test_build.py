@@ -741,27 +741,27 @@ class BuildManagerTest(TestCase):
     async def test_set_finished_for_buildset(self):
         await self._create_test_data()
         self.buildset.started = now()
-        self.buildset.save = AsyncMagicMock(spec=self.buildset.save)
+        await self.buildset.save()
         await self.manager._set_finished_for_buildset(self.buildset)
-        self.assertTrue(self.buildset.finished)
-        self.assertTrue(self.buildset.save.called)
+        bs = await type(self.buildset).objects.get(id=self.buildset.id)
+        self.assertTrue(bs.finished)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
+    @mock.patch.object(build.BuildSet.objects, 'get', AsyncMagicMock())
     @async_test
     async def test_set_finished_for_buildset_already_finished(self):
         await self._create_test_data()
-        buildset = mock.MagicMock()
-        save_mock = mock.MagicMock()
-        buildset.save = asyncio.coroutine(lambda *a, **kw: save_mock())
-        finished = now() + datetime.timedelta(days=20)
-        buildset.finished = finished
-        await self.manager._set_finished_for_buildset(buildset)
-        self.assertTrue(buildset.finished is finished)
-        self.assertFalse(save_mock.called)
+        started = now()
+        finished = started + datetime.timedelta(days=20)
+        self.buildset.finished = finished
+        self.buildset.started = started
+        await self.buildset.save()
+        await self.manager._set_finished_for_buildset(self.buildset)
+        self.assertTrue(self.buildset.finished is finished)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -774,11 +774,11 @@ class BuildManagerTest(TestCase):
         just_now = now()
         build.now.return_value = just_now + datetime.timedelta(seconds=10)
         await self._create_test_data()
-        self.buildset.save = AsyncMagicMock(spec=self.buildset.save)
-        self.buildset.started = just_now
+        self.buildset.started = build.localtime2utc(just_now)
+        await self.buildset.save()
         await self.manager._set_finished_for_buildset(self.buildset)
-        self.assertEqual(self.buildset.total_time, 10)
-        self.assertTrue(self.buildset.save.called)
+        bs = await type(self.buildset).objects.get(id=self.buildset.id)
+        self.assertEqual(bs.total_time, 10)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

@@ -233,6 +233,20 @@ def now():
     return datetime.now(tz=tz)
 
 
+def set_tzinfo(dt, tzoff):
+    """Sets a timezone info to a datetime object.
+
+    :param dt: A datetime object.
+    :para tzoff: The timezone offset from utc in seconds"""
+
+    tz = timezone(timedelta(seconds=tzoff))
+    tztime = datetime(dt.year, dt.month, dt.day,
+                      dt.hour, dt.minute, dt.second,
+                      dt.microsecond,
+                      tzinfo=tz)
+    return tztime
+
+
 def get_toxicbuildconf(directory):
     """Returns the toxicbuild.conf module.
 

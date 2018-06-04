@@ -74,7 +74,7 @@ class Builder(LoggerMixin):
     def _do_build(self):
         build_status = None
         build_info = {'steps': [], 'status': 'running',
-                      'started': datetime2string(now()),
+                      'started': datetime2string(localtime2utc(now())),
                       'finished': None, 'info_type': 'build_info'}
 
         yield from self.manager.send_info(build_info)
@@ -130,7 +130,7 @@ class Builder(LoggerMixin):
 
         build_info['status'] = build_status
         build_info['total_steps'] = len(self.steps)
-        finished = now()
+        finished = localtime2utc(now())
         build_info['finished'] = datetime2string(finished)
 
         return build_info

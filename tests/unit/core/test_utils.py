@@ -226,6 +226,11 @@ class UtilsTest(TestCase):
         self.assertEqual(n.utcoffset().total_seconds(),
                          time.localtime().tm_gmtoff)
 
+    def test_set_tz_info(self):
+        n = datetime.datetime.now()
+        ntz = utils.set_tzinfo(n, -10800)
+        self.assertEqual(ntz.utcoffset().total_seconds(), -10800)
+
     @patch.object(utils, 'load_module_from_file', Mock())
     def test_get_toxicbuildconf(self):
         utils.get_toxicbuildconf('/some/dir/')
@@ -238,7 +243,7 @@ class UtilsTest(TestCase):
         slave = Mock()
         slave.name = 'myslave'
         confmodule.BUILDERS = [{'name': 'b0'},
-                               {'name': 'b1', 'branches': ['other']},
+                               {'name': 'b1', 'branches': ['otheir']},
                                {'name': 'b2',
                                 'slaves': ['myslave'],
                                 'branches': ['mast*', 'release']},
