@@ -31,7 +31,8 @@ from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                IntField)
 from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
-                                   format_timedelta, LoggerMixin)
+                                   format_timedelta, LoggerMixin,
+                                   localtime2utc)
 from toxicbuild.master.exceptions import DBError, ImpossibleCancellation
 from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import build_added, build_cancelled
@@ -723,6 +724,8 @@ class BuildManager(LoggerMixin):
             buildset.total_time = int((buildset.finished -
                                        buildset.started).seconds)
             await buildset.save()
+            # reload it so we get the right info about builds and status
+            buildset = await type(buildset).objects.get(id=buildset.id)
             await buildset.notify('buildset-finished')
 
     async def _execute_builds(self, slave):

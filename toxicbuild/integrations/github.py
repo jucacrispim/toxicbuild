@@ -490,6 +490,11 @@ class GithubCheckRun(MasterPlugin):
         :param sender: The :class:`~toxicbuild.master.repository.Repository`
           that is running the plugin.
         :param info: The information that is being sent."""
+
+        self.log('Sending notification to github for buildset {}'.format(
+            info['id']), level='info')
+        self.log('Info is: {}'.format(info), level='debug')
+
         self.sender = sender
 
         status = info['status']

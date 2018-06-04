@@ -740,14 +740,11 @@ class BuildManagerTest(TestCase):
     @async_test
     async def test_set_finished_for_buildset(self):
         await self._create_test_data()
-        buildset = mock.MagicMock()
-        save_mock = mock.MagicMock()
-        buildset.save = asyncio.coroutine(lambda *a, **kw: save_mock())
-        buildset.finished = None
-        buildset.notify = AsyncMagicMock()
-        await self.manager._set_finished_for_buildset(buildset)
-        self.assertTrue(buildset.finished)
-        self.assertTrue(save_mock.called)
+        self.buildset.started = now()
+        self.buildset.save = AsyncMagicMock(spec=self.buildset.save)
+        await self.manager._set_finished_for_buildset(self.buildset)
+        self.assertTrue(self.buildset.finished)
+        self.assertTrue(self.buildset.save.called)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -774,18 +771,14 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(build, 'now', mock.Mock())
     @async_test
     async def test_set_finished_for_buildset_total_time(self):
+        just_now = now()
+        build.now.return_value = just_now + datetime.timedelta(seconds=10)
         await self._create_test_data()
-        buildset = mock.MagicMock()
-        save_mock = mock.MagicMock()
-        buildset.save = asyncio.coroutine(lambda *a, **kw: save_mock())
-        buildset.started = now()
-        build.now.return_value = buildset.started + datetime.timedelta(
-            seconds=10)
-        buildset.finished = None
-        buildset.notify = AsyncMagicMock()
-        await self.manager._set_finished_for_buildset(buildset)
-        self.assertEqual(buildset.total_time, 10)
-        self.assertTrue(save_mock.called)
+        self.buildset.save = AsyncMagicMock(spec=self.buildset.save)
+        self.buildset.started = just_now
+        await self.manager._set_finished_for_buildset(self.buildset)
+        self.assertEqual(self.buildset.total_time, 10)
+        self.assertTrue(self.buildset.save.called)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

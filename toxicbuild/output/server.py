@@ -83,7 +83,12 @@ class OutputMethodServer(LoggerMixin):
         :param msg: The incomming message from a notification"""
 
         repo = await Repository.get(id=msg['repository_id'])
-        for plugin in repo.get_plugins_for_event(msg['event_type']):
+        event_type = msg['event_type']
+
+        self.log('Running plugins for event_type {}'.format(event_type),
+                 level='debug')
+
+        for plugin in repo.get_plugins_for_event(event_type):
             self.add_running_task()
             t = ensure_future(plugin.run(repo, msg))
             t.add_done_callback(lambda r: self.remove_running_task())
