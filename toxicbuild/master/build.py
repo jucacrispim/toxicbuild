@@ -31,8 +31,7 @@ from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                IntField)
 from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
-                                   format_timedelta, LoggerMixin,
-                                   localtime2utc)
+                                   format_timedelta, LoggerMixin)
 from toxicbuild.master.exceptions import DBError, ImpossibleCancellation
 from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import build_added, build_cancelled
