@@ -356,7 +356,7 @@ def write_stream(writer, data):
     init = 0
     chunk = data[:WRITE_CHUNK_LEN]
     while chunk:
-        writer.write(data)
+        writer.write(chunk)
         yield from writer.drain()
         init += WRITE_CHUNK_LEN
         chunk = data[init: init + WRITE_CHUNK_LEN]
