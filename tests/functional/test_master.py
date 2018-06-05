@@ -92,12 +92,13 @@ class DummyUIClient(BaseToxicClient):
         return resp
 
     @asyncio.coroutine
-    def start_build(self):
+    def start_build(self, builder='builder-1'):
 
         action = 'repo-start-build'
         body = {'repo_name': 'test-repo',
-                'builder_name': 'builder-1',
                 'branch': 'master'}
+        if builder:
+            body['builder_name'] = builder
         resp = yield from self.request2server(action, body)
 
         return resp
@@ -297,8 +298,7 @@ class ToxicMasterTest(BaseFunctionalTest):
                 if step['status'] == body['status']:
                     return step
 
-        self.assertEqual(response['body']['status'], 'success',
-                         get_bad_step(response['body']))
+        self.assertTrue(response['body']['finished'])
 
     @async_test
     def test_11_list_plugins(self):
@@ -359,13 +359,14 @@ class ToxicMasterTest(BaseFunctionalTest):
 
     @async_test
     def test_15_stream_step_output(self):
-        with (yield from get_dummy_client(self.user)) as client:
-            yield from client.start_build()
 
         with (yield from get_dummy_client(self.user)) as client:
             yield from client.write({'action': 'stream', 'token': '123',
                                      'body': {},
                                      'user_id': str(self.user.id)})
+
+            with (yield from get_dummy_client(self.user)) as bclient:
+                yield from bclient.start_build()
 
             steps = []
             # this ugly part here it to wait for the right message
@@ -378,14 +379,8 @@ class ToxicMasterTest(BaseFunctionalTest):
                 if body.get('event_type') == 'step_output_info':
                     steps.append(body)
 
-                if body.get('event_type') == 'build_finished':
-                    has_sleep = False
-                    for step in body['steps']:
-                        if step['command'] == 'sleep 3':
-                            has_sleep = True
-
-                    if not has_sleep:
-                        break
+                if steps:
+                    break
 
         self.assertTrue(steps)
 

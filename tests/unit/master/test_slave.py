@@ -302,9 +302,15 @@ class SlaveTest(TestCase):
 
         await self.slave._process_step_info(self.build, info)
 
+        info = {'cmd': 'echo "oi"', 'name': 'echo', 'status': 'running',
+                'output': '', 'started': started, 'finished': None,
+                'index': 1, 'uuid': other_uuid}
+
+        await self.slave._process_step_info(self.build, info)
+
         info = {'cmd': 'echo "oi"', 'name': 'echo', 'status': 'success',
                 'output': '', 'started': started, 'finished': finished,
-                'index': 1, 'uuid': other_uuid}
+                'index': 1, 'uuid': other_uuid, 'total_time': 2}
 
         await self.slave._process_step_info(self.build, info)
 
@@ -315,9 +321,10 @@ class SlaveTest(TestCase):
 
         await self.slave._process_step_info(self.build, info)
 
-        self.assertEqual(self.build.steps[0].status, 'success')
-        self.assertEqual(len(self.build.steps), 2)
-        self.assertTrue(self.build.steps[0].total_time)
+        build = await type(self.build).get(self.build.uuid)
+        self.assertEqual(build.steps[1].status, 'success')
+        self.assertEqual(len(build.steps), 2)
+        self.assertTrue(build.steps[1].total_time)
         self.assertTrue(slave.build_notifications.publish.called)
 
     @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
@@ -339,9 +346,18 @@ class SlaveTest(TestCase):
 
         info = {'uuid': a_uuid, 'output': 'somefile.txt\n'}
         await self.slave._process_step_output_info(self.build, info)
-        step = self.slave._get_step(self.build, a_uuid)
+        step = await self.slave._get_step(self.build, a_uuid)
         self.assertTrue(step.output)
         self.assertTrue(slave.build_notifications.publish.called)
+
+    @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
+        spec=slave.build_notifications.publish))
+    @async_test
+    async def test_get_step_wait(self):
+        await self._create_test_data()
+        build = self.buildset.builds[0]
+        step = await self.slave._get_step(build, 'dont-exist', wait=True)
+        self.assertIsNone(step)
 
     async def _create_test_data(self):
         await self.slave.save()

@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
 import traceback
 from mongomotor.fields import (StringField, IntField, BooleanField)
 from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
@@ -214,9 +215,9 @@ class Slave(OwnedDocument, LoggerMixin):
         uuid = step_info['uuid']
 
         repo = await build.repository
-        requested_step = self._get_step(build, uuid)
 
-        if requested_step:
+        if finished:
+            requested_step = await self._get_step(build, uuid, wait=True)
             requested_step.status = status
             requested_step.output = output
             requested_step.finished = string2datetime(finished)
@@ -253,7 +254,7 @@ class Slave(OwnedDocument, LoggerMixin):
         info['output'] = info['output'] + '\n'
         output = info['output']
         repo = await build.repository
-        step = self._get_step(build, uuid)
+        step = await self._get_step(build, uuid, wait=True)
         step.output = ''.join([step.output or '', output])
         info['repository'] = {'id': str(repo.id)}
         await build.update()
@@ -261,7 +262,7 @@ class Slave(OwnedDocument, LoggerMixin):
         self.log(msg, level='debug')
         step_output_arrived.send(str(repo.id), step_info=info)
 
-    def _get_step(self, build, step_uuid):
+    async def _get_step(self, build, step_uuid, wait=False):
         """Returns a step from ``build``. Returns None if the requested
         step is not present in the build.
 
@@ -269,6 +270,27 @@ class Slave(OwnedDocument, LoggerMixin):
         :param step_uuid: The uuid of the requested step.
         """
 
-        for step in build.steps:
-            if str(step.uuid) == step_uuid:
-                return step
+        # this is ridiculous, but the idea of waitig for the step is
+        # that sometimes a info - ie step_output_info - may arrive here
+        # before the step output info, so we need to wait a little.
+        build_inst = build
+
+        async def _get():
+
+            build = await type(build_inst).get(build_inst.uuid)
+            for i, step in enumerate(build.steps):
+                if str(step.uuid) == str(step_uuid):
+                    build_inst.steps[i] = step
+                    return step
+
+        step = await _get()
+        limit = 5
+        n = 0
+        while not step and wait:
+            asyncio.sleep(0.1)
+            step = await _get()
+            n += 1
+            if n >= limit:
+                wait = False
+
+        return step
