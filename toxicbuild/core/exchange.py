@@ -158,18 +158,20 @@ class Exchange(LoggerMixin):
         # but we use a new channel everytime to avoid waiter already
         # exists stuff.
         channel = await self.connection.protocol.channel()
-        # self.channel = await self.connection.protocol.channel()
-        if not queue_name:
-            queue_name = self.queue_name
+        try:
+            # self.channel = await self.connection.protocol.channel()
+            if not queue_name:
+                queue_name = self.queue_name
 
-        self.exchange_declared = await channel.exchange_declare(
-            self.name, self.exchange_type, durable=self.durable)
+            self.exchange_declared = await channel.exchange_declare(
+                self.name, self.exchange_type, durable=self.durable)
 
-        if not self.is_declared(queue_name) and \
-           not self.exclusive_consumer_queue:
-            await self._declare_queue(queue_name, channel)
+            if not self.is_declared(queue_name) and \
+               not self.exclusive_consumer_queue:
+                await self._declare_queue(queue_name, channel)
 
-        await channel.close()
+        finally:
+            await channel.close()
 
     async def _declare_queue(self, queue_name, channel):
 

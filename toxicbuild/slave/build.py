@@ -171,6 +171,7 @@ class Builder(LoggerMixin):
 
         yield from self.manager.send_info(msg)
         self._step_output_buff = []
+        self._current_step_output_buff_len = 0
 
     def _get_env_vars(self):
         envvars = copy(self.envvars)
