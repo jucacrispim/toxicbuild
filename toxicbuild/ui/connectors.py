@@ -125,7 +125,8 @@ class StreamConnector(LoggerMixin):
             event = body.get('event_type')
             allowed_events = ['repo_status_changed']
             if repo_id == self.repo_id or event in allowed_events:
-                self.log('message {} arrived for {}'.format(event, repo_id))
+                self.log('message {} arrived for {}'.format(event, repo_id),
+                         level='debug')
                 message_arrived.send(repo_id, **body)
 
     @classmethod
