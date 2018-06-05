@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -79,6 +79,22 @@ class BuilderTest(TestCase):
         self.assertEqual(len(build_info['steps']), 2)
 
     @async_test
+    def test_send_step_output_info_step_index(self):
+        step_info = {'uuid': 'some-uuid'}
+
+        send_mock = mock.Mock()
+
+        @asyncio.coroutine
+        def send_info(msg):
+            send_mock(msg)
+
+        self.builder.manager.send_info = send_info
+        self.builder._current_step_output_index = 1
+        yield from self.builder._send_step_output_info(step_info,
+                                                       0, 'some line' * 1024)
+        self.assertTrue(send_mock.called)
+
+    @async_test
     def test_send_step_output_info(self):
         step_info = {'uuid': 'some-uuid'}
 
@@ -90,8 +106,23 @@ class BuilderTest(TestCase):
 
         self.builder.manager.send_info = send_info
         yield from self.builder._send_step_output_info(step_info,
-                                                       0, 'some line')
+                                                       0, 'some line' * 1024)
         self.assertTrue(send_mock.called)
+
+    @async_test
+    def test_send_step_output_info_short(self):
+        step_info = {'uuid': 'some-uuid'}
+
+        send_mock = mock.Mock()
+
+        @asyncio.coroutine
+        def send_info(msg):
+            send_mock(msg)
+
+        self.builder.manager.send_info = send_info
+        yield from self.builder._send_step_output_info(step_info,
+                                                       0, 'some line')
+        self.assertFalse(send_mock.called)
 
     @async_test
     async def test_get_env_vars(self):

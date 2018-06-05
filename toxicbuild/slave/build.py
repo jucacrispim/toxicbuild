@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -32,6 +32,8 @@ class Builder(LoggerMixin):
     the toxicbuild.conf file
     """
 
+    STEP_OUTPUT_BUFF_LEN = 1024
+
     def __init__(self, manager, name, workdir, platorm='linux-generic',
                  remove_env=True, **envvars):
         """:param manager: instance of :class:`toxicbuild.slave.BuildManager`.
@@ -50,6 +52,9 @@ class Builder(LoggerMixin):
         self.platform = platorm
         self.remove_env = remove_env
         self.envvars = envvars
+        self._step_output_buff = []
+        self._current_step_output_index = None
+        self._current_step_output_buff_len = 0
 
     async def __aenter__(self):
         await self._copy_workdir()
@@ -81,6 +86,7 @@ class Builder(LoggerMixin):
         last_step_status = None
         last_step_output = None
         for index, step in enumerate(self.steps):
+            self._clear_step_output_buff()
             cmd = yield from step.get_command()
             msg = 'Executing %s' % cmd
             self.log(msg, level='debug')
@@ -103,7 +109,7 @@ class Builder(LoggerMixin):
                 last_step_status=last_step_status,
                 last_step_output=last_step_output, **envvars)
             step_info.update(step_exec_output)
-
+            yield from self._flush_step_output_buff(step_info['uuid'])
             status = step_info['status']
             last_step_output = step_exec_output
             last_step_status = status
@@ -135,13 +141,36 @@ class Builder(LoggerMixin):
 
         return build_info
 
+    def _clear_step_output_buff(self):
+        self._step_output_buff = []
+        self._current_step_output_index = None
+        self._current_step_output_buff_len = 0
+
     @asyncio.coroutine
     def _send_step_output_info(self, step_info, line_index, line):
+        self._step_output_buff.append(line)
+        self._current_step_output_buff_len += len(line)
+
+        if not self._current_step_output_buff_len > self.STEP_OUTPUT_BUFF_LEN:
+            return
+
+        yield from self._flush_step_output_buff(step_info['uuid'])
+
+    @asyncio.coroutine
+    def _flush_step_output_buff(self, step_uuid):
+
+        if self._current_step_output_index is None:
+            self._current_step_output_index = 0
+        else:
+            self._current_step_output_index += 1
+
         msg = {'info_type': 'step_output_info',
-               'uuid': step_info['uuid'], 'output_index': line_index,
-               'output': line.strip('\n')}
+               'uuid': step_uuid,
+               'output_index': self._current_step_output_index,
+               'output': ''.join(self._step_output_buff).strip('\n')}
 
         yield from self.manager.send_info(msg)
+        self._step_output_buff = []
 
     def _get_env_vars(self):
         envvars = copy(self.envvars)
