@@ -317,6 +317,7 @@ def read_stream(reader):
     data = yield from reader.read(1)
     if not data or data == b'\n':
         raw_data = b''
+        raw_data_list = [b'']
     else:
         char = None
         while char != b'\n' and char != b'':
@@ -330,15 +331,17 @@ def read_stream(reader):
             raw_data = yield from reader.read(READ_CHUNK_LEN)
 
         raw_data_len = len(raw_data)
-        raw_data = [raw_data]
+        #raw_data = [raw_data]
+        raw_data_list = [raw_data]
         while raw_data_len < len_data:
             left = len_data - len(raw_data)
             next_chunk = left if left < READ_CHUNK_LEN else READ_CHUNK_LEN
             new_data = yield from reader.read(next_chunk)
             raw_data_len += len(new_data)
-            raw_data.append(new_data)
+            # raw_data += new_data
+            raw_data_list.append(new_data)
 
-    return b''.join(raw_data)
+    return b''.join(raw_data_list)
 
 
 @asyncio.coroutine
@@ -356,9 +359,10 @@ def write_stream(writer, data):
     chunk = data[:WRITE_CHUNK_LEN]
     while chunk:
         writer.write(data)
-        yield from writer.drain()
         init += WRITE_CHUNK_LEN
         chunk = data[init: init + WRITE_CHUNK_LEN]
+
+    yield from writer.drain()
 
 
 def bcrypt_string(src_string, salt=None):
