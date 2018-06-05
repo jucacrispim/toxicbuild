@@ -359,10 +359,9 @@ def write_stream(writer, data):
     chunk = data[:WRITE_CHUNK_LEN]
     while chunk:
         writer.write(data)
+        yield from writer.drain()
         init += WRITE_CHUNK_LEN
         chunk = data[init: init + WRITE_CHUNK_LEN]
-
-    yield from writer.drain()
 
 
 def bcrypt_string(src_string, salt=None):
