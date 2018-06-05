@@ -42,7 +42,7 @@ DTFORMAT = '%a %b %d %H:%M:%S %Y %z'
 _THREAD_EXECUTOR = ThreadPoolExecutor()
 
 WRITE_CHUNK_LEN = 4096
-READ_CHUNK_LEN = 4096
+READ_CHUNK_LEN = 1024
 
 
 def _get_envvars(envvars):
