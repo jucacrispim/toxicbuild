@@ -42,7 +42,7 @@ DTFORMAT = '%a %b %d %H:%M:%S %Y %z'
 _THREAD_EXECUTOR = ThreadPoolExecutor()
 
 WRITE_CHUNK_LEN = 4096
-READ_CHUNK_LEN = 1024
+READ_CHUNK_LEN = 4096
 
 
 def _get_envvars(envvars):
@@ -329,12 +329,16 @@ def read_stream(reader):
         else:
             raw_data = yield from reader.read(READ_CHUNK_LEN)
 
-        while len(raw_data) < len_data:
+        raw_data_len = len(raw_data)
+        raw_data = [raw_data]
+        while raw_data_len < len_data:
             left = len_data - len(raw_data)
             next_chunk = left if left < READ_CHUNK_LEN else READ_CHUNK_LEN
-            raw_data += yield from reader.read(next_chunk)
+            new_data = yield from reader.read(next_chunk)
+            raw_data_len += len(new_data)
+            raw_data.append(new_data)
 
-    return raw_data
+    return b''.join(raw_data)
 
 
 @asyncio.coroutine
