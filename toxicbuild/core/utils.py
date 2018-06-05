@@ -41,6 +41,9 @@ DTFORMAT = '%a %b %d %H:%M:%S %Y %z'
 
 _THREAD_EXECUTOR = ThreadPoolExecutor()
 
+WRITE_CHUNK_LEN = 4096
+READ_CHUNK_LEN = 1024
+
 
 def _get_envvars(envvars):
     """Returns environment variables to be used in shell. Does the
@@ -321,14 +324,14 @@ def read_stream(reader):
             data += char
 
         len_data = int(data)
-        if len_data <= 1024:
+        if len_data <= READ_CHUNK_LEN:
             raw_data = yield from reader.read(len_data)
         else:
-            raw_data = yield from reader.read(1024)
+            raw_data = yield from reader.read(READ_CHUNK_LEN)
 
         while len(raw_data) < len_data:
             left = len_data - len(raw_data)
-            next_chunk = left if left < 1024 else 1024
+            next_chunk = left if left < READ_CHUNK_LEN else READ_CHUNK_LEN
             raw_data += yield from reader.read(next_chunk)
 
     return raw_data
@@ -345,8 +348,13 @@ def write_stream(writer, data):
 
     data = data.encode('utf-8')
     data = '{}\n'.format(len(data)).encode('utf-8') + data
-    writer.write(data)
-    yield from writer.drain()
+    init = 0
+    chunk = data[:WRITE_CHUNK_LEN]
+    while chunk:
+        writer.write(data)
+        yield from writer.drain()
+        init += WRITE_CHUNK_LEN
+        chunk = data[init: init + WRITE_CHUNK_LEN]
 
 
 def bcrypt_string(src_string, salt=None):
