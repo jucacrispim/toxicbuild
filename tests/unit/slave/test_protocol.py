@@ -84,10 +84,9 @@ class ProtocolTest(TestCase):
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
-    @async_test
     def test_get_buildmanager(self):
         self.protocol.data = yield from self.protocol.get_json_data()
-        builder = yield from self.protocol.get_buildmanager()
+        builder = self.protocol.get_buildmanager()
         self.assertTrue(builder)
 
     @async_test
