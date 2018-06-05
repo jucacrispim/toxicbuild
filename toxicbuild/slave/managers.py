@@ -214,7 +214,7 @@ class BuildManager(LoggerMixin):
                             'branch')is None)]
         except KeyError as e:
             key = str(e)
-            msg = 'Your builder config does not have a required key'.format(
+            msg = 'Your builder config does not have a required key {}'.format(
                 key)
             raise BadBuilderConfig(msg)
 

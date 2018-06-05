@@ -29,6 +29,7 @@ from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import changedir, log, daemonize as daemon
 
+# pylint: disable=global-statement
 
 PIDFILE = 'toxicoutput.pid'
 LOGFILE = './toxicoutput.log'
@@ -83,12 +84,12 @@ def run_toxicoutput(loglevel):
 
     # this one must be imported so the plugin can run in the
     # output process
-    from toxicbuild.integrations.github import GithubCheckRun  # noqa F401
+
+    from toxicbuild.integrations.github import (  # pylint: disable=W0612
+        GithubCheckRun)
 
     from toxicbuild.output.server import OutputMethodServer
-
     server = OutputMethodServer()
-
     loop = asyncio.get_event_loop()
     output_server_init(server)
     try:

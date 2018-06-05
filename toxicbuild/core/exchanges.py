@@ -19,6 +19,8 @@
 
 from toxicbuild.core.exchange import Exchange
 
+# pylint: disable=global-statement
+
 gconn = None
 
 

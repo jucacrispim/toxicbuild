@@ -188,8 +188,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
             await repo.build_manager.add_builds(revisions)
         except Exception as e:
-            log_msg = '[_add_builds] error adding builds for repo {}. '
-            log_msg += 'Exception was {}'.format(repo.id, str(e))
+            log_msg = 'Error adding builds for repo {}. '.format(repo.id)
+            log_msg += 'Exception was {}'.format(str(e))
             utils.log(log_msg, level='error')
         finally:
             await msg.acknowledge()
@@ -230,8 +230,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             await repo.start_build(branch, builder_name=builder_name,
                                    named_tree=named_tree, slaves=slaves)
         except Exception as e:
-            log_msg = '[_add_requested_build] error starting builds for {}. '
-            log_msg += 'Exception was {}'.format(repo.id, str(e))
+            log_msg = 'Error starting builds for {}. '.format(repo.id)
+            log_msg += 'Exception was {}'.format(str(e))
             utils.log(log_msg, level='error')
         finally:
             await msg.acknowledge()
@@ -606,7 +606,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         """Adds a new slave to a repository.
 
         :param slave: A slave instance."""
-        self.slaves
         slaves = await self.slaves
         slaves.append(slave)
         self.slaves = slaves
@@ -754,7 +753,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             self.plugins.remove(p)
         await self.save()
 
-    async def add_builds_for_slave(self, buildset, slave, builders=[]):
+    async def add_builds_for_slave(self, buildset, slave, builders=None):
         """Adds a buildset to the build queue of a given slave
         for this repository.
 
@@ -762,6 +761,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
           :class:`toxicbuild.master.build.BuildSet`.
         :param slave: An instance of :class:`toxicbuild.master.build.Slave`.
         """
+        builders = builders or []
         await self.build_manager.add_builds_for_slave(
             buildset, slave, builders=builders)
 

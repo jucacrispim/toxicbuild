@@ -63,8 +63,8 @@ from collections import OrderedDict
 import copy
 import json
 from uuid import uuid4
-from mongomotor import EmbeddedDocument
 from mongoengine.base.metaclasses import DocumentMetaclass
+from mongomotor import EmbeddedDocument
 from mongomotor.fields import (StringField, URLField, ListField, UUIDField,
                                ReferenceField)
 from toxicbuild.core import requests
@@ -75,7 +75,7 @@ from toxicbuild.master.mail import MailSender
 from toxicbuild.master.signals import build_started, build_finished
 
 
-class PrettyField:
+class PrettyFieldMixin:  # pylint: disable=too-few-public-methods
     """A field with a descriptive name for humans"""
 
     def __init__(self, *args, **kwargs):
@@ -90,19 +90,19 @@ class PrettyField:
         super().__init__(*args, **kwargs)
 
 
-class PrettyStringField(PrettyField, StringField):
+class PrettyStringField(PrettyFieldMixin, StringField):
     pass
 
 
-class PrettyURLField(PrettyField, URLField):
+class PrettyURLField(PrettyFieldMixin, URLField):
     pass
 
 
-class PrettyListField(PrettyField, ListField):
+class PrettyListField(PrettyFieldMixin, ListField):
     pass
 
 
-_translate_table = {PrettyListField: 'list',
+_TRANSLATE_TABLE = {PrettyListField: 'list',
                     ListField: 'list',
                     PrettyStringField: 'string',
                     PrettyURLField: 'url',
@@ -152,11 +152,11 @@ class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
         try:
             fdict = {'pretty_name': field.pretty_name,
                      'name': field.name,
-                     'type': _translate_table[type(field)]}
+                     'type': _TRANSLATE_TABLE[type(field)]}
         except (KeyError, AttributeError):
             fdict = {'pretty_name': '',
                      'name': field.name,
-                     'type': _translate_table[type(field)]}
+                     'type': _TRANSLATE_TABLE[type(field)]}
 
         return fdict
 
@@ -185,11 +185,12 @@ class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
     def get_schema(cls, to_serialize=False):
         """Returns a dictionary with the schema of the plugin."""
 
-        ordered = cls._fields_ordered
+        # the linter does not know attrs setted dynamicaly
+        ordered = cls._fields_ordered  # pylint: disable=no-member
         fields = OrderedDict()
 
         for of in ordered:
-            fields[of] = cls._fields[of]
+            fields[of] = cls._fields[of]  # pylint: disable=no-member
 
         fields['type'] = cls.type
         fields['name'] = cls.name
@@ -230,7 +231,7 @@ class MasterPlugin(LoggerMixin, Plugin, EmbeddedDocument,
         objdict['repository'] = str(self._instance.id)
         return objdict
 
-    async def run(self, sender, info):
+    async def run(self, sender, info):  # pylint: disable=unused-argument
         """Runs the plugin. You must implement this in your plugin."""
 
         msg = 'You must implement a run() method in your plugin'
@@ -327,8 +328,8 @@ class NotificationPlugin(MasterPlugin):
         translation = super()._translate_schema(to_serialize)
         # we move these guys here so the user defined attributes
         # appear first
-        translation.move_to_end('branches')
-        translation.move_to_end('statuses')
+        translation.move_to_end('branches')  # pylint: disable=no-member
+        translation.move_to_end('statuses')  # pylint: disable=no-member
         return translation
 
 
@@ -394,8 +395,9 @@ class EmailPlugin(NotificationPlugin):
 
     async def send_started_message(self, repo, build):
         buildset = await build.get_buildset()
-        dt = datetime2string(build.started)
-        subject = '[ToxicBuild][{}] Build started at {}'.format(repo.name, dt)
+        started = datetime2string(build.started)
+        subject = '[ToxicBuild][{}] Build started at {}'.format(repo.name,
+                                                                started)
         message = 'A build has just started for the repository {}.'.format(
             repo.name)
 

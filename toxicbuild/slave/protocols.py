@@ -98,7 +98,7 @@ class BuildServerProtocol(BaseToxicProtocol):
     def list_builders(self):
         """ Informs all builders' names for this repo/branch/named_tree
         """
-        with (yield from self.get_buildmanager()) as manager:
+        with self.get_buildmanager() as manager:
             # We do not work after wait because if we wait for it
             # the other instance working is in the same named_tree
             yield from manager.update_and_checkout(work_after_wait=False)
@@ -111,7 +111,7 @@ class BuildServerProtocol(BaseToxicProtocol):
         """ Performs a build requested by the client using the params sent
         in the request data
         """
-        with (yield from self.get_buildmanager()) as manager:
+        with self.get_buildmanager() as manager:
             external = self.data['body'].get('external')
             yield from manager.update_and_checkout(work_after_wait=False,
                                                    external=external)
@@ -133,7 +133,6 @@ class BuildServerProtocol(BaseToxicProtocol):
                 build_info = yield from builder.build()
             return build_info
 
-    @asyncio.coroutine
     def get_buildmanager(self):
         """ Returns the builder manager for this request
         """

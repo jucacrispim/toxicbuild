@@ -27,6 +27,8 @@ from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import changedir
 
+# pylint: disable=global-statement
+
 PIDFILE = 'toxicintegrations.pid'
 LOGFILE = './toxicintegrations.log'
 ENVVAR = 'TOXICINTEGRATIONS_SETTINGS'

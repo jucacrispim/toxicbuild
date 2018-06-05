@@ -132,7 +132,7 @@ def load_module_from_file(filename):
     """ Load a module from a source file
     :param filename: full path for file to be loaded.
     """
-    fname, extension = filename.rsplit('.', 1)
+    fname = filename.rsplit('.', 1)[0]
     fname = fname.rsplit(os.sep, 1)[-1]
     source_file = importlib.machinery.SourceFileLoader(fname, filename)
 

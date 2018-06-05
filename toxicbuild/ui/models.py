@@ -254,7 +254,7 @@ class Repository(BaseModel):
     @classmethod
     @asyncio.coroutine
     def add(cls, requester, name, url, owner, vcs_type, update_seconds=300,
-            slaves=[], parallel_builds=None):
+            slaves=None, parallel_builds=None):
         """Adds a new repository.
 
         :param requester: The user who is requesting the operation.
@@ -272,7 +272,7 @@ class Repository(BaseModel):
               'parallel_builds': parallel_builds,
               'owner_id': str(owner.id)}
 
-        kw.update({'slaves': slaves})
+        kw.update({'slaves': slaves or []})
         with (yield from cls.get_client(requester)) as client:
             repo_dict = yield from client.repo_add(**kw)
 
@@ -371,7 +371,7 @@ class Repository(BaseModel):
 
     @asyncio.coroutine
     def start_build(self, branch, builder_name=None, named_tree=None,
-                    slaves=[]):
+                    slaves=None):
         """Starts a (some) build(s) for a repository.
 
         :param branch: The name of the branch.
@@ -385,7 +385,7 @@ class Repository(BaseModel):
         with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_start_build(
                 repo_name=self.name, branch=branch, builder_name=builder_name,
-                named_tree=named_tree, slaves=slaves)
+                named_tree=named_tree, slaves=slaves or [])
         return resp
 
     def to_dict(self):

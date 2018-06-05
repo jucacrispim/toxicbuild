@@ -16,6 +16,8 @@ from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import (log, daemonize as daemon,
                                    bcrypt_string, changedir)
 
+# pylint: disable=global-statement
+
 settings = None
 dbconn = None
 scheduler = None
@@ -471,7 +473,7 @@ def create_user(configfile, email=None, password=None, superuser=False):
     return user
 
 
-def _ask_thing(thing, opts=[]):
+def _ask_thing(thing, opts=None):
     if opts:
         thing += '[' + '/'.join(opts) + ']'
 

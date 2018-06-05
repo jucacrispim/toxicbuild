@@ -71,8 +71,10 @@ class LoginHandler(TemplateHandler):
             return self.redirect('/login?error=2')
 
         try:
-            self.user = yield from User.authenticate(username_or_email,
-                                                     password)
+            # async methode User.authenticate being used with yield from
+            # bacause of tornado and pylint complains
+            self.user = yield from User.authenticate(  # pylint: disable=E1133
+                username_or_email, password)
         except:
             return self.redirect('/login?error=1')
 

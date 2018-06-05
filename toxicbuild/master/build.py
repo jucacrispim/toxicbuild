@@ -427,7 +427,7 @@ class BuildSet(SerializeMixin, Document):
     }
 
     @queryset_manager
-    def objects(doc_cls, queryset):
+    def objects(doc_cls, queryset):  # pylint: disable=no-self-argument
         """The default querymanager for BuildSet"""
 
         return queryset.order_by('created')
@@ -590,7 +590,7 @@ class BuildManager(LoggerMixin):
         if last_bs and self.repository.notify_only_latest(buildset.branch):
             await self.cancel_previous_pending(buildset)
 
-    async def add_builds_for_slave(self, buildset, slave, builders=[]):
+    async def add_builds_for_slave(self, buildset, slave, builders=None):
         """Adds builds for a given slave on a given buildset.
 
         :param buildset: An instance of :class:`toxicbuild.master.BuildSet`.
@@ -599,6 +599,7 @@ class BuildManager(LoggerMixin):
           not builders all builders for this slave and revision will be used.
         """
 
+        builders = builders or []
         revision = await buildset.revision
         if not builders:
             builders = await self.get_builders(slave, revision)

@@ -158,7 +158,7 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
 
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
-    def get_revisions(self, since={}, branches=None):
+    def get_revisions(self, since=None, branches=None):
         """ Returns the revisions for ``branches`` since ``since``.
 
         :param since: dictionary in the format: {branch_name: since_date}.
@@ -310,8 +310,9 @@ class Git(VCS):
         return ret
 
     @asyncio.coroutine
-    def get_revisions(self, since={}, branches=None):
+    def get_revisions(self, since=None, branches=None):
 
+        since = since or {}
         # this must be called everytime so we sync our repo
         # with the remote repo and then we can see new branches
         yield from self.fetch()

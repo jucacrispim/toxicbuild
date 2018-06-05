@@ -45,7 +45,9 @@ class ToxicProgram(Program):
             return _command
 
     def execute(self, *args, **kwargs):
-        [call() for call in self._generate_queue]
+        for call in self._generate_queue:
+            call()
+
         super().execute(*args, **kwargs)
         self._generate_queue = []
 

@@ -331,7 +331,9 @@ class HoleHandler:
 
         repo = await Repository.get_for_user(self.protocol.user,
                                              name=repo_name)
-        [setattr(repo, k, v) for k, v in kwargs.items()]
+
+        for k, v in kwargs.items():
+            setattr(repo, k, v)
 
         await repo.save()
         return {'repo-update': 'ok'}
@@ -407,9 +409,9 @@ class HoleHandler:
         return {'repo-disable-plugin': 'ok'}
 
     async def repo_start_build(self, repo_name, branch, builder_name=None,
-                               named_tree=None, slaves=[]):
+                               named_tree=None, slaves=None):
         """ Starts a(some) build(s) in a given repository. """
-        # Mutable stuff on method declaration. Sin!!! Take that, PyLint!
+        slaves = slaves or []
 
         repo = await Repository.get_for_user(self.protocol.user,
                                              name=repo_name)
@@ -498,7 +500,9 @@ class HoleHandler:
         """Updates infomation of a slave."""
 
         slave = await Slave.get_for_user(self.protocol.user, name=slave_name)
-        [setattr(slave, k, v) for k, v in kwargs.items()]
+
+        for k, v in kwargs.items():
+            setattr(slave, k, v)
 
         await slave.save()
         return {'slave-update': 'ok'}

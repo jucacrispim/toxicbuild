@@ -14,6 +14,8 @@ from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string,
                                    changedir)
 
 
+# pylint: disable=global-statement
+
 ENVVAR = 'TOXICSLAVE_SETTINGS'
 DEFAULT_SETTINGS = 'toxicslave.conf'
 
@@ -65,7 +67,8 @@ def start(workdir, daemonize=False, stdout=LOGFILE,
     create_settings()
     # These toxicbuild.slave imports must be here so I can
     # change the settings file before settings are instanciated.
-    from toxicbuild.slave import server, settings
+    from toxicbuild.slave.server import run_server
+    global settings
 
     addr = settings.ADDR
     port = settings.PORT
@@ -85,7 +88,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE,
         keyfile = None
 
     if daemonize:
-        daemon(call=server.run_server, cargs=(addr, port),
+        daemon(call=run_server, cargs=(addr, port),
                ckwargs={'use_ssl': use_ssl, 'certfile': certfile,
                         'keyfile': keyfile},
                stdout=stdout, stderr=stderr, workdir=workdir, pidfile=pidfile)
@@ -94,8 +97,8 @@ def start(workdir, daemonize=False, stdout=LOGFILE,
         logging.basicConfig(level=loglevel)
 
         with changedir(workdir):
-            server.run_server(addr, port, use_ssl=use_ssl,
-                              certfile=certfile, keyfile=keyfile)
+            run_server(addr, port, use_ssl=use_ssl,
+                       certfile=certfile, keyfile=keyfile)
 
 
 def _process_exist(pid):

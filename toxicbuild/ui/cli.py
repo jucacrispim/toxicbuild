@@ -90,7 +90,8 @@ def validate_input(command_params, user_args, user_kwargs):
     sig = ', '.join([args, kwargs]) if (args or kwargs) else ' '
     sig = sig.strip().strip(',')
 
-    f = eval('lambda {}: None'.format(sig))
+    # take that, pylint!
+    f = eval('lambda {}: None'.format(sig))  # pylint: disable=eval-used
 
     try:
         f(*user_args, **user_kwargs)

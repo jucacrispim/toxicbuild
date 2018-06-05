@@ -80,7 +80,7 @@ class Poller(LoggerMixin):
         async with await self.repository.toxicbuild_conf_lock.acquire(
                 routing_key=str(self.repository.id)):
             if self.is_polling():
-                self.log('alreay polling. leaving...'.format(
+                self.log('{} alreay polling. leaving...'.format(
                     self.repository.url), level='debug')
                 return
 
