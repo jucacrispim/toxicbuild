@@ -334,7 +334,7 @@ def read_stream(reader):
         #raw_data = [raw_data]
         raw_data_list = [raw_data]
         while raw_data_len < len_data:
-            left = len_data - len(raw_data)
+            left = len_data - raw_data_len
             next_chunk = left if left < READ_CHUNK_LEN else READ_CHUNK_LEN
             new_data = yield from reader.read(next_chunk)
             raw_data_len += len(new_data)
