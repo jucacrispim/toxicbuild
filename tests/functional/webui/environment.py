@@ -135,6 +135,10 @@ def del_repo(context):
         except Exception as e:
             log('Error deleting repo ' + str(e), level='warning')
 
+    from toxicbuild.master.repository import Repository as RepoModel
+
+    yield from RepoModel.drop_collection()
+
 
 def before_all(context):
     start_slave()
