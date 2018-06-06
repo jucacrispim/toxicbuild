@@ -21,11 +21,9 @@
 import asyncio
 from collections import OrderedDict
 import json
-from toxicbuild.ui import settings
-from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import string2datetime
 from toxicbuild.ui.client import get_hole_client
-from toxicbuild.ui.utils import is_datetime
+from toxicbuild.ui.utils import is_datetime, get_client_settings
 
 
 class BaseModel:
@@ -62,7 +60,7 @@ class BaseModel:
         self.requester = requester
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.id == other.id
+        return isinstance(self, type(other)) and self.id == other.id
 
     def __hash__(self):
         return hash(self.id)
@@ -72,21 +70,8 @@ class BaseModel:
     def get_client(cls, requester):
         """Returns a client connected to master."""
 
-        host = settings.HOLE_HOST
-        port = settings.HOLE_PORT
-        try:
-            use_ssl = settings.MASTER_USES_SSL
-        except ConfigError:
-            use_ssl = False
-
-        try:
-            validate_cert = settings.VALIDATE_CERT_MASTER
-        except ConfigError:
-            validate_cert = False
-
-        client = yield from get_hole_client(requester, host, port,
-                                            use_ssl=use_ssl,
-                                            validate_cert=validate_cert)
+        client_settings = get_client_settings()
+        client = yield from get_hole_client(requester, **client_settings)
         return client
 
     def to_dict(self):

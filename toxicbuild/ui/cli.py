@@ -103,13 +103,13 @@ def get_kwargs(command_params, args):
     """ Return kwargs for ``args`` based on ``command_params``.
     ``command_params`` are the known parameters for a command, those
     sent by list-funcs."""
-
+    # pylint: disable=undefined-variable
     kwargs = {}
     for i, arg in enumerate(args):
         try:
             kwargs.update({command_params[i]['name']: arg})
         except IndexError:
-            msg = _('Bad args for command')  # noqa f821
+            msg = _('Bad args for command')
             raise ToxicShellError(msg)
 
     return kwargs
@@ -250,7 +250,8 @@ class ToxicCliActions:
         try:
             sig = self.actions[cmd]
         except KeyError:
-            msg = _('Command "{}" does not exist').format(cmd)  # noqa f821
+            msg = _(  # pylint: disable=undefined-variable
+                'Command "{}" does not exist').format(cmd)
             raise ToxicShellError(msg)
 
         known_params = sig['parameters']
@@ -262,7 +263,8 @@ class ToxicCliActions:
         try:
             action_sig = self.actions[action_name]
         except KeyError:
-            msg = _('Command "{}" does not exist').format(action_name)  # noqa f821
+            msg = _(  # pylint: disable=undefined-variable
+                'Command "{}" does not exist').format(action_name)
             raise ToxicShellError(msg)
 
         action_help = {}
@@ -341,7 +343,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         self.messages.set_text('')
         if not input_text:
             return
-        f = asyncio.async(self.execute_and_show(input_text))
+        f = asyncio.ensure_future(self.execute_and_show(input_text))
         # for tests
         return f
 
@@ -441,8 +443,8 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
                 '%s' % action_help['short_doc']]
 
         if full:
-            params = _('Parameters')  # noqa f821
-            required = _('Required')  # noqa f821
+            params = _('Parameters')  # pylint: disable=undefined-variable
+            required = _('Required')  # pylint: disable=undefined-variable
 
             text += [action_help['doc'], '\n']
 
@@ -459,16 +461,16 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         return text
 
     def get_help_screen(self, command_name=None):
-
+        # pylint: disable=undefined-variable
         text = [('action-name', 'help'), ' - ']
 
-        text.append(_('Displays this help text.'))  # noqa f821
+        text.append(_('Displays this help text.'))
 
-        params = _('Parameters')  # noqa f821
+        params = _('Parameters')
         text += ['\n%s: ' % params, ('param', 'command-name\n\n')]
         text += [('action-name', 'quit'), ' - ']
 
-        text.append(_('Finishes the program'))  # noqa f821
+        text.append(_('Finishes the program'))
         text.append('\n')
 
         ordered_actions = sorted(self.actions.keys())
@@ -479,12 +481,14 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         return text
 
     def _get_welcome_text(self):
+        # pylint: disable=undefined-variable
         # Translators: Do not translate what is inside {}
-        return _('Welcome to {toxicbuild}')  # noqa f821
+        return _('Welcome to {toxicbuild}')
 
     def _get_help_text(self):
+        # pylint: disable=undefined-variable
         # Translators: Do not translate what is inside {}
-        return _('Type {h} for help and {q} for quit')  # noqa f821
+        return _('Type {h} for help and {q} for quit')
 
     def _format_help_text(self, text):
         # all this mess to put colors on h and q... pfff
@@ -534,17 +538,20 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         return ''.join(formated_output)
 
     def _format_repo_list(self, repos):
-        output = [(_('name'), _('vcs'))]  # noqa f821
+        output = [(_('name'), _('vcs'))]  # pylint: disable=undefined-variable
         output += [(r['name'], r['vcs_type']) for r in repos]
         return self._format_output_columns(output)
 
     def _format_slave_list(self, slaves):
-        output = [(_('name'), _('host'), _('port'))]  # noqa f821
+        # pylint: disable=undefined-variable
+        output = [(_('name'), _('host'), _('port'))]
         output += [(s['name'], s['host'], s['port']) for s in slaves]
         return self._format_output_columns(output)
 
     def _format_builder_list(self, builders):
-        output = [(_('name'), _('status'))]  # noqa f821
+        # pylint: disable=undefined-variable
+
+        output = [(_('name'), _('status'))]
         output += [(b['name'], b['status'])
                    for b in builders]
         return self._format_output_columns(output)
@@ -579,12 +586,14 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
     def _format_peek_step(self, response):
         if response.get('finished'):
             # Translators: Do not translate what is inside {}
-            msg = _('step {step} finished with status {status}')  # noqa f821
+            msg = _(  # pylint: disable=undefined-variable
+                'step {step} finished with status {status}')
             msg = msg.format(step=response['command'],
                              status=response['status'])
         else:
             # Translators: Do not translate what is inside {}
-            msg = _('step {step} is running')  # noqa f821
+            msg = _(  # pylint: disable=undefined-variable
+                'step {step} is running')
             msg = msg.format(step=response['command'])
 
         return msg

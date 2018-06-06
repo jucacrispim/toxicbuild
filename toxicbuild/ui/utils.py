@@ -69,3 +69,21 @@ def is_datetime(dtstr):
     if not isinstance(dtstr, str):
         return False
     return bool(re.match(_dt_regex, dtstr))
+
+
+def get_client_settings():
+    host = settings.HOLE_HOST
+    port = settings.HOLE_PORT
+    try:
+        use_ssl = settings.MASTER_USES_SSL
+    except ConfigError:
+        use_ssl = False
+
+    try:
+        validate_cert = settings.VALIDATE_CERT_MASTER
+    except ConfigError:
+        validate_cert = False
+
+    return {'host': host, 'port': port,
+            'use_ssl': use_ssl,
+            'validate_cert': validate_cert}

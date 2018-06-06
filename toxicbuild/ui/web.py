@@ -75,7 +75,7 @@ class LoginHandler(TemplateHandler):
             # bacause of tornado and pylint complains
             self.user = yield from User.authenticate(  # pylint: disable=E1133
                 username_or_email, password)
-        except:
+        except Exception:
             return self.redirect('/login?error=1')
 
         self._set_cookie_content()
@@ -90,6 +90,10 @@ class LoginHandler(TemplateHandler):
 
 
 class LoggedTemplateHandler(TemplateHandler):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = None
 
     def prepare(self):
         super().prepare()
@@ -151,6 +155,10 @@ class BaseModelHandler(LoggedTemplateHandler):
 
 class RepositoryHandler(BaseModelHandler):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.params = None
+
     @gen.coroutine
     def post(self, *args):
         if 'add-branch' in args:
@@ -206,7 +214,7 @@ class RepositoryHandler(BaseModelHandler):
 
     @asyncio.coroutine
     def list_plugins(self):
-        plugins = yield from Plugin.list()
+        plugins = yield from Plugin.list(self.user)
         return plugins
 
     @asyncio.coroutine
@@ -309,6 +317,10 @@ class RepositoryHandler(BaseModelHandler):
 
 class SlaveHandler(BaseModelHandler):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.params = None
+
     def prepare(self):
         super().prepare()
         kw = {}
@@ -334,6 +346,11 @@ class SlaveHandler(BaseModelHandler):
 
 
 class StreamHandler(LoggerMixin, LoggedTemplateHandler, WebSocketHandler):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.action = None
+        self.repo_id = None
 
     def initialize(self):
         self.action = None
@@ -472,6 +489,10 @@ class MainHandler(LoggedTemplateHandler):
 
 class WaterfallHandler(LoggedTemplateHandler):
     template = 'waterfall.html'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.params = None
 
     def prepare(self):
         super().prepare()

@@ -102,6 +102,7 @@ class PythonVenvPlugin(SlavePlugin):
 
     def __init__(self, pyversion, requirements_file='requirements.txt',
                  remove_env=False):
+        super().__init__()
         self.pyversion = pyversion
         self.requirements_file = requirements_file
         self.remove_env = remove_env
@@ -181,6 +182,7 @@ class AptInstallPlugin(SlavePlugin):
         """Initializes the plugin.
         :param packages: A list of packages names to be installed."""
 
+        super().__init__()
         self.packages = packages
 
     def get_steps_before(self):
