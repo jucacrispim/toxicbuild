@@ -33,7 +33,6 @@ from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
 from pyrocumulus.web.handlers import TemplateHandler, PyroRequest
 from pyrocumulus.web.urlmappers import URLSpec
 
-from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import LoggerMixin, string2datetime
 from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
@@ -477,7 +476,7 @@ class MainHandler(LoggedTemplateHandler):
     def _get_settings(self, key):
         try:
             return getattr(settings, key)
-        except ConfigError:
+        except AttributeError:
             return None
 
     def _get_btn_class(self, status):

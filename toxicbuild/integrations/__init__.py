@@ -28,7 +28,7 @@ import sys
 from pyrocumulus.commands.base import get_command
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
-from toxicbuild.core.utils import changedir
+from toxicbuild.core.utils import changedir, SettingsPatcher
 
 PIDFILE = 'toxicintegrations.pid'
 LOGFILE = './toxicintegrations.log'
@@ -153,6 +153,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         create_settings_and_connect()
         create_scheduler()
         create_settings()
+        SettingsPatcher().patch_pyro_settings(settings)
 
         from toxicbuild.master.exchanges import connect_exchanges
 
@@ -209,6 +210,7 @@ def stop(workdir, pidfile=PIDFILE):
         create_settings_and_connect()
         create_scheduler()
         create_settings()
+        SettingsPatcher().patch_pyro_settings(settings)
 
         sys.argv = ['pyromanager.py', '']
 

@@ -11,6 +11,7 @@ def step_impl(context):
     browser = context.browser
     btn = browser.find_element_by_id('btn-status-repo-bla')
     browser.click(btn)
+    time.sleep(0.2)
 
 
 @then('he sees a list of builds in the waterfall')  # noqa f401

@@ -11,7 +11,6 @@ from time import sleep
 from uuid import uuid4
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
-from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string,
                                    changedir)
 
@@ -73,17 +72,17 @@ def start(workdir, daemonize=False, stdout=LOGFILE,
     port = settings.PORT
     try:
         use_ssl = settings.USE_SSL
-    except ConfigError:
+    except AttributeError:
         use_ssl = False
 
     try:
         certfile = settings.CERTFILE
-    except ConfigError:
+    except AttributeError:
         certfile = None
 
     try:
         keyfile = settings.KEYFILE
-    except ConfigError:
+    except AttributeError:
         keyfile = None
 
     if daemonize:
