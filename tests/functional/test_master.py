@@ -23,6 +23,7 @@ from toxicbuild.core import BaseToxicClient
 from toxicbuild.master import settings
 from toxicbuild.master.repository import Repository
 from toxicbuild.master.users import User
+from toxicbuild.master.exchanges import scheduler_action
 from tests import async_test
 from tests.functional import BaseFunctionalTest, REPO_DIR
 from tests.functional.custom_webhook import WebHookMessage
@@ -181,6 +182,8 @@ class ToxicMasterTest(BaseFunctionalTest):
 
         await User.drop_collection()
         await Repository.drop_collection()
+        await scheduler_action.declare()
+        await scheduler_action.queue_delete()
         super().tearDownClass()
 
     @async_test

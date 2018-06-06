@@ -150,7 +150,7 @@ class SchedulerServer(BaseQueueReactorServer):
                 raise UnknownSchedulerAction(req_type)
         finally:
             self._running_tasks -= 1
-            await msg.acknowledge()
+            # await msg.acknowledge()
 
     async def handle_add_update_code(self, msg):
         repo_id = msg.body['repository_id']
@@ -159,7 +159,12 @@ class SchedulerServer(BaseQueueReactorServer):
             self.log('Update for repo {} already scheduled'.format(repo_id),
                      level='warning')
             return False
-        repo = await Repository.get(id=repo_id)
+        try:
+            repo = await Repository.get(id=repo_id)
+        except Repository.DoesNotExist:
+            self.log('Repository {} DoesNotExist'.format(repo_id),
+                     level='error')
+            return False
         await repo._create_locks()
         sched_hash = self.scheduler.add(repo.update_code,
                                         repo.update_seconds)

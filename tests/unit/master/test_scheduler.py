@@ -152,6 +152,16 @@ class SchedulerServerTest(TestCase):
 
     @patch.object(Repository, 'objects', AsyncMagicMock())
     @async_test
+    async def test_handle_add_update_request_does_not_exist(self, *a, **kw):
+        Repository.objects.get.side_effect = Repository.DoesNotExist
+        Repository.objects.get.return_value.id = 'id'
+        msg = Mock()
+        msg.body = {'repository_id': 'some-id'}
+        r = await self.server.handle_add_update_code(msg)
+        self.assertFalse(r)
+
+    @patch.object(Repository, 'objects', AsyncMagicMock())
+    @async_test
     async def test_handle_add_update_request(self, *a, **kw):
         Repository.objects.get.return_value.update_code = lambda: None
         Repository.objects.get.return_value.id = 'id'
