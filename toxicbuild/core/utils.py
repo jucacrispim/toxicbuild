@@ -33,6 +33,7 @@ import string
 import sys
 import time
 import bcrypt
+from mongomotor.monkey import MonkeyPatcher
 from toxicbuild.core.exceptions import ExecCmdError, ConfigError
 
 
@@ -43,6 +44,26 @@ _THREAD_EXECUTOR = ThreadPoolExecutor()
 
 WRITE_CHUNK_LEN = 4096
 READ_CHUNK_LEN = 1024
+
+
+class SourceSuffixesPatcher(MonkeyPatcher):
+    """We must to path ``SOURCE_SUFFIXES`` in the python ``importlib`` so
+    we can import source code files with extension other than `.py`, in
+    this case, namely `.conf`"""
+
+    SOURCE_SUFFIXES = ['.py', '.conf']
+
+    def patch_source_suffixes(self):
+        """Patches the ``SOURCE_SUFFIXES`` constant in the module
+        :mod:`importlib._bootstrap_external`."""
+
+        self.patch_item(importlib._bootstrap_external, 'SOURCE_SUFFIXES',
+                        self.SOURCE_SUFFIXES)
+
+
+# patching it now!
+patcher = SourceSuffixesPatcher()
+patcher.patch_source_suffixes()
 
 
 def _get_envvars(envvars):
