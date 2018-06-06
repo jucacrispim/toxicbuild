@@ -1,0 +1,7 @@
+# A yaml build conf
+
+builders:
+  - name: Buider 1
+    steps:
+      - name: ls
+        command: ls

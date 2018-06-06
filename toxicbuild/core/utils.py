@@ -34,6 +34,11 @@ import sys
 import time
 import bcrypt
 from mongomotor.monkey import MonkeyPatcher
+import yaml
+try:
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Loader
 from toxicbuild.core.exceptions import ExecCmdError, ConfigError
 
 
@@ -291,6 +296,22 @@ def get_toxicbuildconf(directory):
     return load_module_from_file(configfile)
 
 
+async def get_toxicbuildconf_yaml(directory, filename='toxicbuild.yml'):
+    """Returns the python objet representing the yaml build configuration.
+
+    :param directory: The path of the directory containing the config file.
+    :param filename: The actual name of the config file.
+    """
+    configfile = os.path.join(directory, filename)
+    config = await read_file(configfile)
+    try:
+        return yaml.load(config, Loader=Loader)
+    except yaml.scanner.ScannerError as e:
+        err_msg = 'There is something wrong with your file. '
+        err_msg += 'The original exception was:\n{}'.format(e.args[0])
+        raise ConfigError(err_msg)
+
+
 def _match_branch(branch, builder):
     if not branch or not builder.get('branches') or match_string(
             branch, builder.get('branches')):
@@ -468,8 +489,35 @@ class MatchKeysDict(dict):
 
 @asyncio.coroutine
 def run_in_thread(fn, *args, **kwargs):
-    return _THREAD_EXECUTOR.submit(fn, *args, **kwargs)
+    """Runs a callable in a background thread.
 
+    :param fn: A callable to be executed in a thread.
+    :param args: Positional arguments to ``fn``
+    :param kwargs: Named arguments to ``fn``
+
+    Usage
+    ``````
+
+    .. code-block:: python
+
+        r = yield from run_in_thread(call, 1, bla='a')
+"""
+    f = _THREAD_EXECUTOR.submit(fn, *args, **kwargs)
+    return f
+
+
+async def read_file(filename):
+    """Reads the contents of a file asynchronously.
+
+    :param filename: The path of the file."""
+
+    def _read(filename):
+        with open(filename) as fd:
+            contents = fd.read()
+        return contents
+
+    contents = (await run_in_thread(_read, filename)).result()
+    return contents
 
 # Sorry, but not willing to test  a daemonizer.
 

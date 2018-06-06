@@ -126,6 +126,22 @@ class UtilsTest(TestCase):
 
         self.assertEqual(mod.BLA, 'val')
 
+    @async_test
+    async def test_get_toxicbuildconf_yaml_not_found(self):
+        with self.assertRaises(FileNotFoundError):
+            await utils.get_toxicbuildconf_yaml('/i/dont/exist')
+
+    @async_test
+    async def test_get_toxicbuildconf_yaml_with_some_error(self):
+        with self.assertRaises(utils.ConfigError):
+            await utils.get_toxicbuildconf_yaml(
+                TEST_DATA_DIR, 'toxicbuild_error.yml')
+
+    @async_test
+    async def test_get_toxicbuildconf_yaml(self):
+        config = await utils.get_toxicbuildconf_yaml(TEST_DATA_DIR)
+        self.assertTrue(config['builders'][0])
+
     @patch.object(utils.logging, 'info', Mock())
     def test_log(self):
         utils.log('msg')
@@ -350,6 +366,12 @@ class UtilsTest(TestCase):
             self.assertEqual(pyrocumulus.conf.settings, settings)
 
         self.assertNotEqual(pyrocumulus.conf.settings, settings)
+
+    @async_test
+    async def test_read_file(self):
+        filename = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
+        c = await utils.read_file(filename)
+        self.assertTrue(c)
 
 
 class StreamUtilsTest(TestCase):
