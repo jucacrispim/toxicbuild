@@ -66,6 +66,15 @@ patcher = SourceSuffixesPatcher()
 patcher.patch_source_suffixes()
 
 
+class SettingsPatcher(MonkeyPatcher):
+    """Patches the settings from pyrocumulus to use the same settings
+    as toxibuild."""
+
+    def patch_pyro_settings(self, settings):
+        from pyrocumulus import conf as pyroconf
+        self.patch_item(pyroconf, 'settings', settings)
+
+
 def _get_envvars(envvars):
     """Returns environment variables to be used in shell. Does the
     interpolation of values using the current values from the envvar
@@ -157,7 +166,9 @@ def load_module_from_file(filename):
     fname = fname.rsplit(os.sep, 1)[-1]
     spec = importlib.util.spec_from_file_location(fname, filename)
     module = importlib.util.module_from_spec(spec)
+    # source_file = importlib.machinery.SourceFileLoader(fname, filename)
     try:
+        # module = source_file.load_module()
         spec.loader.exec_module(module)
     except FileNotFoundError:
         err_msg = 'Config file "%s" does not exist!' % (filename)
@@ -458,6 +469,7 @@ class MatchKeysDict(dict):
 @asyncio.coroutine
 def run_in_thread(fn, *args, **kwargs):
     return _THREAD_EXECUTOR.submit(fn, *args, **kwargs)
+
 
 # Sorry, but not willing to test  a daemonizer.
 

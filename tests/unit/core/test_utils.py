@@ -341,6 +341,16 @@ class UtilsTest(TestCase):
                 utils.importlib._bootstrap_external.SOURCE_SUFFIXES,
                 ['.py', '.conf'])
 
+    def test_patch_pyrosettings(self):
+        patcher = utils.SettingsPatcher()
+        settings = Mock()
+        with patcher:
+            patcher.patch_pyro_settings(settings)
+            import pyrocumulus
+            self.assertEqual(pyrocumulus.conf.settings, settings)
+
+        self.assertNotEqual(pyrocumulus.conf.settings, settings)
+
 
 class StreamUtilsTest(TestCase):
 

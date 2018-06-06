@@ -19,7 +19,6 @@
 
 import re
 import pytz
-from toxicbuild.core.conf import ConfigError
 from toxicbuild.core.utils import DTFORMAT, datetime2string
 from toxicbuild.ui import settings
 
@@ -30,7 +29,7 @@ _dt_regex = re.compile('\w+\s\w+\s\d+\s\d+:\d+:\d+\s\d+\s[\+|-]\d+$')
 def _get_dtformat():
     try:
         dtformat = settings.DTFORMAT
-    except ConfigError:
+    except AttributeError:
         dtformat = DTFORMAT
 
     return dtformat
@@ -40,7 +39,7 @@ def _get_timezone():
     try:
         tz = settings.TIMEZONE
         tz = pytz.timezone(tz)
-    except (ConfigError, pytz.UnknownTimeZoneError):
+    except (AttributeError, pytz.UnknownTimeZoneError):
         tz = None
 
     return tz
@@ -76,12 +75,12 @@ def get_client_settings():
     port = settings.HOLE_PORT
     try:
         use_ssl = settings.MASTER_USES_SSL
-    except ConfigError:
+    except AttributeError:
         use_ssl = False
 
     try:
         validate_cert = settings.VALIDATE_CERT_MASTER
-    except ConfigError:
+    except AttributeError:
         validate_cert = False
 
     return {'host': host, 'port': port,

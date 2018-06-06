@@ -6,10 +6,9 @@ import pkg_resources
 import shutil
 import sys
 from tornado.platform.asyncio import AsyncIOMainLoop
-from pyrocumulus.commands.base import get_command
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
-from toxicbuild.core.utils import bcrypt, changedir
+from toxicbuild.core.utils import bcrypt, changedir, SettingsPatcher
 
 # pylint: disable=global-statement
 
@@ -98,6 +97,10 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
 
         create_settings()
 
+        SettingsPatcher().patch_pyro_settings(settings)
+
+        from pyrocumulus.commands.base import get_command
+
         sys.argv = ['pyromanager.py', '']
 
         if not pyrocommand:
@@ -139,6 +142,10 @@ def stop(workdir, pidfile=None):
         os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicui'
 
         create_settings()
+
+        SettingsPatcher().patch_pyro_settings(settings)
+
+        from pyrocumulus.commands.base import get_command
 
         sys.argv = ['pyromanager.py', '']
 
