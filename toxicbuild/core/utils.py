@@ -155,10 +155,10 @@ def load_module_from_file(filename):
     """
     fname = filename.rsplit('.', 1)[0]
     fname = fname.rsplit(os.sep, 1)[-1]
-    source_file = importlib.machinery.SourceFileLoader(fname, filename)
-
+    spec = importlib.util.spec_from_file_location(fname, filename)
+    module = importlib.util.module_from_spec(spec)
     try:
-        module = source_file.load_module()
+        spec.loader.exec_module(module)
     except FileNotFoundError:
         err_msg = 'Config file "%s" does not exist!' % (filename)
         raise FileNotFoundError(err_msg)
