@@ -40,6 +40,8 @@ create_settings_ui()
 create_settings_and_connect()
 create_settings_output()
 
+from toxicbuild.master.exchanges import scheduler_action  # noqa f402
+
 from toxicbuild.master.users import User  # noqa f402
 from toxicbuild.ui.models import Slave, Repository  # noqa 402
 from tests.functional import (start_slave, stop_slave,  # noqa 402
@@ -95,6 +97,9 @@ def del_slave(context):
 def create_repo(context):
     """Creates a new repo to be used in tests"""
 
+    yield from scheduler_action.connection.connect()
+    yield from scheduler_action.declare()
+
     repo = yield from Repository.add(context.user,
                                      name='repo-bla', update_seconds=1,
                                      owner=context.user,
@@ -126,6 +131,10 @@ def del_repo(context):
             yield from repo.delete()
         except Exception as e:
             log('Error deleting repo ' + str(e), level='warning')
+
+        yield from scheduler_action.declare()
+        yield from scheduler_action.queue_delete()
+        yield from scheduler_action.connection.disconnect()
 
 
 def before_all(context):
