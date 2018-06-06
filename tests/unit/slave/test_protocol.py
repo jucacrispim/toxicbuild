@@ -103,10 +103,11 @@ class ProtocolTest(TestCase):
     @async_test
     def test_build(self):
         protocols.settings.USE_DOCKER = False
+        manager = protocols.BuildManager.return_value
+        manager.load_config = AsyncMagicMock()
         self.protocol.data = yield from self.protocol.get_json_data()
         protocols.BuildManager.return_value.current_build = None
 
-        manager = protocols.BuildManager.return_value.__enter__.return_value
         manager.load_builder = AsyncMagicMock()
         yield from self.protocol.build()
         self.assertTrue(manager.load_builder.called)
@@ -117,7 +118,9 @@ class ProtocolTest(TestCase):
     def test_build_with_bad_data(self):
         self.protocol.data = yield from self.protocol.get_json_data()
         del self.protocol.data['body']['builder_name']
-        protocols.BuildManager.return_value.current_build = None
+        manager = protocols.BuildManager.return_value
+        manager.load_config = AsyncMagicMock()
+        manager.current_build = None
 
         with self.assertRaises(protocols.BadData):
             yield from self.protocol.build()
@@ -126,8 +129,10 @@ class ProtocolTest(TestCase):
                        mock.MagicMock(spec=protocols.BuildManager))
     @async_test
     def test_build_with_bad_builder_config(self):
-        protocols.BuildManager.return_value.__enter__.return_value.\
-            load_builder = mock.Mock(side_effect=protocols.BadBuilderConfig)
+        manager = protocols.BuildManager.return_value
+        manager.load_config = AsyncMagicMock()
+        manager.load_builder = AsyncMagicMock(
+            side_effect=protocols.BadBuilderConfig)
         protocols.BuildManager.return_value.current_build = None
         self.protocol.data = yield from self.protocol.get_json_data()
 
@@ -142,10 +147,10 @@ class ProtocolTest(TestCase):
                     'body': {'builders': ['b1', 'b2']}}
 
         self.protocol.data = yield from self.protocol.get_json_data()
-        protocols.BuildManager.return_value.__enter__.return_value.\
-            current_build = None
+        manager = protocols.BuildManager.return_value
+        manager.load_config = AsyncMagicMock()
 
-        manager = protocols.BuildManager.return_value.__enter__.return_value
+        manager.current_build = None
 
         manager.list_builders.return_value = ['b1', 'b2']
 
@@ -195,7 +200,8 @@ class ProtocolTest(TestCase):
     @async_test
     def test_client_connected_list_builders(self):
         self.message.update({'token': '123'})
-        manager = protocols.BuildManager.return_value.__enter__.return_value
+        manager = protocols.BuildManager.return_value
+        manager.load_config = AsyncMagicMock()
         protocols.BuildManager.return_value.current_build = None
 
         manager.list_builders.return_value = ['b1', 'b2']
@@ -220,6 +226,7 @@ class ProtocolTest(TestCase):
     @async_test
     def test_client_connected_build(self):
         protocols.settings.USE_DOCKER = False
+        manager = protocols.BuildManager.return_value
         self.message = {'action': 'build',
                         'token': '123',
                         'body': {
@@ -228,8 +235,8 @@ class ProtocolTest(TestCase):
                             'named_tree': 'v0.1',
                             'vcs_type': 'git',
                             'builder_name': 'bla'}}
-        protocols.BuildManager.return_value.current_build = None
-        manager = protocols.BuildManager.return_value.__enter__.return_value
+        manager.load_config = AsyncMagicMock()
+        manager.current_build = None
         manager.load_builder = AsyncMagicMock()
         self.protocol.connection_made(self.transport)
         yield from self._wait_futures()

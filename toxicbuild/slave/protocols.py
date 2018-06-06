@@ -98,7 +98,8 @@ class BuildServerProtocol(BaseToxicProtocol):
     def list_builders(self):
         """ Informs all builders' names for this repo/branch/named_tree
         """
-        with self.get_buildmanager() as manager:
+        manager = yield from self.get_buildmanager()
+        with manager:
             # We do not work after wait because if we wait for it
             # the other instance working is in the same named_tree
             yield from manager.update_and_checkout(work_after_wait=False)
@@ -111,7 +112,9 @@ class BuildServerProtocol(BaseToxicProtocol):
         """ Performs a build requested by the client using the params sent
         in the request data
         """
-        with self.get_buildmanager() as manager:
+
+        manager = yield from self.get_buildmanager()
+        with manager:
             external = self.data['body'].get('external')
             yield from manager.update_and_checkout(work_after_wait=False,
                                                    external=external)
@@ -133,7 +136,7 @@ class BuildServerProtocol(BaseToxicProtocol):
                 build_info = yield from builder.build()
             return build_info
 
-    def get_buildmanager(self):
+    async def get_buildmanager(self):
         """ Returns the builder manager for this request
         """
         try:
@@ -141,10 +144,17 @@ class BuildServerProtocol(BaseToxicProtocol):
             branch = self.data['body']['branch']
             vcs_type = self.data['body']['vcs_type']
             named_tree = self.data['body']['named_tree']
-        except KeyError:
-            raise BadData('Bad data!')
+        except KeyError as e:
+            raise BadData('Bad data! Missing {}'.format(str(e)))
 
-        manager = BuildManager(self, repo_url, vcs_type, branch, named_tree)
+        config_type = self.data['body'].get('config_type') or 'py'
+        config_filename = self.data['body'].get(
+            'config_filename') or 'toxicbuild.conf'
+
+        manager = BuildManager(self, repo_url, vcs_type, branch, named_tree,
+                               config_type=config_type,
+                               config_filename=config_filename)
+        await manager.load_config()
 
         return manager
 

@@ -23,7 +23,8 @@ import os
 from toxicbuild.core import get_vcs
 from toxicbuild.core.utils import (get_toxicbuildconf, LoggerMixin,
                                    ExecCmdError, match_string,
-                                   list_builders_from_config)
+                                   list_builders_from_config,
+                                   get_toxicbuildconf_yaml)
 from toxicbuild.slave import settings
 from toxicbuild.slave.build import Builder, BuildStep
 from toxicbuild.slave.docker import DockerContainerBuilder
@@ -45,14 +46,17 @@ class BuildManager(LoggerMixin):
     # key is repo_url and value is named_tree
     building_repos = defaultdict(lambda: None)  # pragma no branch WTF??
 
-    def __init__(self, protocol, repo_url, vcs_type, branch, named_tree):
+    def __init__(self, protocol, repo_url, vcs_type, branch, named_tree,
+                 config_type='py', config_filename='toxicbuild.conf'):
         self.protocol = protocol
         self.repo_url = repo_url
         self.vcs_type = vcs_type
         self.vcs = get_vcs(vcs_type)(self.workdir)
         self.branch = branch
         self.named_tree = named_tree
-        self._configmodule = None
+        self.config_type = config_type
+        self.config_filename = config_filename
+        self._config = None
 
     def __enter__(self):
         if self.current_build and self.current_build != self.named_tree:
@@ -67,10 +71,8 @@ class BuildManager(LoggerMixin):
         self.current_build = None
 
     @property
-    def configmodule(self):
-        if not self._configmodule:  # pragma: no branch
-            self._configmodule = get_toxicbuildconf(self.workdir)
-        return self._configmodule
+    def config(self):
+        return self._config
 
     @property
     def workdir(self):
@@ -118,6 +120,13 @@ class BuildManager(LoggerMixin):
     def is_working(self):
         """Informs if this repository is cloning or updating"""
         return self.is_cloning or self.is_updating
+
+    async def load_config(self):
+        if self.config_type == 'py':
+            self._config = get_toxicbuildconf(self.workdir)
+        else:
+            self._config = await get_toxicbuildconf_yaml(self.workdir,
+                                                         self.config_filename)
 
     @asyncio.coroutine
     def wait_clone(self):
@@ -205,13 +214,13 @@ class BuildManager(LoggerMixin):
         # to load builers from a config file.
     def list_builders(self):
         """ Returns a list with all builders names for this branch
-        based on toxicbuild.conf file
+        based on build config file
         """
+        builders = list_builders_from_config(self.config,
+                                             config_type=self.config_type)
 
         try:
-            builders = [b['name'] for b in self.configmodule.BUILDERS
-                        if (b.get('branch') == self.branch or b.get(
-                            'branch')is None)]
+            builders = [b['name'] for b in builders]
         except KeyError as e:
             key = str(e)
             msg = 'Your builder config does not have a required key {}'.format(
@@ -228,8 +237,9 @@ class BuildManager(LoggerMixin):
         :param name: builder name
         """
         try:
-            builders = list_builders_from_config(self.configmodule,
-                                                 branch=self.branch)
+            builders = list_builders_from_config(self.config,
+                                                 branch=self.branch,
+                                                 config_type=self.config_type)
             bdict = [b for b in builders if b['name'] == name][0]
         except IndexError:
             msg = 'builder {} does not exist for {} branch {}'.format(

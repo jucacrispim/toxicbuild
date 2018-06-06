@@ -268,6 +268,21 @@ class UtilsTest(TestCase):
         self.assertEqual(len(builders), 2)
         self.assertNotIn({'name': 'b1', 'branch': 'other'}, builders)
 
+    def test_list_builders_from_config_yaml(self):
+        slave = Mock()
+        slave.name = 'myslave'
+        config = {'builders':
+                  [{'name': 'b0'},
+                   {'name': 'b1', 'branches': ['otheir']},
+                   {'name': 'b2',
+                    'slaves': ['myslave'],
+                    'branches': ['mast*', 'release']},
+                   {'name': 'b3', 'slaves': ['otherslave']}]}
+        builders = utils.list_builders_from_config(config, 'master', slave,
+                                                   config_type='yaml')
+        self.assertEqual(len(builders), 2)
+        self.assertNotIn({'name': 'b1', 'branch': 'other'}, builders)
+
     def test_list_builders_from_config_no_branch(self):
         confmodule = Mock()
         slave = Mock()

@@ -326,11 +326,20 @@ def _match_slave(slave, builder):
     return False
 
 
-def list_builders_from_config(confmodule, branch=None, slave=None):
-    """Lists builders from a config module"""
+def list_builders_from_config(config, branch=None, slave=None,
+                              config_type='py'):
+    """Lists builders from a build config
+
+    :param config: The build configuration.
+    :param branch: The branch for which builders are being listed.
+    :param slave: The slave for which builders are being listed."""
 
     builders = []
-    for builder in confmodule.BUILDERS:
+    if config_type == 'py':
+        conf_builders = config.BUILDERS
+    else:
+        conf_builders = config['builders']
+    for builder in conf_builders:
 
         if _match_branch(branch, builder) and _match_slave(slave, builder):
             builders.append(builder)
