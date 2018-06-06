@@ -268,7 +268,7 @@ def _match_branch(branch, builder):
 
 def _match_slave(slave, builder):
     if not slave or not builder.get('slaves') or match_string(
-            slave.name,  builder.get('slaves')):
+            slave.name, builder.get('slaves')):
         return True
     return False
 

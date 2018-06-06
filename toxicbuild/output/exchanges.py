@@ -24,7 +24,7 @@ from toxicbuild.output import settings
 conn_kw = settings.RABBITMQ_CONNECTION
 
 conn = AmqpConnection(**conn_kw)
-core_exchanges = create_exchanges(conn)
+core_exchanges = create_exchanges(conn)  # pylint: disable-all
 repo_status_changed = core_exchanges['repo_status_changed']
 repo_added = core_exchanges['repo_added']
 ui_notifications = core_exchanges['ui_notifications']

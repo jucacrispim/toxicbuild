@@ -50,6 +50,9 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         self._check_data_future = None
         self._client_connected_future = None
         self.connection_lost_cb = connection_lost_cb
+        self.data = None
+        self.peername = None
+        self._transport = None
 
         reader = asyncio.StreamReader(loop=loop)
         super().__init__(reader, loop=loop)

@@ -469,6 +469,10 @@ class GithubCheckRun(MasterPlugin):
     """The :class:`~toxicbuild.integrations.github.GithubInstallation`
       that owns the plugin"""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sender = None
+
     async def _get_repo_full_name(self, repo):
         full_name = None
 

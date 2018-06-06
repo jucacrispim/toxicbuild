@@ -286,7 +286,8 @@ class StreamConnectorTest(TestCase):
 
         repo_id = 'asfd'
 
-        def callback(msg): return None
+        def callback(msg):
+            return None
 
         yield from connectors.StreamConnector.plug(user, repo_id, callback)
         self.assertTrue(connectors.message_arrived.connect.called)
@@ -301,7 +302,8 @@ class StreamConnectorTest(TestCase):
 
         repo_id = None
 
-        def callback(msg): return None
+        def callback(msg):
+            return None
 
         yield from connectors.StreamConnector.plug(user, repo_id, callback)
         called_kw = connectors.message_arrived.connect.call_args[1]
@@ -316,7 +318,8 @@ class StreamConnectorTest(TestCase):
 
         repo_id = 'asdf'
 
-        def callback(msg): return None
+        def callback(msg):
+            return None
 
         connectors.StreamConnector.unplug(user, repo_id, callback)
         self.assertTrue(connectors.message_arrived.disconnect.called)

@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# pylint: disable-all
+
+
 import asyncio
 from asyncio import ensure_future
 import logging
@@ -15,8 +18,6 @@ from toxicbuild.core.conf import Settings
 from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import (log, daemonize as daemon,
                                    bcrypt_string, changedir)
-
-# pylint: disable=global-statement
 
 settings = None
 dbconn = None

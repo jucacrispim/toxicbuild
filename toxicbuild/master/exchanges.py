@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+
 from toxicbuild.core.exchange import Exchange, AmqpConnection
 from toxicbuild.core.exchanges import create_exchanges
 from toxicbuild.master import settings
@@ -47,7 +48,7 @@ scheduler_action = Exchange('toxicmaster.scheduler_action',
                             durable=True,
                             exchange_type='direct')
 
-core_exchanges = create_exchanges(conn)
+core_exchanges = create_exchanges(conn)  # pylint: disable=duplicate-code
 repo_status_changed = core_exchanges['repo_status_changed']
 repo_added = core_exchanges['repo_added']
 ui_notifications = core_exchanges['ui_notifications']

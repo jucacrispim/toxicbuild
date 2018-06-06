@@ -841,7 +841,7 @@ class HoleServer(LoggerMixin):
             kw = {}
 
         coro = self.loop.create_server(
-            self.get_protocol_instance, self.addr,  self.port, **kw)
+            self.get_protocol_instance, self.addr, self.port, **kw)
 
         ensure_future(coro)
 

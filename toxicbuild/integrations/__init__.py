@@ -17,6 +17,9 @@
 # You shoud have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable-all
+
+
 import asyncio
 import os
 import pkg_resources
@@ -26,8 +29,6 @@ from pyrocumulus.commands.base import get_command
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import changedir
-
-# pylint: disable=global-statement
 
 PIDFILE = 'toxicintegrations.pid'
 LOGFILE = './toxicintegrations.log'

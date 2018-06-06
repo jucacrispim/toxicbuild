@@ -47,7 +47,7 @@ class BuildServer(LoggerMixin):
         else:
             kw = {}
 
-        coro = self.loop.create_server(self.get_protocol_instance, addr,  port,
+        coro = self.loop.create_server(self.get_protocol_instance, addr, port,
                                        **kw)
         self.server = self.loop.run_until_complete(coro)
         signal.signal(signal.SIGTERM, self.sync_shutdown)

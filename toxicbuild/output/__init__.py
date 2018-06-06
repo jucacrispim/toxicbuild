@@ -17,6 +17,8 @@
 # You shoud have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable-all
+
 import asyncio
 import logging
 import os
@@ -28,8 +30,6 @@ from mongomotor import connect
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import changedir, log, daemonize as daemon
-
-# pylint: disable=global-statement
 
 PIDFILE = 'toxicoutput.pid'
 LOGFILE = './toxicoutput.log'

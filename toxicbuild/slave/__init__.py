@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# pylint: disable-all
+
 import logging
 import os
 import pkg_resources
@@ -12,9 +14,6 @@ from toxicbuild.core.cmd import command, main
 from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string,
                                    changedir)
-
-
-# pylint: disable=global-statement
 
 ENVVAR = 'TOXICSLAVE_SETTINGS'
 DEFAULT_SETTINGS = 'toxicslave.conf'

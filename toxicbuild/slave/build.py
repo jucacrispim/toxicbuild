@@ -235,7 +235,7 @@ class BuildStep:
         return self.command == other.command
 
     @asyncio.coroutine
-    def execute(self, cwd,  out_fn=None, last_step_status=None,
+    def execute(self, cwd, out_fn=None, last_step_status=None,
                 last_step_output=None, **envvars):
         """Executes the step command.
 
