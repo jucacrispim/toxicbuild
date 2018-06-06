@@ -32,8 +32,8 @@ from toxicbuild.core import utils
 from toxicbuild.core.coordination import Mutex
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.master import settings
-from toxicbuild.master.build import BuildSet, Builder, BuildManager
-from toxicbuild.master.document import OwnedDocument
+from toxicbuild.master.build import (BuildSet, Builder, BuildManager)
+from toxicbuild.master.document import OwnedDocument, ExternalRevisionIinfo
 from toxicbuild.master.exceptions import RepoBranchDoesNotExist
 from toxicbuild.master.exchanges import (update_code, poll_status,
                                          revisions_added, locks_conn,
@@ -701,7 +701,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                   branch=branch, commit_date=commit_date,
                   author=author, title=title)
         if external:
-            external_rev = RepositoryRevisionExternal(**external)
+            external_rev = ExternalRevisionIinfo(**external)
             kw['external'] = external_rev
 
         revision = RepositoryRevision(**kw)
@@ -864,30 +864,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         return builders
 
 
-class RepositoryRevisionExternal(EmbeddedDocument):
-    """The information about the external repository that generated
-    a revision."""
-
-    url = StringField(required=True)
-    """The url of the external repo"""
-
-    name = StringField(required=True)
-    """A name to indentify the external repo."""
-
-    branch = StringField(required=True)
-    """The name of the branch in the external repo."""
-
-    into = StringField(required=True)
-    """A name for a local branch to clone the external branch into."""
-
-    def to_dict(self):
-        """Returns a dict representations of the object"""
-        return {'url': self.url,
-                'name': self.name,
-                'branch': self.branch,
-                'into': self.into}
-
-
 class RepositoryRevision(Document):
     """A commit in the code tree."""
 
@@ -909,7 +885,7 @@ class RepositoryRevision(Document):
     commit_date = DateTimeField(required=True)
     """Commit's date."""
 
-    external = EmbeddedDocumentField(RepositoryRevisionExternal)
+    external = EmbeddedDocumentField(ExternalRevisionIinfo)
     """A list of :class:`~toxicbuild.master.bulid.RepositoryRevisionExternal`.
     """
 

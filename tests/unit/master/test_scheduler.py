@@ -23,8 +23,8 @@ from unittest.mock import Mock, patch
 from toxicbuild.master import scheduler
 from toxicbuild.master.scheduler import (TaskScheduler, SchedulerServer,
                                          UnknownSchedulerAction, Repository,
-                                         scheduler_action, asyncio,
-                                         ConsumerTimeout)
+                                         scheduler_action, asyncio)
+from toxicbuild.master.utils import ConsumerTimeout
 from tests import async_test, AsyncMagicMock
 
 
@@ -220,8 +220,11 @@ class SchedulerServerTest(TestCase):
             finally:
                 self.t += 1
 
-        consumer.fetch_message = fm
+            msg = AsyncMagicMock()
+            msg.body = {'repo_id': 'some-repo-id'}
+            return msg
 
+        consumer.fetch_message = fm
         await server.run()
         self.assertTrue(handle.called)
 

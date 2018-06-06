@@ -102,9 +102,10 @@ class BuildTest(TestCase):
                              finished=now(),
                              total_time=1,
                              status='finished')
-        external = build.BuildExternalInfo(url='http://somewhere.com/bla.git',
-                                           name='somerepo', branch='master',
-                                           into='into')
+        external = build.ExternalRevisionIinfo(
+            url='http://somewhere.com/bla.git',
+            name='somerepo', branch='master',
+            into='into')
         self.buildset.builds[0].external = external
         self.buildset.builds[0].steps.append(bs)
         self.buildset.builds[0].total_time = 1

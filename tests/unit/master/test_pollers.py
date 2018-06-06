@@ -22,7 +22,7 @@ import datetime
 import json
 from unittest import mock, TestCase
 from toxicbuild.core.exchange import JsonAckMessage as Message
-from toxicbuild.master import pollers, repository, users
+from toxicbuild.master import pollers, repository, users, utils
 from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.exchanges import connect_exchanges, disconnect_exchanges
 from tests import async_test, AsyncMagicMock
@@ -435,14 +435,14 @@ class PollerServerTest(TestCase):
 
         async def fm(cancel_on_timeout=True):
             server.stop()
-            raise pollers.ConsumerTimeout
+            raise utils.ConsumerTimeout
 
         consumer = pollers.update_code.consume.return_value
         consumer.fetch_message = fm
         await server.run()
         self.assertFalse(handle.called)
 
-    @mock.patch.object(pollers.asyncio, 'sleep', AsyncMagicMock())
+    @mock.patch.object(utils.asyncio, 'sleep', AsyncMagicMock())
     @async_test
     async def test_shutdown(self):
 
@@ -455,7 +455,7 @@ class PollerServerTest(TestCase):
             server._running_tasks -= 1
             return AsyncMagicMock()()
 
-        pollers.asyncio.sleep = sleep
+        utils.asyncio.sleep = sleep
         await server.shutdown()
         self.assertTrue(sleep_mock.called)
 

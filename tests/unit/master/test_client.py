@@ -274,9 +274,9 @@ class BuildClientTest(TestCase):
         builder = build.Builder(repository=repo, name='b1')
         await builder.save()
 
-        external = build.BuildExternalInfo(url='http://bla.com/bla.git',
-                                           name='remote', branch='master',
-                                           into='into')
+        external = build.ExternalRevisionIinfo(url='http://bla.com/bla.git',
+                                               name='remote', branch='master',
+                                               into='into')
         buildinstance = build.Build(repository=repo, slave=slave_inst,
                                     builder=builder, branch='master',
                                     named_tree='123sdf09', external=external)

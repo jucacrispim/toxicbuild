@@ -33,6 +33,7 @@ from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
                                    format_timedelta, LoggerMixin,
                                    localtime2utc, set_tzinfo)
+from toxicbuild.master.document import ExternalRevisionIinfo
 from toxicbuild.master.exceptions import DBError, ImpossibleCancellation
 from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import build_added, build_cancelled
@@ -204,29 +205,6 @@ class BuildStep(EmbeddedDocument):
         return json.dumps(self.to_dict())
 
 
-class BuildExternalInfo(EmbeddedDocument):
-    """Information about an external remote if the build was created
-    from a revision that came from an external repo."""
-
-    url = StringField(required=True)
-    """The url of the external repository"""
-
-    name = StringField(required=True)
-    """A name for the remote repository."""
-
-    branch = StringField(required=True)
-    """The name of the branch in the external repo."""
-
-    into = StringField(required=True)
-    """A name for a local branch to clone the external branch into."""
-
-    def to_dict(self):
-        """Returns a dict representation of the object."""
-
-        return {'url': self.url, 'name': self.name,
-                'branch': self.branch, 'into': self.into}
-
-
 class Build(EmbeddedDocument):
 
     """ A set of steps for a repository. This is the object that stores
@@ -252,7 +230,7 @@ class Build(EmbeddedDocument):
     """The branch of the code that will be tested."""
 
     named_tree = StringField(required=True)
-    """A identifies of the commit, a sha, a tag name, etc..."""
+    """A identifier of the commit, a sha, a tag name, etc..."""
 
     started = DateTimeField()
     """When the build was started. It must be in UTC."""
@@ -275,8 +253,9 @@ class Build(EmbeddedDocument):
     total_time = IntField()
     """The total time of the build execution."""
 
-    external = EmbeddedDocumentField(BuildExternalInfo)
-    """A reference to :class:`~toxicbuild.master.build.BuildExternalInfo`"""
+    external = EmbeddedDocumentField(ExternalRevisionIinfo)
+    """A reference to
+      :class:`~toxicbuild.master.repository.RepositoryRevisionExternal`"""
 
     def to_dict(self, id_as_str=False):
         """Transforms the object into a dictionary.
@@ -289,10 +268,10 @@ class Build(EmbeddedDocument):
         objdict['builder']['id'] = objdict['builder']['$oid']
         objdict['uuid'] = str(self.uuid)
         objdict['steps'] = steps
-        objdict['started'] = datetime2string(self.started) if self.started \
-            else ''
-        objdict['finished'] = datetime2string(self.finished) if self.finished \
-            else ''
+        objdict['started'] = datetime2string(
+            self.started) if self.started else ''
+        objdict['finished'] = datetime2string(
+            self.finished) if self.finished else ''
         if self.total_time is not None:
             td = timedelta(seconds=self.total_time)
             objdict['total_time'] = format_timedelta(td)

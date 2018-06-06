@@ -17,6 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
+import signal
+from asyncamqp.exceptions import ConsumerTimeout
+from toxicbuild.core.utils import LoggerMixin
+
 
 def as_db_ref(document, field):
     """Returns reference field of a document as DBRefs."""
@@ -29,3 +34,49 @@ def as_db_ref(document, field):
         document._fields[field]._auto_dereference = dref
 
     return dbref
+
+
+class BaseQueueReactorServer(LoggerMixin):
+    """A base class for server that react to incomming messages
+    from queues"""
+
+    def __init__(self, exchange, msg_callback, loop=None):
+        """:param exchange: The exchange in which messages are published
+          for the server to fetch.
+        :param msg_callback: A callable that receives the message"""
+        self.exchange = exchange
+        self.msg_callback = msg_callback
+        self.loop = loop or asyncio.get_event_loop()
+        self._stop = False
+        self._running_tasks = 0
+        signal.signal(signal.SIGTERM, self.sync_shutdown)
+
+    async def run(self):
+        """Starts the server"""
+
+        async with await self.exchange.consume(timeout=1000) as consumer:
+            while not self._stop:
+                try:
+                    msg = await consumer.fetch_message(cancel_on_timeout=False)
+                except ConsumerTimeout:
+                    continue
+
+                self.log('Consuming message')
+
+                asyncio.ensure_future(self.msg_callback(msg))
+                await msg.acknowledge()
+
+            self._stop = False
+
+    def stop(self):
+        self._stop = True
+
+    async def shutdown(self):
+        self.log('Shutting down')
+        self.stop()
+        while self._running_tasks > 0:
+            self.log('Waiting for tasks')
+            await asyncio.sleep(0.5)
+
+    def sync_shutdown(self, signum=None, frame=None):
+        self.loop.run_until_complete(self.shutdown())

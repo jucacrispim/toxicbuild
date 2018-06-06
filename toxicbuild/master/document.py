@@ -19,14 +19,24 @@
 
 from bson.dbref import DBRef
 from mongoengine.queryset import Q
-from mongomotor import Document
-from mongomotor.fields import GenericReferenceField
+from mongomotor import Document, EmbeddedDocument
+from mongomotor.fields import GenericReferenceField, StringField
 from toxicbuild.master.exceptions import NotEnoughPerms
 from toxicbuild.master.users import User
 from toxicbuild.master.utils import as_db_ref
 
 
 class OwnedDocument(Document):
+    """An abstract document for objects that have an owner. Subclass it
+    to use it.
+
+    Example:
+    ````````
+
+    class MyOwnedDocument(OwnedDocument):
+
+       some_field = StringField()
+    """
 
     owner = GenericReferenceField(required=True)
 
@@ -98,3 +108,28 @@ class OwnedDocument(Document):
             has_perms = False
 
         return has_perms
+
+
+class ExternalRevisionIinfo(EmbeddedDocument):
+    """Information about code that came from an external source.
+    Shared by :class:`~toxicbuild.master.repository.RepositoryRevision` and
+    :class:`~toxicbuild.master.build.Build`"""
+
+    url = StringField(required=True)
+    """The url of the external repo"""
+
+    name = StringField(required=True)
+    """A name to indentify the external repo."""
+
+    branch = StringField(required=True)
+    """The name of the branch in the external repo."""
+
+    into = StringField(required=True)
+    """A name for a local branch to clone the external branch into."""
+
+    def to_dict(self):
+        """Returns a dict representations of the object"""
+        return {'url': self.url,
+                'name': self.name,
+                'branch': self.branch,
+                'into': self.into}

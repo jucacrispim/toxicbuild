@@ -19,13 +19,12 @@
 
 import asyncio
 from asyncio import ensure_future
-import signal
 import time
-from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.exceptions import UnknownSchedulerAction
 from toxicbuild.master.exchanges import scheduler_action
 from toxicbuild.master.repository import Repository
+from toxicbuild.master.utils import BaseQueueReactorServer
 
 
 __doc__ = """
@@ -121,41 +120,22 @@ class TaskScheduler(LoggerMixin):
         self._stop = True
 
 
-class SchedulerServer(LoggerMixin):
+class SchedulerServer(BaseQueueReactorServer):
     """Simple server to add or remove something from the scheduler."""
 
     def __init__(self, loop=None):
-        self.loop = loop or asyncio.get_event_loop()
+        exchange = scheduler_action
+        msg_callback = self.handle_request
+        super().__init__(exchange, msg_callback)
         self.scheduler = TaskScheduler()
-        self._stop = False
         self._sched_hashes = {}
         self._updates_scheduled = set()
-        self._running_tasks = 0
-        signal.signal(signal.SIGTERM, self.sync_shutdown)
 
     async def run(self):
         ensure_future(self.scheduler.start())
-        async with await scheduler_action.consume(timeout=1000) as consumer:
-            while not self._stop:
-                try:
-                    msg = await consumer.fetch_message(cancel_on_timeout=False)
-                except ConsumerTimeout:
-                    continue
-
-                ensure_future(self.handle_request(msg))
-
-            self.scheduler.stop()
-            self._stop = False
-
-    def stop(self):
-        self._stop = True
-
-    async def shutdown(self):
-        while self._running_tasks > 0:
-            await asyncio.sleep(0.5)
-
-    def sync_shutdown(self, signum=None, frame=None):
-        self.loop.run_until_complete(self.shutdown())
+        self._stop = False
+        await super().run()
+        self.scheduler.stop()
 
     async def handle_request(self, msg):
         req_type = msg.body['type']
@@ -185,6 +165,7 @@ class SchedulerServer(LoggerMixin):
                                         repo.update_seconds)
         self._sched_hashes[str(repo.id)] = sched_hash
         self._updates_scheduled.add(repo_id)
+        self.log('add-update-code ok for {}'.format(repo_id))
         return True
 
     async def handle_rm_update_code(self, msg):

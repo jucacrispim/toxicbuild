@@ -37,7 +37,7 @@ extension-pkg-whitelist=
 # operator. Joining a lot of strings can lead to a maximum recursion error in
 # Pylint and this flag can prevent that. It has one side effect, the resulting
 # AST will be different than the one from reality.
-optimize-ast=no
+optimize-ast=yes
 
 
 [MESSAGES CONTROL]
@@ -192,7 +192,6 @@ enable=import-error,
        non-iterator-returned,
        attribute-defined-outside-init,
        no-init,
-       abstract-method,
        signature-differs,
        bad-staticmethod-argument,
        non-parent-init-called,
@@ -210,7 +209,9 @@ enable=import-error,
        bare-except,
        not-async-context-manager,
        yield-inside-async-function,
-       unidiomatic-typecheck
+       unidiomatic-typecheck,
+       undefined-variable,
+       no-name-in-module,
 
 
 
@@ -313,7 +314,10 @@ ignored-modules=
 # List of classes names for which member attributes should not be checked
 # (useful for classes with attributes dynamically set). This supports can work
 # with qualified names.
-ignored-classes=toxicbuild.ui.models.Repository,toxicbuild.ui.models.Slave
+ignored-classes=toxicbuild.ui.models.Repository,
+	        toxicbuild.ui.models.Slave,
+	        toxicbuild.ui.models.User,
+	        toxicbuild.ui.models.BaseModel,
 
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E1101 when accessed. Python regular

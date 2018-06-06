@@ -1100,7 +1100,7 @@ class RepositoryRevisionTest(TestCase):
         repo = repository.Repository(name='bla', url='bla@bl.com/aaa',
                                      owner=user)
         await repo.save()
-        ext = repository.RepositoryRevisionExternal(
+        ext = repository.ExternalRevisionIinfo(
             url='http://someurl.com/bla.git', name='other-remote',
             branch='master', into='other-remote:master')
         rev = repository.RepositoryRevision(repository=repo,
