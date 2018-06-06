@@ -32,7 +32,6 @@
 # builds.
 
 import asyncio
-from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import exec_cmd, LoggerMixin
 from toxicbuild.slave import settings
 from toxicbuild.slave.client import ContainerBuildClient
@@ -127,7 +126,7 @@ class DockerContainerBuilder(LoggerMixin):
         self.log(msg, level='debug')
         try:
             timeout = settings.DOCKER_CONTAINER_TIMEOUT
-        except ConfigError:
+        except AttributeError:
             timeout = 30
         total = 0.0
         step = 0.1

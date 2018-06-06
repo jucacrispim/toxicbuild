@@ -19,7 +19,6 @@
 
 import asyncio
 import os
-from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.plugins import Plugin
 from toxicbuild.core.utils import run_in_thread, exec_cmd
 from toxicbuild.slave import settings
@@ -43,7 +42,7 @@ class SlavePlugin(Plugin):
 
         try:
             data_dir = settings.PLUGINS_DATA_DIR
-        except ConfigError:
+        except AttributeError:
             data_dir = os.path.join('..', '.')
 
         return os.path.join(data_dir, self.name)
