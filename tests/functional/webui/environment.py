@@ -129,12 +129,11 @@ def del_repo(context):
     for repo in repos:
         try:
             yield from repo.delete()
+            yield from scheduler_action.declare()
+            yield from scheduler_action.queue_delete()
+            yield from scheduler_action.connection.disconnect()
         except Exception as e:
             log('Error deleting repo ' + str(e), level='warning')
-
-        yield from scheduler_action.declare()
-        yield from scheduler_action.queue_delete()
-        yield from scheduler_action.connection.disconnect()
 
 
 def before_all(context):
