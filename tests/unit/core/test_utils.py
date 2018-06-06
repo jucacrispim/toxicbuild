@@ -333,6 +333,24 @@ class UtilsTest(TestCase):
         expected = ((fn, 1), {'a': 2})
         self.assertEqual(called, expected)
 
+    def test_patch_source_suffixes(self):
+        patcher = utils.SourceSuffixesPatcher()
+        with patcher:
+            patcher.patch_source_suffixes()
+            self.assertEqual(
+                utils.importlib._bootstrap_external.SOURCE_SUFFIXES,
+                ['.py', '.conf'])
+
+    def test_patch_pyrosettings(self):
+        patcher = utils.SettingsPatcher()
+        settings = Mock()
+        with patcher:
+            patcher.patch_pyro_settings(settings)
+            import pyrocumulus
+            self.assertEqual(pyrocumulus.conf.settings, settings)
+
+        self.assertNotEqual(pyrocumulus.conf.settings, settings)
+
 
 class StreamUtilsTest(TestCase):
 

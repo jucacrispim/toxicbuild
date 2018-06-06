@@ -28,7 +28,6 @@ from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, DateTimeField, IntField,
                                ReferenceField, EmbeddedDocumentListField)
 from toxicbuild.core import requests
-from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import (string2datetime, now, localtime2utc,
                                    LoggerMixin, utc2localtime,
                                    datetime2string)
@@ -329,7 +328,7 @@ class GithubInstallation(LoggerMixin, Document):
 
         try:
             parallel_imports = settings.PARALLEL_IMPORTS
-        except ConfigError:
+        except AttributeError:
             parallel_imports = None
 
         if not parallel_imports:
