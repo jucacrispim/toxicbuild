@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 import traceback
 from toxicbuild.core.protocol import BaseToxicProtocol
 from toxicbuild.core.utils import log, datetime2string, now
