@@ -1,0 +1,154 @@
+# CI confs for toxicbuild
+
+# envvars
+
+TESTS_ENVVARS:  &TESTS_ENVVARS
+  DISPLAY: :99
+  TOXICSLEEP_TIME: 1.5
+
+
+# steps
+
+UNITTEST_COVERAGE:  &UNITTEST_COVERAGE
+  - name: Unit tests coverage
+    command: ./build-scripts/check_coverage.sh toxicbuild 100
+    timeout: 20
+
+
+FUNCTIONAL_TESTS:  &FUNCTIONAL_TESTS
+  - name: Functional tests for Python code
+    command: python setup.py test --test-suite=tests.functional
+    timeout: 20
+
+
+SELENIUM_TESTS:  &SELENIUM_TESTS
+  - name: Selenium tests for web ui
+    command: ./build-scripts/run_selenium_tests.sh
+    timeout: 35
+
+
+PYLINT:  &PYLINT
+  - name: Code linter
+    command: pylint toxicbuild/
+    warning_on_fail: true
+
+
+PEP8:  &PEP8
+  - name: Checking code conventions
+    command: ./build-scripts/check_style.sh
+    warning_on_fail: true
+
+
+XENON:  &XENON
+  - name: Checking code complexity
+    command: xenon toxicbuild -b B
+    warning_on_fail: true
+
+
+UPLOAD_DOCS:  &UPLOAD_DOCS
+  - name: Upload documentation
+    command: pdj-deployer pdj01 software_deploy toxicbuild_docs release
+    warning_on_fail: true
+
+
+UPLOAD2PYPI:  &UPLOAD2PYPI
+  - name: Uploading to PyPI
+    command: ./build-scripts/upload2pypi.sh
+    timeout: 300
+
+
+MAIN_STEPS:  &MAIN_STEPS
+  *UNITTEST_COVERAGE
+  *FUNCTIONAL_TESTS
+  *SELENIUM_TESTS
+  *PYLINT
+  *PEP8
+  *XENON
+
+RELEASE_STEPS:  &RELEASE_STEPS
+  <<: *MAIN_STEPS
+  UPLOAD_DOCS
+  UPLOAD2PYPI
+
+# plugins
+
+APT_INSTALL:  &APT_INSTALL
+  - name: apt-install
+    packages:
+      chromedriver
+      xvfb
+      rabbitmq-server
+      mongodb
+
+
+PY35_VENV:  &PY35_VENV
+  - name: python-venv
+    pyversion: python3.5
+    requirements_file: requirements.txt
+
+
+PY36_VENV:  &PY36_VENV
+  - name: python-venv
+    pyversion: python3.6
+    requirements_file: requirements.txt
+
+
+# builders
+
+PY35_BUILDER:  &PY35_BUILDER
+  - name: python3.5
+    branches:
+      master
+
+    plugins:
+      APT_INSTALL
+      PY35_VENV
+
+    envvars:
+      *TESTS_ENVVARS
+
+    steps:
+      *TEST_STEPS
+
+    platform:
+      python3.5
+
+
+PY36_BUILDER:  &PY36_BUILDER
+  - name: python3.6
+    branches:
+      master
+      feature-*
+      bug-*
+
+    plugins:
+      APT_INSTALL
+      PY36_VENV
+
+    envvars:
+      *TESTS_ENVVARS
+
+    steps:
+      *TEST_STEPS
+
+    platform:
+      python3.6
+
+
+RELEASE_BUILDER:  &RELEASE_BUILDER
+  - name: release
+    branches:
+      release
+
+    plugins:
+      APT_INSTALL
+      PY36_VENV
+
+    envvars:
+      *TESTS_ENVVARS
+
+    steps:
+      *RELEASE_STEPS
+
+    platform:
+      python3.6
