@@ -153,3 +153,9 @@ RELEASE_BUILDER:  &RELEASE_BUILDER
 
   platform:
     python3.6
+
+
+builders:
+  - <<: *PY35_BUILDER
+  - <<: *PY36_BUILDER
+  - <<: *RELEASE_BUILDER
