@@ -171,6 +171,10 @@ class BuildManager(LoggerMixin):
                 self.log('cloning {}'.format(self.repo_url))
                 yield from self.vcs.clone(self.repo_url)
 
+            if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
+                self.log('updating submodule', level='debug')
+                yield from self.vcs.update_submodule()
+
             if external:
                 url = external['url']
                 name = external['name']
