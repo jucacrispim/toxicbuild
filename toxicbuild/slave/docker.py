@@ -43,7 +43,8 @@ class DockerContainerBuilder(LoggerMixin):
 
     # really ugly signature, right?
     def __init__(self, manager, platform, repo_url, vcs_type, branch,
-                 named_tree, builder_name, source_dir, remove_env=True):
+                 named_tree, builder_name, source_dir, remove_env=True,
+                 config_type='py', config_filename='toxicbuild.conf'):
         """Constructor for DockerContainer.
 
         :param manager: instance of :class:`toxicbuild.slave.BuildManager.`
@@ -55,13 +56,18 @@ class DockerContainerBuilder(LoggerMixin):
         :param builder_name: The builder that will execute the build
         :param source_dir: Directory with the source code in the host
         :param remove_env: Should the container be removed when the build is
-          done?"""
+          done?
+        :param config_type: The type of config used. 'py' or 'yaml'.
+        :param config_filename: The name of the build config file.
+        """
 
         self.build_data_body = {'repo_url': repo_url,
                                 'vcs_type': vcs_type,
                                 'branch': branch,
                                 'named_tree': named_tree,
-                                'builder_name': builder_name}
+                                'builder_name': builder_name,
+                                'config_type': config_type,
+                                'config_filename': config_filename}
         self.build_data = {'action': 'build',
                            'body': self.build_data_body}
 

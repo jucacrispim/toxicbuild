@@ -258,11 +258,14 @@ class BuildManager(LoggerMixin):
         # now we have all we need to instanciate the container builder if
         # needed.
         if settings.USE_DOCKER:
-            builder = DockerContainerBuilder(self, platform, self.repo_url,
-                                             self.vcs_type, self.branch,
-                                             self.named_tree,
-                                             name, self.workdir,
-                                             remove_env=remove_env)
+            builder = DockerContainerBuilder(
+                self, platform, self.repo_url,
+                self.vcs_type, self.branch,
+                self.named_tree,
+                name, self.workdir,
+                remove_env=remove_env,
+                config_type=self.config_type,
+                config_filename=self.config_filename)
         else:
             # this envvars are used in all steps in this builder
             builder_envvars = bdict.get('envvars', {})
