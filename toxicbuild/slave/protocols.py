@@ -150,7 +150,6 @@ class BuildServerProtocol(BaseToxicProtocol):
         manager = BuildManager(self, repo_url, vcs_type, branch, named_tree,
                                config_type=config_type,
                                config_filename=config_filename)
-        await manager.load_config()
 
         return manager
 

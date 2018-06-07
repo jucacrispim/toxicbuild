@@ -204,6 +204,9 @@ class BuildManager(LoggerMixin):
         finally:
             self.is_updating = False
 
+        yield from self.load_config()
+
+
     def _branch_match(self, builder):
         return builder.get('branch') is None or match_string(
             self.branch, [builder.get('branch', '')])
