@@ -544,6 +544,7 @@ class BuildManagerTest(TestCase):
         self.repo.schedule = mock.Mock()
         await self.repo.bootstrap()
         self.manager.repository = self.repo
+        self.manager.config_type = 'py'
         self.manager.repository.vcs.checkout = asyncio.coroutine(
             lambda *a, **kw: checkout())
         builders = await self.manager.get_builders(self.slave,

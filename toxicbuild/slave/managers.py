@@ -162,6 +162,7 @@ class BuildManager(LoggerMixin):
         if self.is_working:
             yield from self.wait_all()
             if not work_after_wait:
+                yield from self.load_config()
                 return
 
         try:
@@ -206,15 +207,14 @@ class BuildManager(LoggerMixin):
 
         yield from self.load_config()
 
-
     def _branch_match(self, builder):
         return builder.get('branch') is None or match_string(
             self.branch, [builder.get('branch', '')])
 
-        # the whole purpose of toxicbuild is this!
-        # see the git history and look for the first versions.
-        # First thing I changed on buildbot was to add the possibility
-        # to load builers from a config file.
+    # the whole purpose of toxicbuild is this!
+    # see the git history and look for the first versions.
+    # First thing I changed on buildbot was to add the possibility
+    # to load builers from a config file.
     def list_builders(self):
         """ Returns a list with all builders names for this branch
         based on build config file

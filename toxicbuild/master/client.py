@@ -19,6 +19,8 @@
 
 from asyncio import ensure_future
 from toxicbuild.core import BaseToxicClient
+from toxicbuild.master.utils import (get_build_config_type,
+                                     get_build_config_filename)
 
 
 class BuildClient(BaseToxicClient):
@@ -29,6 +31,8 @@ class BuildClient(BaseToxicClient):
     def __init__(self, slave, *args, **kwargs):
         self.slave = slave
         super().__init__(*args, **kwargs)
+        self.config_type = get_build_config_type()
+        self.config_filename = get_build_config_filename()
 
     async def healthcheck(self):
         """ Asks to know if the server is up and running
@@ -51,7 +55,9 @@ class BuildClient(BaseToxicClient):
                 'body': {'repo_url': repo_url,
                          'vcs_type': vcs_type,
                          'branch': branch,
-                         'named_tree': named_tree}}
+                         'named_tree': named_tree,
+                         'config_type': self.config_type,
+                         'config_filename': self.config_filename}}
         await self.write(data)
         response = await self.get_response()
         builders = response['body']['builders']
@@ -73,7 +79,9 @@ class BuildClient(BaseToxicClient):
                          'vcs_type': repository.vcs_type,
                          'branch': build.branch,
                          'named_tree': build.named_tree,
-                         'builder_name': builder_name}}
+                         'builder_name': builder_name,
+                         'config_type': self.config_type,
+                         'config_filename': self.config_filename}}
         if build.external:
             data['body']['external'] = build.external.to_dict()
 
