@@ -104,6 +104,8 @@ class ProtocolTest(TestCase):
     def test_build(self):
         protocols.settings.USE_DOCKER = False
         manager = protocols.BuildManager.return_value
+        manager.update_and_checkout = AsyncMagicMock()
+        manager.build = AsyncMagicMock()
         manager.load_config = AsyncMagicMock()
         self.protocol.data = yield from self.protocol.get_json_data()
         protocols.BuildManager.return_value.current_build = None
@@ -121,6 +123,7 @@ class ProtocolTest(TestCase):
         manager = protocols.BuildManager.return_value
         manager.load_config = AsyncMagicMock()
         manager.current_build = None
+        manager.update_and_checkout = AsyncMagicMock()
 
         with self.assertRaises(protocols.BadData):
             yield from self.protocol.build()
@@ -130,6 +133,7 @@ class ProtocolTest(TestCase):
     @async_test
     def test_build_with_bad_builder_config(self):
         manager = protocols.BuildManager.return_value
+        manager.update_and_checkout = AsyncMagicMock()
         manager.load_config = AsyncMagicMock()
         manager.load_builder = AsyncMagicMock(
             side_effect=protocols.BadBuilderConfig)
@@ -151,7 +155,7 @@ class ProtocolTest(TestCase):
         manager.load_config = AsyncMagicMock()
 
         manager.current_build = None
-
+        manager.update_and_checkout = AsyncMagicMock()
         manager.list_builders.return_value = ['b1', 'b2']
 
         yield from self.protocol.list_builders()
@@ -205,7 +209,7 @@ class ProtocolTest(TestCase):
         protocols.BuildManager.return_value.current_build = None
 
         manager.list_builders.return_value = ['b1', 'b2']
-
+        manager.update_and_checkout = AsyncMagicMock()
         self.protocol.connection_made(self.transport)
         yield from self._wait_futures()
 
@@ -238,6 +242,7 @@ class ProtocolTest(TestCase):
         manager.load_config = AsyncMagicMock()
         manager.current_build = None
         manager.load_builder = AsyncMagicMock()
+        manager.update_and_checkout = AsyncMagicMock()
         self.protocol.connection_made(self.transport)
         yield from self._wait_futures()
         builder = manager.load_builder.return_value

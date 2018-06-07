@@ -34,8 +34,7 @@ class BuildServerProtocol(BaseToxicProtocol):
     _clients_connected = 0
     _is_shuting_down = False
 
-    @asyncio.coroutine
-    def client_connected(self):
+    async def client_connected(self):
         if type(self)._is_shuting_down:
             self.log('Rejecting connection. Shutting down',
                      level='warning')
@@ -47,10 +46,10 @@ class BuildServerProtocol(BaseToxicProtocol):
             self.log('executing {} for {}'.format(self.action, self.peername))
             status = 0
             if self.action == 'healthcheck':
-                yield from self.healthcheck()
+                await self.healthcheck()
 
             elif self.action == 'list_builders':
-                yield from self.list_builders()
+                await self.list_builders()
 
             elif self.action == 'build':
                 # build has a strange behavior. It sends messages to the client
@@ -60,24 +59,24 @@ class BuildServerProtocol(BaseToxicProtocol):
                 # BuildManager and captured by the protocol, but didn't try
                 # that yet. Any ideas?
 
-                build_info = yield from self.build()
+                build_info = await self.build()
 
-                yield from self.send_response(code=0, body=build_info)
+                await self.send_response(code=0, body=build_info)
             else:
                 msg = 'Action {} does not exist'.format(self.action)
                 self.log(msg, level='error')
-                yield from self.send_response(code=1, body={'error': msg})
+                await self.send_response(code=1, body={'error': msg})
 
         except BadData:
             msg = 'Something wrong with your data {}'.format(self.raw_data)
             self.log('bad data', level='error')
-            yield from self.send_response(code=1, body={'error': msg})
+            await self.send_response(code=1, body={'error': msg})
             status = 1
         except Exception as e:
             self.log(e.args[0], level='error')
             msg = traceback.format_exc()
             status = 1
-            yield from self.send_response(code=1, body={'error': msg})
+            await self.send_response(code=1, body={'error': msg})
 
         finally:
             self.close_connection()
@@ -85,39 +84,36 @@ class BuildServerProtocol(BaseToxicProtocol):
 
         return status
 
-    @asyncio.coroutine
-    def healthcheck(self):
+    async def healthcheck(self):
         """ Informs that the server is up and running
         """
         code = 0
         body = "I'm alive!"
 
-        yield from self.send_response(code=code, body=body)
+        await self.send_response(code=code, body=body)
 
-    @asyncio.coroutine
-    def list_builders(self):
+    async def list_builders(self):
         """ Informs all builders' names for this repo/branch/named_tree
         """
-        manager = yield from self.get_buildmanager()
+        manager = await self.get_buildmanager()
         with manager:
             # We do not work after wait because if we wait for it
             # the other instance working is in the same named_tree
-            yield from manager.update_and_checkout(work_after_wait=False)
+            await manager.update_and_checkout(work_after_wait=False)
 
             builder_names = manager.list_builders()
-        yield from self.send_response(code=0, body={'builders': builder_names})
+        await self.send_response(code=0, body={'builders': builder_names})
 
-    @asyncio.coroutine
-    def build(self):
+    async def build(self):
         """ Performs a build requested by the client using the params sent
         in the request data
         """
 
-        manager = yield from self.get_buildmanager()
+        manager = await self.get_buildmanager()
         with manager:
             external = self.data['body'].get('external')
-            yield from manager.update_and_checkout(work_after_wait=False,
-                                                   external=external)
+            await manager.update_and_checkout(work_after_wait=False,
+                                              external=external)
 
             try:
                 builder_name = self.data['body']['builder_name']
@@ -125,7 +121,7 @@ class BuildServerProtocol(BaseToxicProtocol):
                 raise BadData("No builder name for build.")
 
             try:
-                builder = yield from manager.load_builder(builder_name)
+                builder = await manager.load_builder(builder_name)
             except BadBuilderConfig:
                 build_info = {'steps': [], 'status': 'exception',
                               'started': datetime2string(now()),
@@ -133,7 +129,7 @@ class BuildServerProtocol(BaseToxicProtocol):
                               'branch': manager.branch,
                               'named_tree': manager.named_tree}
             else:
-                build_info = yield from builder.build()
+                build_info = await builder.build()
             return build_info
 
     async def get_buildmanager(self):
