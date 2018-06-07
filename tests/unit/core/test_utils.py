@@ -110,6 +110,22 @@ class UtilsTest(TestCase):
             self.assertIn(var, returned)
             self.assertEqual(returned[var], val)
 
+    def test_get_envvars_type_error(self):
+        envvars = {'PATH': 'PATH:venv/bin',
+                   'MYPROGRAMVAR': 'something',
+                   'bla': 1}
+
+        expected = {'PATH': '{}:venv/bin'.format(os.environ.get('PATH')),
+                    'MYPROGRAMVAR': 'something',
+                    'HOME': os.environ.get('HOME', ''),
+                    'bla': '1'}
+
+        returned = utils._get_envvars(envvars)
+
+        for var, val in expected.items():
+            self.assertIn(var, returned)
+            self.assertEqual(returned[var], val)
+
     def test_load_module_from_file_with_file_not_found(self):
         with self.assertRaises(FileNotFoundError):
             utils.load_module_from_file('/some/file/that/does/not/exist.conf')
