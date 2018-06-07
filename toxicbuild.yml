@@ -109,7 +109,7 @@ PY35_BUILDER:  &PY35_BUILDER
     - <<: *TESTS_ENVVARS
 
   steps:
-    - *MAIN_STEPS
+    *MAIN_STEPS
 
   platform:
     python3.5
@@ -130,7 +130,7 @@ PY36_BUILDER:  &PY36_BUILDER
     <<: *TESTS_ENVVARS
 
   steps:
-    - *MAIN_STEPS
+    *MAIN_STEPS
 
   platform:
     python3.6
@@ -149,7 +149,7 @@ RELEASE_BUILDER:  &RELEASE_BUILDER
     <<: *TESTS_ENVVARS
 
   steps:
-    - *RELEASE_STEPS
+    *RELEASE_STEPS
 
   platform:
     python3.6
