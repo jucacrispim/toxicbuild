@@ -178,6 +178,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         # The thing here is: run client_connected only if everything ok
         # on check_data
         if not self._connected:  # pragma no cover
+            self.log('Not connected', level='warning')
             return
 
         # wrapping it to log it.
