@@ -114,7 +114,7 @@ PY35_BUILDER:  &PY35_BUILDER
     - <<: *PY35_VENV
 
   envvars:
-    - <<: *TESTS_ENVVARS
+    <<: *TESTS_ENVVARS
 
   steps:
     *MAIN_STEPS
