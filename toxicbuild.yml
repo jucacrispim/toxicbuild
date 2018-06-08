@@ -5,6 +5,9 @@
 TESTS_ENVVARS:  &TESTS_ENVVARS
   DISPLAY: ':99'
   TOXICSLEEP_TIME: '1.5'
+  TOXICMASTER_SETTINGS: '$PWD/tests/functional/data/master/toxicmaster.conf'
+  TOXICSLAVE_SETTINGS: '$PWD/tests/functional/data/slave/toxicslave.conf'
+  TOXICUI_SETTINGS: '$PWD/tests/functional/data/ui/toxicui.conf'
 
 
 # steps
