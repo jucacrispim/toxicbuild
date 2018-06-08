@@ -20,6 +20,7 @@
 
 import time
 from tests.functional import BaseFunctionalTest
+from toxicbuild.master.repository import Repository as RepoDBModel
 from toxicbuild.master.users import User as UserDBModel
 from toxicbuild.ui.models import Slave, Repository, BuildSet, User
 from tests import async_test
@@ -94,6 +95,12 @@ class SlaveTest(BaseUITest):
 
 
 class RepositoryTest(BaseUITest):
+
+    @classmethod
+    @async_test
+    async def setUpClass(cls):
+        super().setUpClass()
+        await RepoDBModel.drop_collection()
 
     @async_test
     async def tearDown(self):
