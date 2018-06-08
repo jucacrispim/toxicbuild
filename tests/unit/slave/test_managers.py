@@ -393,7 +393,7 @@ class BuilderManagerTest(TestCase):
         self.assertTrue(managers.get_toxicbuildconf_yaml.called)
 
     @async_test
-    async def get_builder_steps_str(self):
+    async def test_get_builder_steps_str(self):
         builder = Mock()
         builder.plugins = []
         bdict = {'name': 'bla', 'steps': ['ls', 'cmd2']}
