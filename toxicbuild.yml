@@ -12,6 +12,7 @@ TESTS_ENVVARS:  &TESTS_ENVVARS
 INSTALL_MONGODB:  &INSTALL_MONGODB
   name: Installing mongodb
   command: sh ./build-scripts/install_mongodb.sh
+  stop_on_fail: true
 
 UNITTEST_COVERAGE:  &UNITTEST_COVERAGE
    name: Unit tests coverage
