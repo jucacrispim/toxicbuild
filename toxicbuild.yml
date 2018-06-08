@@ -78,7 +78,7 @@ APT_INSTALL:  &APT_INSTALL
     - chromedriver
     - xvfb
     - rabbitmq-server
-    - mongodb
+    - mongodb-server
 
 
 PY35_VENV:  &PY35_VENV
@@ -117,6 +117,7 @@ PY35_BUILDER:  &PY35_BUILDER
 
 PY36_BUILDER:  &PY36_BUILDER
   name: python3.6
+  remove_env: false
   branches:
     - master
     - 'feature-*'
