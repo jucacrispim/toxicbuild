@@ -195,6 +195,4 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
             end = (time.time() * 1e3)
             self.log('{}: {} {}'.format(self.action, status, (end - init)))
 
-        self._client_connected_future = logged_cb()
-        self._client_connected_future = ensure_future(
-            self._client_connected_future)
+        self._client_connected_future = ensure_future(logged_cb())
