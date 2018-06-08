@@ -1,2 +1,3 @@
 #!/bin/bash
-sudo bash -c 'apt-get install -y mongodb-server'
+sudo apt-get install -y mongodb-server
+exit 0
