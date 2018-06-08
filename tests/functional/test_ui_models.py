@@ -111,6 +111,7 @@ class RepositoryTest(BaseUITest):
             await self.slave.delete()
 
         await self.user.delete()
+        await RepoDBModel.drop_collection()
 
     @async_test
     def test_add(self):
