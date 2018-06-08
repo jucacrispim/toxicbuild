@@ -262,4 +262,9 @@ class ProtocolTest(TestCase):
     @asyncio.coroutine
     def _wait_futures(self):
         yield from self.protocol._check_data_future
+        total = 10
+        i = 0
+        while not self.protocol._client_connected_future and i < total:
+            i += 1
+            yield from asyncio.sleep(0.5)
         yield from self.protocol._client_connected_future
