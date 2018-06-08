@@ -286,6 +286,9 @@ class BuildManager(LoggerMixin):
             steps += plugin.get_steps_before()
 
         for sdict in bdict['steps']:
+            if isinstance(sdict, str):
+                sdict = {'name': sdict,
+                         'command': sdict}
             step = BuildStep(**sdict)
             steps.append(step)
 

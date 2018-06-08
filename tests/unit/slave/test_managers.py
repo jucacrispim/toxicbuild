@@ -391,3 +391,11 @@ class BuilderManagerTest(TestCase):
         self.manager.config_type = 'yaml'
         await self.manager.load_config()
         self.assertTrue(managers.get_toxicbuildconf_yaml.called)
+
+    @async_test
+    async def get_builder_steps_str(self):
+        builder = Mock()
+        builder.plugins = []
+        bdict = {'name': 'bla', 'steps': ['ls', 'cmd2']}
+        steps = await self.manager._get_builder_steps(builder, bdict)
+        self.assertEqual(len(steps), 2)
