@@ -2,11 +2,11 @@ Configuring builds
 ==================
 
 Now we have our repository in ToxicBuild, lets create the build configuration.
-The build configuration stays in a file called `toxicbuild.conf` in the root
+The build configuration stays in a file called `toxicbuild.yml` in the root
 directory of your repository.
 
 `Builds` are simply a sequence of shell commands, called `steps` in
-ToxicBuild, that are executed sequencially. The builds are done by
+ToxicBuild, that are executed sequencially. The builds are carried by
 `builders`. The build config is based in these steps and builders.
 
 When a change is detected in the source code new `builds` will be
@@ -14,32 +14,20 @@ created for the `builders` that will execute the `steps`.
 
 So, let's say you have build process consisting in two steps: ``make`` and
 ``make test``. To have this executed by ToxicBuild we create a builder
-with these two steps. This config must be in a file called `toxicbuild.conf`
+with these two steps. This config must be in a file called `toxicbuild.yml`
 in the root directory of your code:
 
 
-.. note::
+.. code-block:: yaml
 
-   The `toxicbuild.conf` file is a Python file, do whatever you want, but
-   it must have a ``BUILDERS`` list.
-
-
-.. code-block:: python
-
-    # The step configuration has two required keys: 'name' and 'command'
-    MAKE_STEP = {'name': 'Compile', 'command': 'make'}
-    MAKE_TEST_STEP = {'name': 'Test': 'command': 'make test'}
-
-    # Builder configuration has two requred keys: 'name' and 'steps'.
-    # The 'steps' value is a list of steps configurations.
-    BUILDER = {'name': 'my-builder',
-               'steps': [MAKE_STEP, MAKE_TEST_STEP]}
-
-    # And now we need to add the builder config to a list of builders
-    # that will be used in the builds. You may have more than one builder
-    # and the builders will execute the builds in parallel for every change
-    # in the source code.
-    BUILDERS = [BUILDER]
+    # You must have a list of builders
+    builders:
+      # Our builder will be called `My Builder`
+      - name: My Builder
+	# and will execute two steps
+	steps:
+	  - make
+	  - make test
 
 
 And it is done! Commit and push this config to you repository and ToxicBuild
@@ -48,30 +36,11 @@ will execute this steps when a change is detected in your source code.
 These are the most basic configuration for a build, but the following
 parameters may be used in your builds:
 
-Step parameters
----------------
 
-The two params we saw, ``name`` and ``command``, are the two required params
-for a steps, but the following params may be used too:
+Builder parameters
+------------------
 
-* ``stop_on_fail``: If true, the build will halt if the step fails.
-* ``warning_on_fail``: If true the build status will be marked as warning if
-  the command fails (exits with a status different than 0).
-* ``timeout``: How many seconds we should wait for the step complete. The
-  default is 3600 seconds (one hour).
-
-Example:
-
-.. code-block:: python
-
-   MAKE_STEP = {'name': 'Compile', 'command': 'make',
-		'stop_on_fail': True}
-
-
-Builder params
---------------
-
-Builder has extra optional params, too. They are the following:
+The following parameters may be used for a builder:
 
 * ``branches``: A list containing the branches that trigger this builder.
   If no branches, all branches will trigger the builder.
@@ -81,18 +50,79 @@ Builder has extra optional params, too. They are the following:
 * ``plugins``: A list of plugins configurations that will be used in the
   builder.
 
+
 Example:
 
-.. code-block:: python
+.. code-block:: yaml
 
-   # note that here the value of the environment variable PATH will be
-   # interpolated in the builder envvars.
-   ENVVARS = {'PATH': '/opt/bin:PATH'}
-   BUILDER = {'name': 'my-builder',
-              'steps': [MAKE_STEP, MAKE_TEST_STEP],
-	      'envvars': ENVVARS}
+   builders:
+     - name: My Builder
+
+       # a list of branches that may trigger builds. If no branches, all
+       # branches in the repository will be allowed to trigger builds.
+       # You can use wildcars to specify the branches.
+       branches:
+         - master
+	 - feature-*
+	 - bug-*
+
+       envvars:
+         # You can use interpolation in environment variables
+         PATH: /some/dir:PATH
+	 OTHER: some-value
+	 # environment variables must always be strings.
+	 A_VAR: '10'
+
+       plugins:
+         - name: apt-install
+	   packages:
+	     - build-essential
+
+   ...
+
+.. note::
+
+   See :ref:`builder-plugins-config` for information about plugins
 
 
+Step parameters
+---------------
+
+We saw steps configuration as a string that is a shell command, but we can
+configure steps with a few extra parameters. To do so, configure the step
+as a dictionary.
+
+Example:
+
+.. code-block:: yaml
+
+   ...
+
+   steps:
+
+     # The can give a descriptive name for the step and the name will
+     # be shown in the waterfall.
+     - command: make
+       name: Build the project
+
+     # We can also give a timeout for the step. The timeout counts for how
+     # long a step keeps running without sending any data to the output.
+     - command: make test
+       name: Test the whole stuff
+       timeout: 300  # seconds
+
+
+
+The following are the options accepted by the step:
+
+* ``stop_on_fail``: If true, the build will halt if the step fails.
+* ``warning_on_fail``: If true the build status will be marked as warning if
+  the command fails (exits with a status different than 0).
+* ``timeout``: How many seconds we should wait for the step complete. The
+  default is 3600 seconds (one hour).
+
+
+.. _builder-plugins-config:
 
 Plugins
 -------
@@ -103,23 +133,37 @@ only two plugins. They are:
 Python virtualenv plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-A very common way of installing python packages is using a `vitualenv`.
-This plugin enables you test your python programs inside a virutalenv.
+A very common way of installing python packages is installing it
+inside a `vitualenv` using ``pip``.
+This plugin enables you test your python programs inside a `virutalenv` and
+install de python dependencies usig ``pip``.
 
 The basic configuration of this plugin is as follows:
 
-.. code-block:: python
 
-    PY_VENV = {'python-venv', 'pyversion': 'python3.5'}
-    BUILDER = {'plugins': [PY_VENV]}
+.. code-block:: yaml
+
+   PY_ENV_PLUGIN:  &PY_ENV_PLUGIN
+      - name: python-venv
+	pyversion: python3.5
+
+   # your builder config
+   builders:
+     - name: My Builder
+      ...
+
+     - plugins:
+       - <<: *PY_ENV_PLUGIN
+
+   ...
 
 This will include two steps before your steps: First will create a virtualenv
 using python3.5 and then will install the dependencies using pip.
 
 .. note::
 
-   This plugin uses the external program ``virtualenv``. You must have this
-   installed in the slave system.
+   This plugin uses the external programs ``virtualenv`` and ``pip``.
+   You must have these installed in the slave system.
 
 
 Python virtualenv parameters
@@ -133,20 +177,30 @@ The following params may be used with this plugin:
   executed. Default is False.
 
 
-Aptitude install plugin
-^^^^^^^^^^^^^^^^^^^^^^^
+Apt install plugin
+^^^^^^^^^^^^^^^^^^
 
-This plugins installs a list of packages in a debian system using the aptitude
+This plugins installs a list of packages in a debian system using the apt-get
 command.
 
-.. code-block:: python
 
-   APT_INSTALL = {'name': 'aptitude-install', 'packages': ['build-essential']}
+.. code-block:: yaml
+
+   APT_INSTALL_PLUGIN:  &APT_INSTALL_PLUGIN
+     - name: apt-install
+       packages:
+         - build-essential
+	 - python3.6-dev
 
 .. note::
 
-   This plugin uses the external programs ``sudo`` and ``aptitude``. You must
-   have these installed in the slave system.
+   This plugin use the external program ``sudo``. You must have this
+   installed in the slave system.
+
+.. note::
+
+   This is a plugin that uses the APT package system, thus can only be used in
+   debian (or debian-based) systems.
 
 
 Now we have some configuration for builds and we have commited and pushed
