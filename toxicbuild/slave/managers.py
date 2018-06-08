@@ -23,7 +23,8 @@ import os
 from toxicbuild.core import get_vcs
 from toxicbuild.core.utils import (get_toxicbuildconf, LoggerMixin,
                                    ExecCmdError, match_string,
-                                   list_builders_from_config)
+                                   list_builders_from_config,
+                                   get_toxicbuildconf_yaml)
 from toxicbuild.slave import settings
 from toxicbuild.slave.build import Builder, BuildStep
 from toxicbuild.slave.docker import DockerContainerBuilder
@@ -45,14 +46,17 @@ class BuildManager(LoggerMixin):
     # key is repo_url and value is named_tree
     building_repos = defaultdict(lambda: None)  # pragma no branch WTF??
 
-    def __init__(self, protocol, repo_url, vcs_type, branch, named_tree):
+    def __init__(self, protocol, repo_url, vcs_type, branch, named_tree,
+                 config_type='py', config_filename='toxicbuild.conf'):
         self.protocol = protocol
         self.repo_url = repo_url
         self.vcs_type = vcs_type
         self.vcs = get_vcs(vcs_type)(self.workdir)
         self.branch = branch
         self.named_tree = named_tree
-        self._configmodule = None
+        self.config_type = config_type
+        self.config_filename = config_filename
+        self._config = None
 
     def __enter__(self):
         if self.current_build and self.current_build != self.named_tree:
@@ -67,10 +71,8 @@ class BuildManager(LoggerMixin):
         self.current_build = None
 
     @property
-    def configmodule(self):
-        if not self._configmodule:  # pragma: no branch
-            self._configmodule = get_toxicbuildconf(self.workdir)
-        return self._configmodule
+    def config(self):
+        return self._config
 
     @property
     def workdir(self):
@@ -119,6 +121,13 @@ class BuildManager(LoggerMixin):
         """Informs if this repository is cloning or updating"""
         return self.is_cloning or self.is_updating
 
+    async def load_config(self):
+        if self.config_type == 'py':
+            self._config = get_toxicbuildconf(self.workdir)
+        else:
+            self._config = await get_toxicbuildconf_yaml(self.workdir,
+                                                         self.config_filename)
+
     @asyncio.coroutine
     def wait_clone(self):
         """Wait until the repository clone is complete."""
@@ -153,6 +162,7 @@ class BuildManager(LoggerMixin):
         if self.is_working:
             yield from self.wait_all()
             if not work_after_wait:
+                yield from self.load_config()
                 return
 
         try:
@@ -160,6 +170,10 @@ class BuildManager(LoggerMixin):
             if not self.vcs.workdir_exists():
                 self.log('cloning {}'.format(self.repo_url))
                 yield from self.vcs.clone(self.repo_url)
+
+            if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
+                self.log('updating submodule', level='debug')
+                yield from self.vcs.update_submodule()
 
             if external:
                 url = external['url']
@@ -195,23 +209,25 @@ class BuildManager(LoggerMixin):
         finally:
             self.is_updating = False
 
+        yield from self.load_config()
+
     def _branch_match(self, builder):
         return builder.get('branch') is None or match_string(
             self.branch, [builder.get('branch', '')])
 
-        # the whole purpose of toxicbuild is this!
-        # see the git history and look for the first versions.
-        # First thing I changed on buildbot was to add the possibility
-        # to load builers from a config file.
+    # the whole purpose of toxicbuild is this!
+    # see the git history and look for the first versions.
+    # First thing I changed on buildbot was to add the possibility
+    # to load builers from a config file.
     def list_builders(self):
         """ Returns a list with all builders names for this branch
-        based on toxicbuild.conf file
+        based on build config file
         """
+        builders = list_builders_from_config(self.config,
+                                             config_type=self.config_type)
 
         try:
-            builders = [b['name'] for b in self.configmodule.BUILDERS
-                        if (b.get('branch') == self.branch or b.get(
-                            'branch')is None)]
+            builders = [b['name'] for b in builders]
         except KeyError as e:
             key = str(e)
             msg = 'Your builder config does not have a required key {}'.format(
@@ -228,8 +244,9 @@ class BuildManager(LoggerMixin):
         :param name: builder name
         """
         try:
-            builders = list_builders_from_config(self.configmodule,
-                                                 branch=self.branch)
+            builders = list_builders_from_config(self.config,
+                                                 branch=self.branch,
+                                                 config_type=self.config_type)
             bdict = [b for b in builders if b['name'] == name][0]
         except IndexError:
             msg = 'builder {} does not exist for {} branch {}'.format(
@@ -241,11 +258,14 @@ class BuildManager(LoggerMixin):
         # now we have all we need to instanciate the container builder if
         # needed.
         if settings.USE_DOCKER:
-            builder = DockerContainerBuilder(self, platform, self.repo_url,
-                                             self.vcs_type, self.branch,
-                                             self.named_tree,
-                                             name, self.workdir,
-                                             remove_env=remove_env)
+            builder = DockerContainerBuilder(
+                self, platform, self.repo_url,
+                self.vcs_type, self.branch,
+                self.named_tree,
+                name, self.workdir,
+                remove_env=remove_env,
+                config_type=self.config_type,
+                config_filename=self.config_filename)
         else:
             # this envvars are used in all steps in this builder
             builder_envvars = bdict.get('envvars', {})
@@ -266,6 +286,9 @@ class BuildManager(LoggerMixin):
             steps += plugin.get_steps_before()
 
         for sdict in bdict['steps']:
+            if isinstance(sdict, str):
+                sdict = {'name': sdict,
+                         'command': sdict}
             step = BuildStep(**sdict)
             steps.append(step)
 

@@ -98,6 +98,8 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         self.data = yield from self.get_json_data()
 
         if not self.data:
+            self.log('Bada data', level='warning')
+            self.log(self.raw_data, level='debug')
             msg = 'Something wrong with your data {!r}'.format(self.raw_data)
             yield from self.send_response(code=1, body={'error': msg})
             return self.close_connection()
@@ -105,11 +107,13 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         token = self.data.get('token')
         if not token:
             msg = 'No auth token'
+            self.log(msg, level='warning')
             yield from self.send_response(code=2, body={'error': msg})
             return self.close_connection()
 
         if not utils.compare_bcrypt_string(token, self.encrypted_token):
             msg = 'Bad auth token'
+            self.log(msg, level='warning')
             yield from self.send_response(code=3, body={'error': msg})
             return self.close_connection()
 
@@ -117,6 +121,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
 
         if not self.action:
             msg = 'No action found!'
+            self.log(msg, level='warning')
             yield from self.send_response(code=1, body=msg)
             return self.close_connection()
 
@@ -178,6 +183,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         # The thing here is: run client_connected only if everything ok
         # on check_data
         if not self._connected:  # pragma no cover
+            self.log('Not connected', level='warning')
             return
 
         # wrapping it to log it.
@@ -194,6 +200,4 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
             end = (time.time() * 1e3)
             self.log('{}: {} {}'.format(self.action, status, (end - init)))
 
-        self._client_connected_future = logged_cb()
-        self._client_connected_future = ensure_future(
-            self._client_connected_future)
+        self._client_connected_future = ensure_future(logged_cb())

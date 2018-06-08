@@ -110,6 +110,22 @@ class UtilsTest(TestCase):
             self.assertIn(var, returned)
             self.assertEqual(returned[var], val)
 
+    # def test_get_envvars_type_error(self):
+    #     envvars = {'PATH': 'PATH:venv/bin',
+    #                'MYPROGRAMVAR': 'something',
+    #                'bla': 1}
+
+    #     expected = {'PATH': '{}:venv/bin'.format(os.environ.get('PATH')),
+    #                 'MYPROGRAMVAR': 'something',
+    #                 'HOME': os.environ.get('HOME', ''),
+    #                 'bla': '1'}
+
+    #     returned = utils._get_envvars(envvars)
+
+    #     for var, val in expected.items():
+    #         self.assertIn(var, returned)
+    #         self.assertEqual(returned[var], val)
+
     def test_load_module_from_file_with_file_not_found(self):
         with self.assertRaises(FileNotFoundError):
             utils.load_module_from_file('/some/file/that/does/not/exist.conf')
@@ -125,6 +141,22 @@ class UtilsTest(TestCase):
         mod = utils.load_module_from_file(filename)
 
         self.assertEqual(mod.BLA, 'val')
+
+    @async_test
+    async def test_get_toxicbuildconf_yaml_not_found(self):
+        with self.assertRaises(FileNotFoundError):
+            await utils.get_toxicbuildconf_yaml('/i/dont/exist')
+
+    @async_test
+    async def test_get_toxicbuildconf_yaml_with_some_error(self):
+        with self.assertRaises(utils.ConfigError):
+            await utils.get_toxicbuildconf_yaml(
+                TEST_DATA_DIR, 'toxicbuild_error.yml')
+
+    @async_test
+    async def test_get_toxicbuildconf_yaml(self):
+        config = await utils.get_toxicbuildconf_yaml(TEST_DATA_DIR)
+        self.assertTrue(config['builders'][0])
 
     @patch.object(utils.logging, 'info', Mock())
     def test_log(self):
@@ -252,6 +284,21 @@ class UtilsTest(TestCase):
         self.assertEqual(len(builders), 2)
         self.assertNotIn({'name': 'b1', 'branch': 'other'}, builders)
 
+    def test_list_builders_from_config_yaml(self):
+        slave = Mock()
+        slave.name = 'myslave'
+        config = {'builders':
+                  [{'name': 'b0'},
+                   {'name': 'b1', 'branches': ['otheir']},
+                   {'name': 'b2',
+                    'slaves': ['myslave'],
+                    'branches': ['mast*', 'release']},
+                   {'name': 'b3', 'slaves': ['otherslave']}]}
+        builders = utils.list_builders_from_config(config, 'master', slave,
+                                                   config_type='yaml')
+        self.assertEqual(len(builders), 2)
+        self.assertNotIn({'name': 'b1', 'branch': 'other'}, builders)
+
     def test_list_builders_from_config_no_branch(self):
         confmodule = Mock()
         slave = Mock()
@@ -350,6 +397,12 @@ class UtilsTest(TestCase):
             self.assertEqual(pyrocumulus.conf.settings, settings)
 
         self.assertNotEqual(pyrocumulus.conf.settings, settings)
+
+    @async_test
+    async def test_read_file(self):
+        filename = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
+        c = await utils.read_file(filename)
+        self.assertTrue(c)
 
 
 class StreamUtilsTest(TestCase):

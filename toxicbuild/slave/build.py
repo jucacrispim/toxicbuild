@@ -32,7 +32,7 @@ class Builder(LoggerMixin):
     the toxicbuild.conf file
     """
 
-    STEP_OUTPUT_BUFF_LEN = 1024
+    STEP_OUTPUT_BUFF_LEN = 258
 
     def __init__(self, manager, name, workdir, platorm='linux-generic',
                  remove_env=True, **envvars):

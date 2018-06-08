@@ -32,12 +32,14 @@ from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
 from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    list_builders_from_config, datetime2string,
                                    format_timedelta, LoggerMixin,
-                                   localtime2utc, set_tzinfo)
+                                   localtime2utc, set_tzinfo,
+                                   get_toxicbuildconf_yaml)
 from toxicbuild.master.document import ExternalRevisionIinfo
 from toxicbuild.master.exceptions import DBError, ImpossibleCancellation
 from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import build_added, build_cancelled
-from toxicbuild.master.utils import as_db_ref
+from toxicbuild.master.utils import (as_db_ref, get_build_config_type,
+                                     get_build_config_filename)
 
 
 # The statuses used in builds  ordered by priority.
@@ -214,6 +216,7 @@ class Build(EmbeddedDocument):
     PENDING = 'pending'
     CANCELLED = 'cancelled'
     STATUSES = BuildStep.STATUSES + [PENDING, CANCELLED]
+    CONFIG_TYPES = ['py', 'yaml']
 
     uuid = UUIDField(required=True, default=lambda: uuid4())
     """An uuid that identifies the build"""
@@ -255,7 +258,7 @@ class Build(EmbeddedDocument):
 
     external = EmbeddedDocumentField(ExternalRevisionIinfo)
     """A reference to
-      :class:`~toxicbuild.master.repository.RepositoryRevisionExternal`"""
+      :class:`~toxicbuild.master.document.ExternalRevisionIinfo`"""
 
     def to_dict(self, id_as_str=False):
         """Transforms the object into a dictionary.
@@ -536,6 +539,8 @@ class BuildManager(LoggerMixin):
         self.repository = repository
         self._is_getting_builders = False
         self._is_connected_to_signals = False
+        self.config_type = get_build_config_type()
+        self.config_filename = get_build_config_filename()
 
     @property
     def build_queues(self):
@@ -613,9 +618,14 @@ class BuildManager(LoggerMixin):
                 self.repository.url, revision.commit), level='debug')
             await self.repository.vcs.checkout(revision.commit)
             try:
-                conf = get_toxicbuildconf(self.repository.workdir)
+                if self.config_type == 'py':
+                    conf = get_toxicbuildconf(self.repository.workdir)
+                else:
+                    conf = await get_toxicbuildconf_yaml(
+                        self.repository.workdir, self.config_filename)
+
                 builders = list_builders_from_config(
-                    conf, revision.branch, slave)
+                    conf, revision.branch, slave, config_type=self.config_type)
                 names = [b['name'] for b in builders]
             except Exception as e:
                 msg = 'Something wrong with your toxicbuild.conf. Original '

@@ -21,6 +21,7 @@ import asyncio
 import signal
 from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core.utils import LoggerMixin
+from toxicbuild.master import settings
 
 
 def as_db_ref(document, field):
@@ -80,3 +81,15 @@ class BaseQueueReactorServer(LoggerMixin):
 
     def sync_shutdown(self, signum=None, frame=None):
         self.loop.run_until_complete(self.shutdown())
+
+
+def get_build_config_type():
+    """Returns the build config type used by the master"""
+
+    return getattr(settings, 'BUILD_CONFIG_TYPE', 'yaml')
+
+
+def get_build_config_filename():
+    """Returns the build config filename used by the master"""
+
+    return getattr(settings, 'BUILD_CONFIG_FILENAME', 'toxicbuild.yml')

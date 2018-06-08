@@ -39,7 +39,8 @@ BADTOXICCONF = load_module_from_file(BADTOXICCONF)
 class BuilderManagerTest(TestCase):
 
     @patch.object(managers, 'get_vcs', MagicMock())
-    def setUp(self):
+    @async_test
+    async def setUp(self):
         super().setUp()
         protocol = MagicMock()
 
@@ -287,18 +288,22 @@ class BuilderManagerTest(TestCase):
 
         self.assertEqual(len(self.manager.vcs.checkout.call_args_list), 1)
 
-    def test_list_builders(self):
+    @async_test
+    async def test_list_builders(self):
+        await self.manager.load_config()
         expected = ['builder1', 'builder2', 'builder3', 'builder4']
         returned = self.manager.list_builders()
 
         self.assertEqual(returned, expected)
 
     def test_list_builders_with_bad_builder_config(self):
-        self.manager._configmodule = BADTOXICCONF
+        self.manager._config = BADTOXICCONF
         with self.assertRaises(managers.BadBuilderConfig):
             self.manager.list_builders()
 
-    def test_branch_match(self):
+    @async_test
+    async def test_branch_match(self):
+        await self.manager.load_config()
         builder = {'name': 'builder', 'branch': 'master'}
         self.branch = 'master'
         self.assertTrue(self.manager._branch_match(builder))
@@ -316,6 +321,7 @@ class BuilderManagerTest(TestCase):
     @patch.object(managers, 'settings', Mock())
     @async_test
     async def test_load_builder(self):
+        await self.manager.load_config()
         managers.settings.USE_DOCKER = False
         builder = await self.manager.load_builder('builder1')
         self.assertEqual(len(builder.steps), 2)
@@ -324,6 +330,7 @@ class BuilderManagerTest(TestCase):
     @patch.object(managers, 'DockerContainerBuilder', Mock())
     @async_test
     async def test_load_builder_docker(self):
+        await self.manager.load_config()
         managers.settings.USE_DOCKER = True
         await self.manager.load_builder('builder1')
         self.assertTrue(managers.DockerContainerBuilder.called)
@@ -332,12 +339,14 @@ class BuilderManagerTest(TestCase):
     @async_test
     async def test_load_builder_with_plugin(self):
         managers.settings.USE_DOCKER = False
+        await self.manager.load_config()
         builder = await self.manager.load_builder('builder3')
         self.assertEqual(len(builder.steps), 3)
 
     @async_test
     async def test_load_builder_with_not_found(self):
         with self.assertRaises(managers.BuilderNotFound):
+            await self.manager.load_config()
             builder = await self.manager.load_builder('builder300')
             del builder
 
@@ -345,6 +354,7 @@ class BuilderManagerTest(TestCase):
     @async_test
     async def test_load_builder_with_envvars(self):
         managers.settings.USE_DOCKER = False
+        await self.manager.load_config()
         builder = await self.manager.load_builder('builder4')
         self.assertTrue(builder.envvars)
 
@@ -373,3 +383,19 @@ class BuilderManagerTest(TestCase):
         plugins_conf = [{'pyversion': '/usr/bin/python3.4'}]
         with self.assertRaises(managers.BadPluginConfig):
             await self.manager._load_plugins(plugins_conf)
+
+    @patch.object(managers, 'get_toxicbuildconf_yaml',
+                  AsyncMagicMock(spec=managers.get_toxicbuildconf_yaml))
+    @async_test
+    async def test_load_config_yaml(self):
+        self.manager.config_type = 'yaml'
+        await self.manager.load_config()
+        self.assertTrue(managers.get_toxicbuildconf_yaml.called)
+
+    @async_test
+    async def test_get_builder_steps_str(self):
+        builder = Mock()
+        builder.plugins = []
+        bdict = {'name': 'bla', 'steps': ['ls', 'cmd2']}
+        steps = await self.manager._get_builder_steps(builder, bdict)
+        self.assertEqual(len(steps), 2)
