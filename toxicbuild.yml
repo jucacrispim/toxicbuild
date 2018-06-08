@@ -9,6 +9,10 @@ TESTS_ENVVARS:  &TESTS_ENVVARS
 
 # steps
 
+INSTALL_MONGODB:  &INSTALL_MONGODB
+  name: Installing mongodb
+  command: sh ./build-scripts/install_mongodb.sh
+
 UNITTEST_COVERAGE:  &UNITTEST_COVERAGE
    name: Unit tests coverage
    command: ./build-scripts/check_coverage.sh toxicbuild 100
@@ -58,6 +62,7 @@ UPLOAD2PYPI:  &UPLOAD2PYPI
 
 
 MAIN_STEPS:  &MAIN_STEPS
+  - <<: *INSTALL_MONGODB
   - <<: *UNITTEST_COVERAGE
   - <<: *FUNCTIONAL_TESTS
   - <<: *SELENIUM_TESTS
@@ -78,7 +83,6 @@ APT_INSTALL:  &APT_INSTALL
     - chromedriver
     - xvfb
     - rabbitmq-server
-    - mongodb-server
 
 
 PY35_VENV:  &PY35_VENV
@@ -117,7 +121,6 @@ PY35_BUILDER:  &PY35_BUILDER
 
 PY36_BUILDER:  &PY36_BUILDER
   name: python3.6
-  remove_env: false
   branches:
     - master
     - 'feature-*'
