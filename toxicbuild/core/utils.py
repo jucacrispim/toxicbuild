@@ -87,14 +87,9 @@ def _get_envvars(envvars):
 
     newvars = copy.copy(os.environ)
     for var, value in envvars.items():
-        try:
-            if var in value:
-                current = os.environ.get(var, '')
-                value = value.replace(var, current)
-        except TypeError:
-            # If the value of the envvar is not a string
-            # TypeError happens and we simply cast to str
-            value = str(value)
+        if var in value:
+            current = os.environ.get(var, '')
+            value = value.replace(var, current)
 
         newvars[var] = value
 
