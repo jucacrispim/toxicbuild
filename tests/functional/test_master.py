@@ -19,6 +19,7 @@
 
 import asyncio
 import os
+from unittest.mock import patch, Mock
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.master import settings
 from toxicbuild.master.repository import Repository
@@ -173,6 +174,7 @@ class ToxicMasterTest(BaseFunctionalTest):
         cls.user = user
 
     @classmethod
+    @patch('aioamqp.protocol.logger', Mock())
     @async_test
     async def tearDownClass(cls):
         try:
@@ -184,6 +186,7 @@ class ToxicMasterTest(BaseFunctionalTest):
         await Repository.drop_collection()
         await scheduler_action.declare()
         await scheduler_action.queue_delete()
+        await scheduler_action.connection.disconnect()
         super().tearDownClass()
 
     @async_test

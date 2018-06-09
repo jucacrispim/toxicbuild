@@ -424,6 +424,7 @@ class BuildManagerTest(TestCase):
         repo.__func__ = lambda: None
         self.manager = build.BuildManager(repo)
 
+    @mock.patch('aioamqp.protocol.logger', mock.Mock())
     @async_test
     async def tearDown(self):
         if hasattr(self, 'repo') and self.repo.toxicbuild_conf_lock:
@@ -432,6 +433,7 @@ class BuildManagerTest(TestCase):
             lock_name = self.repo.toxicbuild_conf_lock.queue_name
             await channel.queue_delete(
                 lock_name)
+            await channel.close()
             await self.repo.toxicbuild_conf_lock.connection.disconnect()
             repository.toxicbuild_conf_mutex._declared_queues = set()
             repository.update_code_mutex._declared_queues = set()
@@ -787,7 +789,6 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
-    @mock.patch.object(build, 'ensure_future', mock.Mock())
     @async_test
     async def test_start_pending(self):
         await self._create_test_data()
@@ -798,12 +799,10 @@ class BuildManagerTest(TestCase):
         def _eb(slave):
             _eb_mock()
 
-        self.buildset == self.buildset
         self.repo.build_manager._execute_builds = _eb
         await self.repo.build_manager.start_pending()
         await self.other_repo.build_manager.start_pending()
-        # 1 from notify and 1 from _execute_builds
-        self.assertEqual(build.ensure_future.call_count, 2)
+        self.assertEqual(_eb_mock.call_count, 1)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -905,8 +904,8 @@ class BuildManagerTest(TestCase):
                                  token='123', owner=self.owner)
         self.slave.build = asyncio.coroutine(lambda x: None)
         await self.slave.save()
-        await repository.toxicbuild_conf_mutex.declare()
-        await repository.update_code_mutex.declare()
+        # await repository.toxicbuild_conf_mutex.declare()
+        # await repository.update_code_mutex.declare()
         self.repo = await repository.Repository.create(
             name='reponame', url='git@somewhere', update_seconds=300,
             vcs_type='git', slaves=[self.slave], owner=self.owner)

@@ -48,6 +48,7 @@ class RepositoryTest(TestCase):
         cls.exchange = None
 
     @classmethod
+    @patch('aioamqp.protocol.logger', Mock())
     @async_test
     async def tearDownClass(cls):
         if cls.exchange:

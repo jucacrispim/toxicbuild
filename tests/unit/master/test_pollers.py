@@ -36,6 +36,7 @@ class GitPollerTest(TestCase):
         await connect_exchanges()
 
     @classmethod
+    @mock.patch('aioamqp.protocol.logger', mock.Mock())
     @async_test
     async def tearDownClass(cls):
         channel = await pollers.revisions_added.connection.protocol.channel()
@@ -372,6 +373,7 @@ class PollerServerTest(TestCase):
         await connect_exchanges()
 
     @classmethod
+    @mock.patch('aioamqp.protocol.logger', mock.Mock())
     @async_test
     async def tearDownClass(cls):
         channel = await pollers.update_code.connection.protocol.channel()
