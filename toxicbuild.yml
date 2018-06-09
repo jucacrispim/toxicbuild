@@ -37,7 +37,7 @@ SELENIUM_TESTS:  &SELENIUM_TESTS
 
 PYLINT:  &PYLINT
   name: Code linter
-  command: pylint toxicbuild/
+  command: sh ./build-scripts/run_linter.sh
   warning_on_fail: true
 
 
