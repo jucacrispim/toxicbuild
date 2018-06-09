@@ -280,6 +280,24 @@ def stop_customwebserver():
     os.system(' '.join(cmd))
 
 
+def start_all():
+    start_slave()
+    start_poller()
+    start_scheduler()
+    start_master()
+    start_output()
+    start_customwebserver()
+
+
+def stop_all():
+    stop_customwebserver()
+    stop_scheduler()
+    stop_poller()
+    stop_master()
+    stop_output()
+    stop_slave()
+
+
 class BaseFunctionalTest(TestCase):
 
     """An AsyncTestCase that starts a master and a slave process on

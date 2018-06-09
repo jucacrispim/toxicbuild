@@ -21,10 +21,26 @@ from toxicbuild.master.repository import Repository as RepoDBModel
 from toxicbuild.master.users import User as UserDBModel
 from toxicbuild.ui.models import Slave, Repository, BuildSet, User
 from tests import async_test
-from tests.functional import BaseFunctionalTest
+from tests.functional import BaseFunctionalTest, start_all, stop_all
+
+
+def setUpModule():
+    start_all()
+
+
+def tearDownModule():
+    stop_all()
 
 
 class BaseUITest(BaseFunctionalTest):
+
+    @classmethod
+    def setUpClass(cls):
+        pass
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
 
     @async_test
     async def setUp(self):
@@ -262,6 +278,14 @@ class BuildsetTest(BaseUITest):
 
 
 class UserTest(BaseFunctionalTest):
+
+    @classmethod
+    def setUpClass(cls):
+        pass
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
 
     @async_test
     async def setUp(self):
