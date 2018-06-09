@@ -244,6 +244,8 @@ class BuildClientTest(TestCase):
                       'steps': {'cmd': 'ls', 'status': 'success',
                                 'name': 'run ls',
                                 'output': 'somefile.txt\n'}}},
+            {'code': 0,
+             'body': None},
             {},
         ]
 

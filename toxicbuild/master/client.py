@@ -94,6 +94,8 @@ class BuildClient(BaseToxicClient):
                 break
 
             build_info = r['body']
+            if build_info is None:
+                return
             if process_coro:
                 future = ensure_future(process_coro(build, build_info))
                 futures.append(future)
