@@ -667,14 +667,57 @@ class BuildManagerTest(TestCase):
     async def test_execute_in_parallel_limit(self):
         await self._create_test_data()
 
-        builds = [self.build, self.consumed_build, build.Build()]
+        new_build = build.Build(repository=self.repo, slave=self.slave,
+                                branch='master', named_tree='v0.1',
+                                builder=self.builder)
+        self.buildset.builds.append(new_build)
+        await self.buildset.save()
+        builds = [self.build, self.consumed_build, new_build]
 
         self.slave.build = asyncio.coroutine(lambda x: None)
         self.manager.repository = self.repo
         self.manager.repository.parallel_builds = 1
         await self.manager._execute_in_parallel(self.slave, builds)
 
-        self.assertEqual(len(build.asyncio.wait.call_args_list), 3)
+        self.assertEqual(len(build.asyncio.wait.call_args_list), 2)
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
+    @mock.patch.object(repository.toxicbuild_conf_mutex, 'publish',
+                       AsyncMagicMock())
+    @mock.patch.object(repository.update_code_mutex, 'publish',
+                       AsyncMagicMock())
+    @mock.patch.object(build.asyncio, 'wait', AsyncMagicMock())
+    @async_test
+    async def test_execute_in_parallel_cancelled_build_same_buildset(self):
+        await self._create_test_data()
+        cancelled = build.Build(repository=self.repo, slave=self.slave,
+                                branch='to-cancel', named_tree='v0.1',
+                                builder=self.builder)
+        self.buildset.builds.append(cancelled)
+        await self.buildset.save()
+        builds = [self.build, self.consumed_build, cancelled]
+
+        async def build_func(build_instance):
+            cancelled.status = type(build_instance).CANCELLED
+            await cancelled.update()
+
+        wait_mock = AsyncMagicMock()
+        async def wait_func(fs):
+            await wait_mock()
+            for f in fs:
+                await f
+
+        build.asyncio.wait = wait_func
+        self.slave.build = build_func
+        self.manager.repository = self.repo
+        self.manager.repository.parallel_builds = 1
+        await self.manager._execute_in_parallel(self.slave, builds)
+
+        self.assertEqual(len(wait_mock.call_args_list), 1)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

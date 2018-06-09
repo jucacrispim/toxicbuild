@@ -757,12 +757,14 @@ class BuildManager(LoggerMixin):
     async def _execute_in_parallel(self, slave, builds):
         """Executes builds in parallel in a slave.
 
-        :param slave: A :class:`toxicbuild.master.slave.Slave` instance.
+        :param slave: A :class:`~toxicbuild.master.slave.Slave` instance.
         :param builds: A list of
-          :class:`toxicbuild.master.build.Build` instances."""
+          :class:`~toxicbuild.master.build.Build` instances."""
 
         fs = []
         for chunk in self._get_builds_chunks(builds):
+            chunk = [b for b in await self._reload_builds(chunk)
+                     if b.status == type(b).PENDING]
             chunk_fs = []
             for build in chunk:
                 type(self.repository).add_running_build()
@@ -772,7 +774,8 @@ class BuildManager(LoggerMixin):
                 chunk_fs.append(f)
                 fs.append(f)
 
-            await asyncio.wait(chunk_fs)
+            if chunk_fs:
+                await asyncio.wait(chunk_fs)
 
         return fs
 
@@ -784,3 +787,12 @@ class BuildManager(LoggerMixin):
 
         for i in range(0, len(builds), self.repository.parallel_builds):
             yield builds[i:i + self.repository.parallel_builds]
+
+    async def _reload_builds(self, builds):
+        """Reloads a chunk of builds
+
+        :param builds: A list of builds."""
+
+        buildset = await builds[0].get_buildset()
+        uuids = [b.uuid for b in builds]
+        return [b for b in buildset.builds if b.uuid in uuids]
