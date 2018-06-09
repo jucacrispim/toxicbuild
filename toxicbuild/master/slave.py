@@ -272,7 +272,7 @@ class Slave(OwnedDocument, LoggerMixin):
 
         # this is ridiculous, but the idea of waitig for the step is
         # that sometimes a info - ie step_output_info - may arrive here
-        # before the step output info, so we need to wait a little.
+        # before the step started info, so we need to wait a little.
         build_inst = build
 
         async def _get():
@@ -287,7 +287,7 @@ class Slave(OwnedDocument, LoggerMixin):
         limit = 5
         n = 0
         while not step and wait:
-            asyncio.sleep(0.1)
+            await asyncio.sleep(0.001)
             step = await _get()
             n += 1
             if n >= limit:
