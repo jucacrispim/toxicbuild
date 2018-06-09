@@ -16,7 +16,7 @@ pylint==1.9.1
 pylint-django==0.11.1
 pylint-plugin-utils==0.2.6
 pyyaml==3.12
-mongomotor==0.12.0
+mongomotor==0.13.1
 motor==1.2.1
 mongoengine==0.15.0
 asyncblink==0.3.1
