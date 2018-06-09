@@ -130,7 +130,8 @@ class OwnedDocuentTest(TestCase):
 
         repo = TestDoc(owner=org)
         await repo.save()
-        allowed_users = await repo.get_allowed_users().to_list()
+        allowed = await repo.get_allowed_users()
+        allowed_users = await allowed.to_list()
         self.assertEqual(len(allowed_users), 2)
 
     @async_test
@@ -149,5 +150,6 @@ class OwnedDocuentTest(TestCase):
         repo = TestDoc(owner=user_a)
         await repo.save()
         await user_a.reload()
-        allowed_users = await repo.get_allowed_users().to_list()
+        allowed = await repo.get_allowed_users()
+        allowed_users = await allowed.to_list()
         self.assertEqual(len(allowed_users), 2)

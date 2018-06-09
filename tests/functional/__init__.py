@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import socket
 import sys
 import time
 import tornado
@@ -62,7 +63,7 @@ def start_slave(sleep=0.5):
         cmd += ['-c', toxicslave_conf]
 
     os.system(' '.join(cmd))
-    # time.sleep(sleep)
+    # here we try to talk to the master to check if its is alive
 
 
 def stop_slave():
@@ -75,6 +76,27 @@ def stop_slave():
            '--pidfile', pidfile, '--kill']
 
     os.system(' '.join(cmd))
+
+
+def wait_master_to_be_alive():
+    from toxicbuild.master import settings
+    HOST = settings.HOLE_ADDR
+    PORT = settings.HOLE_PORT
+    alive = False
+    limit = 20
+    step = 0.5
+    i = 0
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        while not alive and i < limit:
+            try:
+                s.connect((HOST, PORT))
+                s.close()
+                break
+            except Exception:
+                alive = False
+
+            time.sleep(step)
+            i += step
 
 
 def start_master(sleep=0.5):
@@ -92,7 +114,8 @@ def start_master(sleep=0.5):
         cmd += ['-c', toxicmaster_conf]
 
     os.system(' '.join(cmd))
-    # time.sleep(sleep)
+
+    wait_master_to_be_alive()
 
 
 def start_scheduler(sleep=0.5):

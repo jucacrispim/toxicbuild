@@ -362,7 +362,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         repo_added_msg = await repo.to_dict(id_as_str=True)
         await repo_added.publish(repo_added_msg)
         repo_added_msg['msg_type'] = 'repo_added'
-        async for user in repo.get_allowed_users():
+        async for user in await repo.get_allowed_users():
             ensure_future(ui_notifications.publish(
                 repo_added_msg, routing_key=str(user.id)))
 
@@ -372,7 +372,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await repo_status_changed.publish(status_msg,
                                           routing_key=str(self.id))
         status_msg['msg_type'] = 'repo_status_changed'
-        async for user in self.get_allowed_users():
+        async for user in await self.get_allowed_users():
             ensure_future(ui_notifications.publish(
                 status_msg, routing_key=str(user.id)))
 

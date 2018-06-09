@@ -58,7 +58,7 @@ class UIHoleClient(BaseToxicClient):
         data = {'action': action, 'body': body,
                 'token': self.hole_token}
 
-        if action != 'user-authenticate':
+        if action not in ['user-authenticate', 'list-funcs']:
             data['user_id'] = str(self.requester.id)
 
         yield from self.write(data)

@@ -27,8 +27,8 @@ from toxicbuild.master import settings
 def as_db_ref(document, field):
     """Returns reference field of a document as DBRefs."""
 
+    dref = document._fields[field]._auto_dereference
     try:
-        dref = document._fields[field]._auto_dereference
         document._fields[field]._auto_dereference = False
         dbref = getattr(document, field)
     finally:

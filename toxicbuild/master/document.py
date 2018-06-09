@@ -75,10 +75,10 @@ class OwnedDocument(Document):
 
         return qs.no_cache().filter(**kwargs)
 
-    def get_allowed_users(self):
+    async def get_allowed_users(self):
         """Returns a queryset of users that have read permission."""
 
-        owner = as_db_ref(self, 'owner')
+        owner = await self.owner
         try:
             member_of = [ref.id for ref in as_db_ref(owner, 'member_of')]
             organizations = [ref.id for ref in as_db_ref(
