@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
 from toxicbuild.master.repository import Repository as RepoDBModel
 from toxicbuild.master.users import User as UserDBModel
 from toxicbuild.ui.models import Slave, Repository, BuildSet, User
@@ -30,6 +31,8 @@ def setUpModule():
 
 def tearDownModule():
     stop_all()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(RepoDBModel.drop_collection())
 
 
 class BaseUITest(BaseFunctionalTest):
