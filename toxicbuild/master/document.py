@@ -79,12 +79,16 @@ class OwnedDocument(Document):
         """Returns a queryset of users that have read permission."""
 
         owner = await self.owner
-        try:
-            member_of = [ref.id for ref in as_db_ref(owner, 'member_of')]
-            organizations = [ref.id for ref in as_db_ref(
-                owner, 'organizations')]
-        except (KeyError, UnboundLocalError):
+        if hasattr(owner, 'member_of'):
+            member_of = await owner.member_of
+            member_of = [ref.id for ref in member_of]
+        else:
             member_of = [owner.id]
+
+        if hasattr(owner, 'organizations'):
+            organizations = await owner.organizations
+            organizations = [ref.id for ref in organizations]
+        else:
             organizations = [owner.id]
 
         qs = User.objects(Q(id=owner.id) |
