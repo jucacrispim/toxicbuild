@@ -85,6 +85,12 @@ RELEASE_STEPS:  &RELEASE_STEPS
 APT_INSTALL:  &APT_INSTALL
   name: apt-install
   packages:
+    - rabbitmq-server
+
+
+APT_INSTALL_SELENIUM:  &APT_INSTALL_SELENIUM
+  name: apt-install
+  packages:
     - chromedriver
     - xvfb
     - rabbitmq-server
@@ -153,7 +159,7 @@ SELENIUM_BUILDER:  &SELENIUM_BUILDER
     - 'bug-*'
 
   plugins:
-    - <<: *APT_INSTALL
+    - <<: *APT_INSTALL_SELENIUM
     - <<: *PY36_VENV
 
   envvars:
