@@ -262,8 +262,12 @@ class Slave(OwnedDocument, LoggerMixin):
     async def _process_step_output_info(self, build, info):
         uuid = info['uuid']
         if self._step_finished[uuid]:
-            self.log('Step {} already finished. Leaving...', level='debug')
+            self.log('Step {} already finished. Leaving...'.format(uuid),
+                     level='debug')
             return
+
+        msg = 'step_output_arrived for {}'.format(uuid)
+        self.log(msg, level='debug')
         info['output'] = info['output'] + '\n'
         output = info['output']
         repo = await build.repository
@@ -271,8 +275,6 @@ class Slave(OwnedDocument, LoggerMixin):
         step.output = ''.join([step.output or '', output])
         info['repository'] = {'id': str(repo.id)}
         await build.update()
-        msg = 'step_output_arrived for {}'.format(uuid)
-        self.log(msg, level='debug')
         step_output_arrived.send(str(repo.id), step_info=info)
 
     async def _get_step(self, build, step_uuid, wait=False):
