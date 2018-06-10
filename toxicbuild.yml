@@ -69,13 +69,14 @@ MAIN_STEPS:  &MAIN_STEPS
   - <<: *INSTALL_MONGODB
   - <<: *UNITTEST_COVERAGE
   - <<: *FUNCTIONAL_TESTS
-  - <<: *SELENIUM_TESTS
   - <<: *PYLINT
   - <<: *PEP8
   - <<: *XENON
 
+
 RELEASE_STEPS:  &RELEASE_STEPS
   - <<: *MAIN_STEPS
+  - <<: *SELENIUM_TESTS
   - <<: *UPLOAD_DOCS
   - <<: *UPLOAD2PYPI
 
@@ -139,6 +140,27 @@ PY36_BUILDER:  &PY36_BUILDER
 
   steps:
     *MAIN_STEPS
+
+  platform:
+    python3.6
+
+
+SELENIUM_BUILDER:  &SELENIUM_BUILDER
+  name: selenium
+  branches:
+    - master
+    - 'feature-*'
+    - 'bug-*'
+
+  plugins:
+    - <<: *APT_INSTALL
+    - <<: *PY36_VENV
+
+  envvars:
+    <<: *TESTS_ENVVARS
+
+  steps:
+    - <<: *SELENIUM_TESTS
 
   platform:
     python3.6
