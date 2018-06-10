@@ -353,6 +353,29 @@ class SlaveTest(TestCase):
     @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
         spec=slave.build_notifications.publish))
     @async_test
+    async def test_process_step_output_info_step_finished(self):
+        await self._create_test_data()
+
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+        started = now.strftime('%a %b %d %H:%M:%S %Y %z')
+        a_uuid = str(uuid4())
+
+        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
+                'output': '', 'started': started, 'finished': None,
+                'index': 0, 'uuid': a_uuid}
+
+        self.slave._step_finished[a_uuid] = True
+        await self.slave._process_step_info(self.build, info)
+
+        info = {'uuid': a_uuid, 'output': 'somefile.txt\n'}
+        slave.build_notifications.publish = AsyncMagicMock()
+        await self.slave._process_step_output_info(self.build, info)
+        self.assertFalse(slave.build_notifications.publish.called)
+
+    @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
+        spec=slave.build_notifications.publish))
+    @async_test
     async def test_get_step_wait(self):
         await self._create_test_data()
         build = self.buildset.builds[0]

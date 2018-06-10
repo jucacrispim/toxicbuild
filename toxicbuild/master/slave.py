@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from collections import defaultdict
 import traceback
 from mongomotor.fields import (StringField, IntField, BooleanField)
 from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
@@ -64,6 +65,14 @@ class Slave(OwnedDocument, LoggerMixin):
     meta = {
         'ordering': ['name']
     }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # So, the thing here is that we may have a race condition
+        # with the last step output and the build finished messages.
+        # In fact, all the build management/build server communitation already
+        # is on its limits. A new implementation is needed.
+        self._step_finished = defaultdict(lambda: False)
 
     @classmethod
     async def create(cls, **kwargs):
@@ -217,6 +226,7 @@ class Slave(OwnedDocument, LoggerMixin):
         repo = await build.repository
 
         if finished:
+            self._step_finished[uuid] = True
             requested_step = await self._get_step(build, uuid, wait=True)
             requested_step.status = status
             requested_step.output = output
@@ -251,6 +261,9 @@ class Slave(OwnedDocument, LoggerMixin):
 
     async def _process_step_output_info(self, build, info):
         uuid = info['uuid']
+        if self._step_finished[uuid]:
+            self.log('Step {} already finished. Leaving...', level='debug')
+            return
         info['output'] = info['output'] + '\n'
         output = info['output']
         repo = await build.repository

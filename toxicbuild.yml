@@ -4,7 +4,7 @@
 
 TESTS_ENVVARS:  &TESTS_ENVVARS
   DISPLAY: ':99'
-  TOXICSLEEP_TIME: '1.5'
+  TOXICSLEEP_TIME: '10'
   # TOXICMASTER_SETTINGS: 'tests/functional/data/master/toxicmaster.conf'
   TOXICSLAVE_SETTINGS: 'tests/functional/data/slave/toxicslave.conf'
   # TOXICUI_SETTINGS: 'tests/functional/data/ui/toxicui.conf'

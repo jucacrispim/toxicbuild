@@ -35,7 +35,7 @@ from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
                                    localtime2utc, set_tzinfo,
                                    get_toxicbuildconf_yaml)
 from toxicbuild.master.document import ExternalRevisionIinfo
-from toxicbuild.master.exceptions import DBError, ImpossibleCancellation
+from toxicbuild.master.exceptions import (DBError, ImpossibleCancellation)
 from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import build_added, build_cancelled
 from toxicbuild.master.utils import (as_db_ref, get_build_config_type,
