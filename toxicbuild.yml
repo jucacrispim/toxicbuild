@@ -166,6 +166,7 @@ SELENIUM_BUILDER:  &SELENIUM_BUILDER
     <<: *TESTS_ENVVARS
 
   steps:
+    - <<: *INSTALL_MONGODB
     - <<: *SELENIUM_TESTS
 
   platform:
