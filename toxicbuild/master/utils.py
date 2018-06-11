@@ -24,19 +24,6 @@ from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
 
 
-def as_db_ref(document, field):
-    """Returns reference field of a document as DBRefs."""
-
-    dref = document._fields[field]._auto_dereference
-    try:
-        document._fields[field]._auto_dereference = False
-        dbref = getattr(document, field)
-    finally:
-        document._fields[field]._auto_dereference = dref
-
-    return dbref
-
-
 class BaseQueueReactorServer(LoggerMixin):
     """A base class for server that react to incomming messages
     from queues"""

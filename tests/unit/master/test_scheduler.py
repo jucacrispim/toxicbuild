@@ -34,7 +34,7 @@ class SchedulerTest(TestCase):
         scheduler.stop()
         super(SchedulerTest, self).setUp()
         self.scheduler = TaskScheduler()
-        self.future = asyncio.async(self.scheduler.start())
+        self.future = asyncio.ensure_future(self.scheduler.start())
 
     def tearDown(self):
         self.scheduler.stop()

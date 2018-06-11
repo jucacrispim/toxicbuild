@@ -309,7 +309,7 @@ class HoleHandler:
     async def repo_list(self):
         """ Lists all repositories. """
 
-        repos = Repository.list_for_user(self.protocol.user)
+        repos = await Repository.list_for_user(self.protocol.user)
         repo_list = []
         async for repo in repos:
 
@@ -487,7 +487,7 @@ class HoleHandler:
     async def slave_list(self):
         """ Lists all slaves. """
 
-        slaves = Slave.list_for_user(self.protocol.user)
+        slaves = await Slave.list_for_user(self.protocol.user)
         slave_list = []
 
         async for slave in slaves:
@@ -669,7 +669,7 @@ class UIStreamHandler(LoggerMixin):
         await self.send_info('build_cancelled', **kw)
 
     async def _connect2signals(self):
-        repos = Repository.list_for_user(self.protocol.user)
+        repos = await Repository.list_for_user(self.protocol.user)
         async for repo in repos:
             self._connect_repo(repo)
         ensure_future(self._handle_ui_notifications())

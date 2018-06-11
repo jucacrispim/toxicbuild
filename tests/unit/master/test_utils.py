@@ -17,12 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-from unittest import TestCase
-from toxicbuild.master import utils, users
+# from unittest import TestCase
+# from toxicbuild.master import utils, users
 
+# class UtilsTest(TestCase):
 
-class UtilsTest(TestCase):
-
-    def test_as_db_ref(self):
-        user = users.User()
-        self.assertFalse(utils.as_db_ref(user, 'member_of'))
+#     def test_as_db_ref(self):
+#         user = users.User()
+#         self.assertFalse(utils.as_db_ref(user, 'member_of'))

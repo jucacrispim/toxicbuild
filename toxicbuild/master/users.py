@@ -24,7 +24,6 @@ from mongomotor.fields import (StringField, UUIDField, ListField,
 from mongomotor.queryset import PULL
 from toxicbuild.core.utils import bcrypt_string, compare_bcrypt_string
 from toxicbuild.master.exceptions import InvalidCredentials
-from toxicbuild.master.utils import as_db_ref
 
 
 class Organization(Document):
@@ -52,8 +51,8 @@ class Organization(Document):
         await super().save(*args, **kwargs)
         # we set it here so we can query for user's repo in a easier way
         owner = await self.owner
-        # do not deref to avoid a query for all orgs
-        organizations = [ref.id for ref in as_db_ref(owner, 'organizations')]
+        organizations = await owner.organizations
+        organizations = [ref.id for ref in organizations]
         if self.id not in organizations:
             await owner.update(push__organizations=self)
 

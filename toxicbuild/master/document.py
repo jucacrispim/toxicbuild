@@ -17,13 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-from bson.dbref import DBRef
 from mongoengine.queryset import Q
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import GenericReferenceField, StringField
 from toxicbuild.master.exceptions import NotEnoughPerms
 from toxicbuild.master.users import User
-from toxicbuild.master.utils import as_db_ref
 
 
 class OwnedDocument(Document):
@@ -59,11 +57,13 @@ class OwnedDocument(Document):
         return obj
 
     @classmethod
-    def list_for_user(cls, user, **kwargs):
+    async def list_for_user(cls, user, **kwargs):
         """Returns a queryset of repositories in which the user has read
         permission"""
-        member_of = [ref.id for ref in as_db_ref(user, 'member_of')]
-        organizations = [ref.id for ref in as_db_ref(user, 'organizations')]
+        member_of = await user.member_of
+        member_of = [ref.id for ref in member_of]
+        organizations = await user.organizations
+        organizations = [ref.id for ref in organizations]
 
         if user.is_superuser:
             qs = cls.objects
@@ -75,10 +75,12 @@ class OwnedDocument(Document):
 
         return qs.no_cache().filter(**kwargs)
 
-    async def get_allowed_users(self):
-        """Returns a queryset of users that have read permission."""
+    async def _get_member_of_organizations(self, owner):
+        """Returns a list with the ids of the organizations that a owner.
+        is member of and a list of ids of organizations the owner of the
+        document owns.
+        """
 
-        owner = await self.owner
         if hasattr(owner, 'member_of'):
             member_of = await owner.member_of
             member_of = [ref.id for ref in member_of]
@@ -91,6 +93,15 @@ class OwnedDocument(Document):
         else:
             organizations = [owner.id]
 
+        return member_of, organizations
+
+    async def get_allowed_users(self):
+        """Returns a queryset of users that have read permission."""
+
+        owner = await self.owner
+        member_of, organizations = await self._get_member_of_organizations(
+            owner)
+
         qs = User.objects(Q(id=owner.id) |
                           Q(organizations__in=organizations) |
                           Q(member_of__in=member_of + organizations))
@@ -102,9 +113,11 @@ class OwnedDocument(Document):
             return True
 
         owner = await self.owner
-        owner_id = DBRef(owner.__class__.__name__.lower(), owner.id)
-        member_of = as_db_ref(user, 'member_of')
-        organizations = as_db_ref(user, 'organizations')
+        owner_id = owner.id
+
+        member_of, organizations = await self._get_member_of_organizations(
+            owner)
+
         if owner == user or owner_id in member_of or \
            owner_id in organizations:
             has_perms = True

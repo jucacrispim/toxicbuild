@@ -81,7 +81,7 @@ class OwnedDocuentTest(TestCase):
         await org.save()
         repo = TestDoc(owner=org)
         await repo.save()
-        repos = TestDoc.list_for_user(self.owner)
+        repos = await TestDoc.list_for_user(self.owner)
         count = await repos.count()
         self.assertEqual(count, 1)
 
@@ -89,7 +89,7 @@ class OwnedDocuentTest(TestCase):
     async def test_list_for_user_no_perms(self):
         user = users.User(email='b@b.com', password='123')
         await user.save()
-        repos = TestDoc.list_for_user(user)
+        repos = await TestDoc.list_for_user(user)
         count = await repos.count()
         self.assertEqual(count, 0)
 
@@ -97,7 +97,7 @@ class OwnedDocuentTest(TestCase):
     async def test_list_for_user_superuser(self):
         user = users.User(email='b@b.com', password='123', is_superuser=True)
         await user.save()
-        repos = TestDoc.list_for_user(user)
+        repos = await TestDoc.list_for_user(user)
         count = await repos.count()
         self.assertEqual(count, 1)
 
@@ -110,7 +110,7 @@ class OwnedDocuentTest(TestCase):
         repo = TestDoc(owner=org)
         await repo.save()
         await user.reload()
-        repos = TestDoc.list_for_user(user)
+        repos = await TestDoc.list_for_user(user)
         count = await repos.count()
         self.assertEqual(count, 1)
 

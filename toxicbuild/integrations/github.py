@@ -350,7 +350,8 @@ class GithubInstallation(LoggerMixin, Document):
             RepositoryBranch(name='master', notify_only_latest=True),
             RepositoryBranch(name='feature-*', notify_only_latest=True),
             RepositoryBranch(name='bug-*', notify_only_latest=True)]
-        slaves = await Slave.list_for_user(await self.user).to_list()
+        slaves = await Slave.list_for_user(await self.user)
+        slaves = await slaves.to_list()
         # update_seconds=0 because it will not be scheduled in fact.
         # note the schedule_poller=False.
         # What triggers an update code is a message from github in the
