@@ -653,19 +653,19 @@ class UIStreamHandler(LoggerMixin):
         await self.send_info('step_started', sender=sender, **kw)
 
     async def step_finished(self, sender, **kw):
-        await self.send_info('step_finished', **kw)
+        await self.send_info('step_finished', sender=sender, **kw)
 
     async def build_started(self, sender, **kw):
-        await self.send_info('build_started', **kw)
+        await self.send_info('build_started', sender=sender, **kw)
 
     async def build_finished(self, sender, **kw):
-        await self.send_info('build_finished', **kw)
+        await self.send_info('build_finished', sender=sender, **kw)
 
     async def build_added(self, sender, **kw):
-        await self.send_info('build_added', **kw)
+        await self.send_info('build_added', sender=sender, **kw)
 
     async def build_cancelled_fn(self, sender, **kw):
-        self.log('Got build-cancelled signal', level='debug')
+        self.log('Got build-cancelled signal', sender=sender, level='debug')
         await self.send_info('build_cancelled', **kw)
 
     async def _connect2signals(self):
