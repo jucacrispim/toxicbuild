@@ -422,7 +422,8 @@ class BuildSet(SerializeMixin, Document):
           of :meth:`~toxicbuild.master.build.Buildset.get_status` will be
           used."""
 
-        repo_id = str(as_db_ref(self, 'repository').id)
+        repo = await self.repository
+        repo_id = str(repo.id)
         msg = self.to_dict(id_as_str=True)
         msg['event_type'] = event_type
         msg['status'] = status or self.get_status()
