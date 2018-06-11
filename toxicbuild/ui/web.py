@@ -36,9 +36,10 @@ from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.core.utils import LoggerMixin, string2datetime
 from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
-from toxicbuild.ui.models import (Repository, Slave, BuildSet, Builder, Plugin,
+from toxicbuild.ui.models import (Repository, Slave, BuildSet, Plugin,
                                   User)
-from toxicbuild.ui.utils import format_datetime, is_datetime
+from toxicbuild.ui.utils import (format_datetime, is_datetime,
+                                 get_builders_for_buildsets)
 
 
 COOKIE_NAME = 'toxicui'
@@ -522,24 +523,8 @@ class WaterfallHandler(LoggedTemplateHandler):
 
     @asyncio.coroutine
     def _get_builders_for_buildsets(self, buildsets):
-        builders = set()
-        buildsets = buildsets or []
-        for buildset in buildsets:
-            for build in buildset.builds:
-                builders.add(build.builder)
-
-        # Now the thing here is: the builders here are made
-        # from the response of buildset-list. It returns only
-        # the builder id for builds, so now I retrieve the
-        # 'full' builder using builder-list
-        ids = [b.id for b in builders]
-        builders = yield from Builder.list(self.user, id__in=ids)
-        builders_dict = {b.id: b for b in builders}
-        for buildset in buildsets:
-            for build in buildset.builds:
-                build.builder = builders_dict[build.builder.id]
-
-        return sorted(builders, key=lambda b: b.name)
+        r = yield from get_builders_for_buildsets(self.user, buildsets)
+        return r
 
     def _get_ending(self, build, build_index, builders):
         i = build_index

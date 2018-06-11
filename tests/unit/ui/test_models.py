@@ -53,7 +53,7 @@ class BaseModelTest(TestCase):
     def test_datetime_attributes(self):
         requester = MagicMock()
         model = models.BaseModel(requester,
-                                 {'somedt': 'Wed Oct 25 06:50:49 2017 +0000'})
+                                 {'somedt': '3 10 25 06:50:49 2017 +0000'})
         self.assertIsInstance(model.somedt, datetime.datetime)
 
     def test_to_dict(self):

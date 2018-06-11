@@ -71,6 +71,7 @@ def is_datetime(dtstr):
 
 
 def get_client_settings():
+    """Returns the settings that must be used by the client"""
     host = settings.HOLE_HOST
     port = settings.HOLE_PORT
     try:
@@ -86,3 +87,31 @@ def get_client_settings():
     return {'host': host, 'port': port,
             'use_ssl': use_ssl,
             'validate_cert': validate_cert}
+
+
+async def get_builders_for_buildsets(user, buildsets):
+    """Returns a list of builders used in given buildsets
+
+    :param user: The user to authenticate in the master
+    :param buildsets: A list of buildsets returned by the master."""
+
+    from toxicbuild.ui.models import Builder
+
+    builders = set()
+    buildsets = buildsets or []
+    for buildset in buildsets:
+        for build in buildset.builds:
+            builders.add(build.builder)
+
+    # Now the thing here is: the builders here are made
+    # from the response of buildset-list. It returns only
+    # the builder id for builds, so now I retrieve the
+    # 'full' builder using builder-list
+    ids = [b.id for b in builders]
+    builders = await Builder.list(user, id__in=ids)
+    builders_dict = {b.id: b for b in builders}
+    for buildset in buildsets:
+        for build in buildset.builds:
+            build.builder = builders_dict[build.builder.id]
+
+    return sorted(builders, key=lambda b: b.name)
