@@ -59,9 +59,12 @@ if __name__ == '__main__':
     try:
         username_or_email, password, host, port, \
             token, use_ssl, validate_cert = get_conf(cf)
+        use_ssl = [True, False][use_ssl == 'False']
+        validate_cert = [True, False][validate_cert == 'False']
     except Exception:
         print('Something went wrong.')
         sys.exit(1)
 
-    tc = ToxicCli(username_or_email, password, host, port, token)
+    tc = ToxicCli(username_or_email, password, host, port, token,
+                  use_ssl, validate_cert)
     tc.run()

@@ -41,6 +41,33 @@ class BaseModelTest(TestCase):
         yield from models.BaseModel.get_client(requester)
         self.assertTrue(models.get_hole_client.called)
 
+    @patch.object(models, 'get_hole_client', MagicMock(
+        spec=models.get_hole_client))
+    @async_test
+    def test_get_client_client_exists(self):
+        try:
+            requester = MagicMock()
+            models.BaseModel._client = MagicMock()
+            client = yield from models.BaseModel.get_client(requester)
+            self.assertEqual(client, models.BaseModel._client)
+            self.assertFalse(client.connect.called)
+        finally:
+            models.BaseModel._client = None
+
+    @patch.object(models, 'get_hole_client', MagicMock(
+        spec=models.get_hole_client))
+    @async_test
+    def test_get_client_client_exists_disconnected(self):
+        try:
+            requester = MagicMock()
+            models.BaseModel._client = MagicMock()
+            models.BaseModel._client._connected = False
+            client = yield from models.BaseModel.get_client(requester)
+            self.assertEqual(client, models.BaseModel._client)
+            self.assertTrue(client.connect.called)
+        finally:
+            models.BaseModel._client = None
+
     def test_attributes_order(self):
         ordered = models.OrderedDict()
         ordered['z'] = 1

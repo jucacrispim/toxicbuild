@@ -33,6 +33,9 @@ class BaseModel:
     # that are simply treated as other objects.
     references = {}
 
+    # This is for the cli only. Do not use.
+    _client = None
+
     def __init__(self, requester, ordered_kwargs):
         # here is where we transform the dictonaries from the
         # master's response into objects that are references.
@@ -69,6 +72,11 @@ class BaseModel:
     @asyncio.coroutine
     def get_client(cls, requester):
         """Returns a client connected to master."""
+
+        if cls._client:
+            if not cls._client._connected:
+                yield from cls._client.connect()
+            return cls._client
 
         client_settings = get_client_settings()
         client = yield from get_hole_client(requester, **client_settings)

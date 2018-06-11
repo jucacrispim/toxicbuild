@@ -444,7 +444,7 @@ class ToxicCliTest(unittest.TestCase):
 
     @classmethod
     @patch.object(cli.ToxicCliActions, 'get_client', MagicMock())
-    def setUpClass(cls):
+    def setUp(cls):
         @asyncio.coroutine
         def gc(*args, **kwargs):
             client = MagicMock()
@@ -478,9 +478,29 @@ class ToxicCliTest(unittest.TestCase):
     @patch.object(cli.urwid, 'MainLoop', Mock())
     @patch.object(cli.ToxicCli, 'show_welcome_screen', Mock())
     def test_run(self):
-        self.cli.run()
+        def stop():
+            self.cli._exiting = True
 
-        self.assertTrue(self.cli.show_welcome_screen.called)
+        self.cli.show_welcome_screen = stop
+
+        self.cli._exiting = False
+        self.cli.run()
+        self.assertTrue(cli.urwid.AsyncioEventLoop.called)
+        self.assertTrue(cli.urwid.MainLoop.called)
+
+    @patch.object(cli.urwid, 'AsyncioEventLoop', Mock())
+    @patch.object(cli.urwid, 'MainLoop', Mock())
+    @patch.object(cli.ToxicCli, 'show_welcome_screen', Mock())
+    def test_run_exception(self):
+        def stop():
+            self.cli._exiting = True
+
+        self.cli.show_welcome_screen = stop
+
+        self.cli._exiting = False
+        loop = cli.urwid.MainLoop.return_value
+        loop.run.side_effect = Exception
+        self.cli.run()
         self.assertTrue(cli.urwid.AsyncioEventLoop.called)
         self.assertTrue(cli.urwid.MainLoop.called)
 
@@ -536,6 +556,13 @@ class ToxicCliTest(unittest.TestCase):
         f = self.cli.keypress((10, 10), ' ')
         self.assertIsNone(f)
         self.assertEqual(self.cmdline, None)
+
+
+    def test_execute_and_show_with_show_waterfall(self):
+        self.cli.show_waterfall = AsyncMagicMock()
+        self.loop.run_until_complete(self.cli.execute_and_show('waterfall b'))
+
+        self.assertTrue(self.cli.show_waterfall.called)
 
     def test_execute_and_show_with_exception(self):
         @asyncio.coroutine
@@ -595,7 +622,7 @@ class ToxicCliTest(unittest.TestCase):
         self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
         self.assertTrue(self.cli.quit.called)
 
-    @patch.object(cli.ToxicCli, 'peek', MagicMock(spec=cli.ToxicCli.peek))
+    @patch.object(cli.ToxicCli, 'peek', AsyncMagicMock(spec=cli.ToxicCli.peek))
     def test_execute_with_peek(self):
         cmdline = 'peek'
 
@@ -632,6 +659,45 @@ class ToxicCliTest(unittest.TestCase):
         stream_called = client_mock.request2server.call_args[0][0] == 'stream'
         self.assertTrue(stream_called)
         self.assertTrue(client_mock.get_response.called)
+
+    def test_peek_format_fn(self):
+        client_mock = MagicMock()
+        client_mock.__enter__.return_value = client_mock
+
+        @asyncio.coroutine
+        def gc():
+            return client_mock
+
+        fn_mock = Mock()
+
+        self.COUNT = 0
+        def fn(r):
+            if self.COUNT > 0:
+                self.cli._stop_peek = True
+            self.COUNT += 1
+            fn_mock()
+
+        self.cli.get_client = gc
+        self.loop.run_until_complete(self.cli.peek(fn))
+
+        stream_called = client_mock.request2server.call_args[0][0] == 'stream'
+        self.assertTrue(stream_called)
+        self.assertTrue(client_mock.get_response.called)
+        self.assertTrue(fn_mock.called)
+
+    @async_test
+    async def test_show_watefall_no_repo(self):
+        self.cli.messages = Mock()
+        r = await  self.cli.show_waterfall('waterfall')
+        self.assertFalse(r)
+
+    @patch.object(cli.Waterfall, 'show_waterfall', AsyncMagicMock())
+    @async_test
+    async def test_show_watefall(self):
+        self.cli.messages = Mock()
+        self.cli.get_client = AsyncMagicMock()
+        r = await  self.cli.show_waterfall('waterfall a')
+        self.assertTrue(r)
 
     def test_get_welcome_text(self):
         expected = _('Welcome to {toxicbuild}')  # noqa
@@ -720,7 +786,7 @@ class ToxicCliTest(unittest.TestCase):
 
         formated = self.cli._format_row(sizes, row)
 
-        self.assertEqual(formated, expected)
+        self.assertEqual(''.join(formated), expected)
 
     def test_format_output_columns(self):
         output = (('name', 'url', 'vcs'),
@@ -732,7 +798,15 @@ class ToxicCliTest(unittest.TestCase):
 
         formated = self.cli._format_output_columns(output)
 
-        self.assertEqual(formated.strip(), expected.strip())
+        self.assertEqual(''.join(formated).strip(), expected.strip())
+
+
+    def test_format_output_columns_index_error(self):
+
+        self.cli._format_row = Mock(side_effect=IndexError)
+        formated = self.cli._format_output_columns(['some', 'output'])
+
+        self.assertEqual(''.join(formated).strip(), '')
 
     @patch.object(cli.ToxicCli, '_format_output_columns', Mock())
     def test_format_repo_list(self):
@@ -810,3 +884,158 @@ class ToxicCliTest(unittest.TestCase):
         msg = self.cli._format_peek_step(response)
 
         self.assertEqual(msg, expected)
+
+
+class WaterfallTest(unittest.TestCase):
+
+    def setUp(self):
+        client = AsyncMagicMock()
+        cli_mock = Mock()
+        cli_mock.peek  = AsyncMagicMock()
+        self.waterfall = cli.Waterfall(client, 'some-repo-name', cli_mock)
+
+    def test_get_ordered_builds(self):
+        builder0 = Mock()
+        builder0.name = 'builder0'
+
+        builder1 = Mock()
+        builder1.name = 'builder1'
+
+        builder2 = Mock()
+        builder2.name = 'builder2'
+
+        build0 = Mock()
+        build0.builder = builder1
+
+        build1 = Mock()
+        build1.builder = builder2
+
+        builds = [build0, build1]
+        builders = [builder0, builder1, builder2]
+
+        expected = ['', build0, build1]
+        returned = self.waterfall._get_ordered_builds(builds, builders)
+        self.assertEqual(returned, expected)
+
+    def test_get_ordered_builds_index_error(self):
+        builder0 = Mock()
+        builder0.name = 'builder0'
+
+        builder1 = Mock()
+        builder1.name = 'builder1'
+
+        builder2 = Mock()
+        builder2.name = 'builder2'
+
+        build0 = Mock()
+        build0.builder = builder1
+
+        builds = [build0]
+        builders = [builder0, builder1, builder2]
+
+        expected = ['', build0, '']
+        returned = self.waterfall._get_ordered_builds(builds, builders)
+        self.assertEqual(returned, expected)
+
+    def test_get_ordered_builds_no_builds(self):
+        returned = self.waterfall._get_ordered_builds([], [Mock()])
+        self.assertFalse(returned)
+
+    def test_format_waterfall(self):
+        builder0 = Mock()
+        builder0.name = 'builder0'
+
+        builder1 = Mock()
+        builder1.name = 'builder1'
+
+        builder2 = Mock()
+        builder2.name = 'builder2'
+
+        build0 = Mock()
+        build0.status = 'success'
+        build0.builder = builder1
+
+        build1 = Mock()
+        build1.status = 'fail'
+        build1.builder = builder2
+
+        builds = [build0, build1]
+        builders = [builder0, builder1, builder2]
+
+        buildset0 = Mock()
+        buildset0.commit = 'adsfzxcvqwer1234'
+        buildset0.builds = [build0]
+
+        build2 = Mock()
+        build2.status = 'fail'
+        build2.builder = builder0
+
+        buildset1 = Mock()
+        buildset1.commit = 'adsfzxcvqwer1234'
+        buildset1.builds = [build2] + builds
+        buildsets = [buildset0, buildset1]
+        expected = [
+            ['buildsets', 'builder0', 'builder1', 'builder2'],
+            ['', '', '', ''],
+            ['adsfzxcv', '', 'Build success', ''],
+            ['adsfzxcv', 'Build fail', 'Build success', 'Build fail']
+        ]
+        self.waterfall._write_screen = Mock()
+        self.waterfall._format_waterfall(builders, buildsets)
+        returned = self.waterfall._write_screen.call_args[0][0]
+        self.assertEqual(returned, expected)
+
+    def test_post_item_formatter(self):
+        item = 'Build cancelled   '
+        expected = ('none', 'Build'), ('status-cancelled', ' cancelled   ')
+        returned = self.waterfall.post_item_formatter(item)
+        self.assertEqual(expected, returned)
+
+
+    def test_post_item_formatter_index_error(self):
+        item = 'some-builder other-builder'
+        expected = item
+        returned = self.waterfall.post_item_formatter(item)
+        self.assertEqual(expected, returned)
+
+    def test_post_row_formatter(self):
+        row = ['a-string ', 'and-other', (('a-colored', 'string'),
+                                          ('and-other-colored', 'string'))]
+        expected = ['a-string and-other', ('a-colored', 'string'),
+                    ('and-other-colored', 'string')]
+        returned = self.waterfall.post_row_formatter(row)
+        self.assertEqual(returned, expected)
+
+    @patch.object(cli.BuildSet, 'list', AsyncMagicMock(
+        spec=cli.BuildSet.list))
+    @patch.object(cli, 'get_builders_for_buildsets', AsyncMagicMock(
+        spe=cli.get_builders_for_buildsets))
+    @async_test
+    async def test_show_waterfall(self):
+        self.waterfall._format_waterfall = Mock(
+            spec=self.waterfall._format_waterfall)
+
+        self.waterfall.client = Mock()
+        await self.waterfall.show_waterfall()
+        self.assertTrue(self.waterfall._format_waterfall.called)
+
+    def test_peek_callback_str(self):
+        r = self.waterfall.peek_callback('bla')
+        self.assertFalse(r)
+
+    @async_test
+    def test_peek_callback_build_finished(self):
+        response = {'body': {'event_type': 'build_finished'}}
+        self.waterfall.show_waterfall = AsyncMagicMock()
+        r = self.waterfall.peek_callback(response)
+        self.assertTrue(r)
+
+    def test_peek_callback_step_output(self):
+        response = {'body': {'event_type': 'step_output'}}
+        r = self.waterfall.peek_callback(response)
+        self.assertFalse(r)
+
+    @async_test
+    def test_write_screen(self):
+        self.waterfall._write_screen([['output', 'bla']])
+        self.assertTrue(self.waterfall.cli.main_screen.set_text.called)
