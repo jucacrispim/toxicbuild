@@ -330,6 +330,64 @@ class SlaveTest(TestCase):
     @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
         spec=slave.build_notifications.publish))
     @async_test
+    async def test_process_step_info_exception(self):
+        await self._create_test_data()
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+        started = now.strftime('%w %m %d %H:%M:%S %Y %z')
+        finished = (now + datetime.timedelta(seconds=2)).strftime(
+            '%w %m %d %H:%M:%S %Y %z')
+        a_uuid = str(uuid4())
+
+        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
+                'output': 'some-output', 'started': started, 'finished': None,
+                'index': 0, 'uuid': a_uuid}
+
+        await self.slave._process_step_info(self.build, self.repo, info)
+
+        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'exception',
+                'output': 'shit happens', 'started': started,
+                'finished': finished, 'total_time': 2,
+                'index': 0, 'uuid': a_uuid}
+
+        await self.slave._process_step_info(self.build, self.repo, info)
+
+        build = await type(self.build).get(self.build.uuid)
+        self.assertEqual(build.steps[0].status, 'exception')
+        self.assertEqual(build.steps[0].output, 'some-outputshit happens')
+
+    @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
+        spec=slave.build_notifications.publish))
+    @async_test
+    async def test_process_step_info_exception_no_output(self):
+        await self._create_test_data()
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+        started = now.strftime('%w %m %d %H:%M:%S %Y %z')
+        finished = (now + datetime.timedelta(seconds=2)).strftime(
+            '%w %m %d %H:%M:%S %Y %z')
+        a_uuid = str(uuid4())
+
+        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
+                'output': None, 'started': started, 'finished': None,
+                'index': 0, 'uuid': a_uuid}
+
+        await self.slave._process_step_info(self.build, self.repo, info)
+
+        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'exception',
+                'output': 'shit happens', 'started': started,
+                'finished': finished, 'total_time': 2,
+                'index': 0, 'uuid': a_uuid}
+
+        await self.slave._process_step_info(self.build, self.repo, info)
+
+        build = await type(self.build).get(self.build.uuid)
+        self.assertEqual(build.steps[0].status, 'exception')
+        self.assertEqual(build.steps[0].output, 'shit happens')
+
+    @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
+        spec=slave.build_notifications.publish))
+    @async_test
     async def test_process_step_output_info(self):
         await self._create_test_data()
 
