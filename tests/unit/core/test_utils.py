@@ -199,7 +199,7 @@ class UtilsTest(TestCase):
 
     def test_datetime2string(self):
         dt = utils.now()
-        expected = datetime.datetime.strftime(dt, '%a %b %d %H:%M:%S %Y %z')
+        expected = datetime.datetime.strftime(dt, '%w %m %d %H:%M:%S %Y %z')
         returned = utils.datetime2string(dt)
         self.assertEqual(returned, expected)
 
@@ -207,7 +207,7 @@ class UtilsTest(TestCase):
         dt = datetime.datetime.now()
         dttz = dt.replace(tzinfo=datetime.timezone(
             datetime.timedelta(seconds=0)))
-        expected = datetime.datetime.strftime(dttz, '%a %b %d %H:%M:%S %Y %z')
+        expected = datetime.datetime.strftime(dttz, '%w %m %d %H:%M:%S %Y %z')
         returned = utils.datetime2string(datetime.datetime.now())
         hour = int(returned.split(' ')[3].split(':')[0])
 
@@ -224,7 +224,7 @@ class UtilsTest(TestCase):
 
     def test_string2datetime(self):
         dt = utils.now()
-        dtstr = dt.strftime('%a %b %d %H:%M:%S %Y %z')
+        dtstr = dt.strftime('%w %m %d %H:%M:%S %Y %z')
 
         returned = utils.string2datetime(dtstr)
         tz = returned.utcoffset().total_seconds()
