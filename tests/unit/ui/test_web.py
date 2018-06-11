@@ -577,8 +577,8 @@ class StreamHandlerTest(AsyncTestCase):
     def test_format_info_dt(self):
         utils.settings.TIMEZONE = 'America/Sao_Paulo'
         utils.settings.DTFORMAT = '%d/%m/%Y %H:%M:%S'
-        info = {'started': 'Wed Oct 25 08:53:38 2017 -0000',
-                'finished': 'Wed Oct 25 08:53:44 2017 -0000'}
+        info = {'started': '3 9 25 08:53:38 2017 -0000',
+                'finished': '3 9 25 08:53:44 2017 -0000'}
         self.handler._format_info_dt(info)
         self.assertFalse(info['started'].endswith('0000'))
 
@@ -586,9 +586,9 @@ class StreamHandlerTest(AsyncTestCase):
     def test_format_info_dt_buildset(self):
         utils.settings.TIMEZONE = 'America/Sao_Paulo'
         utils.settings.DTFORMAT = '%d/%m/%Y %H:%M:%S'
-        info = {'buildset': {'started': 'Wed Oct 25 08:53:38 2017 -0000',
-                             'finished': 'Wed Oct 25 08:53:44 2017 -0000',
-                             'created': 'Wed Oct 25 08:53:44 2017 -0000'}}
+        info = {'buildset': {'started': '3 9 25 08:53:38 2017 -0000',
+                             'finished': '3 9 25 08:53:44 2017 -0000',
+                             'created': '3 9 25 08:53:44 2017 -0000'}}
         self.handler._format_info_dt(info)
         self.assertFalse(info['buildset']['created'].endswith('0000'))
         self.assertFalse(info['buildset']['started'].endswith('0000'))
@@ -706,12 +706,10 @@ class WaterfallHandlerTest(AsyncTestCase):
         return tornado.ioloop.IOLoop.instance()
 
     @patch.object(web, 'BuildSet', MagicMock())
-    @patch.object(web, 'Builder', MagicMock())
     @patch.object(web, 'Repository', MagicMock())
+    @patch.object(web, 'get_builders_for_buildsets', AsyncMagicMock())
     @gen_test
     def test_get(self):
-        web.Builder.list = asyncio.coroutine(lambda *a, **kw: [])
-
         self.handler.render_template = MagicMock()
         self.handler.prepare()
 
@@ -724,13 +722,14 @@ class WaterfallHandlerTest(AsyncTestCase):
         context = self.handler.render_template.call_args[0][1]
         self.assertEqual(expected_context, context.keys())
 
-    @patch.object(web, 'Builder', MagicMock())
+    @patch.object(models.Builder, 'list', MagicMock())
     @gen_test
     def test_get_builders_for_buildset(self):
         self._create_test_data()
 
         list_mock = MagicMock(return_value=self.builders)
-        web.Builder.list = asyncio.coroutine(lambda *a, **kw: list_mock(**kw))
+        models.Builder.list = asyncio.coroutine(lambda *a, **kw: list_mock(
+            **kw))
 
         expected = sorted(self.builders, key=lambda b: b.name)
 
@@ -744,7 +743,7 @@ class WaterfallHandlerTest(AsyncTestCase):
         self.assertEqual(expected, called_args)
 
     @patch.object(web, 'BuildSet', MagicMock())
-    @patch.object(web, 'Builder', MagicMock())
+    @patch.object(models.Builder, 'list', MagicMock())
     @patch.object(web, 'Repository', MagicMock())
     @gen_test
     def test_ordered_builds(self):
@@ -755,7 +754,8 @@ class WaterfallHandlerTest(AsyncTestCase):
                   models.Build(requester, dict(name='a', builder=bd1))]
 
         list_mock = MagicMock(return_value=[bd0, bd1])
-        web.Builder.list = asyncio.coroutine(lambda *a, **kw: list_mock(**kw))
+        models.Builder.list = asyncio.coroutine(lambda *a, **kw: list_mock(
+            **kw))
 
         self.handler._get_builders_for_buildsets = asyncio.coroutine(
             lambda b: [bd0, bd1])
