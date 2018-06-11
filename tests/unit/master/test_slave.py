@@ -206,7 +206,7 @@ class SlaveTest(TestCase):
                       'started': now, 'finished': None,
                       'info_type': 'build_info'}
 
-        await self.slave._process_info(self.build, build_info)
+        await self.slave._process_info(self.build, self.repo, build_info)
         self.assertTrue(slave.build_started.send.called)
         self.assertTrue(slave.build_notifications.publish.called)
 
@@ -229,7 +229,7 @@ class SlaveTest(TestCase):
                       'info_type': 'build_info',
                       'total_time': 2}
 
-        await self.slave._process_info(self.build, build_info)
+        await self.slave._process_info(self.build, self.repo, build_info)
         self.assertEqual(self.build.total_time, 2)
         self.assertTrue(slave.build_finished.send.called)
         self.assertTrue(slave.build_notifications.publish.called)
@@ -249,7 +249,7 @@ class SlaveTest(TestCase):
         process_step_info = MagicMock(spec=self.slave._process_step_info)
         self.slave._process_step_info = asyncio.coroutine(
             lambda *a, **kw: process_step_info())
-        await self.slave._process_info(self.build, build_info)
+        await self.slave._process_info(self.build, self.repo, build_info)
         self.assertTrue(process_step_info.called)
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
@@ -263,7 +263,7 @@ class SlaveTest(TestCase):
         self.slave._process_step_output_info = asyncio.coroutine(
             lambda *a, **kw: process_step_info())
 
-        await self.slave._process_info(self.build, info)
+        await self.slave._process_info(self.build, self.repo, info)
         self.assertTrue(process_step_info.called)
 
     @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
@@ -279,7 +279,7 @@ class SlaveTest(TestCase):
         step_info = {'status': 'running', 'cmd': 'ls', 'name': 'run ls',
                      'output': '', 'started': started, 'finished': finished,
                      'index': 0, 'uuid': uuid4()}
-        await self.slave._process_step_info(self.build, step_info)
+        await self.slave._process_step_info(self.build, self.repo, step_info)
         self.assertEqual(len(self.build.steps), 1)
         self.assertTrue(slave.build_notifications.publish.called)
 
@@ -300,26 +300,26 @@ class SlaveTest(TestCase):
                 'output': '', 'started': started, 'finished': None,
                 'index': 0, 'uuid': a_uuid}
 
-        await self.slave._process_step_info(self.build, info)
+        await self.slave._process_step_info(self.build, self.repo, info)
 
         info = {'cmd': 'echo "oi"', 'name': 'echo', 'status': 'running',
                 'output': '', 'started': started, 'finished': None,
                 'index': 1, 'uuid': other_uuid}
 
-        await self.slave._process_step_info(self.build, info)
+        await self.slave._process_step_info(self.build, self.repo, info)
 
         info = {'cmd': 'echo "oi"', 'name': 'echo', 'status': 'success',
                 'output': '', 'started': started, 'finished': finished,
                 'index': 1, 'uuid': other_uuid, 'total_time': 2}
 
-        await self.slave._process_step_info(self.build, info)
+        await self.slave._process_step_info(self.build, self.repo, info)
 
         info = {'cmd': 'ls', 'name': 'run ls', 'status': 'success',
                 'output': 'somefile.txt\n', 'started': started,
                 'finished': finished, 'total_time': 2,
                 'index': 0, 'uuid': a_uuid}
 
-        await self.slave._process_step_info(self.build, info)
+        await self.slave._process_step_info(self.build, self.repo, info)
 
         build = await type(self.build).get(self.build.uuid)
         self.assertEqual(build.steps[1].status, 'success')
@@ -342,10 +342,10 @@ class SlaveTest(TestCase):
                 'output': '', 'started': started, 'finished': None,
                 'index': 0, 'uuid': a_uuid}
 
-        await self.slave._process_step_info(self.build, info)
+        await self.slave._process_step_info(self.build, self.repo, info)
 
         info = {'uuid': a_uuid, 'output': 'somefile.txt\n'}
-        await self.slave._process_step_output_info(self.build, info)
+        await self.slave._process_step_output_info(self.build, self.repo, info)
         step = await self.slave._get_step(self.build, a_uuid)
         self.assertTrue(step.output)
         self.assertTrue(slave.build_notifications.publish.called)
@@ -366,11 +366,11 @@ class SlaveTest(TestCase):
                 'index': 0, 'uuid': a_uuid}
 
         self.slave._step_finished[a_uuid] = True
-        await self.slave._process_step_info(self.build, info)
+        await self.slave._process_step_info(self.build, self.repo, info)
 
         info = {'uuid': a_uuid, 'output': 'somefile.txt\n'}
         slave.build_notifications.publish = AsyncMagicMock()
-        await self.slave._process_step_output_info(self.build, info)
+        await self.slave._process_step_output_info(self.build, self.repo, info)
         self.assertFalse(slave.build_notifications.publish.called)
 
     @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(

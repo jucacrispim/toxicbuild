@@ -97,7 +97,8 @@ class BuildClient(BaseToxicClient):
             if build_info is None:
                 return
             if process_coro:
-                future = ensure_future(process_coro(build, build_info))
+                future = ensure_future(process_coro(
+                    build, repository, build_info))
                 futures.append(future)
 
         return futures

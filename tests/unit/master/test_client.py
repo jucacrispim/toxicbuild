@@ -128,7 +128,8 @@ class BuildClientTest(TestCase):
         await slave_inst.save()
         process = mock.Mock()
 
-        process_coro = asyncio.coroutine(lambda build, build_info: process())
+        process_coro = asyncio.coroutine(
+            lambda build, repo, build_info: process())
 
         repo = repository.Repository(name='repo', url='git@somewhere.com',
                                      slaves=[slave_inst], update_seconds=300,

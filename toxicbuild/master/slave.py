@@ -169,11 +169,12 @@ class Slave(OwnedDocument, LoggerMixin):
 
         return build_info
 
-    async def _process_info(self, build, info):
+    async def _process_info(self, build, repo, info):
         """ Method used to process information sent by
         the build server about an in progress build.
 
         :param build: The build that is being executed
+        :param repo: The repository that owns the build.
         :param info: A dictionary. The information sent by the
           slave that is executing the build.
         """
@@ -181,16 +182,15 @@ class Slave(OwnedDocument, LoggerMixin):
         # if we need one more conditional here is better to use
         # a map...
         if info['info_type'] == 'build_info':
-            await self._process_build_info(build, info)
+            await self._process_build_info(build, repo, info)
 
         elif info['info_type'] == 'step_info':
-            await self._process_step_info(build, info)
+            await self._process_step_info(build, repo, info)
 
         else:
-            await self._process_step_output_info(build, info)
+            await self._process_step_output_info(build, repo, info)
 
-    async def _process_build_info(self, build, build_info):
-        repo = await build.repository
+    async def _process_build_info(self, build, repo, build_info):
         build.status = build_info['status']
         build.started = string2datetime(build_info['started'])
         finished = build_info['finished']
@@ -212,7 +212,7 @@ class Slave(OwnedDocument, LoggerMixin):
             build_finished.send(str(repo.id), build=build)
             await build.notify('build-finished')
 
-    async def _process_step_info(self, build, step_info):
+    async def _process_step_info(self, build, repo, step_info):
 
         cmd = step_info['cmd']
         name = step_info['name']
@@ -222,8 +222,6 @@ class Slave(OwnedDocument, LoggerMixin):
         finished = step_info['finished']
         index = step_info['index']
         uuid = step_info['uuid']
-
-        repo = await build.repository
 
         if finished:
             self._step_finished[uuid] = True
@@ -259,7 +257,7 @@ class Slave(OwnedDocument, LoggerMixin):
 
         await build.update()
 
-    async def _process_step_output_info(self, build, info):
+    async def _process_step_output_info(self, build, repo, info):
         uuid = info['uuid']
         if self._step_finished[uuid]:
             self.log('Step {} already finished. Leaving...'.format(uuid),
@@ -270,7 +268,6 @@ class Slave(OwnedDocument, LoggerMixin):
         self.log(msg, level='debug')
         info['output'] = info['output'] + '\n'
         output = info['output']
-        repo = await build.repository
         step = await self._get_step(build, uuid, wait=True)
         step.output = ''.join([step.output or '', output])
         info['repository'] = {'id': str(repo.id)}
