@@ -1342,6 +1342,7 @@ class UIStreamHandlerTest(TestCase):
         self.handler.send_response = sr
 
         await self.handler.send_info('step_started',
+                                     sender=testrepo.id,
                                      build=testbuild, step=teststep)
 
         await asyncio.sleep(0)
@@ -1393,7 +1394,8 @@ class UIStreamHandlerTest(TestCase):
             self.BODY = body
 
         self.handler.send_response = sr
-        await self.handler.send_info('step-started', build=testbuild)
+        await self.handler.send_info('step-started', sender=testrepo.id,
+                                     build=testbuild)
         await asyncio.sleep(0)
         self.assertEqual(self.CODE, 0)
         self.assertIn('steps', self.BODY.keys())

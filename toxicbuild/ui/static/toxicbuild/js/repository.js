@@ -22,6 +22,7 @@ var REPO_ROW_TEMPLATE = `
 	  {{repo.name}}
 	  <button type="button" class="btn btn-default btn-xs btn-main-edit
                                        btn-edit-repo"
+                  id="btn-edit-repo-{{repo.name}}"
 		  data-toggle="modal" data-target="#repoModal"
 		  data-repo-name="{{repo.name}}" data-repo-url="{{repo.url}}"
 		  data-repo-update-seconds="{{repo.update_seconds}}"
