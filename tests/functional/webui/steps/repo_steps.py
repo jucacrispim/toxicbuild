@@ -150,7 +150,7 @@ def step_impl(context):
 def step_impl(context):
     time.sleep(1)
     browser = context.browser
-    btn = browser.find_elements_by_class_name('btn-edit-repo')[-1]
+    btn = browser.find_element_by_id('btn-edit-repo-toxictest')
     browser.click(btn)
     time.sleep(0.2)
 
