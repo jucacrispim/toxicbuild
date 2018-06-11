@@ -42,7 +42,7 @@ except ImportError:
 from toxicbuild.core.exceptions import ExecCmdError, ConfigError
 
 
-DTFORMAT = '%a %b %d %H:%M:%S %Y %z'
+DTFORMAT = '%w %m %d %H:%M:%S %Y %z'
 
 
 _THREAD_EXECUTOR = ThreadPoolExecutor()
