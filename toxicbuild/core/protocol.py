@@ -53,6 +53,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         self.data = None
         self.peername = None
         self._transport = None
+        self._writer_lock = asyncio.Lock(loop=loop)
 
         reader = asyncio.StreamReader(loop=loop)
         super().__init__(reader, loop=loop)
@@ -156,7 +157,13 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         response['code'] = code
         response['body'] = body
         data = json.dumps(response)
-        yield from utils.write_stream(self._stream_writer, data)
+
+        # drain() cannot be called concurrently by multiple coroutines:
+        # http://bugs.python.org/issue29930. Remove this lock when no
+        # version of Python where this bugs exists is supported anymore.
+        # patch by @RemiCardona for websockets on github.
+        with (yield from self._writer_lock):
+            yield from utils.write_stream(self._stream_writer, data)
 
     @asyncio.coroutine
     def get_raw_data(self):
