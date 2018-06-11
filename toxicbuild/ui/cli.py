@@ -461,12 +461,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         loop = urwid.MainLoop(self, event_loop=evl)
         loop.screen.set_terminal_properties(colors=256)
         loop.screen.register_palette(palette)
-        while not self._exiting:  # pragma no cover
-            try:
-                loop.run()
-            except Exception:
-                tb = traceback.format_exc()
-                self.messages.set_text(('error', tb))
+        loop.run()
 
     def quit(self):
         self._exiting = True

@@ -168,10 +168,10 @@ def step_impl(context):
     browser = context.browser
     try:
         browser.implicitly_wait(0)
-        rows = browser.find_elements_by_class_name('repo-row')
+        repo = browser.finda_element_by_id('repo-row-toxictest')
     except NoSuchElementException:
-        rows = []
+        repo = None
     finally:
         browser.implicitly_wait(10)
 
-    assert not rows
+    assert not repo

@@ -488,22 +488,6 @@ class ToxicCliTest(unittest.TestCase):
         self.assertTrue(cli.urwid.AsyncioEventLoop.called)
         self.assertTrue(cli.urwid.MainLoop.called)
 
-    @patch.object(cli.urwid, 'AsyncioEventLoop', Mock())
-    @patch.object(cli.urwid, 'MainLoop', Mock())
-    @patch.object(cli.ToxicCli, 'show_welcome_screen', Mock())
-    def test_run_exception(self):
-        def stop():
-            self.cli._exiting = True
-
-        self.cli.show_welcome_screen = stop
-
-        self.cli._exiting = False
-        loop = cli.urwid.MainLoop.return_value
-        loop.run.side_effect = Exception
-        self.cli.run()
-        self.assertTrue(cli.urwid.AsyncioEventLoop.called)
-        self.assertTrue(cli.urwid.MainLoop.called)
-
     def test_quit(self):
         self.cli.input.save_history = Mock()
         with self.assertRaises(cli.urwid.ExitMainLoop):
