@@ -650,7 +650,7 @@ class UIStreamHandler(LoggerMixin):
         self.protocol.connection_lost_cb = connection_lost_cb
 
     async def step_started(self, sender, **kw):
-        await self.send_info('step_started', **kw)
+        await self.send_info('step_started', sender=sender, **kw)
 
     async def step_finished(self, sender, **kw):
         await self.send_info('step_finished', **kw)
@@ -735,8 +735,8 @@ class UIStreamHandler(LoggerMixin):
         await self._connect2signals()
         await self.protocol.send_response(code=0, body={'stream': 'ok'})
 
-    async def send_info(self, info_type, build=None, step=None):
-        repo = await build.repository
+    async def send_info(self, info_type, sender, build=None, step=None):
+        repo = await Repository.objects.get(id=sender)
         slave = await build.slave
 
         build_dict = build.to_dict(id_as_str=True)
