@@ -273,7 +273,7 @@ class SlaveTest(TestCase):
         await self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
-        started = now.strftime('%a %b %d %H:%M:%S %Y %z')
+        started = now.strftime('%w %m %d %H:%M:%S %Y %z')
         finished = None
 
         step_info = {'status': 'running', 'cmd': 'ls', 'name': 'run ls',
@@ -290,9 +290,9 @@ class SlaveTest(TestCase):
         await self._create_test_data()
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
-        started = now.strftime('%a %b %d %H:%M:%S %Y %z')
+        started = now.strftime('%w %m %d %H:%M:%S %Y %z')
         finished = (now + datetime.timedelta(seconds=2)).strftime(
-            '%a %b %d %H:%M:%S %Y %z')
+            '%w %m %d %H:%M:%S %Y %z')
         a_uuid = str(uuid4())
         other_uuid = str(uuid4())
 
@@ -335,7 +335,7 @@ class SlaveTest(TestCase):
 
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
-        started = now.strftime('%a %b %d %H:%M:%S %Y %z')
+        started = now.strftime('%w %m %d %H:%M:%S %Y %z')
         a_uuid = str(uuid4())
 
         info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
@@ -358,7 +358,7 @@ class SlaveTest(TestCase):
 
         tz = datetime.timezone(-datetime.timedelta(hours=3))
         now = datetime.datetime.now(tz=tz)
-        started = now.strftime('%a %b %d %H:%M:%S %Y %z')
+        started = now.strftime('%w %m %d %H:%M:%S %Y %z')
         a_uuid = str(uuid4())
 
         info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
