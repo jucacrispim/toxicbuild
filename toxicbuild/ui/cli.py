@@ -452,7 +452,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
                    ('status-fail', 'light red,bold', ''),
                    ('status-exception', '', '', '', 'h89,bold', ''),
                    ('status-cancelled', '', '', '', 'h102,bold', ''),
-                   ('status-success', '', '', '', 'h76,bold', ''),
+                   ('status-success', '', '', '', 'h22,bold', ''),
                    ('status-pending', '', '', '', 'h190,bold', ''),
                    ('param', 'white,bold', '')]
 
