@@ -227,8 +227,11 @@ class Slave(OwnedDocument, LoggerMixin):
             self._step_finished[uuid] = True
             requested_step = await self._get_step(build, uuid, wait=True)
             requested_step.status = status
-            requested_step.output = output if not requested_step.output \
-                else requested_step.output + output
+            if requested_step.status == 'exception':
+                requested_step.output = output if not requested_step.output \
+                                        else requested_step.output + output
+            else:
+                requested_step.output = output
             requested_step.finished = string2datetime(finished)
             requested_step.total_time = step_info['total_time']
             msg = 'step {} finished at {} with status {}'.format(
