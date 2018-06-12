@@ -665,8 +665,8 @@ class UIStreamHandler(LoggerMixin):
         await self.send_info('build_added', sender=sender, **kw)
 
     async def build_cancelled_fn(self, sender, **kw):
-        self.log('Got build-cancelled signal', sender=sender, level='debug')
-        await self.send_info('build_cancelled', **kw)
+        self.log('Got build-cancelled signal', level='debug')
+        await self.send_info('build_cancelled', sender=sender, **kw)
 
     async def _connect2signals(self):
         repos = await Repository.list_for_user(self.protocol.user)
