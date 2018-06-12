@@ -168,7 +168,7 @@ def step_impl(context):
     browser = context.browser
     try:
         browser.implicitly_wait(0)
-        repo = browser.finda_element_by_id('repo-row-toxictest')
+        repo = browser.find_element_by_id('repo-row-toxictest')
     except NoSuchElementException:
         repo = None
     finally:

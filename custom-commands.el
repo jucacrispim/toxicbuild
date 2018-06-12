@@ -46,7 +46,31 @@
 (defcustom toxic:webui-buffer-name "toxicwebui"
   "Toxicweb ui buffer's name")
 
+(defcustom toxic:run-all-tests-command "sh ./build-scripts/run_all_tests.sh"
+  "The command used to run all tests in toxicubuild.")
+
 (defvar toxic:bootstrap-buffer-name "toxic-bootstrap")
+
+
+(defun toxic:run-all-tests ()
+  "Runs tests using `pdj:test-command'. If test-args, concat it to
+   the test command."
+
+  (interactive)
+
+  (defvar toxic--test-command)
+  (if toxic:run-all-tests-command
+      (let ((toxic--test-command toxic:run-all-tests-command))
+	(pdj:compile-on-project-directory toxic--test-command))
+
+    (message "No toxic:run-all-tests-command. You have to customize this.")))
+
+
+
+(defun toxic:custom-keyboard-hooks ()
+  "Custom key combinations for toxicbuild"
+
+  (global-set-key (kbd "C-c t") 'toxic:run-all-tests))
 
 
 (defun toxic:--create-venv ()
