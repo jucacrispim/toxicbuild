@@ -1,6 +1,8 @@
 Configuring builds
 ==================
 
+.. _build-config:
+
 Now we have our repository in ToxicBuild, lets create the build configuration.
 The build configuration stays in a file called `toxicbuild.yml` in the root
 directory of your repository.

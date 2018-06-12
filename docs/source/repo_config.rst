@@ -1,8 +1,53 @@
-Add a new repository
-====================
+Importing Repositories
+======================
 
-The first thing we need is to add a repository we want to have a continuous
-integration process. This is done by clicking in the `Add repository` button.
+You need to import the repositoires into ToxicBuild in order to be able to
+have a continuous integrations. Repositories can be imported from github or
+can be added manually.
+
+Importing repositories from Github
+++++++++++++++++++++++++++++++++++
+
+After you have the github integration properly configured, simply click in the
+github logo in the main page of the web interface:
+
+|import-from-github-link-img|
+
+
+.. |import-from-github-link-img| image:: ./_static/import-from-github.jpg
+    :alt: Adding new repository
+
+
+You will be redirected to Github and can choose wich repositories you want
+imported into ToxicBuild.
+
+|github-app-install|
+
+.. |github-app-install| image:: ./_static/github-app-install.jpg
+
+
+After you select your repositoires and install, you will be redirect to
+the ToxicBuild web ui again and that's it. Your repositories will be imported.
+
+Now you can :ref:`configure configure your build <build-config>` and then
+follow the builds' progress in the :ref:`waterfall <waterfall>` or using some
+:ref:`notification method <notifications>`.
+
+
+Importing repositories manually
+++++++++++++++++++++++++++++++++
+
+If you do not use github or do not want import your repositoires automaticaly,
+you can import them by hand. Click in the `Add Repository` icon.
+
+|import-manually|
+
+.. |import-manually| image:: ./_static/import-manually.jpg
+
+
+In the add repository modal you will see the options for repository. The
+options are explained above:
+
 
 |add-repo-img|
 
@@ -10,8 +55,8 @@ integration process. This is done by clicking in the `Add repository` button.
     :alt: Adding new repository
 
 
-Repository Params
-+++++++++++++++++
+Repository Options
+------------------
 
 - ``Name (required)``: A name for the repository.
 - ``Parallel builds``: Limits the number of parallel builds for this
@@ -30,59 +75,6 @@ Repository Params
   to choose at least one slave or no build will be executed.
 
 
-Notifications
-+++++++++++++
-
-Notifications are the way ToxicBuild sends messages about builds using a given
-notification method. All notification methods have the following common
-parameters:
-
-|notification-methods-img|
-
-.. |notification-methods-img| image:: ./_static/notification-methods.png
-    :alt: Notification methods
-
-
-- ``Branches``: Which branches may trigger the notification method. This is
-  a list. The values are coma-separated.
-- ``Statuses``: Which statuses may trigger the notification method. This is
-  a list. The values are coma-separated.
-
-Email notification
-------------------
-
-Sends notifications using email. This method have the following parameters:
-
-.. note::
-
-   To use this notification method you must configure the smtp parameters
-   in toxicmaster.
-
-- ``Recipients``: Email addresses that will receive messages. This is a list.
-  The values are coma-separated.
-
-
-Slack notification
--------------------
-
-Sends notifications to a slack channel. This method have the following
-parameters:
-
-- ``Webhook URL``: The url for the slack webhook.
-- ``Channel name``: The name of the slack channel.
-
-
-Custom webhook notification
----------------------------
-
-Sends notifications to a custom webhook. This method have the following
-parameters:
-
-- ``Webhook URL``: The url for the webhook. This method sends a post request
-  the the webhook url. The body of the request is a json with 3 keys:
-  ``repository``, ``build`` and ``buildset``.
-
-
-Now we have a repository in ToxicBuild, we need to configure a build and this
-is done creating a configfile called `toxicbuild.conf` in the root directory
-of your repository.
+Now you can :ref:`configure configure your build <build-config>` and then
+follow the builds' progress in the :ref:`waterfall <waterfall>` or using some
+:ref:`notification method <notifications>`.

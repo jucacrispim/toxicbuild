@@ -27,6 +27,7 @@ If you are interested in using toxicbuild in your ci process read:
    repo_config
    build_config
    waterfall
+   notifications
 
 
 Hacking
