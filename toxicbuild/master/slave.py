@@ -229,7 +229,7 @@ class Slave(OwnedDocument, LoggerMixin):
             requested_step.status = status
             if requested_step.status == 'exception':
                 requested_step.output = output if not requested_step.output \
-                                        else requested_step.output + output
+                    else requested_step.output + output
             else:
                 requested_step.output = output
             requested_step.finished = string2datetime(finished)
