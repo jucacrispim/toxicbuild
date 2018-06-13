@@ -1162,6 +1162,8 @@ class UIStreamHandlerTest(TestCase):
                              hole.build_added.disconnect.called,
                              hole.step_output_arrived.disconnect.called]))
         self.assertTrue(hole.ui_notifications.publish.called)
+        kw = hole.ui_notifications.publish.call_args[1]
+        self.assertIn('routing_key', kw)
 
     @patch.object(hole, 'step_started', Mock())
     @patch.object(hole, 'step_finished', Mock())

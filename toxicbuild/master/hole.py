@@ -722,7 +722,8 @@ class UIStreamHandler(LoggerMixin):
         self.log('Disconnecting from signals', level='debug')
 
         ensure_future(ui_notifications.publish(
-            {'msg_type': 'stop_consumption'}))
+            {'msg_type': 'stop_consumption'}, routing_key=str(
+                self.protocol.user.id)))
         step_output_arrived.disconnect(self.send_step_output_info)
         step_started.disconnect(self.step_started)
         step_finished.disconnect(self.step_finished)

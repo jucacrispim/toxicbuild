@@ -101,9 +101,12 @@ class DockerContainerBuilder(LoggerMixin):
             await self.rm_from_container()
 
         await self.kill_container()
-
         if self.remove_env:
-            await self.rm_container()
+
+            # used for tests only. do not use this option for real.
+            if not getattr(settings,  # pragma no branch
+                           'DOCKER_NEVER_REMOVE_CONTAINER', False):
+                await self.rm_container()
 
     async def container_exists(self):
         """Checks if a container named as its ``self.name``
