@@ -503,8 +503,29 @@ class BuildManagerTest(TestCase):
 
         self.assertEqual(len(self.manager.build_queues[self.slave.name]), 1)
 
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
     @async_test
-    async def test_add_builds_no_bs(self):
+    async def test_add_builds_revision_dont_create(self):
+        await self._create_test_data()
+        self.manager.repository = self.repo
+        self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
+
+        @asyncio.coroutine
+        def gb(branch, slave):
+            return [self.builder]
+
+        self.manager.get_builders = gb
+        self.revision.body = 'some commit \n# ci: skip'
+        await self.manager.add_builds([self.revision])
+
+        self.assertEqual(len(self.manager.build_queues[self.slave.name]), 0)
+
+    @async_test
+    async def test_add_builds_no_last_bs(self):
         self.manager.cancel_previous_pending = AsyncMagicMock(
             spec=self.manager.cancel_previous_pending)
         await self.manager.add_builds([])
