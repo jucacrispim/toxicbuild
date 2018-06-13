@@ -225,12 +225,13 @@ class SlaveTest(TestCase):
         future_formated_now = datetime2string(future_now)
 
         self.build.steps = [build.BuildStep(command='ls', name='ls')]
-        build_info = {'status': 'running', 'steps': [
-            {'status': 'success',
-             'finished': future_formated_now}],
-                      'started': formate_now, 'finished': future_formated_now,
-                      'info_type': 'build_info',
-                      'total_time': 2}
+        build_info = {
+            'status': 'running', 'steps': [
+                {'status': 'success',
+                 'finished': future_formated_now}],
+            'started': formate_now, 'finished': future_formated_now,
+            'info_type': 'build_info',
+            'total_time': 2}
 
         await self.slave._process_info(self.build, self.repo, build_info)
         self.assertEqual(self.build.total_time, 2)
