@@ -687,19 +687,22 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         return branches
 
     async def add_revision(self, branch, commit, commit_date, author, title,
-                           external=None):
+                           body=None, external=None):
         """ Adds a revision to the repository.
 
         :param commit: commit uuid
         :param branch: branch name
         :param commit_date: commit's date (on authors time)
+        :param author: The author of the commit
+        :param title: The commit title.
+        :param body: The commit body.
         :param external: Information about an external remote if the revision
           came from an external.
         """
 
         kw = dict(repository=self, commit=commit,
                   branch=branch, commit_date=commit_date,
-                  author=author, title=title)
+                  author=author, title=title, body=body)
         if external:
             external_rev = ExternalRevisionIinfo(**external)
             kw['external'] = external_rev
@@ -882,6 +885,9 @@ class RepositoryRevision(Document):
     title = StringField(required=True)
     """The title of the commit."""
 
+    body = StringField()
+    """The commit body."""
+
     commit_date = DateTimeField(required=True)
     """Commit's date."""
 
@@ -908,3 +914,28 @@ class RepositoryRevision(Document):
         if self.external:
             rev_dict.update({'external': self.external.to_dict()})
         return rev_dict
+
+    def create_builds(self):
+        """Checks for instructions in the commit body to know if a
+        revision should create builds.
+
+        Known instructions:
+        ```````````````````
+
+        - ``ci: skip`` - If in the commit body there's this instruction,
+           no builds will be created for this revision. The regex for
+           match this instruction is ``#\s*ci:\s*skip(\s+|$)``
+        """
+        if not self.body:
+            # No body, no instructions, we create builds normally
+            return True
+
+        return not self._check_skip()
+
+    def _check_skip(self):
+        skip_pattern = re.compile(r'(^|.*\s+)ci:\s*skip(\s+|$)')
+        for l in self.body.split('\n'):
+            if bool(re.match(skip_pattern, l)):
+                return True
+
+        return False

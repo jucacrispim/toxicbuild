@@ -201,6 +201,7 @@ class Git(VCS):
     # this date_format is used to ask git about revisions since
     # some date
     date_format = '%a %b %d %H:%M:%S %Y'
+    _commit_separator = '<end-toxiccommit>'
 
     @asyncio.coroutine
     def clone(self, url):
@@ -339,10 +340,11 @@ class Git(VCS):
 
     @asyncio.coroutine
     def get_revisions_for_branch(self, branch, since=None):
-
         # hash | commit date | author | title
-        cmd = '{} log --pretty=format:"%H | %ad | %an | %s" '.format(
-            self.vcsbin)
+        commit_fmt = "%H | %ad | %an | %s | %+b {}".format(
+            self._commit_separator)
+        cmd = '{} log --pretty=format:"{}" '.format(
+            self.vcsbin, commit_fmt)
         if since:
             # Here we change the time to localtime since we can't get
             # utc time in git commits unless we are using git 2.7+
@@ -354,20 +356,23 @@ class Git(VCS):
             cmd += '--since="%s" ' % date
 
         cmd += '--date=local'
-        last_revs = [r for r in (yield from self.exec_cmd(cmd)).split('\n')
-                     if r]
-
+        msg = 'Getting revisions for branch {} with command {}'.format(
+            branch, cmd)
+        self.log(msg, level='debug')
+        last_revs = [r for r in (yield from self.exec_cmd(cmd)).split(
+            self._commit_separator + '\n') if r]
         last_revs.reverse()
+        self.log('Got {}'.format(last_revs), level='debug')
         revisions = []
 
         for rev in last_revs:
-            rev_uuid, date, author, title = rev.split(' | ')
+            rev_uuid, date, author, title, body = rev.split(' | ')
             date = string2datetime(date.strip(), dtformat=self.date_format)
             # Here we change the date from git, that is in localtime to
             # utc before saving to database.
             date = localtime2utc(date)
             revisions.append({'commit': rev_uuid.strip(), 'commit_date': date,
-                              'author': author, 'title': title})
+                              'author': author, 'title': title, 'body': body})
 
         # The thing here is that the first revision in the list
         # is the last one consumed on last time

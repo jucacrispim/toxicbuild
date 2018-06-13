@@ -370,20 +370,30 @@ class GitTest(TestCase):
     def test_get_revisions_for_branch(self):
         now = utils.now()
         local = utils.utc2localtime(now)
-        expected_cmd = '{} log --pretty=format:"%H | %ad | %an | %s" '.format(
-            'git')
+
+        commit_fmt = "%H | %ad | %an | %s | %+b {}".format(
+            self.vcs._commit_separator)
+
+        expected_cmd = '{} log --pretty=format:"{}" '.\
+                       format('git', commit_fmt)
+
         expected_cmd += '--since="{}" --date=local'.format(
             datetime.datetime.strftime(local, self.vcs.date_format))
+
+        body = '\n\nObrigado deus dos maronitas.\nFadul Abdala\n'
+        body += 'O Grão-turco das putas.'
 
         @asyncio.coroutine
         def e(*a, **kw):
             assert a[0] == expected_cmd, a[0]
             log = '0sdflf093 | Thu Oct 20 16:30:23 2014 '
-            log += '| zezinha do butiá | some good commit\n'
-            log += '0sdflf095 | Thu Oct 20 16:20:23 2014 '
-            log += '| seu fadu | Other good commit.\n'
+            log += '| zezinha do butiá | some good commit | <end-toxiccommit>'
+            log += '\n0sdflf095 | Thu Oct 20 16:20:23 2014 '
+            log += '| seu fadu | Other good commit. | '
+            log += body + '<end-toxiccommit>\n'
             log += '09s80f9asdf | Thu Oct 20 16:10:23 2014 '
-            log += '| capitão natário | I was the last consumed\n'
+            log += '| capitão natário | I was the last consumed\n | '
+            log += '<end-toxiccommit>\n'
             return log
 
         vcs.exec_cmd = e
@@ -391,22 +401,31 @@ class GitTest(TestCase):
                                                                  since=now)
         # The first revision is the older one
         self.assertEqual(revisions[0]['author'], 'seu fadu')
+        self.assertEqual(revisions[0]['body'], body)
         self.assertEqual(revisions[1]['commit'], '0sdflf093')
 
     @async_test
     def test_get_revisions_for_branch_without_since(self):
-        expected_cmd = '{} log --pretty=format:"%H | %ad | %an | %s" {}'.\
-                       format('git', '--date=local')
+        commit_fmt = "%H | %ad | %an | %s | %+b {}".format(
+            self.vcs._commit_separator)
+
+        expected_cmd = '{} log --pretty=format:"{}" {}'.\
+                       format('git', commit_fmt, '--date=local')
+
+        body = '\n\nObrigado deus dos maronitas.\nFadul Abdala\n'
+        body += 'O Grão-turco das putas.'
 
         @asyncio.coroutine
         def e(*a, **kw):
             assert a[0] == expected_cmd, a[0]
             log = '0sdflf093 | Thu Oct 20 16:30:23 2014 '
-            log += '| zezinha do butiá | some good commit\n'
-            log += '0sdflf095 | Thu Oct 20 16:20:23 2014 '
-            log += '| seu fadu | Other good commit.\n'
+            log += '| zezinha do butiá | some good commit | <end-toxiccommit>'
+            log += '\n0sdflf095 | Thu Oct 20 16:20:23 2014 '
+            log += '| seu fadu | Other good commit. | '
+            log += body + '<end-toxiccommit>\n'
             log += '09s80f9asdf | Thu Oct 20 16:10:23 2014 '
-            log += '| capitão natário | I was the last consumed\n'
+            log += '| capitão natário | I was the last consumed\n | '
+            log += '<end-toxiccommit>\n'
             return log
 
         vcs.exec_cmd = e

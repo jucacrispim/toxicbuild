@@ -1047,6 +1047,21 @@ class RepositoryBranchTest(TestCase):
 class RepositoryRevisionTest(TestCase):
 
     @async_test
+    async def setUp(self):
+        self.user = users.User(email='a@a.com', password='bla')
+        await self.user.save()
+        self.repo = repository.Repository(name='bla', url='bla@bl.com/aaa',
+                                          owner=self.user)
+        await self.repo.save()
+        self.rev = repository.RepositoryRevision(repository=self.repo,
+                                                 commit='asdfasf',
+                                                 branch='master',
+                                                 author='ze',
+                                                 title='bla',
+                                                 commit_date=utils.now())
+        await self.rev.save()
+
+    @async_test
     async def tearDown(self):
         await repository.RepositoryRevision.drop_collection()
         await repository.Repository.drop_collection()
@@ -1054,74 +1069,47 @@ class RepositoryRevisionTest(TestCase):
 
     @async_test
     async def test_get(self):
-        user = users.User(email='a@a.com', password='bla')
-        await user.save()
-        repo = repository.Repository(name='bla', url='bla@bl.com/aaa',
-                                     owner=user)
-        await repo.save()
-        rev = repository.RepositoryRevision(repository=repo,
-                                            commit='asdfasf',
-                                            branch='master',
-                                            author='ze',
-                                            title='bla',
-                                            commit_date=utils.now())
-        await rev.save()
         r = await repository.RepositoryRevision.get(
-            commit='asdfasf', repository=repo)
-        self.assertEqual(r, rev)
+            commit='asdfasf', repository=self.repo)
+        self.assertEqual(r, self.rev)
 
     @async_test
     async def test_to_dict(self):
-        user = users.User(email='a@a.com', password='bla')
-        await user.save()
-        repo = repository.Repository(name='bla', url='bla@bl.com/aaa',
-                                     owner=user)
-        await repo.save()
-        rev = repository.RepositoryRevision(repository=repo,
-                                            commit='asdfasf',
-                                            branch='master',
-                                            author='ze',
-                                            title='bla',
-                                            commit_date=utils.now())
-        await rev.save()
-        expected = {'repository_id': str(repo.id),
-                    'commit': rev.commit,
-                    'branch': rev.branch,
-                    'author': rev.author,
-                    'title': rev.title,
+        expected = {'repository_id': str(self.repo.id),
+                    'commit': self.rev.commit,
+                    'branch': self.rev.branch,
+                    'author': self.rev.author,
+                    'title': self.rev.title,
                     'commit_date': repository.utils.datetime2string(
-                        rev.commit_date)}
-        returned = await rev.to_dict()
+                        self.rev.commit_date)}
+        returned = await self.rev.to_dict()
         self.assertEqual(expected, returned)
 
     @async_test
     async def test_to_dict_external(self):
-        user = users.User(email='a@a.com', password='bla')
-        await user.save()
-        repo = repository.Repository(name='bla', url='bla@bl.com/aaa',
-                                     owner=user)
-        await repo.save()
         ext = repository.ExternalRevisionIinfo(
             url='http://someurl.com/bla.git', name='other-remote',
             branch='master', into='other-remote:master')
-        rev = repository.RepositoryRevision(repository=repo,
-                                            commit='asdfasf',
-                                            branch='master',
-                                            author='ze',
-                                            title='bla',
-                                            commit_date=utils.now(),
-                                            external=ext)
-        await rev.save()
-        expected = {'repository_id': str(repo.id),
-                    'commit': rev.commit,
-                    'branch': rev.branch,
-                    'author': rev.author,
-                    'title': rev.title,
+        self.rev.external = ext
+        await self.rev.save()
+        expected = {'repository_id': str(self.repo.id),
+                    'commit': self.rev.commit,
+                    'branch': self.rev.branch,
+                    'author': self.rev.author,
+                    'title': self.rev.title,
                     'commit_date': repository.utils.datetime2string(
-                        rev.commit_date),
+                        self.rev.commit_date),
                     'external': {'branch': 'master',
                                  'name': 'other-remote',
                                  'url': 'http://someurl.com/bla.git',
                                  'into': 'other-remote:master'}}
-        returned = await rev.to_dict()
+        returned = await self.rev.to_dict()
         self.assertEqual(expected, returned)
+
+    def test_check_skip(self):
+        self.rev.body = 'some body\nhey you ci: skip please'
+        self.assertFalse(self.rev.create_builds())
+
+    def test_check_skip_dont_skip(self):
+        self.rev.body = 'some body\n'
+        self.assertTrue(self.rev.create_builds())

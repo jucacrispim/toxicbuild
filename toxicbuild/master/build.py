@@ -564,6 +564,9 @@ class BuildManager(LoggerMixin):
 
         last_bs = None
         for revision in revisions:
+            if not revision.create_builds():
+                continue
+
             buildset = await BuildSet.create(repository=self.repository,
                                              revision=revision)
 
