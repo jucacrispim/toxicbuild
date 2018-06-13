@@ -747,6 +747,7 @@
 (defun toxic:setup ()
 
   (toxic:create-menu)
+  (toxic:custom-keyboard-hooks)
   (toxic:add-watcher))
 
 
