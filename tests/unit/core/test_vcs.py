@@ -387,8 +387,8 @@ class GitTest(TestCase):
         def e(*a, **kw):
             assert a[0] == expected_cmd, a[0]
             log = '0sdflf093 | Thu Oct 20 16:30:23 2014 '
-            log += '| zezinha do butiá | some good commit | <end-toxiccommit>\n'
-            log += '0sdflf095 | Thu Oct 20 16:20:23 2014 '
+            log += '| zezinha do butiá | some good commit | <end-toxiccommit>'
+            log += '\n0sdflf095 | Thu Oct 20 16:20:23 2014 '
             log += '| seu fadu | Other good commit. | '
             log += body + '<end-toxiccommit>\n'
             log += '09s80f9asdf | Thu Oct 20 16:10:23 2014 '
