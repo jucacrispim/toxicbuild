@@ -70,7 +70,7 @@
 (defun toxic:custom-keyboard-hooks ()
   "Custom key combinations for toxicbuild"
 
-  (global-set-key (kbd "C-c t") 'toxic:run-all-tests))
+  (local-set-key (kbd "C-c t") 'toxic:run-all-tests))
 
 
 (defun toxic:--create-venv ()
