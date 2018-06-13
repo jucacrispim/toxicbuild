@@ -85,6 +85,7 @@ class Builder(LoggerMixin):
         yield from self.manager.send_info(build_info)
         last_step_status = None
         last_step_output = None
+        last_step_finished = None
         for index, step in enumerate(self.steps):
             self._clear_step_output_buff()
             cmd = yield from step.get_command()
@@ -96,7 +97,11 @@ class Builder(LoggerMixin):
                          'started': datetime2string(local_now),
                          'finished': None, 'index': index, 'output': '',
                          'info_type': 'step_info', 'uuid': str(uuid4()),
-                         'total_time': None}
+                         'total_time': None,
+                         'last_step_finished': datetime2string(
+                             last_step_finished) if last_step_finished
+                         else None,
+                         'last_step_status': last_step_status}
 
             yield from self.manager.send_info(step_info)
 
@@ -110,13 +115,16 @@ class Builder(LoggerMixin):
                 last_step_output=last_step_output, **envvars)
             step_info.update(step_exec_output)
             yield from self._flush_step_output_buff(step_info['uuid'])
+
             status = step_info['status']
-            last_step_output = step_exec_output
-            last_step_status = status
             msg = 'Finished {} with status {}'.format(cmd, status)
             self.log(msg, level='debug')
-
             finished = localtime2utc(now())
+
+            last_step_output = step_exec_output
+            last_step_status = status
+            last_step_finished = finished
+
             step_info.update({'finished': datetime2string(finished)})
             step_info['total_time'] = (
                 finished - string2datetime(step_info['started'])).seconds

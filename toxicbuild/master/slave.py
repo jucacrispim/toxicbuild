@@ -260,6 +260,17 @@ class Slave(OwnedDocument, LoggerMixin):
             msg.update({'repository_id': str(repo.id),
                         'event_type': 'step-started'})
             await build_notifications.publish(msg)
+            if step_info.get('last_step_status'):
+                last_step = build.steps[-2]
+                await self._fix_last_step_status(build, last_step,
+                                                 step_info)
+
+    async def _fix_last_step_status(self, build, step, step_info):
+        # this fixes the bug with the status of the step that
+        # in someway was getting lost here in the slave.
+        step.status = step_info['last_step_status']
+        step.finished = string2datetime(step_info['last_step_finished'])
+        await build.update()
 
     async def _process_step_output_info(self, build, repo, info):
         uuid = info['uuid']

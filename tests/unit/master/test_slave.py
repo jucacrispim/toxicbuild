@@ -440,6 +440,40 @@ class SlaveTest(TestCase):
         step = await self.slave._get_step(build, 'dont-exist', wait=True)
         self.assertIsNone(step)
 
+    @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
+        spec=slave.build_notifications.publish))
+    @async_test
+    async def test_fix_last_step_output(self):
+        await self._create_test_data()
+
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+        started = now.strftime('%w %m %d %H:%M:%S %Y %z')
+        a_uuid = str(uuid4())
+        other_uuid = str(uuid4())
+
+        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
+                'output': '', 'started': started, 'finished': None,
+                'index': 0, 'uuid': a_uuid,
+                'last_step_status': None,
+                'last_step_finished': None}
+
+        await self.slave._process_step_info(self.build, self.repo, info)
+
+        info = {'cmd': 'echo "oi"', 'name': 'echo', 'status': 'running',
+                'output': '', 'started': started, 'finished': None,
+                'index': 1, 'uuid': other_uuid,
+                'last_step_status': 'success',
+                'last_step_finished': started}
+
+        await self.slave._process_step_info(self.build, self.repo, info)
+
+        b = await build.Build.get(self.build.uuid)
+        for step in b.steps:
+            if str(step.uuid) == a_uuid:
+                break
+        self.assertEqual(step.status, 'success')
+
     async def _create_test_data(self):
         await self.slave.save()
         self.repo = repository.Repository(
