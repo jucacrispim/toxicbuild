@@ -922,7 +922,7 @@ class RepositoryRevision(Document):
         Known instructions:
         ```````````````````
 
-        - ``# ci: skip`` - If in the commit body there's this instruction,
+        - ``ci: skip`` - If in the commit body there's this instruction,
            no builds will be created for this revision. The regex for
            match this instruction is ``#\s*ci:\s*skip(\s+|$)``
         """
@@ -933,7 +933,7 @@ class RepositoryRevision(Document):
         return not self._check_skip()
 
     def _check_skip(self):
-        skip_pattern = re.compile(r'#\s*ci:\s*skip(\s+|$)')
+        skip_pattern = re.compile(r'(^|.*\s+)ci:\s*skip(\s+|$)')
         for l in self.body.split('\n'):
             if bool(re.match(skip_pattern, l)):
                 return True

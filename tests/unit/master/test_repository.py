@@ -1107,7 +1107,7 @@ class RepositoryRevisionTest(TestCase):
         self.assertEqual(expected, returned)
 
     def test_check_skip(self):
-        self.rev.body = 'some body\n# ci: skip'
+        self.rev.body = 'some body\nhey you ci: skip please'
         self.assertFalse(self.rev.create_builds())
 
     def test_check_skip_dont_skip(self):
