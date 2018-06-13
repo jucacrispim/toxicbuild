@@ -38,7 +38,7 @@ will execute this steps when a change is detected in your source code.
 .. note::
 
    If you want same specific change in the repository doesn't trigger
-   any builds, you can use the instruction ``# ci: skip`` in the body of
+   any builds, you can use the instruction ``ci: skip`` in the body of
    the commit.
 
 These are the most basic configuration for a build, but the following
