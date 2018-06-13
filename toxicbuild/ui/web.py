@@ -530,7 +530,7 @@ class WaterfallHandler(LoggedTemplateHandler):
         i = build_index
         while build.builder != builders[i] and len(builders) > i:
             tag = '</td><td class="builder-column builder-column-id-{}'
-            tag += 'builder-column-index-{}">'
+            tag += ' builder-column-index-{}">'
             yield tag.format(builders[i].id, i + 1)
             i += 1
         yield ''

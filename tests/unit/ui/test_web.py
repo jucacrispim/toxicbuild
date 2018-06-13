@@ -773,7 +773,7 @@ class WaterfallHandlerTest(AsyncTestCase):
                     models.Builder(requester, dict(id=2))]
         build = models.Build(requester, dict(builder=builders[1]))
         expected = '</td><td class="builder-column builder-column-id-1'
-        expected += 'builder-column-index-1">'
+        expected += ' builder-column-index-1">'
         returned = ''
 
         for end in self.handler._get_ending(build, 0, builders):

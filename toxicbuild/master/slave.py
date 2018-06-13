@@ -225,7 +225,11 @@ class Slave(OwnedDocument, LoggerMixin):
 
         if finished:
             self._step_finished[uuid] = True
-            requested_step = await self._get_step(build, uuid, wait=True)
+            msg = 'step {} {} finished at {} with status {}'.format(
+                cmd, uuid, finished, status)
+            self.log(msg, level='debug')
+
+            requested_step = await self._get_step(build, uuid)
             requested_step.status = status
             if requested_step.status == 'exception':
                 requested_step.output = output if not requested_step.output \
@@ -234,9 +238,7 @@ class Slave(OwnedDocument, LoggerMixin):
                 requested_step.output = output
             requested_step.finished = string2datetime(finished)
             requested_step.total_time = step_info['total_time']
-            msg = 'step {} finished at {} with status {}'.format(
-                requested_step.command, finished, requested_step.status)
-            self.log(msg, level='debug')
+            await build.update()
             step_finished.send(str(repo.id), build=build, step=requested_step)
             msg = requested_step.to_dict()
             msg.update({'repository_id': str(repo.id),
@@ -248,6 +250,8 @@ class Slave(OwnedDocument, LoggerMixin):
                                        status=status, output=output,
                                        started=string2datetime(started),
                                        index=index, uuid=uuid)
+            build.steps.append(requested_step)
+            await build.update()
             msg = 'step {} started at {}'.format(requested_step.command,
                                                  started)
             self.log(msg, level='debug')
@@ -257,26 +261,26 @@ class Slave(OwnedDocument, LoggerMixin):
                         'event_type': 'step-started'})
             await build_notifications.publish(msg)
 
-            build.steps.append(requested_step)
-
-        await build.update()
-
     async def _process_step_output_info(self, build, repo, info):
         uuid = info['uuid']
-        if self._step_finished[uuid]:
-            self.log('Step {} already finished. Leaving...'.format(uuid),
-                     level='debug')
-            return
-
         msg = 'step_output_arrived for {}'.format(uuid)
         self.log(msg, level='debug')
         info['output'] = info['output'] + '\n'
         output = info['output']
         step = await self._get_step(build, uuid, wait=True)
+
         step.output = ''.join([step.output or '', output])
         info['repository'] = {'id': str(repo.id)}
-        await build.update()
         step_output_arrived.send(str(repo.id), step_info=info)
+
+        # the thing here is that while we are waiting for the step,
+        # the step may have finished, so we don'to anything in this case.
+        if self._step_finished[uuid]:
+            self.log('Step {} already finished. Leaving...'.format(uuid),
+                     level='debug')
+            return
+
+        await build.update()
 
     async def _get_step(self, build, step_uuid, wait=False):
         """Returns a step from ``build``. Returns None if the requested
@@ -294,13 +298,14 @@ class Slave(OwnedDocument, LoggerMixin):
         async def _get():
 
             build = await type(build_inst).get(build_inst.uuid)
-            for i, step in enumerate(build.steps):
+            build_steps = build.steps
+            for i, step in enumerate(build_steps):
                 if str(step.uuid) == str(step_uuid):
                     build_inst.steps[i] = step
                     return step
 
         step = await _get()
-        limit = 5
+        limit = 20
         n = 0
         while not step and wait:
             await asyncio.sleep(0.001)
