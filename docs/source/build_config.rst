@@ -32,12 +32,12 @@ in the root directory of your code:
 	  - make test
 
 
-And it is done! Commit and push this config to you repository and ToxicBuild
-will execute this steps when a change is detected in your source code.
+And it is done! Commit and push this config to your repository and ToxicBuild
+will execute this steps when a change is detected in the source code.
 
 .. note::
 
-   If you want same specific change in the repository doesn't trigger
+   If you want some specific change in the repository doesn't trigger
    any builds, you can use the instruction ``ci: skip`` in the body of
    the commit.
 
@@ -53,7 +53,7 @@ The following parameters may be used for a builder:
 * ``branches``: A list containing the branches that trigger this builder.
   If no branches, all branches will trigger the builder.
   You may use wildcards here.
-* ``envvars``: A dictionary in the form {VAR: VALUE} for environment variables
+* ``envvars``: A dictionary in the form VAR: VALUE for environment variables
   to be used in all steps in this builder.
 * ``plugins``: A list of plugins configurations that will be used in the
   builder.

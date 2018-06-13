@@ -505,7 +505,6 @@ def run_in_thread(fn, *args, **kwargs):
     :param kwargs: Named arguments to ``fn``
 
     Usage
-    ``````
 
     .. code-block:: python
 

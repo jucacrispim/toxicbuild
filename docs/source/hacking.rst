@@ -135,7 +135,6 @@ notification or integration with 3rd party systems like slack.
 Writting master plugins
 +++++++++++++++++++++++
 
-
 .. warning::
 
    This module is out of place here. In the version 0.4 the output module
@@ -260,3 +259,13 @@ The package :mod:`toxicbuild.ui` implements ways for end users to interact
 with ToxicBuild. It uses the module :mod:`toxicbuild.ui.models` to
 communicate with the master and the module :mod:`toxicbuild.ui.web`
 implemnts a simple web interface.
+
+
+..
+   Exchanges
+   ---------
+
+   Exchanges are a the way ToxicBuild parts talk to each other when asychronous
+   events occour, using RabbiMQ. The following may be interresting:
+
+   - repo_notifications: Exchange used

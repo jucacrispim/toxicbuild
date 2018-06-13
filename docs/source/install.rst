@@ -70,13 +70,13 @@ There are some config values you may want to change. They are:
    :ref:`docker-config`.
 
 Toxicmaster config values
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The configuration file for toxicmaster is located at
 `~/ci/master/toxicmaster.conf`.
 
 Basic stuff
-~~~~~~~~~~~
+^^^^^^^^^^^
 
 .. code-block:: python
 
@@ -88,7 +88,7 @@ Basic stuff
 
 
 Database
-~~~~~~~~
+^^^^^^^^
 
 You can change the database connection parameters changing the
 `DATABASE` parameter:
@@ -110,7 +110,7 @@ For authentication, add the `username` and `password` keys:
 	       'password': 'db-password'}
 
 Queue Manager
-~~~~~~~~~~~~~
+^^^^^^^^^^^^^
 
 ToxicBuild uses Rabbitmq as queue manager. Use the `RABBITMQ_CONNECTION`
 settings to configure it:
@@ -121,7 +121,7 @@ settings to configure it:
 
 
 Secure connections
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 To use secure connections, you must set the following parameters:
 
@@ -134,21 +134,21 @@ To use secure connections, you must set the following parameters:
 
 
 ToxicOutput config values
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The configuration file for toxicmaster is located at
 `~/ci/output/toxicoutput.conf`.
 
 
 Database and Queue Manager
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The database and queue manager configurations MUST be the same as the ones
 used in the master configuration
 
 
 Email
-~~~~~
+^^^^^
 
 If you want to be able to send emails containing information about builds,
 you need to configure the smpt options.
@@ -167,10 +167,10 @@ you need to configure the smpt options.
    SMTP_STARTTLS = False
 
 ToxicIntegrations config values
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 General configs
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
@@ -181,7 +181,7 @@ General configs
 
 
 Database and queue managers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The database and queue manager configurations MUST be the same as the ones
 used in the master configuration
@@ -189,7 +189,8 @@ used in the master configuration
 
 
 Toxicweb config values
-^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~
+
 The configuration file for toxicui is located at
 `~/ci/ui/toxicui.conf`.
 
@@ -210,7 +211,8 @@ If the master uses ssl connection, you must set following parameters
 
 
 Toxicslave config values
-^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 The configuration file for toxicslave is located at
 `~/ci/slave/toxicslave.conf`.
 
@@ -275,7 +277,7 @@ Integration with Github
 -----------------------
 
 Create a Github app on Github
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To integrate with Github you first need to create a Github App. To do so, go to
 `https://github.com/settings/apps` and click in `New GitHub App`. In the app
@@ -305,7 +307,7 @@ Now we're done in the Github side. Let's configure ToxicBuild.
 
 
 Toxicbuild Configuration
-^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 In your `toxicintegrations.conf` set the following parameters.
 

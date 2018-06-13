@@ -920,7 +920,6 @@ class RepositoryRevision(Document):
         revision should create builds.
 
         Known instructions:
-        ```````````````````
 
         - ``ci: skip`` - If in the commit body there's this instruction,
            no builds will be created for this revision. The regex for
