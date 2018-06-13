@@ -224,7 +224,10 @@ class SlaveTest(TestCase):
         future_now = now + datetime.timedelta(seconds=2)
         future_formated_now = datetime2string(future_now)
 
-        build_info = {'status': 'running', 'steps': [],
+        self.build.steps = [build.BuildStep(command='ls', name='ls')]
+        build_info = {'status': 'running', 'steps': [
+            {'status': 'success',
+             'finished': future_formated_now}],
                       'started': formate_now, 'finished': future_formated_now,
                       'info_type': 'build_info',
                       'total_time': 2}
