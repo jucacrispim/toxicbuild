@@ -272,7 +272,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         exchange with the routing key `removal-requested`"""
 
         async with await repo_notifications.consume(
-                routing_key='removal-requested', timeout=1000) as consumer:
+                routing_key='repo-removal-requested',
+                timeout=1000) as consumer:
 
             while not cls._stop_consuming_messages:
                 try:

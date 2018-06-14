@@ -549,7 +549,16 @@ class GithubInstallationTest(TestCase):
             full_name='some/name')
 
         self.installation.repositories.append(gh_repo)
-        github.Repository.objects.get.return_value = repo
+
+        gh_repo = github.GithubInstallationRepository(
+            github_id=1234,
+            repository_id=repo.id,
+            full_name='other/name')
+
+        self.installation.repositories.append(gh_repo)
+
+        github.Repository.objects.get.side_effect = [
+            github.Repository.DoesNotExist, repo]
         await self.installation.delete()
         self.assertTrue(repo.request_removal.called)
 

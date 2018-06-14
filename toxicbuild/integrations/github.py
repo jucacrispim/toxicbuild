@@ -437,7 +437,11 @@ class GithubInstallation(LoggerMixin, Document):
         """Deletes the installation from the system"""
 
         for install_repo in self.repositories:
-            repo = await Repository.objects.get(id=install_repo.repository_id)
+            try:
+                repo = await Repository.objects.get(
+                    id=install_repo.repository_id)
+            except Repository.DoesNotExist:
+                continue
             await repo.request_removal()
 
         r = await super().delete(*args, **kwargs)

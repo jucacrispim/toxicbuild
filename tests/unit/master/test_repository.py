@@ -296,7 +296,9 @@ class RepositoryTest(TestCase):
 
         consumer.fetch_message = fm
         await repository.Repository.wait_removal_request()
+        kw = repository.repo_notifications.consume.call_args[1]
         self.assertTrue(repository.Repository._remove_repo.called)
+        self.assertEqual(kw['routing_key'], 'repo-removal-requested')
 
     @patch.object(repository.repo_notifications, 'consume',
                   AsyncMagicMock(spec=repository.repo_notifications.consume))
