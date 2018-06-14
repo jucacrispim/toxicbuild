@@ -103,6 +103,8 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
 
         sys.argv = ['pyromanager.py', '']
 
+        print('Starting web ui on port {}'.format(settings.TORNADO_PORT))
+
         if not pyrocommand:
             pyrocommand = command = get_command('runtornado')()
         else:

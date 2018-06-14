@@ -27,7 +27,7 @@ from toxicbuild.integrations import create as create_integrations
 from toxicbuild.master import create as create_master
 from toxicbuild.master import create_user
 from toxicbuild.master import create_settings_and_connect
-from toxicbuild.master.slave import Slave
+from toxicbuild.output import create as create_output
 from toxicbuild.slave import create as create_slave
 from toxicbuild.ui import create as create_ui
 
@@ -46,15 +46,19 @@ def create(root_dir):  # pragma no cover
     slave_root = os.path.join(root_dir, 'slave')
     master_root = os.path.join(root_dir, 'master')
     integrations_root = os.path.join(root_dir, 'integrations')
+    output_root = os.path.join(root_dir, 'output')
     ui_root = os.path.join(root_dir, 'ui')
 
     # first we create a slave and a master
     slave_token = create_slave(slave_root)
     master_token = create_master(master_root)
     create_integrations(integrations_root)
+    create_output(output_root)
     # a super user to access stuff
     conffile = os.path.join(master_root, 'toxicmaster.conf')
     user = create_user(conffile, superuser=True)
+
+    from toxicbuild.master.slave import Slave
 
     with changedir(master_root):
         create_settings_and_connect()
@@ -209,6 +213,25 @@ def _run_output(workdir, loglevel, daemonize):
     subprocess.call(output_cmd_line)
 
 
+def _run_integrations(workdir, loglevel, daemonize):
+    integrations_root = os.path.join(workdir, 'integrations')
+    cmd = sys.argv[0].replace('-script', '')
+    integrations_cmd = cmd.replace('build', 'integrations')
+
+    integrations_cmd_line = sys.argv[:]
+    integrations_cmd_line[0] = integrations_cmd
+    integrations_cmd_line[2] = integrations_root
+
+    if daemonize:
+        integrations_cmd_line.append('--daemonize')
+
+    if loglevel:
+        integrations_cmd_line.append('--loglevel')
+        integrations_cmd_line.append(loglevel)
+
+    subprocess.call(integrations_cmd_line)
+
+
 def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
 
     _run_slave(workdir, loglevel, daemonize)
@@ -216,6 +239,7 @@ def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
     _run_poller(workdir, loglevel, daemonize)
     _run_scheduler(workdir, loglevel, daemonize)
     _run_output(workdir, loglevel, daemonize)
+    _run_integrations(workdir, loglevel, daemonize)
     _run_webui(workdir, loglevel, daemonize)
 
 

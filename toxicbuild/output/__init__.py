@@ -158,6 +158,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         os.environ['TOXICMASTER_SETTINGS'] = os.environ[
             'TOXICOUTPUT_SETTINGS']
 
+        print('Starting output')
         if daemonize:
             daemon(call=run_toxicoutput, cargs=(loglevel,), ckwargs={},
                    stdout=stdout, stderr=stderr, workdir=workdir,
@@ -205,6 +206,8 @@ def stop(workdir, pidfile=PIDFILE, kill=False):
 
         create_settings_and_connect_master()
         create_settings_and_connect()
+
+        print('Starting output')
 
         with changedir(workdir):
             with open(pidfile) as fd:

@@ -160,6 +160,8 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         loop = asyncio.get_event_loop()
         loop.run_until_complete(connect_exchanges())
 
+        print('Starting integrations on port {}'.format(settings.TORNADO_PORT))
+
         sys.argv = ['pyromanager.py', '']
 
         command = get_command('runtornado')()

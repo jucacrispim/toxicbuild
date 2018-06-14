@@ -40,17 +40,18 @@ This is done using the command ``toxicbuild create``.
 .. code-block:: sh
 
     $ toxicbuild create ~/ci
-    Creating root_dir ~/ci/slave for toxicslave
-    Toxicslave environment created with access token: ...
-    Creating root_dir ~/ci/master for toxicmaster
-    Toxicmaster environment created with access token: ...
+    Creating root_dir `/home/juca/pkgtest/toxicbuild/ci/slave` for toxicslave
+    Toxicslave environment created with access token: 9b9f79b5-1805-45c6-b15a-2afc0f22893b
+    Creating root_dir `/home/juca/pkgtest/toxicbuild/ci/master` for toxicmaster
+    Toxicmaster environment created with access token: 6781d65c-c9b0-485b-b071-c4986e009571
+    Creating root_dir `/home/juca/pkgtest/toxicbuild/ci/integrations` for toxicintegrations
+    Creating root_dir `/home/juca/pkgtest/toxicbuild/ci/output` for toxicoutput
     Creating user for authenticated access
-    email:
-    password:
-    User created successfully
-    Creating root_dir ~/ci/ui
+    email: a@a.com
+    password: 123
+    User a created successfully
+    Creating root_dir /home/juca/pkgtest/toxicbuild/ci/ui
     Toxicui environment created for web
-
 
 .. note::
 
