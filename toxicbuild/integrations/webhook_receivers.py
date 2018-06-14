@@ -49,8 +49,8 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             'pull_request-synchronize': self._handle_pull_request_opened,
             'check_run-rerequested': self._handle_check_run_rerequested,
             'installation-deleted': self._handle_install_deleted,
-            'installation-repositories_removed': handle_repo_removed,
-            'installation_repositires_added': handle_repo_added}
+            'installation_repositories-removed': handle_repo_removed,
+            'installation_repositires-added': handle_repo_added}
 
     async def _get_user_from_cookie(self):
         cookie = self.get_secure_cookie(settings.TOXICUI_COOKIE)
