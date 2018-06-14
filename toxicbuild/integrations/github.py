@@ -454,7 +454,7 @@ class GithubInstallation(LoggerMixin, Document):
         :param github_repo_id: The full name of the repository on github."""
 
         header = await self._get_header()
-        url = settings.GITHUB_API_URL + '/repos/{}'.format(repo_full_name)
+        url = settings.GITHUB_API_URL + 'repos/{}'.format(repo_full_name)
         ret = await requests.get(url, headers=header)
         if ret.status != 200:
             raise BadRequestToGithubAPI(ret.status, ret.text, url)
