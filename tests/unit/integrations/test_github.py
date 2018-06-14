@@ -177,7 +177,7 @@ class GitHubAppTest(TestCase):
 
     @patch.object(github, 'settings', Mock())
     @patch.object(github, 'open', MagicMock())
-    @patch.object(github.LoggerMixin, 'log', MagicMock())
+    @patch.object(github.LoggerMixin, 'log_cls', MagicMock())
     @async_test
     async def test_get_app_already_exists(self):
         github.settings.GITHUB_APP_ID = 123
@@ -563,6 +563,33 @@ class GithubInstallationTest(TestCase):
             github.Repository.DoesNotExist, repo]
         await self.installation.delete()
         self.assertTrue(repo.request_removal.called)
+
+    @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
+        return_value={}))
+    @patch.object(github.requests, 'get', AsyncMagicMock())
+    @async_test
+    async def test_get_repo(self):
+        ret = github.requests.get.return_value
+        json_file = os.path.join(INTEGRATIONS_DATA_PATH,
+                                 'github-repo.json')
+        with open(json_file) as fd:
+            contents = fd.read()
+            json_contents = json.loads(contents)
+
+        ret.status = 200
+        ret.json = Mock(return_value=json_contents)
+        repo = await self.installation.get_repo(1234)
+        self.assertEqual(repo['name'], 'Hello-World')
+
+    @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
+        return_value={}))
+    @patch.object(github.requests, 'get', AsyncMagicMock())
+    @async_test
+    async def test_get_repo_bad_request(self):
+        ret = github.requests.get.return_value
+        ret.status = 400
+        with self.assertRaises(github.BadRequestToGithubAPI):
+            await self.installation.get_repo(1234)
 
 
 class GithubCheckRunTest(TestCase):

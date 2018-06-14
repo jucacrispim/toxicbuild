@@ -149,9 +149,9 @@ class GithubApp(LoggerMixin, Document):
         await self.save()
 
     def get_api_url(self):
-        """Returns the url for the github api."""
+        """Returns the url for the github app api."""
 
-        return 'https://api.github.com/app'
+        return settings.GITHUB_API_URL + 'app'
 
     async def _create_jwt(self):
         exp_time = 10 * 59
@@ -250,7 +250,7 @@ class GithubInstallation(LoggerMixin, Document):
 
         if await cls.objects.filter(github_id=github_id).first():
             msg = 'Installation {} already exists'.format(github_id)
-            cls().log(msg, level='error')
+            cls.log_cls(msg, level='error')
             return
 
         msg = 'Creating installation for github_id {}'.format(github_id)
@@ -293,8 +293,8 @@ class GithubInstallation(LoggerMixin, Document):
     def auth_token_url(self):
         """URL used to retrieve an access token for this installation."""
 
-        return 'https://api.github.com/installations/{}/access_tokens'.format(
-            self.github_id)
+        url = settings.GITHUB_API_URL
+        return url + 'installations/{}/access_tokens'.format(self.github_id)
 
     @property
     def token_is_expired(self):
@@ -416,7 +416,7 @@ class GithubInstallation(LoggerMixin, Document):
         Returns a list of dictionaries with repositories' information"""
 
         header = await self._get_header()
-        url = 'https://api.github.com/installation/repositories'
+        url = settings.GITHUB_API_URL + 'installation/repositories'
         ret = await requests.get(url, headers=header)
         if ret.status != 200:
             raise BadRequestToGithubAPI(ret.status, ret.text, url)
@@ -446,6 +446,19 @@ class GithubInstallation(LoggerMixin, Document):
 
         r = await super().delete(*args, **kwargs)
         return r
+
+    async def get_repo(self, repo_full_name):
+        """Get the repository (if available to the installation) from
+        the github api.
+
+        :param github_repo_id: The full name of the repository on github."""
+
+        header = await self._get_header()
+        url = settings.GITHUB_API_URL + '/repos/{}'.format(repo_full_name)
+        ret = await requests.get(url, headers=header)
+        if ret.status != 200:
+            raise BadRequestToGithubAPI(ret.status, ret.text, url)
+        return ret.json()
 
 
 GithubInstallation.ensure_indexes()
@@ -546,7 +559,8 @@ class GithubCheckRun(MasterPlugin):
         repo = await buildset.repository
         full_name = await self._get_repo_full_name(repo)
         install = await self.installation
-        url = 'https://api.github.com/repos/{}/check-runs'.format(full_name)
+        url = settings.GITHUB_API_URL + '/repos/{}/check-runs'.format(
+            full_name)
         payload = self._get_payload(buildset, run_status, conclusion)
         header = await install._get_header(
             accept='application/vnd.github.antiope-preview+json')

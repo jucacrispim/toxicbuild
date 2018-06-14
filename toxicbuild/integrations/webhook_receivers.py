@@ -106,8 +106,17 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
 
     async def _handle_install_repo_added(self):
         install = await self._get_install()
+        tasks = []
         for repo_info in self.body['repositories_added']:
-            ensure_future(install.import_repository(repo_info))
+            t = ensure_future(self._get_and_import_repo(
+                install, repo_info['full_name']))
+            tasks.append(t)
+
+        return tasks
+
+    async def _get_and_import_repo(self, install, repo_full_name):
+        repo_full_info = await install.get_repo(repo_full_name)
+        await install.import_repository(repo_full_info)
 
     async def _handle_install_repo_removed(self):
         install = await self._get_install()
