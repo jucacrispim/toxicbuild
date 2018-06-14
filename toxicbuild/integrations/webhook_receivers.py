@@ -167,7 +167,8 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
 
         call = self.events.get(self.event_type, default_call)
         self.log('event_type {} received'.format(self.event_type))
-        msg = await call()
+        await call()
+        msg = '{} handled successfully'.format(self.event_type)
         return {'code': 200, 'msg': msg}
 
     async def _validate(self):

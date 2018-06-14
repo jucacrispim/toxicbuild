@@ -66,6 +66,8 @@ Usage:
 For information on how to setup the integration, see
 :ref:`github-integration-config`"""
 
+GITHUB_API_URL = 'https://api.github.com/'
+
 
 class GithubApp(LoggerMixin, Document):
     """A GitHub App. Only one app per ToxicBuild installation."""
@@ -151,7 +153,7 @@ class GithubApp(LoggerMixin, Document):
     def get_api_url(self):
         """Returns the url for the github app api."""
 
-        return settings.GITHUB_API_URL + 'app'
+        return GITHUB_API_URL + 'app'
 
     async def _create_jwt(self):
         exp_time = 10 * 59
@@ -293,7 +295,7 @@ class GithubInstallation(LoggerMixin, Document):
     def auth_token_url(self):
         """URL used to retrieve an access token for this installation."""
 
-        url = settings.GITHUB_API_URL
+        url = GITHUB_API_URL
         return url + 'installations/{}/access_tokens'.format(self.github_id)
 
     @property
@@ -416,7 +418,7 @@ class GithubInstallation(LoggerMixin, Document):
         Returns a list of dictionaries with repositories' information"""
 
         header = await self._get_header()
-        url = settings.GITHUB_API_URL + 'installation/repositories'
+        url = GITHUB_API_URL + 'installation/repositories'
         ret = await requests.get(url, headers=header)
         if ret.status != 200:
             raise BadRequestToGithubAPI(ret.status, ret.text, url)
@@ -454,7 +456,7 @@ class GithubInstallation(LoggerMixin, Document):
         :param github_repo_id: The full name of the repository on github."""
 
         header = await self._get_header()
-        url = settings.GITHUB_API_URL + '/repos/{}'.format(repo_full_name)
+        url = GITHUB_API_URL + 'repos/{}'.format(repo_full_name)
         ret = await requests.get(url, headers=header)
         if ret.status != 200:
             raise BadRequestToGithubAPI(ret.status, ret.text, url)
@@ -559,7 +561,7 @@ class GithubCheckRun(MasterPlugin):
         repo = await buildset.repository
         full_name = await self._get_repo_full_name(repo)
         install = await self.installation
-        url = settings.GITHUB_API_URL + '/repos/{}/check-runs'.format(
+        url = GITHUB_API_URL + '/repos/{}/check-runs'.format(
             full_name)
         payload = self._get_payload(buildset, run_status, conclusion)
         header = await install._get_header(
