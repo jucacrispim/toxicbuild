@@ -281,6 +281,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                 except ConsumerTimeout:
                     continue
                 ensure_future(cls._remove_repo(msg))
+                await msg.acknowledge()
 
     @classmethod
     def stop_consuming_messages(cls):

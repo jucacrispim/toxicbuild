@@ -293,6 +293,7 @@ class RepositoryTest(TestCase):
 
         async def fm(cancel_on_timeout=False):
             repository.Repository._stop_consuming_messages = True
+            return AsyncMagicMock()
 
         consumer.fetch_message = fm
         await repository.Repository.wait_removal_request()
