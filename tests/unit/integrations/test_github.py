@@ -177,6 +177,7 @@ class GitHubAppTest(TestCase):
 
     @patch.object(github, 'settings', Mock())
     @patch.object(github, 'open', MagicMock())
+    @patch.object(github.LoggerMixin, 'log', MagicMock())
     @async_test
     async def test_get_app_already_exists(self):
         github.settings.GITHUB_APP_ID = 123
@@ -373,6 +374,8 @@ class GithubInstallationTest(TestCase):
         spec=repository.Repository._delete_locks))
     @patch.object(repository.shutil, 'rmtree', Mock(
         spec=repository.shutil.rmtree))
+    @patch.object(repository.Repository, 'request_removal', AsyncMagicMock(
+        spe=repository.Repository.request_removal))
     @async_test
     async def test_remove_repository(self):
         repo = repository.Repository(name='myrepo', url='git@bla.com/bla.git',
@@ -384,8 +387,7 @@ class GithubInstallationTest(TestCase):
             github_id=1234, repository_id=str(repo.id), full_name='a/b')
         self.installation.repositories.append(install_repo)
         await self.installation.remove_repository(1234)
-        with self.assertRaises(repository.Repository.DoesNotExist):
-            await repository.Repository.objects.get(id=repo.id)
+        self.assertTrue(repository.Repository.request_removal.called)
 
     @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
         spec=repository.Repository.update_code))

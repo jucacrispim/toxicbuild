@@ -386,7 +386,7 @@ class GithubInstallation(LoggerMixin, Document):
         :param github_repo_id: The id of the repository in github."""
 
         repo = await self._get_repo_by_github_id(github_repo_id)
-        await repo.remove()
+        await repo.request_removal()
 
     async def _get_header(
             self, accept='application/vnd.github.machine-man-preview+json'):
