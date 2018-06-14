@@ -274,7 +274,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         async with await repo_notifications.consume(
                 routing_key='repo-removal-requested',
                 timeout=1000) as consumer:
-
+            cls.log_cls('Got repo-removal-request', level='debug')
             while not cls._stop_consuming_messages:
                 try:
                     msg = await consumer.fetch_message(cancel_on_timeout=False)

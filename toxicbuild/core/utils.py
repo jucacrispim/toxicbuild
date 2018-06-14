@@ -197,10 +197,14 @@ class LoggerMixin:
 
     """A simple mixin to use log on a class."""
 
+    @classmethod
+    def log_cls(cls, msg, level='info'):
+        log('[{}] {} '.format(cls.__name__, msg), level)
+
     def log(self, msg, level='info'):
         """Appends the class name before the log message. """
 
-        log('[{}] {} '.format(type(self).__name__, msg), level)
+        type(self).log_cls(msg, level)
 
 
 def format_timedelta(td):
