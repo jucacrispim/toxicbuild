@@ -196,19 +196,20 @@ implement ``send_started_message`` and ``send_finished_message`` methods.
            finished."""
 
 
-Master signals
-++++++++++++++
+..
+   Master signals
+   ++++++++++++++
 
-The following signals are sent in master:
+   The following signals are sent in master:
 
-* revision_added - Sent when changes are detected in the source code.
-* build_added - Sent when a new build is added to the database.
-* build_started - Sent when a build starts.
-* build_finished - Sent when a build finishes.
-* step_started - Sent when a build step starts
-* step_finished - Sent when a build step finishes.
-* step_output_arrived - Sent when we have some output from a step.
-* repo_status_changed - Sent when the status of a repository changes.
+   * revision_added - Sent when changes are detected in the source code.
+   * build_added - Sent when a new build is added to the database.
+   * build_started - Sent when a build starts.
+   * build_finished - Sent when a build finishes.
+   * step_started - Sent when a build step starts
+   * step_finished - Sent when a build step finishes.
+   * step_output_arrived - Sent when we have some output from a step.
+   * repo_status_changed - Sent when the status of a repository changes.
 
 Slave
 -----
