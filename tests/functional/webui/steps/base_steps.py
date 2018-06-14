@@ -25,6 +25,8 @@ def sees_message(context, msg):
     browser = context.browser
     is_present = browser.wait_text_become_present(msg)
     assert is_present
+    for btn in browser.find_elements_by_class_name('close-msg'):
+        browser.click(btn)
 
 
 then_sees_message = then('he sees the "{msg}" message')(sees_message)
