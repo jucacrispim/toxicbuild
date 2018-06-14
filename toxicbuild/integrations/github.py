@@ -561,7 +561,7 @@ class GithubCheckRun(MasterPlugin):
         repo = await buildset.repository
         full_name = await self._get_repo_full_name(repo)
         install = await self.installation
-        url = GITHUB_API_URL + '/repos/{}/check-runs'.format(
+        url = GITHUB_API_URL + 'repos/{}/check-runs'.format(
             full_name)
         payload = self._get_payload(buildset, run_status, conclusion)
         header = await install._get_header(
