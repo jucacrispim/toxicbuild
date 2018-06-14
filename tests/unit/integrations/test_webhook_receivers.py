@@ -159,7 +159,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver._validate = AsyncMagicMock()
         msg = await self.webhook_receiver.receive_webhook()
         self.assertEqual(msg['code'], 200)
-        self.assertEqual(msg['msg'], 'Got it.')
+        self.assertEqual(msg['msg'], 'ping handled successfully')
 
     @patch.object(webhook_receivers.GithubInstallation, 'objects',
                   AsyncMagicMock())
