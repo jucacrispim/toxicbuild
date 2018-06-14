@@ -48,7 +48,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             'pull_request-opened': self._handle_pull_request_opened,
             'pull_request-synchronize': self._handle_pull_request_opened,
             'check_run-rerequested': self._handle_check_run_rerequested,
-            'installation-removed': self._handle_install_deleted,
+            'installation-deleted': self._handle_install_deleted,
             'installation-repositories_removed': handle_repo_removed,
             'installation_repositires_added': handle_repo_added}
 
