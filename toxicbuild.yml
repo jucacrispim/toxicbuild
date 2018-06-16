@@ -12,6 +12,11 @@ TESTS_ENVVARS:  &TESTS_ENVVARS
 
 # steps
 
+ZK_START:  &ZK_START
+  name: Starting ZooKeeper
+  command: sudo /etc/init.d/zookeeper start
+  stop_on_fail: true
+
 INSTALL_MONGODB:  &INSTALL_MONGODB
   name: Installing mongodb
   command: sh ./build-scripts/install_mongodb.sh
@@ -66,7 +71,7 @@ UPLOAD2PYPI:  &UPLOAD2PYPI
 
 
 MAIN_STEPS:  &MAIN_STEPS
-  - sudo /etc/init.d/zookeeper start
+  - <<: *ZK_START
   - <<: *INSTALL_MONGODB
   - <<: *UNITTEST_COVERAGE
   - <<: *FUNCTIONAL_TESTS
