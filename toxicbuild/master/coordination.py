@@ -43,7 +43,7 @@ class ToxicSharedLock(SharedLock):
                 raise TimeoutError
 
             owned_positions, contenders = await self.analyze_siblings()
-            if znode_label not in owned_positions:
+            if znode_label not in owned_positions:  # pragma no cover
                 raise SessionLost
 
             blockers = contenders[:owned_positions[znode_label]]
