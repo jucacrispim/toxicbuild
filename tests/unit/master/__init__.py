@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
+import atexit
 import os
+from unittest.mock import Mock, patch
 from toxicbuild.master import create_settings_and_connect
 from toxicbuild.master import create_scheduler
 from tests import MASTER_ROOT_DIR
@@ -22,3 +25,16 @@ os.environ['TOXICMASTER_SETTINGS'] = os.path.join(
     MASTER_DATA_PATH, 'toxicmaster.conf')
 
 create_settings_and_connect()
+
+from toxicbuild.master.coordination import ToxicZKClient  # noqa: F402
+
+
+loop = asyncio.get_event_loop()
+
+
+def clean():
+    if ToxicZKClient._zk_client:
+        loop.run_until_complete(ToxicZKClient._zk_client.close())
+
+
+atexit.register(clean)

@@ -169,7 +169,6 @@ class UIHoleTest(TestCase):
 @patch.object(repository, 'repo_added', AsyncMagicMock())
 @patch.object(repository, 'ui_notifications', AsyncMagicMock())
 @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
-@patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
 @patch.object(repository.utils, 'log', Mock())
 class HoleHandlerTest(TestCase):
 
@@ -363,7 +362,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_repo_get_with_repo_name(self):
         await self._create_test_data()
@@ -381,7 +379,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_repo_get_with_repo_url(self):
         await self._create_test_data()
@@ -395,7 +392,6 @@ class HoleHandlerTest(TestCase):
 
         self.assertEqual(repo['url'], repo_url)
 
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_repo_get_without_params(self):
         action = 'repo-get'
@@ -406,8 +402,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
-    @patch.object(repository.Repository, '_delete_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository, 'shutil', Mock())
     @async_test
@@ -425,7 +419,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_repo_enable_plugin(self):
 
@@ -449,7 +442,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @async_test
     async def test_repo_disable_plugin(self):
@@ -489,7 +481,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_repo_update(self):
         await self._create_test_data()
@@ -508,7 +499,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_repo_update_with_slaves(self):
         await self._create_test_data()
@@ -528,7 +518,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @async_test
     async def test_repo_add_slave(self):
@@ -555,7 +544,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @async_test
     async def test_repo_remove_slave(self):
@@ -578,7 +566,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @async_test
     async def test_repo_add_branch(self):
@@ -599,7 +586,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @async_test
     async def test_repo_remove_branch(self):
@@ -623,7 +609,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository, 'BuildManager', MagicMock(
         spec=repository.BuildManager))
@@ -649,7 +634,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
         spec=repository.Repository.add_builds_for_slave))
@@ -671,7 +655,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository, 'BuildManager', MagicMock(
         spec=repository.BuildManager, autospec=True))
@@ -709,7 +692,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository, 'BuildManager', MagicMock())
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
@@ -740,7 +722,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository, 'BuildManager', MagicMock())
     @patch.object(hole.Repository, 'get_for_user', AsyncMagicMock(
@@ -757,7 +738,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository, 'BuildManager', MagicMock())
     @patch.object(hole.Repository, 'get_for_user', AsyncMagicMock(
@@ -862,7 +842,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_buildset_list(self):
         await self._create_test_data()
@@ -917,7 +896,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_builder_show(self):
         await self._create_test_data()
@@ -936,7 +914,6 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_builder_show_with_skip_and_offset(self):
         await self._create_test_data()
@@ -1044,7 +1021,6 @@ class HoleHandlerTest(TestCase):
         self.assertEqual(type(slave_dict['id']), str)
 
     @patch.object(repository.Repository, 'schedule', Mock())
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.Repository, '_notify_repo_creation',
                   AsyncMagicMock())
     @patch.object(repository.utils, 'log', Mock())
@@ -1296,7 +1272,6 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @patch.object(repository.Repository, 'schedule', Mock())
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.Repository, '_notify_repo_creation',
                   AsyncMagicMock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', Mock())
@@ -1354,7 +1329,6 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @patch.object(repository.Repository, 'schedule', Mock())
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.Repository, '_notify_repo_creation',
                   AsyncMagicMock())
     @patch.object(repository.Repository, 'schedule', Mock())
@@ -1407,7 +1381,6 @@ class UIStreamHandlerTest(TestCase):
         self.assertIsInstance(self.BODY['repository']['id'], str)
 
     @patch.object(repository.Repository, 'schedule', Mock())
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.Repository, '_notify_repo_creation',
                   AsyncMagicMock())
     @async_test
@@ -1444,7 +1417,6 @@ class UIStreamHandlerTest(TestCase):
         self.assertIsInstance(self.BODY['id'], str)
 
     @patch.object(repository.Repository, 'schedule', Mock())
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.Repository, '_notify_repo_creation',
                   AsyncMagicMock())
     @async_test

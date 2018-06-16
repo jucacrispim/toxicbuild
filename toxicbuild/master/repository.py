@@ -22,6 +22,7 @@ import os
 import re
 import shutil
 from threading import Thread
+from aiozk.exc import TimeoutError
 from asyncamqp.exceptions import ConsumerTimeout
 from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
@@ -29,10 +30,10 @@ from mongomotor.fields import (StringField, IntField, ReferenceField,
                                DateTimeField, ListField, BooleanField,
                                EmbeddedDocumentField)
 from toxicbuild.core import utils
-from toxicbuild.core.coordination import Mutex
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.master import settings
 from toxicbuild.master.build import (BuildSet, Builder, BuildManager)
+from toxicbuild.master.coordination import Lock
 from toxicbuild.master.document import OwnedDocument, ExternalRevisionIinfo
 from toxicbuild.master.exceptions import RepoBranchDoesNotExist
 from toxicbuild.master.exchanges import (update_code, poll_status,
@@ -51,11 +52,6 @@ from toxicbuild.master.slave import Slave
 # when needed.
 # The is {repourl-start-pending: hash} for starting pending builds
 _scheduler_hashes = {}
-
-toxicbuild_conf_mutex = Mutex('toxicmaster-repo-toxicbuildconf-mutex',
-                              locks_conn)
-update_code_mutex = Mutex('toxicmaster-repo-update-code-mutex',
-                          locks_conn)
 
 
 class RepositoryBranch(EmbeddedDocument):
@@ -139,9 +135,17 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         self._poller_instance = None
         self.build_manager = BuildManager(self)
         self._old_status = None
-        self.toxicbuild_conf_lock = toxicbuild_conf_mutex
-        self.update_code_lock = update_code_mutex
         self._vcs_instance = None
+
+    @property
+    def toxicbuild_conf_lock(self):
+        path = '/{}-toxicbuild_conf'.format(str(self.id))
+        return Lock(path)
+
+    @property
+    def update_code_lock(self):
+        path = '/{}-update_code'.format(str(self.id))
+        return Lock(path)
 
     @classmethod
     def add_running_build(cls):
@@ -392,7 +396,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await cls._notify_repo_creation(repo)
         if repo.schedule_poller:
             repo.schedule()
-        await repo._create_locks()
         return repo
 
     async def remove(self):
@@ -423,8 +426,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         # removes the repository from the file system.
         Thread(target=shutil.rmtree, args=[self.workdir]).start()
-        # creating locks just to declare the stuff...
-        await self._delete_locks()
         await self.delete()
 
     async def request_removal(self):
@@ -483,14 +484,15 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         """
 
         if wait_for_lock:
-            lock = await self.update_code_lock.acquire(routing_key=str(
-                self.id))
+            timeout = None
         else:
-            lock = await self.update_code_lock.try_acquire(routing_key=str(
-                self.id))
-            if not lock:
-                self.log('Repo already updating. Leaving.', level='debug')
-                return
+            timeout = 0.1
+
+        try:
+            lock = await self.update_code_lock.acquire_write(timeout)
+        except TimeoutError:
+            self.log('Repo already updating. Leaving.', level='debug')
+            return
 
         async with lock:
             url = self.get_url()
@@ -521,37 +523,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                           'new_status': self.clone_status}
 
             await self._notify_status_changed(status_msg)
-
-    async def _create_locks(self):
-        # we publish a message in the queue
-        # using the repo id as the routing key so we can fetch the message
-        # based in the id.
-
-        await self.toxicbuild_conf_lock.declare()
-        await self.toxicbuild_conf_lock.publish({'mutex_for': str(self.id)},
-                                                routing_key=str(self.id))
-        await self.update_code_lock.declare()
-        await self.update_code_lock.publish({'mutex_for': str(self.id)},
-                                            routing_key=str(self.id))
-
-    async def _ack_msg_for(self, consumer):
-        async with consumer:
-            msg = await consumer.fetch_message()
-            await msg.acknowledge()
-
-    async def _delete_locks(self):
-        locks = [self.toxicbuild_conf_lock, self.update_code_lock]
-        for lock in locks:
-            try:
-                consumer = await lock.consume(routing_key=str(self.id),
-                                              timeout=5)
-                await self._ack_msg_for(consumer)
-                queue_name = lock._get_queue_name_for_routing_key(
-                    str(self.id), lock.queue_name)
-                await lock.queue_delete(queue_name)
-            except ConsumerTimeout:
-                self.log('lock not find for {}'.format(str(self.id)),
-                         level='warning')
 
     async def bootstrap(self):
         """Initialise the needed stuff. Schedules updates for code,

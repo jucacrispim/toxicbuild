@@ -22,7 +22,7 @@ from collections import defaultdict, deque
 import datetime
 from unittest import TestCase, mock
 from toxicbuild.core.utils import now
-from toxicbuild.master import build, repository, slave, users
+from toxicbuild.master import build, repository, slave, users, coordination
 from tests import async_test, AsyncMagicMock
 
 
@@ -424,19 +424,15 @@ class BuildManagerTest(TestCase):
         repo.__func__ = lambda: None
         self.manager = build.BuildManager(repo)
 
+    # @classmethod
+    # @async_test
+    # async def tearDownClass(cls):
+    #     await coordination.ToxicZKClient._zk_client.close()
+
     @mock.patch('aioamqp.protocol.logger', mock.Mock())
     @async_test
     async def tearDown(self):
-        if hasattr(self, 'repo') and self.repo.toxicbuild_conf_lock:
-            channel = await self.repo.toxicbuild_conf_lock.\
-                connection.protocol.channel()
-            lock_name = self.repo.toxicbuild_conf_lock.queue_name
-            await channel.queue_delete(
-                lock_name)
-            await channel.close()
-            await self.repo.toxicbuild_conf_lock.connection.disconnect()
-            repository.toxicbuild_conf_mutex._declared_queues = set()
-            repository.update_code_mutex._declared_queues = set()
+
         await slave.Slave.drop_collection()
         await build.BuildSet.drop_collection()
         await build.Builder.drop_collection()
@@ -459,10 +455,6 @@ class BuildManagerTest(TestCase):
         spec=build.BuildSet.notify))
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(repository.toxicbuild_conf_mutex, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(repository.update_code_mutex, 'publish',
                        AsyncMagicMock())
     @async_test
     async def test_add_builds_for_slave(self):
@@ -572,12 +564,6 @@ class BuildManagerTest(TestCase):
             lambda *a, **kw: checkout())
         builders = await self.manager.get_builders(self.slave,
                                                    self.revision)
-        channel = await self.repo.\
-            toxicbuild_conf_lock.connection.protocol.channel()
-        await channel.queue_delete(
-            self.repo.toxicbuild_conf_lock.queue_name)
-        await channel.queue_delete(
-            self.repo.update_code_lock.queue_name)
 
         for b in builders:
             self.assertTrue(isinstance(b, build.Document))
@@ -605,10 +591,6 @@ class BuildManagerTest(TestCase):
 
         builders = await self.manager.get_builders(self.slave,
                                                    self.revision)
-        channel = await self.repo.\
-            update_code_lock.connection.protocol.channel()
-        await channel.queue_delete(
-            self.repo.update_code_lock.queue_name)
 
         self.assertFalse(builders)
         self.assertTrue(build.log.called)
@@ -635,10 +617,6 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
-    @mock.patch.object(repository.toxicbuild_conf_mutex, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(repository.update_code_mutex, 'publish',
-                       AsyncMagicMock())
     @async_test
     async def test_execute_build(self):
         await self._create_test_data()
@@ -655,10 +633,6 @@ class BuildManagerTest(TestCase):
         spec=build.BuildSet.notify))
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(repository.toxicbuild_conf_mutex, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(repository.update_code_mutex, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build.asyncio, 'wait', AsyncMagicMock())
     @async_test
@@ -678,10 +652,6 @@ class BuildManagerTest(TestCase):
         spec=build.BuildSet.notify))
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(repository.toxicbuild_conf_mutex, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(repository.update_code_mutex, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build.asyncio, 'wait', AsyncMagicMock())
     @async_test
@@ -707,10 +677,6 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
-    @mock.patch.object(repository.toxicbuild_conf_mutex, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(repository.update_code_mutex, 'publish',
-                       AsyncMagicMock())
     @mock.patch.object(build.asyncio, 'wait', AsyncMagicMock())
     @async_test
     async def test_execute_in_parallel_cancelled_build_same_buildset(self):
@@ -727,6 +693,7 @@ class BuildManagerTest(TestCase):
             await cancelled.update()
 
         wait_mock = AsyncMagicMock()
+
         async def wait_func(fs):
             await wait_mock()
             for f in fs:
@@ -968,8 +935,7 @@ class BuildManagerTest(TestCase):
                                  token='123', owner=self.owner)
         self.slave.build = asyncio.coroutine(lambda x: None)
         await self.slave.save()
-        # await repository.toxicbuild_conf_mutex.declare()
-        # await repository.update_code_mutex.declare()
+
         self.repo = await repository.Repository.create(
             name='reponame', url='git@somewhere', update_seconds=300,
             vcs_type='git', slaves=[self.slave], owner=self.owner)

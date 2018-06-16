@@ -304,7 +304,6 @@ class GithubInstallationTest(TestCase):
             len(self.installation.import_repository.call_args_list), 2)
 
     @patch.object(repository.Repository, 'schedule', Mock())
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.Repository, '_notify_repo_creation',
                   AsyncMagicMock())
     @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
@@ -327,7 +326,6 @@ class GithubInstallationTest(TestCase):
         self.assertTrue(install.repositories)
 
     @patch.object(repository.Repository, 'schedule', Mock())
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.Repository, '_notify_repo_creation',
                   AsyncMagicMock())
     @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
@@ -370,8 +368,6 @@ class GithubInstallationTest(TestCase):
 
     @patch.object(repository, 'scheduler_action', AsyncMagicMock(
         spec=repository.scheduler_action))
-    @patch.object(repository.Repository, '_delete_locks', AsyncMagicMock(
-        spec=repository.Repository._delete_locks))
     @patch.object(repository.shutil, 'rmtree', Mock(
         spec=repository.shutil.rmtree))
     @patch.object(repository.Repository, 'request_removal', AsyncMagicMock(

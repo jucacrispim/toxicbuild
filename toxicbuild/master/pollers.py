@@ -75,8 +75,8 @@ class Poller(LoggerMixin):
         """
 
         with_clone = False
-        async with await self.repository.toxicbuild_conf_lock.acquire(
-                routing_key=str(self.repository.id)):
+
+        async with await self.repository.toxicbuild_conf_lock.acquire_write():
             if self.is_polling():
                 self.log('{} alreay polling. leaving...'.format(
                     self.repository.url), level='debug')
@@ -85,7 +85,6 @@ class Poller(LoggerMixin):
             url = self.repository.get_url()
             self.log('Polling with url {}'.format(url))
             self._is_polling = True
-            self.log('Polling changes')
 
             if not self.vcs.workdir_exists():
                 self.log('clonning repo')

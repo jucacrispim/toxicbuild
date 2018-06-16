@@ -66,6 +66,7 @@ class ToxicSharedLock(SharedLock):
 
 class ToxicZKClient(LoggerMixin):
     _zk_client = None
+    _started = False
 
     def __init__(self):
         if not self._client:
@@ -73,7 +74,6 @@ class ToxicZKClient(LoggerMixin):
             kwargs = getattr(settings, 'ZK_KWARGS', {})
             client = ZKClient(servers, **kwargs)
             self._client = client
-        self._started = False
 
     def _get_client(self):
         return type(self)._zk_client
@@ -83,6 +83,7 @@ class ToxicZKClient(LoggerMixin):
 
     async def _start(self):
         await self._client.start()
+        type(self)._started = True
 
     async def get_lock(self, path):
         if not self._started:  # pragma no branch

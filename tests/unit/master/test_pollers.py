@@ -22,7 +22,7 @@ import datetime
 import json
 from unittest import mock, TestCase
 from toxicbuild.core.exchange import JsonAckMessage as Message
-from toxicbuild.master import pollers, repository, users, utils
+from toxicbuild.master import pollers, repository, users, utils, coordination
 from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.exchanges import connect_exchanges, disconnect_exchanges
 from tests import async_test, AsyncMagicMock
@@ -43,6 +43,7 @@ class GitPollerTest(TestCase):
         await channel.queue_delete(
             'toxicmaster.revisions_added_queue')
         await disconnect_exchanges()
+        # await coordination.ToxicZKClient._zk_client.close()
 
     @mock.patch.object(pollers, 'get_vcs', mock.MagicMock())
     @async_test
@@ -62,7 +63,6 @@ class GitPollerTest(TestCase):
 
     @async_test
     def tearDown(self):
-        yield from self.repo._delete_locks()
         channel = yield from repository.\
             scheduler_action.connection.protocol.channel()
         yield from channel.queue_delete(
@@ -468,7 +468,6 @@ class PollerServerTest(TestCase):
         server.sync_shutdown()
         self.assertTrue(server.shutdown.called)
 
-    @mock.patch.object(pollers.Repository, '_create_locks', AsyncMagicMock())
     @mock.patch.object(pollers.Poller, 'poll', AsyncMagicMock(
         return_value=True))
     @async_test
@@ -490,7 +489,6 @@ class PollerServerTest(TestCase):
             msg = await consumer.fetch_message()
             self.assertTrue(msg)
 
-    @mock.patch.object(pollers.Repository, '_create_locks', AsyncMagicMock())
     @mock.patch.object(pollers.Poller, 'poll', AsyncMagicMock(
         side_effect=Exception))
     @mock.patch.object(pollers.PollerServer, 'log', mock.Mock())
@@ -514,7 +512,6 @@ class PollerServerTest(TestCase):
             msg = await consumer.fetch_message()
             self.assertTrue(msg)
 
-    @mock.patch.object(pollers.Repository, '_create_locks', AsyncMagicMock())
     @mock.patch.object(pollers.Poller, 'external_poll', AsyncMagicMock(
         return_value=True))
     @async_test
