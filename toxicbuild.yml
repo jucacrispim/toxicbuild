@@ -66,6 +66,7 @@ UPLOAD2PYPI:  &UPLOAD2PYPI
 
 
 MAIN_STEPS:  &MAIN_STEPS
+  - sudo /etc/init.d/zookeeper start
   - <<: *INSTALL_MONGODB
   - <<: *UNITTEST_COVERAGE
   - <<: *FUNCTIONAL_TESTS
