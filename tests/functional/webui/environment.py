@@ -142,10 +142,10 @@ def del_repo(context):
 
 def before_all(context):
     start_slave()
-    start_master()
     start_poller()
     start_scheduler()
     start_output()
+    start_master()
     start_webui()
 
     create_browser(context)
