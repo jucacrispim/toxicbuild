@@ -751,4 +751,4 @@
   (toxic:add-watcher))
 
 
-(toxic:setup)
+(add-hook 'python-mode-hook 'toxic:setup)
