@@ -46,7 +46,7 @@ setup(name='toxicbuild',
                         'pyrocumulus>=0.11.4', 'pytz==2018.04',
                         'aiohttp>=1.0.5', 'aiosmtplib>=1.0.2',
                         'asyncamqp>=0.1.4', 'pyyaml>=3.11',
-                        'PyJWT==1.5.3'],
+                        'PyJWT==1.5.3', 'aiozk>=0.7.0'],
       classifiers=[
           'Development Status :: 3 - Alpha',
           'Environment :: No Input/Output (Daemon)',
