@@ -86,6 +86,7 @@ APT_INSTALL:  &APT_INSTALL
   name: apt-install
   packages:
     - rabbitmq-server
+    - zookeeper
 
 
 APT_INSTALL_SELENIUM:  &APT_INSTALL_SELENIUM
@@ -94,6 +95,7 @@ APT_INSTALL_SELENIUM:  &APT_INSTALL_SELENIUM
     - chromedriver
     - xvfb
     - rabbitmq-server
+    - zookeeper
 
 
 PY35_VENV:  &PY35_VENV
