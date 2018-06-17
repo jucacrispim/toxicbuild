@@ -23,7 +23,7 @@ from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch
 from uuid import uuid4
 from toxicbuild.core import utils, exchange
-from toxicbuild.master import (repository, build, slave, users, coordination)
+from toxicbuild.master import (repository, build, slave, users)
 from toxicbuild.master.exchanges import (connect_exchanges,
                                          disconnect_exchanges)
 from tests import async_test, AsyncMagicMock, create_autospec

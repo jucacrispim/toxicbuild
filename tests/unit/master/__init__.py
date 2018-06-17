@@ -3,7 +3,6 @@
 import asyncio
 import atexit
 import os
-from unittest.mock import Mock, patch
 from toxicbuild.master import create_settings_and_connect
 from toxicbuild.master import create_scheduler
 from tests import MASTER_ROOT_DIR

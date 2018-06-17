@@ -22,7 +22,7 @@ import datetime
 import json
 from unittest import mock, TestCase
 from toxicbuild.core.exchange import JsonAckMessage as Message
-from toxicbuild.master import pollers, repository, users, utils, coordination
+from toxicbuild.master import pollers, repository, users, utils
 from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.exchanges import connect_exchanges, disconnect_exchanges
 from tests import async_test, AsyncMagicMock
@@ -43,7 +43,6 @@ class GitPollerTest(TestCase):
         await channel.queue_delete(
             'toxicmaster.revisions_added_queue')
         await disconnect_exchanges()
-        # await coordination.ToxicZKClient._zk_client.close()
 
     @mock.patch.object(pollers, 'get_vcs', mock.MagicMock())
     @async_test

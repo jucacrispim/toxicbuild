@@ -22,7 +22,7 @@ from collections import defaultdict, deque
 import datetime
 from unittest import TestCase, mock
 from toxicbuild.core.utils import now
-from toxicbuild.master import build, repository, slave, users, coordination
+from toxicbuild.master import build, repository, slave, users
 from tests import async_test, AsyncMagicMock
 
 
@@ -423,11 +423,6 @@ class BuildManagerTest(TestCase):
         repo.__self__ = repo
         repo.__func__ = lambda: None
         self.manager = build.BuildManager(repo)
-
-    # @classmethod
-    # @async_test
-    # async def tearDownClass(cls):
-    #     await coordination.ToxicZKClient._zk_client.close()
 
     @mock.patch('aioamqp.protocol.logger', mock.Mock())
     @async_test

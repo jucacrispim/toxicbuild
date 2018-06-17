@@ -18,7 +18,7 @@
 
 import time
 from aiozk import ZKClient
-from aiozk.exc import TimeoutError, SessionLost
+from aiozk import exc
 from aiozk.recipes.shared_lock import SharedLock
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
@@ -40,11 +40,11 @@ class ToxicSharedLock(SharedLock):
 
         while True:
             if time_limit and time.time() >= time_limit:
-                raise TimeoutError
+                raise exc.TimeoutError
 
             owned_positions, contenders = await self.analyze_siblings()
             if znode_label not in owned_positions:  # pragma no cover
-                raise SessionLost
+                raise exc.SessionLost
 
             blockers = contenders[:owned_positions[znode_label]]
             if blocked_by:
@@ -58,7 +58,7 @@ class ToxicSharedLock(SharedLock):
 
             try:
                 await self.wait_on_sibling(blockers[-1], timeout)
-            except TimeoutError:
+            except exc.TimeoutError:
                 await self.delete_unique_znode(znode_label)
 
         return self.make_contextmanager(znode_label)

@@ -22,7 +22,7 @@ import os
 import re
 import shutil
 from threading import Thread
-from aiozk.exc import TimeoutError
+from aiozk import exc
 from asyncamqp.exceptions import ConsumerTimeout
 from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
@@ -37,7 +37,7 @@ from toxicbuild.master.coordination import Lock
 from toxicbuild.master.document import OwnedDocument, ExternalRevisionIinfo
 from toxicbuild.master.exceptions import RepoBranchDoesNotExist
 from toxicbuild.master.exchanges import (update_code, poll_status,
-                                         revisions_added, locks_conn,
+                                         revisions_added,
                                          scheduler_action, repo_status_changed,
                                          repo_added, ui_notifications,
                                          repo_notifications)
@@ -490,7 +490,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         try:
             lock = await self.update_code_lock.acquire_write(timeout)
-        except TimeoutError:
+        except exc.TimeoutError:
             self.log('Repo already updating. Leaving.', level='debug')
             return
 
