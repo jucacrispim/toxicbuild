@@ -199,19 +199,27 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             await msg.acknowledge()
 
     @classmethod
-    async def wait_revisions(cls):
-        """Waits for messages sent by pollers about new revisions."""
+    async def _wait_for_thing(cls, exchange, callback, routing_key=None):
+        kw = {'timeout': 1000}
+        if routing_key:
+            kw['routing_key'] = routing_key
 
-        async with await revisions_added.consume(timeout=1000) as consumer:
+        async with await exchange.consume(**kw) as consumer:
             while not cls._stop_consuming_messages:
                 try:
                     msg = await consumer.fetch_message(cancel_on_timeout=False)
                 except ConsumerTimeout:
                     continue
 
-                utils.log('[wait_revisions] Got msg from revisions_added',
-                          level='debug')
-                ensure_future(cls._add_builds(msg))
+                cls.log_cls('Got message for routing_key {}'.format(
+                    routing_key))
+                ensure_future(callback(msg))
+
+    @classmethod
+    async def wait_revisions(cls):
+        """Waits for messages sent by pollers about new revisions."""
+
+        await cls._wait_for_thing(revisions_added, cls._add_builds)
 
     @classmethod
     async def _add_requested_build(cls, msg):
@@ -245,19 +253,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         """Waits for build requests that arrive  in the `repo_notifications`
         exchange with the routing key `build-requested`"""
 
-        async with await repo_notifications.consume(
-                routing_key='build-requested', timeout=1000) as consumer:
-            while not cls._stop_consuming_messages:
-                try:
-                    msg = await consumer.fetch_message(cancel_on_timeout=False)
-                except ConsumerTimeout:
-                    continue
-                utils.log('[wait_build_requests] Got a new build requested',
-                          level='debug')
-                ensure_future(cls._add_requested_build(msg))
+        await cls._wait_for_thing(
+            repo_notifications, cls._add_requested_build,
+            routing_key='build-requested')
 
     @classmethod
     async def _remove_repo(cls, msg):
+        await msg.acknowledge()
         repo = await cls._get_repo_from_msg(msg)
         if not repo:
             return False
@@ -273,19 +275,31 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     @classmethod
     async def wait_removal_request(cls):
         """Waits for removal requests in the `repo_notifications`
-        exchange with the routing key `removal-requested`"""
+        exchange with the routing key `repo-removal-requested`"""
 
-        async with await repo_notifications.consume(
-                routing_key='repo-removal-requested',
-                timeout=1000) as consumer:
-            cls.log_cls('Got repo-removal-request', level='debug')
-            while not cls._stop_consuming_messages:
-                try:
-                    msg = await consumer.fetch_message(cancel_on_timeout=False)
-                except ConsumerTimeout:
-                    continue
-                ensure_future(cls._remove_repo(msg))
-                await msg.acknowledge()
+        return await cls._wait_for_thing(repo_notifications, cls._remove_repo,
+                                         routing_key='repo-removal-requested')
+
+    @classmethod
+    async def _update_repo(cls, msg):
+        await msg.acknowledge()
+        repo = await cls._get_repo_from_msg(msg)
+        if not repo:
+            return False
+        try:
+            await repo.update_code()
+        except Exception as e:
+            log_msg = '[_update_repo] Error update repo {}'.format(repo.id)
+            log_msg += '\nOriginal exception was {}'.format(str(e))
+            utils.log(log_msg, level='error')
+
+        return True
+
+    @classmethod
+    async def wait_update_request(cls):
+        return await cls._wait_for_thing(
+            repo_notifications, cls._update_repo,
+            routing_key='update-code-requested')
 
     @classmethod
     def stop_consuming_messages(cls):
@@ -430,12 +444,23 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     async def request_removal(self):
         """Request the removal of a repository by publishing a message in the
-        `repo_notifications` queue with the routing key
+        ``repo_notifications`` queue with the routing key
         `repo-removal-requested`."""
 
         msg = {'repository_id': str(self.id)}
         await repo_notifications.publish(
             msg, routing_key='repo-removal-requested')
+
+    async def request_code_update(self, repo_branches=None, external=None):
+        """Request the code update of a repository by publishing a message in
+        the ``repo_notifications`` queue with the routing key
+        `repo-update-code-requested`."""
+
+        msg = {'repository_id': str(self.id),
+               'repo_branches': repo_branches,
+               'external': external}
+        await repo_notifications.publish(
+            msg, routing_key='update-code-requested')
 
     @classmethod
     async def get(cls, **kwargs):
