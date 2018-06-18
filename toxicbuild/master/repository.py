@@ -22,6 +22,7 @@ import os
 import re
 import shutil
 from threading import Thread
+from aiozk import exc
 from asyncamqp.exceptions import ConsumerTimeout
 from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
@@ -29,14 +30,14 @@ from mongomotor.fields import (StringField, IntField, ReferenceField,
                                DateTimeField, ListField, BooleanField,
                                EmbeddedDocumentField)
 from toxicbuild.core import utils
-from toxicbuild.core.coordination import Mutex
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.master import settings
 from toxicbuild.master.build import (BuildSet, Builder, BuildManager)
+from toxicbuild.master.coordination import Lock
 from toxicbuild.master.document import OwnedDocument, ExternalRevisionIinfo
 from toxicbuild.master.exceptions import RepoBranchDoesNotExist
 from toxicbuild.master.exchanges import (update_code, poll_status,
-                                         revisions_added, locks_conn,
+                                         revisions_added,
                                          scheduler_action, repo_status_changed,
                                          repo_added, ui_notifications,
                                          repo_notifications)
@@ -51,11 +52,6 @@ from toxicbuild.master.slave import Slave
 # when needed.
 # The is {repourl-start-pending: hash} for starting pending builds
 _scheduler_hashes = {}
-
-toxicbuild_conf_mutex = Mutex('toxicmaster-repo-toxicbuildconf-mutex',
-                              locks_conn)
-update_code_mutex = Mutex('toxicmaster-repo-update-code-mutex',
-                          locks_conn)
 
 
 class RepositoryBranch(EmbeddedDocument):
@@ -139,9 +135,17 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         self._poller_instance = None
         self.build_manager = BuildManager(self)
         self._old_status = None
-        self.toxicbuild_conf_lock = toxicbuild_conf_mutex
-        self.update_code_lock = update_code_mutex
         self._vcs_instance = None
+
+    @property
+    def toxicbuild_conf_lock(self):
+        path = '/{}-toxicbuild_conf'.format(str(self.id))
+        return Lock(path)
+
+    @property
+    def update_code_lock(self):
+        path = '/{}-update_code'.format(str(self.id))
+        return Lock(path)
 
     @classmethod
     def add_running_build(cls):
@@ -195,19 +199,27 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             await msg.acknowledge()
 
     @classmethod
-    async def wait_revisions(cls):
-        """Waits for messages sent by pollers about new revisions."""
+    async def _wait_for_thing(cls, exchange, callback, routing_key=None):
+        kw = {'timeout': 1000}
+        if routing_key:
+            kw['routing_key'] = routing_key
 
-        async with await revisions_added.consume(timeout=1000) as consumer:
+        async with await exchange.consume(**kw) as consumer:
             while not cls._stop_consuming_messages:
                 try:
                     msg = await consumer.fetch_message(cancel_on_timeout=False)
                 except ConsumerTimeout:
                     continue
 
-                utils.log('[wait_revisions] Got msg from revisions_added',
-                          level='debug')
-                ensure_future(cls._add_builds(msg))
+                cls.log_cls('Got message for routing_key {}'.format(
+                    routing_key))
+                ensure_future(callback(msg))
+
+    @classmethod
+    async def wait_revisions(cls):
+        """Waits for messages sent by pollers about new revisions."""
+
+        await cls._wait_for_thing(revisions_added, cls._add_builds)
 
     @classmethod
     async def _add_requested_build(cls, msg):
@@ -241,19 +253,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         """Waits for build requests that arrive  in the `repo_notifications`
         exchange with the routing key `build-requested`"""
 
-        async with await repo_notifications.consume(
-                routing_key='build-requested', timeout=1000) as consumer:
-            while not cls._stop_consuming_messages:
-                try:
-                    msg = await consumer.fetch_message(cancel_on_timeout=False)
-                except ConsumerTimeout:
-                    continue
-                utils.log('[wait_build_requests] Got a new build requested',
-                          level='debug')
-                ensure_future(cls._add_requested_build(msg))
+        await cls._wait_for_thing(
+            repo_notifications, cls._add_requested_build,
+            routing_key='build-requested')
 
     @classmethod
     async def _remove_repo(cls, msg):
+        await msg.acknowledge()
         repo = await cls._get_repo_from_msg(msg)
         if not repo:
             return False
@@ -269,19 +275,37 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     @classmethod
     async def wait_removal_request(cls):
         """Waits for removal requests in the `repo_notifications`
-        exchange with the routing key `removal-requested`"""
+        exchange with the routing key `repo-removal-requested`"""
 
-        async with await repo_notifications.consume(
-                routing_key='repo-removal-requested',
-                timeout=1000) as consumer:
-            cls.log_cls('Got repo-removal-request', level='debug')
-            while not cls._stop_consuming_messages:
-                try:
-                    msg = await consumer.fetch_message(cancel_on_timeout=False)
-                except ConsumerTimeout:
-                    continue
-                ensure_future(cls._remove_repo(msg))
-                await msg.acknowledge()
+        return await cls._wait_for_thing(repo_notifications, cls._remove_repo,
+                                         routing_key='repo-removal-requested')
+
+    @classmethod
+    async def _update_repo(cls, msg):
+        await msg.acknowledge()
+        repo = await cls._get_repo_from_msg(msg)
+        repo_branches = msg.body.get('repo_branches')
+        external = msg.body.get('external')
+        wait_for_lock = msg.body.get('wait_for_lock', False)
+        kw = {'repo_branches': repo_branches,
+              'external': external,
+              'wait_for_lock': wait_for_lock}
+        if not repo:
+            return False
+        try:
+            await repo.update_code(**kw)
+        except Exception as e:
+            log_msg = '[_update_repo] Error update repo {}'.format(repo.id)
+            log_msg += '\nOriginal exception was {}'.format(str(e))
+            utils.log(log_msg, level='error')
+
+        return True
+
+    @classmethod
+    async def wait_update_request(cls):
+        return await cls._wait_for_thing(
+            repo_notifications, cls._update_repo,
+            routing_key='update-code-requested')
 
     @classmethod
     def stop_consuming_messages(cls):
@@ -392,7 +416,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await cls._notify_repo_creation(repo)
         if repo.schedule_poller:
             repo.schedule()
-        await repo._create_locks()
         return repo
 
     async def remove(self):
@@ -423,18 +446,46 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         # removes the repository from the file system.
         Thread(target=shutil.rmtree, args=[self.workdir]).start()
-        # creating locks just to declare the stuff...
-        await self._delete_locks()
         await self.delete()
 
     async def request_removal(self):
         """Request the removal of a repository by publishing a message in the
-        `repo_notifications` queue with the routing key
+        ``repo_notifications`` queue with the routing key
         `repo-removal-requested`."""
 
         msg = {'repository_id': str(self.id)}
         await repo_notifications.publish(
             msg, routing_key='repo-removal-requested')
+
+    async def request_code_update(self, repo_branches=None, external=None,
+                                  wait_for_lock=False):
+        """Request the code update of a repository by publishing a message in
+        the ``repo_notifications`` queue with the routing key
+        `repo-update-code-requested`.
+
+        :param repo_branches: A dictionary with information about the branches
+          to be updated. If no ``repo_branches`` all branches in the repo
+          config will be updated.
+
+          The dictionary has the following format.
+
+          .. code-block:: python
+
+             {'branch-name': notify_only_latest}
+
+        :param external: If we should update code from an external
+          (not the origin) repository, `external` is the information about
+          this remote repo.
+        :param wait_for_lock: Indicates if we should wait for the release of
+          the lock or simply return if we cannot get a lock.
+        """
+
+        msg = {'repository_id': str(self.id),
+               'repo_branches': repo_branches,
+               'external': external,
+               'wait_for_lock': wait_for_lock}
+        await repo_notifications.publish(
+            msg, routing_key='update-code-requested')
 
     @classmethod
     async def get(cls, **kwargs):
@@ -483,14 +534,15 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         """
 
         if wait_for_lock:
-            lock = await self.update_code_lock.acquire(routing_key=str(
-                self.id))
+            timeout = None
         else:
-            lock = await self.update_code_lock.try_acquire(routing_key=str(
-                self.id))
-            if not lock:
-                self.log('Repo already updating. Leaving.', level='debug')
-                return
+            timeout = 0.1
+
+        try:
+            lock = await self.update_code_lock.acquire_write(timeout)
+        except exc.TimeoutError:
+            self.log('Repo already updating. Leaving.', level='debug')
+            return
 
         async with lock:
             url = self.get_url()
@@ -521,37 +573,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                           'new_status': self.clone_status}
 
             await self._notify_status_changed(status_msg)
-
-    async def _create_locks(self):
-        # we publish a message in the queue
-        # using the repo id as the routing key so we can fetch the message
-        # based in the id.
-
-        await self.toxicbuild_conf_lock.declare()
-        await self.toxicbuild_conf_lock.publish({'mutex_for': str(self.id)},
-                                                routing_key=str(self.id))
-        await self.update_code_lock.declare()
-        await self.update_code_lock.publish({'mutex_for': str(self.id)},
-                                            routing_key=str(self.id))
-
-    async def _ack_msg_for(self, consumer):
-        async with consumer:
-            msg = await consumer.fetch_message()
-            await msg.acknowledge()
-
-    async def _delete_locks(self):
-        locks = [self.toxicbuild_conf_lock, self.update_code_lock]
-        for lock in locks:
-            try:
-                consumer = await lock.consume(routing_key=str(self.id),
-                                              timeout=5)
-                await self._ack_msg_for(consumer)
-                queue_name = lock._get_queue_name_for_routing_key(
-                    str(self.id), lock.queue_name)
-                await lock.queue_delete(queue_name)
-            except ConsumerTimeout:
-                self.log('lock not find for {}'.format(str(self.id)),
-                         level='warning')
 
     async def bootstrap(self):
         """Initialise the needed stuff. Schedules updates for code,

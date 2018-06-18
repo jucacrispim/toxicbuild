@@ -9,8 +9,14 @@ Install
 +++++++
 
 ToxicBuild is written in Python, and runs in Python3.5 and later. It uses
-mongodb to store data, rabbitmq for queues and git as vcs.
-You must have these installed.
+mongodb to store data, rabbitmq for queues, zookeeper for coordination
+and git as vcs. You must have these installed. In a debian system, use the
+following command:
+
+.. code-block:: sh
+
+   sudo apt-get install mongodb rabbitmq zookeeperd
+
 
 .. note::
 
@@ -119,6 +125,27 @@ settings to configure it:
 .. code-block:: python
 
    RABBITMQ_CONNECTION = {'host': 'localhost', 'port': 5672}
+
+
+Coordination
+^^^^^^^^^^^^
+
+The coordination of all the stuff in ToxicBuild in done using ZooKeeper.
+
+Use the `ZK_SERVERS` variable to set the servers for zookeeper. Use the
+`ZK_KWARGS` to the other arguments passed to aiozk.ZKClient. They are:
+
+* chroot
+* session_timeout=10,
+* default_acl
+* retry_policy
+* allow_read_only
+* read_timeout
+
+.. code-block:: python
+
+   ZK_SERVERS = ['someserver:1234', 'otherserver:8121']
+   ZK_KWARGS = {'chroot': '/somewhere'}
 
 
 Secure connections

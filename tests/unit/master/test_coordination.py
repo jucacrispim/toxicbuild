@@ -18,7 +18,6 @@
 
 from aiozk.exc import TimeoutError
 from unittest import TestCase
-from unittest.mock import Mock, patch
 from toxicbuild.master import coordination
 from tests import async_test
 
@@ -31,11 +30,9 @@ class ToxicLocksTest(TestCase):
         cls.lock_carrier = coordination.Lock('/path')
 
     @classmethod
-    @patch('aiozk.connection.log', Mock())
     @async_test
     async def tearDownClass(cls):
         await cls.lock_carrier.client._client.delete('/path')
-        await cls.lock_carrier.client._client.close()
 
     @async_test
     async def test_acquire_write_lock(self):

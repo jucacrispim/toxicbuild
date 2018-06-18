@@ -16,56 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with 2018. If not, see <http://www.gnu.org/licenses/>.
 
-import time
+
 from aiozk import ZKClient
-from aiozk.exc import TimeoutError, SessionLost
-from aiozk.recipes.shared_lock import SharedLock
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
-
-
-class ToxicSharedLock(SharedLock):
-    """This class is just to patch the original one to correct a bug
-    with the acquire timeout. I oppend a
-    `PR <https://github.com/tipsi/aiozk/pull/22>` to fix that. It it
-    gets approved, when the a new version is released with that this
-    thing must be removed."""
-
-    async def wait_in_line(self, znode_label, timeout=None, blocked_by=None):
-        time_limit = None
-        if timeout is not None:
-            time_limit = time.time() + timeout
-
-        await self.create_unique_znode(znode_label)
-
-        while True:
-            if time_limit and time.time() >= time_limit:
-                raise TimeoutError
-
-            owned_positions, contenders = await self.analyze_siblings()
-            if znode_label not in owned_positions:  # pragma no cover
-                raise SessionLost
-
-            blockers = contenders[:owned_positions[znode_label]]
-            if blocked_by:
-                blockers = [
-                    contender for contender in blockers
-                    if self.determine_znode_label(contender) in blocked_by
-                ]
-
-            if not blockers:
-                break
-
-            try:
-                await self.wait_on_sibling(blockers[-1], timeout)
-            except TimeoutError:
-                await self.delete_unique_znode(znode_label)
-
-        return self.make_contextmanager(znode_label)
+from toxicbuild.master.locks import ToxicSharedLock
 
 
 class ToxicZKClient(LoggerMixin):
     _zk_client = None
+    _started = False
+
+    # The lock paths that where already created in the process.
+    # This is here so we don't need to call create every time.
+    _created_paths = {}
 
     def __init__(self):
         if not self._client:
@@ -73,7 +37,6 @@ class ToxicZKClient(LoggerMixin):
             kwargs = getattr(settings, 'ZK_KWARGS', {})
             client = ZKClient(servers, **kwargs)
             self._client = client
-        self._started = False
 
     def _get_client(self):
         return type(self)._zk_client
@@ -83,13 +46,20 @@ class ToxicZKClient(LoggerMixin):
 
     async def _start(self):
         await self._client.start()
+        type(self)._started = True
 
     async def get_lock(self, path):
         if not self._started:  # pragma no branch
             await self._start()
         recipe = ToxicSharedLock(path)
         recipe.set_client(self._client)
+        await self._create_path(recipe)
         return recipe
+
+    async def _create_path(self, recipe):
+        if not type(self)._created_paths.get(recipe.base_path):
+            await recipe.create_znode(recipe.base_path)
+            type(self)._created_paths[recipe.base_path] = True
 
     _client = property(_get_client, _set_client)
 

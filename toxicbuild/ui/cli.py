@@ -586,7 +586,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         self.main_screen.set_text(text)
 
     async def show_waterfall(self, cmdline):
-        cmd, args, _ = parse_cmdline(cmdline)
+        _, args, _ = parse_cmdline(cmdline)
         try:
             repo_name = args[0]
         except IndexError:
@@ -710,6 +710,7 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         return formated_output
 
     def _format_repo_list(self, repos):
+        # pylint: disable=undefined-variable
         output = [(_('name'), _('vcs'))]  # noqa F821
         output += [(r['name'], r['vcs_type']) for r in repos]
         return self._format_output_columns(output)

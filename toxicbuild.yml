@@ -49,7 +49,7 @@ PEP8:  &PEP8
 
 XENON:  &XENON
   name: Checking code complexity
-  command: xenon toxicbuild -b B
+  command: xenon -e "toxicbuild/master/locks.py" toxicbuild -b B
   warning_on_fail: true
 
 

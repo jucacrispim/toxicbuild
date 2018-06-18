@@ -62,7 +62,6 @@ class GitPollerTest(TestCase):
 
     @async_test
     def tearDown(self):
-        yield from self.repo._delete_locks()
         channel = yield from repository.\
             scheduler_action.connection.protocol.channel()
         yield from channel.queue_delete(
@@ -468,7 +467,6 @@ class PollerServerTest(TestCase):
         server.sync_shutdown()
         self.assertTrue(server.shutdown.called)
 
-    @mock.patch.object(pollers.Repository, '_create_locks', AsyncMagicMock())
     @mock.patch.object(pollers.Poller, 'poll', AsyncMagicMock(
         return_value=True))
     @async_test
@@ -490,7 +488,6 @@ class PollerServerTest(TestCase):
             msg = await consumer.fetch_message()
             self.assertTrue(msg)
 
-    @mock.patch.object(pollers.Repository, '_create_locks', AsyncMagicMock())
     @mock.patch.object(pollers.Poller, 'poll', AsyncMagicMock(
         side_effect=Exception))
     @mock.patch.object(pollers.PollerServer, 'log', mock.Mock())
@@ -514,7 +511,6 @@ class PollerServerTest(TestCase):
             msg = await consumer.fetch_message()
             self.assertTrue(msg)
 
-    @mock.patch.object(pollers.Repository, '_create_locks', AsyncMagicMock())
     @mock.patch.object(pollers.Poller, 'external_poll', AsyncMagicMock(
         return_value=True))
     @async_test

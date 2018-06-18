@@ -49,6 +49,7 @@ class RepositoryTest(TestCase):
 
     @classmethod
     @patch('aioamqp.protocol.logger', Mock())
+    @patch('aiozk.connection.log', Mock())
     @async_test
     async def tearDownClass(cls):
         if cls.exchange:
@@ -56,10 +57,6 @@ class RepositoryTest(TestCase):
                 'toxicmaster.poll_status_queue')
             await cls.exchange.channel.exchange_delete(
                 'toxicmaster.poll_status')
-            await cls.exchange.channel.queue_delete(
-                'toxicmaster-repo-update-code-mutex-queue')
-            await cls.exchange.channel.exchange_delete(
-                'toxicmaster-repo-update-code-mutex')
 
         await disconnect_exchanges()
 
@@ -72,7 +69,6 @@ class RepositoryTest(TestCase):
 
     @async_test
     async def tearDown(self):
-        await self.repo._delete_locks()
         await repository.Repository.drop_collection()
         await repository.RepositoryRevision.drop_collection()
         await repository.BuildSet.drop_collection()
@@ -255,7 +251,9 @@ class RepositoryTest(TestCase):
         spec=repository.Repository._get_repo_from_msg, return_value=None))
     @async_test
     async def test_remove_repo_no_repo(self):
-        r = await repository.Repository._remove_repo({})
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'some-id'}
+        r = await repository.Repository._remove_repo(msg)
         self.assertFalse(r)
 
     @patch.object(repository.Repository, '_get_repo_from_msg', AsyncMagicMock(
@@ -264,7 +262,9 @@ class RepositoryTest(TestCase):
                                      mock_cls=AsyncMagicMock)))
     @async_test
     async def test_remove_repo(self):
-        r = await repository.Repository._remove_repo({})
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'some-id'}
+        r = await repository.Repository._remove_repo(msg)
         repo = repository.Repository._get_repo_from_msg.return_value
         self.assertTrue(repo.remove.called)
         self.assertTrue(r)
@@ -278,10 +278,56 @@ class RepositoryTest(TestCase):
     async def test_remove_repo_exception(self):
         repo = repository.Repository._get_repo_from_msg.return_value
         repo.remove.side_effect = Exception
-        r = await repository.Repository._remove_repo({})
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'some-id'}
+        r = await repository.Repository._remove_repo(msg)
         self.assertTrue(repo.remove.called)
         self.assertTrue(repository.utils.log.called)
         self.assertTrue(r)
+
+    @patch.object(repository.Repository, '_get_repo_from_msg', AsyncMagicMock(
+        spec=repository.Repository._get_repo_from_msg,
+        return_value=create_autospec(spec=repository.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
+        spec=repository.Repository.update_code))
+    @async_test
+    async def test_update_repo(self):
+        repo = repository.Repository._get_repo_from_msg.return_value
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'some-id'}
+        r = await repository.Repository._update_repo(msg)
+        self.assertTrue(r)
+        self.assertTrue(repo.update_code.called)
+
+    @patch.object(repository.Repository, '_get_repo_from_msg', AsyncMagicMock(
+        spec=repository.Repository._get_repo_from_msg,
+        return_value=create_autospec(spec=repository.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
+        spec=repository.Repository.update_code))
+    @patch.object(repository.utils, 'log', Mock())
+    @async_test
+    async def test_update_repo_exception(self):
+        repo = repository.Repository._get_repo_from_msg.return_value
+        repo.update_code.side_effect = Exception
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'some-id'}
+        r = await repository.Repository._update_repo(msg)
+        self.assertTrue(r)
+        self.assertTrue(repo.update_code.called)
+        self.assertTrue(repository.utils.log.called)
+
+    @patch.object(repository.Repository, '_get_repo_from_msg', AsyncMagicMock(
+        spec=repository.Repository._get_repo_from_msg, return_value=None))
+    @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
+        spec=repository.Repository.update_code))
+    @async_test
+    async def test_update_repo_no_repo(self):
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'some-id'}
+        r = await repository.Repository._update_repo(msg)
+        self.assertFalse(r)
 
     @patch.object(repository.repo_notifications, 'consume',
                   AsyncMagicMock(spec=repository.repo_notifications.consume))
@@ -317,6 +363,23 @@ class RepositoryTest(TestCase):
         await repository.Repository.wait_removal_request()
         self.assertFalse(repository.Repository._remove_repo.called)
 
+    @patch.object(repository.repo_notifications, 'consume',
+                  AsyncMagicMock(spec=repository.repo_notifications.consume))
+    @patch.object(repository.Repository, '_update_repo', AsyncMagicMock(
+        spec=repository.Repository._update_repo))
+    @async_test
+    async def test_wait_upate_request(self):
+
+        async def fm(cancel_on_timeout=False):
+            repository.Repository.stop_consuming_messages()
+            msg = AsyncMagicMock()
+            msg.body = {}
+            return msg
+
+        consumer = repository.repo_notifications.consume.return_value
+        consumer.fetch_message = fm
+        await repository.Repository.wait_update_request()
+
     @async_test
     async def test_to_dict(self):
         d = await self.repo.to_dict()
@@ -335,12 +398,19 @@ class RepositoryTest(TestCase):
         await self.repo.request_removal()
         self.assertTrue(repository.repo_notifications.publish.called)
 
-    # @patch.object(repository.Repository, 'objects', AsyncMagicMock())
-    # @async_test
-    # async def test_get_repo(self):
-    #     repo = await repository.Repository.get(id='some-id')
-    #     self.assertTrue(repository.Repository.objects.get.called)
-    #     self.assertTrue(repo._create_locks.called)
+    @async_test
+    async def test_request_code_update(self):
+        await self.repo.request_code_update()
+        self.GOT_MSG = False
+        async with await repository.repo_notifications.consume(
+                routing_key='update-code-requested', timeout=0.1) as consumer:
+            try:
+                async for msg in consumer:
+                    await msg.acknowledge()
+                    self.GOT_MSG = True
+            except repository.ConsumerTimeout:
+                pass
+        self.assertTrue(self.GOT_MSG)
 
     def test_vcs(self):
         self.assertTrue(self.repo.vcs)
@@ -398,7 +468,6 @@ class RepositoryTest(TestCase):
         repo.schedule()
         builder = repository.Builder(name='b1', repository=repo)
         await builder.save()
-        await repo._create_locks()
         await repo.remove()
 
         builders_count = await repository.Builder.objects.filter(
@@ -415,7 +484,6 @@ class RepositoryTest(TestCase):
         self.assertTrue(repository.scheduler_action.publish.called)
 
     @patch.object(repository, 'repo_added', AsyncMagicMock())
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
     async def test_get(self):
@@ -448,23 +516,9 @@ class RepositoryTest(TestCase):
              'clone_status': 'clone-exception'},
             routing_key=str(self.repo.id))
         await self.repo.save()
-        # await self.repo._create_locks()
         await self.repo.update_code()
-        # await self.repo._delete_locks()
         await self.repo.reload()
         self.assertEqual(self.repo.clone_status, 'clone-exception')
-
-    @async_test
-    async def test_delete_locks_timeout(self):
-        await self.repo.save()
-        self.repo.log = Mock()
-        self.repo.toxicbuild_conf_lock = AsyncMagicMock()
-        self.repo.update_code_lock = AsyncMagicMock()
-        self.repo.toxicbuild_conf_lock.consume.\
-            side_effect = repository.ConsumerTimeout
-
-        await self.repo._delete_locks()
-        self.assertTrue(self.repo.log.called)
 
     @patch.object(repository, 'update_code', AsyncMagicMock())
     @patch.object(exchange, 'uuid4', MagicMock())
@@ -483,9 +537,7 @@ class RepositoryTest(TestCase):
              'clone_status': 'ready'},
             routing_key=str(self.repo.id))
         await self.repo.save()
-        # await self.repo._create_locks()
         await self.repo.update_code()
-        # await self.repo._delete_locks()
         await asyncio.sleep(0.1)
         await self.repo.reload()
         self.assertEqual(self.repo.clone_status, 'ready')
@@ -507,9 +559,7 @@ class RepositoryTest(TestCase):
              'clone_status': 'ready'},
             routing_key=str(self.repo.id))
         await self.repo.save()
-        # await self.repo._create_locks()
         await self.repo.update_code(wait_for_lock=True)
-        # await self.repo._delete_locks()
         await asyncio.sleep(0.1)
         await self.repo.reload()
         self.assertEqual(self.repo.clone_status, 'ready')
@@ -519,8 +569,7 @@ class RepositoryTest(TestCase):
     async def test_update_code_locked(self):
         self.repo.clone_status = 'cloning'
         await self.repo.save()
-        lock = await self.repo.update_code_lock.try_acquire(
-            routing_key=str(self.repo.id))
+        lock = await self.repo.update_code_lock.acquire_write()
         async with lock:
             self.repo.get_url = MagicMock(spec=self.repo.get_url)
             await self.repo.update_code()
@@ -547,9 +596,7 @@ class RepositoryTest(TestCase):
             routing_key=str(self.repo.id))
 
         self.repo._poller_instance.poll = asyncio.coroutine(lambda: True)
-        # await self.repo._create_locks()
         await self.repo.update_code()
-        # await self.repo._delete_locks()
         self.assertTrue(repository.repo_status_changed.publish.called)
 
     @async_test
@@ -636,7 +683,6 @@ class RepositoryTest(TestCase):
         await self.repo.add_or_update_branch('master')
         self.assertEqual(len(self.repo.branches), 1)
 
-    @patch.object(repository.Repository, '_create_locks', AsyncMagicMock())
     @async_test
     async def test_update_branch(self):
         await self.repo.add_or_update_branch('master')
@@ -985,7 +1031,6 @@ class RepositoryTest(TestCase):
             vcs_type='git', update_seconds=100, clone_status='ready',
             owner=self.owner)
         await self.repo.save()
-        await self.repo._create_locks()
 
         await self.repo.save()
         rep = self.repo

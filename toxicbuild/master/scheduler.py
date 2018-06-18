@@ -165,7 +165,6 @@ class SchedulerServer(BaseQueueReactorServer):
             self.log('Repository {} DoesNotExist'.format(repo_id),
                      level='error')
             return False
-        await repo._create_locks()
         sched_hash = self.scheduler.add(repo.update_code,
                                         repo.update_seconds)
         self._sched_hashes[str(repo.id)] = sched_hash

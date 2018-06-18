@@ -26,8 +26,6 @@ conn_kw = settings.RABBITMQ_CONNECTION
 
 conn = AmqpConnection(**conn_kw)
 
-locks_conn = AmqpConnection(**conn_kw)
-
 update_code = Exchange('toxicmaster.update_code', connection=conn,
                        exchange_type='direct', durable=True,
                        bind_publisher=True)
@@ -59,7 +57,6 @@ build_notifications = core_exchanges['build_notifications']
 async def connect_exchanges():
 
     await conn.connect()
-    await locks_conn.connect()
 
     await update_code.declare()
     await revisions_added.declare()
@@ -74,4 +71,3 @@ async def connect_exchanges():
 
 async def disconnect_exchanges():
     await conn.disconnect()
-    await locks_conn.disconnect()
