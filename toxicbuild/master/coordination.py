@@ -27,6 +27,10 @@ class ToxicZKClient(LoggerMixin):
     _zk_client = None
     _started = False
 
+    # The lock paths that where already created in the process.
+    # This is here so we don't need to call create every time.
+    _created_paths = {}
+
     def __init__(self):
         if not self._client:
             servers = ','.join(settings.ZK_SERVERS)
@@ -49,7 +53,13 @@ class ToxicZKClient(LoggerMixin):
             await self._start()
         recipe = ToxicSharedLock(path)
         recipe.set_client(self._client)
+        await self._create_path(recipe)
         return recipe
+
+    async def _create_path(self, recipe):
+        if not type(self)._created_paths.get(recipe.base_path):
+            await recipe.create_znode(recipe.base_path)
+            type(self)._created_paths[recipe.base_path] = True
 
     _client = property(_get_client, _set_client)
 
