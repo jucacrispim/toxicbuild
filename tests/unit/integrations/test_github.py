@@ -693,7 +693,33 @@ class GithubCheckRunTest(TestCase):
         buildset.finished = now()
         run_status = 'completed'
         conclusion = None
-        github.requests.post.return_value.text = ''
+        ret = Mock()
+        ret.text = ''
+        ret.status = 201
+        github.requests.post.return_value = ret
 
         await self.check_run._send_message(buildset, run_status, conclusion)
+        self.assertTrue(github.requests.post.called)
+
+    @patch.object(github.requests, 'post', AsyncMagicMock(
+        spec=github.requests.post))
+    @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
+        spec=github.GithubInstallation._get_header))
+    @async_test
+    async def test_send_message_bad_request(self):
+        buildset = github.BuildSet(repository=self.repo)
+        buildset.branch = 'master'
+        buildset.commit = '123asdf'
+        buildset.started = now()
+        buildset.finished = now()
+        run_status = 'completed'
+        conclusion = None
+        ret = Mock()
+        ret.text = ''
+        ret.status = 400
+        github.requests.post.return_value = ret
+
+        with self.assertRaises(github.BadRequestToGithubAPI):
+            await self.check_run._send_message(buildset, run_status,
+                                               conclusion)
         self.assertTrue(github.requests.post.called)
