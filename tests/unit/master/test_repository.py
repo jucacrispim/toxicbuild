@@ -369,7 +369,6 @@ class RepositoryTest(TestCase):
         spec=repository.Repository._update_repo))
     @async_test
     async def test_wait_upate_request(self):
-        msg = {'repository_id': str(self.repo.id)}
 
         async def fm(cancel_on_timeout=False):
             repository.Repository.stop_consuming_messages()
@@ -407,6 +406,7 @@ class RepositoryTest(TestCase):
                 routing_key='update-code-requested', timeout=0.1) as consumer:
             try:
                 async for msg in consumer:
+                    await msg.acknowledge()
                     self.GOT_MSG = True
             except repository.ConsumerTimeout:
                 pass
