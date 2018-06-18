@@ -83,6 +83,8 @@ def toxicinit(server):
     ensure_future(Repository.wait_build_requests())
     log('[init] Waiting removal requests')
     ensure_future(Repository.wait_removal_request())
+    log('[init] Waiting code update requests')
+    ensure_future(Repository.wait_update_request())
 
     log('[init] Boostrap for everyone', level='debug')
     yield from Repository.bootstrap_all()
