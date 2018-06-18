@@ -288,8 +288,9 @@ class GithubInstallation(LoggerMixin, Document):
         if repo.fetch_url != url:
             repo.fetch_url = url
             await repo.save()
-        await repo.update_code(repo_branches=repo_branches, external=external,
-                               wait_for_lock=wait_for_lock)
+        await repo.request_code_update(
+            repo_branches=repo_branches, external=external,
+            wait_for_lock=wait_for_lock)
 
     @property
     def auth_token_url(self):

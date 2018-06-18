@@ -348,7 +348,7 @@ class GithubInstallationTest(TestCase):
             id=self.installation.id)
         self.assertTrue(install.repositories)
 
-    @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
+    @patch.object(repository.Repository, 'request_code_update', AsyncMagicMock(
         spec=repository.Repository.update_code))
     @patch.object(github.GithubInstallation, '_get_auth_url', AsyncMagicMock(
         spec=github.GithubInstallation._get_auth_url,
@@ -364,7 +364,7 @@ class GithubInstallationTest(TestCase):
             github_id=1234, repository_id=str(repo.id), full_name='a/b')
         self.installation.repositories.append(install_repo)
         await self.installation.update_repository(1234)
-        self.assertTrue(repository.Repository.update_code.called)
+        self.assertTrue(repository.Repository.request_code_update.called)
 
     @patch.object(repository, 'scheduler_action', AsyncMagicMock(
         spec=repository.scheduler_action))
@@ -385,7 +385,7 @@ class GithubInstallationTest(TestCase):
         await self.installation.remove_repository(1234)
         self.assertTrue(repository.Repository.request_removal.called)
 
-    @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
+    @patch.object(repository.Repository, 'request_code_update', AsyncMagicMock(
         spec=repository.Repository.update_code))
     @patch.object(github.GithubInstallation, '_get_auth_url', AsyncMagicMock(
         spec=github.GithubInstallation._get_auth_url,
@@ -405,7 +405,7 @@ class GithubInstallationTest(TestCase):
             github_id=1234, repository_id=repo.id, full_name='a/b')
         self.installation.repositories.append(install_repo)
         await self.installation.update_repository(1234)
-        self.assertTrue(repository.Repository.update_code.called)
+        self.assertTrue(repository.Repository.request_code_update.called)
 
     @async_test
     async def test_get_repo_by_github_id_bad_repo(self):

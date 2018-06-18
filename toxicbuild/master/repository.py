@@ -284,10 +284,16 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     async def _update_repo(cls, msg):
         await msg.acknowledge()
         repo = await cls._get_repo_from_msg(msg)
+        repo_branches = msg.body.get('repo_branches')
+        external = msg.body.get('external')
+        wait_for_lock = msg.body.get('wait_for_lock', False)
+        kw = {'repo_branches': repo_branches,
+              'external': external,
+              'wait_for_lock': wait_for_lock}
         if not repo:
             return False
         try:
-            await repo.update_code()
+            await repo.update_code(**kw)
         except Exception as e:
             log_msg = '[_update_repo] Error update repo {}'.format(repo.id)
             log_msg += '\nOriginal exception was {}'.format(str(e))
@@ -451,14 +457,33 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await repo_notifications.publish(
             msg, routing_key='repo-removal-requested')
 
-    async def request_code_update(self, repo_branches=None, external=None):
+    async def request_code_update(self, repo_branches=None, external=None,
+                                  wait_for_lock=False):
         """Request the code update of a repository by publishing a message in
         the ``repo_notifications`` queue with the routing key
-        `repo-update-code-requested`."""
+        `repo-update-code-requested`.
+
+        :param repo_branches: A dictionary with information about the branches
+          to be updated. If no ``repo_branches`` all branches in the repo
+          config will be updated.
+
+          The dictionary has the following format.
+
+          .. code-block:: python
+
+             {'branch-name': notify_only_latest}
+
+        :param external: If we should update code from an external
+          (not the origin) repository, `external` is the information about
+          this remote repo.
+        :param wait_for_lock: Indicates if we should wait for the release of
+          the lock or simply return if we cannot get a lock.
+        """
 
         msg = {'repository_id': str(self.id),
                'repo_branches': repo_branches,
-               'external': external}
+               'external': external,
+               'wait_for_lock': wait_for_lock}
         await repo_notifications.publish(
             msg, routing_key='update-code-requested')
 
