@@ -21,10 +21,10 @@ import asyncio
 from asyncio import ensure_future
 import time
 from toxicbuild.core.utils import LoggerMixin
+from toxicbuild.master.consumers import BaseConsumer
 from toxicbuild.master.exceptions import UnknownSchedulerAction
 from toxicbuild.master.exchanges import scheduler_action
 from toxicbuild.master.repository import Repository
-from toxicbuild.master.utils import BaseQueueReactorServer
 
 
 __doc__ = """
@@ -120,7 +120,7 @@ class TaskScheduler(LoggerMixin):
         self._stop = True
 
 
-class SchedulerServer(BaseQueueReactorServer):
+class SchedulerServer(BaseConsumer):
     """Simple server to add or remove something from the scheduler."""
 
     def __init__(self, loop=None):
