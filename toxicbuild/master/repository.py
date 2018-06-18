@@ -165,155 +165,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         """Returns the number of running builds among all the repos."""
         return cls._running_builds
 
-    @classmethod
-    async def _get_repo_from_msg(cls, msg):
-        try:
-            repo = await cls.get(id=msg.body['repository_id'])
-        except Repository.DoesNotExist:
-            log_msg = '[_get_repo_from_msg] repo {} does not exist'.format(
-                msg.body['repository_id'])
-            utils.log(log_msg, level='warning')
-
-            await msg.acknowledge()
-            return
-
-        return repo
-
-    @classmethod
-    async def _add_builds(cls, msg):
-        repo = await cls._get_repo_from_msg(msg)
-        if not repo:
-            return
-
-        body = msg.body
-        try:
-            revisions = await RepositoryRevision.objects.filter(
-                id__in=body['revisions_ids']).to_list()
-
-            await repo.build_manager.add_builds(revisions)
-        except Exception as e:
-            log_msg = 'Error adding builds for repo {}. '.format(repo.id)
-            log_msg += 'Exception was {}'.format(str(e))
-            utils.log(log_msg, level='error')
-        finally:
-            await msg.acknowledge()
-
-    @classmethod
-    async def _wait_for_thing(cls, exchange, callback, routing_key=None):
-        kw = {'timeout': 1000}
-        if routing_key:
-            kw['routing_key'] = routing_key
-
-        async with await exchange.consume(**kw) as consumer:
-            while not cls._stop_consuming_messages:
-                try:
-                    msg = await consumer.fetch_message(cancel_on_timeout=False)
-                except ConsumerTimeout:
-                    continue
-
-                cls.log_cls('Got message for routing_key {}'.format(
-                    routing_key))
-                ensure_future(callback(msg))
-
-    @classmethod
-    async def wait_revisions(cls):
-        """Waits for messages sent by pollers about new revisions."""
-
-        await cls._wait_for_thing(revisions_added, cls._add_builds)
-
-    @classmethod
-    async def _add_requested_build(cls, msg):
-        repo = await cls._get_repo_from_msg(msg)
-        if not repo:
-            return
-
-        body = msg.body
-        try:
-            branch = body['branch']
-            builder_name = body.get('builder_name')
-            named_tree = body.get('named_tree')
-            slaves_ids = body.get('slaves_ids')
-            if slaves_ids:
-                slaves = await Slave.objects.filter(
-                    id__in=body['slaves_ids']).to_list()
-            else:
-                slaves = []
-
-            await repo.start_build(branch, builder_name=builder_name,
-                                   named_tree=named_tree, slaves=slaves)
-        except Exception as e:
-            log_msg = 'Error starting builds for {}. '.format(repo.id)
-            log_msg += 'Exception was {}'.format(str(e))
-            utils.log(log_msg, level='error')
-        finally:
-            await msg.acknowledge()
-
-    @classmethod
-    async def wait_build_requests(cls):
-        """Waits for build requests that arrive  in the `repo_notifications`
-        exchange with the routing key `build-requested`"""
-
-        await cls._wait_for_thing(
-            repo_notifications, cls._add_requested_build,
-            routing_key='build-requested')
-
-    @classmethod
-    async def _remove_repo(cls, msg):
-        await msg.acknowledge()
-        repo = await cls._get_repo_from_msg(msg)
-        if not repo:
-            return False
-        try:
-            await repo.remove()
-        except Exception as e:
-            log_msg = '[_remove_repo] Error removing repo {}'.format(repo.id)
-            log_msg += '\nOriginal exception was {}'.format(str(e))
-            utils.log(log_msg, level='error')
-
-        return True
-
-    @classmethod
-    async def wait_removal_request(cls):
-        """Waits for removal requests in the `repo_notifications`
-        exchange with the routing key `repo-removal-requested`"""
-
-        return await cls._wait_for_thing(repo_notifications, cls._remove_repo,
-                                         routing_key='repo-removal-requested')
-
-    @classmethod
-    async def _update_repo(cls, msg):
-        await msg.acknowledge()
-        repo = await cls._get_repo_from_msg(msg)
-        repo_branches = msg.body.get('repo_branches')
-        external = msg.body.get('external')
-        wait_for_lock = msg.body.get('wait_for_lock', False)
-        kw = {'repo_branches': repo_branches,
-              'external': external,
-              'wait_for_lock': wait_for_lock}
-        if not repo:
-            return False
-        try:
-            await repo.update_code(**kw)
-        except Exception as e:
-            log_msg = '[_update_repo] Error update repo {}'.format(repo.id)
-            log_msg += '\nOriginal exception was {}'.format(str(e))
-            utils.log(log_msg, level='error')
-
-        return True
-
-    @classmethod
-    async def wait_update_request(cls):
-        return await cls._wait_for_thing(
-            repo_notifications, cls._update_repo,
-            routing_key='update-code-requested')
-
-    @classmethod
-    def stop_consuming_messages(cls):
-        """Informs that :class:`~toxicbuild.master.repository.Repository`
-        should stop consumming messages from exchanges."""
-
-        cls._stop_consuming_messages = True
-
     async def to_dict(self, id_as_str=False):
         """Returns a dict representation of the object."""
 
@@ -946,7 +797,7 @@ class RepositoryRevision(Document):
 
         - ``ci: skip`` - If in the commit body there's this instruction,
            no builds will be created for this revision. The regex for
-           match this instruction is ``#\s*ci:\s*skip(\s+|$)``
+           match this instruction is ``(^|.*\s+)ci:\s*skip(\s+|$)``
         """
         if not self.body:
             # No body, no instructions, we create builds normally
@@ -961,3 +812,168 @@ class RepositoryRevision(Document):
                 return True
 
         return False
+
+
+class RepositoryMessageConsumer(utils.LoggerMixin):
+    """Waits for messages published in the ``repo_notifications``
+    exchange and reacts to them."""
+
+    REPOSITORY_CLASS = Repository
+    REPOSITORY_REVISION_CLASS = RepositoryRevision
+    SLAVE_CLASS = Slave
+
+    _stop_consuming_messages = False
+
+    def run(self):
+        """Starts the repository message consumer.
+        """
+        self.log('[init] Waiting revisions')
+        ensure_future(self.wait_revisions())
+        self.log('[init] Waiting build requests')
+        ensure_future(self.wait_build_requests())
+        self.log('[init] Waiting removal requests')
+        ensure_future(self.wait_removal_request())
+        self.log('[init] Waiting code update requests')
+        ensure_future(self.wait_update_request())
+
+    async def _get_repo_from_msg(self, msg):
+        try:
+            repo = await self.REPOSITORY_CLASS.get(
+                id=msg.body['repository_id'])
+        except Repository.DoesNotExist:
+            log_msg = '[_get_repo_from_msg] repo {} does not exist'.format(
+                msg.body['repository_id'])
+            self.log(log_msg, level='warning')
+
+            await msg.acknowledge()
+            return
+
+        return repo
+
+    async def _add_builds(self, msg):
+        repo = await self._get_repo_from_msg(msg)
+        if not repo:
+            return
+
+        body = msg.body
+        try:
+            revisions = await self.REPOSITORY_REVISION_CLASS.objects.filter(
+                id__in=body['revisions_ids']).to_list()
+
+            await repo.build_manager.add_builds(revisions)
+        except Exception as e:
+            log_msg = 'Error adding builds for repo {}. '.format(repo.id)
+            log_msg += 'Exception was {}'.format(str(e))
+            self.log(log_msg, level='error')
+        finally:
+            await msg.acknowledge()
+
+    async def _wait_for_thing(self, exchange, callback, routing_key=None):
+        kw = {'timeout': 1000}
+        if routing_key:
+            kw['routing_key'] = routing_key
+
+        async with await exchange.consume(**kw) as consumer:
+            while not type(self)._stop_consuming_messages:
+                try:
+                    msg = await consumer.fetch_message(cancel_on_timeout=False)
+                except ConsumerTimeout:
+                    continue
+
+                self.log('Got message for routing_key {}'.format(
+                    routing_key))
+                ensure_future(callback(msg))
+
+    async def wait_revisions(self):
+        """Waits for messages sent by pollers about new revisions."""
+
+        await self._wait_for_thing(revisions_added, self._add_builds)
+
+    async def _add_requested_build(self, msg):
+        repo = await self._get_repo_from_msg(msg)
+        if not repo:
+            return
+
+        body = msg.body
+        try:
+            branch = body['branch']
+            builder_name = body.get('builder_name')
+            named_tree = body.get('named_tree')
+            slaves_ids = body.get('slaves_ids')
+            if slaves_ids:
+                slaves = await self.SLAVE_CLASS.objects.filter(
+                    id__in=body['slaves_ids']).to_list()
+            else:
+                slaves = []
+
+            await repo.start_build(branch, builder_name=builder_name,
+                                   named_tree=named_tree, slaves=slaves)
+        except Exception as e:
+            log_msg = 'Error starting builds for {}. '.format(repo.id)
+            log_msg += 'Exception was {}'.format(str(e))
+            self.log(log_msg, level='error')
+        finally:
+            await msg.acknowledge()
+
+    async def wait_build_requests(self):
+        """Waits for build requests that arrive  in the `repo_notifications`
+        exchange with the routing key `build-requested`"""
+
+        await self._wait_for_thing(
+            repo_notifications, self._add_requested_build,
+            routing_key='build-requested')
+
+    async def _remove_repo(self, msg):
+        await msg.acknowledge()
+        repo = await self._get_repo_from_msg(msg)
+        if not repo:
+            return False
+        try:
+            await repo.remove()
+        except Exception as e:
+            log_msg = '[_remove_repo] Error removing repo {}'.format(repo.id)
+            log_msg += '\nOriginal exception was {}'.format(str(e))
+            utils.log(log_msg, level='error')
+
+        return True
+
+    async def wait_removal_request(self):
+        """Waits for removal requests in the `repo_notifications`
+        exchange with the routing key `repo-removal-requested`"""
+
+        return await self._wait_for_thing(repo_notifications,
+                                          self._remove_repo,
+                                          routing_key='repo-removal-requested')
+
+    async def _update_repo(self, msg):
+        await msg.acknowledge()
+        repo = await self._get_repo_from_msg(msg)
+        repo_branches = msg.body.get('repo_branches')
+        external = msg.body.get('external')
+        wait_for_lock = msg.body.get('wait_for_lock', False)
+        kw = {'repo_branches': repo_branches,
+              'external': external,
+              'wait_for_lock': wait_for_lock}
+        if not repo:
+            return False
+        try:
+            await repo.update_code(**kw)
+        except Exception as e:
+            log_msg = '[_update_repo] Error update repo {}'.format(repo.id)
+            log_msg += '\nOriginal exception was {}'.format(str(e))
+            self.log(log_msg, level='error')
+
+        return True
+
+    async def wait_update_request(self):
+        return await self._wait_for_thing(
+            repo_notifications, self._update_repo,
+            routing_key='update-code-requested')
+
+    @classmethod
+    def stop_consuming_messages(cls):
+        """Informs that
+        :class:`~toxicbuild.master.repository.RepositoryMessageConsumer` should
+        stop consumming messages from exchanges."""
+
+        cls._stop_consuming_messages = True

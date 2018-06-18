@@ -34,7 +34,7 @@ from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder
-from toxicbuild.master.repository import Repository
+from toxicbuild.master.repository import Repository, RepositoryMessageConsumer
 from toxicbuild.master.exceptions import (UIFunctionNotFound,
                                           OwnerDoesNotExist, NotEnoughPerms)
 from toxicbuild.master.exchanges import ui_notifications
@@ -849,7 +849,7 @@ class HoleServer(LoggerMixin):
     async def shutdown(self):
         self.log('Shutting down')
         self.protocol.set_shutting_down()
-        Repository.stop_consuming_messages()
+        RepositoryMessageConsumer.stop_consuming_messages()
         while Repository.get_running_builds() > 0:
             self.log('Waiting for {} build to finish'.format(
                 Repository.get_running_builds()))
