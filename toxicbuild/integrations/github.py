@@ -569,4 +569,6 @@ class GithubCheckRun(MasterPlugin):
             accept='application/vnd.github.antiope-preview+json')
         data = json.dumps(payload)
         r = await requests.post(url, headers=header, data=data)
+        if r.status != 201:
+            raise BadRequestToGithubAPI(r.status, r.text, url)
         self.log(r.text, level='debug')
