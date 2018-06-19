@@ -19,7 +19,7 @@
 from unittest import TestCase
 from unittest.mock import Mock, patch
 from toxicbuild.master import consumers
-from tests import async_test, AsyncMagicMock
+from tests import async_test, AsyncMagicMock, create_autospec
 
 
 class BaseConsumerTest(TestCase):
@@ -53,9 +53,9 @@ class BaseConsumerTest(TestCase):
 
     @async_test
     async def test_run_routing_key(self):
-        server = self.srv_class(self.exchange, lambda: None)
+        server = self.srv_class(self.exchange, lambda: None, routing_key='bla')
         server.msg_callback = server.handle_update_request
-        await server.run(routing_key='bla')
+        await server.run()
         self.assertTrue(self.handle.called)
         kw = self.exchange.consume.call_args[1]
         self.assertIn('routing_key', kw.keys())
@@ -99,3 +99,235 @@ class BaseConsumerTest(TestCase):
         server = consumers.BaseConsumer(exchange, lambda: None)
         server.sync_shutdown()
         self.assertTrue(server.shutdown.called)
+
+
+class RepositoryMessageConsumerTest(TestCase):
+
+    def tearDown(self):
+        consumers.RepositoryMessageConsumer._stop_consuming_messages = False
+
+    @patch.object(consumers.Repository, 'get', AsyncMagicMock())
+    @patch.object(consumers.RepositoryRevision, 'objects', Mock())
+    @async_test
+    async def test_add_builds(self):
+        repo = create_autospec(spec=consumers.Repository,
+                               mock_cls=AsyncMagicMock)
+        repo.build_manager = AsyncMagicMock()
+        consumers.Repository.get.return_value = repo
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf',
+                    'revisions_ids': []}
+        to_list = AsyncMagicMock()
+        consumers.RepositoryRevision\
+            .objects.filter.return_value.to_list = to_list
+        message_consumer = consumers.RepositoryMessageConsumer()
+        await message_consumer._add_builds(msg)
+        self.assertTrue(consumers.Repository.get.called)
+        self.assertTrue(to_list.called)
+        self.assertTrue(msg.acknowledge.called)
+
+    @patch.object(consumers.Repository, 'get', AsyncMagicMock())
+    @patch.object(consumers.RepositoryRevision, 'objects', Mock())
+    @patch.object(consumers.LoggerMixin, 'log', Mock())
+    @async_test
+    async def test_add_builds_exception(self):
+        repo = create_autospec(spec=consumers.Repository,
+                               mock_cls=AsyncMagicMock)
+        consumers.Repository.get.return_value = repo
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf', 'revisions_ids': []}
+        to_list = AsyncMagicMock(side_effect=Exception)
+        consumers.RepositoryRevision\
+            .objects.filter.return_value.to_list = to_list
+        message_consumer = consumers.RepositoryMessageConsumer()
+        await message_consumer._add_builds(msg)
+        self.assertTrue(consumers.Repository.get.called)
+        self.assertTrue(to_list.called)
+        self.assertTrue(msg.acknowledge.called)
+
+    @patch.object(consumers.Repository, 'get', AsyncMagicMock(
+        side_effect=consumers.Repository.DoesNotExist))
+    @patch.object(consumers.LoggerMixin, 'log', Mock())
+    @patch.object(consumers.RepositoryRevision, 'objects', Mock())
+    @async_test
+    async def test_add_builds_repo_dont_exist(self):
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf'}
+        to_list = AsyncMagicMock()
+        consumers.RepositoryRevision\
+            .objects.filter.return_value.to_list = to_list
+        message_consumer = consumers.RepositoryMessageConsumer()
+        await message_consumer._add_builds(msg)
+        self.assertTrue(consumers.Repository.get.called)
+        self.assertFalse(to_list.called)
+        self.assertTrue(msg.acknowledge.called)
+
+    @patch.object(consumers.Repository, 'get', AsyncMagicMock())
+    @patch.object(consumers.Slave, 'objects', Mock())
+    @async_test
+    async def test_add_requested_build(self):
+        repo = create_autospec(spec=consumers.Repository,
+                               mock_cls=AsyncMagicMock)
+        consumers.Repository.get.return_value = repo
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf',
+                    'branch': 'master',
+                    'slaves_ids': ['some-slave-id']}
+        to_list = AsyncMagicMock()
+        consumers.Slave.objects.filter.return_value.to_list = to_list
+        message_consumer = consumers.RepositoryMessageConsumer()
+        await message_consumer._add_requested_build(msg)
+        self.assertTrue(repo.start_build.called)
+
+    @patch.object(consumers.Repository, 'get', AsyncMagicMock(
+        return_value=None))
+    @patch.object(consumers.Slave, 'objects', Mock())
+    @async_test
+    async def test_add_requested_build_no_repo(self):
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf',
+                    'branch': 'master',
+                    'slave_ids': ['some-slave-id']}
+        message_consumer = consumers.RepositoryMessageConsumer()
+        await message_consumer._add_requested_build(msg)
+        self.assertFalse(consumers.Slave.objects.filter.called)
+
+    @patch.object(consumers.Repository, 'get', AsyncMagicMock())
+    @patch.object(consumers.Slave, 'objects', Mock())
+    @async_test
+    async def test_add_requested_build_no_slaves(self):
+        repo = create_autospec(spec=consumers.Repository,
+                               mock_cls=AsyncMagicMock)
+        consumers.Repository.get.return_value = repo
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf',
+                    'branch': 'master'}
+        message_consumer = consumers.RepositoryMessageConsumer()
+        await message_consumer._add_requested_build(msg)
+        self.assertTrue(repo.start_build.called)
+
+    @patch.object(consumers.Repository, 'get', AsyncMagicMock())
+    @patch.object(consumers.LoggerMixin, 'log', Mock())
+    @async_test
+    async def test_add_requested_build_exception(self):
+        repo = create_autospec(spec=consumers.Repository,
+                               mock_cls=AsyncMagicMock)
+        consumers.Repository.get.return_value = repo
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf'}
+        message_consumer = consumers.RepositoryMessageConsumer()
+        await message_consumer._add_requested_build(msg)
+        self.assertFalse(repo.start_build.called)
+        self.assertTrue(consumers.LoggerMixin.log.called)
+
+    @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
+                  AsyncMagicMock(return_value=None))
+    @async_test
+    async def test_remove_repo_no_repo(self):
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'some-id'}
+        message_consumer = consumers.RepositoryMessageConsumer()
+        r = await message_consumer._remove_repo(msg)
+        self.assertFalse(r)
+
+    @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
+                  AsyncMagicMock(spec=consumers.RepositoryMessageConsumer.
+                                 _get_repo_from_msg,
+                                 return_value=create_autospec(
+                                     spec=consumers.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_remove_repo(self):
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'some-id'}
+        message_consumer = consumers.RepositoryMessageConsumer()
+        r = await message_consumer._remove_repo(msg)
+        repo = message_consumer._get_repo_from_msg.\
+            return_value
+        self.assertTrue(repo.remove.called)
+        self.assertTrue(r)
+
+    @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
+                  AsyncMagicMock(spec=consumers.RepositoryMessageConsumer.
+                                 _get_repo_from_msg,
+                                 return_value=create_autospec(
+                                     spec=consumers.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @patch.object(consumers.LoggerMixin, 'log', Mock())
+    @async_test
+    async def test_remove_repo_exception(self):
+        repo = consumers.RepositoryMessageConsumer._get_repo_from_msg.\
+            return_value
+        repo.remove.side_effect = Exception
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'some-id'}
+        message_consumer = consumers.RepositoryMessageConsumer()
+        r = await message_consumer._remove_repo(msg)
+        self.assertTrue(repo.remove.called)
+        self.assertTrue(consumers.LoggerMixin.log.called)
+        self.assertTrue(r)
+
+    @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
+                  AsyncMagicMock(spec=consumers.RepositoryMessageConsumer.
+                                 _get_repo_from_msg,
+                                 return_value=create_autospec(
+                                     spec=consumers.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @patch.object(consumers.Repository, 'update_code', AsyncMagicMock(
+        spec=consumers.Repository.update_code))
+    @async_test
+    async def test_update_repo(self):
+        repo = consumers.RepositoryMessageConsumer.\
+            _get_repo_from_msg.return_value
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'some-id'}
+        message_consumer = consumers.RepositoryMessageConsumer()
+        r = await message_consumer._update_repo(msg)
+        self.assertTrue(r)
+        self.assertTrue(repo.update_code.called)
+
+    @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
+                  AsyncMagicMock(spec=consumers.RepositoryMessageConsumer.
+                                 _get_repo_from_msg,
+                                 return_value=create_autospec(
+                                     spec=consumers.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @patch.object(consumers.Repository, 'update_code', AsyncMagicMock(
+        spec=consumers.Repository.update_code))
+    @patch.object(consumers.LoggerMixin, 'log', Mock())
+    @async_test
+    async def test_update_repo_exception(self):
+        repo = consumers.RepositoryMessageConsumer._get_repo_from_msg.\
+            return_value
+        repo.update_code.side_effect = Exception
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'some-id'}
+        message_consumer = consumers.RepositoryMessageConsumer()
+        r = await message_consumer._update_repo(msg)
+        self.assertTrue(r)
+        self.assertTrue(repo.update_code.called)
+        self.assertTrue(consumers.LoggerMixin.log.called)
+
+    @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
+                  AsyncMagicMock(spec=consumers.RepositoryMessageConsumer.
+                                 _get_repo_from_msg,
+                                 return_value=None))
+    @patch.object(consumers.Repository, 'update_code', AsyncMagicMock(
+        spec=consumers.Repository.update_code))
+    @async_test
+    async def test_update_repo_no_repo(self):
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'some-id'}
+        message_consumer = consumers.RepositoryMessageConsumer()
+        r = await message_consumer._update_repo(msg)
+        self.assertFalse(r)
+
+    @patch.object(consumers.BaseConsumer, 'run', AsyncMagicMock())
+    def test_run(self):
+        message_consumer = consumers.RepositoryMessageConsumer()
+
+        message_consumer.run()
+        self.assertTrue(all([message_consumer.revision_consumer.run.called,
+                             message_consumer.build_consumer.run.called,
+                             message_consumer.removal_consumer.run.called,
+                             message_consumer.update_consumer.run.called]))

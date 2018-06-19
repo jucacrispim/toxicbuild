@@ -65,8 +65,8 @@ def toxicinit(server):
 
     # importing here to avoid circular imports
     from toxicbuild.master.build import BuildSet
-    from toxicbuild.master.repository import (Repository,
-                                              RepositoryMessageConsumer)
+    from toxicbuild.master.consumers import RepositoryMessageConsumer
+    from toxicbuild.master.repository import Repository
     from toxicbuild.master.slave import Slave
     from toxicbuild.master.users import User, Organization
 

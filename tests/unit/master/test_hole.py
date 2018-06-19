@@ -1524,6 +1524,7 @@ class HoleServerTest(TestCase):
             hole.Repository.remove_running_build()
 
         hole.asyncio.sleep = sleep
+        hole.RepositoryMessageConsumer()
         hole.Repository.add_running_build()
         await self.server.shutdown()
 

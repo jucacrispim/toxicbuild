@@ -334,7 +334,7 @@ class ToxicMasterTest(BaseFunctionalTest):
                 response = await client.get_response()
                 body = response['body'] if response else {}
                 if body.get('event_type') == 'build_finished':
-                    sleep_time = os.environ.get('TOXICSLEEP_TIME') or 2
+                    sleep_time = os.environ.get('TOXICSLEEP_TIME') or 5
                     sleep_time = float(sleep_time)
                     t = 0
                     while t <= sleep_time:
