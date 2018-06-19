@@ -22,6 +22,7 @@ import datetime
 from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch
 from uuid import uuid4
+from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core import utils, exchange
 from toxicbuild.master import (repository, build, slave, users)
 from toxicbuild.master.exchanges import (connect_exchanges,
@@ -106,7 +107,7 @@ class RepositoryTest(TestCase):
                 async for msg in consumer:
                     await msg.acknowledge()
                     self.GOT_MSG = True
-            except repository.ConsumerTimeout:
+            except ConsumerTimeout:
                 pass
         self.assertTrue(self.GOT_MSG)
 
