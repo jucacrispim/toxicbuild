@@ -150,7 +150,6 @@ class SchedulerServer(BaseConsumer):
                 raise UnknownSchedulerAction(req_type)
         finally:
             self._running_tasks -= 1
-            # await msg.acknowledge()
 
     async def handle_add_update_code(self, msg):
         repo_id = msg.body['repository_id']

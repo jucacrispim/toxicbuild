@@ -124,7 +124,6 @@ class RepositoryMessageConsumerTest(TestCase):
         await message_consumer._add_builds(msg)
         self.assertTrue(consumers.Repository.get.called)
         self.assertTrue(to_list.called)
-        self.assertTrue(msg.acknowledge.called)
 
     @patch.object(consumers.Repository, 'get', AsyncMagicMock())
     @patch.object(consumers.RepositoryRevision, 'objects', Mock())
@@ -143,7 +142,6 @@ class RepositoryMessageConsumerTest(TestCase):
         await message_consumer._add_builds(msg)
         self.assertTrue(consumers.Repository.get.called)
         self.assertTrue(to_list.called)
-        self.assertTrue(msg.acknowledge.called)
 
     @patch.object(consumers.Repository, 'get', AsyncMagicMock(
         side_effect=consumers.Repository.DoesNotExist))
@@ -160,7 +158,6 @@ class RepositoryMessageConsumerTest(TestCase):
         await message_consumer._add_builds(msg)
         self.assertTrue(consumers.Repository.get.called)
         self.assertFalse(to_list.called)
-        self.assertTrue(msg.acknowledge.called)
 
     @patch.object(consumers.Repository, 'get', AsyncMagicMock())
     @patch.object(consumers.Slave, 'objects', Mock())

@@ -130,8 +130,6 @@ class RepositoryMessageConsumer(LoggerMixin):
             log_msg = '[_get_repo_from_msg] repo {} does not exist'.format(
                 msg.body['repository_id'])
             self.log(log_msg, level='warning')
-
-            await msg.acknowledge()
             return
 
         return repo
@@ -151,8 +149,6 @@ class RepositoryMessageConsumer(LoggerMixin):
             log_msg = 'Error adding builds for repo {}. '.format(repo.id)
             log_msg += 'Exception was {}'.format(str(e))
             self.log(log_msg, level='error')
-        finally:
-            await msg.acknowledge()
 
     async def _add_requested_build(self, msg):
         repo = await self._get_repo_from_msg(msg)
@@ -177,11 +173,8 @@ class RepositoryMessageConsumer(LoggerMixin):
             log_msg = 'Error starting builds for {}. '.format(repo.id)
             log_msg += 'Exception was {}'.format(str(e))
             self.log(log_msg, level='error')
-        finally:
-            await msg.acknowledge()
 
     async def _remove_repo(self, msg):
-        await msg.acknowledge()
         repo = await self._get_repo_from_msg(msg)
         if not repo:
             return False
@@ -195,7 +188,6 @@ class RepositoryMessageConsumer(LoggerMixin):
         return True
 
     async def _update_repo(self, msg):
-        await msg.acknowledge()
         repo = await self._get_repo_from_msg(msg)
         repo_branches = msg.body.get('repo_branches')
         external = msg.body.get('external')
