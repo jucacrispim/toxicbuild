@@ -23,8 +23,7 @@ from unittest.mock import Mock, patch
 from toxicbuild.master import scheduler
 from toxicbuild.master.scheduler import (TaskScheduler, SchedulerServer,
                                          UnknownSchedulerAction, Repository,
-                                         scheduler_action, asyncio)
-from toxicbuild.master.utils import ConsumerTimeout
+                                         asyncio, BaseConsumer)
 from tests import async_test, AsyncMagicMock
 
 
@@ -188,72 +187,15 @@ class SchedulerServerTest(TestCase):
         self.assertTrue(r)
         self.assertTrue(self.server.scheduler.remove_by_hash.called)
 
-    @patch.object(scheduler_action, 'consume', AsyncMagicMock())
+    @patch.object(BaseConsumer, 'run', AsyncMagicMock())
     @async_test
     async def test_run(self):
-        handle = Mock()
-        scheduler_action.consume.return_value.aiter_items = ['']
+        self.server.scheduler.start = AsyncMagicMock()
+        server = self.server
 
-        class Srv(SchedulerServer):
+        async def run(self, routing_key=None):
+            server.stop()
 
-            def handle_request(self, msg):
-                self.stop()
-                handle()
-                return AsyncMagicMock()()
-
-        server = Srv()
-        await server.run()
-        self.assertTrue(handle.called)
-
-    @patch.object(scheduler_action, 'consume', AsyncMagicMock())
-    @async_test
-    async def test_run_timeout(self):
-        handle = Mock()
-        consumer = scheduler_action.consume.return_value
-
-        class Srv(SchedulerServer):
-
-            def handle_request(self, msg):
-                self.stop()
-                handle()
-                return AsyncMagicMock()()
-
-        server = Srv()
-        self.t = 0
-
-        async def fm(cancel_on_timeout):
-            try:
-                if self.t > 0:
-                    server.stop()
-                else:
-                    raise ConsumerTimeout
-            finally:
-                self.t += 1
-
-            msg = AsyncMagicMock()
-            msg.body = {'repo_id': 'some-repo-id'}
-            return msg
-
-        consumer.fetch_message = fm
-        await server.run()
-        self.assertTrue(handle.called)
-
-    @patch.object(asyncio, 'sleep', AsyncMagicMock(spec=asyncio.sleep))
-    @async_test
-    async def test_shutdown(self):
-        self.server._running_tasks = 1
-
-        sleep_mock = AsyncMagicMock()
-
-        async def sleep(t):
-            await sleep_mock()
-            self.server._running_tasks = 0
-
-        asyncio.sleep = sleep
-        await self.server.shutdown()
-        self.assertTrue(sleep_mock.called)
-
-    def test_sync_shutdown(self):
-        self.server.shutdown = AsyncMagicMock()
-        self.server.sync_shutdown()
-        self.assertTrue(self.server.shutdown.called)
+        BaseConsumer.run = run
+        await self.server.run()
+        self.assertTrue(self.server.scheduler.start.called)

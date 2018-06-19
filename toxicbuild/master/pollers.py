@@ -21,11 +21,11 @@ from functools import partial
 import traceback
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.core.utils import LoggerMixin, MatchKeysDict
+from toxicbuild.master.consumers import BaseConsumer
 from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.exchanges import revisions_added
 from toxicbuild.master.exchanges import update_code, poll_status
 from toxicbuild.master.repository import Repository
-from toxicbuild.master.utils import BaseQueueReactorServer
 
 
 class Poller(LoggerMixin):
@@ -212,7 +212,7 @@ class Poller(LoggerMixin):
                                 branch))
 
 
-class PollerServer(BaseQueueReactorServer):
+class PollerServer(BaseConsumer):
     """A server for pollers. Uses Rabbitmq to publish/consume messages from
     the master"""
 

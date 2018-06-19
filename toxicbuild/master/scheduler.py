@@ -21,10 +21,10 @@ import asyncio
 from asyncio import ensure_future
 import time
 from toxicbuild.core.utils import LoggerMixin
+from toxicbuild.master.consumers import BaseConsumer
 from toxicbuild.master.exceptions import UnknownSchedulerAction
 from toxicbuild.master.exchanges import scheduler_action
 from toxicbuild.master.repository import Repository
-from toxicbuild.master.utils import BaseQueueReactorServer
 
 
 __doc__ = """
@@ -120,7 +120,7 @@ class TaskScheduler(LoggerMixin):
         self._stop = True
 
 
-class SchedulerServer(BaseQueueReactorServer):
+class SchedulerServer(BaseConsumer):
     """Simple server to add or remove something from the scheduler."""
 
     def __init__(self, loop=None):
@@ -150,7 +150,6 @@ class SchedulerServer(BaseQueueReactorServer):
                 raise UnknownSchedulerAction(req_type)
         finally:
             self._running_tasks -= 1
-            # await msg.acknowledge()
 
     async def handle_add_update_code(self, msg):
         repo_id = msg.body['repository_id']

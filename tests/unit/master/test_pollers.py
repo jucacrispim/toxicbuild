@@ -22,7 +22,7 @@ import datetime
 import json
 from unittest import mock, TestCase
 from toxicbuild.core.exchange import JsonAckMessage as Message
-from toxicbuild.master import pollers, repository, users, utils
+from toxicbuild.master import pollers, repository, users
 from toxicbuild.master.exceptions import CloneException
 from toxicbuild.master.exchanges import connect_exchanges, disconnect_exchanges
 from tests import async_test, AsyncMagicMock
@@ -387,86 +387,6 @@ class PollerServerTest(TestCase):
     def setUp(self):
         self.server = pollers.PollerServer()
 
-    @mock.patch.object(pollers.update_code, 'consume', AsyncMagicMock(
-        spec=pollers.update_code.consume))
-    @async_test
-    async def test_run(self):
-        handle = mock.Mock()
-        msg = mock.Mock()
-        msg.body = {'repo_id': 'someid'}
-        msg.acknowledge = AsyncMagicMock()
-        consumer = pollers.update_code.consume.return_value
-        consumer.fetch_message.return_value = msg
-        tasks = []
-
-        class Srv(pollers.PollerServer):
-
-            def _handler_counter(self, msg):
-                t = asyncio.ensure_future(super()._handler_counter(msg))
-                tasks.append(t)
-                self.stop()
-                return t
-
-            def handle_update_request(self, msg):
-                handle()
-                return AsyncMagicMock()()
-
-        server = Srv()
-        await server.run()
-        await asyncio.gather(*tasks)
-        self.assertTrue(handle.called)
-
-    @mock.patch.object(pollers.update_code, 'consume', AsyncMagicMock(
-        spec=pollers.update_code.consume))
-    @async_test
-    async def test_run_timeout(self):
-        handle = mock.Mock()
-        msg = mock.Mock()
-        msg.body = {'repo_id': 'someid'}
-        msg.acknowledge = AsyncMagicMock()
-
-        class Srv(pollers.PollerServer):
-
-            def handle_update_request(self, msg):
-                self.stop()
-                handle()
-                return AsyncMagicMock()()
-
-        server = Srv()
-
-        async def fm(cancel_on_timeout=True):
-            server.stop()
-            raise utils.ConsumerTimeout
-
-        consumer = pollers.update_code.consume.return_value
-        consumer.fetch_message = fm
-        await server.run()
-        self.assertFalse(handle.called)
-
-    @mock.patch.object(utils.asyncio, 'sleep', AsyncMagicMock())
-    @async_test
-    async def test_shutdown(self):
-
-        server = pollers.PollerServer()
-        server._running_tasks = 1
-        sleep_mock = mock.Mock()
-
-        def sleep(t):
-            sleep_mock()
-            server._running_tasks -= 1
-            return AsyncMagicMock()()
-
-        utils.asyncio.sleep = sleep
-        await server.shutdown()
-        self.assertTrue(sleep_mock.called)
-
-    @mock.patch.object(pollers.PollerServer, 'shutdown', AsyncMagicMock(
-        spec=pollers.PollerServer.shutdown))
-    def test_sync_shutdown(self):
-        server = pollers.PollerServer()
-        server.sync_shutdown()
-        self.assertTrue(server.shutdown.called)
-
     @mock.patch.object(pollers.Poller, 'poll', AsyncMagicMock(
         return_value=True))
     @async_test
@@ -484,7 +404,7 @@ class PollerServerTest(TestCase):
         async with await pollers.poll_status.consume(
                 routing_key=repo_id) as consumer:
             message = Message(channel, body, envelope, properties)
-            await self.server.handle_update_request(message)
+            await self.server._handler_counter(message)
             msg = await consumer.fetch_message()
             self.assertTrue(msg)
 

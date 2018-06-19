@@ -65,6 +65,7 @@ def toxicinit(server):
 
     # importing here to avoid circular imports
     from toxicbuild.master.build import BuildSet
+    from toxicbuild.master.consumers import RepositoryMessageConsumer
     from toxicbuild.master.repository import Repository
     from toxicbuild.master.slave import Slave
     from toxicbuild.master.users import User, Organization
@@ -77,21 +78,14 @@ def toxicinit(server):
 
     yield from connect_exchanges()
 
-    log('[init] Waiting revisions', level='debug')
-    ensure_future(Repository.wait_revisions())
-    log('[init] Waiting build requests')
-    ensure_future(Repository.wait_build_requests())
-    log('[init] Waiting removal requests')
-    ensure_future(Repository.wait_removal_request())
-    log('[init] Waiting code update requests')
-    ensure_future(Repository.wait_update_request())
-
     log('[init] Boostrap for everyone', level='debug')
     yield from Repository.bootstrap_all()
     if settings.ENABLE_HOLE:
         log('[init] Serving UIHole at {}'.format(settings.HOLE_PORT))
         server.serve()
 
+    message_consumer = RepositoryMessageConsumer()
+    message_consumer.run()
     log('[init] Toxicmaster is running!')
 
 
