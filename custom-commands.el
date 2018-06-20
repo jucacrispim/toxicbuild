@@ -46,7 +46,8 @@
 (defcustom toxic:webui-buffer-name "toxicwebui"
   "Toxicweb ui buffer's name")
 
-(defcustom toxic:run-all-tests-command "sh ./build-scripts/run_all_tests.sh"
+(defcustom toxic:run-all-tests-command
+  "sh ./build-scripts/run_all_tests.sh --with-integrations"
   "The command used to run all tests in toxicubuild.")
 
 (defvar toxic:bootstrap-buffer-name "toxic-bootstrap")
