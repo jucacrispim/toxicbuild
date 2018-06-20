@@ -37,7 +37,7 @@ SELENIUM_TESTS:  &SELENIUM_TESTS
 
 INTEGRATION_TESTS:  &INTEGRATION_TESTS
   name: Tests for integrations
-  command: ./build-scripts/run_integrations_tests.sh
+  command: ./build-scripts/run_integration_tests.sh
   timeout: 35
 
 
