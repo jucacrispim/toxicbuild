@@ -79,7 +79,8 @@ class LoginHandler(TemplateHandler):
             return self.redirect('/login?error=1')
 
         self._set_cookie_content()
-        self.redirect('/')
+        redirect = self.params.get('redirect') or '/'
+        self.redirect(redirect)
 
     def _set_cookie_content(self):
         userjson = json.dumps({'id': self.user.id, 'email': self.user.email,
