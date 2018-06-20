@@ -94,6 +94,7 @@ APT_INSTALL:  &APT_INSTALL
     - rabbitmq-server
     - zookeeper
     - zookeeperd
+    - git-crypt
 
 
 APT_INSTALL_SELENIUM:  &APT_INSTALL_SELENIUM
