@@ -41,5 +41,5 @@ def user_redirected_to_main_page(context):
 @then('his repositories beeing imported from github')
 def user_sees_repositories_imported(context):
     browser = context.browser
-    repo_row = browser.find_element_by_id('repo-row-toxic-ghintegration-test')
+    repo_row = browser.wait_text_become_present('toxic-ghintegration-test')
     assert repo_row
