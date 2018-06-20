@@ -94,6 +94,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         yield self.webhook_receiver.authenticate()
         url = self.webhook_receiver.redirect.call_args[0][0]
         self.assertIn('redirect=', url)
+        self.assertTrue(self.webhook_receiver.request.full_url.called)
 
     @patch.object(webhook_receivers, 'settings', Mock())
     @gen_test

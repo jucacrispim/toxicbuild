@@ -77,7 +77,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         user = yield from self._get_user_from_cookie()
         if not user:
             url = '{}?redirect={}'.format(
-                settings.TOXICUI_LOGIN_URL, self.request.get_full_url())
+                settings.TOXICUI_LOGIN_URL, self.request.full_url())
         else:
             githubapp_id = self.params.get('installation_id')
             if not githubapp_id:
