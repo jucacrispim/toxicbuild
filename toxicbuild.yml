@@ -94,7 +94,6 @@ APT_INSTALL:  &APT_INSTALL
     - rabbitmq-server
     - zookeeper
     - zookeeperd
-    - git-crypt
 
 
 APT_INSTALL_SELENIUM:  &APT_INSTALL_SELENIUM
@@ -105,6 +104,7 @@ APT_INSTALL_SELENIUM:  &APT_INSTALL_SELENIUM
     - rabbitmq-server
     - zookeeper
     - zookeeperd
+    - git-crypt
 
 PY35_VENV:  &PY35_VENV
   name: python-venv
