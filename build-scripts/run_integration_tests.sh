@@ -1,6 +1,7 @@
 #!/bin/sh
 
-if ["$ENV" = "ci"]
+if [ "$ENV" = "ci" ]
+then
    git-crypt unlock ~/keys/toxictest-gcrypt.key
 fi
 
