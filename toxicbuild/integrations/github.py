@@ -256,7 +256,7 @@ class GithubInstallation(LoggerMixin, Document):
             return
 
         msg = 'Creating installation for github_id {}'.format(github_id)
-        cls().log(msg, level='debug')
+        cls.log_cls(msg, level='debug')
         installation = cls(github_id=github_id, user=user)
         await installation.save()
         await installation.import_repositories()
@@ -277,7 +277,7 @@ class GithubInstallation(LoggerMixin, Document):
 
         :param github_repo_id: The id of the repository on github.
         :param repo_branches: Param to be passed to
-          :meth:`~toxicbuild.master.repository.Repository.update_code`.
+          :meth:`~toxicbuild.master.repository.Repository.request_code_update`.
         :param external: Information about an external repository.
         :param wait_for_lock: Indicates if we should wait for the release of
           the lock or simply return if we cannot get a lock.
@@ -320,7 +320,8 @@ class GithubInstallation(LoggerMixin, Document):
         for chunk in self._get_import_chunks(repos):
             tasks = []
             for repo in chunk:
-                t = ensure_future(repo.update_code())
+                await repo.request_code_update()
+                t = ensure_future(repo._wait_update())
                 tasks.append(t)
 
             await gather(*tasks)
@@ -380,7 +381,7 @@ class GithubInstallation(LoggerMixin, Document):
         await repo.enable_plugin('github-check-run', installation=self)
 
         if clone:
-            await repo.update_code()
+            await repo.request_code_update()
         return repo
 
     async def remove_repository(self, github_repo_id):

@@ -306,8 +306,8 @@ class GithubInstallationTest(TestCase):
     @patch.object(repository.Repository, 'schedule', Mock())
     @patch.object(repository.Repository, '_notify_repo_creation',
                   AsyncMagicMock())
-    @patch.object(repository.Repository, 'update_code', AsyncMagicMock(
-        spec=repository.Repository.update_code))
+    @patch.object(repository.Repository, 'request_code_update', AsyncMagicMock(
+        spec=repository.Repository.request_code_update))
     @patch.object(repository, 'repo_added', AsyncMagicMock())
     @patch.object(github.GithubApp, 'create_installation_token',
                   AsyncMagicMock())
@@ -320,7 +320,7 @@ class GithubInstallationTest(TestCase):
                      'id': 1234, 'full_name': 'ze/my-repo'}
         repo = await self.installation.import_repository(repo_info)
         self.assertTrue(repo.id)
-        self.assertTrue(repo.update_code.called)
+        self.assertTrue(repo.request_code_update.called)
         install = await type(self.installation).objects.get(
             id=self.installation.id)
         self.assertTrue(install.repositories)

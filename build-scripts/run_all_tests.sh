@@ -33,3 +33,15 @@ echo "\n"
 sh ./build-scripts/run_selenium_tests.sh
 
 check_run_ok;
+
+if [ "$1" = "--with-integrations" ]
+then
+    echo "\n"
+    echo "###############################\n"
+    echo "# Running integrations  tests #\n"
+    echo "###############################\n"
+    echo "\n"
+    sh ./build-scripts/run_integration_tests.sh
+
+    check_run_ok;
+fi

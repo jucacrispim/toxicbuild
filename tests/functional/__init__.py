@@ -63,7 +63,6 @@ def start_slave(sleep=0.5):
         cmd += ['-c', toxicslave_conf]
 
     os.system(' '.join(cmd))
-    # here we try to talk to the master to check if its is alive
 
 
 def stop_slave():
