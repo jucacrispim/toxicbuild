@@ -8,7 +8,7 @@ TESTS_ENVVARS:  &TESTS_ENVVARS
   # TOXICMASTER_SETTINGS: 'tests/functional/data/master/toxicmaster.conf'
   TOXICSLAVE_SETTINGS: 'tests/functional/data/slave/toxicslave.conf'
   # TOXICUI_SETTINGS: 'tests/functional/data/ui/toxicui.conf'
-
+  ENV: ci
 
 # steps
 
@@ -16,6 +16,7 @@ INSTALL_MONGODB:  &INSTALL_MONGODB
   name: Installing mongodb
   command: sh ./build-scripts/install_mongodb.sh
   stop_on_fail: true
+
 
 UNITTEST_COVERAGE:  &UNITTEST_COVERAGE
    name: Unit tests coverage
@@ -32,6 +33,11 @@ FUNCTIONAL_TESTS:  &FUNCTIONAL_TESTS
 SELENIUM_TESTS:  &SELENIUM_TESTS
   name: Selenium tests for web ui
   command: ./build-scripts/run_selenium_tests.sh
+  timeout: 35
+
+INTEGRATION_TESTS:  &INTEGRATION_TESTS
+  name: Tests for integrations
+  command: ./build-scripts/run_integration_tests.sh
   timeout: 35
 
 
@@ -98,6 +104,7 @@ APT_INSTALL_SELENIUM:  &APT_INSTALL_SELENIUM
     - rabbitmq-server
     - zookeeper
     - zookeeperd
+    - git-crypt
 
 PY35_VENV:  &PY35_VENV
   name: python-venv
@@ -171,6 +178,7 @@ SELENIUM_BUILDER:  &SELENIUM_BUILDER
   steps:
     - <<: *INSTALL_MONGODB
     - <<: *SELENIUM_TESTS
+    - <<: *INTEGRATION_TESTS
 
   platform:
     python3.6

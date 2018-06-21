@@ -32,29 +32,29 @@ def step_impl(context):
     browser.get(url)
 
 
-@when('he inserts "{user_name}" as user name')  # noqa f401
-def step_impl(context, user_name):
+@when('he inserts "{user_name}" as user name')
+def user_inserts_username_login(context, user_name):
     browser = context.browser
     username_input = browser.find_element_by_id('inputUsername')
     username_input.send_keys(user_name)
 
 
-@when('inserts "{passwd}" as password')  # noqa f401
-def step_impl(context, passwd):
+@when('inserts "{passwd}" as password')
+def user_inserts_password_login(context, passwd):
     browser = context.browser
     passwd_input = browser.find_element_by_id('inputPassword')
     passwd_input.send_keys(passwd)
 
 
-@when('clicks in the login button')  # noqa f401
-def step_impl(context):
+@when('clicks in the login button')
+def user_clicks_login_button(context):
     browser = context.browser
     btn = browser.find_element_by_class_name('btn')
     browser.click(btn)
 
 
-@then('he sees the main page')  # noqa f401
-def step_impl(context):
+@then('he sees the main page')
+def user_sees_main_main_page_login(context):
     browser = context.browser
     txt = 'Connected to master'
     is_present = browser.wait_text_become_present(txt)

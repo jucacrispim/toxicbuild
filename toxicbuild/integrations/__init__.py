@@ -172,7 +172,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         command.daemonize = daemonize
         command.stderr = stderr
         command.asyncio = True
-        command.log_level = loglevel
+        command.loglevel = loglevel
         command.application = None
         command.stdout = stdout
         command.port = settings.TORNADO_PORT

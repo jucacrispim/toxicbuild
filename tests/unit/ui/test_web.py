@@ -909,6 +909,26 @@ class LoginHandlerTest(AsyncTestCase):
         self.handler.params['username_or_email'] = ['someguy']
         self.handler.params['password'] = ['123']
         yield self.handler.post('login')
+        redir_url = self.handler.redirect.call_args[0][0]
+        self.assertEqual(redir_url, '/')
+        self.assertTrue(self.handler._set_cookie_content.called)
+
+    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
+        spec=web.TemplateHandler.redirect))
+    @patch.object(web.LoginHandler, '_set_cookie_content', MagicMock(
+        spec=web.LoginHandler._set_cookie_content))
+    @patch.object(web.User, 'authenticate', AsyncMagicMock(
+        spec=web.User.authenticate))
+    @gen_test
+    def test_post_ok_redir(self):
+        self.handler.prepare()
+        self.handler.params['username_or_email'] = ['someguy']
+        self.handler.params['password'] = ['123']
+        redir = '/some/where'
+        self.handler.params['redirect'] = [redir]
+        yield self.handler.post('login')
+        redir_url = self.handler.redirect.call_args[0][0]
+        self.assertEqual(redir_url, redir)
         self.assertTrue(self.handler._set_cookie_content.called)
 
     @patch.object(web.LoginHandler, 'set_secure_cookie', MagicMock(

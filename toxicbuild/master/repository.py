@@ -23,7 +23,6 @@ import re
 import shutil
 from threading import Thread
 from aiozk import exc
-from asyncamqp.exceptions import ConsumerTimeout
 from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, IntField, ReferenceField,
@@ -37,7 +36,6 @@ from toxicbuild.master.coordination import Lock
 from toxicbuild.master.document import OwnedDocument, ExternalRevisionIinfo
 from toxicbuild.master.exceptions import RepoBranchDoesNotExist
 from toxicbuild.master.exchanges import (update_code, poll_status,
-                                         revisions_added,
                                          scheduler_action, repo_status_changed,
                                          repo_added, ui_notifications,
                                          repo_notifications)
@@ -406,14 +404,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
             # Sends a message to the queue that is consumed by the pollers
             await update_code.publish(msg)
-
-            async with await poll_status.consume(
-                    routing_key=str(self.id), no_ack=False) as consumer:
-
-                # wait for the message with the poll response.
-                msg = await consumer.fetch_message()
-                self.log('poll status received', level='debug')
-                await msg.acknowledge()
+            msg = await self._wait_update()
 
         self.clone_status = msg.body['clone_status']
         await self.save()
@@ -424,6 +415,18 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                           'new_status': self.clone_status}
 
             await self._notify_status_changed(status_msg)
+
+    async def _wait_update(self):
+        # you must call this after you call an update_code()
+        async with await poll_status.consume(
+                routing_key=str(self.id), no_ack=False) as consumer:
+
+            # wait for the message with the poll response.
+            msg = await consumer.fetch_message()
+            self.log('poll status received', level='debug')
+            await msg.acknowledge()
+
+        return msg
 
     async def bootstrap(self):
         """Initialise the needed stuff. Schedules updates for code,
