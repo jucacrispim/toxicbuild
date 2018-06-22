@@ -291,7 +291,7 @@ class BuilderManagerTest(TestCase):
     @async_test
     async def test_list_builders(self):
         await self.manager.load_config()
-        expected = ['builder1', 'builder2', 'builder3', 'builder4']
+        expected = ['builder1', 'builder2', 'builder3', 'builder4', 'builder5']
         returned = self.manager.list_builders()
 
         self.assertEqual(returned, expected)
