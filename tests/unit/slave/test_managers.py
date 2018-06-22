@@ -327,6 +327,15 @@ class BuilderManagerTest(TestCase):
         self.assertEqual(len(builder.steps), 2)
 
     @patch.object(managers, 'settings', Mock())
+    @async_test
+    async def test_load_builder_from_other_branch(self):
+        self.manager.builders_from = 'other-branch'
+        await self.manager.load_config()
+        managers.settings.USE_DOCKER = False
+        builder = await self.manager.load_builder('builder5')
+        self.assertEqual(len(builder.steps), 1)
+
+    @patch.object(managers, 'settings', Mock())
     @patch.object(managers, 'DockerContainerBuilder', Mock())
     @async_test
     async def test_load_builder_docker(self):
