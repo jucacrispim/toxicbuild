@@ -81,7 +81,8 @@ class BuildClient(BaseToxicClient):
                          'named_tree': build.named_tree,
                          'builder_name': builder_name,
                          'config_type': self.config_type,
-                         'config_filename': self.config_filename}}
+                         'config_filename': self.config_filename,
+                         'builders_from': build.builders_from}}
         if build.external:
             data['body']['external'] = build.external.to_dict()
 
