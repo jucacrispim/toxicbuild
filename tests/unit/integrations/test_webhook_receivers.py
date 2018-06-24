@@ -227,13 +227,13 @@ class GithubWebhookReceiverTest(AsyncTestCase):
                 'head': {'repo': {'id': 'some-id'},
                          'label': 'someone:repo', 'ref': 'some-branch',
                          'clone_url': 'http://somewhere.com/repo.git'},
-                'base': {'repo': {'id': 'other-id'}}}}
+                'base': {'repo': {'id': 'other-id'}, 'ref': 'master'}}}
 
         self.webhook_receiver.body = body
         await self.webhook_receiver._handle_pull_request_opened()
         called = install.update_repository.call_args[1]
         self.assertEqual(sorted(list(called.keys())), [
-                         'external', 'wait_for_lock'])
+                         'external', 'repo_branches', 'wait_for_lock'])
 
     @patch.object(
         webhook_receivers.GithubWebhookReceiver, '_get_install',
@@ -244,7 +244,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         body = {
             'pull_request': {
                 'head': {'repo': {'id': 'some-id'}, 'ref': 'some-branch'},
-                'base': {'repo': {'id': 'some-id'}}}}
+                'base': {'repo': {'id': 'some-id'}, 'ref': 'master'}}}
 
         self.webhook_receiver.body = body
         install = create_autospec(
