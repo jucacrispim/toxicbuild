@@ -647,7 +647,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         """
         builders = builders or []
         await self.build_manager.add_builds_for_slave(
-            buildset, slave, builders=builders, builders_origin=builders_origin)
+            buildset, slave, builders=builders,
+            builders_origin=builders_origin)
 
     async def _check_for_status_change(self, sender, build):
         """Called when a build is started or finished. If this event
