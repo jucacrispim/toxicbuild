@@ -88,6 +88,8 @@ class GithubWebhookReceiverTest(AsyncTestCase):
     @patch.object(webhook_receivers, 'settings', Mock())
     @gen_test
     def test_authenticate_without_user(self):
+        # if trying to authenticate wihtout a user, we should be redireced
+        # to the login page of the webui.
         self.webhook_receiver._get_user_from_cookie = AsyncMagicMock(
             return_value=None)
         self.webhook_receiver.redirect = Mock()
@@ -99,6 +101,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
     @patch.object(webhook_receivers, 'settings', Mock())
     @gen_test
     def test_authenticate_without_installation_id(self):
+        # installation_id is sent as a get param by github
         self.webhook_receiver._get_user_from_cookie = AsyncMagicMock(
             return_value=Mock())
         self.webhook_receiver.params = {}
@@ -111,6 +114,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
     @patch.object(webhook_receivers, 'settings', Mock())
     @gen_test
     def test_authenticate(self):
+        # if everything ok, we create a installation.
         self.webhook_receiver._get_user_from_cookie = AsyncMagicMock(
             return_value=Mock())
         self.webhook_receiver.params = {'installation_id': 1234}

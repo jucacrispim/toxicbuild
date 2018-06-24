@@ -260,6 +260,10 @@ class Build(EmbeddedDocument):
     """A reference to
       :class:`~toxicbuild.master.document.ExternalRevisionIinfo`"""
 
+    builders_from = StringField()
+    """Indicates the branch from which the builders for this build came from.
+    This may not be the same as the build branch."""
+
     def to_dict(self, id_as_str=False):
         """Transforms the object into a dictionary.
 
@@ -578,7 +582,8 @@ class BuildManager(LoggerMixin):
         if last_bs and self.repository.notify_only_latest(buildset.branch):
             await self.cancel_previous_pending(buildset)
 
-    async def add_builds_for_slave(self, buildset, slave, builders=None):
+    async def add_builds_for_slave(self, buildset, slave, builders=None,
+                                   builders_origin=None):
         """Adds builds for a given slave on a given buildset.
 
         :param buildset: An instance of :class:`toxicbuild.master.BuildSet`.
@@ -590,12 +595,13 @@ class BuildManager(LoggerMixin):
         builders = builders or []
         revision = await buildset.revision
         if not builders:
-            builders = await self.get_builders(slave, revision)
+            builders, builders_origin = await self.get_builders(slave,
+                                                                revision)
 
         for builder in builders:
             build = Build(repository=self.repository, branch=revision.branch,
                           named_tree=revision.commit, slave=slave,
-                          builder=builder)
+                          builder=builder, builders_from=builders_origin)
 
             buildset.builds.append(build)
             await buildset.save()
@@ -620,6 +626,7 @@ class BuildManager(LoggerMixin):
             log('checkout on {} to {}'.format(
                 self.repository.url, revision.commit), level='debug')
             await self.repository.vcs.checkout(revision.commit)
+            origin = revision.branch
             try:
                 if self.config_type == 'py':
                     conf = get_toxicbuildconf(self.repository.workdir)
@@ -627,14 +634,18 @@ class BuildManager(LoggerMixin):
                     conf = await get_toxicbuildconf_yaml(
                         self.repository.workdir, self.config_filename)
 
-                builders = list_builders_from_config(
-                    conf, revision.branch, slave, config_type=self.config_type)
-                names = [b['name'] for b in builders]
             except Exception as e:
                 msg = 'Something wrong with your toxicbuild.conf. Original '
                 msg += 'exception was:\n {}'.format(str(e))
                 log(msg, level='warning')
-                return []
+                return [], origin
+
+            names = self._get_builders_names(conf, revision.branch, slave,
+                                             self.config_type)
+            if not names and revision.builders_fallback:
+                origin = revision.builders_fallback
+                names = self._get_builders_names(
+                    conf, revision.builders_fallback, slave, self.config_type)
 
             builders = []
             for name in names:
@@ -642,7 +653,13 @@ class BuildManager(LoggerMixin):
                     name=name, repository=self.repository)
                 builders.append(builder)
 
-        return builders
+        return builders, origin
+
+    def _get_builders_names(self, conf, branch, slave, config_type):
+        builders = list_builders_from_config(
+            conf, branch, slave, config_type=self.config_type)
+        names = [b['name'] for b in builders]
+        return names
 
     async def cancel_build(self, build_uuid):
         """Cancel a given build.

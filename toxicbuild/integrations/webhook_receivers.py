@@ -140,7 +140,7 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
         else:
             head_branch = head['ref']
             # branch_name: notify_only_latest
-            repo_branches = {head_branch: True}
+            repo_branches = {head_branch: {'notify_only_latest': True}}
             await install.update_repository(base_id,
                                             repo_branches=repo_branches,
                                             wait_for_lock=True)
