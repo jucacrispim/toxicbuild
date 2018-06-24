@@ -47,7 +47,19 @@ class BuildManager(LoggerMixin):
     building_repos = defaultdict(lambda: None)  # pragma no branch WTF??
 
     def __init__(self, protocol, repo_url, vcs_type, branch, named_tree,
-                 config_type='py', config_filename='toxicbuild.conf'):
+                 config_type='py', config_filename='toxicbuild.conf',
+                 builders_from=None):
+        """
+        :param manager: instance of :class:`toxicbuild.slave.BuildManager.`
+        :param repo_url: The repository URL
+        :param vcs_type: Type of vcs used in the repository.
+        :param branch: Which branch to use in the build.
+        :param named_tree: A tag, commit, branch name...
+        :param config_type: The type of config used. 'py' or 'yaml'.
+        :param config_filename: The name of the build config file.
+        :param builders_from: If not None, builders to this branch will be used
+          instead of builders for the current branch.
+        """
         self.protocol = protocol
         self.repo_url = repo_url
         self.vcs_type = vcs_type
@@ -56,6 +68,7 @@ class BuildManager(LoggerMixin):
         self.named_tree = named_tree
         self.config_type = config_type
         self.config_filename = config_filename
+        self.builders_from = builders_from
         self._config = None
 
     def __enter__(self):
@@ -237,15 +250,17 @@ class BuildManager(LoggerMixin):
         return builders
 
     async def load_builder(self, name):
-        """ Load a builder from toxicbuild.conf. If a container
-        is to be used in for the build, returns a container builder
+        """ Loads a builder from toxicbuild.(conf|yml). If a container
+        is to be used for the build, returns a container builder
         instance. Otherwise, return a Builder instance.
 
         :param name: builder name
         """
+        builders_branch = self.builders_from or self.branch
+
         try:
             builders = list_builders_from_config(self.config,
-                                                 branch=self.branch,
+                                                 branch=builders_branch,
                                                  config_type=self.config_type)
             bdict = [b for b in builders if b['name'] == name][0]
         except IndexError:
@@ -265,7 +280,8 @@ class BuildManager(LoggerMixin):
                 name, self.workdir,
                 remove_env=remove_env,
                 config_type=self.config_type,
-                config_filename=self.config_filename)
+                config_filename=self.config_filename,
+                builders_from=self.builders_from)
         else:
             # this envvars are used in all steps in this builder
             builder_envvars = bdict.get('envvars', {})

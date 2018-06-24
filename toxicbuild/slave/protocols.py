@@ -145,10 +145,12 @@ class BuildServerProtocol(BaseToxicProtocol):
         config_type = self.data['body'].get('config_type') or 'py'
         config_filename = self.data['body'].get(
             'config_filename') or 'toxicbuild.conf'
+        builders_from = self.data['body'].get('builders_from')
 
         manager = BuildManager(self, repo_url, vcs_type, branch, named_tree,
                                config_type=config_type,
-                               config_filename=config_filename)
+                               config_filename=config_filename,
+                               builders_from=builders_from)
 
         return manager
 

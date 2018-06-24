@@ -320,7 +320,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
           .. code-block:: python
 
-             {'branch-name': notify_only_latest}
+             {'branch-name': {'notify_only_latest': True}}
 
         :param external: If we should update code from an external
           (not the origin) repository, `external` is the information about
@@ -564,10 +564,10 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         return branches
 
     async def add_revision(self, branch, commit, commit_date, author, title,
-                           body=None, external=None):
+                           body=None, external=None, builders_fallback=''):
         """ Adds a revision to the repository.
 
-        :param commit: commit uuid
+        :param commit: Commit's sha
         :param branch: branch name
         :param commit_date: commit's date (on authors time)
         :param author: The author of the commit
@@ -575,6 +575,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         :param body: The commit body.
         :param external: Information about an external remote if the revision
           came from an external.
+        :param builders_fallback: If not None, builders from this branch will
+          be used in case of the revision branch has no builders configured
+          for it
         """
 
         kw = dict(repository=self, commit=commit,
@@ -633,7 +636,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             self.plugins.remove(p)
         await self.save()
 
-    async def add_builds_for_slave(self, buildset, slave, builders=None):
+    async def add_builds_for_slave(self, buildset, slave, builders=None,
+                                   builders_origin=None):
         """Adds a buildset to the build queue of a given slave
         for this repository.
 
@@ -643,7 +647,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         """
         builders = builders or []
         await self.build_manager.add_builds_for_slave(
-            buildset, slave, builders=builders)
+            buildset, slave, builders=builders,
+            builders_origin=builders_origin)
 
     async def _check_for_status_change(self, sender, build):
         """Called when a build is started or finished. If this event
@@ -666,7 +671,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         super().log(msg, level=level)
 
     async def start_build(self, branch, builder_name=None, named_tree=None,
-                          slaves=None):
+                          slaves=None, builders_origin=None):
         """ Starts a (some) build(s) in the repository. """
 
         if not slaves:
@@ -681,8 +686,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                                                commit=named_tree)
 
         if not builder_name:
-            builders = await self._get_builders(slaves, rev)
+            builders, builders_origin = await self._get_builders(slaves, rev)
         else:
+            builders_origin = None
             blist = [(await Builder.get(name=builder_name,
                                         repository=self))]
             builders = {}
@@ -692,7 +698,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         buildset = await BuildSet.create(repository=self, revision=rev)
         for slave in slaves:
             await self.add_builds_for_slave(buildset, slave,
-                                            builders[slave])
+                                            builders[slave],
+                                            builders_origin=builders_origin)
 
     async def request_build(self, branch, builder_name=None, named_tree=None,
                             slaves=None):
@@ -738,10 +745,10 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     async def _get_builders(self, slaves, revision):
         builders = {}
         for slave in slaves:
-            builders[slave] = await self.build_manager.get_builders(
+            builders[slave], origin = await self.build_manager.get_builders(
                 slave, revision)
 
-        return builders
+        return builders, origin
 
 
 class RepositoryRevision(Document):
@@ -771,6 +778,10 @@ class RepositoryRevision(Document):
     external = EmbeddedDocumentField(ExternalRevisionIinfo)
     """A list of :class:`~toxicbuild.master.bulid.RepositoryRevisionExternal`.
     """
+
+    builders_fallback = StringField()
+    """A name of a branch. If not None, builders from this branch will be used
+    if there are no builders for the branch of the revision."""
 
     @classmethod
     async def get(cls, **kwargs):

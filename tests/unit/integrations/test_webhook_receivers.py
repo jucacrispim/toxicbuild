@@ -88,6 +88,8 @@ class GithubWebhookReceiverTest(AsyncTestCase):
     @patch.object(webhook_receivers, 'settings', Mock())
     @gen_test
     def test_authenticate_without_user(self):
+        # if trying to authenticate wihtout a user, we should be redireced
+        # to the login page of the webui.
         self.webhook_receiver._get_user_from_cookie = AsyncMagicMock(
             return_value=None)
         self.webhook_receiver.redirect = Mock()
@@ -99,6 +101,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
     @patch.object(webhook_receivers, 'settings', Mock())
     @gen_test
     def test_authenticate_without_installation_id(self):
+        # installation_id is sent as a get param by github
         self.webhook_receiver._get_user_from_cookie = AsyncMagicMock(
             return_value=Mock())
         self.webhook_receiver.params = {}
@@ -111,6 +114,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
     @patch.object(webhook_receivers, 'settings', Mock())
     @gen_test
     def test_authenticate(self):
+        # if everything ok, we create a installation.
         self.webhook_receiver._get_user_from_cookie = AsyncMagicMock(
             return_value=Mock())
         self.webhook_receiver.params = {'installation_id': 1234}
@@ -223,13 +227,13 @@ class GithubWebhookReceiverTest(AsyncTestCase):
                 'head': {'repo': {'id': 'some-id'},
                          'label': 'someone:repo', 'ref': 'some-branch',
                          'clone_url': 'http://somewhere.com/repo.git'},
-                'base': {'repo': {'id': 'other-id'}}}}
+                'base': {'repo': {'id': 'other-id'}, 'ref': 'master'}}}
 
         self.webhook_receiver.body = body
         await self.webhook_receiver._handle_pull_request_opened()
         called = install.update_repository.call_args[1]
         self.assertEqual(sorted(list(called.keys())), [
-                         'external', 'wait_for_lock'])
+                         'external', 'repo_branches', 'wait_for_lock'])
 
     @patch.object(
         webhook_receivers.GithubWebhookReceiver, '_get_install',
@@ -240,7 +244,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         body = {
             'pull_request': {
                 'head': {'repo': {'id': 'some-id'}, 'ref': 'some-branch'},
-                'base': {'repo': {'id': 'some-id'}}}}
+                'base': {'repo': {'id': 'some-id'}, 'ref': 'master'}}}
 
         self.webhook_receiver.body = body
         install = create_autospec(

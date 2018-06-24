@@ -148,7 +148,8 @@ class GitPollerTest(TestCase):
 
         self.poller.vcs.get_revisions = gr
 
-        await self.poller.process_changes(repo_branches={'master': True})
+        repo_branch = {'master': {'notify_only_latest': True}}
+        await self.poller.process_changes(repo_branches=repo_branch)
 
         self.assertTrue(pollers.revisions_added.publish.called)
         self.assertFalse(pollers.MatchKeysDict.called)

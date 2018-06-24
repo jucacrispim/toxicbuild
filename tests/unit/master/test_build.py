@@ -482,7 +482,7 @@ class BuildManagerTest(TestCase):
 
         @asyncio.coroutine
         def gb(branch, slave):
-            return [self.builder]
+            return [self.builder, self.revision.branch]
 
         self.manager.get_builders = gb
 
@@ -529,7 +529,8 @@ class BuildManagerTest(TestCase):
         self.manager._execute_builds = AsyncMagicMock(
             spec=self.manager._execute_builds)
         self.manager.get_builders = AsyncMagicMock(
-            spec=self.manager.get_builders, return_value=[self.builder])
+            spec=self.manager.get_builders,
+            return_value=[self.builder, self.revision.branch])
         self.manager.cancel_previous_pending = AsyncMagicMock(
             spec=self.manager.cancel_previous_pending)
         self.manager.repository = self.repo
@@ -557,8 +558,37 @@ class BuildManagerTest(TestCase):
         self.manager.config_type = 'py'
         self.manager.repository.vcs.checkout = asyncio.coroutine(
             lambda *a, **kw: checkout())
-        builders = await self.manager.get_builders(self.slave,
-                                                   self.revision)
+        builders, origin = await self.manager.get_builders(self.slave,
+                                                           self.revision)
+
+        for b in builders:
+            self.assertTrue(isinstance(b, build.Document))
+
+        self.assertEqual(len(builders), 2)
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
+    @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
+    @mock.patch.object(build, 'list_builders_from_config',
+                       mock.Mock(side_effect=[[], [{'name': 'builder-0'},
+                                                   {'name': 'builder-1'}]]))
+    @async_test
+    async def test_get_builders_fallback(self):
+        await self._create_test_data()
+        checkout = mock.MagicMock()
+        self.revision.branch = 'no-builders'
+        self.revision.builders_fallback = 'master'
+        self.repo.schedule = mock.Mock()
+        await self.repo.bootstrap()
+        self.manager.repository = self.repo
+        self.manager.config_type = 'py'
+        self.manager.repository.vcs.checkout = asyncio.coroutine(
+            lambda *a, **kw: checkout())
+        builders, origin = await self.manager.get_builders(self.slave,
+                                                           self.revision)
 
         for b in builders:
             self.assertTrue(isinstance(b, build.Document))
@@ -584,8 +614,8 @@ class BuildManagerTest(TestCase):
         self.manager.repository.vcs.checkout = asyncio.coroutine(
             lambda *a, **kw: checkout())
 
-        builders = await self.manager.get_builders(self.slave,
-                                                   self.revision)
+        builders, origin = await self.manager.get_builders(self.slave,
+                                                           self.revision)
 
         self.assertFalse(builders)
         self.assertTrue(build.log.called)

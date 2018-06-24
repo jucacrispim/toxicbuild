@@ -410,7 +410,8 @@ class HoleHandler:
         return {'repo-disable-plugin': 'ok'}
 
     async def repo_start_build(self, repo_name, branch, builder_name=None,
-                               named_tree=None, slaves=None):
+                               named_tree=None, slaves=None,
+                               builders_origin=None):
         """ Starts a(some) build(s) in a given repository. """
         slaves = slaves or []
 
@@ -424,7 +425,8 @@ class HoleHandler:
 
         slaves = slave_instances
 
-        await repo.start_build(branch, builder_name, named_tree, slaves=slaves)
+        await repo.start_build(branch, builder_name, named_tree, slaves=slaves,
+                               builders_origin=builders_origin)
         return {'repo-start-build': 'builds added'}
 
     async def repo_cancel_build(self, repo_name_or_id, build_uuid):

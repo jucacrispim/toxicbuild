@@ -291,7 +291,7 @@ class BuilderManagerTest(TestCase):
     @async_test
     async def test_list_builders(self):
         await self.manager.load_config()
-        expected = ['builder1', 'builder2', 'builder3', 'builder4']
+        expected = ['builder1', 'builder2', 'builder3', 'builder4', 'builder5']
         returned = self.manager.list_builders()
 
         self.assertEqual(returned, expected)
@@ -325,6 +325,15 @@ class BuilderManagerTest(TestCase):
         managers.settings.USE_DOCKER = False
         builder = await self.manager.load_builder('builder1')
         self.assertEqual(len(builder.steps), 2)
+
+    @patch.object(managers, 'settings', Mock())
+    @async_test
+    async def test_load_builder_from_other_branch(self):
+        self.manager.builders_from = 'other-branch'
+        await self.manager.load_config()
+        managers.settings.USE_DOCKER = False
+        builder = await self.manager.load_builder('builder5')
+        self.assertEqual(len(builder.steps), 1)
 
     @patch.object(managers, 'settings', Mock())
     @patch.object(managers, 'DockerContainerBuilder', Mock())

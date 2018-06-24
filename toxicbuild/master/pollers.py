@@ -125,7 +125,10 @@ class Poller(LoggerMixin):
 
           .. code block:: python
 
-             {'branch-name': notify_only_latest}
+             # builders_fallback is the builders_fallback to
+             # :class:`~toxicbuild.master.repository.RepositoryRevision`
+             {'branch-name': {'notify_only_latest': True
+                              'builders_fallback': 'branch-name'}}
 
         """
         self.log('processing changes', level='debug')
@@ -137,7 +140,7 @@ class Poller(LoggerMixin):
 
         if not repo_branches:
             repo_branches = MatchKeysDict(
-                **{b.name: b.notify_only_latest
+                **{b.name: {'notify_only_latest': b.notify_only_latest}
                    for b in self.repository.branches})
 
         branches = repo_branches.keys()
@@ -152,22 +155,22 @@ class Poller(LoggerMixin):
             self.log('processing changes for branch {}'.format(branch),
                      level='debug')
             # the thing here is that if the branch is a new one
-            # or is the first time its running, I don't what to get all
+            # or is the first time its running, I don't want to get all
             # revisions, but the last one only.
             if branch not in known_branches:
-                rev = revs[-1]
-                revision = await self.repository.add_revision(
-                    branch, external=self._external_info, **rev)
-                msg = 'Last revision added for branch {} '
-                self.log(msg.format(branch), level='debug')
-                revisions.append(revision)
-                continue
+                revs = [revs[-1]]
 
-            notify_only_latest = repo_branches.get(branch) \
+            notify_only_latest = repo_branches.get(
+                branch, {}).get('notify_only_latest') \
                 if repo_branches.get(branch) is not None else True
+
+            builders_fallback = repo_branches.get(
+                branch, {}).get('builders_fallback') \
+                if repo_branches.get(branch) is not None else ''
 
             await self._process_branch_revisions(branch, revs,
                                                  notify_only_latest,
+                                                 builders_fallback,
                                                  revisions)
 
         if revisions:
@@ -189,13 +192,15 @@ class Poller(LoggerMixin):
         super().log(msg, level)
 
     async def _process_branch_revisions(self, branch, revisions,
-                                        notify_only_latest, to_notify):
+                                        notify_only_latest, builders_fallback,
+                                        to_notify):
         """Processes the revisions for a branch"""
 
         branch_revs = []
         for rev in revisions:
             revision = await self.repository.add_revision(
-                branch, external=self._external_info, **rev)
+                branch, external=self._external_info,
+                builders_fallback=builders_fallback, **rev)
             # the thing here is: if notify_only_latest, we only
             # add the most recent revision, the last one of the revisions
             # list to the revisionset

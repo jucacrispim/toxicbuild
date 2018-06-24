@@ -641,8 +641,9 @@ class RepositoryTest(TestCase):
                             autospec=True)]
         self.repo.build_manager.get_builders = create_autospec(
             spec=self.repo.build_manager.get_builders, mock_cls=AsyncMagicMock)
-        self.repo.build_manager.get_builders.return_value = [self.builder]
-        builders = await self.repo._get_builders(slaves, self.revision)
+        self.repo.build_manager.get_builders.return_value = [self.builder], \
+            'master'
+        builders, origin = await self.repo._get_builders(slaves, self.revision)
         self.assertEqual(list(builders.values())[0], [self.builder])
 
     @async_test
@@ -657,7 +658,7 @@ class RepositoryTest(TestCase):
         self.repo.get_latest_revision_for_branch.return_value = self.revision
         self.repo._get_builders = create_autospec(
             spec=self.repo._get_builders, mock_cls=AsyncMagicMock)
-
+        self.repo._get_builders.return_value = {self.slave: ['bla']}, 'master'
         await self.repo.start_build('master')
 
         self.assertTrue(self.repo.add_builds_for_slave.called)
