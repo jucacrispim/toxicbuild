@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,8 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-# THIS WHOLE MODULE NEEDS TO BE RE-WRITTEN
-
 import asyncio
 from asyncio import ensure_future
 import base64
@@ -27,10 +25,12 @@ import json
 import traceback
 
 from tornado import gen
+from tornado.web import HTTPError
 from tornado.websocket import WebSocketHandler, WebSocketError
-
 from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
-from pyrocumulus.web.handlers import TemplateHandler, PyroRequest
+from pyrocumulus.web.decorators import post, get, put, delete
+from pyrocumulus.web.handlers import (TemplateHandler, PyroRequest,
+                                      BasePyroHandler)
 from pyrocumulus.web.urlmappers import URLSpec
 
 from toxicbuild.core.utils import LoggerMixin, string2datetime
@@ -45,49 +45,28 @@ from toxicbuild.ui.utils import (format_datetime, is_datetime,
 COOKIE_NAME = 'toxicui'
 
 
-class LoginHandler(TemplateHandler):
+class ToxicRequest(PyroRequest):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.user = None
+    def __getitem__(self, key):
+        item = self.new_request[key]
+        if len(item) == 1:
+            item = item[0]
+        return item
 
-    def get(self, action):
-        if action == 'logout':
-            self.clear_cookie(COOKIE_NAME)
-            return self.redirect('/')
+    def items(self):
+        """Returns the request items"""
+        for k, v in self.new_request.items():
+            yield k, self.get(k)
 
-        if self.get_secure_cookie(COOKIE_NAME):
-            return self.redirect('/')
-
-        error = bool(self.params.get('error'))
-        self.render_template('login.html', {'error': error})
-
-    @gen.coroutine
-    def post(self, action):
-        username_or_email = self.params.get('username_or_email')
-        password = self.params.get('password')
-
-        if not (username_or_email and password):
-            return self.redirect('/login?error=2')
-
+    def get(self, key, default=None):
+        """Returns a single value for a key. If it's not present
+        returns None."""
         try:
-            # async methode User.authenticate being used with yield from
-            # bacause of tornado and pylint complains
-            self.user = yield from User.authenticate(  # pylint: disable=E1133
-                username_or_email, password)
-        except Exception:
-            return self.redirect('/login?error=1')
+            item = self[key]
+        except KeyError:
+            item = default
 
-        self._set_cookie_content()
-        redirect = self.params.get('redirect') or '/'
-        self.redirect(redirect)
-
-    def _set_cookie_content(self):
-        userjson = json.dumps({'id': self.user.id, 'email': self.user.email,
-                               'username': self.user.username})
-
-        content = base64.encodebytes(userjson.encode('utf-8'))
-        self.set_secure_cookie(COOKIE_NAME, content)
+        return item
 
 
 class LoggedTemplateHandler(TemplateHandler):
@@ -112,238 +91,225 @@ class LoggedTemplateHandler(TemplateHandler):
         return User(None, json.loads(userjson))
 
 
-class BaseModelHandler(LoggedTemplateHandler):
-    item_template = 'item.html'
-    list_template = 'list.html'
+class CookieAuthHandlerMixin(LoggerMixin, BasePyroHandler):
+    """A mixin that checks if the requester is logged by looking
+    for a cookie."""
 
-    def initialize(self, *args, **kwargs):
-        self.model = kwargs['model']
-        del kwargs['model']
-        super().initialize(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        self.user = None
+        super().__init__(*args, **kwargs)
 
-    @asyncio.coroutine
-    def get_item(self, **kwargs):
-        item = yield from self.model.get(self.user, **kwargs)
-        return item
+    async def async_prepare(self):
+        user = self._get_user_from_cookie()
+        if not user:
+            raise HTTPError(403)
+        self.user = user
+        await super().async_prepare()
+        return True
 
-    @asyncio.coroutine
-    def add(self, **kwargs):
-        if not kwargs.get('owner'):
-            kwargs['owner'] = self.user
+    def _get_user_from_cookie(self):
+        cookie = self.get_secure_cookie(COOKIE_NAME)
+        if not cookie:
+            return
 
-        resp = yield from self.model.add(self.user, **kwargs)
+        userjson = base64.decodebytes(cookie).decode('utf-8')
+        return User(None, json.loads(userjson))
+
+
+class LoginHandler(BasePyroHandler):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.body = None
+
+    async def async_prepare(self):
+        await super().async_prepare()
+        self.body = json.loads(self.request.body)
+
+    @post('login')
+    async def do_login(self):
+        """Authenticates using username and password and creates a cookie"""
+
+        username_or_email = self.body.get('username_or_email')
+        password = self.body.get('password')
+
+        if not (username_or_email and password):
+            raise HTTPError(400, 'Missing parameters for login')
+
+        try:
+            self.user = await User.authenticate(username_or_email, password)
+        except Exception:
+            raise HTTPError(403)
+
+        self._set_cookie_content()
+        return {'login': 'ok'}
+
+    @get('logout')
+    def do_logout(self):
+        self.clear_cookie(COOKIE_NAME)
+        return {'logout': 'ok'}
+
+    def _set_cookie_content(self):
+        userjson = json.dumps({'id': self.user.id, 'email': self.user.email,
+                               'username': self.user.username})
+
+        content = base64.encodebytes(userjson.encode('utf-8'))
+        self.set_secure_cookie(COOKIE_NAME, content)
+
+
+class ModelRestHandler(LoggerMixin, BasePyroHandler):
+    """A base handler for handlers that are responsible for manipulating
+    models from :mod:`~toxicbuild.ui.models`"""
+
+    def __init__(self, *args, **kwargs):
+        self.model = kwargs.pop('model', None)
+        self.body = None
+        self.query = None
+        super().__init__(*args, **kwargs)
+
+    async def async_prepare(self):
+        super().async_prepare()
+
+        if self.request.body:  # pragma no branch
+            self.body = json.loads(self.request.body)
+
+        self.query = ToxicRequest(self.request.arguments)
+
+    @post('')
+    async def add(self):
+        self.body['owner'] = self.user
+
+        resp = await self.model.add(self.user, **self.body)
 
         json_resp = resp.to_json()
         return json_resp
 
-    @gen.coroutine
-    def get(self, *args):
-        resp = yield from self.get_item(**self.params)
-        json_resp = resp.to_json()
-        return json_resp
+    @get('')
+    async def get_or_list(self):
+        if self._query_has_pk():
+            item = await self.model.get(self.user, **self.query)
+            resp = item.to_json()
+        else:
+            items = await self.model.list(self.user, **self.query)
+            r = {'items': [i.to_dict() for i in items]}
+            resp = json.dumps(r)
 
-    @gen.coroutine
-    def post(self, *args):
-        resp = yield from self.add(**self.params)
-        self.write(resp)
-
-    @gen.coroutine
-    def delete(self, *args):
-        item = yield from self.get_item(**self.params)
-        resp = yield from item.delete()
         return resp
 
+    @put('')
+    async def update(self):
+        item = await self.model.get(self.user, **self.query)
+        for key, value in self.body.items():
+            setattr(item, key, value)
 
-class RepositoryHandler(BaseModelHandler):
+        await item.update(**self.body)
+        return item.to_json()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.params = None
+    @delete('')
+    async def delete_item(self):
+        item = await self.model.get(self.user, **self.query)
+        await item.delete()
+        return {'delete': 'ok'}
 
-    @gen.coroutine
-    def post(self, *args):
-        if 'add-branch' in args:
-            yield from self.add_branch()
-            return
-
-        elif 'remove-branch' in args:
-            yield from self.remove_branch()
-            return
-
-        elif 'enable-plugin' in self.request.uri:
-            yield from self.enable_plugin()
-            return
-
-        elif 'disable-plugin' in self.request.uri:
-            yield from self.disable_plugin()
-            return
-
-        elif 'cancel-build' in self.request.uri:
-            yield from self.cancel_build()
-            return
-
-        elif'start-build' not in args:
-            yield super().post(*args)
-            return
-
-        ret = yield from self.start_build()
-        self.write(ret)
-
-    @asyncio.coroutine
-    def cancel_build(self):
-        repo = yield from self.get_item(repo_name=self.params.get('name'))
-        build_uuid = self.params.get('build_uuid')
-        r = yield from repo.cancel_build(build_uuid)
-        return r
-
-    @asyncio.coroutine
-    def enable_plugin(self):
-
-        repo = yield from self.get_item(repo_name=self.params.get('name'))
-        del self.params['name']
-        plugin_name = self.params.get('plugin_name')
-        del self.params['plugin_name']
-        r = yield from repo.enable_plugin(plugin_name, **self.params)
-        return r
-
-    @asyncio.coroutine
-    def disable_plugin(self):
-        repo = yield from self.get_item(repo_name=self.params.get('name'))
-        plugin_name = self.params.get('plugin_name')
-        r = yield from repo.disable_plugin(name=plugin_name)
-        return r
-
-    @asyncio.coroutine
-    def list_plugins(self):
-        plugins = yield from Plugin.list(self.user)
-        return plugins
-
-    @asyncio.coroutine
-    def start_build(self):
-        item = yield from self.get_item(repo_name=self.params.get('name'))
-        del self.params['name']
-        ret = yield from item.start_build(**self.params)
-        return ret
-
-    @asyncio.coroutine
-    def add_branch(self):
-        item = yield from self.get_item(repo_name=self.params.get('name'))
-        del self.params['name']
-        notify = self.params['notify_only_latest']
-        notify = True if notify == 'true' else False
-        self.params['notify_only_latest'] = notify
-        r = yield from item.add_branch(**self.params)
-        return r
-
-    @asyncio.coroutine
-    def remove_branch(self):
-        item = yield from self.get_item(repo_name=self.params.get('name'))
-        del self.params['name']
-        r = yield from item.remove_branch(**self.params)
-        return r
-
-    @gen.coroutine
-    def prepare(self):
-        super().prepare()
-        if 'start-build' in self.request.uri:
-            self._prepare_start_build()
-
-        elif 'add-branch' in self.request.uri:
-            kw = {'name': self.params.get('name'),
-                  'branch_name': self.params.get('branch_name'),
-                  'notify_only_latest': self.params.get('notify_only_latest')}
-            self.params = kw
-
-        elif 'remove-branch' in self.request.uri:
-            kw = {'name': self.params.get('name'),
-                  'branch_name': self.params.get('branch_name')}
-            self.params = kw
-
-        elif ('enable-plugin' in self.request.uri or
-              'disable-plugin' in self.request.uri):
-            yield from self._prepare_for_plugin()
-
-        elif 'cancel-build' in self.request.uri:
-            pass
-
-        else:
-            kw = {}
-            kw['name'] = self.params.get('name')
-            kw['url'] = self.params.get('url')
-            kw['vcs_type'] = self.params.get('vcs_type')
-            kw['update_seconds'] = self.params.get('update_seconds')
-            kw['parallel_builds'] = self.params.get('parallel_builds')
-            kw['slaves'] = self.params.getlist('slaves')
-            self.params = kw
-
-    @gen.coroutine
-    def delete(self, *args):
-        self.params = {'repo_name': self.params.get('name')}
-        yield super().delete(*args)
-
-    @gen.coroutine
-    def put(self, *args):
-        item = yield from self.get_item(repo_name=self.params['name'])
-        del self.params['name']
-        r = yield from item.update(**self.params)
-        self.write(r)
-
-    def _prepare_start_build(self):
-        kw = {}
-        kw['name'] = self.params.get('name')
-        kw['builder_name'] = self.params.get('builder_name')
-        kw['branch'] = self.params.get('branch')
-        kw['slaves'] = self.params.getlist('slaves')
-        kw['named_tree'] = self.params.get('named_tree')
-
-        self.params = kw
-
-    @asyncio.coroutine
-    def _prepare_for_plugin(self):
-
-        kw = {}
-        plugin_name = self.params.get('plugin_name')
-        plugin = yield from Plugin.get(self.user, name=plugin_name)
-        for k, v in self.params.items():
-            try:
-                kw[k] = v[0] if getattr(plugin, k)['type'] != 'list' else [
-                    i.strip() for i in v[0].split(',')]
-            except (AttributeError, TypeError):
-                # TypeError happens when a attribute is not a dict
-                # ie, plugin pretty_name and description
-                kw[k] = v[0]
-
-        self.params = kw
+    def _query_has_pk(self):
+        return 'id' in self.query.keys()
 
 
-class SlaveHandler(BaseModelHandler):
+class RepositoryRestHandler(ModelRestHandler):
+    """A rest api handler for repositories"""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.params = None
+    @post('add-slave')
+    async def add_slave(self):
+        repo = await self.model.get(self.user, **self.query)
+        slave = await Slave.get(self.user, **self.body)
+        await repo.add_slave(slave)
+        return {'repo-add-slave': 'slave added'}
 
-    def prepare(self):
-        super().prepare()
-        kw = {}
-        kw['name'] = self.params.get('name')
-        kw['host'] = self.params.get('host')
-        kw['port'] = self.params.get('port')
-        kw['token'] = self.params.get('token')
-        kw['use_ssl'] = True if self.params.get('use_ssl') == 'true' else False
-        kw['validate_cert'] = True if self.params.get(
-            'validate_cert') == 'true' else False
+    @post('remove-slave')
+    async def remove_slave(self):
+        repo = await self.model.get(self.user, **self.query)
+        slave = await Slave.get(self.user, **self.body)
+        await repo.remove_slave(slave)
+        return {'repo-remove-slave': 'slave removed'}
 
-        self.params = kw
+    @post('add-branch')
+    async def add_branch(self):
+        """Adds a new branch configuration to the repository."""
 
-    @gen.coroutine
-    def delete(self, *args):
-        self.params = {'slave_name': self.params.get('name')}
-        yield super().delete(*args)
+        repo = await self.model.get(self.user, **self.query)
+        branches = self.body.get('add_branches', [])
+        tasks = [ensure_future(repo.add_branch(**branch))
+                 for branch in branches]
 
-    @gen.coroutine
-    def put(self, *args):
-        item = yield from self.get_item(slave_name=self.params['name'])
-        yield from item.update(**self.params)
+        await asyncio.gather(*tasks)
+        return {'repo-add-branch': '{} branches added'.format(len(branches))}
+
+    @post('remove-branch')
+    async def remove_branch(self):
+        """Removes a branch configuration from the repository."""
+
+        repo = await self.model.get(self.user, **self.query)
+        branches = self.body.get('remove_branches', [])
+        tasks = [ensure_future(repo.remove_branch(branch))
+                 for branch in branches]
+        await asyncio.gather(*tasks)
+        return {'repo-remove-branch': '{} branches removed'.format(len(
+            branches))}
+
+    @post('enable-plugin')
+    async def enable_plugin(self):
+        """Enables a plugin for a repository."""
+
+        repo = await self.model.get(self.user, **self.query)
+        await repo.enable_plugin(**self.body)
+        return {'repo-enable-plugin': 'plugin {} enabled'.format(self.body.get(
+            'plugin_name'))}
+
+    @post('disable-plugin')
+    async def disable_plugin(self):
+        """Disables a plugin for a repository."""
+
+        repo = await self.model.get(self.user, **self.query)
+        await repo.disable_plugin(**self.body)
+        return {'repo-disable-plugin': 'plugin {} disabled'.format(
+            self.body.get('plugin_name'))}
+
+    @get('list-plugins')
+    async def list_plugins(self):
+        """Lists all plugins available to a repository."""
+
+        plugins = await Plugin.list(self.user)
+        return {'items': [p.to_dict() for p in plugins]}
+
+    @post('start-build')
+    async def start_build(self):
+        """Starts builds for the repository."""
+
+        repo = await self.model.get(self.user, **self.query)
+        await repo.start_build(**self.body)
+        return {'repo-start-build': 'builds scheduled'}
+
+    @post('cancel-build')
+    async def cancel_build(self):
+        """Cancels a build from a repository."""
+
+        repo = await self.model.get(self.user, **self.query)
+        build_uuid = self.body.get('build_uuid')
+        await repo.cancel_build(build_uuid)
+        return {'repo-cancel-build': 'build cancelled'}
+
+
+class CookieAuthRepositoryRestHandler(CookieAuthHandlerMixin,
+                                      RepositoryRestHandler):
+    """A rest api handler for repositories which requires cookie auth."""
+
+
+class SlaveRestHandler(ModelRestHandler):
+    """A rest api handler for slaves."""
+
+
+class CookieAuthSlaveRestHandler(CookieAuthHandlerMixin, SlaveRestHandler):
+    """A rest api handler for slaves which requires cookie auth."""
 
 
 class StreamHandler(LoggerMixin, LoggedTemplateHandler, WebSocketHandler):
@@ -547,9 +513,11 @@ app = PyroApplication([url, waterfall, login, websocket])
 static_app = StaticApplication()
 
 repo_kwargs = {'model': Repository}
-repo_api_url = URLSpec('/api/repo/(.*)', RepositoryHandler, repo_kwargs)
+repo_api_url = URLSpec('/api/repo/(.*)', CookieAuthRepositoryRestHandler,
+                       repo_kwargs)
 
 slave_kwargs = {'model': Slave}
-slave_api_url = URLSpec('/api/slave/(.*)', SlaveHandler, slave_kwargs)
+slave_api_url = URLSpec('/api/slave/(.*)', CookieAuthSlaveRestHandler,
+                        slave_kwargs)
 
 api_app = PyroApplication([repo_api_url, slave_api_url])

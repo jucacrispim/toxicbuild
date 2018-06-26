@@ -69,7 +69,7 @@ class User(Document):
                                              reverse_delete_rule=PULL))
     # organizations which the user is part of, but not the owner
     member_of = ListField(ReferenceField('Organization'))
-    # what the user can do: create_repo, create_slave or create_user
+    # what the user can do: add_repo, add_slave or add_user
     allowed_actions = ListField(StringField())
 
     @classmethod

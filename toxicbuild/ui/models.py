@@ -213,6 +213,7 @@ class Plugin(BaseModel):
     """A repository plugin."""
 
     @classmethod
+    @asyncio.coroutine
     def list(cls, requester):
         """Lists all plugins available in the master.
 
@@ -225,6 +226,7 @@ class Plugin(BaseModel):
         return plugins
 
     @classmethod
+    @asyncio.coroutine
     def get(cls, requester, name):
         """Return the schema for a specific plugin
 
@@ -266,6 +268,7 @@ class Repository(BaseModel):
               'owner_id': str(owner.id)}
 
         kw.update({'slaves': slaves or []})
+
         with (yield from cls.get_client(requester)) as client:
             repo_dict = yield from client.repo_add(**kw)
 
