@@ -75,7 +75,7 @@ class SlaveTest(BaseUITest):
                                               'test-slave-get', 'localhost',
                                               123, '123', self.user)
             get_slave = yield from Slave.get(self.user,
-                                             slave_name='test-slave-get')
+                                             slave_name_or_id='test-slave-get')
             self.assertEqual(self.slave.id, get_slave.id)
         finally:
             yield from self.slave.delete()
@@ -98,8 +98,8 @@ class SlaveTest(BaseUITest):
                                               'test-slave-update', 'localhost',
                                               123, '123', self.user)
             yield from self.slave.update(host='192.168.0.1')
-            get_slave = yield from Slave.get(self.user,
-                                             slave_name='test-slave-update')
+            get_slave = yield from Slave.get(
+                self.user, slave_name_or_id='test-slave-update')
             self.assertEqual(self.slave.id, get_slave.id)
             self.assertEqual(get_slave.host, '192.168.0.1')
         finally:
@@ -145,7 +145,7 @@ class RepositoryTest(BaseUITest):
             owner=self.user, vcs_type='git',
             update_seconds=200)
         get_repo = yield from Repository.get(self.user,
-                                             repo_name='some-repo')
+                                             name='some-repo')
         self.assertEqual(self.repo.id, get_repo.id)
 
     @async_test
@@ -166,7 +166,7 @@ class RepositoryTest(BaseUITest):
             update_seconds=200)
         yield from self.repo.update(update_seconds=100)
         get_repo = yield from Repository.get(self.user,
-                                             repo_name=self.repo.name)
+                                             name=self.repo.name)
         self.assertEqual(self.repo.id, get_repo.id)
         self.assertEqual(get_repo.update_seconds, 100)
 
@@ -181,7 +181,7 @@ class RepositoryTest(BaseUITest):
                                               vcs_type='git',
                                               update_seconds=200)
         yield from self.repo.add_slave(self.slave)
-        repo = yield from Repository.get(self.user, repo_name=self.repo.name)
+        repo = yield from Repository.get(self.user, name=self.repo.name)
         self.assertEqual(len(repo.slaves), 1)
 
     @async_test
@@ -196,7 +196,7 @@ class RepositoryTest(BaseUITest):
                                               update_seconds=200,
                                               slaves=[self.slave.name])
         yield from self.repo.remove_slave(self.slave)
-        repo = yield from Repository.get(self.user, repo_name=self.repo.name)
+        repo = yield from Repository.get(self.user, name=self.repo.name)
         self.assertEqual(len(repo.slaves), 0)
 
     @async_test
@@ -208,7 +208,7 @@ class RepositoryTest(BaseUITest):
                                               vcs_type='git',
                                               update_seconds=200)
         yield from self.repo.add_branch('master', True)
-        repo = yield from Repository.get(self.user, repo_name=self.repo.name)
+        repo = yield from Repository.get(self.user, name=self.repo.name)
         self.assertEqual(len(repo.branches), 1)
 
     @async_test
@@ -221,7 +221,7 @@ class RepositoryTest(BaseUITest):
                                               update_seconds=200)
         yield from self.repo.add_branch('master', True)
         yield from self.repo.remove_branch('master')
-        repo = yield from Repository.get(self.user, repo_name=self.repo.name)
+        repo = yield from Repository.get(self.user, name=self.repo.name)
         self.assertEqual(len(repo.branches), 0)
 
     @async_test
@@ -234,7 +234,7 @@ class RepositoryTest(BaseUITest):
         yield from self.repo.enable_plugin(
             'slack-notification',
             webhook_url='https://some.url.slack')
-        repo = yield from Repository.get(self.user, repo_name='some-repo')
+        repo = yield from Repository.get(self.user, name='some-repo')
         self.assertEqual(len(repo.plugins), 1)
 
     @async_test
@@ -249,7 +249,7 @@ class RepositoryTest(BaseUITest):
             webhook_url='https://some.url.slack')
         kw = {'name': 'slack-notification'}
         yield from self.repo.disable_plugin(**kw)
-        repo = yield from Repository.get(self.user, repo_name='some-repo')
+        repo = yield from Repository.get(self.user, name='some-repo')
         self.assertEqual(len(repo.plugins), 0)
 
 
@@ -276,7 +276,8 @@ class BuildsetTest(BaseUITest):
                                               vcs_type='git',
                                               update_seconds=200,
                                               slaves=[self.slave.name])
-        buildsets = yield from BuildSet.list(self.user, repo_name='some-repo')
+        buildsets = yield from BuildSet.list(self.user,
+                                             repo_name_or_id='some-repo')
         self.assertEqual(len(buildsets), 0)
 
 

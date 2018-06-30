@@ -78,7 +78,7 @@ class RepositoryRestAPITest(TestCase):
         data = {'name': 'somerepo', 'url': 'https://somebla.com',
                 'vcs_type': 'git'}
         self.session.post(url, data=json.dumps(data))
-        self.session.delete(url + '?repo_name=somerepo')
+        self.session.delete(url + '?name=somerepo')
         resp = self.session.get(url)
         repos = resp.json()
         self.assertEqual(len(repos['items']), 0)
@@ -88,9 +88,9 @@ class RepositoryRestAPITest(TestCase):
         data = {'name': 'somerepo', 'url': 'https://somebla.com',
                 'vcs_type': 'git'}
         self.session.post(url, data=json.dumps(data))
-        slave_data = {'slave_name': 'someslave'}
+        slave_data = {'name': 'someslave'}
 
-        resp = self.session.post(url + 'add-slave?repo_name=somerepo',
+        resp = self.session.post(url + 'add-slave?name=somerepo',
                                  data=json.dumps(slave_data))
         json_resp = resp.json()
         self.assertEqual(json_resp['repo-add-slave'], 'slave added')
@@ -100,12 +100,12 @@ class RepositoryRestAPITest(TestCase):
         data = {'name': 'somerepo', 'url': 'https://somebla.com',
                 'vcs_type': 'git'}
         self.session.post(url, data=json.dumps(data))
-        slave_data = {'slave_name': 'someslave'}
+        slave_data = {'name': 'someslave'}
 
-        resp = self.session.post(url + 'add-slave?repo_name=somerepo',
+        resp = self.session.post(url + 'add-slave?name=somerepo',
                                  data=json.dumps(slave_data))
 
-        resp = self.session.post(url + 'remove-slave?repo_name=somerepo',
+        resp = self.session.post(url + 'remove-slave?name=somerepo',
                                  data=json.dumps(slave_data))
 
         json_resp = resp.json()
@@ -119,7 +119,7 @@ class RepositoryRestAPITest(TestCase):
 
         branch_data = {'add_branches': [{'branch_name': 'master',
                                          'notify_only_latest': True}]}
-        resp = self.session.post(url + 'add-branch?repo_name=somerepo',
+        resp = self.session.post(url + 'add-branch?name=somerepo',
                                  data=json.dumps(branch_data))
         self.assertEqual(resp.json()['repo-add-branch'], '1 branches added')
 
@@ -131,10 +131,10 @@ class RepositoryRestAPITest(TestCase):
 
         branch_data = {'add_branches': [{'branch_name': 'master',
                                          'notify_only_latest': True}]}
-        self.session.post(url + 'add-branch?repo_name=somerepo',
+        self.session.post(url + 'add-branch?name=somerepo',
                           data=json.dumps(branch_data))
         rm_data = {'remove_branches': ['master']}
-        resp = self.session.post(url + 'remove-branch?repo_name=somerepo',
+        resp = self.session.post(url + 'remove-branch?name=somerepo',
                                  data=json.dumps(rm_data))
 
         self.assertEqual(
@@ -150,7 +150,7 @@ class RepositoryRestAPITest(TestCase):
                        'branches': ['master'], 'statuses': ['fail'],
                        'webhook_url': 'https://bla.com'}
 
-        resp = self.session.post(url + 'enable-plugin?repo_name=somerepo',
+        resp = self.session.post(url + 'enable-plugin?name=somerepo',
                                  data=json.dumps(plugin_data))
         self.assertEqual(resp.json()['repo-enable-plugin'],
                          'plugin custom-webhook enabled')
@@ -165,11 +165,11 @@ class RepositoryRestAPITest(TestCase):
                        'branches': ['master'], 'statuses': ['fail'],
                        'webhook_url': 'https://bla.com'}
 
-        self.session.post(url + 'enable-plugin?repo_name=somerepo',
+        self.session.post(url + 'enable-plugin?name=somerepo',
                           data=json.dumps(plugin_data))
 
         rm_data = {'plugin_name': 'custom-webhook'}
-        resp = self.session.post(url + 'disable-plugin?repo_name=somerepo',
+        resp = self.session.post(url + 'disable-plugin?name=somerepo',
                                  data=json.dumps(rm_data))
         self.assertEqual(resp.json()['repo-disable-plugin'],
                          'plugin custom-webhook disabled')
@@ -216,7 +216,7 @@ class SlaveRestAPITest(TestCase):
         data = {'name': 'someslave', 'token': 'asdf', 'host': 'localhost',
                 'port': 1234, 'use_ssl': False}
         self.session.post(url, data=json.dumps(data))
-        self.session.delete(url + '?slave_name=someslave')
+        self.session.delete(url + '?name=someslave')
         resp = self.session.get(url)
         repos = resp.json()
         self.assertEqual(len(repos['items']), 0)

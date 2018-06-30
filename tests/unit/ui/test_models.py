@@ -289,7 +289,7 @@ class RepositoryTest(TestCase):
             requester, 'add slave ok')
 
         kw = models.OrderedDict(name='localslave', host='localhost', port=7777,
-                                token='123')
+                                token='123', id='some-id')
         requester = MagicMock()
         slave = models.Slave(requester, kw)
         resp = yield from self.repository.add_slave(slave)
@@ -300,7 +300,8 @@ class RepositoryTest(TestCase):
     def test_remove_slave(self):
         self.repository.get_client = lambda requester: get_client_mock(
             requester, 'remove slave ok')
-        kw = dict(name='localslave', host='localhost', port=7777)
+        kw = dict(name='localslave', host='localhost', port=7777,
+                  id='some-id')
         requester = MagicMock()
         slave = models.Slave(requester, kw)
         resp = yield from self.repository.remove_slave(slave)
@@ -415,7 +416,8 @@ class SlaveTest(TestCase):
     @async_test
     def test_delete(self):
         requester = MagicMock()
-        kw = dict(name='slave', host='localhost', port=1234)
+        kw = dict(name='slave', host='localhost', port=1234,
+                  id='some=id')
         slave = models.Slave(requester, kw)
         slave.get_client = lambda requester: get_client_mock(
             requester, 'ok')
@@ -426,7 +428,8 @@ class SlaveTest(TestCase):
     @async_test
     def test_update(self):
         requester = MagicMock()
-        kw = dict(name='slave', host='localhost', port=1234)
+        kw = dict(name='slave', host='localhost', port=1234,
+                  id='some=id')
         slave = models.Slave(requester, kw)
         slave.get_client = lambda requester: get_client_mock(
             requester, 'ok')

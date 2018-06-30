@@ -102,6 +102,17 @@ class BaseModel:
         d = self.to_dict()
         return json.dumps(d)
 
+    @classmethod
+    def _handle_name_or_id(cls, prefix, kw):
+        name = kw.pop('name', None)
+        key = '{}_name_or_id'.format(prefix)
+        if name:
+            kw[key] = name
+
+        id = kw.pop('id', None)
+        if id:
+            kw[key] = id
+
 
 class User(BaseModel):
 
@@ -174,6 +185,7 @@ class Slave(BaseModel):
         :param requester: The user who is requesting the operation.
         :param kwargs: kwargs to get the slave."""
 
+        cls._handle_name_or_id('slave', kwargs)
         with (yield from cls.get_client(requester)) as client:
             slave_dict = yield from client.slave_get(**kwargs)
         slave = cls(requester, slave_dict)
@@ -196,7 +208,7 @@ class Slave(BaseModel):
         """Delete a slave."""
 
         with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.slave_remove(slave_name=self.name)
+            resp = yield from client.slave_remove(slave_name_or_id=self.id)
         return resp
 
     @asyncio.coroutine
@@ -204,7 +216,7 @@ class Slave(BaseModel):
         """Updates a slave"""
 
         with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.slave_update(slave_name=self.name,
+            resp = yield from client.slave_update(slave_name_or_id=self.id,
                                                   **kwargs)
         return resp
 
@@ -283,6 +295,7 @@ class Repository(BaseModel):
         :param requester: The user who is requesting the operation.
         :param kwargs: kwargs to get the repository."""
 
+        cls._handle_name_or_id('repo', kwargs)
         with (yield from cls.get_client(requester)) as client:
             repo_dict = yield from client.repo_get(**kwargs)
         repo = cls(requester, repo_dict)
@@ -305,7 +318,7 @@ class Repository(BaseModel):
         """Delete a repository."""
 
         with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_remove(repo_name=self.name)
+            resp = yield from client.repo_remove(repo_name_or_id=self.id)
         return resp
 
     @asyncio.coroutine
@@ -315,8 +328,8 @@ class Repository(BaseModel):
         :param slave: A Slave instance."""
 
         with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_add_slave(repo_name=self.name,
-                                                    slave_name=slave.name)
+            resp = yield from client.repo_add_slave(repo_name_or_id=self.id,
+                                                    slave_name_or_id=slave.id)
         return resp
 
     @asyncio.coroutine
@@ -327,8 +340,8 @@ class Repository(BaseModel):
         """
 
         with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_remove_slave(repo_name=self.name,
-                                                       slave_name=slave.name)
+            resp = yield from client.repo_remove_slave(
+                repo_name_or_id=self.id, slave_name_or_id=slave.id)
         return resp
 
     @asyncio.coroutine
@@ -341,7 +354,7 @@ class Repository(BaseModel):
 
         with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_add_branch(
-                repo_name=self.name, branch_name=branch_name,
+                repo_name_or_id=self.id, branch_name=branch_name,
                 notify_only_latest=notify_only_latest)
 
         return resp
@@ -353,7 +366,7 @@ class Repository(BaseModel):
         :param branch_name: The name of the branch."""
         with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_remove_branch(
-                repo_name=self.name, branch_name=branch_name)
+                repo_name_or_id=self.id, branch_name=branch_name)
 
         return resp
 
@@ -361,7 +374,7 @@ class Repository(BaseModel):
     def update(self, **kwargs):
         """Updates a slave"""
         with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_update(repo_name=self.name,
+            resp = yield from client.repo_update(repo_name_or_id=self.id,
                                                  **kwargs)
         return resp
 
@@ -380,7 +393,8 @@ class Repository(BaseModel):
 
         with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_start_build(
-                repo_name=self.name, branch=branch, builder_name=builder_name,
+                repo_name_or_id=self.id, branch=branch,
+                builder_name=builder_name,
                 named_tree=named_tree, slaves=slaves or [])
         return resp
 
@@ -402,7 +416,7 @@ class Repository(BaseModel):
 
         with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_enable_plugin(
-                repo_name=self.name, plugin_name=plugin_name, **kwargs)
+                repo_name_or_id=self.id, plugin_name=plugin_name, **kwargs)
 
         return resp
 
@@ -414,7 +428,7 @@ class Repository(BaseModel):
 
         with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_disable_plugin(
-                repo_name=self.name, **kwargs)
+                repo_name_or_id=self.id, **kwargs)
 
         return resp
 
@@ -458,15 +472,15 @@ class BuildSet(BaseModel):
 
     @classmethod
     @asyncio.coroutine
-    def list(cls, requester, repo_name=None):
+    def list(cls, requester, repo_name_or_id=None):
         """Lists buildsets. If ``repo_name`` only builds of this
         repsitory will be listed.
 
         :param repo_name: Name of a repository."""
 
         with (yield from cls.get_client(requester)) as client:
-            buildsets = yield from client.buildset_list(repo_name=repo_name,
-                                                        offset=10)
+            buildsets = yield from client.buildset_list(
+                repo_name_or_id=repo_name_or_id, offset=10)
 
         buildset_list = [cls(requester, buildset) for buildset in buildsets]
         return buildset_list

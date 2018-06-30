@@ -519,7 +519,8 @@ class HoleHandler:
     async def buildset_list(self, repo_name_or_id=None, skip=0, offset=None):
         """ Lists all buildsets.
 
-        If ``repo_name_or_id``, only builders from this repository will be listed.
+        If ``repo_name_or_id``, only builders from this repository will be
+          listed.
         :param repo_name_or_id: Repository's name or id.
         :param skip: skip for buildset list.
         :param offset: offset for buildset list.
