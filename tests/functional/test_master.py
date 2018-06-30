@@ -97,7 +97,7 @@ class DummyUIClient(BaseToxicClient):
     def start_build(self, builder='builder-1'):
 
         action = 'repo-start-build'
-        body = {'repo_name': 'test-repo',
+        body = {'repo_name_or_id': 'test-repo',
                 'branch': 'master'}
         if builder:
             body['builder_name'] = builder
@@ -134,7 +134,7 @@ class DummyUIClient(BaseToxicClient):
     @asyncio.coroutine
     def enable_plugin(self):
         action = 'repo-enable-plugin'
-        body = {'repo_name': 'test-repo',
+        body = {'repo_name_or_id': 'test-repo',
                 'plugin_name': 'custom-webhook',
                 'webhook_url': 'http://localhost:{}/webhookmessage/'.format(
                     settings.WEBHOOK_PORT),
@@ -147,7 +147,7 @@ class DummyUIClient(BaseToxicClient):
     @asyncio.coroutine
     def disable_plugin(self):
         action = 'repo-disable-plugin'
-        body = {'repo_name': 'test-repo',
+        body = {'repo_name_or_id': 'test-repo',
                 'plugin_name': 'slack-notification'}
 
         resp = yield from self.request2server(action, body)
@@ -238,7 +238,8 @@ class ToxicMasterTest(BaseFunctionalTest):
         with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server(
                 'repo-add-slave',
-                {'repo_name': 'test-repo', 'slave_name': 'test-slave2'})
+                {'repo_name_or_id': 'test-repo',
+                 'slave_name_or_id': 'test-slave2'})
         self.assertTrue(resp)
 
     @async_test
@@ -246,14 +247,15 @@ class ToxicMasterTest(BaseFunctionalTest):
         with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server(
                 'repo-remove-slave',
-                {'repo_name': 'test-repo', 'slave_name': 'test-slave2'})
+                {'repo_name_or_id': 'test-repo',
+                 'slave_name_or_id': 'test-slave2'})
         self.assertTrue(resp)
 
     @async_test
     def test_07_slave_get(self):
         with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server('slave-get',
-                                                    {'slave_name':
+                                                    {'slave_name_or_id':
                                                      'test-slave2'})
         self.assertTrue(resp)
 
@@ -261,7 +263,7 @@ class ToxicMasterTest(BaseFunctionalTest):
     def test_08_repo_get(self):
         with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server('repo-get',
-                                                    {'repo_name':
+                                                    {'repo_name_or_id':
                                                      'test-repo'})
         self.assertTrue(resp)
 
@@ -269,7 +271,7 @@ class ToxicMasterTest(BaseFunctionalTest):
     def test_09_slave_remove(self):
         with (yield from get_dummy_client(self.user)) as client:
             resp = yield from client.request2server('slave-remove',
-                                                    {'slave_name':
+                                                    {'slave_name_or_id':
                                                      'test-slave2'})
         self.assertTrue(resp)
 
@@ -414,7 +416,8 @@ class ToxicMasterTest(BaseFunctionalTest):
     def _delete_test_data(cls):
         with (yield from get_dummy_client(cls.user)) as client:
             yield from client.request2server('slave-remove',
-                                             {'slave_name': 'test-slave'})
+                                             {'slave_name_or_id':
+                                              'test-slave'})
             yield from client.connect()
             yield from client.request2server('repo-remove',
-                                             {'repo_name': 'test-repo'})
+                                             {'repo_name_or_id': 'test-repo'})
