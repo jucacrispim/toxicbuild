@@ -276,19 +276,27 @@ class HoleHandler:
         msg = 'The owner {} does not exist'.format(owner_id)
         raise OwnerDoesNotExist(msg)
 
-    async def repo_get(self, repo_name=None, repo_url=None):
+    def _get_kw_for_name_or_id(self, repo_name_or_id):
+        if ObjectId.is_valid(repo_name_or_id):
+            kw = {'id': repo_name_or_id}
+        else:
+            kw = {'name': repo_name_or_id}
+
+        return kw
+
+    async def repo_get(self, repo_name_or_id=None, repo_url=None):
         """Shows information about one specific repository. One of
         ``repo_name`` or ``repo_url`` is required.
 
-        :param repo_name: Repository name,
+        :param repo_name_or_id: Repository name or ObjectId,
         :param repo_url: Repository vcs url."""
 
-        if not (repo_name or repo_url):
+        if not (repo_name_or_id or repo_url):
             raise TypeError("repo_name or repo_url required")
 
         kw = {}
-        if repo_name:
-            kw['name'] = repo_name
+        if repo_name_or_id:
+            kw = self._get_kw_for_name_or_id(repo_name_or_id)
 
         if repo_url:
             kw['url'] = repo_url
@@ -297,13 +305,13 @@ class HoleHandler:
         repo_dict = await self._get_repo_dict(repo)
         return {'repo-get': repo_dict}
 
-    async def repo_remove(self, repo_name):
+    async def repo_remove(self, repo_name_or_id):
         """ Removes a repository from toxicubild.
 
-        :param repo_name: Repository name."""
+        :param repo_name_or_id: Repository name or id."""
 
-        repo = await Repository.get_for_user(self.protocol.user,
-                                             name=repo_name)
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.remove()
         return {'repo-remove': 'ok'}
 
@@ -319,10 +327,10 @@ class HoleHandler:
 
         return {'repo-list': repo_list}
 
-    async def repo_update(self, repo_name, **kwargs):
+    async def repo_update(self, repo_name_or_id, **kwargs):
         """ Updates repository information.
 
-        :param repo_name: Repository name
+        :param repo_name_or_id: Repository name or id
         :param kwargs: kwargs to update the repository"""
 
         if kwargs.get('slaves'):
@@ -330,8 +338,8 @@ class HoleHandler:
             slaves_instances = await qs.to_list()
             kwargs['slaves'] = slaves_instances
 
-        repo = await Repository.get_for_user(self.protocol.user,
-                                             name=repo_name)
+        query_kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **query_kw)
 
         for k, v in kwargs.items():
             setattr(repo, k, v)
@@ -339,84 +347,85 @@ class HoleHandler:
         await repo.save()
         return {'repo-update': 'ok'}
 
-    async def repo_add_slave(self, repo_name, slave_name):
+    async def repo_add_slave(self, repo_name_or_id, slave_name_or_id):
         """ Adds a slave to a repository.
 
-        :param repo_name: Repository name.
-        :param slave_name: Slave name."""
+        :param repo_name_or_id: Repository name or id.
+        :param slave_name_or_id: Slave name or id."""
 
-        repo = await Repository.get_for_user(self.protocol.user,
-                                             name=repo_name)
-        slave = await Slave.get_for_user(self.protocol.user,
-                                         name=slave_name)
+        repo_kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **repo_kw)
+        slave_kw = self._get_kw_for_name_or_id(slave_name_or_id)
+        slave = await Slave.get_for_user(self.protocol.user, **slave_kw)
         await repo.add_slave(slave)
         return {'repo-add-slave': 'ok'}
 
-    async def repo_remove_slave(self, repo_name, slave_name):
-        """ Removes a slave from toxicbuild. """
+    async def repo_remove_slave(self, repo_name_or_id, slave_name_or_id):
+        """ Removes a slave from a repository.
 
-        repo = await Repository.get_for_user(self.protocol.user,
-                                             name=repo_name)
+        :param repo_name_or_id: Repository name or id.
+        :param slave_name_or_id: Slave name or id."""
 
-        slave = await Slave.get_for_user(self.protocol.user,
-                                         name=slave_name)
+        repo_kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **repo_kw)
+        slave_kw = self._get_kw_for_name_or_id(slave_name_or_id)
+        slave = await Slave.get_for_user(self.protocol.user, **slave_kw)
         await repo.remove_slave(slave)
         return {'repo-remove-slave': 'ok'}
 
-    async def repo_add_branch(self, repo_name, branch_name,
+    async def repo_add_branch(self, repo_name_or_id, branch_name,
                               notify_only_latest=False):
         """Adds a branch to the list of branches of the repository.
 
-        :param repo_name: Reporitory name
-        :param branch_name: Branch's name
+        :param repo_name_or_id: Reporitory name or id.
+        :param branch_name: Branch's name.
         :notify_only_latest: If True only the latest commit in the
           branch will trigger a build."""
-        repo = await Repository.get_for_user(self.protocol.user,
-                                             name=repo_name)
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.add_or_update_branch(branch_name, notify_only_latest)
         return {'repo-add-branch': 'ok'}
 
-    async def repo_remove_branch(self, repo_name, branch_name):
+    async def repo_remove_branch(self, repo_name_or_id, branch_name):
         """Removes a branch from the list of branches of a repository.
-        :param repo_name: Repository name
+        :param repo_name_or_id: Repository name or id.
         :param branch_name: Branch's name."""
 
-        repo = await Repository.get_for_user(self.protocol.user,
-                                             name=repo_name)
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.remove_branch(branch_name)
         return {'repo-remove-branch': 'ok'}
 
-    async def repo_enable_plugin(self, repo_name, plugin_name, **kwargs):
+    async def repo_enable_plugin(self, repo_name_or_id, plugin_name, **kwargs):
         """Enables a plugin to a repository.
 
-        :param repo_name: Repository name.
+        :param repo_name_or_id: Repository name or id.
         :param plugin_name: Plugin name
         :param kwargs: kwargs passed to the plugin."""
 
-        repo = await Repository.get_for_user(self.protocol.user,
-                                             name=repo_name)
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.enable_plugin(plugin_name, **kwargs)
         return {'repo-enable-plugin': 'ok'}
 
-    async def repo_disable_plugin(self, repo_name, **kwargs):
+    async def repo_disable_plugin(self, repo_name_or_id, **kwargs):
         """Disables a plugin from a repository.
 
-        :param repo_name: Repository name.
+        :param repo_name_or_id: Repository name or id.
         :param kwargs: kwargs passed to the plugin"""
 
-        repo = await Repository.get_for_user(self.protocol.user,
-                                             name=repo_name)
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.disable_plugin(**kwargs)
         return {'repo-disable-plugin': 'ok'}
 
-    async def repo_start_build(self, repo_name, branch, builder_name=None,
+    async def repo_start_build(self, repo_name_or_id, branch, builder_name=None,
                                named_tree=None, slaves=None,
                                builders_origin=None):
         """ Starts a(some) build(s) in a given repository. """
         slaves = slaves or []
-
-        repo = await Repository.get_for_user(self.protocol.user,
-                                             name=repo_name)
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
 
         slave_instances = []
         for sname in slaves:
@@ -435,11 +444,7 @@ class HoleHandler:
         :param repo_name_or_id: The name or the id of the repository.
         :param buid_uuid: The uuid of the build to be cancelled."""
 
-        if ObjectId.is_valid(repo_name_or_id):
-            kw = {'id': repo_name_or_id}
-        else:
-            kw = {'name': repo_name_or_id}
-
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
         repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.cancel_build(build_uuid)
         return {'repo-cancel-build': 'ok'}
@@ -469,19 +474,19 @@ class HoleHandler:
         slave_dict = self._get_slave_dict(slave)
         return {'slave-add': slave_dict}
 
-    async def slave_get(self, slave_name):
+    async def slave_get(self, slave_name_or_id):
         """Returns information about one specific slave"""
 
-        slave = await Slave.get_for_user(self.protocol.user,
-                                         name=slave_name)
+        kw = self._get_kw_for_name_or_id(slave_name_or_id)
+        slave = await Slave.get_for_user(self.protocol.user, **kw)
         slave_dict = self._get_slave_dict(slave)
         return {'slave-get': slave_dict}
 
-    async def slave_remove(self, slave_name):
+    async def slave_remove(self, slave_name_or_id):
         """ Removes a slave from toxicbuild. """
 
-        slave = await Slave.get_for_user(self.protocol.user,
-                                         name=slave_name)
+        kw = self._get_kw_for_name_or_id(slave_name_or_id)
+        slave = await Slave.get_for_user(self.protocol.user, **kw)
 
         await slave.delete()
 
@@ -499,10 +504,11 @@ class HoleHandler:
 
         return {'slave-list': slave_list}
 
-    async def slave_update(self, slave_name, **kwargs):
+    async def slave_update(self, slave_name_or_id, **kwargs):
         """Updates infomation of a slave."""
 
-        slave = await Slave.get_for_user(self.protocol.user, name=slave_name)
+        kw = self._get_kw_for_name_or_id(slave_name_or_id)
+        slave = await Slave.get_for_user(self.protocol.user, **kw)
 
         for k, v in kwargs.items():
             setattr(slave, k, v)
@@ -510,19 +516,20 @@ class HoleHandler:
         await slave.save()
         return {'slave-update': 'ok'}
 
-    async def buildset_list(self, repo_name=None, skip=0, offset=None):
+    async def buildset_list(self, repo_name_or_id=None, skip=0, offset=None):
         """ Lists all buildsets.
 
-        If ``repo_name``, only builders from this repository will be listed.
-        :param repo_name: Repository's name.
+        If ``repo_name_or_id``, only builders from this repository will be listed.
+        :param repo_name_or_id: Repository's name or id.
         :param skip: skip for buildset list.
         :param offset: offset for buildset list.
         """
 
         buildsets = BuildSet.objects.no_dereference()
-        if repo_name:
+        if repo_name_or_id:
+            kw = self._get_kw_for_name_or_id(repo_name_or_id)
             repository = await Repository.get_for_user(
-                self.protocol.user, name=repo_name)
+                self.protocol.user, **kw)
             buildsets = buildsets.filter(repository=repository)
 
         buildsets = buildsets.order_by('-created')
@@ -567,18 +574,19 @@ class HoleHandler:
         plugin = MasterPlugin.get_plugin(name=name)
         return {'plugin-get': plugin.get_schema(to_serialize=True)}
 
-    async def builder_show(self, repo_name, builder_name, skip=0, offset=None):
+    async def builder_show(self, repo_name_or_id, builder_name, skip=0,
+                           offset=None):
         """ Returns information about one specific builder.
 
-        :param repo_name: The builder's repository name.
+        :param repo_name_or_id: The builder's repository name.
         :param builder_name: The bulider's name.
         :param skip: How many elements we should skip in the result.
         :param offset: How many results we should return.
         """
 
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
         kwargs = {'name': builder_name}
-        repo = await Repository.get_for_user(self.protocol.user,
-                                             name=repo_name)
         kwargs.update({'repository': repo})
 
         builder = await Builder.get(**kwargs)

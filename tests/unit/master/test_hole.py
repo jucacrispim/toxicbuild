@@ -354,6 +354,20 @@ class HoleHandlerTest(TestCase):
 
         self.assertEqual(repo['repo-add']['parallel_builds'], 1)
 
+    def test_get_kw_for_name_or_id_name(self):
+        name_or_id = 'some-name'
+        expected = {'name': 'some-name'}
+        handler = hole.HoleHandler({}, 'repo-get', MagicMock())
+        returned = handler._get_kw_for_name_or_id(name_or_id)
+        self.assertEqual(returned, expected)
+
+    def test_get_kw_for_name_or_id_id(self):
+        name_or_id = str(ObjectId())
+        expected = {'id': name_or_id}
+        handler = hole.HoleHandler({}, 'repo-get', MagicMock())
+        returned = handler._get_kw_for_name_or_id(name_or_id)
+        self.assertEqual(returned, expected)
+
     @async_test
     async def test_get_owner_user_does_not_exist(self):
         with self.assertRaises(hole.OwnerDoesNotExist):
@@ -371,7 +385,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler({}, action, protocol)
-        repo = (await handler.repo_get(repo_name=repo_name))['repo-get']
+        repo = (await handler.repo_get(repo_name_or_id=repo_name))['repo-get']
 
         self.assertEqual(repo['name'], repo_name)
         self.assertTrue(repo['id'])
@@ -411,7 +425,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler({}, action, protocol)
-        await handler.repo_remove(repo_name='reponame')
+        await handler.repo_remove(repo_name_or_id='reponame')
         allrepos = [r.name for r in (
             await hole.Repository.objects.to_list())]
         self.assertEqual((await hole.Repository.objects.count()),
@@ -491,7 +505,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler(data, action, protocol)
-        await handler.repo_update(repo_name=self.repo.name,
+        await handler.repo_update(repo_name_or_id=self.repo.name,
                                   update_seconds=60)
         repo = await hole.Repository.objects.get(name=self.repo.name)
 
@@ -511,7 +525,7 @@ class HoleHandlerTest(TestCase):
 
         handler = hole.HoleHandler(data, action, protocol)
         slaves = ['name']
-        await handler.repo_update(repo_name=self.repo.name,
+        await handler.repo_update(repo_name_or_id=self.repo.name,
                                   update_seconds=60, slaves=slaves)
         repo = await hole.Repository.objects.get(name=self.repo.name)
         self.assertEqual(repo.update_seconds, 60)
@@ -535,8 +549,8 @@ class HoleHandlerTest(TestCase):
         protocol.user = self.owner
         handler = hole.HoleHandler({}, action, protocol)
 
-        await handler.repo_add_slave(repo_name=repo_name,
-                                     slave_name='name2')
+        await handler.repo_add_slave(repo_name_or_id=repo_name,
+                                     slave_name_or_id='name2')
 
         repo = await hole.Repository.objects.get(url=self.repo.url)
 
@@ -576,7 +590,7 @@ class HoleHandlerTest(TestCase):
         protocol.user = self.owner
         handler = hole.HoleHandler({}, action, protocol)
 
-        await handler.repo_add_branch(repo_name=self.repo.name,
+        await handler.repo_add_branch(repo_name_or_id=self.repo.name,
                                       branch_name='release',
                                       notify_only_latest=True)
 
@@ -596,12 +610,12 @@ class HoleHandlerTest(TestCase):
         protocol.user = self.owner
         handler = hole.HoleHandler({}, action, protocol)
 
-        await handler.repo_add_branch(repo_name=self.repo.name,
+        await handler.repo_add_branch(repo_name_or_id=self.repo.name,
                                       branch_name='release',
                                       notify_only_latest=True)
         repo = await hole.Repository.objects.get(url=self.repo.url)
         branch_count = len(repo.branches)
-        await handler.repo_remove_branch(repo_name=self.repo.name,
+        await handler.repo_remove_branch(repo_name_or_id=self.repo.name,
                                          branch_name='release')
 
         await repo.reload('branches')
@@ -807,7 +821,7 @@ class HoleHandlerTest(TestCase):
         protocol.user = self.owner
         handler = hole.HoleHandler({}, action, protocol)
         slave = (await handler.slave_get(
-            slave_name=slave_name))['slave-get']
+            slave_name_or_id=slave_name))['slave-get']
 
         self.assertEqual(slave['name'], slave_name)
         self.assertTrue(slave['id'])
@@ -821,7 +835,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler(data, 'slave-remove', protocol)
-        await handler.slave_remove(slave_name='name')
+        await handler.slave_remove(slave_name_or_id='name')
         await asyncio.sleep(0.1)
         self.assertEqual((await hole.Slave.objects.count()), 0)
 
@@ -848,7 +862,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler(data, action, protocol)
-        await handler.slave_update(slave_name=self.slave.name,
+        await handler.slave_update(slave_name_or_id=self.slave.name,
                                    host='10.0.0.1')
         slave = await hole.Slave.get(name=self.slave.name)
         self.assertEqual(slave.host, '10.0.0.1')
@@ -918,7 +932,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler(data, action, protocol)
-        builder = await handler.builder_show(repo_name=self.repo.name,
+        builder = await handler.builder_show(repo_name_or_id=self.repo.name,
                                              builder_name='b01')
         builder = builder['builder-show']
 
@@ -936,7 +950,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler(data, action, protocol)
-        builder = await handler.builder_show(repo_name=self.repo.name,
+        builder = await handler.builder_show(repo_name_or_id=self.repo.name,
                                              builder_name='b01',
                                              skip=1, offset=1)
         builder = builder['builder-show']
