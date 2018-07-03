@@ -419,8 +419,8 @@ class HoleHandler:
         await repo.disable_plugin(**kwargs)
         return {'repo-disable-plugin': 'ok'}
 
-    async def repo_start_build(self, repo_name_or_id, branch, builder_name=None,
-                               named_tree=None, slaves=None,
+    async def repo_start_build(self, repo_name_or_id, branch,
+                               builder_name=None, named_tree=None, slaves=None,
                                builders_origin=None):
         """ Starts a(some) build(s) in a given repository. """
         slaves = slaves or []
