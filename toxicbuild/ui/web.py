@@ -31,6 +31,7 @@ from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
 from pyrocumulus.web.decorators import post, get, put, delete
 from pyrocumulus.web.handlers import (TemplateHandler, PyroRequest,
                                       BasePyroHandler)
+from pyrocumulus.web.template import render_template
 from pyrocumulus.web.urlmappers import URLSpec
 
 from toxicbuild.core.utils import LoggerMixin, string2datetime
@@ -116,7 +117,26 @@ class CookieAuthHandlerMixin(LoggerMixin, BasePyroHandler):
         return User(None, json.loads(userjson))
 
 
-class LoginHandler(BasePyroHandler):
+class TemplateHandler(BasePyroHandler):
+    """
+    Handler with little improved template support
+    """
+
+    def render_template(self, template, extra_context=None):
+        """
+        Renders a template using
+        :func:`pyrocumulus.web.template.render_template`.
+        """
+        extra_context = extra_context or {}
+        self.write(render_template(template, self.request, extra_context))
+
+    def set_xsrf_cookie(self):  # pragma no cover
+        return self.xsrf_token
+
+
+class LoginHandler(TemplateHandler):
+
+    login_template = 'toxictheme/login.html'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -124,7 +144,15 @@ class LoginHandler(BasePyroHandler):
 
     async def async_prepare(self):
         await super().async_prepare()
-        self.body = json.loads(self.request.body)
+        self.query = ToxicRequest(self.request.arguments)
+        if self.request.body:
+            self.body = json.loads(self.request.body)
+
+    @get('login')
+    def show_login_page(self):
+        self.set_xsrf_cookie()
+        self.render_template(self.login_template, {})
+        return ''
 
     @post('login')
     async def do_login(self):
@@ -147,7 +175,8 @@ class LoginHandler(BasePyroHandler):
     @get('logout')
     def do_logout(self):
         self.clear_cookie(COOKIE_NAME)
-        return {'logout': 'ok'}
+
+        self.redirect('/')
 
     def _set_cookie_content(self):
         userjson = json.dumps({'id': self.user.id, 'email': self.user.email,

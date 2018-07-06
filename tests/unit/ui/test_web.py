@@ -90,6 +90,26 @@ class CookieAuthHandlerMixinTest(TestCase):
         self.assertTrue(r)
 
 
+class TemplateHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        super().setUp()
+        request = MagicMock()
+        request.cookies = {}
+        request.body = '{}'
+        application = MagicMock()
+        self.handler = web.LoginHandler(application, request=request)
+        await self.handler.async_prepare()
+
+    @patch.object(web, 'render_template', MagicMock(
+        spec=web.render_template, return_value='<html>mytemplate</html>'))
+    def test_render_template(self):
+        self.handler.write = MagicMock()
+        self.handler.render_template('some/template.html', {'my': 'context'})
+        self.assertTrue(self.handler.write.called)
+
+
 class LoginHandlerTest(TestCase):
 
     @async_test
@@ -133,10 +153,20 @@ class LoginHandlerTest(TestCase):
         await self.handler.do_login()
         self.assertTrue(self.handler.set_secure_cookie.called)
 
-    def test_do_logout(self):
+    @async_test
+    async def test_do_logout(self):
         self.handler.clear_cookie = MagicMock()
+        self.handler.redirect = MagicMock()
+        self.handler.request.body = None
+        await self.handler.async_prepare()
         self.handler.do_logout()
         self.assertTrue(self.handler.clear_cookie.called)
+
+    def test_show_login_page(self):
+        self.handler.render_template = MagicMock()
+        self.handler.show_login_page()
+        template = self.handler.render_template.call_args[0][0]
+        self.assertEqual(template, self.handler.login_template)
 
 
 @patch.object(models.Repository, 'get_client', AsyncMagicMock(
