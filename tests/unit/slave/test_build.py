@@ -53,6 +53,8 @@ class BuilderTest(TestCase):
         s1 = build.BuildStep(name='s1', command='ls')
         s2 = build.BuildStep(name='s2', command='echo "uhu!"')
         self.builder.steps = [s1, s2]
+        self.builder._copy_workdir = AsyncMagicMock(
+            spec=self.builder._copy_workdir)
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'success')
         self.assertIn('total_time', build_info['steps'][0].keys())
@@ -62,6 +64,8 @@ class BuilderTest(TestCase):
         s1 = build.BuildStep(name='s1', command='ls')
         s2 = build.BuildStep(name='s2', command='exit 1')
         s3 = build.BuildStep(name='s3', command='echo "oi"')
+        self.builder._copy_workdir = AsyncMagicMock(
+            spec=self.builder._copy_workdir)
         self.builder.steps = [s1, s2, s3]
 
         build_info = yield from self.builder.build()
@@ -73,6 +77,8 @@ class BuilderTest(TestCase):
         s2 = build.BuildStep(name='s2', command='exit 1', stop_on_fail=True)
         s3 = build.BuildStep(name='s3', command='echo "oi"')
         self.builder.steps = [s1, s2, s3]
+        self.builder._copy_workdir = AsyncMagicMock(
+            spec=self.builder._copy_workdir)
 
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'fail')
