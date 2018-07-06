@@ -22,7 +22,6 @@ import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 import tornado
-from tornado import gen
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.ui import web, models, utils
 from tests import AsyncMagicMock, async_test, create_autospec

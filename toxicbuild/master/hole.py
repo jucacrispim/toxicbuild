@@ -420,8 +420,8 @@ class HoleHandler:
         return {'repo-disable-plugin': 'ok'}
 
     async def repo_start_build(self, repo_name_or_id, branch,
-                               builder_name=None, named_tree=None, slaves=None,
-                               builders_origin=None):
+                               builder_name=None, named_tree=None,
+                               slaves=None, builders_origin=None):
         """ Starts a(some) build(s) in a given repository. """
         slaves = slaves or []
         kw = self._get_kw_for_name_or_id(repo_name_or_id)

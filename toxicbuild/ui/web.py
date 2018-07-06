@@ -194,6 +194,7 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
         self.model = kwargs.pop('model', None)
         self.body = None
         self.query = None
+        self.user = None
         super().__init__(*args, **kwargs)
 
     async def async_prepare(self):
