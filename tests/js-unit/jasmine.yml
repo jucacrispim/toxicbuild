@@ -12,9 +12,9 @@
     #   - dist/**/*.js
     #
     src_files:
-      # - "base.js"
-      - "jquery.min.js"
-      - "*.js"
+      - "jquery/*.js"
+      - "bootstrap/js/*.js"
+      - "toxicbuild/js/*.js"
 
     # stylesheets
     #
@@ -27,8 +27,8 @@
     #   - css/style.css
     #   - stylesheets/*.css
     #
-    stylesheets:
-      - jasmine-style/jasmine-dark.css
+    # stylesheets:
+    #   - jasmine-style/jasmine-dark.css
 
     # helpers
     #
@@ -54,6 +54,7 @@
     #   - **/*[sS]pec.js
     #
     spec_files:
+      - "**/jasmine-fixture.js"
       - "**/*[Ss]pec.js"
 
     # src_dir
@@ -65,7 +66,7 @@
     #
     # src_dir: public
     #
-    src_dir: toxicbuild/ui/static/toxicbuild/js/
+    src_dir: toxicbuild/ui/static/
 
     # spec_dir
     #

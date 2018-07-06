@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block logout_link %}{% end %}
+
+{% block main_area %}
+<div class="container login-container">
+  <div class="login-header-msg text-center mx-auto">
+    <p>Sign in</p>
+  </div>
+
+  <div id="login-input-container"
+       class="box-white-sm col-sm-3 mx-auto box-shadow">
+    <form class="form-signin" id="form-signin" method="post" action="">
+
+      <div id="login-error-msg-container" class="error">
+	<span class="fas fa-exclamation-triangle"></span>
+	<span>Invalid credentials</span>
+      </div>
+      <input type="text" id="inputUsername" name="username_or_email"
+	     class="form-control login-form-control"
+	     placeholder="email or username"
+	     required>
+
+      <input type="password" id="inputPassword" name="password"
+	     class="form-control login-form-control" placeholder="password"
+	     required>
+    </form>
+    <button class="btn btn-md btn-primary btn-block btn-dark" type="submit"
+	    id="btn-login">
+      <span class="fas fa-spinner" id="login-btn-spinner" style="display:none">
+      </span>
+      <span id="login-btn-text">Sign in</span>
+    </button>
+    <div class="forgot-password-container">
+      <a href="/forgot-password">Forgot password?</a>
+    </div>
+
+  </div>
+
+  <div id="new-to-toxicbuild-container"
+       class="col-sm-3 box-white-sm mx-auto box-shadow">
+    New to ToxicBuild? <a href="/register">Sign up!</a>
+  </div>
+</div>
+{% end %}
+
+
+{% block js_bottom %}
+<script src="{{static_url}}jquery/jquery.min.js"></script>
+<script src="{{static_url}}jquery/jquery.validate.min.js"></script>
+<script src="{{static_url}}jquery/jquery.color-2.1.2.min.js"></script>
+<script src="{{static_url}}bootstrap/js/bootstrap.min.js"></script>
+<script src="{{static_url}}toxicbuild/js/js.cookie.js"></script>
+<script src="{{static_url}}toxicbuild/js/utils.js"></script>
+<script src="{{static_url}}toxicbuild/js/login.js"></script>
+{% end %}

@@ -1,0 +1,91 @@
+/* common */
+:root{
+    --red-light: rgb(226, 112, 123);
+}
+body{
+    background-color: #f9f9f9;
+}
+
+.navbar-brand img{
+    width:200px;
+    margin-top: 1px;
+}
+
+.form-control:focus {
+    border-color: #707375;
+    box-shadow: 0 0 0 0.2rem rgba(109, 112, 115, 0.25);
+}
+
+.form-control-error,
+.form-control-error:focus{
+        border-color: #d2778a57;
+        box-shadow: 0 0 0.4rem rgba(191, 5, 39, 0.9);
+}
+
+.alert{
+    position: fixed;
+    width: 98.0%;
+    margin-top: -35px;
+    z-index: 1000;
+    opacity: 0.98;
+    display: none;
+    font-size: 1.1em;
+}
+
+.error{
+    color: var(--red-light);
+}
+
+.btn-dark{
+    background-image: linear-gradient(-180deg, #757272 0%, #343a40 90%);
+}
+
+.toxic-main-area{
+    background-color: #f9f9f9;
+}
+
+.box-shadow{
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, .05);
+}
+
+.box-shadow-black{
+    box-shadow: 0px 0px 5px 1px #000;
+}
+
+.box-white-sm{
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fff;
+    padding: 15px;
+    font-size: 0.9em;
+    margin-bottom: 10px;
+}
+
+.message-container{
+    padding-left: 35px;
+    margin-top: -26px;
+}
+
+/* login */
+.login-container{
+    padding-top:10px;
+}
+
+.login-container .form-control{
+    margin-bottom: 10px;
+}
+
+
+.login-container p{
+    font-size: 1.8em;
+}
+
+.forgot-password-container{
+    padding-top:10px;
+}
+
+#login-error-msg-container{
+    color: var(--white);
+    margin-bottom: 10px;
+    font-weight: 500;
+}

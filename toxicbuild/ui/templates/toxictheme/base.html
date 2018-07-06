@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{% block title %}Toxicbuild{% end %}</title>
+
+    {% block stylesheet %}
+    <link href="{{static_url}}bootstrap/css/bootstrap.min.css"
+	  rel="stylesheet">
+    <link href="{{static_url}}toxicbuild/css/toxictheme/toxicclear.css"
+	  rel="stylesheet">
+    <link href="{{static_url}}fontawesome/css/all.css" rel="stylesheet">
+    {% end %}
+  </head>
+
+  <body>
+    <nav class="navbar navbar-dark bg-dark p-0">
+
+      <div class="container-fluid toxiclogo-container">
+        <a class="navbar-brand" href="/">
+	  <img class="img-logo" src="{{static_url}}toxicbuild/img/Logo.svg"/>
+	</a>
+      </div>
+
+      {% block logout_link %}
+      <div class="container logout-link-container">
+	<a href="/logout">
+	  Logout
+	</a>
+      </div>
+      {% end %}
+
+    </nav>
+
+    <!-- The main space of the page-->
+    <div class="container-fluid toxic-main-area">
+
+      <!-- Error alert -->
+      {% block messages %}
+      <div class="alert alert-danger alert-dismissible box-shadow-black"
+	   role="alert">
+
+	<div class="alert-inner-container">
+	  <span class="fas fa-exclamation-triangle"></span>
+	  <div id="error-container"
+	       class="col-sm-12 mx-auto message-container">
+	  </div>
+	  <button type="button" class="close close-msg" data-dismiss="alert"
+		  aria-label="Close"><span aria-hidden="true">&times;</span>
+	  </button>
+	</div>
+
+      </div>
+
+      <!-- Success alert -->
+      <div class="alert alert-success alert-dismissible box-shadow-black"
+	   role="alert">
+
+	<div class="alert-inner-container">
+	  <div id="success-container"
+	       class="col-sm-12 mx-auto  message-container">
+	  </div>
+	  <button type="button" class="close close-msg" data-dismiss="alert"
+		  aria-label="Close">
+	  </button>
+	</div>
+
+      </div>
+      {% end %}
+
+      <div class="jumbotron-fluid background-main">
+	<!-- When creating a new page, change this block -->
+	{% block main_area %}{% end %}
+      </div>
+    </div>
+
+    <!-- Include your js in this block. -->
+    {% block js_bottom%}{% end %}
+  </body>
+
+</html>
