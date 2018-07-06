@@ -199,13 +199,13 @@ class ModelRestHandlerTest(TestCase):
 
     @async_test
     async def test_get_or_list_get(self):
-        args = {'id':  [b'123']}
+        args = {'id': [b'123']}
         self.handler.request.arguments = args
         await self.handler.async_prepare()
         client = models.Repository.get_client.return_value
         client.__enter__.return_value.repo_get = AsyncMagicMock()
-        client.__enter__.return_value.repo_get.return_value = {'id': '123',
-                                                               'name': 'something'}
+        client.__enter__.return_value.repo_get.return_value = {
+            'id': '123', 'name': 'something'}
         self.model.get_client = AsyncMagicMock(return_value=client)
         json_resp = await self.handler.get_or_list()
         self.assertEqual(web.json.loads(json_resp)['id'], '123')
