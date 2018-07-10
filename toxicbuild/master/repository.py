@@ -200,13 +200,36 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         workdir = workdir.strip()
         return os.path.join(base_dir, workdir, str(self.id))
 
+    async def get_last_buildset(self):
+        last_buildset = await BuildSet.objects(repository=self).order_by(
+            '-created').first()
+        if not last_buildset:
+            return
+
+        status = last_buildset.get_status()
+        i = 1
+        while status == BuildSet.PENDING:
+            # we do not consider pending builds for the repo status
+            start = i
+            stop = start + 1
+            last_buildset = BuildSet.objects(repository=self).order_by(
+                '-created')[start:stop]
+            last_buildset = await last_buildset.first()
+            i += 1
+
+            if not last_buildset:
+                break
+
+            status = last_buildset.get_status()
+
+        return last_buildset
+
     async def get_status(self):
         """Returns the status for the repository. The status is the
         status of the last buildset created for this repository that is
         not pending."""
 
-        last_buildset = await BuildSet.objects(repository=self).order_by(
-            '-created').first()
+        last_buildset = await self.get_last_buildset()
 
         clone_statuses = ['cloning', 'clone-exception']
         if not last_buildset and self.clone_status in clone_statuses:
@@ -215,21 +238,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             status = 'ready'
         else:
             status = last_buildset.get_status()
-            i = 1
-            while status == BuildSet.PENDING:
-                # we do not consider pending builds for the repo status
-                start = i
-                stop = start + 1
-                last_buildset = BuildSet.objects(repository=self).order_by(
-                    '-created')[start:stop]
-                last_buildset = await last_buildset.first()
 
-                if not last_buildset:
-                    status = 'ready'
-                    break
-
-                status = last_buildset.get_status()
-                i += 1
         return status
 
     @classmethod
@@ -744,6 +753,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     async def _get_builders(self, slaves, revision):
         builders = {}
+        origin = None
         for slave in slaves:
             builders[slave], origin = await self.build_manager.get_builders(
                 slave, revision)

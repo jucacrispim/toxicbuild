@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -1016,6 +1016,9 @@ class HoleHandlerTest(TestCase):
         action_methods = handler._get_action_methods()
 
         self.assertEqual(action_methods, expected)
+
+    def test_get_last_buildset(self):
+        pass
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -24,6 +24,7 @@
 
 import asyncio
 from asyncio import ensure_future
+from datetime import timedelta
 import inspect
 import json
 import signal
@@ -31,7 +32,8 @@ import ssl
 import traceback
 from bson.objectid import ObjectId
 from toxicbuild.core import BaseToxicProtocol
-from toxicbuild.core.utils import LoggerMixin
+from toxicbuild.core.utils import (LoggerMixin, datetime2string,
+                                   format_timedelta)
 from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder
 from toxicbuild.master.consumers import RepositoryMessageConsumer
@@ -630,14 +632,40 @@ class HoleHandler:
         funcs = {n: getattr(self, n) for n in func_names}
         return funcs
 
+    async def _get_last_buildset_info(self, repo):
+        last_buildset = await repo.get_last_buildset()
+        if last_buildset:
+            status = last_buildset.get_status()
+
+            started = datetime2string(last_buildset.started) \
+                if last_buildset.started else ''
+
+            totaltime = format_timedelta(
+                timedelta(seconds=last_buildset.total_time)) \
+                if last_buildset.started else ''
+
+            commit_date = datetime2string(last_buildset.commit_date)
+
+            last_buildset_dict = {
+                'status': status,
+                'total_time': totaltime,
+                'started': started,
+                'commit': last_buildset.commit,
+                'commit_date': commit_date,
+                'title': last_buildset.title}
+        else:
+            last_buildset_dict = {}
+
+        return last_buildset_dict
+
     async def _get_repo_dict(self, repo):
         """Returns a dictionary for a given repository"""
 
         repo_dict = await repo.to_dict(id_as_str=True)
-        repo_dict['id'] = str(repo.id)
+        last_buildset_dict = await self._get_last_buildset_info(repo)
+        repo_dict['last_buildset'] = last_buildset_dict
+
         repo_dict['status'] = await repo.get_status()
-        slaves = await repo.slaves
-        repo_dict['slaves'] = [self._get_slave_dict(s) for s in slaves]
         repo_dict['parallel_builds'] = repo.parallel_builds or ''
         return repo_dict
 
