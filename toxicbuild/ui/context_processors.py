@@ -28,4 +28,5 @@ class ToxicWebMainContextProcessor(ContextProcessor):
         master_location = '{}:{}'.format(settings.HOLE_HOST,
                                          settings.HOLE_PORT)
         return {'master_location': master_location,
-                'version': VERSION}
+                'version': VERSION,
+                'api_url': settings.API_URL}

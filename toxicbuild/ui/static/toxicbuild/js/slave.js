@@ -17,19 +17,11 @@
 
 class Slave extends BaseModel{
 
-  constructor(){
+  constructor(attributes, options){
+    attributes = attributes || {};
     let api_url = window.TOXIC_API_URL + '/slave/';
-    super(api_url);
-  }
-
-  static async get(kw){
-    let r = await super.get(Slave, kw);
-    return r;
-  }
-
-  static async list(kw){
-    let r = await super.list(Slave, kw);
-    return r;
+    attributes.url = api_url;
+    super(attributes, options);
   }
 
 }

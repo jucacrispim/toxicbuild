@@ -19,76 +19,74 @@ describe("BaseModelTest", function(){
 
   beforeEach(function(){
     spyOn(jQuery, 'ajax');
-    jQuery.ajax.and.returnValue(JSON.stringify({'name': 'somerepo'}));
   });
 
-  it('test-save-without-id', async function(){
-    let model = new BaseModel();
-    spyOn(model, '_get_save_data');
-    await model.save();
-    expect(jQuery.ajax.calls.allArgs()[0][0]['type']).toEqual('post');
-    expect(model.name).toEqual('somerepo');
+  it('test-get-url-delete', function(){
+    let method = 'delete';
+    let obj = new BaseModel({'id': 'some-id',
+			     'url': 'http://bla.com/api/'});
+    let url = _get_url(method, obj);
+    let expected = 'http://bla.com/api/?id=some-id';
+    expect(url).toEqual(expected);
   });
 
-  it('test-save-with-id', async function(){
-    let model = new BaseModel();
-    model.id = 'someid';
-    spyOn(model, '_get_save_data');
-    await model.save();
-    expect(jQuery.ajax.calls.allArgs()[0][0]['type']).toEqual('put');
-    expect(model.name).toEqual('somerepo');
+  it('test-get-url-update', function(){
+    let method = 'update';
+    let obj = new BaseModel({'id': 'some-id',
+			     'url': 'http://bla.com/api/'});
+
+    let url = _get_url(method, obj);
+    let expected = 'http://bla.com/api/?id=some-id';
+    expect(url).toEqual(expected);
+
   });
 
-  it('test-get', async function(){
-    let model = await BaseModel.get(BaseModel, {'name': 'somename'});
-    expect(model.name).toEqual('somerepo');
+  it('test-get-url-read-with-id', function(){
+    let method = 'read';
+    let obj = new BaseModel({'id': 'some-id',
+			     'url': 'http://bla.com/api/'});
+    let url = _get_url(method, obj);
+    let expected = 'http://bla.com/api/?id=some-id';
+    expect(url).toEqual(expected);
   });
 
-  it('test-list', async function(){
-    jQuery.ajax.and.returnValue(JSON.stringify(
-      {'items': [{'name': 'somerepo'}, {'name': 'otherrepo'}]}));
-    let models = await BaseModel.list(BaseModel, {'someattr': 'value'});
-    expect(models[1].name).toEqual('otherrepo');
+  it('test-get-url-read-without-id', function(){
+    let method = 'read';
+    let obj = new BaseModel({'id': 'some-id',
+			     'url': 'http://bla.com/api/'});
+    let url = _get_url(method, obj, false);
+    let expected = 'http://bla.com/api/';
+    expect(url).toEqual(expected);
   });
 
-  it('test-delete-without-id', async function(){
-    let model = new BaseModel();
-    var threw = false;
-    try{
-      await model.delete();
-    }catch(e){
-      threw = true;
-    };
-    expect(threw).toBe(true);
+  it('test-get-url-create', function(){
+    let method = 'create';
+    let obj = new BaseModel({'id': 'some-id',
+			     'url': 'http://bla.com/api/'});
+    let url = _get_url(method, obj, false);
+    let expected = 'http://bla.com/api/';
+    expect(url).toEqual(expected);
   });
 
-  it('test-delete', async function(){
-    let model = new BaseModel();
-    model.id = 'some-id';
-    await model.delete();
-    expect(jQuery.ajax).toHaveBeenCalled();
+  it('test-sync', async function(){
+    let method = 'create';
+    let obj = new BaseModel({'id': 'some-id',
+			     'url': 'http://bla.com/api/'});
+    let options = {};
+    await obj.sync(method, obj, options);
+    let expected = 'http://bla.com/api/';
+    expect(options.url).toEqual(expected);
   });
 
-  it('test-get-save-data', function(){
-    let model = new BaseModel();
-    model.name = 'some-name';
-    let data = model._get_save_data();
-    let expected = {'name': 'some-name'};
-    expect(data).toEqual(expected);
-  });
+});
 
-  it('test-format-query', function(){
-    let kw = {'a': 'b'};
-    let expected = '?a=b&';
-    let returned = BaseModel._format_query(kw);
+describe('BaseCollectionTest', function(){
+
+  it('test-parse', function(){
+    let data = {'items': [{'some': 'thing'}]};
+    let collection = new BaseCollection();
+    let expected = [{'some': 'thing'}];
+    let returned = collection.parse(data);
     expect(returned).toEqual(expected);
   });
-
-  it('test-update-object', function(){
-    let model = new BaseModel();
-    let obj = {'some': 'thing'};
-    BaseModel._update_object(model, obj);
-    expect(model.some).toEqual('thing');
-  });
-
 });

@@ -20,10 +20,12 @@
 
 import asyncio
 from collections import OrderedDict
+import datetime
 import json
 from toxicbuild.core.utils import string2datetime
 from toxicbuild.ui.client import get_hole_client
-from toxicbuild.ui.utils import is_datetime, get_client_settings
+from toxicbuild.ui.utils import (is_datetime, get_client_settings,
+                                 format_datetime)
 
 
 class BaseModel:
@@ -251,12 +253,63 @@ class Plugin(BaseModel):
         return cls(requester, resp)
 
 
+class Builder(BaseModel):
+
+    @classmethod
+    @asyncio.coroutine
+    def list(cls, requester, **kwargs):
+        """Lists builders already used."""
+
+        with (yield from cls.get_client(requester)) as client:
+            builders = yield from client.builder_list(**kwargs)
+
+        builders_list = [cls(requester, builder) for builder in builders]
+        return builders_list
+
+
+class Step(BaseModel):
+    pass
+
+
+class Build(BaseModel):
+    references = {'steps': Step,
+                  'builder': Builder}
+
+
+class BuildSet(BaseModel):
+    references = {'builds': Build}
+
+    @classmethod
+    @asyncio.coroutine
+    def list(cls, requester, repo_name_or_id=None):
+        """Lists buildsets. If ``repo_name_or_id`` only builds of this
+        repsitory will be listed.
+
+        :param repo_name: Name of a repository."""
+
+        with (yield from cls.get_client(requester)) as client:
+            buildsets = yield from client.buildset_list(
+                repo_name_or_id=repo_name_or_id, offset=10)
+
+        buildset_list = [cls(requester, buildset) for buildset in buildsets]
+        return buildset_list
+
+    def to_dict(self):
+        d = super().to_dict()
+        for k, v in d.items():
+            if isinstance(v, datetime.datetime):
+                d[k] = format_datetime(v)
+
+        return d
+
+
 class Repository(BaseModel):
 
     """Class representing a repository."""
 
     references = {'slaves': Slave,
-                  'plugins': Plugin}
+                  'plugins': Plugin,
+                  'last_buildset': BuildSet}
 
     @classmethod
     @asyncio.coroutine
@@ -404,6 +457,8 @@ class Repository(BaseModel):
         d = super().to_dict()
         d['slaves'] = [s.to_dict() for s in d['slaves']]
         d['plugins'] = [p.to_dict() for p in d['plugins']]
+        if self.last_buildset:
+            d['last_buildset'] = self.last_buildset.to_dict()
         return d
 
     @asyncio.coroutine
@@ -442,45 +497,3 @@ class Repository(BaseModel):
                                                   build_uuid=build_uuid)
 
         return resp
-
-
-class Builder(BaseModel):
-
-    @classmethod
-    @asyncio.coroutine
-    def list(cls, requester, **kwargs):
-        """Lists builders already used."""
-
-        with (yield from cls.get_client(requester)) as client:
-            builders = yield from client.builder_list(**kwargs)
-
-        builders_list = [cls(requester, builder) for builder in builders]
-        return builders_list
-
-
-class Step(BaseModel):
-    pass
-
-
-class Build(BaseModel):
-    references = {'steps': Step,
-                  'builder': Builder}
-
-
-class BuildSet(BaseModel):
-    references = {'builds': Build}
-
-    @classmethod
-    @asyncio.coroutine
-    def list(cls, requester, repo_name_or_id=None):
-        """Lists buildsets. If ``repo_name`` only builds of this
-        repsitory will be listed.
-
-        :param repo_name: Name of a repository."""
-
-        with (yield from cls.get_client(requester)) as client:
-            buildsets = yield from client.buildset_list(
-                repo_name_or_id=repo_name_or_id, offset=10)
-
-        buildset_list = [cls(requester, buildset) for buildset in buildsets]
-        return buildset_list

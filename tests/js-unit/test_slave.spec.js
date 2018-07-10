@@ -14,27 +14,3 @@
 
 // You should have received a copy of the GNU General Public License
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
-
-describe('SlaveTest', function(){
-
-  beforeEach(function(){
-    spyOn(jQuery, 'ajax');
-    let window_spy = jasmine.createSpy();
-    window_spy.TOXIC_API_URL = 'http://localhost:1234/';
-    window = window_spy;
-  });
-
-  it('test-get', async function(){
-    jQuery.ajax.and.returnValue(JSON.stringify({'name': 'someslave'}));
-    let slave = await Slave.get({'id': 'someid'});
-    expect(slave.name).toEqual('someslave');
-  });
-
-  it('test-list', async function(){
-    jQuery.ajax.and.returnValue(JSON.stringify(
-      {'items': [{'name': 'someslave'}, {'name': 'otherslave'}]}));
-    let slaves = await Slave.list();
-    expect(slaves.length).toEqual(2);
-  });
-
-});

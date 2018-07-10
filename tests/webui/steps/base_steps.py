@@ -13,8 +13,8 @@ def logged_in_webui(context):
     if not browser.is_logged:
         browser.do_login(url, 'someguy', '123')
 
-    txt = 'Connected to master'
-    browser.wait_text_become_present(txt)
+    el = browser.find_element_by_class_name('logout-link-container')
+    browser.wait_element_become_visible(el)
 
 
 given_logged_in_webui = given('the user is logged in the web interface')(

@@ -1,0 +1,128 @@
+<div id="no-repos-info" class="box-white">
+  <div class="col-sm-3 mx-auto">
+    <span id="welcome-message">
+      Welcome to Toxicbuild
+    </span>
+  </div>
+  <div class="icon-toxicmask col-sm-2 mx-auto"></div>
+  <div class="col-sm-3 mx-auto">
+    <span id="bollocks-message">Better software. Ship faster.</span>
+  </div>
+  <span id="no-repos-message">
+    You have no enabled repositories.
+    <a href="#">Add repositories</a> to start.
+  </span>
+</div>
+
+<div class="template">
+  <ul id="repo-list-ul">
+
+    <!-- The item template -->
+    <li class="repository-info box-white box-shadow">
+      <div class="repository-info-container">
+	<!-- header -->
+	<div class="repository-info-header">
+	  <span class="fas fa-ellipsis-h"></span>
+	</div>
+
+	<!-- first row -->
+	<div class="repository-info-row repository-info-first-row">
+	  <!-- repo name -->
+	  <div class="repo-info-container repository-info-name-container">
+	    <a href="#" data-toggle="tooltip" title="Go to history">
+	      <span class="repository-info-name"></span>
+	    </a>
+	  </div>
+	  <!-- end repo name -->
+	  <!-- repo status -->
+	  <div class="reo-info-container repository-info-status-container">
+	    <a href="#">
+	      <span class="repository-info-status badge" data-toggle="tooltip"
+		    title="Go to waterfall">
+	      </span>
+	    </a>
+	  </div>
+	  <!-- end repo status -->
+	</div>
+	<!-- end first row -->
+
+	<!-- second row -->
+	<div class="repository-info-row repository-info-last-row">
+
+	  <!-- no builds info -->
+	  <!-- hidden if there is some build for the repository -->
+	  <div class="no-builds-info">
+	    Seems you haven't configured any builds.
+	    <a href="">Add a toxicbuild.yml</a> file to your repository.
+	  </div>
+	  <!-- end no builds info -->
+
+	  <!-- last buildset info -->
+	  <!-- only displayed if there is some build for the repository -->
+	  <div class="repository-info-last-buildset">
+
+	    <!-- buildset first row -->
+	    <div class="repository-info-row repository-info-commit-row">
+	      <!-- commit -->
+	      <span class="buildset-commit" data-toggle="tooltip"
+		    title="commit">
+	      </span>
+	      <!-- commit title -->
+	      <span class="buildset-title" data-toggle="tooltip"
+		    title="commit title">
+	      </span>
+	    </div>
+	    <!-- end buildset first row -->
+
+	    <!-- buildset second row -->
+	    <div class="repository-info-row"
+		 data-toggle="tooltip" title="commit date">
+	      <span class="far fa-calendar-alt"></span>
+	      <span class="buildset-commit-date"></span>
+	    </div>
+	    <!-- end buildset second row -->
+
+	    <div class="repository-info-row">
+	      <span class="far fa-calendar-check" data-toggle="tooltip"
+		    title="started at"></span>
+	      <span class="buildset-started" data-toggle="tooltip"
+		    title="started at"></span>
+	      <span class="far fa-clock" data-toggle="tooltip"
+		    title="duration"></span>
+	      <span class="buildset-total-time" data-toggle="tooltip"
+		    title="duration"></span>
+	    </div>
+	  </div>
+	</div>
+
+      </div>
+    </li>
+
+  </ul>
+</div>
+
+<div class="enabled-repositories-info-container">
+  Enabled Repositories <a href="#" data-toggle="tooltip"
+			  title="Manage your repositories">
+    <span class="far fa-wrench"></span>
+  </a>
+</div>
+<div id="repo-list-container">
+  <div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
+    <span class="spinner icon-spinner-2"></span>
+    <span class="icon-toxicmask"></span>
+  </div>
+</div>
+
+<script>
+  function init(){
+    showRepos();
+  };
+
+  function showRepos(){
+    var repo_list = new RepositoryListView();
+    repo_list.render();
+  };
+
+  window.onload = function(){init()};
+</script>

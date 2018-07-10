@@ -73,7 +73,7 @@ def user_sees_invalid_credentials_message(context):
 @then('he sees the main page')
 def user_sees_main_main_page_login(context):
     browser = context.browser
-    txt = 'Connected to master'
+    txt = 'Logout'
     is_present = browser.wait_text_become_present(txt)
     assert is_present
 
@@ -83,4 +83,7 @@ def user_sees_main_main_page_login(context):
 @when('he clicks in the logout link')  # noqa f401
 def step_impl(context):
     browser = context.browser
-    browser.click_link('Logout')
+    el = browser.find_element_by_class_name('nav-link')
+    browser.click(el)
+    el = browser.find_element_by_class_name('dropdown-item-logout')
+    browser.click(el)

@@ -14,6 +14,9 @@
     src_files:
       - "jquery/*.js"
       - "bootstrap/js/*.js"
+      - "common/js/*.js"
+      - "backbone/underscore-min.js"
+      - "backbone/backbone-min.js"
       - "toxicbuild/js/*.js"
 
     # stylesheets

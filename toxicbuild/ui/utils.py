@@ -23,7 +23,7 @@ from toxicbuild.core.utils import DTFORMAT, datetime2string
 from toxicbuild.ui import settings
 
 
-_dt_regex = re.compile('\w+\s\w+\s\d+\s\d+:\d+:\d+\s\d+\s[\+|-]\d+$')
+_dt_regex = re.compile('\d\s\d+\s\d+\s\d+:\d+:\d+\s\d+\s[\+|-]\d+$')
 
 
 def _get_dtformat():
@@ -109,7 +109,7 @@ async def get_builders_for_buildsets(user, buildsets):
     # 'full' builder using builder-list
     ids = [b.id for b in builders]
     builders = await Builder.list(user, id__in=ids)
-    builders_dict = {b.id: b for b in builders}
+    builders_dict = {str(b.id): b for b in builders}
     for buildset in buildsets:
         for build in buildset.builds:
             build.builder = builders_dict[build.builder.id]

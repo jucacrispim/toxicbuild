@@ -20,27 +20,20 @@
 import asyncio
 from asyncio import ensure_future
 import base64
-import datetime
 import json
 import traceback
-
-from tornado import gen
 from tornado.web import HTTPError
 from tornado.websocket import WebSocketHandler, WebSocketError
-from pyrocumulus.web.applications import (PyroApplication, StaticApplication)
+from pyrocumulus.web.applications import PyroApplication, StaticApplication
 from pyrocumulus.web.decorators import post, get, put, delete
-from pyrocumulus.web.handlers import (TemplateHandler, PyroRequest,
-                                      BasePyroHandler)
+from pyrocumulus.web.handlers import PyroRequest, BasePyroHandler
 from pyrocumulus.web.template import render_template
 from pyrocumulus.web.urlmappers import URLSpec
 
 from toxicbuild.core.utils import LoggerMixin, string2datetime
-from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
-from toxicbuild.ui.models import (Repository, Slave, BuildSet, Plugin,
-                                  User)
-from toxicbuild.ui.utils import (format_datetime, is_datetime,
-                                 get_builders_for_buildsets)
+from toxicbuild.ui.models import (Repository, Slave, Plugin, User)
+from toxicbuild.ui.utils import (format_datetime, is_datetime)
 
 
 COOKIE_NAME = 'toxicui'
@@ -68,28 +61,6 @@ class ToxicRequest(PyroRequest):
             item = default
 
         return item
-
-
-class LoggedTemplateHandler(TemplateHandler):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.user = None
-
-    def prepare(self):
-        super().prepare()
-        user = self._get_user_from_cookie()
-        if not user:
-            self.redirect('/login')
-        self.user = user
-
-    def _get_user_from_cookie(self):
-        cookie = self.get_secure_cookie(COOKIE_NAME)
-        if not cookie:
-            return
-
-        userjson = base64.decodebytes(cookie).decode('utf-8')
-        return User(None, json.loads(userjson))
 
 
 class CookieAuthHandlerMixin(LoggerMixin, BasePyroHandler):
@@ -132,6 +103,15 @@ class TemplateHandler(BasePyroHandler):
 
     def set_xsrf_cookie(self):  # pragma no cover
         return self.xsrf_token
+
+
+class LoggedTemplateHandler(CookieAuthHandlerMixin, TemplateHandler):
+
+    async def async_prepare(self):
+        try:
+            await super().async_prepare()
+        except HTTPError:
+            self.redirect('/login')
 
 
 class LoginHandler(TemplateHandler):
@@ -210,7 +190,6 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
         self.body['owner'] = self.user
 
         resp = await self.model.add(self.user, **self.body)
-
         json_resp = resp.to_json()
         return json_resp
 
@@ -342,7 +321,7 @@ class CookieAuthSlaveRestHandler(CookieAuthHandlerMixin, SlaveRestHandler):
     """A rest api handler for slaves which requires cookie auth."""
 
 
-class StreamHandler(LoggerMixin, LoggedTemplateHandler, WebSocketHandler):
+class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -456,89 +435,25 @@ class StreamHandler(LoggerMixin, LoggedTemplateHandler, WebSocketHandler):
             self.log('WebSocketError: {}'.format(tb), level='debug')
 
 
-class MainHandler(LoggedTemplateHandler):
-    main_template = 'main.html'
+class DashboardHandler(LoggedTemplateHandler):
+    main_template = 'toxictheme/main.html'
+    enabled_repos_template = 'toxictheme/enabled_repos.html'
 
-    @gen.coroutine
-    def get(self):
-        repos = yield from Repository.list(self.user)
-        slaves = yield from Slave.list(self.user)
-        plugins = yield from Plugin.list(self.user)
-
-        github_import_url = self._get_settings('GITHUB_IMPORT_URL') or '#'
-        context = {'repos': repos, 'slaves': slaves,
-                   'get_btn_class': self._get_btn_class,
-                   'plugins': plugins, 'github_import_url': github_import_url}
+    @get('')
+    def show_dashboard(self):
+        content = render_template(self.enabled_repos_template,
+                                  self.request, {})
+        context = {'content': content}
         self.render_template(self.main_template, context)
-
-    def _get_settings(self, key):
-        try:
-            return getattr(settings, key)
-        except AttributeError:
-            return None
-
-    def _get_btn_class(self, status):
-        return {'success': 'success', 'fail': 'danger',
-                'running': 'info', 'exception': 'exception',
-                'clone-exception': 'exception', 'ready': 'success',
-                'warning': 'warning', 'cloning': 'pending'}.get(status)
+        return ''
 
 
-class WaterfallHandler(LoggedTemplateHandler):
-    template = 'waterfall.html'
+dashboard = URLSpec('/(.*)$', DashboardHandler)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.params = None
-
-    def prepare(self):
-        super().prepare()
-        self.params = PyroRequest(self.request.arguments)
-
-    @gen.coroutine
-    def get(self, repo_name):
-        buildsets = yield from BuildSet.list(self.user, repo_name=repo_name)
-        builders = yield from self._get_builders_for_buildsets(buildsets)
-        repo = yield from Repository.get(self.user, repo_name=repo_name)
-
-        def _ordered_builds(builds):
-            return sorted(
-                builds, key=lambda b: builders[builders.index(b.builder)].name)
-
-        def fmtdt(dt):  # pragma: no cover
-            # when the attribute is not set, it is a empty string int the
-            # template, so we simply skip it here
-            if not isinstance(dt, datetime.datetime):
-                return
-            return format_datetime(dt)
-
-        context = {'buildsets': buildsets, 'builders': builders,
-                   'ordered_builds': _ordered_builds,
-                   'get_ending': self._get_ending,
-                   'repository': repo, 'fmtdt': fmtdt}
-        self.render_template(self.template, context)
-
-    @asyncio.coroutine
-    def _get_builders_for_buildsets(self, buildsets):
-        r = yield from get_builders_for_buildsets(self.user, buildsets)
-        return r
-
-    def _get_ending(self, build, build_index, builders):
-        i = build_index
-        while build.builder != builders[i] and len(builders) > i:
-            tag = '</td><td class="builder-column builder-column-id-{}'
-            tag += ' builder-column-index-{}">'
-            yield tag.format(builders[i].id, i + 1)
-            i += 1
-        yield ''
-
-
-url = URLSpec('/$', MainHandler)
-waterfall = URLSpec('/waterfall/(.*)', WaterfallHandler)
 websocket = URLSpec('/api/socks/(.*)', StreamHandler)
 login = URLSpec('/(login|logout)', LoginHandler)
 
-app = PyroApplication([url, waterfall, login, websocket])
+app = PyroApplication([login, websocket, dashboard])
 
 static_app = StaticApplication()
 

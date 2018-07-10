@@ -344,6 +344,15 @@ class RepositoryTest(TestCase):
         repo_dict = self.repository.to_dict()
         self.assertTrue(isinstance(repo_dict['slaves'][0], dict))
 
+    def test_to_dict_lastbuildset(self):
+        requester = MagicMock()
+        kw = dict(name='bla')
+        buildset = models.BuildSet(requester, ordered_kwargs={'bla': 'ble'})
+        self.repository.last_buildset = buildset
+        self.repository.slaves = [models.Slave(requester, kw)]
+        repo_dict = self.repository.to_dict()
+        self.assertTrue(isinstance(repo_dict['slaves'][0], dict))
+
     @async_test
     def test_update(self):
         self.repository.get_client = lambda requester: get_client_mock(
@@ -452,6 +461,22 @@ class BuildSetTest(TestCase):
         builders = yield from models.BuildSet.list(requester)
         self.assertEqual(len(builders), 2)
         self.assertTrue(len(builders[0].builds[0].steps), 1)
+
+    @patch.object(models.BuildSet, 'get_client', lambda requester:
+                  get_client_mock(
+                      requester, [
+                          {'id': 'sasdfasf',
+                           'started': '3 9 25 08:53:38 2017 -0000',
+                           'builds': [{'steps': [{'name': 'unit'}],
+                                       'builder': {'name': 'some'}}]},
+                          {'id': 'paopofe', 'builds': [{}]}]))
+    @async_test
+    async def test_to_dict(self):
+        requester = MagicMock()
+        buildsets = await models.BuildSet.list(requester)
+        buildset = buildsets[0]
+        b_dict = buildset.to_dict()
+        self.assertTrue(b_dict['id'])
 
 
 class BuilderTest(TestCase):
