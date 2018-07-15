@@ -93,6 +93,10 @@ class User(Document):
 
         raise InvalidCredentials
 
+    @property
+    def name(self):
+        return self.username
+
     def to_dict(self):
         objdict = {'id': str(self.id),
                    'username': self.username,

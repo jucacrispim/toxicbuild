@@ -40,9 +40,6 @@ class Slave(OwnedDocument, LoggerMixin):
     the network (using :class:`toxicbuild.master.client.BuildClient`).
     The steps are actually decided by the slave.
     """
-    name = StringField(required=True, unique=True)
-    """The name of the slave"""
-
     host = StringField(required=True)
     """Slave's host."""
 

@@ -73,9 +73,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     """Repository is where you store your code and where toxicbuild
     looks for incomming changes."""
 
-    name = StringField(required=True, unique=True)
-    """The name of the repository."""
-
     url = StringField(required=True, unique=True)
     """The url of the repository."""
 

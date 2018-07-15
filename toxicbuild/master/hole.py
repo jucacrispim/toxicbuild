@@ -284,7 +284,7 @@ class HoleHandler:
         if ObjectId.is_valid(repo_name_or_id):
             kw = {'id': repo_name_or_id}
         else:
-            kw = {'name': repo_name_or_id}
+            kw = {'full_name': repo_name_or_id}
 
         return kw
 

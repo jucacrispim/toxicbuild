@@ -37,8 +37,22 @@ class OwnedDocument(Document):
     """
 
     owner = GenericReferenceField(required=True)
+    """The user or organization who owns the document"""
+
+    name = StringField(required=True)
+    """The name of the document."""
+
+    full_name = StringField(required=True, unique=True)
+    """Full name of the document in the form `owner-name/doc-name`"""
 
     meta = {'abstract': True}
+
+    async def save(self, *args, **kwargs):
+        if not self.full_name:
+            owner = await self.owner
+            self.full_name = '{}/{}'.format(owner.name, self.name)
+        r = await super().save(*args, **kwargs)
+        return r
 
     @classmethod
     async def get_for_user(cls, user, **kwargs):
