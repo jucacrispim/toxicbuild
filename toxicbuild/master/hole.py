@@ -132,6 +132,8 @@ class HoleHandler:
     * `repo-disable-plugin`
     * `repo-start-build`
     * `repo-cancel-build`
+    * `repo-enable`
+    * `repo-disable`
     * `slave-add`
     * `slave-get`
     * `slave-list`
@@ -317,10 +319,13 @@ class HoleHandler:
         await repo.remove()
         return {'repo-remove': 'ok'}
 
-    async def repo_list(self):
-        """ Lists all repositories. """
+    async def repo_list(self, **kwargs):
+        """ Lists all repositories.
 
-        repos = await Repository.list_for_user(self.protocol.user)
+        :kwargs: Named arguments to filter repositories."""
+
+        repos = await Repository.list_for_user(self.protocol.user,
+                                               **kwargs)
         repo_list = []
         async for repo in repos:
 
@@ -450,6 +455,24 @@ class HoleHandler:
         repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.cancel_build(build_uuid)
         return {'repo-cancel-build': 'ok'}
+
+    async def repo_enable(self, repo_name_or_id):
+        """Enables a repository.
+
+        :param repo_name_or_id: The name or the id of the repository."""
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.enable()
+        return {'repo-enable': 'ok'}
+
+    async def repo_disable(self, repo_name_or_id):
+        """Disables a repository.
+
+        :param repo_name_or_id: The name or the id of the repository."""
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.disable()
+        return {'repo-disable': 'ok'}
 
     async def slave_add(self, slave_name, slave_host, slave_port, slave_token,
                         owner_id, use_ssl=True, validate_cert=True):

@@ -781,6 +781,34 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @async_test
+    async def test_repo_enable(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-enable', protocol)
+        await self.repo.disable()
+        await handler.repo_enable(str(self.repo.id))
+        await self.repo.reload()
+        self.assertTrue(self.repo.enabled)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @async_test
+    async def test_repo_disable(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-disable', protocol)
+        await self.repo.enable()
+        await handler.repo_disable(str(self.repo.id))
+        await self.repo.reload()
+        self.assertFalse(self.repo.enabled)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_slave_add(self):
         data = {'host': '127.0.0.1', 'port': 1234}
@@ -999,6 +1027,8 @@ class HoleHandlerTest(TestCase):
                     'repo_start_build': handler.repo_start_build,
                     'repo_disable_plugin': handler.repo_disable_plugin,
                     'repo_cancel_build': handler.repo_cancel_build,
+                    'repo_enable': handler.repo_enable,
+                    'repo_disable': handler.repo_disable,
                     'slave_add': handler.slave_add,
                     'slave_get': handler.slave_get,
                     'slave_list': handler.slave_list,

@@ -102,7 +102,7 @@ class RepositoryTest(TestCase):
         await self.repo.request_code_update()
         self.GOT_MSG = False
         async with await repository.repo_notifications.consume(
-                routing_key='update-code-requested', timeout=0.1) as consumer:
+                routing_key='update-code-requested', timeout=0.5) as consumer:
             try:
                 async for msg in consumer:
                     await msg.acknowledge()
@@ -722,6 +722,20 @@ class RepositoryTest(TestCase):
             name='master', notify_only_latest=False)]
         only_latest = self.repo.notify_only_latest('dont-know')
         self.assertTrue(only_latest)
+
+    @async_test
+    async def test_enable(self):
+        self.repo.enabled = False
+        await self.repo.save()
+        await self.repo.enable()
+        self.assertTrue(self.repo.enabled)
+
+    @async_test
+    async def test_disable(self):
+        self.repo.enabled = True
+        await self.repo.save()
+        await self.repo.disable()
+        self.assertFalse(self.repo.enabled)
 
     async def _create_db_revisions(self):
         self.owner = users.User(email='zezinho@nada.co', password='123')

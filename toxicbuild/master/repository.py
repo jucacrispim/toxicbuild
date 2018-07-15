@@ -117,6 +117,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     If None, there's no limit for parallel builds.
     """
 
+    enabled = BooleanField(default=True)
+    """Indicates if this repository is enabled to run builds."""
+
     meta = {
         'ordering': ['name'],
     }
@@ -173,6 +176,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                    'slaves': [s.to_dict(id_as_str)
                               for s in (await self.slaves)],
                    'plugins': [p.to_dict() for p in self.plugins],
+                   'enabled': self.enabled,
                    'parallel_builds': self.parallel_builds,
                    'clone_status': self.clone_status}
         if id_as_str:
@@ -728,6 +732,14 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         :param build_uuid: The uuid of the build."""
 
         await self.build_manager.cancel_build(build_uuid)
+
+    async def enable(self):
+        self.enabled = True
+        await self.save()
+
+    async def disable(self):
+        self.enabled = False
+        await self.save()
 
     def get_branch(self, branch_name):
         """Returns an instance of
