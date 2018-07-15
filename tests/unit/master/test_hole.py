@@ -1047,9 +1047,6 @@ class HoleHandlerTest(TestCase):
 
         self.assertEqual(action_methods, expected)
 
-    def test_get_last_buildset(self):
-        pass
-
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
