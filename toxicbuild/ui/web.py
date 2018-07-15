@@ -318,6 +318,18 @@ class RepositoryRestHandler(ModelRestHandler):
         await repo.cancel_build(build_uuid)
         return {'repo-cancel-build': 'build cancelled'}
 
+    @post('enable')
+    async def enable(self):
+        repo = await self.model.get(self.user, **self.query)
+        await repo.enable()
+        return {'repo-enable': 'enabled'}
+
+    @post('disable')
+    async def disable(self):
+        repo = await self.model.get(self.user, **self.query)
+        await repo.disable()
+        return {'repo-disable': 'disabled'}
+
 
 class CookieAuthRepositoryRestHandler(CookieAuthHandlerMixin,
                                       RepositoryRestHandler):

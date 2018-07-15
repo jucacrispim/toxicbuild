@@ -497,3 +497,15 @@ class Repository(BaseModel):
                                                   build_uuid=build_uuid)
 
         return resp
+
+    async def enable(self):
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_enable(repo_name_or_id=self.id)
+
+        return resp
+
+    async def disable(self):
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_disable(repo_name_or_id=self.id)
+
+        return resp

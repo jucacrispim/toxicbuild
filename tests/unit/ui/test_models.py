@@ -388,6 +388,22 @@ class RepositoryTest(TestCase):
         resp = await self.repository.cancel_build('some-build-uuid')
         self.assertEqual(resp, 'build-cancelled')
 
+    @async_test
+    async def test_enable(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-enable')
+
+        resp = await self.repository.enable()
+        self.assertEqual(resp, 'repo-enable')
+
+    @async_test
+    async def test_disable(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-disable')
+
+        resp = await self.repository.disable()
+        self.assertEqual(resp, 'repo-disable')
+
 
 class SlaveTest(TestCase):
 

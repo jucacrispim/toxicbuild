@@ -388,6 +388,26 @@ class RepositoryRestHandlerTest(TestCase):
         r = await self.handler.cancel_build()
         self.assertTrue(r)
 
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get,
+        return_value=create_autospec(spec=web.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_enable(self):
+        self.handler.query = {'id': 'some-id'}
+        r = await self.handler.enable()
+        self.assertTrue(r)
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get,
+        return_value=create_autospec(spec=web.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_disable(self):
+        self.handler.query = {'id': 'some-id'}
+        r = await self.handler.disable()
+        self.assertTrue(r)
+
 
 @patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
 class StreamHandlerTest(AsyncTestCase):
