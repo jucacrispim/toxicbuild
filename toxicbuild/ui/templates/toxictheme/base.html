@@ -10,11 +10,13 @@
     {% block stylesheet %}
     <link href="{{static_url}}bootstrap/css/bootstrap.min.css"
 	  rel="stylesheet">
-    <link href="{{static_url}}toxicbuild/css/toxictheme/toxicclear.css"
+    <link href="{{static_url}}bootstrap/css/bootstrap-toggle.min.css"
 	  rel="stylesheet">
     <link href="{{static_url}}toxicbuild/css/toxictheme/fonts.css"
 	  rel="stylesheet">
     <link href="{{static_url}}fontawesome/css/all.css" rel="stylesheet">
+    <link href="{{static_url}}toxicbuild/css/toxictheme/toxicclear.css"
+	  rel="stylesheet">
     {% end %}
   </head>
 
@@ -39,7 +41,8 @@
 
 	    <div class="dropdown-menu box-shadow-gray dropdown-arrow"
 		 aria-labelledby="navbar-dropdown">
-              <a class="dropdown-item dropdown-item-logout" href="/logout">
+              <a class="dropdown-item dropdown-item-logout" href="/logout"
+		 data-noroute="true">
 		Logout
 	      </a>
 	    </div>

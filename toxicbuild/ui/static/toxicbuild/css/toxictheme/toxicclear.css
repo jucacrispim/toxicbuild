@@ -16,6 +16,11 @@ body{
 }
 
 
+.no-decoration,
+.no-decoration:hover{
+    text-decoration: none;
+}
+
 .toxiclogo-container,
 .logout-link-container{
     float:left;
@@ -99,6 +104,47 @@ body{
     display: none;
 }
 
+.toggle.btn{
+    min-width: 0px;
+    min-height: 0px;
+}
+
+.checkbox-rounded,
+.checkbox-rounded .toggle-handle{
+    border-radius: 20px;
+    margin-right: 22px;
+}
+
+.checkbox-rounded.off .toggle-handle{
+    margin-right: 0;
+    margin-left: 22px;
+}
+
+.checkbox-rounded .toggle-handle{
+    width: 20px;
+    height: 100%;
+    margin-top: -9px;
+    padding: 0;
+    font-size: 0.9em;
+    padding-top: 2px;
+}
+
+.toggle-on.btn,
+.toggle-off.btn{
+    font-size: 0.8em;
+}
+
+.checkbox-sm .toggle-off.btn,
+.checkbox-sm .toggle-on.btn{
+    padding-top: 9px;
+    padding-right: 25px;
+    border-radius: 20px;
+}
+
+.checkbox-sm{
+    height: 21px;
+}
+
 /* wait-toxic-spinner */
 .wait-toxic-spinner{
     color: #d4d3d3;
@@ -152,7 +198,6 @@ body{
 .dropdown-arrow:after {
   position: absolute;
   top: -6px;
-  /* left: 13px; */
   right: 17px;
   display: inline-block;
   border-right: 6px solid transparent;
@@ -201,7 +246,7 @@ body{
     font-weight: 500;
 }
 
-/* enabled repositories main page */
+/* repositories list */
 #welcome-message{
     font-weight: bold;
 }
@@ -246,7 +291,7 @@ body{
     float: left;
 }
 
-.enabled-repositories-info-container{
+.top-page-repositories-info-container{
     display: none;
 }
 
@@ -315,16 +360,108 @@ body{
     font-weight: 500;
 }
 
-.enabled-repositories-info-container .fa-wrench{
+.top-page-repositories-info-container .fa-wrench{
     transform: rotate(270deg);
     color: #adababcc;
 }
 
-.enabled-repositories-info-container .fa-wrench:hover{
+.top-page-repositories-info-container .fa-wrench:hover{
     color: #212529;
     cursor: pointer;
 }
 
-.enabled-repositories-info-container{
+.top-page-repositories-info-container{
     margin-bottom: 10px;
+}
+
+.top-page-repositories-info-container .fa-plus,
+.top-page-repositories-info-container .fa-github{
+    margin-left: 10px;
+}
+
+.top-page-repositories-info-container .fa-plus{
+    color: var(--green);
+}
+
+.top-page-repositories-info-container .fa-github{
+    color: #212529;
+}
+
+.repository-info-enabled-container{
+    float: right;
+    margin-right: -20px;
+}
+
+.enabled-indicator{
+    margin-left: -22px;
+}
+
+.repo-enabled-times{
+    color: var(--secondary);
+}
+
+.repo-enabled-check{
+    color: var(--success);
+}
+
+.repo-enabled .toggle-handle:before{
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    content: "\f00c";
+    color: var(--success);
+}
+
+.repo-disabled .toggle-handle:before{
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    content: "\f00d";
+    color: var(--secondary);
+}
+.repo-disabled .toggle-handle,
+.repo-enabled .toggle-handle{
+    line-height: 1;
+}
+
+.repository-info-header .dropdown-toggle::after {
+    content: none;
+}
+
+
+/* settings page */
+
+.nav-container{
+    display:none;
+}
+.nav-pills{
+    margin-bottom: 10px;
+}
+
+.nav-pills .nav-link, .nav-pills .show>.nav-link{
+    color: #4e4e4f;
+    background-color: #ede8e8;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+
+.nav-pills .nav-link.active, .nav-pills .show>.nav-link{
+    color: #f3f3f4;
+    background-color: #302e2e;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+
+.settings-left-side{
+    float:left;
+}
+
+.settings-right-side{
+    float:right;
+    display: none;o
+}
+
+.settings-right-side{
+    font-size: 0.9em;
+}
+
+.wait-change-enabled-spinner{
+    display:none;
+    margin-right: 55px;
 }

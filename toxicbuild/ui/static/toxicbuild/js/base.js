@@ -16,7 +16,7 @@
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 function _get_url(method, obj, get_with_id=true){
-  let url = obj.get('url');
+  let url = obj._api_url;
   if (method == 'delete' || method == 'update' ||
       (get_with_id && method == 'read')){
     url += '?id=' + obj.id;
@@ -24,11 +24,16 @@ function _get_url(method, obj, get_with_id=true){
   return url;
 };
 
+
 class BaseModel extends Backbone.Model{
 
   sync(method, model, options){
     let url = _get_url(method, this);
+    options.attrs = this.changed;
     options.url = url;
+    let xsrf_token = Cookies.get('_xsrf');
+    let headers = {'X-XSRFToken': xsrf_token};
+    options.headers = headers;
     return super.sync(method, model, options);
   }
 }

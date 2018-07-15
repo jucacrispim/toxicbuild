@@ -23,8 +23,8 @@ describe("BaseModelTest", function(){
 
   it('test-get-url-delete', function(){
     let method = 'delete';
-    let obj = new BaseModel({'id': 'some-id',
-			     'url': 'http://bla.com/api/'});
+    let obj = new BaseModel({'id': 'some-id'});
+    obj._api_url = 'http://bla.com/api/';
     let url = _get_url(method, obj);
     let expected = 'http://bla.com/api/?id=some-id';
     expect(url).toEqual(expected);
@@ -32,9 +32,8 @@ describe("BaseModelTest", function(){
 
   it('test-get-url-update', function(){
     let method = 'update';
-    let obj = new BaseModel({'id': 'some-id',
-			     'url': 'http://bla.com/api/'});
-
+    let obj = new BaseModel({'id': 'some-id'});
+    obj._api_url = 'http://bla.com/api/';
     let url = _get_url(method, obj);
     let expected = 'http://bla.com/api/?id=some-id';
     expect(url).toEqual(expected);
@@ -43,8 +42,8 @@ describe("BaseModelTest", function(){
 
   it('test-get-url-read-with-id', function(){
     let method = 'read';
-    let obj = new BaseModel({'id': 'some-id',
-			     'url': 'http://bla.com/api/'});
+    let obj = new BaseModel({'id': 'some-id'});
+    obj._api_url = 'http://bla.com/api/';
     let url = _get_url(method, obj);
     let expected = 'http://bla.com/api/?id=some-id';
     expect(url).toEqual(expected);
@@ -52,8 +51,8 @@ describe("BaseModelTest", function(){
 
   it('test-get-url-read-without-id', function(){
     let method = 'read';
-    let obj = new BaseModel({'id': 'some-id',
-			     'url': 'http://bla.com/api/'});
+    let obj = new BaseModel({'id': 'some-id'});
+    obj._api_url = 'http://bla.com/api/';
     let url = _get_url(method, obj, false);
     let expected = 'http://bla.com/api/';
     expect(url).toEqual(expected);
@@ -61,8 +60,8 @@ describe("BaseModelTest", function(){
 
   it('test-get-url-create', function(){
     let method = 'create';
-    let obj = new BaseModel({'id': 'some-id',
-			     'url': 'http://bla.com/api/'});
+    let obj = new BaseModel({'id': 'some-id'});
+    obj._api_url = 'http://bla.com/api/';
     let url = _get_url(method, obj, false);
     let expected = 'http://bla.com/api/';
     expect(url).toEqual(expected);
@@ -70,8 +69,8 @@ describe("BaseModelTest", function(){
 
   it('test-sync', async function(){
     let method = 'create';
-    let obj = new BaseModel({'id': 'some-id',
-			     'url': 'http://bla.com/api/'});
+    let obj = new BaseModel({'id': 'some-id'});
+    obj._api_url = 'http://bla.com/api/';
     let options = {};
     await obj.sync(method, obj, options);
     let expected = 'http://bla.com/api/';

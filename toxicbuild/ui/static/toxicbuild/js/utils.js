@@ -49,26 +49,23 @@ var utils = {
 	       SETTIMEOUT_MILIS);
   },
 
-  sendAjax: function(type, url, data, success_cb, error_cb, async){
-    var self = this;
-    if (async == undefined){
-      async = true;
-    }
+  _canvas: document.createElement("canvas"),
 
-    $.ajax({
-      type: type,
-      url: url,
-      data: data,
-      async: async,
-      traditional: true,
-      success: success_cb,
-      error: error_cb,
-    });
+  _get_text_width: function(text){
+    var context = utils._canvas.getContext("2d");
+    context.font = '400 16px Arial,sans-serif';
+    var metrics = context.measureText(text);
+    return metrics.width;
+
   },
 
-  log: function(msg){
-    if (TOXICDEBUG){
-      console.log(msg);
-    }
-  },
+  checkboxToggle: function(el){
+    el.bootstrapToggle();
+    let on_text = el.data('on');
+    let off_text = el.data('off');
+    let text = on_text > off_text ? on_text : off_text;
+    let width = utils._get_text_width(text) + 30;
+    el.parent().attr('style', 'width: ' + width + 'px;');
+  }
+
 };

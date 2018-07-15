@@ -574,22 +574,85 @@ class DashboardHandlerTest(AsyncTestCase):
 
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
-    def test_show_dashboard(self):
+    def test_get_main_template(self):
+        self.handler._get_main_template()
+
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        self.assertEqual(called_template, self.handler.main_template)
+        self.assertEqual(called_context, {})
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_settings_template(self):
+        self.handler._get_settings_template()
+
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = ['github_import_url']
+        self.assertEqual(called_template, self.handler.settings_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
+
+    def test_show_main(self):
         self.handler.render_template = MagicMock(
             spec=self.handler.render_template)
-        self.handler.show_dashboard()
+        self.handler._get_main_template = MagicMock(
+            spec=self.handler._get_main_template)
+
+        self.handler.show_main()
+
+        called_template = self.handler.render_template.call_args[0][0]
         called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_main_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertIn('content', called_context)
+
+    def test_show_main_template(self):
+        self.handler._get_main_template = MagicMock(
+            spec=self.handler._get_main_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_main_template()
+
+        self.assertTrue(self.handler._get_main_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    def test_show_settings(self):
+        self.handler._get_settings_template = MagicMock(
+            spec=self.handler._get_settings_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_settings('repositories')
+
+        expected_keys = ['content', 'settings_type']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_settings_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    def test_show_settings_template(self):
+        self.handler._get_settings_template = MagicMock(
+            spec=self.handler._get_settings_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_settings_template()
+        self.assertTrue(self.handler._get_settings_template.called)
+        self.assertTrue(self.handler.write.called)
 
 
 class ApplicationTest(unittest.TestCase):
 
     def test_urls(self):
-        expected = ['/api/repo/(.*)$',
+        expected = ['/api/socks/(.*)$',
+                    '/api/repo/(.*)$',
                     '/api/slave/(.*)$']
 
         for url in web.api_app.urls:
             pat = url.regex.pattern
             self.assertIn(pat, expected)
 
-        self.assertEqual(len(web.api_app.urls), 2)
+        self.assertEqual(len(web.api_app.urls), 3)

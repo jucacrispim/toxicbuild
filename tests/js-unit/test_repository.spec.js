@@ -164,16 +164,26 @@ describe('RepositoryListView', function(){
     let buildset = {'commit': 'asdf'};
     let model = new Repository({'id': 'some-id', 'name': 'somename',
 				'last_buildset': buildset});
-    let view = new RepositoryListView();
+    let view = new RepositoryListView('short');
     let rendered = view._render_repo(model);
     expect(rendered.html().indexOf('somename') >= 0).toBe(true);
   });
 
-  it('test-render-fetch', function(){
+  it('test-render-enabled', function(){
     let view = new RepositoryListView();
     spyOn(view.model, 'fetch');
-    view.render();
-    expect(view.model.fetch).toHaveBeenCalled();
+    view.render_enabled();
+    let called_args = view.model.fetch.calls.allArgs()[0][0];
+    let expected = {'data': {'enabled': 'true'}};
+    expect(expected).toEqual(called_args);
+  });
+
+  it('test-render-all', function(){
+    let view = new RepositoryListView();
+    spyOn(view.model, 'fetch');
+    view.render_all();
+    let called_args = view.model.fetch.calls.allArgs()[0][0];
+    expect(called_args).toBe(undefined);
   });
 
 });

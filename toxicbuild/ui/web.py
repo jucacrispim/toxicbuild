@@ -31,6 +31,7 @@ from pyrocumulus.web.template import render_template
 from pyrocumulus.web.urlmappers import URLSpec
 
 from toxicbuild.core.utils import LoggerMixin, string2datetime
+from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
 from toxicbuild.ui.models import (Repository, Slave, Plugin, User)
 from toxicbuild.ui.utils import (format_datetime, is_datetime)
@@ -41,10 +42,19 @@ COOKIE_NAME = 'toxicui'
 
 class ToxicRequest(PyroRequest):
 
+    _tranlate_table = {'true': True,
+                       'false': False}
+
     def __getitem__(self, key):
         item = self.new_request[key]
         if len(item) == 1:
             item = item[0]
+
+        try:
+            item = self._tranlate_table.get(item, item)
+        except TypeError:
+            pass
+
         return item
 
     def items(self):
@@ -106,6 +116,7 @@ class TemplateHandler(BasePyroHandler):
 
 
 class LoggedTemplateHandler(CookieAuthHandlerMixin, TemplateHandler):
+    skeleton_template = 'toxictheme/skeleton.html'
 
     async def async_prepare(self):
         try:
@@ -437,23 +448,49 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
 
 class DashboardHandler(LoggedTemplateHandler):
     main_template = 'toxictheme/main.html'
-    enabled_repos_template = 'toxictheme/enabled_repos.html'
+    settings_template = 'toxictheme/settings.html'
+
+    def _get_main_template(self):
+        rendered = render_template(self.main_template,
+                                   self.request, {})
+        return rendered
+
+    def _get_settings_template(self):
+        github_import_url = getattr(settings, 'GITHUB_IMPORT_URL', '#')
+        rendered = render_template(self.settings_template,
+                                   self.request,
+                                   {'github_import_url': github_import_url})
+        return rendered
 
     @get('')
-    def show_dashboard(self):
-        content = render_template(self.enabled_repos_template,
-                                  self.request, {})
+    def show_main(self):
+        content = self._get_main_template()
         context = {'content': content}
-        self.render_template(self.main_template, context)
-        return ''
+        self.render_template(self.skeleton_template, context)
+
+    @get('templates/main')
+    def show_main_template(self):
+        content = self._get_main_template()
+        self.write(content)
+
+    @get('settings/(slaves|repositories)')
+    def show_settings(self, settings_type):
+        content = self._get_settings_template()
+        context = {'content': content,
+                   'settings_type': settings_type}
+        self.render_template(self.skeleton_template, context)
+
+    @get('templates/settings')
+    def show_settings_template(self):
+        content = self._get_settings_template()
+        self.write(content)
 
 
 dashboard = URLSpec('/(.*)$', DashboardHandler)
 
-websocket = URLSpec('/api/socks/(.*)', StreamHandler)
 login = URLSpec('/(login|logout)', LoginHandler)
 
-app = PyroApplication([login, websocket, dashboard])
+app = PyroApplication([login, dashboard])
 
 static_app = StaticApplication()
 
@@ -461,8 +498,10 @@ repo_kwargs = {'model': Repository}
 repo_api_url = URLSpec('/api/repo/(.*)', CookieAuthRepositoryRestHandler,
                        repo_kwargs)
 
+websocket = URLSpec('/api/socks/(.*)', StreamHandler)
 slave_kwargs = {'model': Slave}
 slave_api_url = URLSpec('/api/slave/(.*)', CookieAuthSlaveRestHandler,
                         slave_kwargs)
 
-api_app = PyroApplication([repo_api_url, slave_api_url])
+api_app = PyroApplication(
+    [websocket, repo_api_url, slave_api_url])

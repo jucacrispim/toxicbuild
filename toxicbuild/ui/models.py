@@ -356,13 +356,13 @@ class Repository(BaseModel):
 
     @classmethod
     @asyncio.coroutine
-    def list(cls, requester):
+    def list(cls, requester, **kwargs):
         """Lists all repositories.
 
         :param requester: The user who is requesting the operation."""
 
         with (yield from cls.get_client(requester)) as client:
-            repos = yield from client.repo_list()
+            repos = yield from client.repo_list(**kwargs)
         repo_list = [cls(requester, repo) for repo in repos]
         return repo_list
 
