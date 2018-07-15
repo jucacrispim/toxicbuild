@@ -30,15 +30,20 @@ describe('RepositoryTest', function(){
     let repo = new Repository();
     await repo._post2api(url, body);
     let called = jQuery.ajax.calls.allArgs()[0][0];
-    let expected = {'url': url, 'data': body, 'type': 'post'};
-    expect(called).toEqual(expected);
+    let called_keys = [];
+    for(let key in called){
+      called_keys.push(key);
+    }
+
+    let expected = ['url', 'data', 'type', 'headers'];
+    expect(called_keys).toEqual(expected);
   });
 
   it('test-add-slave', async function(){
     jQuery.ajax.and.returnValue(JSON.stringify({'some': 'thing'}));
     let slave = new Slave();
     let repo = new Repository();
-    let expected_url = repo.get('url') + 'add-slave?id=' + repo.id;
+    let expected_url = repo._api_url + 'add-slave?id=' + repo.id;
     await repo.add_slave(slave);
     let called_url = jQuery.ajax.calls.allArgs()[0][0]['url'];
     expect(called_url).toEqual(expected_url);
@@ -48,7 +53,7 @@ describe('RepositoryTest', function(){
     let slave = new Slave();
     let repo = new Repository();
     repo._post2api = jasmine.createSpy('_post2api');
-    let expected_url = repo.get('url') + 'remove-slave?id=' + repo.id;
+    let expected_url = repo._api_url + 'remove-slave?id=' + repo.id;
     let expected_body = {'id': slave.id};
     await repo.remove_slave(slave);
     let called_url = repo._post2api.calls.allArgs()[0][0];
@@ -63,7 +68,7 @@ describe('RepositoryTest', function(){
     let repo = new Repository();
     repo._post2api = jasmine.createSpy('_post2api');
     let expected_body = {'add_branches': branches_config};
-    let expected_url = repo.get('url') + 'add-branch?id=' + repo.id;
+    let expected_url = repo._api_url + 'add-branch?id=' + repo.id;
     await repo.add_branch(branches_config);
     let called_url = repo._post2api.calls.allArgs()[0][0];
     let called_body = repo._post2api.calls.allArgs()[0][1];
@@ -76,7 +81,7 @@ describe('RepositoryTest', function(){
     let repo = new Repository();
     repo._post2api = jasmine.createSpy('_post2api');
     let expected_body = {'remove_branches': branches};
-    let expected_url = repo.get('url') + 'remove-branch?id=' + repo.id;
+    let expected_url = repo._api_url + 'remove-branch?id=' + repo.id;
     await repo.remove_branch(branches);
     let called_url = repo._post2api.calls.allArgs()[0][0];
     let called_body = repo._post2api.calls.allArgs()[0][1];
@@ -91,7 +96,7 @@ describe('RepositoryTest', function(){
     let repo = new Repository();
     repo._post2api = jasmine.createSpy('_post2api');
     await repo.enable_plugin(plugin_config);
-    let expected_url = repo.get('url') + 'enable-plugin?id=' + repo.id;
+    let expected_url = repo._api_url + 'enable-plugin?id=' + repo.id;
     let called_url = repo._post2api.calls.allArgs()[0][0];
     expect(called_url).toEqual(expected_url);
   });
@@ -101,7 +106,7 @@ describe('RepositoryTest', function(){
     let repo = new Repository();
     repo._post2api = jasmine.createSpy('_post2api');
     await repo.disable_plugin(plugin);
-    let expected_url = repo.get('url') + 'disable-plugin?id=' + repo.id;
+    let expected_url = repo._api_url + 'disable-plugin?id=' + repo.id;
     let called_url = repo._post2api.calls.allArgs()[0][0];
     expect(called_url).toEqual(expected_url);
   });
@@ -111,7 +116,7 @@ describe('RepositoryTest', function(){
     let repo = new Repository();
     repo._post2api = jasmine.createSpy('_post2api');
     await repo.start_build(branch);
-    let expected_url = repo.get('url') + 'start-build?id=' + repo.id;
+    let expected_url = repo._api_url + 'start-build?id=' + repo.id;
     let called_url = repo._post2api.calls.allArgs()[0][0];
     expect(called_url).toEqual(expected_url);
   });
@@ -121,7 +126,25 @@ describe('RepositoryTest', function(){
     let repo = new Repository();
     repo._post2api = jasmine.createSpy('_post2api');
     await repo.cancel_build(build_uuid);
-    let expected_url = repo.get('url') + 'cancel-build?id=' + repo.id;
+    let expected_url = repo._api_url + 'cancel-build?id=' + repo.id;
+    let called_url = repo._post2api.calls.allArgs()[0][0];
+    expect(called_url).toEqual(expected_url);
+  });
+
+  it('test-enable', async function(){
+    let repo = new Repository();
+    repo._post2api = jasmine.createSpy('_post2api');
+    await repo.enable();
+    let expected_url = repo._api_url + 'enable?id=' + repo.id;
+    let called_url = repo._post2api.calls.allArgs()[0][0];
+    expect(called_url).toEqual(expected_url);
+  });
+
+  it('test-disable', async function(){
+    let repo = new Repository();
+    repo._post2api = jasmine.createSpy('_post2api');
+    await repo.disable();
+    let expected_url = repo._api_url + 'disable?id=' + repo.id;
     let called_url = repo._post2api.calls.allArgs()[0][0];
     expect(called_url).toEqual(expected_url);
   });
@@ -136,15 +159,63 @@ describe('RepositoryInfoViewTest', function(){
     infos += '+.buildset-commit+.buildset-title+.buildset-total-time';
     infos += '+.buildset-stated+.buildset-commit-date+.buildset-started';
     affix('.template .repository-info ' + infos);
+    this.view = new RepositoryInfoView();
+  });
+
+  it('test-get-kw-with-last-buildset', function(){
+    let buildset = {'commit': 'asdf'};
+    this.view.model = new Repository({'name': 'bla',
+				      'last_buildset': buildset});
+    let kw = this.view._get_kw();
+    let commit = 'asdf';
+    expect(kw['commit']).toEqual(commit);
+  });
+
+  it('test-get-kw-without-last-buildset', function(){
+    let buildset = {'commit': 'asdf'};
+    this.view.model = new Repository({'name': 'bla',
+				      'last_buildset': {}});
+    let kw = this.view._get_kw();
+    let commit = '';
+    expect(kw['commit']).toEqual(commit);
+  });
+
+  it('test-get-badge-class', function(){
+    let badge_class = this.view._get_badge_class('running');
+    expect(badge_class).toEqual('badge-primary');
+  });
+
+  it('test-change-enabled-repo-enable', async function(){
+    this.view.model = new Repository({'name': 'bla'});
+    this.view.model.enable = jasmine.createSpy('enable');
+    let el = jQuery('<input type="checkbox" checked>');
+    await this.view._change_enabled(el);
+    expect(this.view.model.enable).toHaveBeenCalled();
+  });
+
+  it('test-change-enabled-repo-disabled', async function(){
+    this.view.model = new Repository({'name': 'bla'});
+    this.view.model.disable = jasmine.createSpy('disable');
+    let el = jQuery('<input type="checkbox">');
+    await this.view._change_enabled(el);
+    expect(this.view.model.disable).toHaveBeenCalled();
+  });
+
+  it('test-listen2evets-enabled', function(){
+    this.view.list_type = 'enabled';
+    let el = jasmine.createSpy('el');
+    el.change = jasmine.createSpy('change');
+    this.view._listen2events(el);
+    expect(el.change).toHaveBeenCalled();
   });
 
   it('test-render', function(){
     let buildset = {'commit': 'asdf'};
-    let view = new RepositoryInfoView();
-    view.model = new Repository({'name': 'bla', 'last_buildset': buildset});
-    spyOn(view, 'compiled_template');
-    view.render();
-    expect(view.compiled_template).toHaveBeenCalled();
+    this.view.model = new Repository({'name': 'bla',
+				      'last_buildset': buildset});
+    spyOn(this.view, 'compiled_template');
+    this.view.render();
+    expect(this.view.compiled_template).toHaveBeenCalled();
   });
 
 });

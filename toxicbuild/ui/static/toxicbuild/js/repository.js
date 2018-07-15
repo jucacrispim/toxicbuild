@@ -25,59 +25,73 @@ class Repository extends BaseModel{
   }
 
   async _post2api(url, body){
-    let resp = await jQuery.ajax({'url': url, 'data': body, 'type': 'post'});
-    return jQuery.parseJSON(resp);
+    let xsrf_token = Cookies.get('_xsrf');
+    let headers = {'X-XSRFToken': xsrf_token};
+    let resp = await jQuery.ajax(
+      {'url': url, 'data': body, 'type': 'post',
+       'headers': headers});
+
+    return resp;
   }
 
   async add_slave(slave){
-    let url = this.get('url') + 'add-slave?' + 'id=' + this.id;
+    let url = this._api_url + 'add-slave?' + 'id=' + this.id;
     let body = {'id': slave.id};
     return this._post2api(url, body);
   }
 
   async remove_slave(slave){
-    let url = this.get('url') + 'remove-slave?' + 'id=' + this.id;
+    let url = this._api_url + 'remove-slave?' + 'id=' + this.id;
     let body = {'id': slave.id};
     return this._post2api(url, body);
   }
 
   async add_branch(branches_config){
-    let url = this.get('url') + 'add-branch?id=' + this.id;
+    let url = this._api_url + 'add-branch?id=' + this.id;
     let body = {'add_branches': branches_config};
     return this._post2api(url, body);
   }
 
   async remove_branch(branches){
-    let url = this.get('url') + 'remove-branch?id=' + this.id;
+    let url = this._api_url + 'remove-branch?id=' + this.id;
     let body = {'remove_branches': branches};
     return this._post2api(url, body);
   }
 
   async enable_plugin(plugin_config){
-    let url = this.get('url') + 'enable-plugin?id=' + this.id;
+    let url = this._api_url + 'enable-plugin?id=' + this.id;
     return this._post2api(url, plugin_config);
   }
 
   async disable_plugin(plugin_name){
-    let url = this.get('url') + 'disable-plugin?id=' + this.id;
+    let url = this._api_url + 'disable-plugin?id=' + this.id;
     let body = {'plugin_name': plugin_name};
     return this._post2api(url, body);
   }
 
   async start_build(branch, builder_name=null, named_tree=null,
 		    slaves=null, builders_origin=null){
-    let url = this.get('url') + 'start-build?id=' + this.id;
+    let url = this._api_url + 'start-build?id=' + this.id;
     let body = {'branch': branch, 'builder_name': builder_name,
 		'named_tree': named_tree, 'slaves': slaves,
 		'builders_origin': builders_origin};
     return this._post2api(url, body);
-
   }
 
   async cancel_build(build_uuid){
-    let url = this.get('url') + 'cancel-build?id=' + this.id;
+    let url = this._api_url + 'cancel-build?id=' + this.id;
     let body = {'build_uuid': build_uuid};
     return this._post2api(url, body);
+  }
+
+  async enable(){
+    let url = this._api_url + 'enable?id=' + this.id;
+    return this._post2api(url);
+  }
+
+  async disable(){
+    let url = this._api_url + 'disable?id=' + this.id;
+    return this._post2api(url);
   }
 
 }
@@ -150,10 +164,16 @@ class RepositoryInfoView extends Backbone.View{
     let spinner = jQuery('.wait-change-enabled-spinner', el.parent().parent());
     toggle_group.hide();
     spinner.fadeIn(300);
+
     let enabled = el.is(':checked');
-    await this.model.save({'enabled': enabled});
+    if (enabled){
+      await this.model.enable();
+    }else{
+      await this.model.disable();
+    }
     spinner.hide();
     toggle_group.fadeIn(500);
+
     let container = el.parent().parent();
     jQuery(el.parent().parent()).removeClass('repo-enabled').removeClass(
       'repo-disabled');
