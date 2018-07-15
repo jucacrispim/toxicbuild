@@ -17,7 +17,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from toxicbuild.master import document, users
+from toxicbuild.master import document, users, repository
 from tests import async_test
 
 
@@ -31,7 +31,7 @@ class OwnedDocuentTest(TestCase):
     async def setUp(self):
         self.owner = users.User(email='zezinho@nada.co', password='123')
         await self.owner.save()
-        self.doc = TestDoc(owner=self.owner)
+        self.doc = TestDoc(owner=self.owner, name='bla')
         await self.doc.save()
 
     @async_test
@@ -67,7 +67,7 @@ class OwnedDocuentTest(TestCase):
         await user.save()
         org = users.Organization(name='my-org', owner=user)
         await org.save()
-        repo = TestDoc(owner=org)
+        repo = TestDoc(owner=org, name='bla')
         await repo.save()
         await user.reload()
         returned = await TestDoc.get_for_user(user, id=repo.id)
@@ -79,7 +79,7 @@ class OwnedDocuentTest(TestCase):
         await user.save()
         org = users.Organization(name='my-org', owner=user)
         await org.save()
-        repo = TestDoc(owner=org)
+        repo = TestDoc(owner=org, name='bla')
         await repo.save()
         repos = await TestDoc.list_for_user(self.owner)
         count = await repos.count()
@@ -107,7 +107,7 @@ class OwnedDocuentTest(TestCase):
         await user.save()
         org = users.Organization(name='my-org', owner=user)
         await org.save()
-        repo = TestDoc(owner=org)
+        repo = TestDoc(owner=org, name='bla')
         await repo.save()
         await user.reload()
         repos = await TestDoc.list_for_user(user)
@@ -128,7 +128,7 @@ class OwnedDocuentTest(TestCase):
         user_c = users.User(email='c@c.com')
         await user_c.save()
 
-        repo = TestDoc(owner=org)
+        repo = TestDoc(owner=org, name='bla')
         await repo.save()
         allowed = await repo.get_allowed_users()
         allowed_users = await allowed.to_list()
@@ -147,9 +147,31 @@ class OwnedDocuentTest(TestCase):
         # user_c, not allowed
         user_c = users.User(email='c@c.com')
         await user_c.save()
-        repo = TestDoc(owner=user_a)
+        repo = TestDoc(owner=user_a, name='bla')
         await repo.save()
         await user_a.reload()
         allowed = await repo.get_allowed_users()
         allowed_users = await allowed.to_list()
         self.assertEqual(len(allowed_users), 2)
+
+    @async_test
+    async def test_save_no_full_name(self):
+        self.owner = users.User(email='zezinho@nada.co', password='123')
+        await self.owner.save()
+        self.repo = repository.Repository(
+            name='reponame', url="git@somewhere.com/project.git",
+            vcs_type='git', update_seconds=100, clone_status='ready',
+            owner=self.owner)
+        await self.repo.save()
+        self.assertEqual(self.repo.full_name, 'zezinho/reponame')
+
+    @async_test
+    async def test_save(self):
+        self.owner = users.User(email='zezinho@nada.co', password='123')
+        await self.owner.save()
+        self.repo = repository.Repository(
+            name='reponame', url="git@somewhere.com/project.git",
+            vcs_type='git', update_seconds=100, clone_status='ready',
+            owner=self.owner, full_name='bla/reponame')
+        await self.repo.save()
+        self.assertEqual(self.repo.full_name, 'bla/reponame')
