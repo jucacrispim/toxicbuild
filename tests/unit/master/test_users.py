@@ -175,3 +175,7 @@ class UserTest(TestCase):
                     'email': owner.email}
         returned = owner.to_dict()
         self.assertEqual(expected, returned)
+
+    def test_user_name(self):
+        user = users.User(username='bla')
+        self.assertEqual(user.name, 'bla')

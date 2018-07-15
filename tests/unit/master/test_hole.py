@@ -356,7 +356,7 @@ class HoleHandlerTest(TestCase):
 
     def test_get_kw_for_name_or_id_name(self):
         name_or_id = 'some-name'
-        expected = {'name': 'some-name'}
+        expected = {'full_name': 'some-name'}
         handler = hole.HoleHandler({}, 'repo-get', MagicMock())
         returned = handler._get_kw_for_name_or_id(name_or_id)
         self.assertEqual(returned, expected)
@@ -380,14 +380,14 @@ class HoleHandlerTest(TestCase):
     async def test_repo_get_with_repo_name(self):
         await self._create_test_data()
         await asyncio.sleep(0)
-        repo_name = 'reponame'
+        repo_name = 'asdf/reponame'
         action = 'repo-get'
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler({}, action, protocol)
         repo = (await handler.repo_get(repo_name_or_id=repo_name))['repo-get']
 
-        self.assertEqual(repo['name'], repo_name)
+        self.assertEqual(repo['name'], 'reponame')
         self.assertTrue(repo['id'])
         self.assertIn('status', repo.keys())
 
@@ -425,7 +425,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler({}, action, protocol)
-        await handler.repo_remove(repo_name_or_id='reponame')
+        await handler.repo_remove(repo_name_or_id='asdf/reponame')
         allrepos = [r.name for r in (
             await hole.Repository.objects.to_list())]
         self.assertEqual((await hole.Repository.objects.count()),
@@ -449,7 +449,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler({}, action, protocol)
-        await handler.repo_enable_plugin(self.repo.name,
+        await handler.repo_enable_plugin(self.repo.id,
                                          'test-hole-plugin')
         repo = await hole.Repository.objects.get(id=self.repo.id)
         self.assertEqual(len(repo.plugins), 1)
@@ -473,10 +473,10 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler({}, action, protocol)
-        await handler.repo_enable_plugin(self.repo.name,
+        await handler.repo_enable_plugin(self.repo.full_name,
                                          'test-hole-plugin')
         kw = {'name': 'test-hole-plugin'}
-        await handler.repo_disable_plugin(self.repo.name, **kw)
+        await handler.repo_disable_plugin(self.repo.id, **kw)
         repo = await hole.Repository.objects.get(id=self.repo.id)
         self.assertEqual(len(repo.plugins), 0)
 
@@ -505,7 +505,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler(data, action, protocol)
-        await handler.repo_update(repo_name_or_id=self.repo.name,
+        await handler.repo_update(repo_name_or_id=self.repo.id,
                                   update_seconds=60)
         repo = await hole.Repository.objects.get(name=self.repo.name)
 
@@ -525,7 +525,7 @@ class HoleHandlerTest(TestCase):
 
         handler = hole.HoleHandler(data, action, protocol)
         slaves = ['name']
-        await handler.repo_update(repo_name_or_id=self.repo.name,
+        await handler.repo_update(repo_name_or_id=self.repo.id,
                                   update_seconds=60, slaves=slaves)
         repo = await hole.Repository.objects.get(name=self.repo.name)
         self.assertEqual(repo.update_seconds, 60)
@@ -542,7 +542,7 @@ class HoleHandlerTest(TestCase):
                                         owner=self.owner,
                                         token='asdf')
 
-        repo_name = self.repo.name
+        repo_name = self.repo.full_name
         action = 'repo-add-slave'
 
         protocol = MagicMock()
@@ -550,7 +550,7 @@ class HoleHandlerTest(TestCase):
         handler = hole.HoleHandler({}, action, protocol)
 
         await handler.repo_add_slave(repo_name_or_id=repo_name,
-                                     slave_name_or_id='name2')
+                                     slave_name_or_id='asdf/name2')
 
         repo = await hole.Repository.objects.get(url=self.repo.url)
 
@@ -572,7 +572,7 @@ class HoleHandlerTest(TestCase):
 
         handler = hole.HoleHandler({}, 'repo-remove-slave', protocol)
 
-        await handler.repo_remove_slave(self.repo.name, slave.name)
+        await handler.repo_remove_slave(self.repo.full_name, slave.full_name)
 
         repo = await hole.Repository.objects.get(url=self.repo.url)
 
@@ -590,7 +590,7 @@ class HoleHandlerTest(TestCase):
         protocol.user = self.owner
         handler = hole.HoleHandler({}, action, protocol)
 
-        await handler.repo_add_branch(repo_name_or_id=self.repo.name,
+        await handler.repo_add_branch(repo_name_or_id=self.repo.id,
                                       branch_name='release',
                                       notify_only_latest=True)
 
@@ -610,12 +610,12 @@ class HoleHandlerTest(TestCase):
         protocol.user = self.owner
         handler = hole.HoleHandler({}, action, protocol)
 
-        await handler.repo_add_branch(repo_name_or_id=self.repo.name,
+        await handler.repo_add_branch(repo_name_or_id=self.repo.full_name,
                                       branch_name='release',
                                       notify_only_latest=True)
         repo = await hole.Repository.objects.get(url=self.repo.url)
         branch_count = len(repo.branches)
-        await handler.repo_remove_branch(repo_name_or_id=self.repo.name,
+        await handler.repo_remove_branch(repo_name_or_id=self.repo.id,
                                          branch_name='release')
 
         await repo.reload('branches')
@@ -647,7 +647,7 @@ class HoleHandlerTest(TestCase):
         self.repo.slaves = [self.slave]
         await self.repo.save()
 
-        await handler.repo_start_build(self.repo.name, 'master')
+        await handler.repo_start_build(self.repo.id, 'master')
 
         self.assertEqual(len(add_builds_for_slave.call_args_list), 1)
 
@@ -667,7 +667,7 @@ class HoleHandlerTest(TestCase):
         handler = hole.HoleHandler({}, 'repo-start-build', protocol)
         self.repo.slaves = [self.slave]
         await self.repo.save()
-        await handler.repo_start_build(self.repo.name, 'master',
+        await handler.repo_start_build(self.repo.id, 'master',
                                        builder_name='b00')
 
         self.assertEqual(len(add_builds_for_slave.call_args_list), 1)
@@ -709,7 +709,7 @@ class HoleHandlerTest(TestCase):
             mock_cls=AsyncMagicMock)
         self.repo.slaves = [self.slave]
         await self.repo.save()
-        await handler.repo_start_build(self.repo.name, 'master',
+        await handler.repo_start_build(self.repo.full_name, 'master',
                                        named_tree='123qewad')
 
         self.assertTrue(get_mock.called)
@@ -742,7 +742,7 @@ class HoleHandlerTest(TestCase):
             spec=self.repo.build_manager.get_bulders, autospec=True,
             mock_cls=AsyncMagicMock)
 
-        await handler.repo_start_build(self.repo.name, 'master',
+        await handler.repo_start_build(self.repo.id, 'master',
                                        slaves=['name'])
 
         self.assertEqual(len(add_builds_for_slave.call_args_list), 1)
@@ -843,7 +843,7 @@ class HoleHandlerTest(TestCase):
     @async_test
     async def test_slave_get(self):
         await self._create_test_data()
-        slave_name = 'name'
+        slave_name = 'asdf/name'
         action = 'slave-get'
         protocol = MagicMock()
         protocol.user = self.owner
@@ -851,7 +851,7 @@ class HoleHandlerTest(TestCase):
         slave = (await handler.slave_get(
             slave_name_or_id=slave_name))['slave-get']
 
-        self.assertEqual(slave['name'], slave_name)
+        self.assertEqual(slave['full_name'], slave_name)
         self.assertTrue(slave['id'])
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
@@ -863,7 +863,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler(data, 'slave-remove', protocol)
-        await handler.slave_remove(slave_name_or_id='name')
+        await handler.slave_remove(slave_name_or_id='asdf/name')
         await asyncio.sleep(0.1)
         self.assertEqual((await hole.Slave.objects.count()), 0)
 
@@ -890,9 +890,9 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler(data, action, protocol)
-        await handler.slave_update(slave_name_or_id=self.slave.name,
+        await handler.slave_update(slave_name_or_id=self.slave.id,
                                    host='10.0.0.1')
-        slave = await hole.Slave.get(name=self.slave.name)
+        slave = await hole.Slave.get(id=self.slave.id)
         self.assertEqual(slave.host, '10.0.0.1')
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
@@ -903,7 +903,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler({}, 'buildset-list', protocol)
-        buildsets = await handler.buildset_list(self.repo.name)
+        buildsets = await handler.buildset_list(self.repo.full_name)
         buildsets = buildsets['buildset-list']
 
         self.assertEqual(len(buildsets), 3)
@@ -960,7 +960,7 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler(data, action, protocol)
-        builder = await handler.builder_show(repo_name_or_id=self.repo.name,
+        builder = await handler.builder_show(repo_name_or_id=self.repo.id,
                                              builder_name='b01')
         builder = builder['builder-show']
 
@@ -978,9 +978,10 @@ class HoleHandlerTest(TestCase):
         protocol = MagicMock()
         protocol.user = self.owner
         handler = hole.HoleHandler(data, action, protocol)
-        builder = await handler.builder_show(repo_name_or_id=self.repo.name,
-                                             builder_name='b01',
-                                             skip=1, offset=1)
+        builder = await handler.builder_show(
+            repo_name_or_id=self.repo.full_name,
+            builder_name='b01',
+            skip=1, offset=1)
         builder = builder['builder-show']
 
         self.assertEqual(len(builder['buildsets']), 0)
