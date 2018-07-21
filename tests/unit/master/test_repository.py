@@ -154,6 +154,26 @@ class RepositoryTest(TestCase):
         self.assertTrue(repo.id)
         self.assertEqual(len(repo.branches), 3)
 
+    @async_test
+    async def test_save_change_name(self):
+        repo = await repository.Repository.create(
+            name='reponame', url='git@somewhere.com', owner=self.owner,
+            update_seconds=300, vcs_type='git')
+        repo.name = 'new-reponame'
+        await repo.save()
+        self.assertEqual(repo.full_name, 'zezinho/new-reponame')
+
+    @async_test
+    async def test_save_change_owner(self):
+        repo = await repository.Repository.create(
+            name='reponame', url='git@somewhere.com', owner=self.owner,
+            update_seconds=300, vcs_type='git')
+        new_owner = users.User(email='huguinho@nada.co', password='123')
+        await new_owner.save()
+        repo.owner = new_owner
+        await repo.save()
+        self.assertEqual(repo.full_name, 'huguinho/reponame')
+
     @patch.object(repository, 'repo_added', AsyncMagicMock())
     @patch.object(repository, 'shutil', Mock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())

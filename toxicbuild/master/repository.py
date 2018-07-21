@@ -167,6 +167,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         """Returns a dict representation of the object."""
 
         my_dict = {'id': self.id, 'name': self.name, 'url': self.url,
+                   'full_name': self.full_name,
                    'update_seconds': self.update_seconds,
                    'vcs_type': self.vcs_type,
                    'branches': [b.to_dict() for b in self.branches],
@@ -276,6 +277,16 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         if repo.schedule_poller:
             repo.schedule()
         return repo
+
+    async def save(self, *args, **kwargs):
+        set_full_name = (hasattr(self, '_changed_fields') and
+                         ('name' in self._changed_fields or
+                          'owner' in self._changed_fields))
+        if set_full_name or not self.full_name:
+            owner = await self.owner
+            self.full_name = '{}/{}'.format(owner.name, self.name)
+        r = await super().save(*args, **kwargs)
+        return r
 
     async def remove(self):
         """ Removes all builds and builders and revisions related to the
