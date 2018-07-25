@@ -17,8 +17,9 @@
 
 class BasePage extends Backbone.View{
 
-  constructor(options){
-    super(options);
+  constructor(router){
+    super();
+    this.router = router;
     this.template_container = jQuery('#main-area-container');
   }
 
@@ -59,5 +60,59 @@ class MainPage extends BasePage{
 
   async render(){
     await this.repo_list_view.render_enabled();
+  }
+}
+
+class RepositoryDetailsPage extends BasePage{
+
+  constructor(router, full_name){
+    super(router);
+    this.template_url = '/templates/repo-details';
+    this.repo_details_view = new RepositoryDetailsView(full_name);
+    this.right_sidebar = null;
+    this.nav_pills = null;
+  }
+
+  _toggleAdvanced(){
+    let container = jQuery(
+      '.repo-config-advanced-container #repo-details-advanced-container');
+
+    let angle_container = jQuery(
+      '.repo-config-advanced-container #advanced-angle-span');
+
+    container.toggle(300);
+
+    let help = jQuery('.settings-right-side .advanced-help-container');
+    if (help.is(':visible')){
+      angle_container.removeClass('fa-angle-down').addClass('fa-angle-right');
+      help.fadeOut(300);
+    }else{
+      angle_container.removeClass('fa-angle-right').addClass('fa-angle-down');
+      help.fadeIn(300);
+    }
+  }
+
+  _listen2events(){
+    let self = this;
+    jQuery('.repo-config-advanced-span').on('click', function(e){
+      self._toggleAdvanced();
+    });
+
+    jQuery('.repo-details-main-container .close-btn').on('click', function(e){
+      self.close_page();
+    });
+  }
+
+  async render(){
+    this.nav_pills = jQuery('.nav-container');
+    this.right_sidebar = jQuery('.settings-right-side');
+    await this.repo_details_view.render_details();
+    this.right_sidebar.fadeIn(300);
+    this.nav_pills.fadeIn(300);
+    this._listen2events();
+  }
+
+  close_page(){
+    this.router.go2lastURL();
   }
 }

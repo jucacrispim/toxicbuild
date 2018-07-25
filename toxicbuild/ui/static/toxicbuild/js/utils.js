@@ -28,6 +28,10 @@ var utils = {
     message_container.fadeOut();
   },
 
+  sleep: function(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  },
+
   showSuccessMessage: function(message){
     var self = this;
     jQuery('#success-container').text(message);

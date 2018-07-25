@@ -1,0 +1,311 @@
+<!-- add branch modal -->
+<!-- Modal -->
+<div class="modal fade" id="addBranchModal" tabindex="-1" role="dialog"
+     aria-labelledby="addBranchModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="exampleModalLabel">Add branch</h6>
+        <button type="button" class="close" data-dismiss="modal"
+		aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="text" class="form-control" id="repo-branch-name"
+	       placeholder="Branch name. You may use wildcards here.">
+
+      <div class="form-check abc-checkbox abc-checkbox-black">
+	<input class="form-check-input" id="notify-only-latest"
+	       type="checkbox" checked>
+	<label class="form-check-label" for="notify-only-latest">
+	  Only most recent changes
+	</label>
+      </div>
+
+      </div>
+
+      <div class="modal-footer">
+
+	  <div class="add-branch-btn-container inner-btn-container">
+	    <button class="btn btn-sm btn-block btn-dark" type="submit"
+		    id="btn-add-branch" disabled>
+	      <span class="spinner icon-spinner-2" id="save-repo-btn-spinner"
+		    style="display:none">
+	      </span>
+	      <span id="add-branch-btn-text">Add branch</span>
+	    </button>
+	  </div>
+
+	  <div class="cancel-btn-container inner-btn-container">
+	    <button class="btn btn-sm btn-light btn-block" type="submit"
+		    id="btn-cancel-save-repo">
+	      <span class="spinner icon-spinner-2" id="save-repo-btn-spinner"
+		    style="display:none">
+	      </span>
+	      <span id="cancel-save-repo-btn-text">Cancel</span>
+	    </button>
+	  </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<!-- end add branch modal -->
+
+<!-- template -->
+<div class="template">
+
+  <div id="repo-details">
+    <div class="form-group repo-name-group">
+
+      <div class="col-sm-12 repo-details-row">
+	<!-- first row -->
+	<!-- name container -->
+	<div class="repo-details-name-label col-sm-1 repo-details-label">
+	  <label for="repo-details-name">Name:</label>
+	</div>
+	<div class="repo-details-name-input col-sm-11 repo-details-input">
+	  <div class="repo-details-input">
+	    <input id="repo-details-name" type="text" class="form-control"
+		   data-valuefor="name">
+	  </div>
+	  <!-- name available -->
+	  <div class="repo-details-name-available repo-details-label col-sm-3"
+	       id="repo-name-available">
+
+	    <div class="wait-name-available-spinner">
+	      <span class="spinner icon-spinner-2"></span>
+	    </div>
+
+	    <span class="check-error-indicator"></span>
+	    <span id="available-text"></span>
+	  </div>
+	  <!-- end name available -->
+	</div>
+	<!-- end name container -->
+      </div>
+      <!-- end first row -->
+
+      <!-- second row -->
+      <div class="col-sm-12 repo-details-row">
+	<!-- url container -->
+	<div class="repo-details-url-label col-sm-1 repo-details-label">
+	  <label for="repo-details-url">URL:</label>
+	</div>
+	<div class="repo-details-url-input col-sm-8 repo-details-input">
+	  <input id="repo-details-url" type="text" class="form-control"
+		 data-valuefor="url">
+	</div>
+	<!-- end url container -->
+
+	<!-- enabled -->
+	<div class="repo-info-container repository-info-enabled-container">
+	  <div class=" wait-change-enabled-spinner col-sm-3">
+	    <span class="spinner icon-spinner-2"></span>
+	  </div>
+
+	  <input type="checkbox" class="enabled-checkbox"
+		 data-on="enabled" data-off="disabled"
+		 data-onstyle="success" data-offstyle="secondary"
+		 data-style="checkbox-rounded checkbox-sm"
+		 data-width="1pz" data-height="1pz">
+
+	  <!-- the 1pz stuff is a hack to avoid bootstrap-togge
+	       setting the width and height of the element to 0 with
+	       inline css -->
+	</div>
+	<!-- end enabled enabled -->
+	<!-- end second row -->
+      </div>
+
+      <!-- advanced config -->
+      <div class="repo-config-advanced-container col-sm-12">
+	<span id="advanced-angle-span"
+	      class="fas fa-angle-right cursor-pointer">
+	</span>
+	<span class="repo-config-advanced-span cursor-pointer">
+	  <b>Advanced</b>
+	</span>
+
+	<div id="repo-details-advanced-container">
+
+	  <!-- builds in palallel -->
+	  <div class="row-container parallel-builds-container">
+	    <div class="parallel-builds-label repo-details-label advanced-item">
+	      <span>Builds in parallel:</span>
+	    </div>
+	    <div class="col-sm-2 repo-details-input advanced-item">
+	      <input id="repo-parallel-builds" type="text" class="form-control"
+		     data-valuefor="parallel_builds">
+	    </div>
+	  </div>
+	  <!-- end builds in palallel -->
+
+	  <!-- branches -->
+	  <div class="row-container">
+	    <div class="col-sm-1 repo-details-label advanced-large-item">
+	      <span>Branches:</span>
+	    </div>
+	    <div id="branches-list-container"
+		 class="col-sm-6 repo-details-input box-shadow-gray-inset advanced-large-item">
+	      <ul class="repo-branches-ul" id="repo-branches-container">
+		<li class="box-shadow box-white no-item-placeholder"
+		    id="no-branch-placeholder">
+		  No branch configuration.
+		</li>
+
+		<li class="repo-branches-li box-shadow box-white">
+		  <span class="branch-name"></span>
+		  <span class="fas fa-times remove-item-btn remove-branch-btn"
+			title="remove branch" data-branch="">
+		  </span>
+		</li>
+
+	      </ul>
+	    </div>
+	    <div class="col-sm-4 repo-details-input advanced-large-item">
+	      <span id="add-branch-btn" class="fas fa-plus"
+		    title="add branch" data-toggle="modal"
+		    data-target="#addBranchModal"></span>
+	    </div>
+	  </div>
+	  <!-- end branches -->
+
+	  <!-- slaves -->
+	  <div class="row-container">
+	    <div class="col-sm-1 repo-details-label advanced-large-item">
+	      <span>Slaves:</span>
+	    </div>
+	    <div id="slaves-list-container"
+		 class="col-sm-6 repo-details-input box-shadow-gray-inset advanced-large-item">
+	      <ul class="repo-slaves-ul">
+		<li class="repo-slaves-li box-shadow box-white">
+		  <span class="slave-name"></span>
+		  <span class="fas fa-times remove-item-btn remove-slave-btn"
+			title="remove slave">
+		  </span>
+		</li>
+	      </ul>
+	    </div>
+	    <div class="col-sm-4 repo-details-input advanced-large-item">
+	      <span id="add-slave-btn" class="fas fa-plus"
+		    title="add slave"></span>
+	    </div>
+	  </div>
+	  <!-- end slaves -->
+	</div>
+
+      </div>
+      <!-- end advanced config -->
+
+      <!-- buttons container -->
+      <div class="repo-details-buttons-container">
+	<div class="save-btn-container inner-btn-container">
+	  <button class="btn btn-sm btn-block btn-dark" type="submit"
+		  id="btn-save-repo" disabled>
+	    <span class="spinner icon-spinner-2" id="save-repo-btn-spinner"
+		  style="display:none">
+	    </span>
+	    <span id="save-repo-btn-text">Save changes</span>
+	  </button>
+	</div>
+
+	<div class="cancel-btn-container inner-btn-container">
+	  <button class="btn btn-sm btn-light btn-block" type="submit"
+		  id="btn-cancel-save-repo">
+	    <span id="cancel-save-repo-btn-text">Cancel</span>
+	  </button>
+	</div>
+
+
+      </div>
+      <!-- end buttons container -->
+    </div>
+  </div>
+
+</div>
+<!-- end template -->
+
+
+<!-- main settings container -->
+<div class="repo-details-main-container box-shadow-gray">
+
+  <!-- loading spinner -->
+  <div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
+    <span class="spinner icon-spinner-2"></span>
+    <span class="icon-toxicmask"></span>
+  </div>
+  <!-- end loading spinner -->
+
+  <!-- navigation pills -->
+  <div class="nav-container">
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+	<a class="nav-link active box-shadow" href="#">
+	  General configurations
+	</a>
+      </li>
+      <li class="nav-item">
+	<a class="nav-link" href="#">
+	  Notifications
+	</a>
+      </li>
+    </ul>
+    <div class="close-btn">&times;</div>
+
+    <div class="repo-locations-link-container">
+      <a href="#" title="go to summary"><span class="fas fa-list"></span></a>
+      <a href="#" title="go to warterfall"><span class="fas fa-th"></span></a>
+    </div>
+  </div>
+  <!-- end navigation pills -->
+
+  <!-- left side -->
+  <div class="settings-left-side col-sm-9">
+    <div id="repo-details-container"></div>
+  </div>
+  <!-- end left side -->
+
+  <!-- righ  side -->
+  <div class="settings-right-side col-sm-3">
+    <div>
+      <span>
+	<h5>Basic configuration</h5>
+	<p id="basic-config-p">
+	  Give a <b>name</b> to your repository and provide a clone <b>url</b>.
+	</p>
+	<div class="advanced-help-container">
+	  <h5>Advanced configuration</h5>
+	  <p id="parallel-builds-config-p">
+	    Determine how many <b>builds</b> can be executed <b>in parallel</b>
+	    in the repository. If no value there is no limit.
+	  </p>
+	  <p id="branches-config-p">
+	    Define which <b>branches</b> trigger builds. If no branch
+	    configuration, changes in all <b>branches</b> will trigger builds.
+	  </p>
+
+	  <p id="slaves-config-p">
+	    <b>Slaves</b> are the ones who execute the builds.
+	  </p>
+	</div>
+      </span>
+    </div>
+  </div>
+<!-- end right side -->
+
+</div>
+
+
+<input type="hidden" value="{{repo_full_name}}" id="repo-full-name">
+
+<script>
+  async function init(){
+    let full_name = jQuery('#repo-full-name').val();
+    let page = new RepositoryDetailsPage(router, full_name);
+    await page.render();
+  }
+
+  window.onload = function(){init()};
+</script>

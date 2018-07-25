@@ -461,6 +461,7 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
 class DashboardHandler(LoggedTemplateHandler):
     main_template = 'toxictheme/main.html'
     settings_template = 'toxictheme/settings.html'
+    repository_template = 'toxictheme/repository.html'
 
     def _get_main_template(self):
         rendered = render_template(self.main_template,
@@ -472,6 +473,11 @@ class DashboardHandler(LoggedTemplateHandler):
         rendered = render_template(self.settings_template,
                                    self.request,
                                    {'github_import_url': github_import_url})
+        return rendered
+
+    def _get_repository_template(self, full_name=''):
+        rendered = render_template(self.repository_template, self.request,
+                                   {'repo_full_name': full_name})
         return rendered
 
     @get('')
@@ -495,6 +501,17 @@ class DashboardHandler(LoggedTemplateHandler):
     @get('templates/settings')
     def show_settings_template(self):
         content = self._get_settings_template()
+        self.write(content)
+
+    @get('(\w+/\w+)/settings')
+    def show_repository_details(self, full_name):
+        content = self._get_repository_template(full_name)
+        context = {'content': content}
+        self.render_template(self.skeleton_template, context)
+
+    @get('templates/repo-details')
+    def show_repository_details_template(self):
+        content = self._get_repository_template()
         self.write(content)
 
 

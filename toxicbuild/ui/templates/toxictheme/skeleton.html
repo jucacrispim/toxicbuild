@@ -29,8 +29,9 @@
 <script src="{{static_url}}toxicbuild/js/routers.js"></script>
 
 <script>
+  var router;
   jQuery(function(){
-    let router = new DashboardRouter();
+    router = new DashboardRouter();
     router.setUpLinks();
     Backbone.history.start({'pushState': true, 'silent': true});
   });

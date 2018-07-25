@@ -7,6 +7,17 @@ body{
     background-color: #f9f9f9;
 }
 
+::-webkit-input-placeholder {
+   font-size: 0.9em!important;
+}
+
+:-moz-placeholder { /* Firefox 18- */
+      font-size: 0.9em!important;
+}
+::-moz-placeholder {  /* Firefox 19+ */
+      font-size: 0.9em!important;
+}
+
 .navbar{
     margin-bottom: 15px;
 }
@@ -26,6 +37,16 @@ body{
     float:left;
 }
 
+.close-btn{
+    float: right;
+    position: absolute;
+    right: 0;
+    top: 0;
+    font-size: 1.6em;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
 .toxiclogo-container{
     width: 235px;
     margin-left: 0;
@@ -35,6 +56,24 @@ body{
     margin-right: 15px;
     width: 5%;
     margin-top: 12px;
+}
+
+.modal-content{
+    background-color: #f9f9f9;
+    font-size: 0.9em;
+}
+
+.modal-header,
+.modal-footer{
+    border: none;
+}
+
+.row-container{
+    overflow: auto
+}
+
+.modal-footer{
+    padding-top: 0;
 }
 
 .form-control:focus {
@@ -50,14 +89,26 @@ body{
 
 .alert{
     position: fixed;
-    width: 98.0%;
+    /* right: 15px; */
+    /* margin-right: 50%; */
+    margin-left: 34%;
     margin-top: -35px;
     z-index: 1000;
     opacity: 0.98;
     display: none;
-    font-size: 1.1em;
+    /* overflow: auto; */
 }
 
+.alert .fas{
+    font-size: 1.3em;
+}
+
+.alert-dismissible button.close-msg{
+    padding: 0;
+    padding-right: 5px;
+    padding-top: 2px;
+
+}
 .error{
     color: var(--red-light);
 }
@@ -66,8 +117,17 @@ body{
     background-image: linear-gradient(-180deg, #757272 0%, #343a40 90%);
 }
 
+.btn-light{
+    background-image: linear-gradient(-180deg, #f1f1f1 0%, #d1d2d2 90%);
+    border-color: #c4c2c2;
+}
+
 .toxic-main-area{
     background-color: #f9f9f9;
+}
+
+#main-area-container{
+    position: relative;
 }
 
 .box-shadow{
@@ -79,7 +139,11 @@ body{
 }
 
 .box-shadow-gray{
-    box-shadow: 0px 2px 7px 0px #b7b4b4;
+    box-shadow: 0px 0px 5px 0px #b7b4b4;
+}
+
+.box-shadow-gray-inset{
+    box-shadow: inset 0px 0px 5px 0px #b7b4b4;
 }
 
 .box-white{
@@ -123,15 +187,29 @@ body{
 .checkbox-rounded .toggle-handle{
     width: 20px;
     height: 100%;
-    margin-top: -9px;
+    margin-top: -8px;
     padding: 0;
     font-size: 0.9em;
     padding-top: 2px;
+    margin-left: 2px;
+}
+
+.abc-checkbox-black input[type="checkbox"]:checked + label::before,
+.abc-checkbox-black input[type="radio"]:checked + label::before {
+    background-color: #212529;
+    border-color: #212529;
+}
+
+.abc-checkbox label::after{
+    color: var(--white);
 }
 
 .toggle-on.btn,
 .toggle-off.btn{
     font-size: 0.8em;
+}
+.toggle-group{
+    min-height: 21px;
 }
 
 .checkbox-sm .toggle-off.btn,
@@ -143,6 +221,10 @@ body{
 
 .checkbox-sm{
     height: 21px;
+}
+
+.cursor-pointer{
+    cursor: pointer;
 }
 
 /* wait-toxic-spinner */
@@ -450,6 +532,7 @@ body{
 
 .settings-left-side{
     float:left;
+    position: relative;
 }
 
 .settings-right-side{
@@ -464,4 +547,177 @@ body{
 .wait-change-enabled-spinner{
     display:none;
     margin-right: 55px;
+}
+
+/* repo details page */
+
+.repo-details-main-container{
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin: -10px;
+    padding: 10px;
+}
+
+#repo-details .repo-details-label,
+#repo-details .repo-details-input{
+    float: left;
+    margin-left: 0px;
+}
+
+.repo-name-group div{
+    margin-bottom: 10px;
+}
+
+.repo-details-buttons-container{
+    float: right;
+    margin-top: 25px;
+}
+
+.repo-details-buttons-container .inner-btn-container{
+    float: left;
+    margin-right: 10px;
+}
+
+#repo-details-container .repository-info-enabled-container{
+    float: right;
+    margin-top: 11px;
+}
+
+#available-text{
+    font-size: 0.8em;
+}
+
+.repo-details-name-available .fa-check{
+    color: var(--success);
+}
+
+.repo-details-name-available #available-text,
+.repo-details-name-available .fa-times{
+    color: var(--danger);
+}
+
+#repo-name-available{
+    margin-top: 7px;
+}
+
+.wait-name-available-spinner{
+    display:none;
+    margin-top: 0px;
+    margin-bottom: 0px !important;
+}
+
+.repo-details-row{
+    min-height: 50px;
+}
+
+#repo-details-advanced-container{
+    display: none;
+    margin-top: 20px;
+    padding-left: 15px;
+}
+
+#repo-details #branches-list-container,
+#repo-details #slaves-list-container{
+    margin-left: 46px;
+    /* border: solid 0.5px #ccc; */
+    border-radius: 3px;
+    min-height: 44px;
+}
+
+#add-branch-btn,
+#add-slave-btn{
+    min-height: 45px;
+    color: var(--success);
+    cursor: pointer;
+}
+
+.advanced-large-item{
+    margin-bottom: 36px !important;
+}
+
+.repo-slaves-ul,
+.repo-branches-ul{
+    padding:0
+}
+
+.no-item-placeholder,
+.repo-slaves-li,
+.repo-branches-li{
+    list-style: none;
+    padding: 3px;
+    padding-left: 12px;
+    margin-left: -10px;
+    margin-right: -10px;
+    margin-top: 10px;
+    margin-bottom: 0;
+    /* font-size: 0.9em; */
+}
+
+.remove-item-btn{
+    float: right;
+    margin-top: 5px;
+    font-size: 0.8em;
+    padding-right: 10px;
+    color: var(--danger);
+    cursor: pointer;
+}
+
+.repo-config-advanced-container{
+    padding-left: 0;
+}
+
+#basic-config-p{
+    height: 70px;
+}
+
+#parallel-builds-config-p{
+    margin-top: 15px;
+    margin-bottom: 32px;
+}
+
+#branches-config-p{
+    height: 87px;
+}
+
+#addBranchModal .form-check{
+    margin-top: 15px;
+}
+
+.no-item-placeholder{
+    font-size: 0.9em;
+    display: none;
+}
+
+.parallel-builds-label{
+    min-width: 120px;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.parallel-builds-container{
+    padding-top: 10px;
+    padding-bottom: 25px;
+}
+
+
+.advanced-help-container{
+    display: none;
+}
+
+#btn-save-repo{
+    width: 105px
+}
+
+.repo-locations-link-container{
+    padding: 10px;
+    margin-left: 15px;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+.repo-locations-link-container a{
+    color: #212529;
+    margin-right: 6px;
 }

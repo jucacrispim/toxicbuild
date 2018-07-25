@@ -615,6 +615,17 @@ class DashboardHandlerTest(AsyncTestCase):
         self.assertEqual(called_template, self.handler.settings_template)
         self.assertEqual(expected_keys, list(called_context.keys()))
 
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_repository_template(self):
+        self.handler._get_repository_template()
+
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        self.assertEqual(called_template, self.handler.repository_template)
+        self.assertEqual(called_context, {'repo_full_name': ''})
+
     def test_show_main(self):
         self.handler.render_template = MagicMock(
             spec=self.handler.render_template)
@@ -661,6 +672,30 @@ class DashboardHandlerTest(AsyncTestCase):
 
         self.handler.show_settings_template()
         self.assertTrue(self.handler._get_settings_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    def test_show_repository_details(self):
+        self.handler._get_repository_template = MagicMock(
+            spec=self.handler._get_repository_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_repository_details('some/repo')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_repository_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    def test_show_repository_details_template(self):
+        self.handler._get_repository_template = MagicMock(
+            spec=self.handler._get_repository_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_repository_details_template()
+        self.assertTrue(self.handler._get_repository_template.called)
         self.assertTrue(self.handler.write.called)
 
 

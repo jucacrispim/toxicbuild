@@ -28,8 +28,8 @@ class Repository extends BaseModel{
     let xsrf_token = Cookies.get('_xsrf');
     let headers = {'X-XSRFToken': xsrf_token};
     let resp = await jQuery.ajax(
-      {'url': url, 'data': body, 'type': 'post',
-       'headers': headers});
+      {'url': url, 'data': JSON.stringify(body), 'type': 'post',
+       'contentType': "application/json", 'headers': headers});
 
     return resp;
   }
@@ -49,13 +49,32 @@ class Repository extends BaseModel{
   async add_branch(branches_config){
     let url = this._api_url + 'add-branch?id=' + this.id;
     let body = {'add_branches': branches_config};
-    return this._post2api(url, body);
+    let r = await this._post2api(url, body);
+    let branches = this.get('branches');
+    for (let i in branches_config){
+      let branch = branches_config[i];
+      branch['name'] = branch.branch_name;
+      delete branch['branch_name'];
+      branches.push(branch);
+    }
+    this.set('branches', branches);
+    return r;
   }
 
   async remove_branch(branches){
     let url = this._api_url + 'remove-branch?id=' + this.id;
     let body = {'remove_branches': branches};
-    return this._post2api(url, body);
+    let r = await this._post2api(url, body);
+    let repo_branches = this.get('branches');
+    let new_branches = [];
+    for (let i in repo_branches){
+      let branch = repo_branches[i];
+      if (branches.indexOf(branch.name) < 0 && new_branches.indexOf(branch) < 0){
+	new_branches.push(branch);
+      }
+    }
+    this.set('branches', new_branches);
+    return r;
   }
 
   async enable_plugin(plugin_config){
@@ -94,6 +113,17 @@ class Repository extends BaseModel{
     return this._post2api(url);
   }
 
+  static async is_name_available(name){
+    let model = new Repository();
+    let r = await model.fetch({'name': name});
+    try{
+      r = model.parse(r);
+    }catch(e){
+      r = null;
+    }
+    return !Boolean(r);
+  }
+
 }
 
 
@@ -108,43 +138,52 @@ class RepositoryList extends BaseCollection{
 }
 
 
-class RepositoryInfoView extends Backbone.View{
-  // A view to display the repository information in the
-  // repository list
-
-  constructor(options, list_type){
-    super(options);
-    this.list_type = list_type;
-
-    this.directives = {
-      'short': {'.repository-info-name': 'name',
-		'.repository-info-status': 'status',
-		'.buildset-commit': 'commit',
-		'.buildset-title': 'title',
-		'.buildset-total-time': 'total_time',
-		'.buildset-started': 'started',
-		'.buildset-commit-date': 'commit_date'},
-      'enabled': {'.repository-info-name': 'name',
-		  '.repository-info-enabled-container input@checked': 'enabled'}};
-
-    this.directive = this.directives[this.list_type];
-    this.template_selector = '.template .repository-info';
-    this.compiled_template = $p(this.template_selector).compile(
-      this.directive);
-
-  }
+class BaseRepositoryView extends Backbone.View{
 
   _get_kw(){
-    let status = this.model.get('status');
-    let last_buildset = this.model.get('last_buildset');
+    let status = this.model.escape('status');
+    let last_buildset = this.model.get('last_buildset') || {};
+    let parallel_builds = this.model.escape('parallel_builds');
     let commit = last_buildset.commit ? last_buildset.commit.slice(0, 8) : '';
+    commit = _.escape(commit);
+    let branches = this.model.get('branches') || [];
+    let escaped_branches = [];
+    for (let i in branches){
+      let branch = branches[i];
+      let escaped_branch = {'name': _.escape(branch.name),
+			    'notify_only_latest': branch.notify_only_latest};
+      escaped_branches.push(escaped_branch);
+    }
+
+    let slaves = this.model.get('slaves') || [];
+    let escaped_slaves = [];
+    for (let i in slaves){
+      let slave = slaves[i];
+      let escaped_slave = {'name': _.escape(slave.name),
+			   'host': _.escape(slave.host),
+			   'port': _.escape(slave.port),
+			   'use_ssl': slave.use_ssl,
+			   'validate_cert': slave.validate_cert};
+      escaped_slaves.push(escaped_slave);
+    }
     let enabled = this.model.get('enabled');
-    let kw = {'name': this.model.get('name'),
-	      'status': status, 'commit': commit,
+    let full_name = this.model.escape('full_name');
+    let details_link = '/' + full_name + '/settings';
+    let url = this.model.escape('url');
+
+    let kw = {'name': this.model.escape('name'),
+	      'status': status,
+	      'commit': commit,
 	      'title': last_buildset.title,
 	      'total_time': last_buildset.total_time,
 	      'started': last_buildset.started,
 	      'enabled': enabled,
+	      'branches': escaped_branches,
+	      'slaves': escaped_slaves,
+	      'url': url,
+	      'full_name': full_name,
+	      'details_link': details_link,
+	      'parallel_builds': parallel_builds,
 	      'commit_date': last_buildset.commit_date};
 
     return kw;
@@ -171,13 +210,13 @@ class RepositoryInfoView extends Backbone.View{
     }else{
       await this.model.disable();
     }
+
     spinner.hide();
     toggle_group.fadeIn(500);
 
-    let container = el.parent().parent();
-    jQuery(el.parent().parent()).removeClass('repo-enabled').removeClass(
-      'repo-disabled');
-    let indicator = jQuery('.toggle-handle', el.parent().parent());
+    let container = jQuery(el.parent().parent());
+    container.removeClass('repo-enabled').removeClass('repo-disabled');
+    let indicator = jQuery('.toggle-handle', container);
     indicator.removeClass('fas fa-check repo-enabled-check').removeClass(
       'fas fa-times');
     if (enabled){
@@ -187,11 +226,344 @@ class RepositoryInfoView extends Backbone.View{
     }
   }
 
-  _listen2events(el){
-    var self = this;
-    if (this.list_type == 'enabled'){
-       el.change(function(){self._change_enabled(jQuery(this));});
+  _listen2events(template){
+    let checkbox = jQuery('.enabled-checkbox', template);
+    let self = this;
+    checkbox.change(function(){self._change_enabled(jQuery(this));});
+  }
+
+  _setEnabled(enabled, template){
+    if (enabled){
+      jQuery('.repository-info-enabled-container', template).addClass(
+	'repo-enabled');
+    }else{
+      jQuery('.repository-info-enabled-container', template).addClass(
+	'repo-disabled');
     }
+
+  }
+}
+
+class RepositoryDetailsView extends BaseRepositoryView{
+
+  constructor(full_name){
+    super({'tagName': 'div'});
+    this.model = new Repository();
+    this.full_name = full_name;
+
+    this.directive = {
+      '#repo-details-name@value': 'name',
+      '#repo-details-url@value': 'url',
+      '#repo-parallel-builds@value': 'parallel_builds',
+      '.repository-info-enabled-container input@checked': 'enabled',
+      '.repo-branches-li': {
+	'branch<-branches': {'.branch-name': 'branch.name',
+			     '.remove-branch-btn@data-branch': 'branch.name'}},
+      '.repo-slaves-li': {
+	'slave<-slaves': {'.slave-name': 'slave.name'}}
+    };
+
+    this.template_selector = '#repo-details';
+    this.compiled_template = null;
+    this.container_selector = '#repo-details-container';
+    this.container = null;
+    this.branch_modal = jQuery('#addBranchModal');
+  }
+
+  async _checkNameAvailable(name){
+
+    let selector = '#repo-name-available #available-text';
+    let indicator_selector = '#repo-name-available .check-error-indicator';
+    let spinner_selector = '.wait-name-available-spinner';
+    let el = jQuery(selector);
+    let indicator = jQuery(indicator_selector);
+    let spinner = jQuery(spinner_selector);
+
+    el.hide();
+    indicator.hide();
+    indicator.removeClass('fas fa-check').removeClass('fas fa-times');
+
+    if (this.model._init_values['name'] == name){
+      this._checkHasChanges();
+      el.html('');
+      return false;
+    }
+
+    spinner.show();
+
+    let r = await Repository.is_name_available(name);
+
+    if(r){
+      indicator.addClass('fas fa-check');
+      el.html('');
+      this._checkHasChanges();
+    }else{
+      indicator.addClass('fas fa-times');
+      el.html('Name not available');
+    }
+
+    spinner.hide();
+    el.fadeIn(300);
+    indicator.fadeIn(300);
+
+    return r;
+  }
+
+  _getChangesFromInput(){
+    let self = this;
+
+    jQuery('input').each(function(){
+      let el = jQuery(this);
+      let valuefor = el.data('valuefor');
+      if (valuefor){
+	let value = el.val();
+
+	let origvalue = self.model._init_values[valuefor];
+	if (value != origvalue){
+	  self.model.set(valuefor, value);
+	  if (value == '' && valuefor == 'parallel_builds'){
+	    self.model.changed[valuefor] = value || 0;
+	  }
+
+	}else{
+	  delete self.model.changed[valuefor];
+	}
+      };
+    });
+  }
+
+  _checkHasChanges(){
+    this._getChangesFromInput();
+    let btn = jQuery('.save-btn-container button');
+    let has_changed = this.model.hasChanged();
+    if (has_changed){
+      btn.prop('disabled', false);
+    }else{
+      btn.prop('disabled', true);
+    }
+  }
+
+  async _saveChanges(){
+    let spinner = jQuery('.repo-details-buttons-container #save-repo-btn-spinner');
+    let text = jQuery('.repo-details-buttons-container #save-repo-btn-text');
+
+    text.hide();
+    spinner.show();
+
+    let btn = jQuery('.save-btn-container button');
+    btn.prop('disabled', true);
+
+    try{
+      let changed = this.model.changed;
+      await this.model.save();
+      jQuery.extend(this.model._init_values, changed);
+      utils.showSuccessMessage('Repository updated');
+    }catch(e){
+      btn.prop('disabled', false);
+      utils.showErrorMessage('Error updating repository');
+    }
+    spinner.hide();
+    text.show();
+  }
+
+  _addBranchRow(branch){
+    let directive = {'.branch-name': 'name',
+		     '.remove-branch-btn@data-branch': 'name'};
+    let template = $p('.repo-branches-li').compile(directive);
+    let compiled = jQuery(template(branch));
+    let container = jQuery('#repo-details #repo-branches-container');
+    this._listen2remove_branch_event(compiled);
+    container.append(compiled.hide().fadeIn(300));
+  }
+
+  async _addBranch(){
+    let branch_name = jQuery('#repo-branch-name').val();
+    let notify_only_latest = jQuery('#notify_only_latest').is(':checked');
+    let branch = {'branch_name': branch_name,
+		  'notify_only_latest': notify_only_latest};
+    let confs =  [branch];
+    try{
+      await this.model.add_branch(confs);
+      let branches = this.model.get('branches');
+      this._handleBrachList(this.model.get('branches').length);
+      this._addBranchRow({'name': branch_name,
+			  'notify_only_latest': branch.notify_only_latest});
+      this.branch_modal.modal('hide');
+    }catch(e){
+      utils.showErrorMessage('Error adding branch');
+    }
+  }
+
+  async _removeBrach(remove_el){
+    let branch_name = remove_el.data('branch');
+    let confs = [branch_name];
+    try{
+      await this.model.remove_branch(confs);
+    }catch(e){
+      utils.showErrorMessage('Error removing branch');
+      return;
+    }
+    await remove_el.parent().hide();
+    this._handleBrachList(this.model.get('branches').length);
+  }
+
+  _initBranchFields(){
+    jQuery('#repo-branch-name').val('');
+    jQuery('#notify-only-latest').prop('checked', true);
+    jQuery('#btn-add-branch').prop('disabled', true);
+  }
+
+  _enableAddBranchBtn(){
+    let btn = jQuery('#btn-add-branch');
+    let name_input = jQuery('#repo-branch-name');
+    if (Boolean(name_input.val())){
+      btn.prop('disabled', false);
+    }else{
+      btn.prop('disabled', true);
+    }
+  }
+
+  _listen2remove_branch_event(template){
+    let self = this;
+    jQuery('.remove-branch-btn', template).on('click', function(e){
+      let remove_el = jQuery(e.target);
+      self._removeBrach(remove_el);
+    });
+
+  }
+
+  _listen2events(template){
+    let self = this;
+    super._listen2events(template);
+
+    // check repo name and enable save button
+    let check_name = _.debounce(function(name){
+      self._checkNameAvailable(name);}, 500);
+    jQuery('#repo-details-name', template).on('input', function(e){
+      let name = jQuery(this).val();
+      check_name(name);
+    });
+
+    // check for changes to enable save button
+    let check_changes = _.debounce(function(){self._checkHasChanges();}, 300);
+    jQuery('input', template).each(function(){
+      let el = jQuery(this);
+      el.on('input', function(e){check_changes();});
+    });
+
+    // save changes when clicking on save button
+    jQuery('#btn-save-repo', template).on('click', function(e){
+      self._saveChanges();
+    });
+
+    jQuery('#addBranchModal').on('show.bs.modal', function(e){
+      self._initBranchFields();
+    });
+
+    let enable_branch_btn = _.debounce(function(){self._enableAddBranchBtn();},
+				       300);
+    jQuery('#repo-branch-name').on('input', function(e){
+      enable_branch_btn();
+    });
+
+    jQuery('#btn-add-branch').on('click', function(e){
+      self._addBranch();
+    });
+
+    self._listen2remove_branch_event(template);
+  }
+
+  _handleBrachList(has_branches, template){
+    var placeholder;
+    if (template){
+     placeholder = jQuery('#no-branch-placeholder', template);
+    }else{
+      placeholder = jQuery('#repo-details #no-branch-placeholder');
+    }
+
+    if (!has_branches){
+      placeholder.fadeIn(300);
+    }else{
+      placeholder.hide();
+    }
+  }
+
+  _setValidations(){
+    jQuery('#repo-branch-name').validate({
+
+      errorPlacement: function(error, element){
+	element.addClass('form-control-error');
+      },
+
+      errorClass: "form-control-error",
+      focusCleanup: true,
+    });
+  }
+
+  async render_details(){
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+
+    await this.model.fetch({'full_name': this.full_name});
+    jQuery('.wait-toxic-spinner').hide();
+    this.model._init_values = this.model.changed;
+    // we need to set this to {} because when we fetch a model from the
+    // remote host it is marked as changed since the initial model here
+    // had no attributes.
+    this.model.changed = {};
+
+    let kw = this._get_kw();
+    let has_branches = kw.branches.length ? true : false;
+    let has_slaves = kw.slaves.length ? true : false;
+
+    let compiled = jQuery(this.compiled_template(kw));
+    let checkbox = jQuery('.enabled-checkbox', compiled);
+    utils.checkboxToggle(checkbox);
+    this._listen2events(compiled);
+
+    this._setValidations();
+    this._handleBrachList(has_branches, compiled);
+
+    let enabled = kw['enabled'];
+    this._setEnabled(enabled, compiled);
+    this.container = jQuery(this.container_selector);
+    this.container.html(compiled);
+  }
+
+  async close_details(){
+    window.history.back();
+  }
+}
+
+class RepositoryInfoView extends BaseRepositoryView{
+  // A view to display the repository information in the
+  // repository list
+
+  constructor(options, list_type){
+    super(options);
+    this.list_type = list_type;
+
+    this.directives = {
+      'short': {
+	'.repository-info-name': 'name',
+	'.repo-details-link@href': 'details_link',
+	'.repository-info-status': 'status',
+	'.buildset-commit': 'commit',
+	'.buildset-title': 'title',
+	'.buildset-total-time': 'total_time',
+	'.buildset-started': 'started',
+	'.buildset-commit-date': 'commit_date'},
+
+      'enabled': {
+	'.repository-info-name': 'name',
+	'.repo-details-link@href': 'details_link',
+	'.repository-info-enabled-container input@checked': 'enabled'}};
+
+    this.directive = this.directives[this.list_type];
+    this.template_selector = '.template .repository-info';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+
   }
 
   render(){
@@ -205,16 +577,10 @@ class RepositoryInfoView extends Backbone.View{
 
     let checkbox = jQuery('.enabled-checkbox', compiled);
     utils.checkboxToggle(checkbox);
-    this._listen2events(checkbox);
+    this._listen2events(compiled);
 
     let enabled = kw['enabled'];
-    if (enabled){
-      jQuery('.repository-info-enabled-container', compiled).addClass(
-	'repo-enabled');
-    }else{
-      jQuery('.repository-info-enabled-container', compiled).addClass(
-	'repo-disabled');
-    }
+    this._setEnabled(enabled, compiled);
 
     if (status == 'ready'){
       jQuery('.no-builds-info', compiled).show();
@@ -264,7 +630,7 @@ class RepositoryListView extends Backbone.View{
     }
 
     jQuery('.top-page-repositories-info-container').show();
-    jQuery('#repo-list-container').append(this.$el);
+    jQuery('#repo-list-container').html(this.$el);
     var self = this;
     this.model.each(function(model){self._render_repo(model);});
     return true;

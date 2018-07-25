@@ -25,7 +25,17 @@
     <li class="repository-info box-white box-shadow">
       <!-- header -->
       <div class="repository-info-header">
-	<span class="fas fa-ellipsis-h"></span>
+	<span class="fas fa-ellipsis-h dropdown-toggle"
+	      id="dropdown-menu-ellipsis"
+		data-toggle="dropdown"></span>
+
+	<div class="dropdown-menu dropdown-menu-right box-shadow-gray"
+	     aria-labelledby="dropdown-menu-ellipsis">
+	  <a class="dropdown-item repo-details-link" href="">
+	    Settings
+	  </a>
+	</div>
+
       </div>
 
       <!-- first row -->
@@ -105,7 +115,7 @@
 <div class="top-page-repositories-info-container">
   Your Repositories <a href="/settings/repositories" data-toggle="tooltip"
 			  title="Manage your repositories">
-    <span class="far fa-wrench"></span>
+    <span class="fas fa-wrench"></span>
   </a>
 </div>
 <div id="repo-list-container">

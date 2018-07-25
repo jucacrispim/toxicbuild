@@ -12,9 +12,11 @@
 	  rel="stylesheet">
     <link href="{{static_url}}bootstrap/css/bootstrap-toggle.min.css"
 	  rel="stylesheet">
-    <link href="{{static_url}}toxicbuild/css/toxictheme/fonts.css"
+    <link href="{{static_url}}bootstrap/css/awesome-bootstrap-checkbox.css"
 	  rel="stylesheet">
     <link href="{{static_url}}fontawesome/css/all.css" rel="stylesheet">
+    <link href="{{static_url}}toxicbuild/css/toxictheme/fonts.css"
+	  rel="stylesheet">
     <link href="{{static_url}}toxicbuild/css/toxictheme/toxicclear.css"
 	  rel="stylesheet">
     {% end %}
@@ -58,13 +60,12 @@
 
       <!-- Error alert -->
       {% block messages %}
-      <div class="alert alert-danger alert-dismissible box-shadow-black"
+      <div class="alert alert-danger alert-dismissible box-shadow-black col-sm-4"
 	   role="alert">
 
 	<div class="alert-inner-container">
 	  <span class="fas fa-exclamation-triangle"></span>
-	  <div id="error-container"
-	       class="col-sm-12 mx-auto message-container">
+	  <div id="error-container" class="message-container">
 	  </div>
 	  <button type="button" class="close close-msg" data-dismiss="alert"
 		  aria-label="Close"><span aria-hidden="true">&times;</span>
@@ -74,15 +75,14 @@
       </div>
 
       <!-- Success alert -->
-      <div class="alert alert-success alert-dismissible box-shadow-black"
+      <div class="alert alert-success alert-dismissible box-shadow-black col-sm-4"
 	   role="alert">
-
+	<span class="fas fa-check-circle"></span>
 	<div class="alert-inner-container">
-	  <div id="success-container"
-	       class="col-sm-12 mx-auto  message-container">
+	  <div id="success-container" class="message-container">
 	  </div>
 	  <button type="button" class="close close-msg" data-dismiss="alert"
-		  aria-label="Close">
+		  aria-label="Close"><span aria-hidden="true">&times;</span>
 	  </button>
 	</div>
 

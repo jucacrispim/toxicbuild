@@ -59,4 +59,11 @@ describe('DashboarRouterTest', function(){
     expect((page instanceof SettingsPage)).toBe(true);
   });
 
+  it('test-go2lastURL', function(){
+    spyOn(this.router, 'navigate');
+    this.router._last_url = '/some/thing';
+    this.router.go2lastURL();
+    expect(this.router.navigate).toHaveBeenCalled();
+  });
+
 });

@@ -232,7 +232,7 @@ class BuildStepTest(TestCase):
 
     @async_test
     def test_step_timeout(self):
-        step = build.BuildStep(name='test', command='sleep 1', timeout=1)
+        step = build.BuildStep(name='test', command='sleep 1', timeout=0.5)
         status = yield from step.execute(cwd='.')
         self.assertEqual(status['status'], 'exception')
         yield from asyncio.sleep(1)

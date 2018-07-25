@@ -21,6 +21,7 @@ describe('RepositoryTest', function(){
     let window_spy = jasmine.createSpy();
     window_spy.TOXIC_API_URL = 'http://localhost:1234/';
     window = window_spy;
+    this.model = new Repository();
   });
 
   it('test-post2api', async function(){
@@ -35,7 +36,7 @@ describe('RepositoryTest', function(){
       called_keys.push(key);
     }
 
-    let expected = ['url', 'data', 'type', 'headers'];
+    let expected = ['url', 'data', 'type', 'contentType', 'headers'];
     expect(called_keys).toEqual(expected);
   });
 
@@ -65,28 +66,36 @@ describe('RepositoryTest', function(){
   it('test-add-branch', async function(){
     let branches_config = [
       {'name': 'some-branch', 'notify_only_latest': true}];
-    let repo = new Repository();
+    let repo = new Repository({'branches': []});
     repo._post2api = jasmine.createSpy('_post2api');
     let expected_body = {'add_branches': branches_config};
     let expected_url = repo._api_url + 'add-branch?id=' + repo.id;
+
     await repo.add_branch(branches_config);
+
     let called_url = repo._post2api.calls.allArgs()[0][0];
     let called_body = repo._post2api.calls.allArgs()[0][1];
     expect(called_url).toEqual(expected_url);
     expect(called_body).toEqual(expected_body);
+    expect(repo.get('branches').length).toEqual(1);
   });
 
   it('test-remove-branch', async function(){
     let branches = ['master', 'other'];
-    let repo = new Repository();
+    let repo = new Repository({'branches': [{'name': 'master'},
+					    {'name': 'other'},
+					    {'name': 'third'}]});
     repo._post2api = jasmine.createSpy('_post2api');
     let expected_body = {'remove_branches': branches};
     let expected_url = repo._api_url + 'remove-branch?id=' + repo.id;
+
     await repo.remove_branch(branches);
+
     let called_url = repo._post2api.calls.allArgs()[0][0];
     let called_body = repo._post2api.calls.allArgs()[0][1];
     expect(called_url).toEqual(expected_url);
     expect(called_body).toEqual(expected_body);
+    expect(repo.get('branches').length).toEqual(1);
   });
 
   it('test-enable-plugin', async function(){
@@ -149,17 +158,24 @@ describe('RepositoryTest', function(){
     expect(called_url).toEqual(expected_url);
   });
 
+  it('test-is-name-available', async function(){
+    spyOn(this.model, 'fetch').and.returnValue({});
+    let r = await Repository.is_name_available('some-name');
+    expect(r).toBe(true);
+  });
+
+  it('test-is-name-exception', async function(){
+    spyOn(this.model, 'fetch').and.returnValue({'items': []});
+    let r = await Repository.is_name_available('some-name');
+    expect(r).toBe(true);
+  });
+
 });
 
-
-describe('RepositoryInfoViewTest', function(){
+describe('BaseRepositoryViewTest', function(){
 
   beforeEach(function(){
-    let infos = '.repository-info-name+.repository-info-status';
-    infos += '+.buildset-commit+.buildset-title+.buildset-total-time';
-    infos += '+.buildset-stated+.buildset-commit-date+.buildset-started';
-    affix('.template .repository-info ' + infos);
-    this.view = new RepositoryInfoView();
+        this.view = new BaseRepositoryView();
   });
 
   it('test-get-kw-with-last-buildset', function(){
@@ -180,10 +196,28 @@ describe('RepositoryInfoViewTest', function(){
     expect(kw['commit']).toEqual(commit);
   });
 
+  it('test-get-kw-with-branches', function(){
+    let branches = [{'name': 'master', 'notify_only_latest': true}];
+    this.view.model = new Repository({'name': 'bla',
+				      'branches': branches});
+    let kw = this.view._get_kw();
+    expect(kw['branches'][0]['name']).toEqual('master');
+  });
+
+  it('test-get-kw-with-slaves', function(){
+    let slaves = [{'name': 'some-slave', 'token': '123', 'host': 'localhost',
+		   'port': 1234, 'use_ssl': false, 'validade_cert': false}];
+    this.view.model = new Repository({'name': 'bla',
+				      'slaves': slaves});
+    let kw = this.view._get_kw();
+    expect(kw['slaves'][0]['name']).toEqual('some-slave');
+  });
+
   it('test-get-badge-class', function(){
     let badge_class = this.view._get_badge_class('running');
     expect(badge_class).toEqual('badge-primary');
   });
+
 
   it('test-change-enabled-repo-enable', async function(){
     this.view.model = new Repository({'name': 'bla'});
@@ -201,12 +235,41 @@ describe('RepositoryInfoViewTest', function(){
     expect(this.view.model.disable).toHaveBeenCalled();
   });
 
-  it('test-listen2evets-enabled', function(){
-    this.view.list_type = 'enabled';
+  it('test-listen2evets', function(){
+    spyOn(jQuery.fn, 'change');
     let el = jasmine.createSpy('el');
     el.change = jasmine.createSpy('change');
     this.view._listen2events(el);
-    expect(el.change).toHaveBeenCalled();
+    expect(jQuery.fn.change).toHaveBeenCalled();
+  });
+
+  it('test-set-enabled-enable', function(){
+    let enabled = true;
+    let template = affix('div .repository-info-enabled-container');
+    this.view._setEnabled(enabled, template);
+    let el_index = template.html().indexOf('repo-enabled');
+    expect(el_index > 0).toBe(true);
+  });
+
+  it('test-set-enabled-disable', function(){
+    let enabled = false;
+    let template = affix('div .repository-info-enabled-container');
+    this.view._setEnabled(enabled, template);
+    let el_index = template.html().indexOf('repo-disabled');
+    expect(el_index > 0).toBe(true);
+  });
+
+
+});
+
+describe('RepositoryInfoViewTest', function(){
+
+  beforeEach(function(){
+    let infos = '.repository-info-name+.repository-info-status';
+    infos += '+.buildset-commit+.buildset-title+.buildset-total-time';
+    infos += '+.buildset-stated+.buildset-commit-date+.buildset-started';
+    affix('.template .repository-info ' + infos);
+    this.view = new RepositoryInfoView();
   });
 
   it('test-render', function(){
@@ -221,12 +284,238 @@ describe('RepositoryInfoViewTest', function(){
 });
 
 
-describe('RepositoryListView', function(){
+describe('RepositoryDetailsViewTest', function(){
+
+  beforeEach(function(){
+    this.model = new Repository({'name': 'bla',
+				 'last_buildset': {}});
+    this.model.fetch = jasmine.createSpy('fetch');
+    affix('.template #repo-details-container #repo-details-name');
+    let repo_details = 'input#repo-details-name+input#repo-details-url';
+    repo_details += '+#repo-details-url+input#repo-parallel-builds';
+    repo_details += '+#repo-name-available .check-error-indicator';
+    repo_details += '+.repository-info-enabled-container input';
+    repo_details += '+.repo-branches-li';
+    repo_details += '+.repo-slaves-li';
+    this.template = affix('#repo-details ' + repo_details);
+    jQuery('.repo-branches-li', this.template).affix(
+      'span.branch-name+.remove-branch-btn');
+    jQuery('.repo-slaves-li', this.template).affix('.slave-name');
+    this.view = new RepositoryDetailsView('full-name');
+    this.view.model._init_values = {};
+  });
+
+  it('test-render-details', async function(){
+    spyOn(this.view.model, 'fetch');
+    await this.view.render_details();
+    let el_index = this.view.container.html().indexOf('repo-details-name');
+    expect(el_index > 0).toBe(true);
+  });
+
+  it('test-checkNameAvailable-available', async function(){
+    spyOn(Repository, 'is_name_available').and.returnValue(true);
+    spyOn(this.view, '_checkHasChanges');
+    this.view.model._init_values['name'] = 'asdf';
+    await this.view._checkNameAvailable('name');
+    let el_index = this.template.html().indexOf('fa-check');
+    expect(el_index > 0).toBe(true);
+  });
+
+  it('test-checkNameAvailable-not-available', async function(){
+    spyOn(Repository, 'is_name_available').and.returnValue(false);
+    spyOn(this.view, '_checkHasChanges');
+    this.view.model._init_values['name'] = 'asdf';
+    await this.view._checkNameAvailable('name');
+    let el_index = this.template.html().indexOf('fa-times');
+    expect(el_index > 0).toBe(true);
+  });
+
+  it('test-getChangesFromInput-different-value', function(){
+    let fist_in = affix('input');
+    let second_in = affix('input');
+    second_in.data('valuefor', 'name');
+    second_in.val('asfd');
+    this.view.model._init_values = {'name': 'some'};
+    spyOn(this.view.model, 'set');
+    this.view._getChangesFromInput();
+    let call_count = this.view.model.set.calls.allArgs().length;
+    expect(call_count).toEqual(1);
+  });
+
+  it('test-getChangesFromInput-same-as-init-value', function(){
+    let fist_in = affix('input');
+    let second_in = affix('input');
+    second_in.data('valuefor', 'name');
+    second_in.val('asfd');
+    this.view.model._init_values = {'name': 'asfd'};
+    spyOn(this.view.model, 'set');
+    this.view._getChangesFromInput();
+    let call_count = this.view.model.set.calls.allArgs().length;
+    expect(call_count).toEqual(0);
+  });
+
+  it('test-getChangesFromInput-return-to-init-value', function(){
+    let fist_in = affix('input');
+    let second_in = affix('input');
+    second_in.data('valuefor', 'name');
+    second_in.val('qwer');
+    this.view.model._init_values = {'name': 'asfd'};
+    spyOn(this.view.model, 'set');
+    this.view._getChangesFromInput();
+    second_in.val('asfd');
+    this.view._getChangesFromInput();
+    expect(this.view.model.changed.hasOwnProperty('name')).toBe(false);
+  });
+
+  it('test-checkHasChanges-changed', function(){
+    spyOn(this.view, '_getChangesFromInput');
+    spyOn(this.view.model, 'hasChanged').and.returnValue(true);
+    affix('.save-btn-container button');
+    this.view._checkHasChanges();
+    let btn = jQuery('.save-btn-container button');
+    expect(btn.prop('disabled')).toBe(false);
+  });
+
+  it('test-checkHasChanges-not-changed', function(){
+    spyOn(this.view, '_getChangesFromInput');
+    spyOn(this.view.model, 'hasChanged').and.returnValue(false);
+    affix('.save-btn-container button');
+    this.view._checkHasChanges();
+    let btn = jQuery('.save-btn-container button');
+    expect(btn.prop('disabled')).toBe(true);
+  });
+
+  it('test-addBranch-ok', async function(){
+    affix('#repo-branch-name');
+    affix('#notify_only_latest');
+    spyOn(this.view.model, 'add_branch');
+    await this.view._addBranch();
+    expect(this.view.model.add_branch).toHaveBeenCalled();
+  });
+
+  it('test-addBranch-exception', async function(){
+    affix('#repo-branch-name');
+    affix('#notify_only_latest');
+    spyOn(this.view.model, 'add_branch').and.throwError('error');
+    spyOn(utils, 'showErrorMessage');
+    await this.view._addBranch();
+    expect(utils.showErrorMessage).toHaveBeenCalled();
+  });
+
+  it('test-removeBranch-ok', async function(){
+    affix('div.outer span.remove-el');
+    let remove_el = jQuery('.remove-el');
+    remove_el.data('branch', 'bla');
+    this.view.model.set('branches', []);
+    spyOn(this.view.model, 'remove_branch');
+    await this.view._removeBrach(remove_el);
+    expect(this.view.model.remove_branch).toHaveBeenCalled();
+
+  });
+
+  it('test-removeBranch-exception', async function(){
+    affix('div.outer span.remove-el');
+    let remove_el = jQuery('.remove-el');
+    remove_el.data('branch', 'bla');
+
+    spyOn(this.view.model, 'remove_branch').and.throwError('bad remove');
+    spyOn(utils, 'showErrorMessage');
+    await this.view._removeBrach(remove_el);
+    expect(utils.showErrorMessage).toHaveBeenCalled();
+  });
+
+  it('test-addBranchRow', function(){
+    let container = affix('#repo-details #repo-branches-container');
+    let branch = {'name': 'bla'};
+    this.view._addBranchRow(branch);
+    expect(container.html().indexOf('bla') > 0).toBe(true);
+  });
+
+  it('test-initBranchFields', function(){
+    let name_input = affix('#repo-branch-name');
+    let notify_input = affix('#notify-only-latest');
+    name_input.val('asdf');
+    notify_input.prop('checked', false);
+    this.view._initBranchFields();
+    expect(notify_input.prop('checked')).toBe(true);
+    expect(name_input.val()).toEqual('');
+  });
+
+  it('test-enableBranchBtn-no-value', function(){
+    let name_input = affix('#repo-branch-name');
+    let btn = affix('#btn-add-branch');
+    name_input.val('');
+    this.view._enableAddBranchBtn();
+    expect(btn.prop('disabled')).toBe(true);
+  });
+
+  it('test-enableBranchBtn-value', function(){
+    let name_input = affix('#repo-branch-name');
+    let btn = affix('#btn-add-branch');
+    name_input.val('asdf');
+    this.view._enableAddBranchBtn();
+    expect(btn.prop('disabled')).toBe(false);
+  });
+
+  it('test-handleBranchList-no-branches-template', function(){
+    let template = affix('div #no-branch-placeholder');
+    let has_branches = false;
+    let placeholder = jQuery('#no-branch-placeholder');
+    placeholder.hide();
+    this.view._handleBrachList(has_branches, template);
+    expect(placeholder.is(':visible')).toBe(true);
+  });
+
+  it('test-handleBranchList-has-branches-template', function(){
+    let template = affix('div #no-branch-placeholder');
+    let has_branches = true;
+    let placeholder = jQuery('#no-branch-placeholder');
+    placeholder.hide();
+    this.view._handleBrachList(has_branches, template);
+    expect(placeholder.is(':visible')).toBe(false);
+  });
+
+  it('test-handleBranchList-no-branches-no-template', function(){
+    affix('#repo-details #no-branch-placeholder');
+    let has_branches = false;
+    let placeholder = jQuery('#no-branch-placeholder');
+    placeholder.hide();
+    this.view._handleBrachList(has_branches);
+    expect(placeholder.is(':visible')).toBe(true);
+  });
+
+  it('test-handleBranchList-has-branches-no-template', function(){
+    affix('#repo-details #no-branch-placeholder');
+    let has_branches = true;
+    let placeholder = jQuery('#no-branch-placeholder');
+    placeholder.hide();
+    this.view._handleBrachList(has_branches);
+    expect(placeholder.is(':visible')).toBe(false);
+  });
+
+  it('test-saveChanges-ok', async function(){
+    spyOn(this.view.model, 'save');
+    spyOn(utils, 'showSuccessMessage');
+    await this.view._saveChanges();
+    expect(utils.showSuccessMessage).toHaveBeenCalled();
+  });
+
+  it('test-saveChanges-exception', async function(){
+    spyOn(this.view.model, 'save').and.throwError('bad save');
+    spyOn(utils, 'showErrorMessage');
+    await this.view._saveChanges();
+    expect(utils.showErrorMessage).toHaveBeenCalled();
+  });
+
+});
+
+describe('RepositoryListViewTest', function(){
 
   beforeEach(function(){
     let infos = '.repository-info-name+.repository-info-status';
     infos += '+.buildset-commit+.buildset-title+.buildset-total-time';
     infos += '+.buildset-stated+.buildset-commit-date+.buildset-started';
+    infos += '+.repo-details-link';
     affix('.template .repository-info ' + infos);
     affix('#repo-list-container');
   });

@@ -22,11 +22,20 @@ class DashboardRouter extends Backbone.Router{
     options = options || {};
 
     let routes = {'': 'showMainPage',
-		  'settings/repositories': 'showSettingsPage'};
+		  'settings/repositories': 'showSettingsPage',
+		  ':owner/:name/settings': 'showRepoDetailsPage'};
+
     options['routes'] = routes;
     super(options);
     this.template_container = jQuery('#main-area-container');
     this.main_template = '/templates/main';
+    this._last_url = null;
+  }
+
+  navigate(fragment, options){
+    this._last_url = window.location.pathname;
+    let r = super.navigate(fragment, options);
+    return r;
   }
 
   setUpLinks(){
@@ -44,6 +53,11 @@ class DashboardRouter extends Backbone.Router{
     });
   }
 
+  go2lastURL(){
+    let url = this._last_url || '/';
+    this.navigate(url, {'trigger': true});
+  }
+
   async _showPage(page){
     await page.fetch_template();
     await page.render();
@@ -51,12 +65,18 @@ class DashboardRouter extends Backbone.Router{
   }
 
   async showMainPage(){
-    let page = new MainPage();
+    let page = new MainPage(this);
     await this._showPage(page);
   }
 
   async showSettingsPage(){
-    let page = new SettingsPage();
+    let page = new SettingsPage(this);
+    await this._showPage(page);
+  }
+
+  async showRepoDetailsPage(owner, name){
+    let full_name = owner + '/' + name;
+    let page = new RepositoryDetailsPage(this, full_name);
     await this._showPage(page);
   }
 

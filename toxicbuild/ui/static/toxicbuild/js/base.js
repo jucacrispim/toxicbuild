@@ -15,11 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-function _get_url(method, obj, get_with_id=true){
+function _get_url(method, obj){
   let url = obj._api_url;
-  if (method == 'delete' || method == 'update' ||
-      (get_with_id && method == 'read')){
-    url += '?id=' + obj.id;
+  if (method == 'delete' || method == 'update' || method == 'read'){
+    if (!obj._query){
+      url += '?id=' + obj.id;
+    }else{
+      url += '?' + Object.keys(obj._query)[0] + '=' + Object.values(
+	obj._query)[0];
+    }
   }
   return url;
 };
@@ -28,13 +32,28 @@ function _get_url(method, obj, get_with_id=true){
 class BaseModel extends Backbone.Model{
 
   sync(method, model, options){
-    let url = _get_url(method, this);
+    let url = _get_url(method, this, false);
     options.attrs = this.changed;
     options.url = url;
     let xsrf_token = Cookies.get('_xsrf');
     let headers = {'X-XSRFToken': xsrf_token};
     options.headers = headers;
     return super.sync(method, model, options);
+  }
+
+  parse(data){
+    if (data.items){
+      data =  data.items[0];
+    }
+    return data;
+  }
+
+  fetch(options){
+    this._query = options;
+    let r = super.fetch(options);
+    this._has_used_query = true;
+    delete this._query;
+    return r;
   }
 }
 
