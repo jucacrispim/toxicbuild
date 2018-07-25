@@ -267,9 +267,12 @@ class RepositoryDetailsView extends BaseRepositoryView{
     this.compiled_template = null;
     this.container_selector = '#repo-details-container';
     this.container = null;
-    this.branch_modal = jQuery('#addBranchModal');
   }
 
+  _getBranchModal(){
+    let modal = jQuery('#addBranchModal');
+    return modal;
+  }
   async _checkNameAvailable(name){
 
     let selector = '#repo-name-available #available-text';
@@ -388,7 +391,8 @@ class RepositoryDetailsView extends BaseRepositoryView{
       this._handleBrachList(this.model.get('branches').length);
       this._addBranchRow({'name': branch_name,
 			  'notify_only_latest': branch.notify_only_latest});
-      this.branch_modal.modal('hide');
+      let modal = this._getBranchModal();
+      modal.modal('hide');
     }catch(e){
       utils.showErrorMessage('Error adding branch');
     }

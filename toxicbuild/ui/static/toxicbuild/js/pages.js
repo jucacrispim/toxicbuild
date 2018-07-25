@@ -98,7 +98,8 @@ class RepositoryDetailsPage extends BasePage{
       self._toggleAdvanced();
     });
 
-    jQuery('.repo-details-main-container .close-btn').on('click', function(e){
+    let close_btn = jQuery('.repo-details-main-container .close-btn');
+    close_btn.on('click', function(e){
       self.close_page();
     });
   }
