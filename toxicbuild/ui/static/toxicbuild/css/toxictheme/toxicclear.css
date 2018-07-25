@@ -173,6 +173,11 @@ body{
     min-height: 0px;
 }
 
+.toggle.btn label{
+    line-height: 0px;
+    padding-top: 8px;
+}
+
 .checkbox-rounded,
 .checkbox-rounded .toggle-handle{
     border-radius: 20px;
@@ -187,7 +192,7 @@ body{
 .checkbox-rounded .toggle-handle{
     width: 20px;
     height: 100%;
-    margin-top: -8px;
+    margin-top: -9px;
     padding: 0;
     font-size: 0.9em;
     padding-top: 2px;
@@ -214,9 +219,9 @@ body{
 
 .checkbox-sm .toggle-off.btn,
 .checkbox-sm .toggle-on.btn{
-    padding-top: 9px;
-    padding-right: 25px;
-    border-radius: 20px;
+    /* padding-top: 9px; */
+    /* padding-right: 25px; */
+    /* border-radius: 20px; */
 }
 
 .checkbox-sm{
