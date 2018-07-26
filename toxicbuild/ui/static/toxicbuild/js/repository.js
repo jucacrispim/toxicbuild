@@ -369,6 +369,17 @@ class RepositoryDetailsView extends BaseRepositoryView{
     text.show();
   }
 
+  _hackHelpHeight(steps, type='increase'){
+    let step_modif = type == 'increase' ? 1 : -1;
+    let step_size = 40 * step_modif;
+    let container = jQuery('#branches-config-p');
+    for (let i=0; i < steps; i++){
+      let height = container.height();
+      let new_height = step_size + height;
+      container.height(new_height);
+    }
+  }
+
   _addBranchRow(branch){
     let directive = {'.branch-name': 'name',
 		     '.remove-branch-btn@data-branch': 'name'};
@@ -377,6 +388,7 @@ class RepositoryDetailsView extends BaseRepositoryView{
     let container = jQuery('#repo-details #repo-branches-container');
     this._listen2remove_branch_event(compiled);
     container.append(compiled.hide().fadeIn(300));
+    this._hackHelpHeight(1);
   }
 
   async _addBranch(){
@@ -414,6 +426,7 @@ class RepositoryDetailsView extends BaseRepositoryView{
       return;
     }
     await remove_el.parent().hide();
+    this._hackHelpHeight(1, 'decrease');
     this._handleBrachList(this.model.get('branches').length);
   }
 

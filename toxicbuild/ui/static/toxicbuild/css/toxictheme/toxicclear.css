@@ -683,7 +683,7 @@ body{
 }
 
 #branches-config-p{
-    height: 87px;
+    height: 90px;
 }
 
 #addBranchModal .form-check{
@@ -703,7 +703,7 @@ body{
 
 .parallel-builds-container{
     padding-top: 10px;
-    padding-bottom: 25px;
+    padding-bottom: 31px;
 }
 
 

@@ -507,6 +507,22 @@ describe('RepositoryDetailsViewTest', function(){
     expect(utils.showErrorMessage).toHaveBeenCalled();
   });
 
+  it('test-hackHelpHeight-increase', function(){
+    let config = affix('#branches-config-p');
+    config.height(10);
+    this.view._hackHelpHeight(2);
+    config = jQuery('#branches-config-p');
+    expect(config.height()).toEqual(90);
+  });
+
+  it('test-hackHelpHeight-decrease', function(){
+    let config = affix('#branches-config-p');
+    config.height(100);
+    this.view._hackHelpHeight(2, 'decrease');
+    config = jQuery('#branches-config-p');
+    expect(config.height()).toEqual(20);
+  });
+
 });
 
 describe('RepositoryListViewTest', function(){
