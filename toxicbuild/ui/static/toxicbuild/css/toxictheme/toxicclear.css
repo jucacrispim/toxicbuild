@@ -577,7 +577,7 @@ body{
 
 .repo-details-buttons-container{
     float: right;
-    margin-top: 25px;
+    margin-bottom: 25px;
 }
 
 .repo-details-buttons-container .inner-btn-container{

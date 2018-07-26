@@ -565,10 +565,6 @@ class RepositoryDetailsView extends BaseRepositoryView{
     this.container.html(compiled);
     this._hackHelpHeight(this.model.get('branches').length - 1, 'increase');
   }
-
-  async close_details(){
-    window.history.back();
-  }
 }
 
 class RepositoryInfoView extends BaseRepositoryView{
