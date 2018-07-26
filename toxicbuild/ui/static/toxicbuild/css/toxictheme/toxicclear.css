@@ -726,3 +726,9 @@ body{
     color: #212529;
     margin-right: 6px;
 }
+
+.remove-branch-btn-spinner{
+    float: right;
+    margin-top: 2px;
+    margin-right: 10px;
+}

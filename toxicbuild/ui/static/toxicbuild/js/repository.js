@@ -370,6 +370,13 @@ class RepositoryDetailsView extends BaseRepositoryView{
   }
 
   _hackHelpHeight(steps, type='increase'){
+    let branches = this.model.get('branches') || [];
+    if (branches.length <= 1 && type == 'increase'){
+      return;
+    }else if (branches.length < 1 && type == 'decrease'){
+      return;
+    }
+
     let step_modif = type == 'increase' ? 1 : -1;
     let step_size = 40 * step_modif;
     let container = jQuery('#branches-config-p');
@@ -417,11 +424,16 @@ class RepositoryDetailsView extends BaseRepositoryView{
   }
 
   async _removeBrach(remove_el){
+    let spinner = jQuery('.remove-branch-btn-spinner', remove_el.parent());
+    remove_el.hide();
+    spinner.show();
     let branch_name = remove_el.data('branch');
     let confs = [branch_name];
     try{
       await this.model.remove_branch(confs);
     }catch(e){
+      remove_el.show();
+      spinner.hide();
       utils.showErrorMessage('Error removing branch');
       return;
     }
@@ -551,6 +563,7 @@ class RepositoryDetailsView extends BaseRepositoryView{
     this._setEnabled(enabled, compiled);
     this.container = jQuery(this.container_selector);
     this.container.html(compiled);
+    this._hackHelpHeight(this.model.get('branches').length - 1, 'increase');
   }
 
   async close_details(){

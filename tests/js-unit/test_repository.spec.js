@@ -507,20 +507,40 @@ describe('RepositoryDetailsViewTest', function(){
     expect(utils.showErrorMessage).toHaveBeenCalled();
   });
 
-  it('test-hackHelpHeight-increase', function(){
+  it('test-hackHelpHeight-increase-not-first', function(){
     let config = affix('#branches-config-p');
     config.height(10);
+    this.view.model.set('branches', [{}, {}]);
     this.view._hackHelpHeight(2);
     config = jQuery('#branches-config-p');
     expect(config.height()).toEqual(90);
   });
 
-  it('test-hackHelpHeight-decrease', function(){
+  it('test-hackHelpHeight-increase-first', function(){
+    let config = affix('#branches-config-p');
+    config.height(10);
+    this.view.model.set('branches', [{}]);
+    this.view._hackHelpHeight(2);
+    config = jQuery('#branches-config-p');
+    expect(config.height()).toEqual(10);
+  });
+
+  it('test-hackHelpHeight-decrease-not-last', function(){
     let config = affix('#branches-config-p');
     config.height(100);
+    this.view.model.set('branches', [{}]);
     this.view._hackHelpHeight(2, 'decrease');
     config = jQuery('#branches-config-p');
     expect(config.height()).toEqual(20);
+  });
+
+  it('test-hackHelpHeight-decrease-last', function(){
+    let config = affix('#branches-config-p');
+    config.height(100);
+    this.view.model.set('branches', []);
+    this.view._hackHelpHeight(2, 'decrease');
+    config = jQuery('#branches-config-p');
+    expect(config.height()).toEqual(100);
   });
 
 });
