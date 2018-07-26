@@ -83,8 +83,8 @@ body{
 
 .form-control-error,
 .form-control-error:focus{
-        border-color: #d2778a57;
-        box-shadow: 0 0 0.4rem rgba(191, 5, 39, 0.9);
+    border-color: #d2778a57;
+    box-shadow: 0 0 0.4rem rgba(191, 5, 39, 0.9);
 }
 
 .alert{

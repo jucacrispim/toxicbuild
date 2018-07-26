@@ -380,6 +380,10 @@ class RepositoryDetailsView extends BaseRepositoryView{
   }
 
   async _addBranch(){
+    let text = jQuery("#add-branch-btn-text");
+    let spinner = jQuery('#add-branch-btn-spinner');
+    text.hide();
+    spinner.show();
     let branch_name = jQuery('#repo-branch-name').val();
     let notify_only_latest = jQuery('#notify_only_latest').is(':checked');
     let branch = {'branch_name': branch_name,
@@ -396,6 +400,8 @@ class RepositoryDetailsView extends BaseRepositoryView{
     }catch(e){
       utils.showErrorMessage('Error adding branch');
     }
+    text.show();
+    spinner.hide();
   }
 
   async _removeBrach(remove_el){
