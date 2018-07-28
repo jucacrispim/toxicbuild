@@ -34,15 +34,15 @@ class Repository extends BaseModel{
     return resp;
   }
 
-  async add_slave(slave){
+  async add_slave(slave_id){
     let url = this._api_url + 'add-slave?' + 'id=' + this.id;
-    let body = {'id': slave.id};
+    let body = {'id': slave_id};
     return this._post2api(url, body);
   }
 
-  async remove_slave(slave){
+  async remove_slave(slave_id){
     let url = this._api_url + 'remove-slave?' + 'id=' + this.id;
-    let body = {'id': slave.id};
+    let body = {'id': slave_id};
     return this._post2api(url, body);
   }
 
@@ -227,7 +227,7 @@ class BaseRepositoryView extends Backbone.View{
   }
 
   _listen2events(template){
-    let checkbox = jQuery('.enabled-checkbox', template);
+    let checkbox = jQuery('.repo-enabled-checkbox', template);
     let self = this;
     checkbox.change(function(){self._change_enabled(jQuery(this));});
   }
@@ -243,6 +243,7 @@ class BaseRepositoryView extends Backbone.View{
 
   }
 }
+
 
 class RepositoryDetailsView extends BaseRepositoryView{
 
@@ -260,19 +261,23 @@ class RepositoryDetailsView extends BaseRepositoryView{
 	'branch<-branches': {'.branch-name': 'branch.name',
 			     '.remove-branch-btn@data-branch': 'branch.name'}},
       '.repo-slaves-li': {
-	'slave<-slaves': {'.slave-name': 'slave.name'}}
+	'slave<-slaves': {'.slave-name': 'slave.name',
+			  'input@checked': 'slave.enabled',
+			  'input@data-slave-id': 'slave.id'}}
     };
 
     this.template_selector = '#repo-details';
     this.compiled_template = null;
     this.container_selector = '#repo-details-container';
     this.container = null;
+    this.slave_list = new SlaveList();
   }
 
   _getBranchModal(){
     let modal = jQuery('#addBranchModal');
     return modal;
   }
+
   async _checkNameAvailable(name){
 
     let selector = '#repo-name-available #available-text';
@@ -464,7 +469,6 @@ class RepositoryDetailsView extends BaseRepositoryView{
       let remove_el = jQuery(e.target);
       self._removeBrach(remove_el);
     });
-
   }
 
   _listen2events(template){
@@ -523,6 +527,56 @@ class RepositoryDetailsView extends BaseRepositoryView{
     }
   }
 
+  _setSlaveEnabled(el){
+    el.parent().removeClass('repo-enabled');
+    el.parent().removeClass('repo-disabled');
+    if (el.prop('checked')){
+      el.parent().addClass('repo-enabled');
+    }else{
+      el.parent().addClass('repo-disabled');
+    }
+  }
+
+  async _changeSlaveEnabled(el){
+    this._setSlaveEnabled(el);
+
+    let container = el.parent().parent();
+    let toggle_group = jQuery('.toggle', container);
+    let spinner = jQuery('.wait-change-enabled-spinner', container);
+    toggle_group.hide();
+    spinner.fadeIn(300);
+
+    let m;
+    let id = el.data('slave-id');
+    if (el.prop('checked')){
+      try{
+	await this.model.add_slave(id);
+      }catch(e){
+	utils.showErrorMessage('Error adding slave');
+      }
+    }else{
+      try{
+	await this.model.remove_slave(id);
+      }catch(e){
+	utils.showErrorMessage('Error removing slave');
+      }
+    }
+    spinner.hide();
+    toggle_group.fadeIn(300);
+  }
+
+  _handleSlaveList(template){
+    let self = this;
+
+    let checkboxes = jQuery('.slave-enabled-checkbox', template);
+    checkboxes.each(function(){
+      let el = jQuery(this);
+      utils.checkboxToggle(el);
+      self._setSlaveEnabled(el);
+      el.change(function(){self._changeSlaveEnabled(jQuery(this));});
+    });
+  }
+
   _setValidations(){
     jQuery('#repo-branch-name').validate({
 
@@ -533,6 +587,28 @@ class RepositoryDetailsView extends BaseRepositoryView{
       errorClass: "form-control-error",
       focusCleanup: true,
     });
+  }
+
+  async _getSlavesKw(repo_slaves){
+    let names = repo_slaves.map(s => s.name);
+    let slaves_args = [];
+    await this.slave_list.fetch();
+    this.slave_list.each(function(slave){
+      let name = slave.escape('name');
+      let enabled = names.indexOf(name) < 0 ? false : true;
+      let slave_kw = {'name': name, 'enabled': enabled,
+		      'id': slave.get('id')};
+      slaves_args.push(slave_kw);
+    });
+
+    return slaves_args;
+  }
+
+  async _get_kw(){
+    let kw = super._get_kw();
+    let slaves = await this._getSlavesKw(kw['slaves']);
+    kw['slaves'] = slaves;
+    return kw;
   }
 
   async render_details(){
@@ -547,18 +623,19 @@ class RepositoryDetailsView extends BaseRepositoryView{
     // had no attributes.
     this.model.changed = {};
 
-    let kw = this._get_kw();
+    let kw = await this._get_kw();
     let has_branches = kw.branches.length ? true : false;
     let has_slaves = kw.slaves.length ? true : false;
 
     let compiled = jQuery(this.compiled_template(kw));
-    let checkbox = jQuery('.enabled-checkbox', compiled);
+    let checkbox = jQuery('.repo-enabled-checkbox', compiled);
     utils.checkboxToggle(checkbox);
     this._listen2events(compiled);
 
     this._setValidations();
     this._handleBrachList(has_branches, compiled);
 
+    this._handleSlaveList(compiled);
     let enabled = kw['enabled'];
     this._setEnabled(enabled, compiled);
     this.container = jQuery(this.container_selector);
@@ -607,7 +684,7 @@ class RepositoryInfoView extends BaseRepositoryView{
     compiled.addClass('repo-status-' + status);
     jQuery('.badge', compiled).addClass(badge_class);
 
-    let checkbox = jQuery('.enabled-checkbox', compiled);
+    let checkbox = jQuery('.repo-enabled-checkbox', compiled);
     utils.checkboxToggle(checkbox);
     this._listen2events(compiled);
 
@@ -636,12 +713,6 @@ class RepositoryListView extends Backbone.View{
     super(options);
     this.list_type = list_type;
 
-  }
-
-  initialize(){
-    _.bindAll(this, 'render');
-    var self = this;
-    // this.model.bind('sync', function(){self._render_list_if_needed();});
   }
 
   _render_repo(model){

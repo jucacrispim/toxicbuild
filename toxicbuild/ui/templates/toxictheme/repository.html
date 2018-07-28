@@ -105,7 +105,7 @@
 	    <span class="spinner icon-spinner-2"></span>
 	  </div>
 
-	  <input type="checkbox" class="enabled-checkbox"
+	  <input type="checkbox" class="enabled-checkbox repo-enabled-checkbox"
 		 data-on="enabled" data-off="disabled"
 		 data-onstyle="success" data-offstyle="secondary"
 		 data-style="checkbox-rounded checkbox-sm"
@@ -155,7 +155,7 @@
 		  No branch configuration.
 		</li>
 
-		<li class="repo-branches-li box-shadow box-white">
+		<li class="repo-branches-li box-shadow-light box-white">
 		  <span class="branch-name"></span>
 		  <span class="spinner icon-spinner-2 remove-branch-btn-spinner"
 			style="display:none"></span>
@@ -182,17 +182,30 @@
 	    <div id="slaves-list-container"
 		 class="col-sm-6 repo-details-input box-shadow-gray-inset advanced-large-item">
 	      <ul class="repo-slaves-ul">
-		<li class="repo-slaves-li box-shadow box-white">
+		<li class="repo-slaves-li box-shadow-light box-white">
 		  <span class="slave-name"></span>
-		  <span class="fas fa-times remove-item-btn remove-slave-btn"
-			title="remove slave">
-		  </span>
+
+		  <div class=" wait-change-enabled-spinner col-sm-3">
+		    <span class="spinner icon-spinner-2"></span>
+		  </div>
+
+		  <input type="checkbox"
+			 class="enabled-checkbox slave-enabled-checkbox"
+			 data-on="enabled" data-off="disabled"
+			 data-onstyle="success" data-offstyle="secondary"
+			 data-style="checkbox-rounded checkbox-sm"
+			 data-width="1pz" data-height="1pz">
+
+		  <!-- the 1pz stuff is a hack to avoid bootstrap-togge
+		       setting the width and height of the element to 0 with
+		       inline css -->
+
 		</li>
 	      </ul>
 	    </div>
 	    <div class="col-sm-4 repo-details-input advanced-large-item">
-	      <span id="add-slave-btn" class="fas fa-plus"
-		    title="add slave"></span>
+	      <span id="add-slave-btn" class="fas fa-plus" data-toggle="modal"
+		    data-target="#slavesListModal" title="add slave"></span>
 	    </div>
 	  </div>
 	  <!-- end slaves -->
@@ -206,11 +219,11 @@
 
 	    <div class="delete-btn-container inner-btn-container col-sm-2">
 	      <button class="btn btn-sm btn-block btn-danger btn-red" type="submit"
-		      id="btn-save-repo">
-		<span class="spinner icon-spinner-2" id="save-repo-btn-spinner"
+		      id="btn-delete-repo">
+		<span class="spinner icon-spinner-2" id="delete-repo-btn-spinner"
 		      style="display:none">
 		</span>
-		<span id="save-repo-btn-text">Delete</span>
+		<span id="delete-repo-btn-text">Delete</span>
 	      </button>
 	    </div>
 	  </div>

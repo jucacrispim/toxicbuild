@@ -15,13 +15,22 @@
 // You should have received a copy of the GNU General Public License
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+var TOXIC_SLAVE_API_URL = window.TOXIC_API_URL + 'slave/';
+
 class Slave extends BaseModel{
 
   constructor(attributes, options){
-    attributes = attributes || {};
-    let api_url = window.TOXIC_API_URL + '/slave/';
-    attributes.url = api_url;
     super(attributes, options);
+    this._api_url = TOXIC_SLAVE_API_URL;
   }
+}
 
+
+class SlaveList extends BaseCollection{
+
+  constructor(models, options){
+    super(models, options);
+    this.model = Slave;
+    this.url = TOXIC_SLAVE_API_URL;
+  }
 }

@@ -56,7 +56,7 @@ describe('RepositoryTest', function(){
     repo._post2api = jasmine.createSpy('_post2api');
     let expected_url = repo._api_url + 'remove-slave?id=' + repo.id;
     let expected_body = {'id': slave.id};
-    await repo.remove_slave(slave);
+    await repo.remove_slave(slave.id);
     let called_url = repo._post2api.calls.allArgs()[0][0];
     let called_body = repo._post2api.calls.allArgs()[0][1];
     expect(called_url).toEqual(expected_url);
@@ -300,13 +300,15 @@ describe('RepositoryDetailsViewTest', function(){
     this.template = affix('#repo-details ' + repo_details);
     jQuery('.repo-branches-li', this.template).affix(
       'span.branch-name+.remove-branch-btn');
-    jQuery('.repo-slaves-li', this.template).affix('.slave-name');
+    jQuery('.repo-slaves-li', this.template).affix('.slave-name+input');
     this.view = new RepositoryDetailsView('full-name');
     this.view.model._init_values = {};
   });
 
   it('test-render-details', async function(){
     spyOn(this.view.model, 'fetch');
+    spyOn(this.view.slave_list, 'fetch');
+    this.view.model.set('branches', []);
     await this.view.render_details();
     let el_index = this.view.container.html().indexOf('repo-details-name');
     expect(el_index > 0).toBe(true);
@@ -541,6 +543,84 @@ describe('RepositoryDetailsViewTest', function(){
     this.view._hackHelpHeight(2, 'decrease');
     config = jQuery('#branches-config-p');
     expect(config.height()).toEqual(100);
+  });
+
+  it('test-getSlavesKw', async function(){
+    let repo_slaves = [{'name': 'bla'}];
+    spyOn(this.view.slave_list, 'fetch');
+
+    this.view.slave_list.each = function(cb){
+      let slaves = [new Slave({'name': 'bla', 'id': '1'}),
+		    new Slave({'name': 'ble', 'id': '2'})];
+      for (let i in slaves){
+	let slave = slaves[i];
+	cb(slave);
+      }
+    };
+
+    let slaves = await this.view._getSlavesKw(repo_slaves);
+    let expected = [{'name': 'bla', 'enabled': true, 'id': '1'},
+		    {'name': 'ble', 'enabled': false, 'id': '2'}];
+    expect(expected).toEqual(slaves);
+
+  });
+
+  it('test-setSlaveEnabled-enabled', function(){
+    affix('div .slave-enabled-checkbox');
+    let el = jQuery('.slave-enabled-checkbox');
+    el.prop('checked', true);
+    this.view._setSlaveEnabled(el);
+    el = jQuery('.slave-enabled-checkbox');
+    expect(el.parent().hasClass('repo-enabled')).toBe(true);
+  });
+
+  it('test-setSlaveEnabled-disabled', function(){
+    affix('div .slave-enabled-checkbox');
+    let el = jQuery('.slave-enabled-checkbox');
+    el.prop('checked', false);
+    this.view._setSlaveEnabled(el);
+    el = jQuery('.slave-enabled-checkbox');
+    expect(el.parent().hasClass('repo-disabled')).toBe(true);
+  });
+
+  it('test-changeSlaveEnabled-enabled-ok', async function(){
+    spyOn(utils, 'showErrorMessage');
+    spyOn(this.view.model, 'add_slave');
+    let el = affix('input');
+    el.prop('checked', true);
+    await this.view._changeSlaveEnabled(el);
+    expect(this.view.model.add_slave).toHaveBeenCalled();
+    expect(utils.showErrorMessage).not.toHaveBeenCalled();
+  });
+
+  it('test-changeSlaveEnabled-enabled-exception', async function(){
+    spyOn(utils, 'showErrorMessage');
+    spyOn(this.view.model, 'add_slave').and.throwError();
+    let el = affix('input');
+    el.prop('checked', true);
+    await this.view._changeSlaveEnabled(el);
+    expect(this.view.model.add_slave).toHaveBeenCalled();
+    expect(utils.showErrorMessage).toHaveBeenCalled();
+  });
+
+  it('test-changeSlaveEnabled-disabled-ok', async function(){
+    spyOn(utils, 'showErrorMessage');
+    spyOn(this.view.model, 'remove_slave');
+    let el = affix('input');
+    el.prop('checked', false);
+    await this.view._changeSlaveEnabled(el);
+    expect(this.view.model.remove_slave).toHaveBeenCalled();
+    expect(utils.showErrorMessage).not.toHaveBeenCalled();
+  });
+
+  it('test-changeSlaveEnabled-disabled-exeption', async function(){
+    spyOn(utils, 'showErrorMessage');
+    spyOn(this.view.model, 'remove_slave').and.throwError();
+    let el = affix('input');
+    el.prop('checked', false);
+    await this.view._changeSlaveEnabled(el);
+    expect(this.view.model.remove_slave).toHaveBeenCalled();
+    expect(utils.showErrorMessage).toHaveBeenCalled();
   });
 
 });

@@ -136,7 +136,11 @@ body{
 }
 
 .box-shadow{
-    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, .05);
+    box-shadow: 0em 0rem 0.5rem 0.1rem hsla(0, 0%, 0%, 0.15);
+}
+
+.box-shadow-light{
+    box-shadow: 0em 0rem 0.3rem 0.1rem hsla(0, 0%, 0%, 0.09);
 }
 
 .box-shadow-black{
@@ -226,7 +230,7 @@ body{
 .checkbox-sm .toggle-on.btn{
     /* padding-top: 9px; */
     /* padding-right: 25px; */
-    /* border-radius: 20px; */
+    border-radius: 20px;
 }
 
 .checkbox-sm{
@@ -524,6 +528,7 @@ body{
 .nav-container{
     display:none;
 }
+
 .nav-pills{
     margin-bottom: 10px;
 }
@@ -740,8 +745,19 @@ body{
 
 .delete-btn-container{
     float: left;
+    padding-top: 3px;
 }
 .delete-repo-label-container{
     padding-right: 15px;
     padding-left: 15px;
+}
+
+.repo-slaves-li .toggle{
+    float: right;
+    margin-top: 2px;
+}
+
+.repo-slaves-li .wait-change-enabled-spinner{
+    float: right;
+    margin-right: -15px;
 }
