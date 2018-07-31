@@ -153,6 +153,13 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
     this.nav_pills = null;
   }
 
+  _getContainerInner(){
+    this._container = jQuery('.repo-details-main-container');
+    this._inner = jQuery('div', this._container).not('.wait-toxic-spinner').not(
+      '.advanced-help-container').not('.add-repo-message-container');
+  }
+
+
   _toggleAdvanced(){
     let container = jQuery(
       '.repo-config-advanced-container #repo-details-advanced-container');
