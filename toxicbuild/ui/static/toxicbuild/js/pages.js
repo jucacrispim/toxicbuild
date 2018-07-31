@@ -79,6 +79,14 @@ class BaseRepositoryPage extends BasePage{
     close_btn.on('click', function(e){
       self.close_page();
     });
+
+    let cancel_btn = jQuery(
+      '.repo-details-buttons-container #btn-cancel-save-repo');
+    cancel_btn.on('click', function(e){
+      self.close_page();
+    });
+
+
   }
 
   close_page(){
@@ -181,19 +189,15 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
 
   _listen2events(){
     let self = this;
+
     super._listen2events();
     jQuery('.repo-config-advanced-span').on('click', function(e){
       self._toggleAdvanced();
     });
 
-    let cancel_btn = jQuery(
-      '.repo-details-buttons-container #btn-cancel-save-repo');
-    cancel_btn.on('click', function(e){
-      self.close_page();
-    });
-
     // close on remove
-    jQuery(document).on('repo-removed', function(){
+    jQuery(document).on('repo-removed', function(e){
+      e.stopImmediatePropagation();
       self.close_page();
     });
   }
