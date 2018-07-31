@@ -689,6 +689,21 @@ class DashboardHandlerTest(AsyncTestCase):
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 
+    def test_show_repo_add(self):
+        self.handler._get_repository_template = MagicMock(
+            spec=self.handler._get_repository_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_repo_add()
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_repository_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
     def test_show_repository_details_template(self):
         self.handler._get_repository_template = MagicMock(
             spec=self.handler._get_repository_template)
