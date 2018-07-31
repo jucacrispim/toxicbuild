@@ -81,6 +81,23 @@ describe("BaseModelTest", function(){
     expect(this.model._has_used_query).toBe(true);
   });
 
+  it('test-set-key-init-value', function(){
+    let init = this.model.get('id');
+    this.model.set('id', 'other');
+    this.model.set('id', init);
+    expect(this.model._changes.hasOwnProperty('id')).toBe(false);
+  });
+
+  it('test-set-key-other-value', function(){
+    this.model.set('id', 'other');
+    expect(this.model._changes.hasOwnProperty('id')).toBe(true);
+  });
+
+  it('test-remove', async function(){
+    await this.model.remove();
+    expect(jQuery.ajax).toHaveBeenCalled();
+  });
+
 });
 
 describe('BaseCollectionTest', function(){

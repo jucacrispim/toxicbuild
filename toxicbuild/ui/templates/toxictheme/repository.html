@@ -1,5 +1,4 @@
 <!-- add branch modal -->
-<!-- Modal -->
 <div class="modal fade" id="addBranchModal" tabindex="-1" role="dialog"
      aria-labelledby="addBranchModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
@@ -53,6 +52,52 @@
 </div>
 <!-- end add branch modal -->
 
+<!-- confirm delete repo modal -->
+<div class="modal fade" id="removeRepoModal" tabindex="-1" role="dialog"
+     aria-labelledby="removeRepoModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="exampleModalLabel">Delete repository</h6>
+        <button type="button" class="close" data-dismiss="modal"
+		aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+
+	<span>
+	  Are you sure you want to delete this repository? This action can't
+	  be undone.
+	</span>
+
+      </div>
+
+      <div class="modal-footer">
+
+	  <div class="add-branch-btn-container inner-btn-container col-sm-4">
+	    <button class="btn btn-sm btn-block btn-danger btn-red" type="submit"
+		    id="btn-remove-repo">
+	      <span class="spinner icon-spinner-2" id="remove-repo-btn-spinner"
+		    style="display:none">
+	      </span>
+	      <span id="remove-repo-btn-text">Delete</span>
+	    </button>
+	  </div>
+
+	  <div class="cancel-btn-container inner-btn-container">
+	    <button class="btn btn-sm btn-light btn-block" type="submit"
+		    id="btn-cancel-remove-repo">
+	      <span id="cancel-remove-repo-btn-text">Cancel</span>
+	    </button>
+	  </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<!-- end confirm delete repo modal -->
+
 <!-- template -->
 <div class="template">
 
@@ -68,7 +113,7 @@
 	<div class="repo-details-name-input col-sm-11 repo-details-input">
 	  <div class="repo-details-input">
 	    <input id="repo-details-name" type="text" class="form-control"
-		   data-valuefor="name">
+		   data-valuefor="name" required>
 	  </div>
 	  <!-- name available -->
 	  <div class="repo-details-name-available repo-details-label col-sm-3"
@@ -95,7 +140,7 @@
 	</div>
 	<div class="repo-details-url-input col-sm-8 repo-details-input">
 	  <input id="repo-details-url" type="text" class="form-control"
-		 data-valuefor="url">
+		 data-valuefor="url" required>
 	</div>
 	<!-- end url container -->
 
@@ -219,7 +264,8 @@
 
 	    <div class="delete-btn-container inner-btn-container col-sm-2">
 	      <button class="btn btn-sm btn-block btn-danger btn-red" type="submit"
-		      id="btn-delete-repo">
+		      id="btn-delete-repo" data-toggle="modal"
+		    data-target="#removeRepoModal">
 		<span class="spinner icon-spinner-2" id="delete-repo-btn-spinner"
 		      style="display:none">
 		</span>
@@ -243,6 +289,7 @@
 
 <!-- main settings container -->
 <div class="repo-details-main-container box-shadow-gray">
+  <div class="close-btn">&times;</div>
 
   <!-- loading spinner -->
   <div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
@@ -265,7 +312,6 @@
 	</a>
       </li>
     </ul>
-    <div class="close-btn">&times;</div>
 
     <div class="repo-locations-link-container">
       <a href="#" title="go to summary"><span class="fas fa-list"></span></a>
@@ -273,6 +319,12 @@
     </div>
   </div>
   <!-- end navigation pills -->
+
+  <!-- add repo message -->
+  <div class="add-repo-message-container row-container col-sm-10">
+    <h5><span class="add-repo-message-span">Add repository</span></h5>
+  </div>
+  <!-- end add repo message -->
 
   <!-- left side -->
   <div class="settings-left-side col-sm-9">
@@ -341,7 +393,13 @@
 <script>
   async function init(){
     let full_name = jQuery('#repo-full-name').val();
-    let page = new RepositoryDetailsPage(router, full_name);
+    let page;
+    if (full_name){
+      page = new RepositoryDetailsPage(router, full_name);
+    }else{
+      page = new RepositoryAddPage(router);
+    }
+
     await page.render();
   }
 

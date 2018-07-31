@@ -31,9 +31,21 @@ function _get_url(method, obj){
 
 class BaseModel extends Backbone.Model{
 
+  constructor(attributes, options){
+    super(attributes, options);
+    this._init_values = attributes || {};
+    this._changes = {};
+  }
+
+  _getHeaders(){
+    let xsrf_token = Cookies.get('_xsrf');
+    let headers = {'X-XSRFToken': xsrf_token};
+    return headers;
+  }
+
   sync(method, model, options){
     let url = _get_url(method, this, false);
-    options.attrs = this.changed;
+    options.attrs = this._changes;
     options.url = url;
     let xsrf_token = Cookies.get('_xsrf');
     let headers = {'X-XSRFToken': xsrf_token};
@@ -54,6 +66,25 @@ class BaseModel extends Backbone.Model{
     this._has_used_query = true;
     delete this._query;
     return r;
+  }
+
+  set(key, value, options){
+    this._changes = this._changes || {};
+    super.set(key, value, options);
+    let init_values = this._init_values || {};
+    let init = init_values[key];
+    if (value != init){
+      this._changes[key] = value;
+    }else{
+      delete this._changes[key];
+    }
+  }
+
+  async remove(){
+    let url = this._api_url + '?id=' + this.id;
+    let headers = this._getHeaders();
+    await jQuery.ajax({'url': url, 'type': 'delete',
+		       'headers': headers});
   }
 }
 

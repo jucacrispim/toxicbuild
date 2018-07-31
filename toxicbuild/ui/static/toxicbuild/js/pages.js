@@ -63,13 +63,93 @@ class MainPage extends BasePage{
   }
 }
 
-class RepositoryDetailsPage extends BasePage{
+class BaseRepositoryPage extends BasePage{
+
+  constructor(router){
+    super(router);
+    this.template_url = '/templates/repo-details';
+    this.repo_details_view = null;
+    this.right_sidebar = null;
+  }
+
+  _listen2events(){
+    let self = this;
+
+    let close_btn = jQuery('.repo-details-main-container .close-btn');
+    close_btn.on('click', function(e){
+      self.close_page();
+    });
+  }
+
+  close_page(){
+    this.router.go2lastURL();
+  }
+
+  _getContainerInner(){
+    this._container = jQuery('.repo-details-main-container');
+    this._inner = jQuery('div', this._container).not('.wait-toxic-spinner').not(
+      '.advanced-help-container').not('.nav-container');
+  }
+
+  _prepareOpenAnimation(){
+    this._inner.hide();
+    this._container.prop('style', 'margin:0 50% 0px 50%;min-height:0');
+  }
+
+  _animateOpen(){
+    let self = this;
+
+    this._container.animate({'margin': '-10px', 'min-height': '89vh'}, 400,
+			    function(){self._inner.fadeIn(100);
+				       self.right_sidebar.fadeIn(100);});
+  }
+
+}
+
+class RepositoryAddPage extends BaseRepositoryPage{
+
+  constructor(router){
+    super(router);
+    this.repo_details_view = new RepositoryAddView();
+    this.add_message_container = null;
+
+    this._container = null;
+    this._inner = null;
+  }
+
+  async render(){
+    this._getContainerInner();
+    this.add_message_container = jQuery('.add-repo-message-container');
+    this.right_sidebar = jQuery('.settings-right-side');
+
+    this._prepareOpenAnimation();
+
+    await this.repo_details_view.render_details();
+    jQuery('.repo-config-advanced-container').hide();
+    this._listen2events();
+
+    this._animateOpen();
+  }
+
+  redir2repo_settings(full_name){
+    let url = '/' + full_name + '/settings';
+    this.router.redir(url, true, true);
+  }
+
+  _listen2events(){
+    let self = this;
+    super._listen2events();
+    jQuery(document).on('repo-added', function(e, full_name){
+      self.redir2repo_settings(full_name);
+    });
+  }
+}
+
+class RepositoryDetailsPage extends BaseRepositoryPage{
 
   constructor(router, full_name){
     super(router);
-    this.template_url = '/templates/repo-details';
     this.repo_details_view = new RepositoryDetailsView(full_name);
-    this.right_sidebar = null;
     this.nav_pills = null;
   }
 
@@ -94,13 +174,9 @@ class RepositoryDetailsPage extends BasePage{
 
   _listen2events(){
     let self = this;
+    super._listen2events();
     jQuery('.repo-config-advanced-span').on('click', function(e){
       self._toggleAdvanced();
-    });
-
-    let close_btn = jQuery('.repo-details-main-container .close-btn');
-    close_btn.on('click', function(e){
-      self.close_page();
     });
 
     let cancel_btn = jQuery(
@@ -108,18 +184,22 @@ class RepositoryDetailsPage extends BasePage{
     cancel_btn.on('click', function(e){
       self.close_page();
     });
+
+    // close on remove
+    jQuery(document).on('repo-removed', function(){
+      self.close_page();
+    });
   }
 
   async render(){
     this.nav_pills = jQuery('.nav-container');
     this.right_sidebar = jQuery('.settings-right-side');
+    this._getContainerInner();
+    this._prepareOpenAnimation();
     await this.repo_details_view.render_details();
-    this.right_sidebar.fadeIn(300);
-    this.nav_pills.fadeIn(300);
+
     this._listen2events();
+    this._animateOpen();
   }
 
-  close_page(){
-    this.router.go2lastURL();
-  }
 }

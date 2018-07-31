@@ -61,6 +61,54 @@ describe('MainPageTest', function(){
   });
 });
 
+describe('BaseRepositoryPageTest', function(){
+
+  beforeEach(function(){
+    let router = new DashboardRouter();
+    this.page = new BaseRepositoryPage(router);
+  });
+
+  it('test-close-page', function(){
+    spyOn(this.page.router, 'go2lastURL');
+    this.page.close_page();
+    expect(this.page.router.go2lastURL).toHaveBeenCalled();
+  });
+
+});
+
+describe('RepositoryAddPageTest', function(){
+
+  beforeEach(function(){
+    let right_sidebar = affix('.settings-right-side');
+    let message = affix('.add-repo-message-container');
+    message.hide();
+    right_sidebar.hide();
+    let router = new DashboardRouter();
+    this.page = new RepositoryAddPage(router);
+    spyOn(this.page.repo_details_view, 'render_details');
+  });
+
+  it('test-render', async function(){
+    spyOn(this.page, '_prepareOpenAnimation');
+    spyOn(this.page, '_animateOpen');
+    await this.page.render();
+    let advanced_container = jQuery('.repo-config-advanced-container');
+    let message = jQuery('.add-repo-message-container');
+
+    expect(this.page._prepareOpenAnimation).toHaveBeenCalled();
+    expect(this.page._animateOpen).toHaveBeenCalled();
+  });
+
+  it('test-redir2repo_settings', function(){
+    let full_name = 'ze/repo';
+    this.page.router.redir = jasmine.createSpy('redir');
+    let expected = '/ze/repo/settings';
+    this.page.redir2repo_settings(full_name);
+    let called = this.page.router.redir.calls.allArgs()[0][0];
+    expect(called).toEqual(expected);
+  });
+});
+
 describe('RepositoryDetailsPageTest', function(){
 
   beforeEach(function(){
@@ -101,11 +149,4 @@ describe('RepositoryDetailsPageTest', function(){
     expect(jQuery.fn.fadeOut).toHaveBeenCalled();
     expect(angle.hasClass('fa-angle-right'));
   });
-
-  it('test-close-page', function(){
-    spyOn(this.page.router, 'go2lastURL');
-    this.page.close_page();
-    expect(this.page.router.go2lastURL).toHaveBeenCalled();
-  });
-
 });

@@ -69,7 +69,7 @@ body{
 }
 
 .row-container{
-    overflow: auto
+    overflow: auto;
 }
 
 .modal-footer{
@@ -84,7 +84,7 @@ body{
 .form-control-error,
 .form-control-error:focus{
     border-color: #d2778a57;
-    box-shadow: 0 0 0.4rem rgba(191, 5, 39, 0.9);
+    box-shadow: 0px 0px 0.2em 0px rgba(191, 5, 39, 0.9);
 }
 
 .alert{
@@ -570,9 +570,10 @@ body{
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
+    right: 0px;
     margin: -10px;
     padding: 10px;
+    min-height: 89vh;
 }
 
 #repo-details .repo-details-label,
@@ -722,7 +723,7 @@ body{
 }
 
 #btn-save-repo{
-    width: 105px
+    width: 110px;
 }
 
 .repo-locations-link-container{
@@ -760,4 +761,11 @@ body{
 .repo-slaves-li .wait-change-enabled-spinner{
     float: right;
     margin-right: -15px;
+}
+
+/* repo add page */
+
+.add-repo-message-container{
+    display: none;
+    margin-bottom: 25px;
 }

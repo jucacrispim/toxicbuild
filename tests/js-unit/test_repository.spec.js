@@ -175,7 +175,19 @@ describe('RepositoryTest', function(){
 describe('BaseRepositoryViewTest', function(){
 
   beforeEach(function(){
-        this.view = new BaseRepositoryView();
+    affix('.template #repo-details-container #repo-details-name');
+    let repo_details = 'input#repo-details-name+input#repo-details-url';
+    repo_details += '+#repo-details-url+input#repo-parallel-builds';
+    repo_details += '+#repo-name-available .check-error-indicator';
+    repo_details += '+.repository-info-enabled-container input';
+    repo_details += '+.repo-branches-li';
+    repo_details += '+.repo-slaves-li';
+    this.template = affix('#repo-details ' + repo_details);
+    jQuery('.repo-branches-li', this.template).affix(
+      'span.branch-name+.remove-branch-btn');
+    jQuery('.repo-slaves-li', this.template).affix('.slave-name+input');
+
+    this.view = new BaseRepositoryView();
   });
 
   it('test-get-kw-with-last-buildset', function(){
@@ -259,61 +271,6 @@ describe('BaseRepositoryViewTest', function(){
     expect(el_index > 0).toBe(true);
   });
 
-
-});
-
-describe('RepositoryInfoViewTest', function(){
-
-  beforeEach(function(){
-    let infos = '.repository-info-name+.repository-info-status';
-    infos += '+.buildset-commit+.buildset-title+.buildset-total-time';
-    infos += '+.buildset-stated+.buildset-commit-date+.buildset-started';
-    affix('.template .repository-info ' + infos);
-    this.view = new RepositoryInfoView();
-  });
-
-  it('test-render', function(){
-    let buildset = {'commit': 'asdf'};
-    this.view.model = new Repository({'name': 'bla',
-				      'last_buildset': buildset});
-    spyOn(this.view, 'compiled_template');
-    this.view.render();
-    expect(this.view.compiled_template).toHaveBeenCalled();
-  });
-
-});
-
-
-describe('RepositoryDetailsViewTest', function(){
-
-  beforeEach(function(){
-    this.model = new Repository({'name': 'bla',
-				 'last_buildset': {}});
-    this.model.fetch = jasmine.createSpy('fetch');
-    affix('.template #repo-details-container #repo-details-name');
-    let repo_details = 'input#repo-details-name+input#repo-details-url';
-    repo_details += '+#repo-details-url+input#repo-parallel-builds';
-    repo_details += '+#repo-name-available .check-error-indicator';
-    repo_details += '+.repository-info-enabled-container input';
-    repo_details += '+.repo-branches-li';
-    repo_details += '+.repo-slaves-li';
-    this.template = affix('#repo-details ' + repo_details);
-    jQuery('.repo-branches-li', this.template).affix(
-      'span.branch-name+.remove-branch-btn');
-    jQuery('.repo-slaves-li', this.template).affix('.slave-name+input');
-    this.view = new RepositoryDetailsView('full-name');
-    this.view.model._init_values = {};
-  });
-
-  it('test-render-details', async function(){
-    spyOn(this.view.model, 'fetch');
-    spyOn(this.view.slave_list, 'fetch');
-    this.view.model.set('branches', []);
-    await this.view.render_details();
-    let el_index = this.view.container.html().indexOf('repo-details-name');
-    expect(el_index > 0).toBe(true);
-  });
-
   it('test-checkNameAvailable-available', async function(){
     spyOn(Repository, 'is_name_available').and.returnValue(true);
     spyOn(this.view, '_checkHasChanges');
@@ -369,6 +326,15 @@ describe('RepositoryDetailsViewTest', function(){
     expect(this.view.model.changed.hasOwnProperty('name')).toBe(false);
   });
 
+  it('test-getChangesFromInput-no-required-value', function(){
+    let input = affix('input');
+    input.prop('required', true);
+    input.data('valuefor', 'bla');
+    input.val('');
+    this.view._getChangesFromInput();
+    expect(this.view.model.changed.hasOwnProperty('bla')).toBe(false);
+  });
+
   it('test-checkHasChanges-changed', function(){
     spyOn(this.view, '_getChangesFromInput');
     spyOn(this.view.model, 'hasChanged').and.returnValue(true);
@@ -385,6 +351,58 @@ describe('RepositoryDetailsViewTest', function(){
     this.view._checkHasChanges();
     let btn = jQuery('.save-btn-container button');
     expect(btn.prop('disabled')).toBe(true);
+  });
+
+  it('test-render-details', async function(){
+    this.view.model.set('branches', []);
+    await this.view.render_details();
+    let el_index = this.view.container.html().indexOf('repo-details-name');
+    expect(el_index > 0).toBe(true);
+  });
+
+});
+
+describe('RepositoryInfoViewTest', function(){
+
+  beforeEach(function(){
+    let infos = '.repository-info-name+.repository-info-status';
+    infos += '+.buildset-commit+.buildset-title+.buildset-total-time';
+    infos += '+.buildset-stated+.buildset-commit-date+.buildset-started';
+    affix('.template .repository-info ' + infos);
+    this.view = new RepositoryInfoView();
+  });
+
+  it('test-render', function(){
+    let buildset = {'commit': 'asdf'};
+    this.view.model = new Repository({'name': 'bla',
+				      'last_buildset': buildset});
+    spyOn(this.view, 'compiled_template');
+    this.view.render();
+    expect(this.view.compiled_template).toHaveBeenCalled();
+  });
+
+});
+
+
+describe('RepositoryDetailsViewTest', function(){
+
+  beforeEach(function(){
+    this.model = new Repository({'name': 'bla',
+				 'last_buildset': {}});
+    this.model.fetch = jasmine.createSpy('fetch');
+    affix('.template #repo-details-container #repo-details-name');
+    let repo_details = 'input#repo-details-name+input#repo-details-url';
+    repo_details += '+#repo-details-url+input#repo-parallel-builds';
+    repo_details += '+#repo-name-available .check-error-indicator';
+    repo_details += '+.repository-info-enabled-container input';
+    repo_details += '+.repo-branches-li';
+    repo_details += '+.repo-slaves-li';
+    this.template = affix('#repo-details ' + repo_details);
+    jQuery('.repo-branches-li', this.template).affix(
+      'span.branch-name+.remove-branch-btn');
+    jQuery('.repo-slaves-li', this.template).affix('.slave-name+input');
+    this.view = new RepositoryDetailsView('full-name');
+    this.view.model._init_values = {};
   });
 
   it('test-addBranch-ok', async function(){
@@ -662,4 +680,36 @@ describe('RepositoryListViewTest', function(){
     expect(called_args).toBe(undefined);
   });
 
+});
+
+describe('RepositoryAddViewTest', function(){
+
+  beforeEach(function(){
+    this.view = new RepositoryAddView();
+    affix('#repo-details');
+  });
+
+  it('test-addRepo-ok', async function(){
+    spyOn(jQuery.fn, 'trigger');
+    spyOn(this.view.model, 'save').and.returnValue({'full_name': 'bla'});
+    await this.view._addRepo();
+    expect(jQuery.fn.trigger).toHaveBeenCalled();
+  });
+
+  it('test-addRepo-exception', async function(){
+    spyOn(jQuery.fn, 'trigger');
+    spyOn(this.view.model, 'save').and.throwError();
+    await this.view._addRepo();
+    expect(jQuery.fn.trigger).not.toHaveBeenCalled();
+  });
+
+  it('test-render-details', async function(){
+    spyOn(this.view.slaves, 'fetch');
+    this.view.directive = {};
+    let enabled_container = jQuery('.repository-info-enabled-container');
+    enabled_container.show();
+    await this.view.render_details();
+    enabled_container = jQuery('.repository-info-enabled-container');
+    expect(enabled_container.is(':visible')).toBe(false);
+  });
 });

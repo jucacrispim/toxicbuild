@@ -509,6 +509,13 @@ class DashboardHandler(LoggedTemplateHandler):
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
+    @get('repository/add')
+    def show_repo_add(self):
+        full_name = ''
+        content = self._get_repository_template(full_name)
+        context = {'content': content}
+        self.render_template(self.skeleton_template, context)
+
     @get('templates/repo-details')
     def show_repository_details_template(self):
         content = self._get_repository_template()
