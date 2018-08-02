@@ -72,8 +72,7 @@ class NotificationTest(TestCase):
         self.assertEqual(schema['name'], 'BaseNotification')
 
     def test_translate_schema(self):
-        schema = notifications.Notification.get_schema()
-        translation = notifications.Notification._translate_schema(schema)
+        translation = notifications.Notification.get_schema(to_serialize=True)
         keys = {'id', 'name', 'pretty_name', 'description', '_cls',
                 'branches', 'statuses', 'repository_id'}
         self.assertEqual(set(translation.keys()), keys)
@@ -117,6 +116,22 @@ class NotificationTest(TestCase):
     @async_test
     async def test_run_bad_status(self):
         self.notification.statuses = ['success']
+        buildset_info = {'status': 'fail', 'branch': 'master',
+                         'repository': {'id': 'some-id'}}
+
+        self.notification.send_started_message = AsyncMagicMock(
+            spec=self.notification.send_started_message)
+        self.notification.send_finished_message = AsyncMagicMock(
+            spec=self.notification.send_finished_message)
+
+        await self.notification.run(buildset_info)
+
+        self.assertFalse(self.notification.send_started_message.called)
+        self.assertFalse(self.notification.send_finished_message.called)
+
+    @async_test
+    async def test_run_bad_branch(self):
+        self.notification.branches = ['release']
         buildset_info = {'status': 'fail', 'branch': 'master',
                          'repository': {'id': 'some-id'}}
 
@@ -202,7 +217,7 @@ class SlackNotificationTest(TestCase):
         self.assertTrue(notifications.requests.post.called)
 
     @async_test
-    async def send_started_message(self):
+    async def test_send_started_message(self):
 
         buildset_info = {'started': '01/01/1970 00:00:00'}
         self.notification._send_message = AsyncMagicMock(
@@ -211,7 +226,7 @@ class SlackNotificationTest(TestCase):
         self.assertTrue(self.notification._send_message.called)
 
     @async_test
-    async def send_finished_message(self):
+    async def test_send_finished_message(self):
         buildset_info = {'finished': '01/01/1970 00:00:00',
                          'status': 'success'}
         self.notification._send_message = AsyncMagicMock(

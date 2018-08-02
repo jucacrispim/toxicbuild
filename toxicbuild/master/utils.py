@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+from mongomotor.fields import StringField, URLField, ListField
 from toxicbuild.master import settings
 
 
@@ -30,3 +31,30 @@ def get_build_config_filename():
     """Returns the build config filename used by the master"""
 
     return getattr(settings, 'BUILD_CONFIG_FILENAME', 'toxicbuild.yml')
+
+
+class PrettyFieldMixin:  # pylint: disable=too-few-public-methods
+    """A field with a descriptive name for humans"""
+
+    def __init__(self, *args, **kwargs):
+        keys = ['pretty_name', 'description']
+        for k in keys:
+            setattr(self, k, kwargs.get(k))
+            try:
+                del kwargs[k]
+            except KeyError:
+                pass
+
+        super().__init__(*args, **kwargs)
+
+
+class PrettyStringField(PrettyFieldMixin, StringField):
+    pass
+
+
+class PrettyURLField(PrettyFieldMixin, URLField):
+    pass
+
+
+class PrettyListField(PrettyFieldMixin, ListField):
+    pass

@@ -55,21 +55,6 @@ class MetaMasterPluginTest(TestCase):
         self.assertEqual(self.test_cls.name, 'base-plugin')
 
 
-class PrettyFieldTest(TestCase):
-
-    def setUp(self):
-
-        class TestClass(plugins.EmbeddedDocument):
-
-            some_attr = plugins.PrettyStringField(pretty_name='Some Attribute')
-
-        self.test_class = TestClass
-
-    def test_pretty_name(self):
-        self.assertEqual(self.test_class.some_attr.pretty_name,
-                         'Some Attribute')
-
-
 class MasterPluginTest(TestCase):
 
     def setUp(self):

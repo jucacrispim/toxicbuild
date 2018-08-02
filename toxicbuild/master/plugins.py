@@ -65,7 +65,7 @@ import json
 from uuid import uuid4
 from mongoengine.base.metaclasses import DocumentMetaclass
 from mongomotor import EmbeddedDocument
-from mongomotor.fields import (StringField, URLField, ListField, UUIDField,
+from mongomotor.fields import (StringField, ListField, UUIDField,
                                ReferenceField)
 from toxicbuild.core import requests
 from toxicbuild.core.plugins import Plugin, PluginMeta
@@ -73,33 +73,8 @@ from toxicbuild.core.utils import datetime2string, LoggerMixin
 from toxicbuild.master.build import Build
 from toxicbuild.master.mail import MailSender
 from toxicbuild.master.signals import build_started, build_finished
-
-
-class PrettyFieldMixin:  # pylint: disable=too-few-public-methods
-    """A field with a descriptive name for humans"""
-
-    def __init__(self, *args, **kwargs):
-        keys = ['pretty_name', 'description']
-        for k in keys:
-            setattr(self, k, kwargs.get(k))
-            try:
-                del kwargs[k]
-            except KeyError:
-                pass
-
-        super().__init__(*args, **kwargs)
-
-
-class PrettyStringField(PrettyFieldMixin, StringField):
-    pass
-
-
-class PrettyURLField(PrettyFieldMixin, URLField):
-    pass
-
-
-class PrettyListField(PrettyFieldMixin, ListField):
-    pass
+from toxicbuild.master.utils import (PrettyListField, PrettyURLField,
+                                     PrettyStringField)
 
 
 _TRANSLATE_TABLE = {PrettyListField: 'list',
