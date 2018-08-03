@@ -59,7 +59,7 @@ Example:
 
 from asyncio import ensure_future
 import copy
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import json
 from mongomotor import Document
 from mongomotor.fields import (StringField, ListField, ReferenceField,
@@ -68,7 +68,9 @@ from mongomotor.metaprogramming import AsyncDocumentMetaclass
 from toxicbuild.core import requests
 from toxicbuild.core.mail import MailSender as MailSenderCore
 from toxicbuild.core.plugins import Plugin, PluginMeta
-from toxicbuild.core.utils import LoggerMixin
+from toxicbuild.core.utils import (LoggerMixin, datetime2string,
+                                   string2datetime)
+from toxicbuild.integrations.github import GithubInstallation
 from toxicbuild.master.utils import (PrettyListField, PrettyStringField,
                                      PrettyURLField)
 from toxicbuild.output import settings
@@ -110,9 +112,13 @@ class MetaNotification(PluginMeta, AsyncDocumentMetaclass):
         attrs['_description'] = PrettyStringField(default=attrs.get(
             'description'))
 
+        attrs['_events'] = ListField(StringField())
+
         new_cls = super().__new__(cls, name, bases, attrs)
         if getattr(new_cls, 'events', None) is None:
             setattr(new_cls, 'events', [])
+
+        new_cls._events.default = new_cls.events
         return new_cls
 
 
@@ -161,6 +167,7 @@ class Notification(LoggerMixin, Plugin, Document, metaclass=MetaNotification):
         del good['name']
         del good['pretty_name']
         del good['description']
+        del good['events']
         translation = OrderedDict()
 
         for k, v in good.items():
@@ -185,31 +192,14 @@ class Notification(LoggerMixin, Plugin, Document, metaclass=MetaNotification):
         fields['name'] = cls.name
         fields['pretty_name'] = cls.pretty_name
         fields['description'] = cls.description
+        fields['events'] = cls.events
         del fields['_name']
         del fields['_pretty_name']
         del fields['_description']
+        del fields['_events']
         if to_serialize:
             fields = cls._translate_schema(fields)
         return fields
-
-    @classmethod
-    def list_for_event_type(cls, event_type, no_events=False):
-        """Lists the notifications that react for a given event.
-
-        :param event_type. The event type to match against.
-        :param no_events: Indicates if the plugins with no events should
-          be listed. That may be used to make plugins without events react
-          to all events.
-        """
-
-        notifications = []
-        for notification in cls.__subclasses__():
-            notifications += notification.list_for_event_type(
-                event_type=event_type, no_events=no_events)
-
-        return notifications + [n for n in cls.__subclasses__()
-                                if not n.no_list and event_type in n.events or
-                                (no_events and not n.events)]
 
     def to_dict(self):
         schema = type(self).get_schema()
@@ -255,6 +245,21 @@ class Notification(LoggerMixin, Plugin, Document, metaclass=MetaNotification):
         """
 
         raise NotImplementedError
+
+    @classmethod
+    def get_repo_notifications(cls, repository_id, event=None):
+        """Returns a queryset with the notifications for a given repository
+        and event.
+
+        :param repository_id: The id of the repository that sent an event.
+        :param event: The event that will trigger notifications."""
+
+        if event:
+            events_kw = {'_events': event}
+        else:
+            events_kw = {'_events': []}
+
+        return cls.objects.filter(repository_id=repository_id, **events_kw)
 
 
 class SlackNotification(Notification):
@@ -373,3 +378,101 @@ class CustomWebhookNotification(Notification):
 
     async def send_finished_message(self, buildset_info):
         await self._send_message(buildset_info)
+
+
+class GithubCheckRunNotification(Notification):
+    """A plugin that creates a check run reacting to a buildset that
+    was added, started or finished."""
+
+    name = 'github-check-run'
+    """The name of the plugin"""
+
+    events = ['buildset-added', 'buildset-started', 'buildset-finished']
+    """Events that trigger the plugin."""
+
+    no_list = True
+
+    run_name = 'ToxicBuild CI'
+    """The name displayed on github."""
+
+    installation = ReferenceField(GithubInstallation)
+    """The :class:`~toxicbuild.integrations.github.GithubInstallation`
+    that owns the notification. It is needed because each installation has
+    its own auth token and it is needed send the checks.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sender = None
+
+    async def run(self, buildset_info):
+        """Executed when a notification about a build arrives. Reacts
+        to buildsets that started or finished.
+
+        :param buildset_info: A dictionary with information about a buildset.
+        """
+
+        self.log('Sending notification to github for buildset {}'.format(
+            buildset_info['id']), level='info')
+        self.log('Info is: {}'.format(buildset_info), level='debug')
+
+        self.sender = buildset_info['repository']
+        status = buildset_info['status']
+        status_tb = defaultdict(lambda: 'completed')
+
+        status_tb.update({'pending': 'queued',
+                          'running': 'in_progress'})
+        run_status = status_tb[status]
+
+        conclusion_tb = defaultdict(lambda: 'failure')
+        conclusion_tb.update({'success': 'success'})
+        conclusion = conclusion_tb[status]
+
+        await self._send_message(buildset_info, run_status, conclusion)
+
+    def _get_payload(self, buildset_info, run_status, conclusion):
+
+        payload = {'name': self.run_name,
+                   'head_branch': buildset_info['branch'],
+                   'head_sha': buildset_info['commit'],
+                   'status': run_status}
+
+        started_at = buildset_info.get('started')
+        if started_at:
+            dt = string2datetime(started_at)
+            started_at = datetime2string(
+                dt, dtformat="%Y-%m-%dT%H:%M:%S%z")
+
+            started_at = started_at.replace('+0000', 'Z')
+            payload.update({'started_at': started_at})
+
+        if run_status == 'completed':
+            dt = string2datetime(buildset_info['finished'])
+            completed_at = datetime2string(
+                dt, dtformat="%Y-%m-%dT%H:%M:%S%z")
+
+            completed_at = completed_at.replace('+0000', 'Z')
+            payload.update(
+                {'completed_at': completed_at,
+                 'conclusion': conclusion})
+
+        return payload
+
+    async def _send_message(self, buildset_info, run_status, conclusion):
+        self.log('sending check for {} buildset {}'.format(
+            self.sender['id'], buildset_info['id']), level='info')
+        full_name = self.sender['full_name']
+        install = await self.installation
+        url = settings.GITHUB_API_URL + 'repos/{}/check-runs'.format(
+            full_name)
+
+        payload = self._get_payload(buildset_info, run_status, conclusion)
+
+        header = await install._get_header(
+            accept='application/vnd.github.antiope-preview+json')
+        data = json.dumps(payload)
+        r = await requests.post(url, headers=header, data=data)
+
+        self.log('response from check for buildset {} - status: {}'.format(
+            buildset_info['id'], r.status), level='info')
+        self.log(r.text, level='debug')

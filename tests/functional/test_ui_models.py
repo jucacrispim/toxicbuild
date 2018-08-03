@@ -228,36 +228,6 @@ class RepositoryTest(BaseUITest):
             self.user, name='asdf/' + self.repo.name)
         self.assertEqual(len(repo.branches), 0)
 
-    @async_test
-    def test_enable_plugin(self):
-        self.repo = yield from Repository.add(self.user, name='some-repo',
-                                              url='bla@gla.com',
-                                              owner=self.user,
-                                              vcs_type='git',
-                                              update_seconds=200)
-        yield from self.repo.enable_plugin(
-            'slack-notification',
-            webhook_url='https://some.url.slack')
-        repo = yield from Repository.get(self.user,
-                                         name='asdf/' + 'some-repo')
-        self.assertEqual(len(repo.plugins), 1)
-
-    @async_test
-    def test_disable_plugin(self):
-        self.repo = yield from Repository.add(self.user, name='some-repo',
-                                              url='bla@gla.com',
-                                              owner=self.user,
-                                              vcs_type='git',
-                                              update_seconds=200)
-        yield from self.repo.enable_plugin(
-            'slack-notification',
-            webhook_url='https://some.url.slack')
-        kw = {'name': 'slack-notification'}
-        yield from self.repo.disable_plugin(**kw)
-        repo = yield from Repository.get(self.user,
-                                         name='asdf/' + 'some-repo')
-        self.assertEqual(len(repo.plugins), 0)
-
 
 class BuildsetTest(BaseUITest):
 

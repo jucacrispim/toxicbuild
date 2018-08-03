@@ -41,7 +41,6 @@ from toxicbuild.master.repository import Repository
 from toxicbuild.master.exceptions import (UIFunctionNotFound,
                                           OwnerDoesNotExist, NotEnoughPerms)
 from toxicbuild.master.exchanges import ui_notifications
-from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,
@@ -128,8 +127,6 @@ class HoleHandler:
     * `repo-remove-slave`
     * `repo-add-branch`
     * `repo-remove-branch`
-    * `repo-enable-plugin`
-    * `repo-disable-plugin`
     * `repo-start-build`
     * `repo-cancel-build`
     * `repo-enable`
@@ -139,8 +136,6 @@ class HoleHandler:
     * `slave-list`
     * `slave-remove`
     * `slave-update`
-    * `plugins-list`
-    * `plugin-get`
     * `buildset-list`
     * `builder-show`
     * `list-funcs`
@@ -403,29 +398,6 @@ class HoleHandler:
         await repo.remove_branch(branch_name)
         return {'repo-remove-branch': 'ok'}
 
-    async def repo_enable_plugin(self, repo_name_or_id, plugin_name, **kwargs):
-        """Enables a plugin to a repository.
-
-        :param repo_name_or_id: Repository name or id.
-        :param plugin_name: Plugin name
-        :param kwargs: kwargs passed to the plugin."""
-
-        kw = self._get_kw_for_name_or_id(repo_name_or_id)
-        repo = await Repository.get_for_user(self.protocol.user, **kw)
-        await repo.enable_plugin(plugin_name, **kwargs)
-        return {'repo-enable-plugin': 'ok'}
-
-    async def repo_disable_plugin(self, repo_name_or_id, **kwargs):
-        """Disables a plugin from a repository.
-
-        :param repo_name_or_id: Repository name or id.
-        :param kwargs: kwargs passed to the plugin"""
-
-        kw = self._get_kw_for_name_or_id(repo_name_or_id)
-        repo = await Repository.get_for_user(self.protocol.user, **kw)
-        await repo.disable_plugin(**kwargs)
-        return {'repo-disable-plugin': 'ok'}
-
     async def repo_start_build(self, repo_name_or_id, branch,
                                builder_name=None, named_tree=None,
                                slaves=None, builders_origin=None):
@@ -585,20 +557,6 @@ class HoleHandler:
             blist.append((await b.to_dict(id_as_str=True)))
 
         return {'builder-list': blist}
-
-    def plugins_list(self):
-        """Lists all plugins available to the master."""
-
-        plugins = MasterPlugin.list_plugins()
-        plugins_schemas = [p.get_schema(to_serialize=True) for p in plugins]
-        return {'plugins-list': plugins_schemas}
-
-    def plugin_get(self, **kwargs):
-        """Returns a specific plugin."""
-
-        name = kwargs.get('name')
-        plugin = MasterPlugin.get_plugin(name=name)
-        return {'plugin-get': plugin.get_schema(to_serialize=True)}
 
     async def builder_show(self, repo_name_or_id, builder_name, skip=0,
                            offset=None):

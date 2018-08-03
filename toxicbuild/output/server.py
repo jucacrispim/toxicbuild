@@ -22,9 +22,9 @@ from asyncio import get_event_loop
 from asyncio import sleep
 from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core.utils import LoggerMixin
-from toxicbuild.master.repository import Repository
 from toxicbuild.output.exchanges import (repo_notifications,
                                          build_notifications)
+from toxicbuild.output.notifications import Notification
 
 
 class OutputMethodServer(LoggerMixin):
@@ -63,7 +63,7 @@ class OutputMethodServer(LoggerMixin):
                 self.log('Got msg {} from {}'.format(
                     msg.body['event_type'], msg.body['repository_id']),
                     level='debug')
-                ensure_future(self.run_plugins(msg.body))
+                ensure_future(self.run_notifications(msg.body))
                 await msg.acknowledge()
 
             self._stop_consuming_messages = False
@@ -76,19 +76,21 @@ class OutputMethodServer(LoggerMixin):
     def sync_shutdown(self, signum=None, frame=None):
         self.loop.run_until_complete(self.shutdown())
 
-    async def run_plugins(self, msg):
-        """Runs all plugins for a given repository that react to a given
+    async def run_notifications(self, msg):
+        """Runs all notifications for a given repository that react to a given
         event type.
 
         :param msg: The incomming message from a notification"""
 
-        repo = await Repository.get(id=msg['repository_id'])
+        repo_id = msg['repository_id']
         event_type = msg['event_type']
 
-        self.log('Running plugins for event_type {}'.format(event_type),
+        notifications = Notification.get_repo_notifications(repo_id,
+                                                            event_type)
+        self.log('Running notifications for event_type {}'.format(event_type),
                  level='debug')
 
-        for plugin in repo.get_plugins_for_event(event_type):
+        async for notification in notifications:
             self.add_running_task()
-            t = ensure_future(plugin.run(repo, msg))
+            t = ensure_future(notification.run(msg))
             t.add_done_callback(lambda r: self.remove_running_task())

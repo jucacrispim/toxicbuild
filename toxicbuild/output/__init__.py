@@ -82,12 +82,6 @@ def run_toxicoutput(loglevel):
     from toxicbuild.output.exchanges import connect_exchanges
     loop.run_until_complete(connect_exchanges())
 
-    # this one must be imported so the plugin can run in the
-    # output process
-
-    from toxicbuild.integrations.github import (  # pylint: disable=W0612
-        GithubCheckRun)
-
     from toxicbuild.output.server import OutputMethodServer
     server = OutputMethodServer()
     loop = asyncio.get_event_loop()

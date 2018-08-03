@@ -309,64 +309,7 @@ class ToxicMasterTest(BaseFunctionalTest):
         self.assertTrue(response['body']['finished'])
 
     @async_test
-    def test_11_list_plugins(self):
-        with (yield from get_dummy_client(self.user)) as client:
-            resp = yield from client.request2server('plugins-list', {})
-
-        # - slack plugin
-        # - email plugin
-        # - custom_webhook plugin
-        self.assertEqual(len(resp), 3, resp)
-
-    @async_test
-    async def test_12_enable_plugin(self):
-
-        with (await get_dummy_client(self.user)) as client:
-            resp = await client.enable_plugin()
-
-        with (await get_dummy_client(self.user)) as client:
-            await client.start_build()
-
-        with (await get_dummy_client(self.user)) as client:
-            await client.write({'action': 'stream', 'token': '123',
-                                'body': {},
-                                'user_id': str(self.user.id)})
-
-            while True:
-                response = await client.get_response()
-                body = response['body'] if response else {}
-                if body.get('event_type') == 'build_finished':
-                    sleep_time = os.environ.get('TOXICSLEEP_TIME') or 5
-                    sleep_time = float(sleep_time)
-                    t = 0
-                    while t <= sleep_time:
-                        await asyncio.sleep(0.1)
-                        t += .1
-                    break
-
-        has_msg = await WebHookMessage.objects.count()
-        self.assertTrue(has_msg)
-        self.assertEqual(resp, 'ok', resp)
-
-    @async_test
-    def test_13_disable_plugin(self):
-
-        with (yield from get_dummy_client(self.user)) as client:
-            resp = yield from client.disable_plugin()
-
-        self.assertEqual(resp, 'ok', resp)
-
-    @async_test
-    def test_14_get_plugin(self):
-
-        with (yield from get_dummy_client(self.user)) as client:
-            resp = yield from client.request2server(
-                'plugin-get', {'name': 'slack-notification'})
-
-        self.assertEqual(resp['name'], 'slack-notification', resp)
-
-    @async_test
-    def test_15_stream_step_output(self):
+    def test_11_stream_step_output(self):
 
         with (yield from get_dummy_client(self.user)) as client:
             yield from client.write({'action': 'stream', 'token': '123',
@@ -393,20 +336,20 @@ class ToxicMasterTest(BaseFunctionalTest):
         self.assertTrue(steps)
 
     @async_test
-    async def test_16_add_user(self):
+    async def test_12_add_user(self):
         with (await get_dummy_client(self.user)) as client:
             r = await client.create_user()
         self.assertTrue(r['id'])
 
     @async_test
-    async def test_17_user_authenticate(self):
+    async def test_13_user_authenticate(self):
 
         with (await get_dummy_client(self.user)) as client:
             r = await client.user_authenticate()
         self.assertTrue(r['id'])
 
     @async_test
-    async def test_18_user_remove(self):
+    async def test_14_user_remove(self):
         with (await get_dummy_client(self.user)) as client:
             r = await client.remove_user()
         self.assertEqual(r, 'ok')

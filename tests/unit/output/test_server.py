@@ -17,14 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+from bson import ObjectId
 from unittest import TestCase
 from unittest.mock import patch
 from toxicbuild.core.exchange import JsonAckMessage
-from toxicbuild.master.plugins import NotificationPlugin
 from toxicbuild.master.repository import Repository
 from toxicbuild.master.users import User
 from toxicbuild.output import server
 from toxicbuild.output.exchanges import connect_exchanges, disconnect_exchanges
+from toxicbuild.output.notifications import (Notification, SlackNotification)
 from tests import async_test, AsyncMagicMock
 
 
@@ -34,40 +35,36 @@ class OutputMethodServerTest(TestCase):
     async def setUp(self):
         await connect_exchanges()
         self.server = server.OutputMethodServer()
-        self.user = User(email='a@a.com')
-        await self.user.save()
-        self.repo = Repository(name='my-repo',
-                               url='http://somewhere.com/bla.git',
-                               vcs_type='git', update_seconds=100,
-                               owner=self.user)
-        await self.repo.save()
-        await self.repo.enable_plugin('custom-webhook',
-                                      webhook_url='http://bla.com')
+        self.obj_id = ObjectId()
+        self.notification = SlackNotification(webhook_url='https://bla.nada',
+                                              repository_id=self.obj_id)
+        await self.notification.save()
 
+    @patch('aioamqp.protocol.logger')
     @async_test
-    async def tearDown(self):
-        await Repository.drop_collection()
-        await User.drop_collection()
+    async def tearDown(self, *args, **kwargs):
         await disconnect_exchanges()
+        await Notification.drop_collection()
 
-    @patch.object(NotificationPlugin, 'run', AsyncMagicMock(
-        spec=NotificationPlugin.run))
+    @patch.object(Notification, 'run', AsyncMagicMock(
+        spec=Notification.run))
     @async_test
-    async def test_run_plugins(self):
-        msg = {'repository_id': str(self.repo.id),
-               'event_type': 'build-finished'}
-        await self.server.run_plugins(msg)
-        self.assertTrue(NotificationPlugin.run.called)
+    async def test_run_notifications(self):
+        msg = {'repository_id': self.obj_id,
+               'event_type': 'buildset-finished'}
+        await self.server.run_notifications(msg)
+        self.assertTrue(Notification.run.called)
 
     @patch.object(server, 'repo_notifications', AsyncMagicMock(
         spec=server.repo_notifications))
-    @patch.object(server.OutputMethodServer, 'run_plugins', AsyncMagicMock(
-        spec=server.OutputMethodServer.run_plugins))
+    @patch.object(server.OutputMethodServer, 'run_notifications',
+                  AsyncMagicMock(
+                      spec=server.OutputMethodServer.run_notifications))
     @async_test
     async def test_handle_repo_notifications(self):
         msg = AsyncMagicMock(spec=JsonAckMessage)
         msg.body = {'event_type': 'repo-added',
-                    'repository_id': str(self.repo.id)}
+                    'repository_id': self.obj_id}
         consumer = server.repo_notifications.consume.return_value
 
         async def fm(cancel_on_timeout):
@@ -77,17 +74,18 @@ class OutputMethodServerTest(TestCase):
         consumer.fetch_message = fm
 
         await self.server._handle_repo_notifications()
-        self.assertTrue(self.server.run_plugins.called)
+        self.assertTrue(self.server.run_notifications.called)
 
     @patch.object(server, 'repo_notifications', AsyncMagicMock(
         spec=server.repo_notifications))
-    @patch.object(server.OutputMethodServer, 'run_plugins', AsyncMagicMock(
-        spec=server.OutputMethodServer.run_plugins))
+    @patch.object(server.OutputMethodServer, 'run_notifications',
+                  AsyncMagicMock(
+                      spec=server.OutputMethodServer.run_notifications))
     @async_test
     async def test_handle_repo_notifications_timeout(self):
         msg = AsyncMagicMock(spec=JsonAckMessage)
         msg.body = {'event_type': 'repo-added',
-                    'repository_id': str(self.repo.id)}
+                    'repository_id': self.obj_id}
         consumer = server.repo_notifications.consume.return_value
 
         async def fm(cancel_on_timeout):
@@ -97,17 +95,18 @@ class OutputMethodServerTest(TestCase):
         consumer.fetch_message = fm
 
         await self.server._handle_repo_notifications()
-        self.assertFalse(self.server.run_plugins.called)
+        self.assertFalse(self.server.run_notifications.called)
 
     @patch.object(server, 'build_notifications', AsyncMagicMock(
         spec=server.build_notifications))
-    @patch.object(server.OutputMethodServer, 'run_plugins', AsyncMagicMock(
-        spec=server.OutputMethodServer.run_plugins))
+    @patch.object(server.OutputMethodServer, 'run_notifications',
+                  AsyncMagicMock(
+                      spec=server.OutputMethodServer.run_notifications))
     @async_test
     async def test_handle_build_notifications(self):
         msg = AsyncMagicMock(spec=JsonAckMessage)
         msg.body = {'event_type': 'build-added',
-                    'repository_id': str(self.repo.id)}
+                    'repository_id': self.obj_id}
 
         consumer = server.build_notifications.consume.return_value
 
@@ -118,7 +117,7 @@ class OutputMethodServerTest(TestCase):
         consumer.fetch_message = fm
 
         await self.server._handle_build_notifications()
-        self.assertTrue(self.server.run_plugins.called)
+        self.assertTrue(self.server.run_notifications.called)
 
     @patch.object(server, 'sleep', AsyncMagicMock())
     @async_test

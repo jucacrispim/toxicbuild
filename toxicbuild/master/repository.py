@@ -39,9 +39,6 @@ from toxicbuild.master.exchanges import (update_code, poll_status,
                                          scheduler_action, repo_status_changed,
                                          repo_added, ui_notifications,
                                          repo_notifications)
-from toxicbuild.master.fields import (IgnoreUnknownListField,
-                                      HandleUnknownEmbeddedDocumentField)
-from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.signals import (build_started, build_finished)
 from toxicbuild.master.slave import Slave
 
@@ -105,10 +102,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     the repo was imported from an external service that sends webhooks
     (or something else) this should be False."""
 
-    plugins = IgnoreUnknownListField(
-        HandleUnknownEmbeddedDocumentField(MasterPlugin))
-    """The list of plugins enabled for this reposiory."""
-
     parallel_builds = IntField()
     """Max number of builds in parallel that this repo exeutes
     If None, there's no limit for parallel builds.
@@ -121,7 +114,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         'ordering': ['name'],
     }
 
-    _plugins_instances = {}
     _running_builds = 0
     _stop_consuming_messages = False
 
@@ -173,7 +165,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                    'branches': [b.to_dict() for b in self.branches],
                    'slaves': [s.to_dict(id_as_str)
                               for s in (await self.slaves)],
-                   'plugins': [p.to_dict() for p in self.plugins],
                    'enabled': self.enabled,
                    'parallel_builds': self.parallel_builds,
                    'clone_status': self.clone_status}
@@ -469,7 +460,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
           ``self.build_manager.start_pending``.
         * Connects to ``build_started`` and ``build_finished`` signals
           to handle changing of status.
-        * Runs the enabled plugins."""
+        """
 
         self.log('Scheduling {url}'.format(url=self.url))
 
@@ -611,51 +602,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         revision = RepositoryRevision(**kw)
         await revision.save()
         return revision
-
-    async def enable_plugin(self, plugin_name, **plugin_config):
-        """Enables a plugin to this repository.
-
-        :param plugin_name: The name of the plugin that is being enabled.
-        :param plugin_config: A dictionary containing the plugin's
-          configuration."""
-
-        plugin_cls = MasterPlugin.get_plugin(name=plugin_name)
-        plugin = plugin_cls(**plugin_config)
-        self.plugins.append(plugin)
-        await self.save()
-
-    def get_plugins_for_event(self, event):
-        """Returns the plugins that react for a given event.
-
-        :param event: The event for the plugins to react"""
-        return [p for p in self.plugins if event in p.events or not p.events]
-
-    def _match_kw(self, plugin, **kwargs):
-        """True if the plugin's attributes match the
-        kwargs.
-
-        :param plugin: A plugin instance.
-        :param kwargs: kwargs to match the plugin"""
-
-        for k, v in kwargs.items():
-            try:
-                attr = getattr(plugin, k)
-            except AttributeError:
-                return False
-            else:
-                if attr != v:
-                    return False
-
-        return True
-
-    async def disable_plugin(self, **kwargs):
-        """Disables a plugin to the repository.
-
-        :param kwargs: kwargs to match the plugin."""
-        matched = [p for p in self.plugins if self._match_kw(p, **kwargs)]
-        for p in matched:
-            self.plugins.remove(p)
-        await self.save()
 
     async def add_builds_for_slave(self, buildset, slave, builders=None,
                                    builders_origin=None):

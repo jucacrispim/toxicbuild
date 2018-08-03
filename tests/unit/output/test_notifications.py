@@ -19,6 +19,9 @@
 from bson.objectid import ObjectId
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
+from toxicbuild.integrations import github
+from toxicbuild.core.utils import (datetime2string, now, localtime2utc)
+from toxicbuild.master.users import User
 from toxicbuild.output import notifications
 from tests import async_test, AsyncMagicMock
 
@@ -48,10 +51,11 @@ class NotificationTest(TestCase):
             name = 'test-notification'
 
         self.notification_class = TestNotification
-        obj_id = ObjectId()
+        self.obj_id = ObjectId()
         self.notification = self.notification_class(
-            repository_id=obj_id, branches=['master', 'other'],
+            repository_id=self.obj_id, branches=['master', 'other'],
             statuses=['success', 'fail'])
+        await self.notification.save()
 
     @async_test
     async def tearDown(self):
@@ -76,37 +80,6 @@ class NotificationTest(TestCase):
         keys = {'id', 'name', 'pretty_name', 'description', '_cls',
                 'branches', 'statuses', 'repository_id'}
         self.assertEqual(set(translation.keys()), keys)
-
-    def test_list_for_event_type_no_notifications(self):
-
-        self.assertFalse(notifications.Notification.list_for_event_type(
-            'some-random-event'))
-
-    def test_list_for_event_type_no_events(self):
-
-        try:
-            class EventPlugin(notifications.Notification):
-                name = 'event-plugin'
-                type = 'test'
-                events = []
-
-            self.assertTrue(notifications.Notification.list_for_event_type(
-                'some-event', no_events=True))
-        finally:
-            del EventPlugin
-
-    def test_list_for_event_type(self):
-
-        try:
-            class EventPlugin(notifications.Notification):
-                name = 'event-plugin'
-                type = 'test'
-                events = ['some-event']
-
-            self.assertTrue(notifications.Notification.list_for_event_type(
-                'some-event'))
-        finally:
-            del EventPlugin
 
     @async_test
     async def test_to_dict(self):
@@ -188,6 +161,39 @@ class NotificationTest(TestCase):
     async def test_send_finished_message(self):
         with self.assertRaises(NotImplementedError):
             await self.notification.send_finished_message({})
+
+    @async_test
+    async def test_get_repo_notifications_with_event(self):
+
+        class MyNotification(notifications.Notification):
+
+            name = 'my-notification'
+            events = ['bla', 'ble']
+
+        obj_id = ObjectId()
+        notif = MyNotification(repository_id=obj_id)
+        await notif.save()
+
+        qs = notifications.Notification.get_repo_notifications(obj_id, 'bla')
+        count = await qs.count()
+        self.assertEqual(count, 1)
+
+    @async_test
+    async def test_get_repo_notifications_no_event(self):
+        class MyNotification(notifications.Notification):
+
+            name = 'my-notification'
+            events = []
+
+        notif = MyNotification(repository_id=self.obj_id)
+        await notif.save()
+
+        qs = notifications.Notification.get_repo_notifications(self.obj_id)
+
+        f = await qs.first()
+        count = await qs.count()
+        self.assertEqual(count, 1)
+        self.assertEqual('my-notification', f.name)
 
 
 class SlackNotificationTest(TestCase):
@@ -307,3 +313,99 @@ class CustomWebhookNotificationTest(TestCase):
             spec=self.notification._send_message)
         await self.notification.send_finished_message({})
         self.assertTrue(self.notification._send_message.called)
+
+
+class GithubCheckRunNotificationTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.user = User(email='a@a.com')
+        await self.user.save()
+        self.installation = github.GithubInstallation(
+            github_id=1234, user=self.user)
+        await self.installation.save()
+
+        await self.installation.save()
+        self.check_run = notifications.GithubCheckRunNotification(
+            installation=self.installation)
+
+    @async_test
+    async def tearDown(self):
+        await User.drop_collection()
+        await github.GithubInstallation.drop_collection()
+
+    @async_test
+    async def test_run(self):
+        info = {'status': 'fail', 'id': 'some-id',
+                'repository': {'id': 'some-repo-id'}}
+        self.check_run._send_message = AsyncMagicMock(
+            spec=self.check_run._send_message)
+
+        await self.check_run.run(info)
+        self.assertTrue(self.check_run._send_message.called)
+
+    def test_get_payload(self):
+        buildset_info = {'branch': 'master', 'commit': '123adf',
+                         'started': None}
+        run_status = 'pending'
+        conclusion = None
+        expected = {'name': self.check_run.run_name,
+                    'head_branch': 'master',
+                    'head_sha': '123adf',
+                    'status': run_status}
+        payload = self.check_run._get_payload(buildset_info, run_status,
+                                              conclusion)
+        self.assertEqual(payload, expected)
+
+    def test_get_payload_completed(self):
+        started = localtime2utc(now())
+        finished = localtime2utc(now())
+        buildset_info = {'branch': 'master', 'commit': '123adf',
+                         'started': datetime2string(started),
+                         'finished': datetime2string(finished)}
+
+        run_status = 'completed'
+        started_at = datetime2string(
+            started,
+            dtformat="%Y-%m-%dT%H:%M:%S%z").replace('+0000', 'Z')
+        completed_at = datetime2string(
+            finished,
+            dtformat="%Y-%m-%dT%H:%M:%S%z").replace('+0000', 'Z')
+        conclusion = None
+        expected = {'name': self.check_run.run_name,
+                    'head_branch': 'master',
+                    'head_sha': '123adf',
+                    'started_at': started_at,
+                    'status': run_status,
+                    'completed_at': completed_at,
+                    'conclusion': conclusion}
+
+        payload = self.check_run._get_payload(buildset_info, run_status,
+                                              conclusion)
+        self.assertEqual(payload, expected)
+
+    @patch.object(github.requests, 'post', AsyncMagicMock(
+        spec=github.requests.post))
+    @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
+        spec=github.GithubInstallation._get_header))
+    @async_test
+    async def test_send_message(self):
+        self.check_run.sender = {'id': 'some-id',
+                                 'full_name': 'bla/ble'}
+        started = localtime2utc(now())
+        finished = localtime2utc(now())
+        buildset_info = {'branch': 'master', 'commit': '123adf',
+                         'started': datetime2string(started),
+                         'finished': datetime2string(finished),
+                         'id': 'some-id'}
+
+        run_status = 'completed'
+        conclusion = None
+        ret = MagicMock()
+        ret.text = ''
+        ret.status = 201
+        github.requests.post.return_value = ret
+
+        await self.check_run._send_message(buildset_info, run_status,
+                                           conclusion)
+        self.assertTrue(github.requests.post.called)

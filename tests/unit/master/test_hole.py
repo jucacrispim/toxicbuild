@@ -22,7 +22,7 @@ from datetime import datetime
 from unittest import TestCase
 from unittest.mock import MagicMock, Mock, patch
 from bson import ObjectId
-from toxicbuild.master import hole, build, repository, slave, plugins
+from toxicbuild.master import hole, build, repository, slave
 from tests import async_test, AsyncMagicMock, create_autospec
 
 
@@ -430,55 +430,6 @@ class HoleHandlerTest(TestCase):
             await hole.Repository.objects.to_list())]
         self.assertEqual((await hole.Repository.objects.count()),
                          1, allrepos)
-
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
-        spec=build.BuildSet.notify))
-    @async_test
-    async def test_repo_enable_plugin(self):
-
-        class TestPlugin(plugins.MasterPlugin):
-            name = 'test-hole-plugin'
-            type = 'test'
-
-            @asyncio.coroutine
-            def run(self, sender):
-                pass
-
-        await self._create_test_data()
-        action = 'repo-enable-plugin'
-        protocol = MagicMock()
-        protocol.user = self.owner
-        handler = hole.HoleHandler({}, action, protocol)
-        await handler.repo_enable_plugin(self.repo.id,
-                                         'test-hole-plugin')
-        repo = await hole.Repository.objects.get(id=self.repo.id)
-        self.assertEqual(len(repo.plugins), 1)
-
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
-        spec=build.BuildSet.notify))
-    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
-    @async_test
-    async def test_repo_disable_plugin(self):
-
-        class TestPlugin(plugins.MasterPlugin):
-            name = 'test-hole-plugin'
-            type = 'test'
-
-            @asyncio.coroutine
-            def run(self, sender):
-                pass
-
-        await self._create_test_data()
-        action = 'repo-enable-plugin'
-        protocol = MagicMock()
-        protocol.user = self.owner
-        handler = hole.HoleHandler({}, action, protocol)
-        await handler.repo_enable_plugin(self.repo.full_name,
-                                         'test-hole-plugin')
-        kw = {'name': 'test-hole-plugin'}
-        await handler.repo_disable_plugin(self.repo.id, **kw)
-        repo = await hole.Repository.objects.get(id=self.repo.id)
-        self.assertEqual(len(repo.plugins), 0)
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -933,22 +884,6 @@ class HoleHandlerTest(TestCase):
             id__in=[self.builders[0].id]))['builder-list']
         self.assertEqual(builders[0]['id'], str(self.builders[0].id))
 
-    def test_plugins_list(self):
-        handler = hole.HoleHandler({}, 'plugin-list', MagicMock())
-        plugins_count = len(hole.MasterPlugin.list_plugins())
-        plugins = handler.plugins_list()
-        self.assertEqual(len(plugins['plugins-list']), plugins_count)
-        self.assertIn('name', plugins['plugins-list'][0].keys())
-
-        expected = {'pretty_name': 'Statuses',
-                    'name': 'statuses', 'type': 'list'}
-        self.assertEqual(plugins['plugins-list'][0]['statuses'], expected)
-
-    def test_plugin_get(self):
-        handler = hole.HoleHandler({}, 'plugin-list', MagicMock())
-        plugin = handler.plugin_get(name='slack-notification')
-        self.assertTrue(plugin)
-
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
@@ -1024,9 +959,7 @@ class HoleHandlerTest(TestCase):
                     'repo_remove_slave': handler.repo_remove_slave,
                     'repo_add_branch': handler.repo_add_branch,
                     'repo_remove_branch': handler.repo_remove_branch,
-                    'repo_enable_plugin': handler.repo_enable_plugin,
                     'repo_start_build': handler.repo_start_build,
-                    'repo_disable_plugin': handler.repo_disable_plugin,
                     'repo_cancel_build': handler.repo_cancel_build,
                     'repo_enable': handler.repo_enable,
                     'repo_disable': handler.repo_disable,
@@ -1037,8 +970,6 @@ class HoleHandlerTest(TestCase):
                     'slave_update': handler.slave_update,
                     'buildset_list': handler.buildset_list,
                     'builder_list': handler.builder_list,
-                    'plugins_list': handler.plugins_list,
-                    'plugin_get': handler.plugin_get,
                     'builder_show': handler.builder_show,
                     'user_add': handler.user_add,
                     'user_remove': handler.user_remove,
@@ -1054,9 +985,6 @@ class HoleHandlerTest(TestCase):
     async def test_get_repo_dict(self):
         await self._create_test_data()
         self.repo.slaves = [self.slave]
-        plugin = Mock()
-        plugin.to_dict.return_value = {'name': 'myplugin'}
-        self.repo.plugins = [plugin]
 
         handler = hole.HoleHandler({}, 'action', MagicMock())
         repo_dict = await handler._get_repo_dict(self.repo)

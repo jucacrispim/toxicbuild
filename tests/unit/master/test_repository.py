@@ -30,16 +30,6 @@ from toxicbuild.master.exchanges import (connect_exchanges,
 from tests import async_test, AsyncMagicMock, create_autospec
 
 
-class RepoPlugin(repository.MasterPlugin):
-    name = 'repo-plugin'
-    type = 'test'
-    events = ['repo-event']
-
-    @asyncio.coroutine
-    def run(self, sender):
-        pass
-
-
 class RepositoryTest(TestCase):
 
     @classmethod
@@ -75,7 +65,6 @@ class RepositoryTest(TestCase):
         await repository.BuildSet.drop_collection()
         await slave.Slave.drop_collection()
         await build.Builder.drop_collection()
-        repository.Repository._plugins_instances = {}
         await users.User.drop_collection()
         super(RepositoryTest, self).tearDown()
 
@@ -83,7 +72,6 @@ class RepositoryTest(TestCase):
     async def test_to_dict(self):
         d = await self.repo.to_dict()
         self.assertTrue(d['id'])
-        self.assertTrue('plugins' in d.keys())
 
     @async_test
     async def test_to_dict_id_as_str(self):
@@ -334,29 +322,19 @@ class RepositoryTest(TestCase):
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     def test_schedule(self):
         self.repo.scheduler = Mock(spec=self.repo.scheduler)
-        plugin = MagicMock
-        plugin.name = 'my-plugin'
-        plugin.run = AsyncMagicMock()
-        self.repo.plugins = [plugin]
         self.repo.schedule()
 
         self.assertTrue(self.repo.scheduler.add.called)
-        self.assertTrue(self.repo.plugins[0].called)
         self.assertTrue(repository.scheduler_action.publish.called)
 
     @patch.object(repository.utils, 'log', Mock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     def test_schedule_no_poller(self):
         self.repo.scheduler = Mock(spec=self.repo.scheduler)
-        plugin = MagicMock
-        plugin.name = 'my-plugin'
-        plugin.run = AsyncMagicMock()
-        self.repo.plugins = [plugin]
         self.repo.schedule_poller = False
         self.repo.schedule()
 
         self.assertTrue(self.repo.scheduler.add.called)
-        self.assertTrue(self.repo.plugins[0].called)
         self.assertFalse(repository.scheduler_action.publish.called)
 
     @patch.object(repository.utils, 'log', Mock())
@@ -469,45 +447,6 @@ class RepositoryTest(TestCase):
         self.assertTrue(rev.id)
         self.assertEqual('uhuuu!!', rev.title)
         self.assertTrue(rev.external)
-
-    @async_test
-    async def test_enable_plugin(self):
-        await self.repo.save()
-        await self.repo.enable_plugin('repo-plugin')
-        self.assertEqual(len(self.repo.plugins), 1)
-
-    @async_test
-    async def test_get_plugins_for_event(self):
-        await self.repo.save()
-        await self.repo.enable_plugin('repo-plugin')
-        plugins = self.repo.get_plugins_for_event('repo-event')
-        self.assertEqual(len(plugins), 1)
-
-    def test_match_kw(self):
-        plugin = repository.MasterPlugin()
-        kw = {'name': 'BaseMasterPlugin', 'type': None}
-        match = self.repo._match_kw(plugin, **kw)
-        self.assertTrue(match)
-
-    def test_match_not_matching(self):
-        plugin = repository.MasterPlugin()
-        kw = {'name': 'BaseMasterPlugin', 'type': 'bla'}
-        match = self.repo._match_kw(plugin, **kw)
-        self.assertFalse(match)
-
-    def test_test_match_bad_attr(self):
-        plugin = repository.MasterPlugin()
-        kw = {'name': 'BaseMasterPlugin', 'other': 'ble'}
-        match = self.repo._match_kw(plugin, **kw)
-        self.assertFalse(match)
-
-    @async_test
-    async def test_disable_plugin(self):
-        await self.repo.save()
-        await self.repo.enable_plugin('repo-plugin')
-        kw = {'name': 'repo-plugin'}
-        await self.repo.disable_plugin(**kw)
-        self.assertEqual(len(self.repo.plugins), 0)
 
     @async_test
     async def test_add_builds_for_slave(self):

@@ -140,45 +140,6 @@ class RepositoryRestAPITest(TestCase):
         self.assertEqual(
             resp.json()['repo-remove-branch'], '1 branches removed')
 
-    def test_enable_plugin(self):
-        url = settings.REPO_API_URL
-        data = {'name': 'somerepo', 'url': 'https://somebla.com',
-                'vcs_type': 'git'}
-        self.session.post(url, data=json.dumps(data))
-
-        plugin_data = {'plugin_name': 'custom-webhook',
-                       'branches': ['master'], 'statuses': ['fail'],
-                       'webhook_url': 'https://bla.com'}
-
-        resp = self.session.post(url + 'enable-plugin?name=a/somerepo',
-                                 data=json.dumps(plugin_data))
-        self.assertEqual(resp.json()['repo-enable-plugin'],
-                         'plugin custom-webhook enabled')
-
-    def test_disable_plugin(self):
-        url = settings.REPO_API_URL
-        data = {'name': 'somerepo', 'url': 'https://somebla.com',
-                'vcs_type': 'git'}
-        self.session.post(url, data=json.dumps(data))
-
-        plugin_data = {'plugin_name': 'custom-webhook',
-                       'branches': ['master'], 'statuses': ['fail'],
-                       'webhook_url': 'https://bla.com'}
-
-        self.session.post(url + 'enable-plugin?name=a/a/somerepo',
-                          data=json.dumps(plugin_data))
-
-        rm_data = {'plugin_name': 'custom-webhook'}
-        resp = self.session.post(url + 'disable-plugin?name=a/somerepo',
-                                 data=json.dumps(rm_data))
-        self.assertEqual(resp.json()['repo-disable-plugin'],
-                         'plugin custom-webhook disabled')
-
-    def test_list_plugins(self):
-        url = settings.REPO_API_URL + 'list-plugins'
-        resp = self.session.get(url)
-        self.assertEqual(len(resp.json()['items']), 3)
-
 
 class SlaveRestAPITest(TestCase):
 
