@@ -112,7 +112,7 @@ class BaseModel:
             kw[key] = name
 
         obj_id = kw.pop('id', None)
-        if id:
+        if obj_id:
             kw[key] = obj_id
 
 
