@@ -155,21 +155,19 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         """Returns the number of running builds among all the repos."""
         return cls._running_builds
 
-    async def to_dict(self, id_as_str=False):
+    async def to_dict(self):
         """Returns a dict representation of the object."""
 
-        my_dict = {'id': self.id, 'name': self.name, 'url': self.url,
+        my_dict = {'id': str(self.id), 'name': self.name, 'url': self.url,
                    'full_name': self.full_name,
                    'update_seconds': self.update_seconds,
                    'vcs_type': self.vcs_type,
                    'branches': [b.to_dict() for b in self.branches],
-                   'slaves': [s.to_dict(id_as_str)
+                   'slaves': [s.to_dict(True)
                               for s in (await self.slaves)],
                    'enabled': self.enabled,
                    'parallel_builds': self.parallel_builds,
                    'clone_status': self.clone_status}
-        if id_as_str:
-            my_dict['id'] = str(self.id)
 
         return my_dict
 
@@ -236,7 +234,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     @classmethod
     async def _notify_repo_creation(cls, repo):
-        repo_added_msg = await repo.to_dict(id_as_str=True)
+        repo_added_msg = await repo.to_dict()
         await repo_added.publish(repo_added_msg)
         repo_added_msg['msg_type'] = 'repo_added'
         async for user in await repo.get_allowed_users():

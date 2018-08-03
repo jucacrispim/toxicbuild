@@ -73,11 +73,6 @@ class RepositoryTest(TestCase):
         d = await self.repo.to_dict()
         self.assertTrue(d['id'])
 
-    @async_test
-    async def test_to_dict_id_as_str(self):
-        d = await self.repo.to_dict(True)
-        self.assertIsInstance(d['id'], str)
-
     @patch.object(repository, 'repo_notifications', AsyncMagicMock(
         spec=repository.repo_notifications))
     @async_test

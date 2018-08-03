@@ -642,7 +642,7 @@ class HoleHandler:
     async def _get_repo_dict(self, repo):
         """Returns a dictionary for a given repository"""
 
-        repo_dict = await repo.to_dict(id_as_str=True)
+        repo_dict = await repo.to_dict()
         last_buildset_dict = await self._get_last_buildset_info(repo)
         repo_dict['last_buildset'] = last_buildset_dict
 
@@ -763,7 +763,7 @@ class UIStreamHandler(LoggerMixin):
 
         build_dict = build.to_dict()
         slave = slave.to_dict(id_as_str=True)
-        repo = await repo.to_dict(id_as_str=True)
+        repo = await repo.to_dict()
         buildset = await build.get_buildset()
 
         build_dict['slave'] = slave
@@ -790,7 +790,7 @@ class UIStreamHandler(LoggerMixin):
         :param message: A message from the repo_status_changed exchange."""
 
         repo = await Repository.objects.get(id=message.body['repository_id'])
-        rdict = await repo.to_dict(id_as_str=True)
+        rdict = await repo.to_dict()
         rdict['status'] = message.body['new_status']
         rdict['old_status'] = message.body['old_status']
         rdict['event_type'] = 'repo_status_changed'
