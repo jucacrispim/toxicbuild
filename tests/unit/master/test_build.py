@@ -43,6 +43,14 @@ class BuildStepTest(TestCase):
         objdict = bs.to_dict()
         self.assertEqual(objdict['total_time'], '0:00:02')
 
+    def test_to_dict_no_output(self):
+        bs = build.BuildStep(
+            name='bla', command='ls', status='fail', started=now(),
+            finished=now() + datetime.timedelta(seconds=2), total_time=2)
+
+        objdict = bs.to_dict(output=False)
+        self.assertNotIn('output', list(objdict.keys()))
+
     def test_to_json(self):
         bs = build.BuildStep(name='bla',
                              command='ls',

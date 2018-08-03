@@ -179,18 +179,21 @@ class BuildStep(EmbeddedDocument):
     total_time = IntField()
     """The total time spen in the step."""
 
-    def to_dict(self):
+    def to_dict(self, output=True):
         """Returns a dict representation of the BuildStep."""
 
-        objdict = json.loads(super().to_json())
-        objdict['uuid'] = str(self.uuid)
-        keys = objdict.keys()
-        if 'started' not in keys:
+        objdict = {'uuid': str(self.uuid), 'name': self.name,
+                   'command': self.command, 'status': self.status}
+
+        if output:
+            objdict['output'] = output
+
+        if not self.started:
             objdict['started'] = None
         else:
             objdict['started'] = datetime2string(self.started)
 
-        if 'finished' not in keys:
+        if not self.finished:
             objdict['finished'] = None
         else:
             objdict['finished'] = datetime2string(self.finished)
@@ -264,16 +267,17 @@ class Build(EmbeddedDocument):
     """Indicates the branch from which the builders for this build came from.
     This may not be the same as the build branch."""
 
-    def to_dict(self, id_as_str=False):
+    def to_dict(self):
         """Transforms the object into a dictionary.
 
         :param id_as_str: Indicates if the id should be a string or an
           ObjectId instance."""
 
+        objdict = {'uuid': str(self.uuid), 'named_tree': self.named_tree,
+                   'branch': self.branch}
+
         steps = [s.to_dict() for s in self.steps]
-        objdict = json.loads(super().to_json())
-        objdict['builder']['id'] = objdict['builder']['$oid']
-        objdict['uuid'] = str(self.uuid)
+        objdict['builder'] = {'id': str(self._data.get('builder').id)}
         objdict['steps'] = steps
         objdict['started'] = datetime2string(
             self.started) if self.started else ''
@@ -294,7 +298,7 @@ class Build(EmbeddedDocument):
     def to_json(self):
         """Returns a json representation of the buld."""
 
-        objdict = self.to_dict(id_as_str=True)
+        objdict = self.to_dict()
         return json.dumps(objdict)
 
     async def update(self):
@@ -428,7 +432,7 @@ class BuildSet(SerializeMixin, Document):
 
         repo = await self.repository
         repo_id = str(repo.id)
-        msg = self.to_dict(id_as_str=True)
+        msg = self.to_dict()
         msg['event_type'] = event_type
         msg['status'] = status or self.get_status()
         msg['repository_id'] = repo_id
@@ -452,10 +456,13 @@ class BuildSet(SerializeMixin, Document):
         ensure_future(buildset.notify('buildset-added'))
         return buildset
 
-    def to_dict(self, id_as_str=False):
+    def to_dict(self):
         """Returns a dict representation of the object"""
 
-        objdict = super().to_dict(id_as_str=id_as_str)
+        repo_id = str(self._data.get('repository').id)
+        objdict = {'id': str(self.id), 'commit': self.commit,
+                   'branch': self.branch, 'author': self.author,
+                   'title': self.title, 'repository': {'id': repo_id}}
         objdict['commit_date'] = datetime2string(self.commit_date)
         objdict['created'] = datetime2string(self.created)
         objdict['started'] = datetime2string(self.started) if self.started \
@@ -471,13 +478,13 @@ class BuildSet(SerializeMixin, Document):
 
         objdict['builds'] = []
         for b in self.builds:
-            bdict = b.to_dict(id_as_str=id_as_str)
+            bdict = b.to_dict()
             objdict['builds'].append(bdict)
         return objdict
 
     def to_json(self):
         """Returns a json representation of the object."""
-        objdict = self.to_dict(id_as_str=True)
+        objdict = self.to_dict()
         return json.dumps(objdict)
 
     def get_status(self):

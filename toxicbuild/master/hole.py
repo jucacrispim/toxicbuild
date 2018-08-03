@@ -539,7 +539,7 @@ class HoleHandler:
         buildset_list = []
         buildsets = await buildsets.to_list()
         for b in buildsets:
-            bdict = b.to_dict(id_as_str=True)
+            bdict = b.to_dict()
             buildset_list.append(bdict)
 
         return {'buildset-list': buildset_list}
@@ -761,14 +761,14 @@ class UIStreamHandler(LoggerMixin):
         repo = await Repository.objects.get(id=sender)
         slave = await build.slave
 
-        build_dict = build.to_dict(id_as_str=True)
+        build_dict = build.to_dict()
         slave = slave.to_dict(id_as_str=True)
         repo = await repo.to_dict(id_as_str=True)
         buildset = await build.get_buildset()
 
         build_dict['slave'] = slave
         build_dict['repository'] = repo
-        build_dict['buildset'] = buildset.to_dict(id_as_str=True)
+        build_dict['buildset'] = buildset.to_dict()
 
         if step:
             step = step.to_dict()
