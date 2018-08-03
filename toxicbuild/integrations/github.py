@@ -18,21 +18,17 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future, gather
-from collections import defaultdict
 from datetime import timedelta
 import hashlib
 import hmac
-import json
 import jwt
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, DateTimeField, IntField,
                                ReferenceField, EmbeddedDocumentListField)
 from toxicbuild.core import requests
 from toxicbuild.core.utils import (string2datetime, now, localtime2utc,
-                                   LoggerMixin, utc2localtime,
-                                   datetime2string)
+                                   LoggerMixin, utc2localtime)
 from toxicbuild.integrations import settings
-from toxicbuild.master.build import BuildSet
 from toxicbuild.master.repository import Repository, RepositoryBranch
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.users import User

@@ -59,7 +59,7 @@ class ToxicRequest(PyroRequest):
 
     def items(self):
         """Returns the request items"""
-        for k, v in self.new_request.items():
+        for k in self.new_request.keys():
             yield k, self.get(k)
 
     def get(self, key, default=None):
@@ -132,6 +132,8 @@ class LoginHandler(TemplateHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.body = None
+        self.query = None
+        self.user = None
 
     async def async_prepare(self):
         await super().async_prepare()

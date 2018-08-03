@@ -111,9 +111,9 @@ class BaseModel:
         if name:
             kw[key] = name
 
-        id = kw.pop('id', None)
+        obj_id = kw.pop('id', None)
         if id:
-            kw[key] = id
+            kw[key] = obj_id
 
 
 class User(BaseModel):
