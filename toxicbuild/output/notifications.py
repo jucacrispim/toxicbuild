@@ -145,6 +145,10 @@ class Notification(LoggerMixin, Plugin, Document, metaclass=MetaNotification):
 
     meta = {'allow_inheritance': True}
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sender = None
+
     @classmethod
     def _create_field_dict(cls, field):
         try:
