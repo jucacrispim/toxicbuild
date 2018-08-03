@@ -18,7 +18,6 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import os
 from unittest.mock import patch, Mock
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.master import settings
@@ -27,7 +26,6 @@ from toxicbuild.master.users import User
 from toxicbuild.master.exchanges import scheduler_action
 from tests import async_test
 from tests.functional import BaseFunctionalTest, REPO_DIR
-from tests.functional.custom_webhook import WebHookMessage
 
 
 class DummyUIClient(BaseToxicClient):

@@ -21,8 +21,6 @@ from bson import ObjectId
 from unittest import TestCase
 from unittest.mock import patch
 from toxicbuild.core.exchange import JsonAckMessage
-from toxicbuild.master.repository import Repository
-from toxicbuild.master.users import User
 from toxicbuild.output import server
 from toxicbuild.output.exchanges import connect_exchanges, disconnect_exchanges
 from toxicbuild.output.notifications import (Notification, SlackNotification)

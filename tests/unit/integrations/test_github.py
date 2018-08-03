@@ -23,9 +23,7 @@ import json
 import os
 from unittest import TestCase
 from unittest.mock import Mock, patch, MagicMock
-from toxicbuild.core.utils import now, datetime2string, localtime2utc
 from toxicbuild.master import repository
-from toxicbuild.master.users import User
 from toxicbuild.integrations import github
 from tests import async_test, AsyncMagicMock, create_autospec
 from tests.unit.integrations import INTEGRATIONS_DATA_PATH
