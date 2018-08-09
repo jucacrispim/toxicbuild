@@ -22,7 +22,9 @@ import asyncio
 from collections import OrderedDict
 import datetime
 import json
+from toxicbuild.core import requests
 from toxicbuild.core.utils import string2datetime
+from toxicbuild.ui import settings
 from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui.utils import (is_datetime, get_client_settings,
                                  format_datetime)
@@ -451,3 +453,61 @@ class Repository(BaseModel):
             resp = await client.repo_disable(repo_name_or_id=self.id)
 
         return resp
+
+
+class Notification(BaseModel):
+    """Integration with the notifications api."""
+
+    api_url = settings.NOTIFICATIONS_API_URL
+    api_token = settings.NOTIFICATIONS_API_TOKEN
+
+    def __init__(self, ordered_kwargs):
+        super().__init__(None, ordered_kwargs)
+
+    @classmethod
+    def _get_headers(cls):
+        return {'Authorization': 'token {}'.format(cls.api_token)}
+
+    @classmethod
+    async def list(cls, obj_id=None):
+        """Lists all the notifications available.
+
+        :param obj_id: The of of an repository. If not None, the notifications
+          will return the values of the configuration for that repository."""
+
+        url = '{}/list/'.format(cls.api_url)
+        if obj_id:
+            url += obj_id
+        headers = cls._get_headers()
+        r = await requests.get(url, headers=headers)
+        notifications = r.json()['notifications']
+        return [cls(n) for n in notifications]
+
+    @classmethod
+    async def enable(self, repo_id, notif_name, **config):
+        """Enables a notification for a given repository.
+
+        :param repo_id: The id of the repository to enable the notification.
+        :param notif_name: The name of the notification.
+        :param config: A dictionary with the config values for the
+          notification.
+        """
+
+        url = '{}/{}'.format(self.api_url, notif_name)
+        config['repository_id'] = repo_id
+        headers = self._get_headers()
+        r = await requests.post(url, headers=headers, data=json.dumps(config))
+        return r
+
+    @classmethod
+    async def disable(self, repo_id, notif_name):
+        """Disables a notification for a given repository.
+
+        :param repo_id: The id of the repository to enable the notification.
+        :param notif_name: The name of the notification.
+        """
+        url = '{}/{}'.format(self.api_url, notif_name)
+        config = {'repository_id': repo_id}
+        headers = self._get_headers()
+        r = await requests.delete(url, headers=headers, data=json.dumps(config))
+        return r

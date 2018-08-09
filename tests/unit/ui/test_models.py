@@ -24,8 +24,8 @@ import json
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 import tornado
-from toxicbuild.ui import models, client
-from tests import async_test
+from toxicbuild.ui import models, client, settings
+from tests import async_test, AsyncMagicMock
 
 
 class BaseModelTest(TestCase):
@@ -466,3 +466,72 @@ class BuilderTest(TestCase):
 
         self.assertEqual(len(builders), 2)
         self.assertEqual(builders[0].name, 'b0')
+
+
+class NotificationTest(TestCase):
+
+    def setUp(self):
+        self.notification = models.Notification({})
+
+    def test_get_headers(self):
+        expected = {'Authorization': 'token {}'.format(
+            settings.NOTIFICATIONS_API_TOKEN)}
+        returned = self.notification._get_headers()
+        self.assertEqual(expected, returned)
+
+    @patch.object(models.requests, 'get', AsyncMagicMock(
+        spec=models.requests.get))
+    @async_test
+    async def test_list_no_repo(self):
+        r = MagicMock()
+        models.requests.get.return_value = r
+        r.json.return_value = {'notifications': [{'name': 'bla'}]}
+
+        r = await self.notification.list()
+        self.assertEqual(r[0].name, 'bla')
+
+    @patch.object(models.requests, 'get', AsyncMagicMock(
+        spec=models.requests.get))
+    @async_test
+    async def test_list_for_repo(self):
+        r = MagicMock()
+        obj_id = 'fake-obj-id'
+        models.requests.get.return_value = r
+        r.json.return_value = {'notifications': [{'name': 'bla'}]}
+
+        r = await self.notification.list(obj_id)
+        self.assertEqual(r[0].name, 'bla')
+
+    @patch.object(models.requests, 'post', AsyncMagicMock(
+        spec=models.requests.post))
+    @async_test
+    async def test_enable(self):
+        obj_id = 'fake-obj-id'
+        notif_name = 'slack-notification'
+        config = {'webhook_url': 'https://somewebhook.url'}
+        expected_config = {'webhook_url': 'https://somewebhook.url',
+                           'repository_id': obj_id}
+        expected_url = '{}/{}'.format(self.notification.api_url,
+                                      notif_name)
+        await self.notification.enable(obj_id, notif_name, **config)
+        called_url = models.requests.post.call_args[0][0]
+        called_config = json.loads(models.requests.post.call_args[1]['data'])
+
+        self.assertEqual(expected_url, called_url)
+        self.assertEqual(expected_config, called_config)
+
+    @patch.object(models.requests, 'delete', AsyncMagicMock(
+        spec=models.requests.delete))
+    @async_test
+    async def test_disable(self):
+        obj_id = 'fake-obj-id'
+        notif_name = 'slack-notification'
+        expected_config = {'repository_id': obj_id}
+        expected_url = '{}/{}'.format(self.notification.api_url,
+                                      notif_name)
+        await self.notification.disable(obj_id, notif_name)
+        called_url = models.requests.delete.call_args[0][0]
+        called_config = json.loads(models.requests.delete.call_args[1]['data'])
+
+        self.assertEqual(expected_url, called_url)
+        self.assertEqual(expected_config, called_config)
