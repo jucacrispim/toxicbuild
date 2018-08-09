@@ -52,7 +52,9 @@ def create(root_dir):  # pragma no cover
     # first we create a slave and a master
     slave_token = create_slave(slave_root)
     master_token = create_master(master_root)
+    # integrations
     create_integrations(integrations_root)
+    # output
     create_output(output_root)
     # a super user to access stuff
     conffile = os.path.join(master_root, 'toxicmaster.conf')
