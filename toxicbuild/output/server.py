@@ -107,6 +107,10 @@ class NotificationWebHandler(LoggerMixin, BasePyroAuthHandler):
     """Web handler responsible for listing notification methods and
     enabling/disabling notifications for repositories."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.body = None
+
     async def async_prepare(self):
         if self.request.body:
             self.body = json.loads(self.request.body)

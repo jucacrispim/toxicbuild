@@ -200,35 +200,6 @@ class UserTest(TestCase):
         self.assertEqual(r, 'ok')
 
 
-class PluginTest(TestCase):
-
-    @patch.object(models.Plugin, 'get_client', lambda requester:
-                  get_client_mock(None, [
-                      {'name': 'some-plugin', 'type': 'test',
-                       'somefield': {'type': 'list',
-                                     'pretty_name': 'Some Field'},
-                       'otherfield': {'type': 'string',
-                                      'pretty_name': ''}}]))
-    @async_test
-    def test_list(self):
-        requester = MagicMock()
-        plugins = yield from models.Plugin.list(requester)
-        self.assertEqual(plugins[0].name, 'some-plugin')
-
-    @patch.object(models.Plugin, 'get_client', lambda requester:
-                  get_client_mock(None,
-                                  {'name': 'some-plugin', 'type': 'test',
-                                   'somefield': {'type': 'list',
-                                                 'pretty_name': 'Some Field'},
-                                   'otherfield': {'type': 'string',
-                                                  'pretty_name': ''}}))
-    @async_test
-    def test_get(self):
-        requester = MagicMock()
-        plugin = yield from models.Plugin.get(requester, 'some-plugin')
-        self.assertEqual(plugin.name, 'some-plugin')
-
-
 class RepositoryTest(TestCase):
 
     def setUp(self):
@@ -358,26 +329,6 @@ class RepositoryTest(TestCase):
         self.repository.get_client = lambda requester: get_client_mock(
             requester, 'ok')
         resp = yield from self.repository.update(update_seconds=1000)
-        self.assertEqual(resp, 'ok')
-
-    @async_test
-    def test_enable_plugin(self):
-        self.repository.get_client = lambda requester: get_client_mock(
-            requester, 'ok')
-
-        resp = yield from self.repository.enable_plugin('some-plugin',
-                                                        bla='bla',
-                                                        ble=0)
-
-        self.assertEqual(resp, 'ok')
-
-    @async_test
-    def test_disable_plugin(self):
-        self.repository.get_client = lambda requester: get_client_mock(
-            requester, 'ok')
-
-        resp = yield from self.repository.disable_plugin(name='some-plugin')
-
         self.assertEqual(resp, 'ok')
 
     @async_test

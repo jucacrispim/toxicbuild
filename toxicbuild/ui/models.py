@@ -223,36 +223,6 @@ class Slave(BaseModel):
         return resp
 
 
-class Plugin(BaseModel):
-    """A repository plugin."""
-
-    @classmethod
-    @asyncio.coroutine
-    def list(cls, requester):
-        """Lists all plugins available in the master.
-
-        :param requester: The user who is requesting the operation."""
-
-        with (yield from cls.get_client(requester)) as client:
-            resp = yield from client.plugins_list()
-
-        plugins = [cls(requester, p) for p in resp]
-        return plugins
-
-    @classmethod
-    @asyncio.coroutine
-    def get(cls, requester, name):
-        """Return the schema for a specific plugin
-
-        :param requester: The user who is requesting the operation.
-        :param name: The name of the plugin"""
-
-        with (yield from cls.get_client(requester)) as client:
-            resp = yield from client.plugin_get(name=name)
-
-        return cls(requester, resp)
-
-
 class Builder(BaseModel):
 
     @classmethod
@@ -308,7 +278,6 @@ class Repository(BaseModel):
     """Class representing a repository."""
 
     references = {'slaves': Slave,
-                  'plugins': Plugin,
                   'last_buildset': BuildSet}
 
     @classmethod
@@ -456,36 +425,9 @@ class Repository(BaseModel):
 
         d = super().to_dict()
         d['slaves'] = [s.to_dict() for s in d['slaves']]
-        d['plugins'] = [p.to_dict() for p in d['plugins']]
         if self.last_buildset:
             d['last_buildset'] = self.last_buildset.to_dict()
         return d
-
-    @asyncio.coroutine
-    def enable_plugin(self, plugin_name, **kwargs):
-        """Enables a plugin to a repository.
-
-        :param plugin_name: The plugin's name.
-        :param kwargs: kwargs used to configure the plugin.
-        """
-
-        with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_enable_plugin(
-                repo_name_or_id=self.id, plugin_name=plugin_name, **kwargs)
-
-        return resp
-
-    @asyncio.coroutine
-    def disable_plugin(self, **kwargs):
-        """Disables a plugin from a repository.
-
-        :param kwargs: kwargs to match the plugin."""
-
-        with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_disable_plugin(
-                repo_name_or_id=self.id, **kwargs)
-
-        return resp
 
     async def cancel_build(self, build_uuid):
         """Cancels a build from the repository.

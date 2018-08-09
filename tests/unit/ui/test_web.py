@@ -343,36 +343,6 @@ class RepositoryRestHandlerTest(TestCase):
         return_value=create_autospec(spec=web.Repository,
                                      mock_cls=AsyncMagicMock)))
     @async_test
-    async def test_enable_plugin(self):
-        self.handler.body = {'plugin_name': 'someplugin',
-                             'param1': 'value1'}
-        r = await self.handler.enable_plugin()
-        self.assertTrue(r)
-
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get,
-        return_value=create_autospec(spec=web.Repository,
-                                     mock_cls=AsyncMagicMock)))
-    @async_test
-    async def test_disable_plugin(self):
-        self.handler.body = {'plugin_name': 'someplugin'}
-        r = await self.handler.disable_plugin()
-        self.assertTrue(r)
-
-    @patch.object(web.Plugin, 'list', AsyncMagicMock(
-        spec=web.Plugin.list,
-        return_value=[MagicMock(), MagicMock()]))
-    @async_test
-    async def test_list_plugins(self):
-        self.handler.body = {'plugin_name': 'someplugin'}
-        r = await self.handler.list_plugins()
-        self.assertEqual(len(r['items']), 2)
-
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get,
-        return_value=create_autospec(spec=web.Repository,
-                                     mock_cls=AsyncMagicMock)))
-    @async_test
     async def test_start_build(self):
         self.handler.body = {'branch': 'master'}
         r = await self.handler.start_build()

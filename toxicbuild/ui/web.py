@@ -33,7 +33,7 @@ from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.core.utils import LoggerMixin, string2datetime
 from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
-from toxicbuild.ui.models import (Repository, Slave, Plugin, User)
+from toxicbuild.ui.models import (Repository, Slave, User)
 from toxicbuild.ui.utils import (format_datetime, is_datetime)
 
 
@@ -277,31 +277,6 @@ class RepositoryRestHandler(ModelRestHandler):
         await asyncio.gather(*tasks)
         return {'repo-remove-branch': '{} branches removed'.format(len(
             branches))}
-
-    @post('enable-plugin')
-    async def enable_plugin(self):
-        """Enables a plugin for a repository."""
-
-        repo = await self.model.get(self.user, **self.query)
-        await repo.enable_plugin(**self.body)
-        return {'repo-enable-plugin': 'plugin {} enabled'.format(self.body.get(
-            'plugin_name'))}
-
-    @post('disable-plugin')
-    async def disable_plugin(self):
-        """Disables a plugin for a repository."""
-
-        repo = await self.model.get(self.user, **self.query)
-        await repo.disable_plugin(**self.body)
-        return {'repo-disable-plugin': 'plugin {} disabled'.format(
-            self.body.get('plugin_name'))}
-
-    @get('list-plugins')
-    async def list_plugins(self):
-        """Lists all plugins available to a repository."""
-
-        plugins = await Plugin.list(self.user)
-        return {'items': [p.to_dict() for p in plugins]}
 
     @post('start-build')
     async def start_build(self):
