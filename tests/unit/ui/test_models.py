@@ -471,7 +471,7 @@ class BuilderTest(TestCase):
 class NotificationTest(TestCase):
 
     def setUp(self):
-        self.notification = models.Notification({})
+        self.notification = models.Notification
 
     def test_get_headers(self):
         expected = {'Authorization': 'token {}'.format(
@@ -532,6 +532,26 @@ class NotificationTest(TestCase):
         await self.notification.disable(obj_id, notif_name)
         called_url = models.requests.delete.call_args[0][0]
         called_config = json.loads(models.requests.delete.call_args[1]['data'])
+
+        self.assertEqual(expected_url, called_url)
+        self.assertEqual(expected_config, called_config)
+
+    @patch.object(models.requests, 'put', AsyncMagicMock(
+        spec=models.requests.put))
+    @async_test
+    async def test_update(self):
+        obj_id = 'fake-obj-id'
+        notif_name = 'slack-notification'
+
+        expected_url = '{}/{}'.format(self.notification.api_url,
+                                      notif_name)
+        config = {'webhook_url': 'https://somewebhook.url'}
+        expected_config = {'webhook_url': 'https://somewebhook.url',
+                           'repository_id': obj_id}
+
+        await self.notification.update(obj_id, notif_name, **config)
+        called_url = models.requests.put.call_args[0][0]
+        called_config = json.loads(models.requests.put.call_args[1]['data'])
 
         self.assertEqual(expected_url, called_url)
         self.assertEqual(expected_config, called_config)

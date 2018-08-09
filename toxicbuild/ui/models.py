@@ -469,6 +469,11 @@ class Notification(BaseModel):
         return {'Authorization': 'token {}'.format(cls.api_token)}
 
     @classmethod
+    def _get_notif_url(cls, notif_name):
+        url = '{}/{}'.format(cls.api_url, notif_name)
+        return url
+
+    @classmethod
     async def list(cls, obj_id=None):
         """Lists all the notifications available.
 
@@ -484,7 +489,7 @@ class Notification(BaseModel):
         return [cls(n) for n in notifications]
 
     @classmethod
-    async def enable(self, repo_id, notif_name, **config):
+    async def enable(cls, repo_id, notif_name, **config):
         """Enables a notification for a given repository.
 
         :param repo_id: The id of the repository to enable the notification.
@@ -493,21 +498,37 @@ class Notification(BaseModel):
           notification.
         """
 
-        url = '{}/{}'.format(self.api_url, notif_name)
+        url = cls._get_notif_url(notif_name)
         config['repository_id'] = repo_id
-        headers = self._get_headers()
+        headers = cls._get_headers()
         r = await requests.post(url, headers=headers, data=json.dumps(config))
         return r
 
     @classmethod
-    async def disable(self, repo_id, notif_name):
+    async def disable(cls, repo_id, notif_name):
         """Disables a notification for a given repository.
 
         :param repo_id: The id of the repository to enable the notification.
         :param notif_name: The name of the notification.
         """
-        url = '{}/{}'.format(self.api_url, notif_name)
+        url = cls._get_notif_url(notif_name)
         config = {'repository_id': repo_id}
-        headers = self._get_headers()
-        r = await requests.delete(url, headers=headers, data=json.dumps(config))
+        headers = cls._get_headers()
+        r = await requests.delete(url, headers=headers,
+                                  data=json.dumps(config))
+        return r
+
+    @classmethod
+    async def update(cls, repo_id, notif_name, **config):
+        """Updates a notification for a given repository.
+
+        :param repo_id: The id of the repository to enable the notification.
+        :param notif_name: The name of the notification.
+        :param config: A dictionary with the new config values for the
+          notification.
+        """
+        url = cls._get_notif_url(notif_name)
+        config['repository_id'] = repo_id
+        headers = cls._get_headers()
+        r = await requests.put(url, headers=headers, data=json.dumps(config))
         return r
