@@ -27,7 +27,7 @@ from toxicbuild.integrations import create as create_integrations
 from toxicbuild.master import create as create_master
 from toxicbuild.master import create_user
 from toxicbuild.master import create_settings_and_connect
-from toxicbuild.output import create as create_output
+from toxicbuild.output import create as create_output, create_auth_token
 from toxicbuild.slave import create as create_slave
 from toxicbuild.ui import create as create_ui
 
@@ -48,6 +48,7 @@ def create(root_dir):  # pragma no cover
     integrations_root = os.path.join(root_dir, 'integrations')
     output_root = os.path.join(root_dir, 'output')
     ui_root = os.path.join(root_dir, 'ui')
+    loop = asyncio.get_event_loop()
 
     # first we create a slave and a master
     slave_token = create_slave(slave_root)
@@ -56,6 +57,8 @@ def create(root_dir):  # pragma no cover
     create_integrations(integrations_root)
     # output
     create_output(output_root)
+    output_token = loop.run_until_complete(create_auth_token())
+
     # a super user to access stuff
     conffile = os.path.join(master_root, 'toxicmaster.conf')
     user = create_user(conffile, superuser=True)
@@ -64,7 +67,6 @@ def create(root_dir):  # pragma no cover
 
     with changedir(master_root):
         create_settings_and_connect()
-        loop = asyncio.get_event_loop()
         # now we add this slave to the master
         slave = Slave(name='LocalSlave', token=slave_token,
                       host='localhost', port=7777, owner=user)
@@ -72,7 +74,7 @@ def create(root_dir):  # pragma no cover
         loop.run_until_complete(slave.save())
 
     # and finally create a web ui
-    create_ui(ui_root, master_token)
+    create_ui(ui_root, master_token, output_token)
 
 
 @command
