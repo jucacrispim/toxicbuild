@@ -32,7 +32,7 @@ FUNCTIONAL_TESTS:  &FUNCTIONAL_TESTS
 
 JS_UNIT_TESTS:  &JS_UNIT_TESTS
   name: JS unit tests
-  command: jasmine ci -c tests/js-unit/jasmine.yml --browser chrome
+  command: ./build-scripts/run_jasmine_tests.sh
   timeout: 20
 
 SELENIUM_TESTS:  &SELENIUM_TESTS
