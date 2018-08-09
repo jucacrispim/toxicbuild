@@ -106,7 +106,7 @@ class NotificationTest(TestCase):
         notif_name = 'custom-webhook'
         kw = {'webhook_url': 'http://localhost:8123/webhookmessage/',
               'repository_id': str(self.repo_info['id'])}
-        url = 'http://localhost:9234/{}'.format(notif_name)
+        url = 'http://localhost:8345/{}'.format(notif_name)
         headers = {'Authorization': 'token: {}'.format(self.auth_token)}
         r = await requests.post(url, data=json.dumps(kw),
                                 headers=headers)
@@ -118,7 +118,7 @@ class NotificationTest(TestCase):
         notif_name = 'custom-webhook'
         kw = {'webhook_url': 'http://localhost:8123/webhookmessage/',
               'repository_id': str(self.repo_info['id'])}
-        url = 'http://localhost:9234/{}'.format(notif_name)
+        url = 'http://localhost:8345/{}'.format(notif_name)
         headers = {'Authorization': 'token: {}'.format(self.auth_token)}
         await requests.post(url, data=json.dumps(kw), headers=headers)
 
@@ -152,13 +152,13 @@ class NotificationTest(TestCase):
         notif_name = 'custom-webhook'
         kw = {'webhook_url': 'http://localhost:8123/webhookmessage/',
               'repository_id': str(self.repo_info['id'])}
-        url = 'http://localhost:9234/{}'.format(notif_name)
+        url = 'http://localhost:8345/{}'.format(notif_name)
         headers = {'Authorization': 'token: {}'.format(self.auth_token)}
         await requests.post(url, data=json.dumps(kw),
                             headers=headers)
 
         kw = {'repository_id': str(self.repo_info['id'])}
-        url = 'http://localhost:9234/{}'.format(notif_name)
+        url = 'http://localhost:8345/{}'.format(notif_name)
         headers = {'Authorization': 'token: {}'.format(self.auth_token)}
         r = await requests.delete(url, data=json.dumps(kw),
                                   headers=headers)
@@ -167,7 +167,7 @@ class NotificationTest(TestCase):
 
     @async_test
     async def test_list_notifications(self):
-        url = 'http://localhost:9234/list/'
+        url = 'http://localhost:8345/list/'
         headers = {'Authorization': 'token: {}'.format(self.auth_token)}
         r = await requests.get(url, headers=headers)
         r = r.json()
@@ -180,11 +180,11 @@ class NotificationTest(TestCase):
         notif_name = 'custom-webhook'
         kw = {'webhook_url': 'http://localhost:8123/webhookmessage/',
               'repository_id': str(self.repo_info['id'])}
-        url = 'http://localhost:9234/{}'.format(notif_name)
+        url = 'http://localhost:8345/{}'.format(notif_name)
         headers = {'Authorization': 'token: {}'.format(self.auth_token)}
         await requests.post(url, data=json.dumps(kw), headers=headers)
 
-        url = 'http://localhost:9234/list/{}'.format(self.repo_info['id'])
+        url = 'http://localhost:8345/list/{}'.format(self.repo_info['id'])
         headers = {'Authorization': 'token: {}'.format(self.auth_token)}
         r = await requests.get(url, headers=headers)
         notifications = r.json()['notifications']
