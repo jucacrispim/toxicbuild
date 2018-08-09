@@ -26,10 +26,14 @@ import pkg_resources
 import shutil
 import sys
 from time import sleep
+from uuid import uuid4
 from mongomotor import connect
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
-from toxicbuild.core.utils import changedir, log, daemonize as daemon
+from toxicbuild.core.utils import (changedir, log, daemonize as daemon,
+                                   SettingsPatcher)
+from toxicbuild.master import (
+    create_settings_and_connect as create_settings_and_connect_master)
 
 PIDFILE = 'toxicoutput.pid'
 LOGFILE = './toxicoutput.log'
@@ -57,39 +61,62 @@ def _check_conffile(workdir, conffile):
     return absconffile.startswith(absworkdir)
 
 
-def output_server_init(server):
+def output_handler_init(handler):
     """Starts the output server"""
 
-    asyncio.ensure_future(server.run())
+    asyncio.ensure_future(handler.run())
     log('ToxicOutput is running.')
 
 
-def run_toxicoutput(loglevel):
+def run_toxicoutput(loglevel, tornado_server):
     loglevel = getattr(logging, loglevel.upper())
     logging.basicConfig(level=loglevel)
 
-    from toxicbuild.master import (
-        create_settings_and_connect as create_settings_and_connect_master)
-    create_settings_and_connect_master()
-    create_settings_and_connect()
-
-    from toxicbuild.master.exchanges import (
-        connect_exchanges as connect_master_exchanges)
-
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(connect_master_exchanges())
 
     from toxicbuild.output.exchanges import connect_exchanges
     loop.run_until_complete(connect_exchanges())
 
-    from toxicbuild.output.server import OutputMethodServer
-    server = OutputMethodServer()
-    loop = asyncio.get_event_loop()
-    output_server_init(server)
+    from toxicbuild.output.server import OutputMessageHandler
+    handler = OutputMessageHandler()
+
+    output_handler_init(handler)
+    tornado_server.run()
     try:
-        loop.run_forever()
+        # loop.run_forever()
+        tornado_server.run()
     finally:
-        server.sync_shutdown()
+        handler.sync_shutdown()
+
+
+def _set_conffile_env(workdir, conffile):
+    if conffile:
+
+        is_in_workdir = _check_conffile(workdir, conffile)
+
+        if not is_in_workdir:
+            print('Config file must be inside workdir')
+            sys.exit(1)
+
+        os.environ['TOXICOUTPUT_SETTINGS'] = os.path.join(
+            workdir, conffile)
+
+    else:
+        os.environ['TOXICOUTPUT_SETTINGS'] = os.path.join(
+            workdir, 'toxicoutput.conf')
+
+    os.environ['TOXICMASTER_SETTINGS'] = os.environ[
+        'TOXICOUTPUT_SETTINGS']
+
+
+async def create_auth_token():
+    from pyrocumulus.auth import AccessToken, Permission
+    from toxicbuild.output.notifications import Notification
+
+    token = AccessToken(name='notifications-token-'.format(uuid4().hex))
+    uncrypted_token = await token.save()
+    await Permission.create_perms_to(token, Notification, 'crud')
+    return uncrypted_token
 
 
 @command
@@ -135,31 +162,38 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
     with changedir(workdir):
         sys.path.append(workdir)
 
-        if conffile:
+        _set_conffile_env(workdir, conffile)
 
-            is_in_workdir = _check_conffile(workdir, conffile)
+        create_settings_and_connect_master()
+        create_settings_and_connect()
 
-            if not is_in_workdir:
-                print('Config file must be inside workdir')
-                sys.exit(1)
+        SettingsPatcher().patch_pyro_settings(settings)
 
-            os.environ['TOXICOUTPUT_SETTINGS'] = os.path.join(
-                workdir, conffile)
-        else:
-            os.environ['TOXICOUTPUT_SETTINGS'] = os.path.join(
-                workdir, 'toxicoutput.conf')
+        from pyrocumulus.commands.base import get_command
 
-        os.environ['TOXICMASTER_SETTINGS'] = os.environ[
-            'TOXICOUTPUT_SETTINGS']
+        sys.argv = ['pyromanager.py', '']
 
-        print('Starting output')
+        print('Starting output web api on port {}'.format(
+            settings.TORNADO_PORT))
+
+        command = get_command('runtornado')()
+
+        command.kill = False
+        command.daemonize = daemonize
+        command.stderr = stderr
+        command.application = None
+        command.loglevel = loglevel
+        command.stdout = stdout
+        command.port = settings.TORNADO_PORT
+        command.pidfile = pidfile
+
         if daemonize:
-            daemon(call=run_toxicoutput, cargs=(loglevel,), ckwargs={},
+            daemon(call=run_toxicoutput, cargs=(loglevel, command), ckwargs={},
                    stdout=stdout, stderr=stderr, workdir=workdir,
                    pidfile=pidfile)
         else:
             with changedir(workdir):
-                run_toxicoutput(loglevel)
+                run_toxicoutput(loglevel, command)
 
 
 def _process_exist(pid):
@@ -195,13 +229,10 @@ def stop(workdir, pidfile=PIDFILE, kill=False):
         os.environ['TOXICMASTER_SETTINGS'] = os.environ[
             'TOXICOUTPUT_SETTINGS']
 
-        from toxicbuild.master import (
-            create_settings_and_connect as create_settings_and_connect_master)
-
         create_settings_and_connect_master()
         create_settings_and_connect()
 
-        print('Starting output')
+        print('Stopping output')
 
         with changedir(workdir):
             with open(pidfile) as fd:
@@ -229,6 +260,26 @@ def restart(workdir, pidfile=PIDFILE):
 
     stop(workdir, pidfile=pidfile)
     start(workdir, pidfile=pidfile, daemonize=True)
+
+
+@command
+def create_token(workdir, conffile=None):
+    """Creates an access token for the notifications api.
+
+    :param workdir: Work directory for server.
+
+    :param -c, --conffile: path to config file. Defaults to None.
+      If not conffile, will look for a file called ``toxicoutput.conf``
+      inside ``workdir``."""
+
+    _set_conffile_env(workdir, conffile)
+
+    create_settings_and_connect()
+    create_settings_and_connect_master()
+
+    loop = asyncio.get_event_loop()
+    uncrypted_token = loop.run_until_complete(create_auth_token())
+    print('Token created. {}'.format(uncrypted_token))
 
 
 if __name__ == '__main__':

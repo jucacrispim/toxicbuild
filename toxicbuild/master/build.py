@@ -363,7 +363,7 @@ class Build(EmbeddedDocument):
         build_cancelled.send(str(repo.id), build=self)
 
 
-class BuildSet(SerializeMixin, Document):
+class BuildSet(SerializeMixin, LoggerMixin, Document):
 
     """A list of builds associated with a revision."""
 
@@ -430,6 +430,7 @@ class BuildSet(SerializeMixin, Document):
           of :meth:`~toxicbuild.master.build.Buildset.get_status` will be
           used."""
 
+        self.log('notifying buildset {}'.format(event_type), level='debug')
         msg = self.to_dict()
         repo = await self.repository
         msg['repository'] = await repo.to_dict()

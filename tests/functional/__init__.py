@@ -6,6 +6,7 @@ import sys
 import time
 import tornado
 from unittest import TestCase
+from toxicbuild.core import BaseToxicClient
 from toxicbuild.master import create_settings_and_connect
 from toxicbuild.slave import create_settings
 from toxicbuild.output import (
@@ -358,13 +359,11 @@ class BaseFunctionalTest(TestCase):
         cls.start_scheduler()
         cls.start_master()
         cls.start_output()
-        start_customwebserver()
         time.sleep(0.1)
 
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
-        stop_customwebserver()
         cls.stop_scheduler()
         cls.stop_poller()
         cls.stop_master()
@@ -373,3 +372,91 @@ class BaseFunctionalTest(TestCase):
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
+
+
+class DummyMasterHoleClient(BaseToxicClient):
+
+    def __init__(self, user, *args, **kwargs):
+        kwargs['use_ssl'] = True
+        kwargs['validate_cert'] = False
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    async def request2server(self, action, body):
+
+        data = {'action': action, 'body': body,
+                'user_id': str(self.user.id),
+                'token': '123'}
+        await self.write(data)
+        response = await self.get_response()
+        return response['body'][action]
+
+    async def create_slave(self, slave_port):
+        action = 'slave-add'
+        body = {'slave_name': 'test-slave',
+                'slave_host': 'localhost',
+                'slave_port': slave_port,
+                'slave_token': '123',
+                'owner_id': str(self.user.id),
+                'use_ssl': True,
+                'validate_cert': False}
+
+        resp = await self.request2server(action, body)
+        return resp
+
+    async def create_repo(self):
+        action = 'repo-add'
+        body = {'repo_name': 'test-repo', 'repo_url': REPO_DIR,
+                'vcs_type': 'git', 'update_seconds': 1,
+                'slaves': ['test-slave'],
+                'owner_id': str(self.user.id)}
+
+        resp = await self.request2server(action, body)
+
+        return resp
+
+    async def wait_clone(self):
+        await self.write({'action': 'stream', 'token': '123',
+                          'body': {},
+                          'user_id': str(self.user.id)})
+        while True:
+            r = await self.get_response()
+            body = r['body'] if r else {}
+            try:
+                event = body['event_type']
+                if event == 'repo_status_changed':
+                    break
+            except KeyError:
+                pass
+
+    async def start_build(self, builder='builder-1'):
+
+        action = 'repo-start-build'
+        body = {'repo_name_or_id': 'toxic/test-repo',
+                'branch': 'master'}
+        if builder:
+            body['builder_name'] = builder
+        resp = await self.request2server(action, body)
+
+        return resp
+
+    async def wait_build_complete(self):
+        await self.write({'action': 'stream', 'token': '123',
+                          'body': {},
+                          'user_id': str(self.user.id)})
+
+        # this ugly part here it to wait for the right message
+        # If we don't use this we may read the wrong message and
+        # the test will fail.
+        while True:
+            response = await self.get_response()
+            body = response['body'] if response else {}
+            if body.get('event_type') == 'build_finished':
+                has_sleep = False
+                for step in body['steps']:
+                    if step['command'] == 'sleep 3':
+                        has_sleep = True
+
+                if not has_sleep:
+                    break
+        return response

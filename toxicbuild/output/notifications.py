@@ -220,6 +220,8 @@ class Notification(LoggerMixin, Plugin, Document, metaclass=MetaNotification):
         """
 
         self.sender = buildset_info['repository']
+        self.log('Running notification for {}'.format(self.sender['id']),
+                 level='debug')
 
         status = buildset_info['status']
         branch = buildset_info['branch']

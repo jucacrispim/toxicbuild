@@ -19,58 +19,20 @@
 
 import asyncio
 from unittest.mock import patch, Mock
-from toxicbuild.core import BaseToxicClient
 from toxicbuild.master import settings
 from toxicbuild.master.repository import Repository
 from toxicbuild.master.users import User
 from toxicbuild.master.exchanges import scheduler_action
 from tests import async_test
-from tests.functional import BaseFunctionalTest, REPO_DIR
+from tests.functional import (BaseFunctionalTest, DummyMasterHoleClient)
 
 
-class DummyUIClient(BaseToxicClient):
+class DummyUIClient(DummyMasterHoleClient):
 
-    def __init__(self, user, *args, **kwargs):
-        kwargs['use_ssl'] = True
-        kwargs['validate_cert'] = False
-        super().__init__(*args, **kwargs)
-        self.user = user
-
-    @asyncio.coroutine
-    def request2server(self, action, body):
-
-        data = {'action': action, 'body': body,
-                'user_id': str(self.user.id),
-                'token': '123'}
-        yield from self.write(data)
-        response = yield from self.get_response()
-        return response['body'][action]
-
-    @asyncio.coroutine
-    def create_slave(self):
-        action = 'slave-add'
-        body = {'slave_name': 'test-slave',
-                'slave_host': 'localhost',
-                'slave_port': settings.SLAVE_PORT,
-                'slave_token': '123',
-                'owner_id': str(self.user.id),
-                'use_ssl': True,
-                'validate_cert': False}
-
-        resp = yield from self.request2server(action, body)
-        return resp
-
-    @asyncio.coroutine
-    def create_repo(self):
-        action = 'repo-add'
-        body = {'repo_name': 'test-repo', 'repo_url': REPO_DIR,
-                'vcs_type': 'git', 'update_seconds': 1,
-                'slaves': ['test-slave'],
-                'owner_id': str(self.user.id)}
-
-        resp = yield from self.request2server(action, body)
-
-        return resp
+    async def create_slave(self):
+        slave_port = settings.SLAVE_PORT
+        r = await super().create_slave(slave_port)
+        return r
 
     async def create_user(self):
         action = 'user-add'
@@ -89,18 +51,6 @@ class DummyUIClient(BaseToxicClient):
         action = 'user-remove'
         body = {'email': 'ze@ze.com'}
         resp = await self.request2server(action, body)
-        return resp
-
-    @asyncio.coroutine
-    def start_build(self, builder='builder-1'):
-
-        action = 'repo-start-build'
-        body = {'repo_name_or_id': 'toxic/test-repo',
-                'branch': 'master'}
-        if builder:
-            body['builder_name'] = builder
-        resp = yield from self.request2server(action, body)
-
         return resp
 
     @asyncio.coroutine
@@ -280,29 +230,7 @@ class ToxicMasterTest(BaseFunctionalTest):
             yield from client.start_build()
 
         with (yield from get_dummy_client(self.user)) as client:
-            yield from client.write({'action': 'stream', 'token': '123',
-                                     'body': {},
-                                     'user_id': str(self.user.id)})
-
-            # this ugly part here it to wait for the right message
-            # If we don't use this we may read the wrong message and
-            # the test will fail.
-            while True:
-                response = yield from client.get_response()
-                body = response['body'] if response else {}
-                if body.get('event_type') == 'build_finished':
-                    has_sleep = False
-                    for step in body['steps']:
-                        if step['command'] == 'sleep 3':
-                            has_sleep = True
-
-                    if not has_sleep:
-                        break
-
-        def get_bad_step(body):
-            for step in body['steps']:
-                if step['status'] == body['status']:
-                    return step
+            response = yield from client.wait_build_complete()
 
         self.assertTrue(response['body']['finished'])
 
