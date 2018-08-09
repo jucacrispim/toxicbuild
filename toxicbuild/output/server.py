@@ -23,7 +23,7 @@ from asyncio import get_event_loop
 from asyncio import sleep
 from asyncamqp.exceptions import ConsumerTimeout
 from pyrocumulus.web.applications import PyroApplication
-from pyrocumulus.web.decorators import post, delete, get
+from pyrocumulus.web.decorators import post, delete, get, put
 from pyrocumulus.web.handlers import BasePyroAuthHandler
 from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.core.utils import LoggerMixin
@@ -130,6 +130,15 @@ class NotificationWebHandler(LoggerMixin, BasePyroAuthHandler):
                                                       **self.body)
         await notification.delete()
         return {notification_name: 'disabled'}
+
+    @put('(.*)')
+    async def update_notification(self, notification_name):
+        notification_name = notification_name.decode()
+        repo_id = self.body['repository_id']
+        await Notification.objects(
+            _name=notification_name, repository_id=repo_id).update_one(
+                **self.body)
+        return {notification_name: 'updated'}
 
     def _merge_notif_values(self, schemas, notifs):
         notifs_tb = {n.name: n for n in notifs}
