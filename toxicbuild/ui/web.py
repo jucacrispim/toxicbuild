@@ -33,7 +33,7 @@ from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.core.utils import LoggerMixin, string2datetime
 from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
-from toxicbuild.ui.models import (Repository, Slave, User)
+from toxicbuild.ui.models import (Repository, Slave, User, Notification)
 from toxicbuild.ui.utils import (format_datetime, is_datetime)
 
 
@@ -308,6 +308,44 @@ class RepositoryRestHandler(ModelRestHandler):
         return {'repo-disable': 'disabled'}
 
 
+class NotificationRestHandler(ModelRestHandler):
+    """Handler for enable/disable/update notifications for
+    repositories.
+    """
+
+    @post('(.*)/(.*)')
+    async def enable(self, notif_name, repo_id):
+        notif_name = notif_name.decode()
+        repo_id = repo_id.decode()
+        await Notification.enable(repo_id, notif_name, **self.body)
+        return {notif_name: 'enabled'}
+
+    @delete('(.*)/(.*)')
+    async def disable(self, notif_name, repo_id):
+        notif_name = notif_name.decode()
+        repo_id = repo_id.decode()
+        await Notification.disable(repo_id, notif_name)
+        return {notif_name: 'disabled'}
+
+    @put('(.*)/(.*)')
+    async def update(self, notif_name, repo_id):
+        notif_name = notif_name.decode()
+        repo_id = repo_id.decode()
+        await Notification.update(repo_id, notif_name, **self.body)
+        return {notif_name: 'updated'}
+
+    @get('list/(.*)')
+    async def list(self, repo_id=None):
+        repo_id = repo_id.decode() if repo_id else None
+        r = await Notification.list(repo_id)
+        return r
+
+
+class CookieAuthNotificationRestHandler(CookieAuthHandlerMixin,
+                                        NotificationRestHandler):
+    """Rest api handler for notifications which requires cookie auth."""
+
+
 class CookieAuthRepositoryRestHandler(CookieAuthHandlerMixin,
                                       RepositoryRestHandler):
     """A rest api handler for repositories which requires cookie auth."""
@@ -515,6 +553,8 @@ websocket = URLSpec('/api/socks/(.*)', StreamHandler)
 slave_kwargs = {'model': Slave}
 slave_api_url = URLSpec('/api/slave/(.*)', CookieAuthSlaveRestHandler,
                         slave_kwargs)
+notifications_api_url = URLSpec('/api/notification/(.*)$',
+                                CookieAuthNotificationRestHandler)
 
 api_app = PyroApplication(
-    [websocket, repo_api_url, slave_api_url])
+    [websocket, repo_api_url, slave_api_url, notifications_api_url])

@@ -16,25 +16,33 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import base64
 import json
 from unittest import TestCase
+import bcrypt
 import requests
+from pyrocumulus.auth import AccessToken
+from pyrocumulus.utils import bcrypt_string
 from toxicbuild.master.repository import Repository as RepoDBModel
 from toxicbuild.master.slave import Slave as SlaveDBModel
 from toxicbuild.master.users import User as UserDBModel
+from toxicbuild.output.notifications import Notification
 from toxicbuild.ui import settings
 from tests import async_test
-from tests.functional import start_master, stop_master, start_webui, stop_webui
+from tests.functional import (start_master, stop_master, start_webui,
+                              stop_webui, start_output, stop_output)
 
 
 def setUpModule():
     start_master()
     start_webui()
+    start_output()
 
 
 def tearDownModule():
     stop_master()
     stop_webui()
+    stop_output()
 
 
 class RepositoryRestAPITest(TestCase):
@@ -181,3 +189,53 @@ class SlaveRestAPITest(TestCase):
         resp = self.session.get(url)
         repos = resp.json()
         self.assertEqual(len(repos['items']), 0)
+
+
+class NotificationRestApiTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        # Creating the token for notification api access
+        self.real_token = bcrypt_string(
+            settings.ACCESS_TOKEN_BASE, bcrypt.gensalt(8))
+        self.final_token = base64.b64encode('{}:{}'.format(
+            settings.ACCESS_TOKEN_ID,
+            settings.ACCESS_TOKEN_BASE).encode()).decode()
+        self.token = AccessToken(token_id=settings.ACCESS_TOKEN_ID,
+                                 token=self.final_token)
+        await self.token.save()
+
+        # login
+        self.user = UserDBModel(email='a@a.com',
+                                allowed_actions=['add_repo', 'add_slave'])
+        self.user.set_password('123')
+        await self.user.save()
+
+        self.session = requests.session()
+
+        url = settings.LOGIN_URL
+        self.session.post(url, data=json.dumps({
+            'username_or_email': 'a@a.com',
+            'password': '123'}))
+
+    @async_test
+    async def tearDown(self):
+        await UserDBModel.drop_collection()
+        await AccessToken.drop_collection()
+        await Notification.drop_collection()
+
+    def test_enable(self):
+        url = settings.NOTIFICATION_API_URL + 'custom-webhook/some-id'
+        data = {'webhook_url': 'http://bla.nada'}
+        r = self.session.post(url, data=json.dumps(data))
+        self.assertTrue(r.status_code, 200)
+
+    def test_disable(self):
+        url = settings.NOTIFICATION_API_URL + 'custom-webhook/some-id'
+
+        data = {'webhook_url': 'http://bla.nada'}
+        r = self.session.post(url, data=json.dumps(data))
+        self.assertTrue(r.status_code, 200)
+
+        r = self.session.delete(url)
+        self.assertTrue(r.status_code, 200)

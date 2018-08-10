@@ -379,6 +379,62 @@ class RepositoryRestHandlerTest(TestCase):
         self.assertTrue(r)
 
 
+class NotificationRestHandlerTest(TestCase):
+
+    def setUp(self):
+        super().setUp()
+        request = MagicMock()
+        request.arguments = {}
+        application = MagicMock()
+        self.handler = web.NotificationRestHandler(application,
+                                                   request=request)
+
+    @patch.object(web.Notification, 'enable', AsyncMagicMock(
+        spec=web.Notification.enable))
+    @async_test
+    async def test_enable(self):
+        notif_name = b'some-notif'
+        repo_id = b'some-repo-id'
+        self.handler.body = {'some': 'field'}
+        await self.handler.enable(notif_name, repo_id)
+        self.assertTrue(web.Notification.enable.called)
+
+    @patch.object(web.Notification, 'disable', AsyncMagicMock(
+        spec=web.Notification.disable))
+    @async_test
+    async def test_disable(self):
+        notif_name = b'some-notif'
+        repo_id = b'some-repo-id'
+        self.handler.body = {'some': 'field'}
+        await self.handler.disable(notif_name, repo_id)
+        self.assertTrue(web.Notification.disable.called)
+
+    @patch.object(web.Notification, 'update', AsyncMagicMock(
+        spec=web.Notification.update))
+    @async_test
+    async def test_update(self):
+        notif_name = b'some-notif'
+        repo_id = b'some-repo-id'
+        self.handler.body = {'some': 'field'}
+        self.handler.body = {'some': 'field'}
+        await self.handler.update(notif_name, repo_id)
+        self.assertTrue(web.Notification.update.called)
+
+    @patch.object(web.Notification, 'list', AsyncMagicMock(
+        spec=web.Notification.list))
+    @async_test
+    async def test_list_no_repo_id(self):
+        await self.handler.list()
+        self.assertTrue(web.Notification.list.called)
+
+    @patch.object(web.Notification, 'list', AsyncMagicMock(
+        spec=web.Notification.list))
+    @async_test
+    async def test_list(self):
+        await self.handler.list(b'some-repo-id')
+        self.assertTrue(web.Notification.list.called)
+
+
 @patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
 class StreamHandlerTest(AsyncTestCase):
 
@@ -689,10 +745,11 @@ class ApplicationTest(unittest.TestCase):
     def test_urls(self):
         expected = ['/api/socks/(.*)$',
                     '/api/repo/(.*)$',
-                    '/api/slave/(.*)$']
+                    '/api/slave/(.*)$',
+                    '/api/notification/(.*)$']
 
         for url in web.api_app.urls:
             pat = url.regex.pattern
             self.assertIn(pat, expected)
 
-        self.assertEqual(len(web.api_app.urls), 3)
+        self.assertEqual(len(web.api_app.urls), 4)
