@@ -15,7 +15,7 @@ behave==1.2.5
 blinker==1.4
 certifi==2018.4.16
 cffi==1.11.5
-cryptography==2.1.4
+cryptography==2.3
 chardet==3.0.4
 clint==0.5.1
 colorama==0.3.3
