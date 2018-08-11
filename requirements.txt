@@ -36,4 +36,4 @@ cffi==1.11.5
 pymongo==3.6.1
 jasmine==3.1.1
 jasmine-core==3.1.0
-toxicjasmine==0.1
+toxicjasmine==0.1.1
