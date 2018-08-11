@@ -13,6 +13,7 @@
     #
     src_files:
       - "jquery/jquery.min.js"
+      - "jquery/additional-methods.min.js"
       - "jquery/*.js"
       - "bootstrap/js/*.js"
       - "common/js/*.js"
