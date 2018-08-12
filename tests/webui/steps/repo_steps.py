@@ -2,7 +2,6 @@
 
 import time
 from behave import when, then, given
-from selenium.common.exceptions import NoSuchElementException
 from tests.webui.steps.base_steps import (  # noqa f811
     given_logged_in_webui, then_sees_message, when_navigate2settings)
 from tests.functional import REPO_DIR
@@ -298,6 +297,7 @@ def click_delete_button(context):
 
     el = browser.find_element_by_id('removeRepoModal')
     browser.wait_element_become_visible(el)
+
 
 @when('clicks in the delete repo button in the modal')
 def click_delete_button_modal(context):
