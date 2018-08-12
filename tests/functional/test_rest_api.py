@@ -75,6 +75,7 @@ class RepositoryRestAPITest(TestCase):
         url = settings.REPO_API_URL
         data = {'name': 'somerepo', 'url': 'https://somebla.com',
                 'vcs_type': 'git'}
+
         self.session.post(url, data=json.dumps(data))
 
         resp = self.session.get(url)
