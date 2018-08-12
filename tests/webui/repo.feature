@@ -1,48 +1,98 @@
 Feature:
     A user inserts and deletes a repo in web ui, enabling and disabling
-    output methods plugins.
+    notifications.
 
     Scenario:
-        The user inserts a new repo without required information
+        The user navigates to the add repo page
 
         Given the user is logged in the web interface
-        When he clicks in the add repo button
-        And sees the repo modal
-        And fills the repo name field with "toxictest"
-        And clicks in the save repo button
-        Then he sees the required fields in red
+        When he clicks in the add repository link
+        Then he sees the add repository page
 
     Scenario:
-        The user inserts a new repo and that works
+        The user adds a new repository
 
-        Given the user already tried to save a repo
-        When he fills the url field with a repo url
-        And selects a slave named "repo-slave"
-        And clicks in the save repo button
-        Then he sees the "Repository is being created. Please wait." message
-        And the repo status "pending"
-        And the repo status "running"
+        Given the user is in the add repo page
+        When he fills the name with a repo name
+        And fills the url field with a repo url
+        And clicks in the add repo button
+        Then he sees the "Repository added" message
 
     Scenario:
-        The user enables an output method plugin
+        The user toggles the advanced configuration
 
-        Given the user already inserted a new repo
-        When he clicks in the configure output methods button
-        And sees the output methods modal
-        And clicks in the enable ckeckbox
-        And fills the webhook url field with "https://something.net/bla"
-        And fills the channel name field with "my-channel"
-        And fills the branches field with "master, dev, release"
-        And fills the statuses field with "fail, exeption, warning, success"
-        And clicks in the save plugin button
-        Then he sees the "Plugin slack-notification enabled" message
+        Given the user is in the repository settings page
+        When he clicks in the Advanced element
+        Then he sees the advanced options
+        And sees the advanced help in the side bar
 
     Scenario:
-        A user removes a repo
+        The user adds a branch configuration to the repository
 
-        Given the user is logged in the web interface and has a repo
-        When he clicks in the edit repo button
-        And sees the repo modal
+        Given the user is in the repository settings page
+        And he sees the advanced options
+        When he clicks in the add branch button
+        And fills the branch name
+        And clicks in the add branch button
+        Then he sees the new branch config in the list
+
+    Scenario:
+        The user removes a branch configuration
+
+        Given the user already added a branch config
+        When he clicks in the remove branch config button
+        Then he sees the no branch config info in the list
+
+    Scenario:
+        The user disables a slave
+
+        Given the user is in the repository settings page
+        When he clicks in the slave enabled check button
+        Then he sees the slave disabled check button
+
+    Scenario:
+        The user enables a slave
+
+        Given the user is in the repository settings page
+        When he clicks in the slave disabled check button
+        Then he sees the slave enabled check button
+
+    Scenario:
+        The user disables a repository
+
+        Given the user is in the repository settings page
+        When he clicks in the repo enabled check button
+        Then he sees the repo disabled check button
+
+    Scenario:
+        The user navigates to the repository management page
+
+        Given the user is in the repository settings page
+        When he clicks in the close button
+        And clicks in the manage repositories link
+        Then he sees a list of repositories
+
+    Scenario:
+        The user enables a repository
+
+        Given the user is in the repository management page
+        When he clicks in the repo disabled ckeck button
+        Then he sees the repo enabled check button
+
+    Scenario:
+        The user navigates to the repository settings page
+
+        Given the user is in the repository management page
+        When he clicks in the toxicbuild logo
+        And clicks in the repo menu
+        And clicks in the repo settings link
+        Then he sees the repository settings page
+
+    Scenario:
+        The user deletes a repository
+
+        Given the user is in the repository settings page
+        When he clicks in the Advanced element
         And clicks in the delete repo button
-        Then he sees the "Repository removed." message
-        And the repo is removed from the repo list
+        And clicks in the delete repo button in the modal
+        Then he sees the "Repository removed" message

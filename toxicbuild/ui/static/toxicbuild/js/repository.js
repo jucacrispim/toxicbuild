@@ -147,8 +147,8 @@ class BaseRepositoryView extends Backbone.View{
 
 
     this.directive = {
-      '#repo-details-name@value': 'name',
-      '#repo-details-url@value': 'url',
+      '.repo-details-name@value': 'name',
+      '.repo-details-url@value': 'url',
       '#repo-parallel-builds@value': 'parallel_builds',
       '.repository-info-enabled-container input@checked': 'enabled',
       '.repo-branches-li': {

@@ -29,6 +29,13 @@ function _get_url(method, obj){
 };
 
 
+function _getHeaders(){
+  let xsrf_token = Cookies.get('_xsrf');
+  let headers = {'X-XSRFToken': xsrf_token};
+  return headers;
+}
+
+
 class BaseModel extends Backbone.Model{
 
   constructor(attributes, options){
@@ -38,18 +45,16 @@ class BaseModel extends Backbone.Model{
   }
 
   _getHeaders(){
-    let xsrf_token = Cookies.get('_xsrf');
-    let headers = {'X-XSRFToken': xsrf_token};
-    return headers;
+    return _getHeaders();
   }
 
   sync(method, model, options){
     let url = _get_url(method, this, false);
     options.attrs = this._changes;
     options.url = url;
-    let xsrf_token = Cookies.get('_xsrf');
-    let headers = {'X-XSRFToken': xsrf_token};
+    let headers = this._getHeaders();
     options.headers = headers;
+    console.log(options);
     return super.sync(method, model, options);
   }
 
@@ -93,5 +98,11 @@ class BaseCollection extends Backbone.Collection{
 
   parse(data){
     return data.items;
+  }
+
+  sync(method, model, options){
+    options.headers = _getHeaders();
+    let r = super.sync(method, model, options);
+    return r;
   }
 }

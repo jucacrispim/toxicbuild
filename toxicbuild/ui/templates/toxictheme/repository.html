@@ -112,7 +112,7 @@
 	</div>
 	<div class="repo-details-name-input col-sm-11 repo-details-input">
 	  <div class="repo-details-input">
-	    <input id="repo-details-name" type="text" class="form-control"
+	    <input type="text" class="form-control repo-details-name"
 		   data-valuefor="name" required>
 	  </div>
 	  <!-- name available -->
@@ -139,7 +139,7 @@
 	  <label for="repo-details-url">URL:</label>
 	</div>
 	<div class="repo-details-url-input col-sm-8 repo-details-input">
-	  <input id="repo-details-url" type="text" class="form-control"
+	  <input  type="text" class="form-control repo-details-url"
 		 data-valuefor="url" required>
 	</div>
 	<!-- end url container -->
@@ -212,7 +212,7 @@
 	      </ul>
 	    </div>
 	    <div class="col-sm-4 repo-details-input advanced-large-item">
-	      <span id="add-branch-btn" class="fas fa-plus"
+	      <span class="fas fa-plus add-branch-btn"
 		    title="add branch" data-toggle="modal"
 		    data-target="#addBranchModal"></span>
 	    </div>
@@ -263,8 +263,9 @@
 	  </div>
 
 	    <div class="delete-btn-container inner-btn-container col-sm-2">
-	      <button class="btn btn-sm btn-block btn-danger btn-red" type="submit"
-		      id="btn-delete-repo" data-toggle="modal"
+	      <button class="btn btn-sm btn-block btn-danger btn-red btn-delete-repo"
+		      type="submit"
+		      data-toggle="modal"
 		    data-target="#removeRepoModal">
 		<span class="spinner icon-spinner-2" id="delete-repo-btn-spinner"
 		      style="display:none">

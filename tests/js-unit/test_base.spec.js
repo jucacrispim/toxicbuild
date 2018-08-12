@@ -102,11 +102,22 @@ describe("BaseModelTest", function(){
 
 describe('BaseCollectionTest', function(){
 
+  beforeEach(function(){
+    this.collection = new BaseCollection();
+  });
+
   it('test-parse', function(){
     let data = {'items': [{'some': 'thing'}]};
-    let collection = new BaseCollection();
     let expected = [{'some': 'thing'}];
-    let returned = collection.parse(data);
+    let returned = this.collection.parse(data);
     expect(returned).toEqual(expected);
+  });
+
+  it('test-sync', function(){
+    window._getHeaders = jasmine.createSpy();
+    let model = jasmine.createSpy('some-model');
+    spyOn(Backbone, 'sync');
+    this.collection.sync('post', model, {});
+    expect(window._getHeaders).toHaveBeenCalled();
   });
 });

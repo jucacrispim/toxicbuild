@@ -642,7 +642,7 @@ body{
     min-height: 44px;
 }
 
-#add-branch-btn,
+.add-branch-btn,
 #add-slave-btn{
     min-height: 45px;
     color: var(--success);

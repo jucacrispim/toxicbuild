@@ -124,6 +124,8 @@ class LoggedTemplateHandler(CookieAuthHandlerMixin, TemplateHandler):
         except HTTPError:
             self.redirect('/login')
 
+        self.set_xsrf_cookie()
+
 
 class LoginHandler(TemplateHandler):
 

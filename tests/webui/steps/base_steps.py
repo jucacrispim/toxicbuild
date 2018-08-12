@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from toxicbuild.ui import settings
-from behave import given, then
+from behave import given, then, when
 
 
 def logged_in_webui(context):
@@ -30,3 +30,14 @@ def sees_message(context, msg):
 
 
 then_sees_message = then('he sees the "{msg}" message')(sees_message)
+
+
+def navigate2settings(context):
+    browser = context.browser
+    btn = browser.find_element_by_xpath('a[href="/settings/repositories"]')
+    browser.click(btn)
+    browser.wait_text_become_present('Manage repositories')
+
+
+when_navigate2settings = when('he navigates to the settings page')(
+    navigate2settings)

@@ -64,7 +64,7 @@ class SeleniumBrowser(webdriver.Chrome):
     def click_link(self, link_text):
         """Clicks in  link indicated by link_text"""
 
-        self.find_element_by_partial_link_text(link_text).click()
+        self.click(self.find_element_by_partial_link_text(link_text))
 
     @property
     def is_logged(self):

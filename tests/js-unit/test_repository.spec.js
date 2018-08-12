@@ -176,7 +176,7 @@ describe('BaseRepositoryViewTest', function(){
 
   beforeEach(function(){
     affix('.template #repo-details-container #repo-details-name');
-    let repo_details = 'input#repo-details-name+input#repo-details-url';
+    let repo_details = 'input.repo-details-name+input.repo-details-url';
     repo_details += '+#repo-details-url+input#repo-parallel-builds';
     repo_details += '+#repo-name-available .check-error-indicator';
     repo_details += '+.repository-info-enabled-container input';

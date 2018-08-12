@@ -623,7 +623,7 @@ class HoleHandler:
 
             totaltime = format_timedelta(
                 timedelta(seconds=last_buildset.total_time)) \
-                if last_buildset.started else ''
+                if last_buildset.finished else ''
 
             commit_date = datetime2string(last_buildset.commit_date)
 
