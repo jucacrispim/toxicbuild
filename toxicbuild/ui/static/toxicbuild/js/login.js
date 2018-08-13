@@ -54,6 +54,11 @@ function _hideErrorMessage(){
 
 }
 
+function getRedir(){
+  let params = new URLSearchParams(window.location.search.slice(1));
+  return params.get('redirect') || '/';
+}
+
 async function doLogin(_location=null){
   let form = jQuery('#form-signin');
   let location = _location || window.location;
@@ -79,7 +84,8 @@ async function doLogin(_location=null){
   try{
     // tries to authenticate and redirect to the main page.
     await jQuery.ajax(data);
-    location.replace('/');
+    let redir = getRedir();
+    location.replace(redir);
     r = true;
   }catch (e){
     // if something goes wrong, shows the error message.
