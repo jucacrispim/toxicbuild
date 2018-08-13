@@ -4,7 +4,7 @@ import os
 import sys
 from tests.functional import (start_all as start_all_base,
                               stop_all as stop_all_base)
-from tests.functional.webui.environment import start_webui, stop_webui
+from tests.webui.environment import start_webui, stop_webui
 from toxicbuild.integrations import create_settings
 
 PYVERSION = ''.join([str(n) for n in sys.version_info[:2]])

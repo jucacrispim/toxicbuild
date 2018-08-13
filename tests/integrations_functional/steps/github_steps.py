@@ -18,7 +18,7 @@
 
 from behave import given, when, then
 from toxicbuild.integrations import settings
-from tests.functional.webui.steps.authentication_steps import (  # noqa F401
+from tests.webui.steps.authentication_steps import (  # noqa F401
     user_inserts_password_login, user_inserts_username_login,
     user_clicks_login_button, user_sees_main_main_page_login)
 

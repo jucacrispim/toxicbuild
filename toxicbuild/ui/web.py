@@ -165,6 +165,7 @@ class LoginHandler(TemplateHandler):
             raise HTTPError(403)
 
         self._set_cookie_content()
+
         return {'login': 'ok'}
 
     @get('logout')
