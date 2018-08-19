@@ -183,8 +183,7 @@ class UserTest(TestCase):
                                          'email': 'some-email@bla.com'}))
     @async_test
     async def test_add(self):
-        requester = MagicMock()
-        user = await models.User.add(requester, 'some-email@bla.com',
+        user = await models.User.add('some-email@bla.com',
                                      'some-guy', 'asdf',
                                      ['add_repo'])
         self.assertEqual(user.id, 'some-id')
@@ -198,6 +197,13 @@ class UserTest(TestCase):
         user = models.User(requester, {'id': 'some-id'})
         r = await user.delete()
         self.assertEqual(r, 'ok')
+
+    @patch.object(models.BaseModel, 'get_client', lambda requester:
+                  get_client_mock(None, False))
+    @async_test
+    async def test_exists(self):
+        exists = await models.User.exists(username='some-guy')
+        self.assertFalse(exists)
 
 
 class RepositoryTest(TestCase):

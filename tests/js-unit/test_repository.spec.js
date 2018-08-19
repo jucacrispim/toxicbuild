@@ -333,15 +333,29 @@ describe('BaseRepositoryViewTest', function(){
     input.val('');
     this.view._getChangesFromInput();
     expect(this.view.model.changed.hasOwnProperty('bla')).toBe(false);
+    expect(this.view.model.get('bla')).toEqual('');
   });
 
   it('test-checkHasChanges-changed', function(){
     spyOn(this.view, '_getChangesFromInput');
     spyOn(this.view.model, 'hasChanged').and.returnValue(true);
     affix('.save-btn-container button');
+    jQuery('.repo-details-name', this.view.container).val('asdf');
+    jQuery('.repo-details-url', this.view.container).val('asdf');
     this.view._checkHasChanges();
     let btn = jQuery('.save-btn-container button');
     expect(btn.prop('disabled')).toBe(false);
+  });
+
+  it('test-checkHasChanges-required', function(){
+    spyOn(this.view, '_getChangesFromInput');
+    spyOn(this.view.model, 'hasChanged').and.returnValue(true);
+    affix('.save-btn-container button');
+    jQuery('.repo-details-name', this.view.container).val('asdf');
+    jQuery('.repo-details-url', this.view.container).val('');
+    this.view._checkHasChanges();
+    let btn = jQuery('.save-btn-container button');
+    expect(btn.prop('disabled')).toBe(true);
   });
 
   it('test-checkHasChanges-not-changed', function(){

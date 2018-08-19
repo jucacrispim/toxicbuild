@@ -119,11 +119,17 @@ class BaseModel:
 
 
 class User(BaseModel):
+    """A user created in the master"""
 
     def __init__(self, requester, ordered_kwargs):
         if requester is None:
             requester = self
         super().__init__(requester, ordered_kwargs)
+
+    @classmethod
+    def _get_root_user(cls):
+        root_id = settings.ROOT_USER_ID
+        return cls(None, {'id': root_id})
 
     @classmethod
     async def authenticate(cls, username_or_email, password):
@@ -136,8 +142,9 @@ class User(BaseModel):
         return user
 
     @classmethod
-    async def add(cls, requester, email, username, password,
+    async def add(cls, email, username, password,
                   allowed_actions):
+        requester = cls._get_root_user()
         kw = {'username': username,
               'email': email,
               'password': password, 'allowed_actions': allowed_actions}
@@ -152,6 +159,17 @@ class User(BaseModel):
         with (await type(self).get_client(self.requester)) as client:
             resp = await client.user_remove(**kw)
         return resp
+
+    @classmethod
+    async def exists(cls, **kwargs):
+        """Checks if a user with some given information exists.
+
+        :param kwargs: Named arguments to match the user"""
+        requester = cls._get_root_user()
+        with (await cls.get_client(requester)) as client:
+            exists = await client.user_exists(**kwargs)
+
+        return exists
 
 
 class Slave(BaseModel):

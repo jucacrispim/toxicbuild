@@ -273,6 +273,38 @@ class ModelRestHandlerTest(TestCase):
         self.assertEqual(resp, {'delete': 'ok'})
 
 
+class UserAddRestHandler(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = web.User
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.UserAddRestHandler(application, request,
+                                              model=self.model)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    @patch.object(web.User, 'exists', AsyncMagicMock(return_value=True,
+                                                     spec=web.User.exists))
+    @async_test
+    async def test_check_exists(self):
+        r = await self.handler.check_exists()
+        self.assertTrue(r)
+
+    @patch.object(web.User, 'add', AsyncMagicMock(spec=web.User.add,
+                                                  return_value=MagicMock()))
+    @async_test
+    async def test_add(self):
+        self.handler.body = {'email': 'a@a.com', 'username': 'mra',
+                             'password': 'asdf'}
+        await self.handler.add()
+        user = web.User.add.return_value
+        self.assertTrue(user.to_dict.called)
+        self.assertTrue(web.User.add.called)
+
+
 class RepositoryRestHandlerTest(TestCase):
 
     @async_test
@@ -746,10 +778,11 @@ class ApplicationTest(unittest.TestCase):
         expected = ['/api/socks/(.*)$',
                     '/api/repo/(.*)$',
                     '/api/slave/(.*)$',
-                    '/api/notification/(.*)$']
+                    '/api/notification/(.*)$',
+                    '/api/user/(.*)$']
 
         for url in web.api_app.urls:
             pat = url.regex.pattern
             self.assertIn(pat, expected)
 
-        self.assertEqual(len(web.api_app.urls), 4)
+        self.assertEqual(len(web.api_app.urls), 5)

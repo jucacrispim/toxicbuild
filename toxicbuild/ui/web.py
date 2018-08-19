@@ -25,7 +25,7 @@ import traceback
 from tornado.web import HTTPError
 from tornado.websocket import WebSocketHandler, WebSocketError
 from pyrocumulus.web.applications import PyroApplication, StaticApplication
-from pyrocumulus.web.decorators import post, get, put, delete
+from pyrocumulus.web.decorators import post, get, put, delete, patch
 from pyrocumulus.web.handlers import PyroRequest, BasePyroHandler
 from pyrocumulus.web.template import render_template
 from pyrocumulus.web.urlmappers import URLSpec
@@ -127,9 +127,7 @@ class LoggedTemplateHandler(CookieAuthHandlerMixin, TemplateHandler):
         self.set_xsrf_cookie()
 
 
-class LoginHandler(TemplateHandler):
-
-    login_template = 'toxictheme/login.html'
+class BaseNotLoggedTemplate(TemplateHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -142,6 +140,21 @@ class LoginHandler(TemplateHandler):
         self.query = ToxicRequest(self.request.arguments)
         if self.request.body:
             self.body = json.loads(self.request.body)
+
+
+class RegisterHandler(BaseNotLoggedTemplate):
+
+    register_template = 'toxictheme/register.html'
+
+    @get('register')
+    def show_register_page(self):
+        self.set_xsrf_cookie()
+        self.render_template(self.register_template, {})
+
+
+class LoginHandler(BaseNotLoggedTemplate):
+
+    login_template = 'toxictheme/login.html'
 
     @get('login')
     def show_login_page(self):
@@ -221,6 +234,7 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
 
         return resp
 
+    @patch('')
     @put('')
     async def update(self):
         item = await self.model.get(self.user, **self.query)
@@ -238,6 +252,25 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
 
     def _query_has_pk(self):
         return 'id' in self.query.keys()
+
+
+class UserAddRestHandler(ModelRestHandler):
+    """A rest api handler to add new users.
+    """
+
+    @get('check')
+    async def check_exists(self):
+        exists = await self.model.exists(**self.query)
+        return {'check-exists': exists}
+
+    @post('')
+    async def add(self):
+        email = self.body['email']
+        username = self.body['username']
+        password = self.body['password']
+        allowed_actions = ['add_repo', 'add_slave']
+        r = await self.model.add(email, username, password, allowed_actions)
+        return {'user-add': r.to_dict()}
 
 
 class RepositoryRestHandler(ModelRestHandler):
@@ -543,8 +576,9 @@ class DashboardHandler(LoggedTemplateHandler):
 dashboard = URLSpec('/(.*)$', DashboardHandler)
 
 login = URLSpec('/(login|logout)', LoginHandler)
+register = URLSpec('/(register)', RegisterHandler)
 
-app = PyroApplication([login, dashboard])
+app = PyroApplication([register, login, dashboard])
 
 static_app = StaticApplication()
 
@@ -558,6 +592,9 @@ slave_api_url = URLSpec('/api/slave/(.*)', CookieAuthSlaveRestHandler,
                         slave_kwargs)
 notifications_api_url = URLSpec('/api/notification/(.*)$',
                                 CookieAuthNotificationRestHandler)
+user_add_api = URLSpec('/api/user/(.*)$',
+                       UserAddRestHandler, {'model': User})
 
 api_app = PyroApplication(
-    [websocket, repo_api_url, slave_api_url, notifications_api_url])
+    [websocket, repo_api_url, slave_api_url, notifications_api_url,
+     user_add_api])
