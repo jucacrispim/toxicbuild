@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block logout_link %}{% end %}
+
+{% block main_area %}
+<div class="container login-container">
+  <div class="login-header-msg text-center mx-auto">
+    <p>Sign up</p>
+  </div>
+
+  <div id="login-input-container" class="col-sm-3 box-white mx-auto box-shadow">
+
+    <div class="register-spinner-container">
+      <span class="spinner icon-spinner-2" id="register-available-spinner"
+	    style="display:none">
+      </span>
+      <span class="fas fa-check register-info-icon" id="register-available-ok"
+	    style="display:none" >
+      </span>
+      <span class="fas fa-times register-info-icon" id="register-available-fail"
+	    style="display:none">
+      </span>
+      <span id="register-error-msg" style="display:none"></span>
+    </div>
+
+    <form class="form-signin" id="form-signin" method="post" action="">
+
+      <input type="text" id="username" name="username"
+	     class="form-control login-form-control"
+	     placeholder="Username"
+	     required>
+
+
+      <input type="text" id="email" name="email"
+	     class="form-control login-form-control"
+	     placeholder="Email address"
+	     required>
+
+      <input type="password" id="password" name="password"
+	     class="form-control login-form-control"
+	     placeholder="password"
+	     required>
+    </form>
+    <button class="btn btn-md btn-primary btn-block btn-dark" type="submit"
+	    id="btn-register" disabled>
+      <span class="spinner icon-spinner-2" id="register-btn-spinner"
+	    style="display:none">
+      </span>
+      <span id="login-btn-text">Sign up</span>
+    </button>
+  </div>
+
+  <div id="new-to-toxicbuild-container"
+       class="col-sm-3 box-white mx-auto box-shadow">
+    Already have an account? <a href="/login">Sign in.</a>
+  </div>
+</div>
+{% end %}
+
+
+{% block js_bottom %}
+
+<script>
+  var TOXIC_API_URL = "{{api_url}}";
+</script>
+
+<script src="{{static_url}}jquery/jquery.min.js"></script>
+<script src="{{static_url}}jquery/jquery.validate.min.js"></script>
+<script src="{{static_url}}jquery/jquery.color-2.1.2.min.js"></script>
+<script src="{{static_url}}bootstrap/js/bootstrap.min.js"></script>
+<script src="{{static_url}}common/js/js.cookie.js"></script>
+<script src="{{static_url}}toxicbuild/js/utils.js"></script>
+<script src="{{static_url}}backbone/underscore-min.js"></script>
+<script src="{{static_url}}toxicbuild/js/register.js"></script>
+
+<script>
+  $(document).ready(function(){
+    let handler = new RegisterHandler();
+  });
+</script>
+
+{% end %}

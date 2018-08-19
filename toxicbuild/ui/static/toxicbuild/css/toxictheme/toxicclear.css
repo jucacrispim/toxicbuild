@@ -769,3 +769,19 @@ body{
     display: none;
     margin-bottom: 25px;
 }
+
+
+/* register */
+
+.register-spinner-container{
+    min-height: 34px;
+}
+
+#register-available-ok{
+    color: var(--green);
+}
+
+#register-error-msg,
+#register-available-fail{
+    color: var(--red);
+}
