@@ -292,6 +292,24 @@ class HoleHandlerTest(TestCase):
         user_id = response['user-authenticate']['id']
         self.assertEqual(str(self.owner.id), user_id)
 
+    @async_test
+    async def test_user_get(self):
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'action', protocol)
+        r = await handler.user_get(id=str(self.owner.id))
+        user = r['user-get']
+        self.assertEqual(user['id'], str(self.owner.id))
+
+    @async_test
+    async def test_user_exists(self):
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'action', protocol)
+        r = await handler.user_exists(username='bla')
+        exists = r['user-exists']
+        self.assertFalse(exists)
+
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
@@ -973,7 +991,9 @@ class HoleHandlerTest(TestCase):
                     'builder_show': handler.builder_show,
                     'user_add': handler.user_add,
                     'user_remove': handler.user_remove,
-                    'user_authenticate': handler.user_authenticate}
+                    'user_authenticate': handler.user_authenticate,
+                    'user_get': handler.user_get,
+                    'user_exists': handler.user_exists}
 
         action_methods = handler._get_action_methods()
 

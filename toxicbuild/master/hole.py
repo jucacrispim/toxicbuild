@@ -62,6 +62,13 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
     def set_shutting_down(cls):
         cls._shutting_down = True
 
+    async def _get_user(self):
+        user_id = self.data.get('user_id', '')
+        if not user_id:
+            raise User.DoesNotExist
+        u = await User.objects.get(id=user_id)
+        return u
+
     async def client_connected(self):
 
         if type(self)._shutting_down:
@@ -77,12 +84,10 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
             # a requester user, so we only try to get it when we are not
             # authenticating.
             try:
-                user_id = self.data.get('user_id', '')
-                if not user_id:
-                    raise User.DoesNotExist
-                self.user = await User.objects.get(id=user_id)
+                self.user = await self._get_user()
             except User.DoesNotExist:
-                msg = 'User {} does not exist'.format(user_id)
+                msg = 'User {} does not exist'.format(
+                    self.data.get('user_id', ''))
                 self.log(msg, level='warning')
                 status = 2
                 await self.send_response(code=status, body={'error': msg})
@@ -142,6 +147,8 @@ class HoleHandler:
     * `user-add`
     * `user-remove`
     * `user-authenticate`
+    * `user-get`
+    * `user-exists`
     """
 
     def __init__(self, data, action, protocol):
@@ -224,6 +231,24 @@ class HoleHandler:
 
         user = await User.authenticate(username_or_email, password)
         return {'user-authenticate': user.to_dict()}
+
+    async def user_get(self, **kw):
+        """Returns information about a specific user.
+
+        :params kw: Named arguments to match the user.
+        """
+
+        user = await User.objects.get(**kw)
+        return {'user-get': user.to_dict()}
+
+    async def user_exists(self, **kw):
+        """Checks if a user with given information exists.
+
+        :params kw: Named arguments to check if the user exists.
+        """
+
+        count = await User.objects.filter(**kw).count()
+        return {'user-exists': bool(count)}
 
     async def repo_add(self, repo_name, repo_url, owner_id,
                        update_seconds, vcs_type, slaves=None,
