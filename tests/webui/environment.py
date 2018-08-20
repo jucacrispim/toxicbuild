@@ -41,7 +41,7 @@ create_settings_and_connect()
 create_settings_output()
 
 from toxicbuild.master.exchanges import scheduler_action  # noqa f402
-from toxicbuild.ui import settings
+from toxicbuild.ui import settings  # noqa f402
 from toxicbuild.master.users import User  # noqa f402
 from toxicbuild.ui.models import Slave, Repository  # noqa 402
 from tests.functional import (start_slave, stop_slave,  # noqa 402
