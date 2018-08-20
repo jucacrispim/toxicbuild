@@ -144,7 +144,7 @@ class BaseRepositoryView extends Backbone.View{
     super(options);
     this.model = this.model || new Repository();
     this.model._init_values = {};
-
+    this.model._changed = {};
 
     this.directive = {
       '.repo-details-name@value': 'name',
@@ -258,7 +258,7 @@ class BaseRepositoryView extends Backbone.View{
     // check repo name and enable save button
     let check_name = _.debounce(function(name){
       self._checkNameAvailable(name);}, 500);
-    jQuery('#repo-details-name', template).on('input', function(e){
+    jQuery('.repo-details-name', template).on('input', function(e){
       let name = jQuery(this).val();
       check_name(name);
     });
@@ -344,23 +344,35 @@ class BaseRepositoryView extends Backbone.View{
 	let req_ok = required ? Boolean(value) : true;
 	let origvalue = self.model._init_values[valuefor];
 	if (value != origvalue && req_ok){
-	  self.model.set(valuefor, value);
+	  self.model._changed[valuefor] = value;
 	  if (value == '' && valuefor == 'parallel_builds'){
-	    self.model.changed[valuefor] = 0;
+	    self.model._changed[valuefor] = 0;
 	  }
 
-	}else{
-	  delete self.model.changed[valuefor];
+	}else if (!req_ok){
+	  // self.model.set(valuefor, value);
+	  // delete self.model.changed[valuefor];
 	}
       };
     });
   }
 
+  _hasRequired(){
+    let has_name = jQuery('.repo-details-name', this.container).val();
+    let has_url = jQuery('.repo-details-url', this.container).val();
+    return Boolean(has_name) && Boolean(has_url);
+  }
+
+  _hasChanges(){
+    return Object.keys(this.model._changed).length > 0;
+  }
+
   _checkHasChanges(){
     this._getChangesFromInput();
     let btn = jQuery('.save-btn-container button');
-    let has_changed = this.model.hasChanged();
-    if (has_changed){
+    let has_changed = this._hasChanges();
+    let has_required = this._hasRequired();
+    if (has_changed && has_required){
       btn.prop('disabled', false);
     }else{
       btn.prop('disabled', true);
@@ -401,11 +413,14 @@ class RepositoryAddView extends BaseRepositoryView{
   }
 
   async _addRepo(){
+    this.model.set('name', this.model._changed['name']);
+    this.model.set('url', this.model._changed['url']);
     this.model.set('parallel_builds', 0);
     this.model.set('vcs_type', 'git');
     this.model.set('update_seconds', 10);
     let names = this.slaves.pluck('name');
     this.model.set('slaves', names);
+
     var r;
     try{
       r = await this.model.save();
@@ -463,7 +478,8 @@ class RepositoryDetailsView extends BaseRepositoryView{
   }
 
   async _saveChanges(){
-    let spinner = jQuery('.repo-details-buttons-container #save-repo-btn-spinner');
+    let spinner = jQuery(
+      '.repo-details-buttons-container #save-repo-btn-spinner');
     let text = jQuery('.repo-details-buttons-container #save-repo-btn-text');
 
     text.hide();
@@ -473,11 +489,12 @@ class RepositoryDetailsView extends BaseRepositoryView{
     btn.prop('disabled', true);
 
     try{
-      let changed = this.model.changed;
-      await this.model.save();
+      let changed = this.model._changed;
+      await this.model.save(null, {attrs: changed});
       jQuery.extend(this.model._init_values, changed);
       utils.showSuccessMessage('Repository updated');
     }catch(e){
+      console.error(e);
       btn.prop('disabled', false);
       utils.showErrorMessage('Error updating repository');
     }

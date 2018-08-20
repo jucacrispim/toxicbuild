@@ -295,10 +295,9 @@ describe('BaseRepositoryViewTest', function(){
     second_in.data('valuefor', 'name');
     second_in.val('asfd');
     this.view.model._init_values = {'name': 'some'};
-    spyOn(this.view.model, 'set');
     this.view._getChangesFromInput();
-    let call_count = this.view.model.set.calls.allArgs().length;
-    expect(call_count).toEqual(1);
+    let c_count = Object.keys(this.view.model._changed).length;
+    expect(c_count).toEqual(1);
   });
 
   it('test-getChangesFromInput-same-as-init-value', function(){
@@ -332,13 +331,12 @@ describe('BaseRepositoryViewTest', function(){
     input.data('valuefor', 'bla');
     input.val('');
     this.view._getChangesFromInput();
-    expect(this.view.model.changed.hasOwnProperty('bla')).toBe(false);
-    expect(this.view.model.get('bla')).toEqual('');
+    expect(this.view.model._changed.hasOwnProperty('bla')).toBe(false);
   });
 
   it('test-checkHasChanges-changed', function(){
     spyOn(this.view, '_getChangesFromInput');
-    spyOn(this.view.model, 'hasChanged').and.returnValue(true);
+    spyOn(this.view, '_hasChanges').and.returnValue(true);
     affix('.save-btn-container button');
     jQuery('.repo-details-name', this.view.container).val('asdf');
     jQuery('.repo-details-url', this.view.container).val('asdf');

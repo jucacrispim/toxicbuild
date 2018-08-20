@@ -50,7 +50,7 @@ class BaseModel extends Backbone.Model{
 
   sync(method, model, options){
     let url = _get_url(method, this, false);
-    options.attrs = this._changes;
+    options.attrs = _.extend(this._changes, options.attrs);
     options.url = url;
     let headers = this._getHeaders();
     options.headers = headers;
