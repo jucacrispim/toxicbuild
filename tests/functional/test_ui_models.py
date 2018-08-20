@@ -20,6 +20,7 @@
 import asyncio
 from toxicbuild.master.repository import Repository as RepoDBModel
 from toxicbuild.master.users import User as UserDBModel
+from toxicbuild.ui import settings
 from toxicbuild.ui.models import Slave, Repository, BuildSet, User
 from tests import async_test
 from tests.functional import BaseFunctionalTest, start_all, stop_all
@@ -262,34 +263,28 @@ class BuildsetTest(BaseUITest):
 class UserTest(BaseFunctionalTest):
 
     @classmethod
-    def setUpClass(cls):
-        pass
+    @async_test
+    async def setUpClass(cls):
+        cls.root = UserDBModel(id=settings.ROOT_USER_ID, email='bla@bla.nada',
+                               is_superuser=True)
+        await cls.root.save()
 
     @classmethod
-    def tearDownClass(cls):
-        pass
-
     @async_test
-    async def setUp(self):
-        self.requester = UserDBModel(email='asdf@asfd.com', is_superuser=True)
-        self.requester.set_password('bla')
-        await self.requester.save()
+    async def tearDownClass(cls):
+        await cls.root.delete()
 
     @async_test
     async def tearDown(self):
-        self.user.requester = self.requester
         await self.user.delete()
-        await self.requester.delete()
 
     @async_test
     async def test_add(self):
-        self.user = await User.add(
-            self.requester, 'a@a.com', 'a', 'asdf', ['add_repo'])
+        self.user = await User.add('a@a.com', 'a', 'asdf', ['add_repo'])
         self.assertTrue(self.user.id)
 
     @async_test
     async def test_authenticate(self):
-        self.user = await User.add(
-            self.requester, 'a@a.com', 'a', 'asdf', ['add_repo'])
+        self.user = await User.add('a@a.com', 'a', 'asdf', ['add_repo'])
         auth = await User.authenticate('a@a.com', 'asdf')
         self.assertEqual(self.user.id, auth.id)

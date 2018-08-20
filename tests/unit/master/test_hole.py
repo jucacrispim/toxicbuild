@@ -266,11 +266,14 @@ class HoleHandlerTest(TestCase):
     @async_test
     async def test_user_remove_not_enough_perms(self):
         protocol = MagicMock()
-        self.owner.allowed_actions = []
         protocol.user = self.owner
         handler = hole.HoleHandler({}, 'action', protocol)
+        response = await handler.user_add('a@a.com', 'password',
+                                          ['repo_add', 'slave_add'])
+        self.owner.allowed_actions = []
+        uid = response['user-add']['id']
         with self.assertRaises(hole.NotEnoughPerms):
-            await handler.user_remove(id='bla')
+            await handler.user_remove(id=uid)
 
     @async_test
     async def test_user_remove(self):
@@ -280,6 +283,20 @@ class HoleHandlerTest(TestCase):
         response = await handler.user_add('a@a.com', 'password',
                                           ['repo_add', 'slave_add'])
         user_id = response['user-add']['id']
+        response = await handler.user_remove(id=user_id)
+        self.assertEqual(response['user-remove'], 'ok')
+
+    @async_test
+    async def test_user_remove_himself(self):
+        protocol = MagicMock()
+        protocol.user = self.owner
+
+        handler = hole.HoleHandler({}, 'action', protocol)
+        response = await handler.user_add('a@a.com', 'password',
+                                          ['repo_add', 'slave_add'])
+        user_id = response['user-add']['id']
+        user = await hole.User.objects.get(id=user_id)
+        handler.protocol.user = user
         response = await handler.user_remove(id=user_id)
         self.assertEqual(response['user-remove'], 'ok')
 

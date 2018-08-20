@@ -214,10 +214,11 @@ class HoleHandler:
     async def user_remove(self, **kwargs):
         """Removes a user from the system."""
 
-        if not self._user_is_allowed('remove_user'):
+        user = await User.objects.get(**kwargs)
+        is_himself = user == self.protocol.user
+        if not is_himself and not self._user_is_allowed('remove_user'):
             raise NotEnoughPerms
 
-        user = await User.objects.get(**kwargs)
         await user.delete()
         return {'user-remove': 'ok'}
 

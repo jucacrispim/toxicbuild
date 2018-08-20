@@ -268,7 +268,8 @@ class UserAddRestHandler(ModelRestHandler):
         email = self.body['email']
         username = self.body['username']
         password = self.body['password']
-        allowed_actions = ['add_repo', 'add_slave']
+        allowed_actions = ['add_repo', 'add_slave',
+                           'remove_repo', 'remove_slave']
         r = await self.model.add(email, username, password, allowed_actions)
         return {'user-add': r.to_dict()}
 
