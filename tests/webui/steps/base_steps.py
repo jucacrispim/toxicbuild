@@ -41,3 +41,11 @@ def navigate2settings(context):
 
 when_navigate2settings = when('he navigates to the settings page')(
     navigate2settings)
+
+
+@then('he sees the main page')
+def user_sees_main_main_page_login(context):
+    browser = context.browser
+    txt = 'Logout'
+    is_present = browser.wait_text_become_present(txt)
+    assert is_present

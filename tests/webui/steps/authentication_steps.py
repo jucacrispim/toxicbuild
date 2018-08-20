@@ -4,7 +4,7 @@ import time
 from behave import when, then, given
 from toxicbuild.ui import settings
 from tests.webui.steps.base_steps import (  # noqa f811
-    given_logged_in_webui)
+    given_logged_in_webui, user_sees_main_main_page_login)
 
 
 # Scenario: Someone try to access a page without being logged.
@@ -68,14 +68,6 @@ def user_sees_invalid_credentials_message(context):
     color = el.value_of_css_property('color')
     time.sleep(0.5)
     assert color != 'rgb(255, 255, 255)'
-
-
-@then('he sees the main page')
-def user_sees_main_main_page_login(context):
-    browser = context.browser
-    txt = 'Logout'
-    is_present = browser.wait_text_become_present(txt)
-    assert is_present
 
 
 # Scenario: Do logout

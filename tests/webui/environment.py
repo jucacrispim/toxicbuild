@@ -41,7 +41,7 @@ create_settings_and_connect()
 create_settings_output()
 
 from toxicbuild.master.exchanges import scheduler_action  # noqa f402
-
+from toxicbuild.ui import settings
 from toxicbuild.master.users import User  # noqa f402
 from toxicbuild.ui.models import Slave, Repository  # noqa 402
 from tests.functional import (start_slave, stop_slave,  # noqa 402
@@ -140,6 +140,12 @@ def del_repo(context):
     yield from RepoModel.drop_collection()
 
 
+async def create_root_user(context):
+    user = User(id=settings.ROOT_USER_ID, username='already-exists',
+                email='nobody@nowhere.nada', allowed_actions=['add_user'])
+    await user.save()
+
+
 def before_all(context):
     start_slave()
     start_poller()
@@ -169,6 +175,9 @@ def before_feature(context, feature):
 
         if 'waterfall.feature' in feature.filename:
             await create_repo(context)
+
+        elif 'register.feature' in feature.filename:
+            await create_root_user(context)
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(create(context))
