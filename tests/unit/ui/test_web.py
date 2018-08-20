@@ -139,6 +139,27 @@ class LoggedTemplateHandlerTest(TestCase):
         self.assertFalse(self.handler.redirect.called)
 
 
+class RegisterHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        super().setUp()
+        request = MagicMock()
+        request.cookies = {}
+        request.body = '{}'
+        application = MagicMock()
+        application.settings = {'cookie_secret': 'bladjfçajf'}
+        self.handler = web.RegisterHandler(application, request=request)
+        await self.handler.async_prepare()
+
+    def test_show_register_page(self):
+        self.handler.render_template = MagicMock()
+        self.handler.set_xsrf_cookie = MagicMock()
+        self.handler.show_register_page()
+        self.assertTrue(self.handler.set_xsrf_cookie.called)
+        self.assertTrue(self.handler.render_template.called)
+
+
 class LoginHandlerTest(TestCase):
 
     @async_test
