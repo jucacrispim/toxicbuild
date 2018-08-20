@@ -54,7 +54,6 @@ class BaseModel extends Backbone.Model{
     options.url = url;
     let headers = this._getHeaders();
     options.headers = headers;
-    console.log(options);
     return super.sync(method, model, options);
   }
 

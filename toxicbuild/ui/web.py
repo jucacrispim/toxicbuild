@@ -73,6 +73,14 @@ class ToxicRequest(PyroRequest):
         return item
 
 
+def _create_cookie_content(user):
+    userjson = json.dumps({'id': user.id, 'email': user.email,
+                           'username': user.username})
+
+    content = base64.encodebytes(userjson.encode('utf-8'))
+    return content
+
+
 class CookieAuthHandlerMixin(LoggerMixin, BasePyroHandler):
     """A mixin that checks if the requester is logged by looking
     for a cookie."""
@@ -141,6 +149,10 @@ class BaseNotLoggedTemplate(TemplateHandler):
         if self.request.body:
             self.body = json.loads(self.request.body)
 
+    def _set_cookie_content(self):
+        content = _create_cookie_content(self.user)
+        self.set_secure_cookie(COOKIE_NAME, content)
+
 
 class RegisterHandler(BaseNotLoggedTemplate):
 
@@ -186,13 +198,6 @@ class LoginHandler(BaseNotLoggedTemplate):
         self.clear_cookie(COOKIE_NAME)
 
         self.redirect('/')
-
-    def _set_cookie_content(self):
-        userjson = json.dumps({'id': self.user.id, 'email': self.user.email,
-                               'username': self.user.username})
-
-        content = base64.encodebytes(userjson.encode('utf-8'))
-        self.set_secure_cookie(COOKIE_NAME, content)
 
 
 class ModelRestHandler(LoggerMixin, BasePyroHandler):
@@ -271,6 +276,11 @@ class UserAddRestHandler(ModelRestHandler):
         allowed_actions = ['add_repo', 'add_slave',
                            'remove_repo', 'remove_slave']
         r = await self.model.add(email, username, password, allowed_actions)
+
+        # When we create a user, we set a cookie for the new user's login
+        content = _create_cookie_content(r)
+
+        self.set_secure_cookie(COOKIE_NAME, content)
         return {'user-add': r.to_dict()}
 
 

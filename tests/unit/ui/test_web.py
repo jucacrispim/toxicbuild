@@ -302,6 +302,7 @@ class UserAddRestHandler(TestCase):
         application, request = MagicMock(), MagicMock()
         request.body = web.json.dumps({})
         application.ui_methods = {}
+        application.settings = {'cookie_secret': 'sdf'}
         self.handler = web.UserAddRestHandler(application, request,
                                               model=self.model)
         self.handler._get_user_from_cookie = MagicMock()
@@ -320,6 +321,10 @@ class UserAddRestHandler(TestCase):
     async def test_add(self):
         self.handler.body = {'email': 'a@a.com', 'username': 'mra',
                              'password': 'asdf'}
+        new_user = web.User.add.return_value
+        new_user.username = 'bla'
+        new_user.email = 'bla@a.com'
+        new_user.id = 'some-id'
         await self.handler.add()
         user = web.User.add.return_value
         self.assertTrue(user.to_dict.called)

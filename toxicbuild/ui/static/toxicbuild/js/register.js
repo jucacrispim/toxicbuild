@@ -54,6 +54,7 @@ class RegisterHandler{
   _showErrorInfo(text){
     let error_msg_container = $('#register-error-msg');
     error_msg_container.text(text);
+    $('#register-available-fail').show();
     error_msg_container.show();
   }
 
