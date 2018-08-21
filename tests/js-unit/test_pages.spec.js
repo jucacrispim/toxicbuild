@@ -60,17 +60,49 @@ describe('SettingsPageTest', function(){
   });
 
   it('test-fetch-main-template', async function(){
-    this.page = new SettingsPage({settings_type: 'slaves'});
+    let router = jasmine.createSpy('router');
+    router.setUpLinks = jasmine.createSpy('setUpLinks');
+    this.page = new SettingsPage({settings_type: 'slaves',
+				  router: router});
     await this.page.fetch_main_template();
     expect(this.page.main_template_container.html).toHaveBeenCalled();
   });
 
+  it('test-checkRenderPath', function(){
+    let router = jasmine.createSpy('router');
+    router._getCurrentPath = jasmine.createSpy('path').and.returnValue(
+      '/settings/slaves');
+    this.page = new SettingsPage({settings_type: 'slaves',
+				  router: router});
+    let r = this.page._checkRenderPath('repositories');
+    expect(r).toBe(true);
+  });
+
   it('test-render_main', async function(){
-    this.page = new SettingsPage({settings_type: 'slaves'});
+    let router = jasmine.createSpy('router');
+    router.setUpLinks = jasmine.createSpy('setUpLinks');
+    router._getCurrentPath = jasmine.createSpy('path').and.returnValue(
+      '/settings/slaves');
+    router.navigate = jasmine.createSpy('navigate');
+    this.page = new SettingsPage({settings_type: 'slaves',
+				  router: router});
     spyOn(this.page, 'fetch_main_template');
     spyOn(this.page, 'render');
     await this.page.render_main('repositories');
     expect(this.page.template_url).toEqual('/templates/settings/repositories');
+  });
+
+  it('test-render_main-same-page', async function(){
+    let router = jasmine.createSpy('router');
+    router.setUpLinks = jasmine.createSpy('setUpLinks');
+    router._getCurrentPath = jasmine.createSpy('path').and.returnValue(
+      '/settings/slaves');
+    this.page = new SettingsPage({settings_type: 'slaves',
+				  router: router});
+    spyOn(this.page, 'fetch_main_template');
+    spyOn(this.page, 'render');
+    await this.page.render_main('slaves');
+    expect(this.page.template_url).toEqual('/templates/settings/slaves');
   });
 
 });
@@ -81,7 +113,6 @@ describe('MainPageTest', function(){
     this.page = new MainPage({router: jasmine.createSpy('router')});
     this.page.repo_list_view.render_enabled = jasmine.createSpy(
       'render-enabled');
-
   });
 
   it('test-render', async function(){

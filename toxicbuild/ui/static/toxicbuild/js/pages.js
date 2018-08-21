@@ -68,10 +68,12 @@ class SettingsPage extends BasePage{
     }
     let self = this;
     $('#manage-slaves-link').on('click', async function(e){
+      e.preventDefault();
       await self.render_main('slaves');
     });
 
     $('#manage-repositories-link').on('click', async function(e){
+      e.preventDefault();
       await self.render_main('repositories');
     });
     self._already_listen = true;
@@ -92,14 +94,28 @@ class SettingsPage extends BasePage{
     $('#manage-' + settings_type + '-link').addClass('active box-shadow');
   }
 
+  _checkRenderPath(settings_type){
+    let path = this.router._getCurrentPath();
+    let next = '/settings/' + settings_type;
+    return path != next;
+  }
+
   async render_main(settings_type){
+    if(!this._checkRenderPath(settings_type)){
+      return;
+    }
+    let href = '/settings/' + settings_type;
+    this.router.navigate(href, {'trigger': false});
+
     this._handle_navigation(settings_type);
     this.template_url = this._get_template_url(settings_type);
     this.main_template_url = this._get_main_template_url(settings_type);
     this.main_template_container = this._get_main_template_container();
     await this.fetch_main_template();
+    $('.wait-toxic-spinner').show();
     this._set_list_view(settings_type);
     await this.render();
+    this.router.setUpLinks();
   }
 
   async fetch_main_template(){

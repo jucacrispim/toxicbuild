@@ -5,13 +5,13 @@
   <div class="nav-container">
     <ul class="nav nav-pills">
       <li class="nav-item">
-	<a class="nav-link {% if settings_type == 'repositories' %} active box-shadow {% end %}" href="/settings/repositories" data-notrigger=true
+	<a class="nav-link {% if settings_type == 'repositories' %} active box-shadow {% end %}" href="/settings/repositories" data-noroute=true
 	   id="manage-repositories-link">
 	  Manage repositories
 	</a>
       </li>
       <li class="nav-item">
-	<a class="nav-link {% if settings_type == 'slaves' %} active box-shadow {% end %}" href="/settings/slaves" data-notrigger=true id="manage-slaves-link">
+	<a class="nav-link {% if settings_type == 'slaves' %} active box-shadow {% end %}" href="/settings/slaves" data-noroute=true id="manage-slaves-link">
 	  Manage slaves
 	</a>
       </li>
@@ -43,7 +43,8 @@
 
 <script>
   async function init(){
-    let options = {settings_type: "{{settings_type}}"};
+    let options = {settings_type: "{{settings_type}}",
+		   router: router};
     let page = new SettingsPage(options);
     await page.render();
   }
