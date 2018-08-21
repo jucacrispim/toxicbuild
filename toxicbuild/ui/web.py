@@ -33,6 +33,7 @@ from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.core.utils import LoggerMixin, string2datetime
 from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
+from toxicbuild.ui.exceptions import BadSettingsType
 from toxicbuild.ui.models import (Repository, Slave, User, Notification)
 from toxicbuild.ui.utils import (format_datetime, is_datetime)
 
@@ -523,6 +524,8 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
 class DashboardHandler(LoggedTemplateHandler):
     main_template = 'toxictheme/main.html'
     settings_template = 'toxictheme/settings.html'
+    repo_settings_template = 'toxictheme/repo_settings.html'
+    slave_settings_template = 'toxictheme/slave_settings.html'
     repository_template = 'toxictheme/repository.html'
 
     def _get_main_template(self):
@@ -530,11 +533,28 @@ class DashboardHandler(LoggedTemplateHandler):
                                    self.request, {})
         return rendered
 
-    def _get_settings_template(self):
+    def _get_settings_template(self, settings_type):
         github_import_url = getattr(settings, 'GITHUB_IMPORT_URL', '#')
         rendered = render_template(self.settings_template,
                                    self.request,
-                                   {'github_import_url': github_import_url})
+                                   {'github_import_url': github_import_url,
+                                    'settings_type': settings_type})
+        return rendered
+
+    def _get_settings_main_template(self, settings_type):
+        if settings_type == 'repositories':
+            github_import_url = getattr(settings, 'GITHUB_IMPORT_URL', '#')
+            context = {'github_import_url': github_import_url}
+            template = self.repo_settings_template
+
+        elif settings_type == 'slaves':
+            context = {}
+            template = self.slave_settings_template
+
+        else:
+            raise BadSettingsType(settings_type)
+
+        rendered = render_template(template, self.request, context)
         return rendered
 
     def _get_repository_template(self, full_name=''):
@@ -555,14 +575,21 @@ class DashboardHandler(LoggedTemplateHandler):
 
     @get('settings/(slaves|repositories)')
     def show_settings(self, settings_type):
-        content = self._get_settings_template()
-        context = {'content': content,
-                   'settings_type': settings_type}
+        settings_type = settings_type.decode()
+        content = self._get_settings_template(settings_type)
+        context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
-    @get('templates/settings')
-    def show_settings_template(self):
-        content = self._get_settings_template()
+    @get('templates/settings/(slaves|repositories)')
+    def show_settings_template(self, settings_type):
+        settings_type = settings_type.decode()
+        content = self._get_settings_template(settings_type)
+        self.write(content)
+
+    @get('templates/settings/main/(slaves|repositories)')
+    def show_settings_main_template(self, settings_type):
+        settings_type = settings_type.decode()
+        content = self._get_settings_main_template(settings_type)
         self.write(content)
 
     @get('(\w+/\w+)/settings')

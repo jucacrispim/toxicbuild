@@ -370,27 +370,33 @@ body{
     font-size: 0.8em;
 }
 
+#slave-list-container ul,
 #repo-list-container ul{
     list-style: none;
     padding-left: 0;
 }
 
+#slave-list-container .slave-info-name-container,
 #repo-list-container .repository-info-name-container{
     margin-right: 10px;
 }
 
+#slave-list-container .slave-info-name-container a:hover,
 #repo-list-container .repository-info-name-container a:hover{
     color: #212529;
 }
 
+.slave-info-container,
 .repo-info-container{
     float: left;
 }
 
+.top-page-slaves-info-container,
 .top-page-repositories-info-container{
     display: none;
 }
 
+#slave-list-container .slave-status-ready,
 #repo-list-container .repo-status-ready{
     border-left: 5px solid var(--gray);
 }
@@ -403,10 +409,12 @@ body{
     border-left: 5px solid var(--exception);
 }
 
+.slave-info-row,
 .repository-info-row{
     margin-bottom: 3px;
 }
 
+.slave-info-header,
 .repository-info-header{
     float: right;
     margin-top: -15px;
@@ -414,17 +422,20 @@ body{
     color: #bdb8b8;
 }
 
+.slave-info-header:hover,
 .repository-info-header:hover{
     color: #6d6c6c;
     cursor: pointer;
 }
 
+.slave-info-name,
 .repository-info-name{
     color: #212529;
     font-size: 1.2em;
     font-weight: 500;
 }
 
+.slave-info-first-row,
 .repository-info-first-row{
     margin-bottom: 20px;
 }
@@ -433,6 +444,7 @@ body{
     margin-bottom: 10px;
 }
 
+.slave-info-last-row,
 .repository-info-last-row{
     margin-bottom: 0;
 }
@@ -466,6 +478,7 @@ body{
     cursor: pointer;
 }
 
+.top-page-slaves-info-container,
 .top-page-repositories-info-container{
     margin-bottom: 10px;
 }
@@ -475,6 +488,7 @@ body{
     margin-left: 10px;
 }
 
+.top-page-slaves-info-container .fa-plus,
 .top-page-repositories-info-container .fa-plus{
     color: var(--green);
 }
@@ -518,6 +532,7 @@ body{
     line-height: 1;
 }
 
+.slave-info-header .dropdown-toggle::after,
 .repository-info-header .dropdown-toggle::after {
     content: none;
 }
@@ -784,4 +799,10 @@ body{
 #register-error-msg,
 #register-available-fail{
     color: var(--red);
+}
+
+/* slave stuff */
+
+.slave-info-address{
+    float: right;
 }

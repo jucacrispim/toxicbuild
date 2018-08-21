@@ -22,7 +22,8 @@ class DashboardRouter extends Backbone.Router{
     options = options || {};
 
     let routes = {'': 'showMainPage',
-		  'settings/repositories': 'showSettingsPage',
+		  'settings/repositories': 'showRepoListSettingsPage',
+		  'settings/slaves': 'showSlaveListSettingsPage',
 		  'repository/add': 'showRepoAddPage',
 		  ':owner/:name/settings': 'showRepoSettingsPage'};
 
@@ -52,9 +53,10 @@ class DashboardRouter extends Backbone.Router{
 	let a_el = jQuery(this);
 	let href = a_el.attr('href');
 	let noroute = a_el.data('noroute');
+	let trigger = !a_el.data('notrigger');
 	if (href != '#' && !noroute){
 	  e.preventDefault();
-	  self.navigate(href, {'trigger': true});
+	  self.navigate(href, {'trigger': trigger});
 	}
       });
     });
@@ -77,12 +79,19 @@ class DashboardRouter extends Backbone.Router{
   }
 
   async showMainPage(){
-    let page = new MainPage(this);
+    let page = new MainPage({router: this});
     await this._showPage(page);
   }
 
-  async showSettingsPage(){
-    let page = new SettingsPage(this);
+  async showRepoListSettingsPage(){
+    let page = new SettingsPage({router: this,
+				 settings_type: 'repositories'});
+    await this._showPage(page);
+  }
+
+  async showSlaveListSettingsPage(){
+    let page = new SettingsPage({router: this,
+				 settings_type: 'slaves'});
     await this._showPage(page);
   }
 

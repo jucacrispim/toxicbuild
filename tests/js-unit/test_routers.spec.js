@@ -52,11 +52,20 @@ describe('DashboarRouterTest', function(){
     expect((page instanceof MainPage)).toBe(true);
   });
 
-  it('test-showSettingsPage', async function(){
+  it('test-showRepoListSettingsPage', async function(){
     this.router._showPage = jasmine.createSpy('_showPage');
-    await this.router.showSettingsPage();
+    await this.router.showRepoListSettingsPage();
     let page = this.router._showPage.calls.allArgs()[0][0];
     expect((page instanceof SettingsPage)).toBe(true);
+    expect((page.list_view instanceof RepositoryListView)).toBe(true);
+  });
+
+  it('test-showSlaveListSettingsPage', async function(){
+    this.router._showPage = jasmine.createSpy('_showPage');
+    await this.router.showSlaveListSettingsPage();
+    let page = this.router._showPage.calls.allArgs()[0][0];
+    expect((page instanceof SettingsPage)).toBe(true);
+    expect((page.list_view instanceof SlaveListView)).toBe(true);
   });
 
   it('test-showRepoSettingsPage', async function(){

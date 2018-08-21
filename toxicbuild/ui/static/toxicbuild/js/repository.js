@@ -26,7 +26,7 @@ class Repository extends BaseModel{
 
   async _post2api(url, body){
     let headers = this._getHeaders();
-    let resp = await jQuery.ajax(
+    let resp = await $.ajax(
       {'url': url, 'data': JSON.stringify(body), 'type': 'post',
        'contentType': "application/json", 'headers': headers});
 
@@ -226,8 +226,8 @@ class BaseRepositoryView extends Backbone.View{
   }
 
   async _change_enabled(el){
-    let toggle_group = jQuery('.toggle', el.parent().parent());
-    let spinner = jQuery('.wait-change-enabled-spinner', el.parent().parent());
+    let toggle_group = $('.toggle', el.parent().parent());
+    let spinner = $('.wait-change-enabled-spinner', el.parent().parent());
     toggle_group.hide();
     spinner.fadeIn(300);
 
@@ -241,9 +241,9 @@ class BaseRepositoryView extends Backbone.View{
     spinner.hide();
     toggle_group.fadeIn(500);
 
-    let container = jQuery(el.parent().parent());
+    let container = $(el.parent().parent());
     container.removeClass('repo-enabled').removeClass('repo-disabled');
-    let indicator = jQuery('.toggle-handle', container);
+    let indicator = $('.toggle-handle', container);
     indicator.removeClass('fas fa-check repo-enabled-check').removeClass(
       'fas fa-times');
     if (enabled){
@@ -258,8 +258,8 @@ class BaseRepositoryView extends Backbone.View{
     // check repo name and enable save button
     let check_name = _.debounce(function(name){
       self._checkNameAvailable(name);}, 500);
-    jQuery('.repo-details-name', template).on('input', function(e){
-      let name = jQuery(this).val();
+    $('.repo-details-name', template).on('input', function(e){
+      let name = $(this).val();
       check_name(name);
     });
 
@@ -269,26 +269,26 @@ class BaseRepositoryView extends Backbone.View{
     let self = this;
     // check for changes to enable save button
     let check_changes = _.debounce(function(){self._checkHasChanges();}, 300);
-    jQuery('input', template).each(function(){
-      let el = jQuery(this);
+    $('input', template).each(function(){
+      let el = $(this);
       el.on('input', function(e){check_changes();});
     });
   }
 
   _listen2events(template){
-    let checkbox = jQuery('.repo-enabled-checkbox', template);
+    let checkbox = $('.repo-enabled-checkbox', template);
     let self = this;
-    checkbox.change(function(){self._change_enabled(jQuery(this));});
+    checkbox.change(function(){self._change_enabled($(this));});
     self._listen2name_available(template);
     self._listen2input_changes(template);
   }
 
   _setEnabled(enabled, template){
     if (enabled){
-      jQuery('.repository-info-enabled-container', template).addClass(
+      $('.repository-info-enabled-container', template).addClass(
 	'repo-enabled');
     }else{
-      jQuery('.repository-info-enabled-container', template).addClass(
+      $('.repository-info-enabled-container', template).addClass(
 	'repo-disabled');
     }
   }
@@ -298,9 +298,9 @@ class BaseRepositoryView extends Backbone.View{
     let selector = '#repo-name-available #available-text';
     let indicator_selector = '#repo-name-available .check-error-indicator';
     let spinner_selector = '.wait-name-available-spinner';
-    let el = jQuery(selector);
-    let indicator = jQuery(indicator_selector);
-    let spinner = jQuery(spinner_selector);
+    let el = $(selector);
+    let indicator = $(indicator_selector);
+    let spinner = $(spinner_selector);
 
     el.hide();
     indicator.hide();
@@ -335,8 +335,8 @@ class BaseRepositoryView extends Backbone.View{
   _getChangesFromInput(){
     let self = this;
 
-    jQuery('input').each(function(){
-      let el = jQuery(this);
+    $('input').each(function(){
+      let el = $(this);
       let valuefor = el.data('valuefor');
       if (valuefor){
 	let value = el.val();
@@ -358,8 +358,8 @@ class BaseRepositoryView extends Backbone.View{
   }
 
   _hasRequired(){
-    let has_name = jQuery('.repo-details-name', this.container).val();
-    let has_url = jQuery('.repo-details-url', this.container).val();
+    let has_name = $('.repo-details-name', this.container).val();
+    let has_url = $('.repo-details-url', this.container).val();
     return Boolean(has_name) && Boolean(has_url);
   }
 
@@ -369,7 +369,7 @@ class BaseRepositoryView extends Backbone.View{
 
   _checkHasChanges(){
     this._getChangesFromInput();
-    let btn = jQuery('.save-btn-container button');
+    let btn = $('.save-btn-container button');
     let has_changed = this._hasChanges();
     let has_required = this._hasRequired();
     if (has_changed && has_required){
@@ -382,15 +382,15 @@ class BaseRepositoryView extends Backbone.View{
   async render_details(){
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
-    jQuery('.wait-toxic-spinner').hide();
+    $('.wait-toxic-spinner').hide();
 
     let kw = await this._get_kw();
     let has_branches = kw.branches.length ? true : false;
 
-    let compiled = jQuery(this.compiled_template(kw));
-    let checkbox = jQuery('.repo-enabled-checkbox', compiled);
+    let compiled = $(this.compiled_template(kw));
+    let checkbox = $('.repo-enabled-checkbox', compiled);
     utils.checkboxToggle(checkbox);
-    this.container = jQuery(this.container_selector);
+    this.container = $(this.container_selector);
     this.container.html(compiled);
     this._listen2events(compiled);
   }
@@ -407,9 +407,9 @@ class RepositoryAddView extends BaseRepositoryView{
     await this.slaves.fetch();
     this.model._init_values = this.model.changed;
     this.model.changed = {};
-    jQuery('#save-repo-btn-text').text('Add repository');
+    $('#save-repo-btn-text').text('Add repository');
     await super.render_details();
-    jQuery('.repository-info-enabled-container').hide();
+    $('.repository-info-enabled-container').hide();
   }
 
   async _addRepo(){
@@ -430,13 +430,13 @@ class RepositoryAddView extends BaseRepositoryView{
       utils.showErrorMessage('Error adding repository');
       return;
     }
-    jQuery(document).trigger('repo-added', r['full_name']);
+    $(document).trigger('repo-added', r['full_name']);
   }
 
   _listen2events(template){
     let self = this;
     super._listen2events(template);
-    let add_btn = jQuery('#btn-save-repo');
+    let add_btn = $('#btn-save-repo');
 
     add_btn.on('click', function(e){
       self._addRepo();
@@ -453,12 +453,12 @@ class RepositoryDetailsView extends BaseRepositoryView{
   }
 
   _getBranchModal(){
-    let modal = jQuery('#addBranchModal');
+    let modal = $('#addBranchModal');
     return modal;
   }
 
   _getRemoveModal(){
-    let modal = jQuery('#removeRepoModal');
+    let modal = $('#removeRepoModal');
     return modal;
   }
 
@@ -473,25 +473,25 @@ class RepositoryDetailsView extends BaseRepositoryView{
       utils.showErrorMessage('Error deleting repository');
     }
     modal.on('hidden.bs.modal', function(e){
-      jQuery(document).trigger('repo-removed');
+      $(document).trigger('repo-removed');
     });
   }
 
   async _saveChanges(){
-    let spinner = jQuery(
+    let spinner = $(
       '.repo-details-buttons-container #save-repo-btn-spinner');
-    let text = jQuery('.repo-details-buttons-container #save-repo-btn-text');
+    let text = $('.repo-details-buttons-container #save-repo-btn-text');
 
     text.hide();
     spinner.show();
 
-    let btn = jQuery('.save-btn-container button');
+    let btn = $('.save-btn-container button');
     btn.prop('disabled', true);
 
     try{
       let changed = this.model._changed;
       await this.model.save(null, {attrs: changed});
-      jQuery.extend(this.model._init_values, changed);
+      $.extend(this.model._init_values, changed);
       utils.showSuccessMessage('Repository updated');
     }catch(e){
       console.error(e);
@@ -512,7 +512,7 @@ class RepositoryDetailsView extends BaseRepositoryView{
 
     let step_modif = type == 'increase' ? 1 : -1;
     let step_size = 40 * step_modif;
-    let container = jQuery('#branches-config-p');
+    let container = $('#branches-config-p');
     for (let i=0; i < steps; i++){
       let height = container.height();
       let new_height = step_size + height;
@@ -524,20 +524,20 @@ class RepositoryDetailsView extends BaseRepositoryView{
     let directive = {'.branch-name': 'name',
 		     '.remove-branch-btn@data-branch': 'name'};
     let template = $p('.repo-branches-li').compile(directive);
-    let compiled = jQuery(template(branch));
-    let container = jQuery('#repo-details #repo-branches-container');
+    let compiled = $(template(branch));
+    let container = $('#repo-details #repo-branches-container');
     this._listen2remove_branch_event(compiled);
     container.append(compiled.hide().fadeIn(300));
     this._hackHelpHeight(1);
   }
 
   async _addBranch(){
-    let text = jQuery("#add-branch-btn-text");
-    let spinner = jQuery('#add-branch-btn-spinner');
+    let text = $("#add-branch-btn-text");
+    let spinner = $('#add-branch-btn-spinner');
     text.hide();
     spinner.show();
-    let branch_name = jQuery('#repo-branch-name').val();
-    let notify_only_latest = jQuery('#notify_only_latest').is(':checked');
+    let branch_name = $('#repo-branch-name').val();
+    let notify_only_latest = $('#notify_only_latest').is(':checked');
     let branch = {'branch_name': branch_name,
 		  'notify_only_latest': notify_only_latest};
     let confs =  [branch];
@@ -557,7 +557,7 @@ class RepositoryDetailsView extends BaseRepositoryView{
   }
 
   async _removeBrach(remove_el){
-    let spinner = jQuery('.remove-branch-btn-spinner', remove_el.parent());
+    let spinner = $('.remove-branch-btn-spinner', remove_el.parent());
     remove_el.hide();
     spinner.show();
     let branch_name = remove_el.data('branch');
@@ -576,14 +576,14 @@ class RepositoryDetailsView extends BaseRepositoryView{
   }
 
   _initBranchFields(){
-    jQuery('#repo-branch-name').val('');
-    jQuery('#notify-only-latest').prop('checked', true);
-    jQuery('#btn-add-branch').prop('disabled', true);
+    $('#repo-branch-name').val('');
+    $('#notify-only-latest').prop('checked', true);
+    $('#btn-add-branch').prop('disabled', true);
   }
 
   _enableAddBranchBtn(){
-    let btn = jQuery('#btn-add-branch');
-    let name_input = jQuery('#repo-branch-name');
+    let btn = $('#btn-add-branch');
+    let name_input = $('#repo-branch-name');
     if (Boolean(name_input.val())){
       btn.prop('disabled', false);
     }else{
@@ -593,8 +593,8 @@ class RepositoryDetailsView extends BaseRepositoryView{
 
   _listen2remove_branch_event(template){
     let self = this;
-    jQuery('.remove-branch-btn', template).on('click', function(e){
-      let remove_el = jQuery(e.target);
+    $('.remove-branch-btn', template).on('click', function(e){
+      let remove_el = $(e.target);
       self._removeBrach(remove_el);
     });
   }
@@ -604,27 +604,27 @@ class RepositoryDetailsView extends BaseRepositoryView{
     super._listen2events(template);
 
     // save changes when clicking on save button
-    let save_btn = jQuery('#btn-save-repo');
+    let save_btn = $('#btn-save-repo');
     save_btn.on('click', function(e){
       self._saveChanges();
     });
 
-    jQuery('#addBranchModal').on('show.bs.modal', function(e){
+    $('#addBranchModal').on('show.bs.modal', function(e){
       self._initBranchFields();
     });
 
     let enable_branch_btn = _.debounce(function(){self._enableAddBranchBtn();},
 				       300);
-    jQuery('#repo-branch-name').on('input', function(e){
+    $('#repo-branch-name').on('input', function(e){
       enable_branch_btn();
     });
 
-    jQuery('#btn-add-branch').on('click', function(e){
+    $('#btn-add-branch').on('click', function(e){
       self._addBranch();
     });
 
     // remove repository
-    let remove_btn = jQuery('#btn-remove-repo');
+    let remove_btn = $('#btn-remove-repo');
     remove_btn.on('click', function(e){
       self._removeRepo();
     });
@@ -635,9 +635,9 @@ class RepositoryDetailsView extends BaseRepositoryView{
   _handleBrachList(has_branches, template){
     var placeholder;
     if (template){
-     placeholder = jQuery('#no-branch-placeholder', template);
+     placeholder = $('#no-branch-placeholder', template);
     }else{
-      placeholder = jQuery('#repo-details #no-branch-placeholder');
+      placeholder = $('#repo-details #no-branch-placeholder');
     }
 
     if (!has_branches){
@@ -661,8 +661,8 @@ class RepositoryDetailsView extends BaseRepositoryView{
     this._setSlaveEnabled(el);
 
     let container = el.parent().parent();
-    let toggle_group = jQuery('.toggle', container);
-    let spinner = jQuery('.wait-change-enabled-spinner', container);
+    let toggle_group = $('.toggle', container);
+    let spinner = $('.wait-change-enabled-spinner', container);
     toggle_group.hide();
     spinner.fadeIn(300);
 
@@ -688,17 +688,17 @@ class RepositoryDetailsView extends BaseRepositoryView{
   _handleSlaveList(template){
     let self = this;
 
-    let checkboxes = jQuery('.slave-enabled-checkbox', template);
+    let checkboxes = $('.slave-enabled-checkbox', template);
     checkboxes.each(function(){
-      let el = jQuery(this);
+      let el = $(this);
       utils.checkboxToggle(el);
       self._setSlaveEnabled(el);
-      el.change(function(){self._changeSlaveEnabled(jQuery(this));});
+      el.change(function(){self._changeSlaveEnabled($(this));});
     });
   }
 
   _setValidations(){
-    jQuery('#repo-branch-name').validate({
+    $('#repo-branch-name').validate({
 
       errorPlacement: function(error, element){
 	element.addClass('form-control-error');
@@ -785,11 +785,11 @@ class RepositoryInfoView extends BaseRepositoryView{
     let kw = this._get_kw();
     let status = kw['status'];
     let badge_class = this._get_badge_class(status);
-    let compiled = jQuery(this.compiled_template(kw));
+    let compiled = $(this.compiled_template(kw));
     compiled.addClass('repo-status-' + status);
-    jQuery('.badge', compiled).addClass(badge_class);
+    $('.badge', compiled).addClass(badge_class);
 
-    let checkbox = jQuery('.repo-enabled-checkbox', compiled);
+    let checkbox = $('.repo-enabled-checkbox', compiled);
     utils.checkboxToggle(checkbox);
     this._listen2events(compiled);
 
@@ -797,10 +797,10 @@ class RepositoryInfoView extends BaseRepositoryView{
     this._setEnabled(enabled, compiled);
 
     if (status == 'ready'){
-      jQuery('.no-builds-info', compiled).show();
+      $('.no-builds-info', compiled).show();
     }
     else{
-      jQuery('.repository-info-last-buildset', compiled).show();
+      $('.repository-info-last-buildset', compiled).show();
     }
     return compiled;
   }
@@ -831,14 +831,14 @@ class RepositoryListView extends Backbone.View{
   _render_list_if_needed(){
     // Renders the repository list if there are some repositories. If not
     // displays the welcome message
-    jQuery('.wait-toxic-spinner').hide();
+    $('.top-page-repositories-info-container').fadeIn();
+    $('.wait-toxic-spinner').hide();
     if (this.model.length == 0){
-      jQuery('#no-repos-info').fadeIn(300);
+      $('#no-repos-info').fadeIn(300);
       return false;
     }
 
-    jQuery('.top-page-repositories-info-container').show();
-    jQuery('#repo-list-container').html(this.$el);
+    $('#repo-list-container').html(this.$el);
     var self = this;
     this.model.each(function(model){self._render_repo(model);});
     return true;

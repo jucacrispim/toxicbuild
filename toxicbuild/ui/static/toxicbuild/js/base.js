@@ -87,7 +87,7 @@ class BaseModel extends Backbone.Model{
   async remove(){
     let url = this._api_url + '?id=' + this.id;
     let headers = this._getHeaders();
-    await jQuery.ajax({'url': url, 'type': 'delete',
+    await $.ajax({'url': url, 'type': 'delete',
 		       'headers': headers});
   }
 }

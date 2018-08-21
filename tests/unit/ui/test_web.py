@@ -690,20 +690,50 @@ class DashboardHandlerTest(AsyncTestCase):
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
     def test_get_settings_template(self):
-        self.handler._get_settings_template()
+        self.handler._get_settings_template('repositories')
 
         called = web.render_template.call_args
         called_template = called[0][0]
         called_context = called[0][2]
-        expected_keys = ['github_import_url']
+        expected_keys = ['github_import_url', 'settings_type']
         self.assertEqual(called_template, self.handler.settings_template)
         self.assertEqual(expected_keys, list(called_context.keys()))
 
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
+    def test_get_settings_main_template_repo(self):
+        settings_type = 'repositories'
+        self.handler._get_settings_main_template(settings_type)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = ['github_import_url']
+        self.assertEqual(called_template, self.handler.repo_settings_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_settings_main_template_slave(self):
+        settings_type = 'slaves'
+        self.handler._get_settings_main_template(settings_type)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = []
+        self.assertEqual(called_template, self.handler.slave_settings_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_settings_main_template_bad_settings(self):
+        settings_type = 'bad'
+        with self.assertRaises(web.BadSettingsType):
+            self.handler._get_settings_main_template(settings_type)
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
     def test_get_repository_template(self):
         self.handler._get_repository_template()
-
         called = web.render_template.call_args
         called_template = called[0][0]
         called_context = called[0][2]
@@ -740,9 +770,9 @@ class DashboardHandlerTest(AsyncTestCase):
         self.handler.render_template = MagicMock(
             spec=self.handler.render_template)
 
-        self.handler.show_settings('repositories')
+        self.handler.show_settings(b'repositories')
 
-        expected_keys = ['content', 'settings_type']
+        expected_keys = ['content']
         called_template = self.handler.render_template.call_args[0][0]
         called_context = self.handler.render_template.call_args[0][1]
         self.assertTrue(self.handler._get_settings_template.called)
@@ -754,8 +784,17 @@ class DashboardHandlerTest(AsyncTestCase):
             spec=self.handler._get_settings_template)
         self.handler.write = MagicMock(spec=self.handler.write)
 
-        self.handler.show_settings_template()
+        self.handler.show_settings_template(b'slaves')
         self.assertTrue(self.handler._get_settings_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    def test_show_settings_main_template(self):
+        self.handler._get_settings_main_template = MagicMock(
+            spec=self.handler._get_settings_main_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_settings_main_template(b'slaves')
+        self.assertTrue(self.handler._get_settings_main_template.called)
         self.assertTrue(self.handler.write.called)
 
     def test_show_repository_details(self):

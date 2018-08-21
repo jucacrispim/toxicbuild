@@ -34,3 +34,74 @@ class SlaveList extends BaseCollection{
     this.url = TOXIC_SLAVE_API_URL;
   }
 }
+
+
+class SlaveInfoView extends Backbone.View{
+  // The info about a slave shown in a slave list
+
+  constructor(options){
+    options = options || {'tagName': 'div'};
+    super(options);
+    this.model = this.model || new Slave();
+
+    this.directive = {
+      '.slave-info-name': 'name',
+      '.slave-details-link@href': 'details_link',
+      '.slave-info-host': 'host',
+      '.slave-info-port': 'port',
+    };
+    this.template_selector = '.template .slave-info';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+
+  }
+
+  _get_kw(){
+    let name = this.model.escape('name');
+    let host = this.model.escape('host');
+    let port = this.model.escape('port');
+    let details_link = '/slave/' + name;
+    return {name: name, host: host, port: port, details_link: details_link};
+  }
+
+  getRendered(){
+    let kw = this._get_kw();
+    let compiled = $(this.compiled_template(kw));
+    return compiled;
+  }
+
+}
+
+class SlaveListView extends Backbone.View{
+
+  constructor(){
+    let model = new SlaveList();
+    let options = {'tagName': 'ul',
+		   'model': model};
+
+    super(options);
+    this._info_view = SlaveInfoView;
+ }
+
+  _render_slave(model){
+    let view = new this._info_view({'model': model});
+    let rendered = view.getRendered();
+    this.$el.append(rendered.hide().fadeIn(300));
+    return rendered;
+  }
+
+  _render_list(){
+    $('#slave-list-container').html(this.$el);
+    var self = this;
+    this.model.each(function(model){self._render_slave(model);});
+    return true;
+  }
+
+  async render_all(){
+    await this.model.fetch();
+    $('.wait-toxic-spinner').hide();
+    $('.top-page-slaves-info-container').fadeIn();
+    this._render_list();
+  }
+
+}

@@ -20,7 +20,7 @@ describe('BasePageTest', function(){
   beforeEach(function(){
     spyOn(jQuery, 'ajax');
     affix('#main-area-container');
-    this.page = new BasePage();
+    this.page = new BasePage({router: jasmine.createSpy('router')});
     this.page.template_container.html = jasmine.createSpy('html_call');
   });
 
@@ -36,20 +36,49 @@ describe('SettingsPageTest', function(){
   beforeEach(function(){
     affix('.settings-right-side');
     affix('.nav-container');
-    this.page = new SettingsPage();
-    this.page.repo_list_view.render_all = jasmine.createSpy('render-all');
+    affix('#settings-sides');
+    spyOn($, 'ajax');
+    spyOn($.fn, 'html');
   });
 
-  it('test-render', async function(){
+  it('test-render-repo', async function(){
+    this.page = new SettingsPage({settings_type: 'repositories'});
+    this.page.list_view.render_all = jasmine.createSpy('render-all');
     await this.page.render();
-    expect(this.page.repo_list_view.render_all).toHaveBeenCalled();
+    let isinstance = this.page.list_view instanceof RepositoryListView;
+    expect(isinstance).toBe(true);
+    expect(this.page.list_view.render_all).toHaveBeenCalled();
   });
+
+  it('test-render-slave', async function(){
+    this.page = new SettingsPage({settings_type: 'slaves'});
+    this.page.list_view.render_all = jasmine.createSpy('render-all');
+    await this.page.render();
+    let isinstance = this.page.list_view instanceof SlaveListView;
+    expect(isinstance).toBe(true);
+    expect(this.page.list_view.render_all).toHaveBeenCalled();
+  });
+
+  it('test-fetch-main-template', async function(){
+    this.page = new SettingsPage({settings_type: 'slaves'});
+    await this.page.fetch_main_template();
+    expect(this.page.main_template_container.html).toHaveBeenCalled();
+  });
+
+  it('test-render_main', async function(){
+    this.page = new SettingsPage({settings_type: 'slaves'});
+    spyOn(this.page, 'fetch_main_template');
+    spyOn(this.page, 'render');
+    await this.page.render_main('repositories');
+    expect(this.page.template_url).toEqual('/templates/settings/repositories');
+  });
+
 });
 
 describe('MainPageTest', function(){
 
   beforeEach(function(){
-    this.page = new MainPage();
+    this.page = new MainPage({router: jasmine.createSpy('router')});
     this.page.repo_list_view.render_enabled = jasmine.createSpy(
       'render-enabled');
 
