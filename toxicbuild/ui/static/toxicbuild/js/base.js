@@ -105,3 +105,60 @@ class BaseCollection extends Backbone.Collection{
     return r;
   }
 }
+
+
+class BaseView extends Backbone.View{
+
+  constructor(options){
+    options = options || {};
+    super(options);
+    this.model = options.model || null;
+    this._model_init_values = {};
+    this._model_changed = {};
+
+  }
+
+  _getChangesFromInput(){
+    let self = this;
+
+    $('input').each(function(){
+      let el = $(this);
+      let valuefor = el.data('valuefor');
+      if (valuefor){
+	let value = el.val();
+	let required = el.prop('required');
+	let req_ok = required ? Boolean(value) : true;
+	let origvalue = self._model_init_values[valuefor];
+	if (value != origvalue && req_ok){
+	  self._model_changed[valuefor] = value;
+	}else if (value == origvalue){
+	  delete self._model_changed[valuefor];
+	}
+      }
+    });
+  }
+
+  _hasChanges(){
+    return Object.keys(this._model_changed).length > 0;
+  }
+
+  _hasRequired(){
+    throw "You must implement _hasRequired()";
+  }
+
+  _getSaveBtn(){
+    return $('.save-btn-container button');
+  }
+
+  _checkHasChanges(){
+    this._getChangesFromInput();
+    let btn = this._getSaveBtn();
+    let has_changed = this._hasChanges();
+    let has_required = this._hasRequired();
+    if (has_changed && has_required){
+      btn.prop('disabled', false);
+    }else{
+      btn.prop('disabled', true);
+    }
+  }
+}

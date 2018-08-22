@@ -17,7 +17,7 @@
 
 describe('RepositoryTest', function(){
   beforeEach(function(){
-    spyOn(jQuery, 'ajax');
+    spyOn($, 'ajax');
     let window_spy = jasmine.createSpy();
     window_spy.TOXIC_API_URL = 'http://localhost:1234/';
     window = window_spy;
@@ -25,12 +25,12 @@ describe('RepositoryTest', function(){
   });
 
   it('test-post2api', async function(){
-    jQuery.ajax.and.returnValue(JSON.stringify({'some': 'thing'}));
+    $.ajax.and.returnValue(JSON.stringify({'some': 'thing'}));
     let url = 'http://bla.nada/';
     let body = {'some': 'data'};
     let repo = new Repository();
     await repo._post2api(url, body);
-    let called = jQuery.ajax.calls.allArgs()[0][0];
+    let called = $.ajax.calls.allArgs()[0][0];
     let called_keys = [];
     for(let key in called){
       called_keys.push(key);
@@ -41,12 +41,12 @@ describe('RepositoryTest', function(){
   });
 
   it('test-add-slave', async function(){
-    jQuery.ajax.and.returnValue(JSON.stringify({'some': 'thing'}));
+    $.ajax.and.returnValue(JSON.stringify({'some': 'thing'}));
     let slave = new Slave();
     let repo = new Repository();
     let expected_url = repo._api_url + 'add-slave?id=' + repo.id;
     await repo.add_slave(slave);
-    let called_url = jQuery.ajax.calls.allArgs()[0][0]['url'];
+    let called_url = $.ajax.calls.allArgs()[0][0]['url'];
     expect(called_url).toEqual(expected_url);
   });
 
@@ -183,9 +183,9 @@ describe('BaseRepositoryViewTest', function(){
     repo_details += '+.repo-branches-li';
     repo_details += '+.repo-slaves-li';
     this.template = affix('#repo-details ' + repo_details);
-    jQuery('.repo-branches-li', this.template).affix(
+    $('.repo-branches-li', this.template).affix(
       'span.branch-name+.remove-branch-btn');
-    jQuery('.repo-slaves-li', this.template).affix('.slave-name+input');
+    $('.repo-slaves-li', this.template).affix('.slave-name+input');
 
     this.view = new BaseRepositoryView();
   });
@@ -234,7 +234,7 @@ describe('BaseRepositoryViewTest', function(){
   it('test-change-enabled-repo-enable', async function(){
     this.view.model = new Repository({'name': 'bla'});
     this.view.model.enable = jasmine.createSpy('enable');
-    let el = jQuery('<input type="checkbox" checked>');
+    let el = $('<input type="checkbox" checked>');
     await this.view._change_enabled(el);
     expect(this.view.model.enable).toHaveBeenCalled();
   });
@@ -242,17 +242,17 @@ describe('BaseRepositoryViewTest', function(){
   it('test-change-enabled-repo-disabled', async function(){
     this.view.model = new Repository({'name': 'bla'});
     this.view.model.disable = jasmine.createSpy('disable');
-    let el = jQuery('<input type="checkbox">');
+    let el = $('<input type="checkbox">');
     await this.view._change_enabled(el);
     expect(this.view.model.disable).toHaveBeenCalled();
   });
 
   it('test-listen2evets', function(){
-    spyOn(jQuery.fn, 'change');
+    spyOn($.fn, 'change');
     let el = jasmine.createSpy('el');
     el.change = jasmine.createSpy('change');
     this.view._listen2events(el);
-    expect(jQuery.fn.change).toHaveBeenCalled();
+    expect($.fn.change).toHaveBeenCalled();
   });
 
   it('test-set-enabled-enable', function(){
@@ -289,80 +289,31 @@ describe('BaseRepositoryViewTest', function(){
     expect(el_index > 0).toBe(true);
   });
 
-  it('test-getChangesFromInput-different-value', function(){
-    let fist_in = affix('input');
-    let second_in = affix('input');
-    second_in.data('valuefor', 'name');
-    second_in.val('asfd');
-    this.view.model._init_values = {'name': 'some'};
+  it('test-getChangesFromInput', function(){
+    this.view._model_changed['parallel_builds'] = '';
     this.view._getChangesFromInput();
-    let c_count = Object.keys(this.view.model._changed).length;
-    expect(c_count).toEqual(1);
+    expect(this.view._model_changed['parallel_builds']).toEqual(0);
   });
 
-  it('test-getChangesFromInput-same-as-init-value', function(){
-    let fist_in = affix('input');
-    let second_in = affix('input');
-    second_in.data('valuefor', 'name');
-    second_in.val('asfd');
-    this.view.model._init_values = {'name': 'asfd'};
-    spyOn(this.view.model, 'set');
-    this.view._getChangesFromInput();
-    let call_count = this.view.model.set.calls.allArgs().length;
-    expect(call_count).toEqual(0);
+  it('test-hasRequired-no-name', function(){
+    $('.repo-details-name', this.view.container).val('');
+    $('.repo-details-url', this.view.container).val('/bla/ble');
+    let r = this.view._hasRequired();
+    expect(r).toBe(false);
   });
 
-  it('test-getChangesFromInput-return-to-init-value', function(){
-    let fist_in = affix('input');
-    let second_in = affix('input');
-    second_in.data('valuefor', 'name');
-    second_in.val('qwer');
-    this.view.model._init_values = {'name': 'asfd'};
-    spyOn(this.view.model, 'set');
-    this.view._getChangesFromInput();
-    second_in.val('asfd');
-    this.view._getChangesFromInput();
-    expect(this.view.model.changed.hasOwnProperty('name')).toBe(false);
+  it('test-hasRequired-no-url', function(){
+    $('.repo-details-name', this.view.container).val('somename');
+    $('.repo-details-url', this.view.container).val('');
+    let r = this.view._hasRequired();
+    expect(r).toBe(false);
   });
 
-  it('test-getChangesFromInput-no-required-value', function(){
-    let input = affix('input');
-    input.prop('required', true);
-    input.data('valuefor', 'bla');
-    input.val('');
-    this.view._getChangesFromInput();
-    expect(this.view.model._changed.hasOwnProperty('bla')).toBe(false);
-  });
-
-  it('test-checkHasChanges-changed', function(){
-    spyOn(this.view, '_getChangesFromInput');
-    spyOn(this.view, '_hasChanges').and.returnValue(true);
-    affix('.save-btn-container button');
-    jQuery('.repo-details-name', this.view.container).val('asdf');
-    jQuery('.repo-details-url', this.view.container).val('asdf');
-    this.view._checkHasChanges();
-    let btn = jQuery('.save-btn-container button');
-    expect(btn.prop('disabled')).toBe(false);
-  });
-
-  it('test-checkHasChanges-required', function(){
-    spyOn(this.view, '_getChangesFromInput');
-    spyOn(this.view.model, 'hasChanged').and.returnValue(true);
-    affix('.save-btn-container button');
-    jQuery('.repo-details-name', this.view.container).val('asdf');
-    jQuery('.repo-details-url', this.view.container).val('');
-    this.view._checkHasChanges();
-    let btn = jQuery('.save-btn-container button');
-    expect(btn.prop('disabled')).toBe(true);
-  });
-
-  it('test-checkHasChanges-not-changed', function(){
-    spyOn(this.view, '_getChangesFromInput');
-    spyOn(this.view.model, 'hasChanged').and.returnValue(false);
-    affix('.save-btn-container button');
-    this.view._checkHasChanges();
-    let btn = jQuery('.save-btn-container button');
-    expect(btn.prop('disabled')).toBe(true);
+  it('test-hasRequired-ok', function(){
+    $('.repo-details-name', this.view.container).val('somename');
+    $('.repo-details-url', this.view.container).val('/bla/ble');
+    let r = this.view._hasRequired();
+    expect(r).toBe(true);
   });
 
   it('test-render-details', async function(){
@@ -410,9 +361,9 @@ describe('RepositoryDetailsViewTest', function(){
     repo_details += '+.repo-branches-li';
     repo_details += '+.repo-slaves-li';
     this.template = affix('#repo-details ' + repo_details);
-    jQuery('.repo-branches-li', this.template).affix(
+    $('.repo-branches-li', this.template).affix(
       'span.branch-name+.remove-branch-btn');
-    jQuery('.repo-slaves-li', this.template).affix('.slave-name+input');
+    $('.repo-slaves-li', this.template).affix('.slave-name+input');
     this.view = new RepositoryDetailsView('full-name');
     this.view.model._init_values = {};
   });
@@ -436,7 +387,7 @@ describe('RepositoryDetailsViewTest', function(){
 
   it('test-removeBranch-ok', async function(){
     affix('div.outer span.remove-el');
-    let remove_el = jQuery('.remove-el');
+    let remove_el = $('.remove-el');
     remove_el.data('branch', 'bla');
     this.view.model.set('branches', []);
     spyOn(this.view.model, 'remove_branch');
@@ -447,7 +398,7 @@ describe('RepositoryDetailsViewTest', function(){
 
   it('test-removeBranch-exception', async function(){
     affix('div.outer span.remove-el');
-    let remove_el = jQuery('.remove-el');
+    let remove_el = $('.remove-el');
     remove_el.data('branch', 'bla');
 
     spyOn(this.view.model, 'remove_branch').and.throwError('bad remove');
@@ -492,7 +443,7 @@ describe('RepositoryDetailsViewTest', function(){
   it('test-handleBranchList-no-branches-template', function(){
     let template = affix('div #no-branch-placeholder');
     let has_branches = false;
-    let placeholder = jQuery('#no-branch-placeholder');
+    let placeholder = $('#no-branch-placeholder');
     placeholder.hide();
     this.view._handleBrachList(has_branches, template);
     expect(placeholder.is(':visible')).toBe(true);
@@ -501,7 +452,7 @@ describe('RepositoryDetailsViewTest', function(){
   it('test-handleBranchList-has-branches-template', function(){
     let template = affix('div #no-branch-placeholder');
     let has_branches = true;
-    let placeholder = jQuery('#no-branch-placeholder');
+    let placeholder = $('#no-branch-placeholder');
     placeholder.hide();
     this.view._handleBrachList(has_branches, template);
     expect(placeholder.is(':visible')).toBe(false);
@@ -510,7 +461,7 @@ describe('RepositoryDetailsViewTest', function(){
   it('test-handleBranchList-no-branches-no-template', function(){
     affix('#repo-details #no-branch-placeholder');
     let has_branches = false;
-    let placeholder = jQuery('#no-branch-placeholder');
+    let placeholder = $('#no-branch-placeholder');
     placeholder.hide();
     this.view._handleBrachList(has_branches);
     expect(placeholder.is(':visible')).toBe(true);
@@ -519,7 +470,7 @@ describe('RepositoryDetailsViewTest', function(){
   it('test-handleBranchList-has-branches-no-template', function(){
     affix('#repo-details #no-branch-placeholder');
     let has_branches = true;
-    let placeholder = jQuery('#no-branch-placeholder');
+    let placeholder = $('#no-branch-placeholder');
     placeholder.hide();
     this.view._handleBrachList(has_branches);
     expect(placeholder.is(':visible')).toBe(false);
@@ -544,7 +495,7 @@ describe('RepositoryDetailsViewTest', function(){
     config.height(10);
     this.view.model.set('branches', [{}, {}]);
     this.view._hackHelpHeight(2);
-    config = jQuery('#branches-config-p');
+    config = $('#branches-config-p');
     expect(config.height()).toEqual(90);
   });
 
@@ -553,7 +504,7 @@ describe('RepositoryDetailsViewTest', function(){
     config.height(10);
     this.view.model.set('branches', [{}]);
     this.view._hackHelpHeight(2);
-    config = jQuery('#branches-config-p');
+    config = $('#branches-config-p');
     expect(config.height()).toEqual(10);
   });
 
@@ -562,7 +513,7 @@ describe('RepositoryDetailsViewTest', function(){
     config.height(100);
     this.view.model.set('branches', [{}]);
     this.view._hackHelpHeight(2, 'decrease');
-    config = jQuery('#branches-config-p');
+    config = $('#branches-config-p');
     expect(config.height()).toEqual(20);
   });
 
@@ -571,7 +522,7 @@ describe('RepositoryDetailsViewTest', function(){
     config.height(100);
     this.view.model.set('branches', []);
     this.view._hackHelpHeight(2, 'decrease');
-    config = jQuery('#branches-config-p');
+    config = $('#branches-config-p');
     expect(config.height()).toEqual(100);
   });
 
@@ -597,19 +548,19 @@ describe('RepositoryDetailsViewTest', function(){
 
   it('test-setSlaveEnabled-enabled', function(){
     affix('div .slave-enabled-checkbox');
-    let el = jQuery('.slave-enabled-checkbox');
+    let el = $('.slave-enabled-checkbox');
     el.prop('checked', true);
     this.view._setSlaveEnabled(el);
-    el = jQuery('.slave-enabled-checkbox');
+    el = $('.slave-enabled-checkbox');
     expect(el.parent().hasClass('repo-enabled')).toBe(true);
   });
 
   it('test-setSlaveEnabled-disabled', function(){
     affix('div .slave-enabled-checkbox');
-    let el = jQuery('.slave-enabled-checkbox');
+    let el = $('.slave-enabled-checkbox');
     el.prop('checked', false);
     this.view._setSlaveEnabled(el);
-    el = jQuery('.slave-enabled-checkbox');
+    el = $('.slave-enabled-checkbox');
     expect(el.parent().hasClass('repo-disabled')).toBe(true);
   });
 
@@ -702,26 +653,26 @@ describe('RepositoryAddViewTest', function(){
   });
 
   it('test-addRepo-ok', async function(){
-    spyOn(jQuery.fn, 'trigger');
+    spyOn($.fn, 'trigger');
     spyOn(this.view.model, 'save').and.returnValue({'full_name': 'bla'});
     await this.view._addRepo();
-    expect(jQuery.fn.trigger).toHaveBeenCalled();
+    expect($.fn.trigger).toHaveBeenCalled();
   });
 
   it('test-addRepo-exception', async function(){
-    spyOn(jQuery.fn, 'trigger');
+    spyOn($.fn, 'trigger');
     spyOn(this.view.model, 'save').and.throwError();
     await this.view._addRepo();
-    expect(jQuery.fn.trigger).not.toHaveBeenCalled();
+    expect($.fn.trigger).not.toHaveBeenCalled();
   });
 
   it('test-render-details', async function(){
     spyOn(this.view.slaves, 'fetch');
     this.view.directive = {};
-    let enabled_container = jQuery('.repository-info-enabled-container');
+    let enabled_container = $('.repository-info-enabled-container');
     enabled_container.show();
     await this.view.render_details();
-    enabled_container = jQuery('.repository-info-enabled-container');
+    enabled_container = $('.repository-info-enabled-container');
     expect(enabled_container.is(':visible')).toBe(false);
   });
 });

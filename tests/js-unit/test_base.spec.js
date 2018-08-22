@@ -121,3 +121,102 @@ describe('BaseCollectionTest', function(){
     expect(window._getHeaders).toHaveBeenCalled();
   });
 });
+
+
+describe('BaseViewTest', function(){
+
+  beforeEach(function(){
+    this.view = new BaseView();
+    this.view.model = new BaseModel();
+    affix('.save-btn-container button');
+  });
+
+  it('test-getChangesFromInput-different-value', function(){
+    let fist_in = affix('input');
+    let second_in = affix('input');
+    second_in.data('valuefor', 'name');
+    second_in.val('asfd');
+    this.view._model_init_values = {'name': 'some'};
+    this.view._getChangesFromInput();
+    let c_count = Object.keys(this.view._model_changed).length;
+    expect(c_count).toEqual(1);
+  });
+
+  it('test-getChangesFromInput-same-as-init-value', function(){
+    let fist_in = affix('input');
+    let second_in = affix('input');
+    second_in.data('valuefor', 'name');
+    second_in.val('asfd');
+    this.view._model_init_values = {'name': 'asfd'};
+    spyOn(this.view.model, 'set');
+    this.view._getChangesFromInput();
+    let call_count = this.view.model.set.calls.allArgs().length;
+    expect(call_count).toEqual(0);
+  });
+
+  it('test-getChangesFromInput-return-to-init-value', function(){
+    let fist_in = affix('input');
+    let second_in = affix('input');
+    second_in.data('valuefor', 'name');
+    second_in.val('qwer');
+    this.view._model_init_values = {'name': 'asfd'};
+    spyOn(this.view.model, 'set');
+    this.view._getChangesFromInput();
+    second_in.val('asfd');
+    this.view._getChangesFromInput();
+    expect(this.view._model_changed.hasOwnProperty('name')).toBe(false);
+  });
+
+  it('test-getChangesFromInput-no-required-value', function(){
+    let input = affix('input');
+    input.prop('required', true);
+    input.data('valuefor', 'bla');
+    input.val('');
+    this.view._getChangesFromInput();
+    expect(this.view._model_changed.hasOwnProperty('bla')).toBe(false);
+  });
+
+  it('test-hasChanges', function(){
+    this.view._model_changed['bla'] = false;
+    expect(this.view._hasChanges()).toBe(true);
+  });
+
+  it('test-hasRequired', function(){
+    var threw;
+    try{
+      this.view._hasRequired();
+      threw = false;
+    }catch(e){
+      threw = true;
+    }
+    expect(threw).toBe(true);
+  });
+
+  it('test-checkHasChanges-changed-and-required', function(){
+    spyOn(this.view, '_getChangesFromInput');
+    spyOn(this.view, '_hasChanges').and.returnValue(true);
+    spyOn(this.view, '_hasRequired').and.returnValue(true);
+    this.view._checkHasChanges();
+    let btn = jQuery('.save-btn-container button');
+    expect(btn.prop('disabled')).toBe(false);
+  });
+
+  it('test-checkHasChanges-not-required', function(){
+    spyOn(this.view, '_getChangesFromInput');
+    spyOn(this.view.model, 'hasChanged').and.returnValue(true);
+    spyOn(this.view, '_hasRequired').and.returnValue(false);
+    this.view._checkHasChanges();
+    let btn = jQuery('.save-btn-container button');
+    expect(btn.prop('disabled')).toBe(true);
+  });
+
+  it('test-checkHasChanges-not-changed', function(){
+    spyOn(this.view, '_getChangesFromInput');
+    spyOn(this.view.model, 'hasChanged').and.returnValue(false);
+    spyOn(this.view, '_hasRequired').and.returnValue(true);
+    this.view._checkHasChanges();
+    let btn = jQuery('.save-btn-container button');
+    expect(btn.prop('disabled')).toBe(true);
+  });
+
+});

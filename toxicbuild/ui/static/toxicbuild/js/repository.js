@@ -137,14 +137,12 @@ class RepositoryList extends BaseCollection{
 }
 
 
-class BaseRepositoryView extends Backbone.View{
+class BaseRepositoryView extends BaseView{
 
   constructor(options){
     options = options || {'tagName': 'div'};
+    options.model = options.model || new Repository();
     super(options);
-    this.model = this.model || new Repository();
-    this.model._init_values = {};
-    this.model._changed = {};
 
     this.directive = {
       '.repo-details-name@value': 'name',
@@ -306,7 +304,7 @@ class BaseRepositoryView extends Backbone.View{
     indicator.hide();
     indicator.removeClass('fas fa-check').removeClass('fas fa-times');
 
-    if (this.model._init_values['name'] == name || !name){
+    if (this._model_init_values['name'] == name || !name){
       this._checkHasChanges();
       el.html('');
       return false;
@@ -333,38 +331,19 @@ class BaseRepositoryView extends Backbone.View{
   }
 
   _getChangesFromInput(){
-    let self = this;
-
-    $('input').each(function(){
-      let el = $(this);
-      let valuefor = el.data('valuefor');
-      if (valuefor){
-	let value = el.val();
-	let required = el.prop('required');
-	let req_ok = required ? Boolean(value) : true;
-	let origvalue = self.model._init_values[valuefor];
-	if (value != origvalue && req_ok){
-	  self.model._changed[valuefor] = value;
-	  if (value == '' && valuefor == 'parallel_builds'){
-	    self.model._changed[valuefor] = 0;
-	  }
-
-	}else if (!req_ok){
-	  // self.model.set(valuefor, value);
-	  // delete self.model.changed[valuefor];
-	}
-      };
-    });
+    super._getChangesFromInput();
+    for (let key in this._model_changed){
+      let value = this._model_changed[key];
+      if (value == '' && key == 'parallel_builds'){
+	this._model_changed[key] = 0;
+      }
+    }
   }
 
   _hasRequired(){
     let has_name = $('.repo-details-name', this.container).val();
     let has_url = $('.repo-details-url', this.container).val();
     return Boolean(has_name) && Boolean(has_url);
-  }
-
-  _hasChanges(){
-    return Object.keys(this.model._changed).length > 0;
   }
 
   _checkHasChanges(){
@@ -405,7 +384,7 @@ class RepositoryAddView extends BaseRepositoryView{
 
   async render_details(){
     await this.slaves.fetch();
-    this.model._init_values = this.model.changed;
+    this._model_init_values = this.model.changed;
     this.model.changed = {};
     $('#save-repo-btn-text').text('Add repository');
     await super.render_details();
@@ -413,8 +392,8 @@ class RepositoryAddView extends BaseRepositoryView{
   }
 
   async _addRepo(){
-    this.model.set('name', this.model._changed['name']);
-    this.model.set('url', this.model._changed['url']);
+    this.model.set('name', this._model_changed['name']);
+    this.model.set('url', this._model_changed['url']);
     this.model.set('parallel_builds', 0);
     this.model.set('vcs_type', 'git');
     this.model.set('update_seconds', 10);
@@ -489,9 +468,9 @@ class RepositoryDetailsView extends BaseRepositoryView{
     btn.prop('disabled', true);
 
     try{
-      let changed = this.model._changed;
+      let changed = this._model_changed;
       await this.model.save(null, {attrs: changed});
-      $.extend(this.model._init_values, changed);
+      $.extend(this._model_init_values, changed);
       utils.showSuccessMessage('Repository updated');
     }catch(e){
       console.error(e);
@@ -733,7 +712,7 @@ class RepositoryDetailsView extends BaseRepositoryView{
 
   async render_details(){
     await this.model.fetch({'full_name': this.full_name});
-    this.model._init_values = this.model.changed;
+    this._model_init_values = this.model.changed;
     // we need to set this to {} because when we fetch a model from the
     // remote host it is marked as changed since the initial model here
     // had no attributes.
