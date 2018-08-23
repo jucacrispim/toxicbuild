@@ -881,6 +881,15 @@ class DashboardHandlerTest(AsyncTestCase):
         self.assertTrue(self.handler._get_repository_template.called)
         self.assertTrue(self.handler.write.called)
 
+    def test_show_slave_details_template(self):
+        self.handler._get_slave_template = MagicMock(
+            spec=self.handler._get_slave_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_slave_details_template()
+        self.assertTrue(self.handler._get_slave_template.called)
+        self.assertTrue(self.handler.write.called)
+
 
 class ApplicationTest(unittest.TestCase):
 

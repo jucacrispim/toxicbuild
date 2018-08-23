@@ -615,6 +615,11 @@ class DashboardHandler(LoggedTemplateHandler):
         content = self._get_repository_template()
         self.write(content)
 
+    @get('templates/slave-details')
+    def show_slave_details_template(self):
+        content = self._get_slave_template()
+        self.write(content)
+
     @get('templates/settings/(slaves|repositories)')
     def show_settings_template(self, settings_type):
         settings_type = settings_type.decode()
