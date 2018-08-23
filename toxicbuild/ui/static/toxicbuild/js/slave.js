@@ -123,7 +123,7 @@ class SlaveListView extends Backbone.View{
 
 }
 
-class SlaveDetailsView extends BaseSlaveView{
+class BaseSlaveDetailsView extends BaseSlaveView{
 
   constructor(options){
     options = options || {'tagName': 'div'};
@@ -147,7 +147,6 @@ class SlaveDetailsView extends BaseSlaveView{
     this.compiled_template = null;
     this.container_selector = '#slave-details-container';
     this.container = null;
-    this.slave_list = new SlaveList();
   }
 
   _hasRequired(){
@@ -159,8 +158,7 @@ class SlaveDetailsView extends BaseSlaveView{
 	    Boolean(has_token));
   }
 
-  async render_details(){
-    await this.model.fetch({name: this.name});
+  render_details(){
 
     this._model_init_values = this.model.changed;
         this.compiled_template = $p(this.template_selector).compile(
@@ -173,5 +171,13 @@ class SlaveDetailsView extends BaseSlaveView{
     this._listen2events(compiled);
     this.container = $(this.container_selector);
     this.container.html(compiled);
+  }
+}
+
+class SlaveDetailsView extends BaseSlaveDetailsView{
+
+  async render_details(){
+    await this.model.fetch({name: this.name});
+    super.render_details();
   }
 }

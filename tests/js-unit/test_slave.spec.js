@@ -96,11 +96,10 @@ describe('SlaveListViewTest', function(){
 
 });
 
-
-describe('SlaveDetailsView', function(){
+describe('BaseSlaveDetailsViewTest', function(){
 
   beforeEach(function(){
-    this.view = new SlaveDetailsView({name: 'someslave'});
+    this.view = new BaseSlaveDetailsView({name: 'someslave'});
     let container = affix(this.view.template_selector);
     affix(this.view.container_selector);
     container.affix('input.slave-details-name');
@@ -159,6 +158,21 @@ describe('SlaveDetailsView', function(){
 
     let has_required = this.view._hasRequired();
     expect(has_required).toBe(true);
+  });
+});
+
+describe('SlaveDetailsViewTest', function(){
+
+  beforeEach(function(){
+    this.view = new SlaveDetailsView({name: 'someslave'});
+    let container = affix(this.view.template_selector);
+    affix(this.view.container_selector);
+    container.affix('input.slave-details-name');
+    container.affix('input.slave-details-host');
+    container.affix('input.slave-details-port');
+    container.affix('input.slave-details-token');
+    container.affix('checkbox.slave-details-use-ssl');
+    container.affix('checkbox.slave-details-verify-cert');
   });
 
   it('test-render_details', async function(){
