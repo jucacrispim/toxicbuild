@@ -581,6 +581,7 @@ body{
 
 /* repo details page */
 
+.slave-details-main-container,
 .repo-details-main-container{
     position: absolute;
     top: 0;
@@ -601,12 +602,12 @@ body{
     margin-bottom: 10px;
 }
 
-.repo-details-buttons-container{
+.obj-details-buttons-container{
     float: right;
     margin-bottom: 25px;
 }
 
-.repo-details-buttons-container .inner-btn-container{
+.obj-details-buttons-container .inner-btn-container{
     float: left;
     margin-right: 10px;
 }
@@ -737,7 +738,7 @@ body{
     display: none;
 }
 
-#btn-save-repo{
+#btn-save-obj{
     width: 110px;
 }
 
@@ -805,4 +806,18 @@ body{
 
 .slave-info-address{
     float: right;
+}
+
+
+.slave-port-container{
+    margin-left: 15px;
+}
+
+.slave-details-row{
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+}
+
+.slave-checkbox-row{
+    margin-top:45px;
 }

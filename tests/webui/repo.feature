@@ -15,7 +15,7 @@ Feature:
         Given the user is in the add repo page
         When he fills the name with a repo name
         And fills the url field with a repo url
-        And clicks in the add repo button
+        And clicks in the add button
         Then he sees the "Repository added" message
 
     Scenario:
@@ -25,6 +25,15 @@ Feature:
         When he clicks in the Advanced element
         Then he sees the advanced options
         And sees the advanced help in the side bar
+
+    Scenario:
+        The user updates the parallel builds configuration
+
+        Given the user is in the repository settings page
+        And he sees the advanced options
+        When he fills the parallel builds with 2
+        And clicks in the save button
+        Then he sees the "Repository updated" message
 
     Scenario:
         The user adds a branch configuration to the repository

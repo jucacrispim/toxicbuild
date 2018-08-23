@@ -437,6 +437,26 @@ class RepositoryRestHandlerTest(TestCase):
         self.assertTrue(r)
 
 
+class SlaveRestHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = web.Slave
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.CookieAuthSlaveRestHandler(application,
+                                                      request,
+                                                      model=self.model)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    def test_query_has_pk(self):
+        self.handler.query = {'full_name': 'bla'}
+        has_pk = self.handler._query_has_pk()
+        self.assertTrue(has_pk)
+
+
 class NotificationRestHandlerTest(TestCase):
 
     def setUp(self):
@@ -740,6 +760,16 @@ class DashboardHandlerTest(AsyncTestCase):
         self.assertEqual(called_template, self.handler.repository_template)
         self.assertEqual(called_context, {'repo_full_name': ''})
 
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_slave_template(self):
+        self.handler._get_slave_template()
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        self.assertEqual(called_template, self.handler.slave_template)
+        self.assertEqual(called_context, {'slave_full_name': ''})
+
     def test_show_main(self):
         self.handler.render_template = MagicMock(
             spec=self.handler.render_template)
@@ -809,6 +839,21 @@ class DashboardHandlerTest(AsyncTestCase):
         called_template = self.handler.render_template.call_args[0][0]
         called_context = self.handler.render_template.call_args[0][1]
         self.assertTrue(self.handler._get_repository_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    def test_show_slave_details(self):
+        self.handler._get_slave_template = MagicMock(
+            spec=self.handler._get_slave_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_slave_details(b'someslave')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_slave_template.called)
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 

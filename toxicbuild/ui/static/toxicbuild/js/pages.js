@@ -138,30 +138,27 @@ class MainPage extends BasePage{
   }
 }
 
-class BaseRepositoryPage extends BasePage{
+class BaseFloatingPage extends BasePage{
 
-  constructor(router){
-    super({router: router});
-    this.template_url = '/templates/repo-details';
-    this.repo_details_view = null;
+  constructor(options){
+    super(options);
     this.right_sidebar = null;
+    this._container = null;
+    this._inner = null;
   }
 
   _listen2events(){
     let self = this;
 
-    let close_btn = $('.repo-details-main-container .close-btn');
+    let close_btn = $('.details-main-container .close-btn');
     close_btn.on('click', function(e){
       self.close_page();
     });
 
-    let cancel_btn = $(
-      '.repo-details-buttons-container #btn-cancel-save-repo');
+    let cancel_btn = $('.buttons-container #btn-cancel-save');
     cancel_btn.on('click', function(e){
       self.close_page();
     });
-
-
   }
 
   close_page(){
@@ -169,12 +166,13 @@ class BaseRepositoryPage extends BasePage{
   }
 
   _getContainerInner(){
-    this._container = $('.repo-details-main-container');
+    this._container = $('.details-main-container');
     this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
-      '.advanced-help-container').not('.nav-container');
+      '.advanced-help-container').not('.add-repo-message-container');
   }
 
   _prepareOpenAnimation(){
+    this._getContainerInner();
     this._inner.hide();
     this._container.prop('style', 'margin:0 50% 0px 50%;min-height:0');
   }
@@ -185,6 +183,16 @@ class BaseRepositoryPage extends BasePage{
     this._container.animate({'margin': '-10px', 'min-height': '89vh'}, 400,
 			    function(){self._inner.fadeIn(100);
 				       self.right_sidebar.fadeIn(100);});
+  }
+
+}
+
+class BaseRepositoryPage extends BaseFloatingPage{
+
+  constructor(router){
+    super({router: router});
+    this.template_url = '/templates/repo-details';
+    this.repo_details_view = null;
   }
 
 }
@@ -201,7 +209,6 @@ class RepositoryAddPage extends BaseRepositoryPage{
   }
 
   async render(){
-    this._getContainerInner();
     this.add_message_container = $('.add-repo-message-container');
     this.right_sidebar = $('.settings-right-side');
 
@@ -235,13 +242,6 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
     this.repo_details_view = new RepositoryDetailsView(full_name);
     this.nav_pills = null;
   }
-
-  _getContainerInner(){
-    this._container = $('.repo-details-main-container');
-    this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
-      '.advanced-help-container').not('.add-repo-message-container');
-  }
-
 
   _toggleAdvanced(){
     let container = $(
@@ -280,7 +280,6 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
   async render(){
     this.nav_pills = $('.nav-container');
     this.right_sidebar = $('.settings-right-side');
-    this._getContainerInner();
     this._prepareOpenAnimation();
     await this.repo_details_view.render_details();
 
@@ -288,4 +287,23 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
     this._animateOpen();
   }
 
+}
+
+
+class SlaveDetailsPage extends BaseFloatingPage{
+
+  constructor(router, name){
+    super({router: router});
+    this.template_url = '/templates/slave-details';
+    this.name = name;
+    this.view = new SlaveDetailsView({name: this.name});
+  }
+
+  async render(){
+    this.right_sidebar = $('.settings-right-side');
+    this._prepareOpenAnimation();
+    await this.view.render_details();
+    this._listen2events();
+    this._animateOpen();
+  }
 }

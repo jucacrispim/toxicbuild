@@ -402,6 +402,10 @@ class CookieAuthRepositoryRestHandler(CookieAuthHandlerMixin,
 class SlaveRestHandler(ModelRestHandler):
     """A rest api handler for slaves."""
 
+    def _query_has_pk(self):
+        keys = self.query.keys()
+        return 'id' in keys or 'name' in keys
+
 
 class CookieAuthSlaveRestHandler(CookieAuthHandlerMixin, SlaveRestHandler):
     """A rest api handler for slaves which requires cookie auth."""
@@ -527,6 +531,7 @@ class DashboardHandler(LoggedTemplateHandler):
     repo_settings_template = 'toxictheme/repo_settings.html'
     slave_settings_template = 'toxictheme/slave_settings.html'
     repository_template = 'toxictheme/repository.html'
+    slave_template = 'toxictheme/slave.html'
 
     def _get_main_template(self):
         rendered = render_template(self.main_template,
@@ -562,6 +567,11 @@ class DashboardHandler(LoggedTemplateHandler):
                                    {'repo_full_name': full_name})
         return rendered
 
+    def _get_slave_template(self, full_name=''):
+        rendered = render_template(self.slave_template, self.request,
+                                   {'slave_full_name': full_name})
+        return rendered
+
     @get('')
     def show_main(self):
         content = self._get_main_template()
@@ -580,18 +590,6 @@ class DashboardHandler(LoggedTemplateHandler):
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
-    @get('templates/settings/(slaves|repositories)')
-    def show_settings_template(self, settings_type):
-        settings_type = settings_type.decode()
-        content = self._get_settings_template(settings_type)
-        self.write(content)
-
-    @get('templates/settings/main/(slaves|repositories)')
-    def show_settings_main_template(self, settings_type):
-        settings_type = settings_type.decode()
-        content = self._get_settings_main_template(settings_type)
-        self.write(content)
-
     @get('(\w+/\w+)/settings')
     def show_repository_details(self, full_name):
         content = self._get_repository_template(full_name)
@@ -605,9 +603,28 @@ class DashboardHandler(LoggedTemplateHandler):
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
+    @get('slave/(\w+/\w+)')
+    def show_slave_details(self, full_name):
+        full_name = full_name.decode()
+        content = self._get_slave_template(full_name)
+        context = {'content': content}
+        self.render_template(self.skeleton_template, context)
+
     @get('templates/repo-details')
     def show_repository_details_template(self):
         content = self._get_repository_template()
+        self.write(content)
+
+    @get('templates/settings/(slaves|repositories)')
+    def show_settings_template(self, settings_type):
+        settings_type = settings_type.decode()
+        content = self._get_settings_template(settings_type)
+        self.write(content)
+
+    @get('templates/settings/main/(slaves|repositories)')
+    def show_settings_main_template(self, settings_type):
+        settings_type = settings_type.decode()
+        content = self._get_settings_main_template(settings_type)
         self.write(content)
 
 

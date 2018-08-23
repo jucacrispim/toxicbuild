@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import time
 from toxicbuild.ui import settings
 from behave import given, then, when
 
@@ -49,3 +50,12 @@ def user_sees_main_main_page_login(context):
     txt = 'Logout'
     is_present = browser.wait_text_become_present(txt)
     assert is_present
+
+
+@when('clicks in the save button')
+@when('clicks in the add button')
+def click_add_button(context):
+    browser = context.browser
+    time.sleep(0.5)
+    btn = browser.find_element_by_id('btn-save-obj')
+    browser.click(btn)

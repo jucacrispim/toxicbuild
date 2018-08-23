@@ -28,6 +28,16 @@ function _get_url(method, obj){
   return url;
 };
 
+async function is_name_available(model, name){
+  var r;
+  try{
+    r = await model.fetch({'name': name});
+    r = model.parse(r);
+  }catch(e){
+    r = null;
+  }
+  return !Boolean(r);
+}
 
 function _getHeaders(){
   let xsrf_token = Cookies.get('_xsrf');
@@ -50,7 +60,7 @@ class BaseModel extends Backbone.Model{
 
   sync(method, model, options){
     let url = _get_url(method, this, false);
-    options.attrs = _.extend(this._changes, options.attrs);
+    // options.attrs = _.extend(this._changes, options.attrs);
     options.url = url;
     let headers = this._getHeaders();
     options.headers = headers;
@@ -88,7 +98,7 @@ class BaseModel extends Backbone.Model{
     let url = this._api_url + '?id=' + this.id;
     let headers = this._getHeaders();
     await $.ajax({'url': url, 'type': 'delete',
-		       'headers': headers});
+		  'headers': headers});
   }
 }
 
@@ -107,7 +117,7 @@ class BaseCollection extends Backbone.Collection{
 }
 
 
-class BaseView extends Backbone.View{
+class BaseFormView extends Backbone.View{
 
   constructor(options){
     options = options || {};
@@ -115,6 +125,19 @@ class BaseView extends Backbone.View{
     this.model = options.model || null;
     this._model_init_values = {};
     this._model_changed = {};
+
+    this._name_avail_s = '#obj-name-available #available-text';
+    this._name_avail_indicator_s = '#obj-name-available .check-error-indicator';
+    this._name_avail_spinner_s = '.wait-name-available-spinner';
+    this._name_available = null;
+    this._name_available_indicator = null;
+    this._name_available_spinner = null;
+
+    this._save_btn = $('.save-btn-container button');
+    this._save_btn_text = $(
+      '.obj-details-buttons-container #save-obj-btn-text');
+    this._save_btn_spinner = $(
+      '.obj-details-buttons-container #save-obj-btn-spinner');
 
   }
 
@@ -125,7 +148,14 @@ class BaseView extends Backbone.View{
       let el = $(this);
       let valuefor = el.data('valuefor');
       if (valuefor){
-	let value = el.val();
+	let el_type = el.prop('type');
+
+	var value;
+	if (el_type == 'checkbox'){
+	  value = el.prop('checked');
+	}else{
+	  value = el.val();
+	}
 	let required = el.prop('required');
 	let req_ok = required ? Boolean(value) : true;
 	let origvalue = self._model_init_values[valuefor];
@@ -161,4 +191,113 @@ class BaseView extends Backbone.View{
       btn.prop('disabled', true);
     }
   }
+
+  _clearNameAvailableInfo(){
+    this._name_available = $(this._name_avail_s);
+    this._name_available_indicator = $(this._name_avail_indicator_s);
+    this._name_available_spinner = $(this._name_available_spinner);
+    this._name_available.hide();
+    this._name_available_indicator.hide();
+    this._name_available_indicator.removeClass('fas fa-check').removeClass(
+      'fas fa-times');
+
+  }
+
+  _handleNameAvailableInfo(is_available){
+
+    if(is_available){
+      this._name_available_indicator.addClass('fas fa-check');
+      this._name_available.html('');
+      this._checkHasChanges();
+    }else{
+      this._name_available_indicator.addClass('fas fa-times');
+      this._name_available.html('Name not available');
+    }
+
+    this._name_available_spinner.hide();
+    this._name_available.fadeIn(300);
+    this._name_available_indicator.fadeIn(300);
+
+  }
+
+  async _checkNameAvailable(name){
+    this._clearNameAvailableInfo();
+
+    if (this._model_init_values['name'] == name || !name){
+      this._checkHasChanges();
+      this._name_available.html('');
+      return false;
+    }
+
+    this._name_available_spinner.show();
+
+    let r = await this.model.constructor.is_name_available(name);
+    this._handleNameAvailableInfo(r);
+
+    return r;
+  }
+
+  async _saveChanges(){
+
+    this._save_btn_text.hide();
+    this._save_btn_spinner.show();
+    this._save_btn.prop('disabled', true);
+
+    let cls_name = this.model.constructor.name;
+    try{
+      let changed = this._model_changed;
+      await this.model.save(null, {attrs: changed});
+      $.extend(this._model_init_values, changed);
+      utils.showSuccessMessage(cls_name + ' updated');
+    }catch(e){
+      console.error(e);
+      this._save_btn.prop('disabled', false);
+      utils.showErrorMessage('Error updating ' + cls_name);
+    }
+    this._save_btn_spinner.hide();
+    this._save_btn_text.show();
+  }
+
+  _listen2save(template){
+    let self = this;
+    // save changes when clicking on save button
+    let save_btn = $('#btn-save-obj');
+    save_btn.on('click', function(e){
+      self._saveChanges();
+    });
+
+  }
+
+  _listen2name_available(template){
+    let self = this;
+    let check_name = _.debounce(function(name){
+      self._checkNameAvailable(name);}, 500);
+    $('.obj-details-name', template).on('input', function(e){
+      let name = $(this).val();
+      check_name(name);
+    });
+  }
+
+  _listen2input_changes(template){
+    let self = this;
+    // check for changes to enable save button
+    let check_changes = _.debounce(function(){self._checkHasChanges();}, 300);
+    $('input', template).each(function(){
+      let el = $(this);
+      if(el.prop('type') == 'checkbox'){
+	el.on('click', function(){
+	  self._checkHasChanges();
+	});
+      }else{
+	el.on('input', function(e){check_changes();});
+      }
+    });
+  }
+
+  _listen2events(template){
+    this._listen2input_changes(template);
+    this._listen2name_available(template);
+    this._listen2save(template);
+  }
+
 }

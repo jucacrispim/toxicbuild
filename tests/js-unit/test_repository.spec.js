@@ -159,17 +159,9 @@ describe('RepositoryTest', function(){
   });
 
   it('test-is-name-available', async function(){
-    spyOn(this.model, 'fetch').and.returnValue({});
     let r = await Repository.is_name_available('some-name');
     expect(r).toBe(true);
   });
-
-  it('test-is-name-exception', async function(){
-    spyOn(this.model, 'fetch').and.returnValue({'items': []});
-    let r = await Repository.is_name_available('some-name');
-    expect(r).toBe(true);
-  });
-
 });
 
 describe('BaseRepositoryViewTest', function(){
@@ -177,7 +169,7 @@ describe('BaseRepositoryViewTest', function(){
   beforeEach(function(){
     affix('.template #repo-details-container #repo-details-name');
     let repo_details = 'input.repo-details-name+input.repo-details-url';
-    repo_details += '+#repo-details-url+input#repo-parallel-builds';
+    repo_details += '+#repo-details-url+input.repo-parallel-builds';
     repo_details += '+#repo-name-available .check-error-indicator';
     repo_details += '+.repository-info-enabled-container input';
     repo_details += '+.repo-branches-li';
@@ -271,24 +263,6 @@ describe('BaseRepositoryViewTest', function(){
     expect(el_index > 0).toBe(true);
   });
 
-  it('test-checkNameAvailable-available', async function(){
-    spyOn(Repository, 'is_name_available').and.returnValue(true);
-    spyOn(this.view, '_checkHasChanges');
-    this.view.model._init_values['name'] = 'asdf';
-    await this.view._checkNameAvailable('name');
-    let el_index = this.template.html().indexOf('fa-check');
-    expect(el_index > 0).toBe(true);
-  });
-
-  it('test-checkNameAvailable-not-available', async function(){
-    spyOn(Repository, 'is_name_available').and.returnValue(false);
-    spyOn(this.view, '_checkHasChanges');
-    this.view.model._init_values['name'] = 'asdf';
-    await this.view._checkNameAvailable('name');
-    let el_index = this.template.html().indexOf('fa-times');
-    expect(el_index > 0).toBe(true);
-  });
-
   it('test-getChangesFromInput', function(){
     this.view._model_changed['parallel_builds'] = '';
     this.view._getChangesFromInput();
@@ -355,7 +329,7 @@ describe('RepositoryDetailsViewTest', function(){
     this.model.fetch = jasmine.createSpy('fetch');
     affix('.template #repo-details-container #repo-details-name');
     let repo_details = 'input#repo-details-name+input#repo-details-url';
-    repo_details += '+#repo-details-url+input#repo-parallel-builds';
+    repo_details += '+#repo-details-url+input.repo-parallel-builds';
     repo_details += '+#repo-name-available .check-error-indicator';
     repo_details += '+.repository-info-enabled-container input';
     repo_details += '+.repo-branches-li';

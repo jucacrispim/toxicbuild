@@ -47,11 +47,11 @@ def step_impl(context, slave_port):
     input_element.send_keys(slave_port)
 
 
-@when('clicks in the save button')  # noqa f401
-def step_impl(context):
-    browser = context.browser
-    btn = browser.find_element_by_id('btn-save-slave')
-    browser.click(btn)
+# @when('clicks in the save button')  # noqa f401
+# def step_impl(context):
+#     browser = context.browser
+#     btn = browser.find_element_by_id('btn-save-slave')
+#     browser.click(btn)
 
 
 @then('he sees the token field label in red')  # noqa f401

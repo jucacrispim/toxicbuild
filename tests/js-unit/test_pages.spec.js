@@ -121,11 +121,11 @@ describe('MainPageTest', function(){
   });
 });
 
-describe('BaseRepositoryPageTest', function(){
+describe('BaseFloatingPageTest', function(){
 
   beforeEach(function(){
     let router = new DashboardRouter();
-    this.page = new BaseRepositoryPage(router);
+    this.page = new BaseFloatingPage({router: router});
   });
 
   it('test-close-page', function(){
@@ -133,6 +133,27 @@ describe('BaseRepositoryPageTest', function(){
     this.page.close_page();
     expect(this.page.router.go2lastURL).toHaveBeenCalled();
   });
+
+  it('test-prepareOpenAnimation', function(){
+    this.page._getContainerInner = jasmine.createSpy('_getcontainerinner');
+    this.page._inner = jasmine.createSpy('_inner');
+    this.page._inner.hide = jasmine.createSpy('hide');
+    this.page._container = jasmine.createSpy('_container');
+    this.page._container.prop = jasmine.createSpy('prop');
+    this.page._prepareOpenAnimation();
+    expect(this.page._inner.hide).toHaveBeenCalled();
+    expect(this.page._container.prop).toHaveBeenCalled();
+  });
+
+  it('test-animateOpen', function(){
+    this.page._container = jasmine.createSpy('_container');
+    this.page._container.animate = jasmine.createSpy('animate');
+    this.page._animateOpen();
+    expect(this.page._container.animate).toHaveBeenCalled();
+  });
+});
+
+describe('BaseRepositoryPageTest', function(){
 
 });
 

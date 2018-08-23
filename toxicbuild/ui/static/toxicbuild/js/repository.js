@@ -114,15 +114,9 @@ class Repository extends BaseModel{
 
   static async is_name_available(name){
     let model = new Repository();
-    let r = await model.fetch({'name': name});
-    try{
-      r = model.parse(r);
-    }catch(e){
-      r = null;
-    }
-    return !Boolean(r);
+    let r = await is_name_available(model, name);
+    return r;
   }
-
 }
 
 
@@ -137,7 +131,7 @@ class RepositoryList extends BaseCollection{
 }
 
 
-class BaseRepositoryView extends BaseView{
+class BaseRepositoryView extends BaseFormView{
 
   constructor(options){
     options = options || {'tagName': 'div'};
@@ -147,7 +141,7 @@ class BaseRepositoryView extends BaseView{
     this.directive = {
       '.repo-details-name@value': 'name',
       '.repo-details-url@value': 'url',
-      '#repo-parallel-builds@value': 'parallel_builds',
+      '.repo-parallel-builds@value': 'parallel_builds',
       '.repository-info-enabled-container input@checked': 'enabled',
       '.repo-branches-li': {
 	'branch<-branches': {'.branch-name': 'branch.name',
@@ -251,34 +245,11 @@ class BaseRepositoryView extends BaseView{
     }
   }
 
-  _listen2name_available(template){
-    let self = this;
-    // check repo name and enable save button
-    let check_name = _.debounce(function(name){
-      self._checkNameAvailable(name);}, 500);
-    $('.repo-details-name', template).on('input', function(e){
-      let name = $(this).val();
-      check_name(name);
-    });
-
-  }
-
-  _listen2input_changes(template){
-    let self = this;
-    // check for changes to enable save button
-    let check_changes = _.debounce(function(){self._checkHasChanges();}, 300);
-    $('input', template).each(function(){
-      let el = $(this);
-      el.on('input', function(e){check_changes();});
-    });
-  }
-
   _listen2events(template){
+    super._listen2events(template);
     let checkbox = $('.repo-enabled-checkbox', template);
     let self = this;
     checkbox.change(function(){self._change_enabled($(this));});
-    self._listen2name_available(template);
-    self._listen2input_changes(template);
   }
 
   _setEnabled(enabled, template){
@@ -291,51 +262,12 @@ class BaseRepositoryView extends BaseView{
     }
   }
 
-  async _checkNameAvailable(name){
-
-    let selector = '#repo-name-available #available-text';
-    let indicator_selector = '#repo-name-available .check-error-indicator';
-    let spinner_selector = '.wait-name-available-spinner';
-    let el = $(selector);
-    let indicator = $(indicator_selector);
-    let spinner = $(spinner_selector);
-
-    el.hide();
-    indicator.hide();
-    indicator.removeClass('fas fa-check').removeClass('fas fa-times');
-
-    if (this._model_init_values['name'] == name || !name){
-      this._checkHasChanges();
-      el.html('');
-      return false;
-    }
-
-    spinner.show();
-
-    let r = await Repository.is_name_available(name);
-
-    if(r){
-      indicator.addClass('fas fa-check');
-      el.html('');
-      this._checkHasChanges();
-    }else{
-      indicator.addClass('fas fa-times');
-      el.html('Name not available');
-    }
-
-    spinner.hide();
-    el.fadeIn(300);
-    indicator.fadeIn(300);
-
-    return r;
-  }
-
   _getChangesFromInput(){
     super._getChangesFromInput();
     for (let key in this._model_changed){
       let value = this._model_changed[key];
       if (value == '' && key == 'parallel_builds'){
-	this._model_changed[key] = 0;
+  	this._model_changed[key] = 0;
       }
     }
   }
@@ -344,18 +276,6 @@ class BaseRepositoryView extends BaseView{
     let has_name = $('.repo-details-name', this.container).val();
     let has_url = $('.repo-details-url', this.container).val();
     return Boolean(has_name) && Boolean(has_url);
-  }
-
-  _checkHasChanges(){
-    this._getChangesFromInput();
-    let btn = $('.save-btn-container button');
-    let has_changed = this._hasChanges();
-    let has_required = this._hasRequired();
-    if (has_changed && has_required){
-      btn.prop('disabled', false);
-    }else{
-      btn.prop('disabled', true);
-    }
   }
 
   async render_details(){
@@ -415,9 +335,8 @@ class RepositoryAddView extends BaseRepositoryView{
   _listen2events(template){
     let self = this;
     super._listen2events(template);
-    let add_btn = $('#btn-save-repo');
 
-    add_btn.on('click', function(e){
+    $('#btn-save-obj').on('click', function(e){
       self._addRepo();
     });
   }
@@ -454,31 +373,6 @@ class RepositoryDetailsView extends BaseRepositoryView{
     modal.on('hidden.bs.modal', function(e){
       $(document).trigger('repo-removed');
     });
-  }
-
-  async _saveChanges(){
-    let spinner = $(
-      '.repo-details-buttons-container #save-repo-btn-spinner');
-    let text = $('.repo-details-buttons-container #save-repo-btn-text');
-
-    text.hide();
-    spinner.show();
-
-    let btn = $('.save-btn-container button');
-    btn.prop('disabled', true);
-
-    try{
-      let changed = this._model_changed;
-      await this.model.save(null, {attrs: changed});
-      $.extend(this._model_init_values, changed);
-      utils.showSuccessMessage('Repository updated');
-    }catch(e){
-      console.error(e);
-      btn.prop('disabled', false);
-      utils.showErrorMessage('Error updating repository');
-    }
-    spinner.hide();
-    text.show();
   }
 
   _hackHelpHeight(steps, type='increase'){
@@ -581,12 +475,6 @@ class RepositoryDetailsView extends BaseRepositoryView{
   _listen2events(template){
     let self = this;
     super._listen2events(template);
-
-    // save changes when clicking on save button
-    let save_btn = $('#btn-save-repo');
-    save_btn.on('click', function(e){
-      self._saveChanges();
-    });
 
     $('#addBranchModal').on('show.bs.modal', function(e){
       self._initBranchFields();

@@ -98,6 +98,19 @@ describe("BaseModelTest", function(){
     expect(jQuery.ajax).toHaveBeenCalled();
   });
 
+  it('test-is-name-available-ok', async function(){
+    let model = new BaseModel();
+    model.fetch = async function(kw){return {items: []};};
+    let r = await is_name_available(model, 'some-name');
+    expect(r).toBe(true);
+  });
+
+  it('test-is-name-available-not-available', async function(){
+    let model = new BaseModel();
+    spyOn(model, 'fetch').and.returnValue({items: [{}]});
+    let r = await is_name_available(model, 'some-name');
+    expect(r).toBe(false);
+  });
 });
 
 describe('BaseCollectionTest', function(){
@@ -123,12 +136,15 @@ describe('BaseCollectionTest', function(){
 });
 
 
-describe('BaseViewTest', function(){
+describe('BaseFormViewTest', function(){
 
   beforeEach(function(){
-    this.view = new BaseView();
+    this.view = new BaseFormView();
     this.view.model = new BaseModel();
     affix('.save-btn-container button');
+    affix(this.view._name_avail_s);
+    affix(this.view._name_avail_indicator_s);
+    affix(this.view._name_avail_spinner_s);
   });
 
   it('test-getChangesFromInput-different-value', function(){
@@ -155,12 +171,12 @@ describe('BaseViewTest', function(){
   });
 
   it('test-getChangesFromInput-return-to-init-value', function(){
-    let fist_in = affix('input');
     let second_in = affix('input');
     second_in.data('valuefor', 'name');
     second_in.val('qwer');
+
     this.view._model_init_values = {'name': 'asfd'};
-    spyOn(this.view.model, 'set');
+
     this.view._getChangesFromInput();
     second_in.val('asfd');
     this.view._getChangesFromInput();
@@ -174,6 +190,15 @@ describe('BaseViewTest', function(){
     input.val('');
     this.view._getChangesFromInput();
     expect(this.view._model_changed.hasOwnProperty('bla')).toBe(false);
+  });
+
+  it('test-getChangesFromInput-checkbox', function(){
+    let input = affix('input');
+    input.prop('type', 'checkbox');
+    input.data('valuefor', 'bla');
+    input.prop('checked', true);
+    this.view._getChangesFromInput();
+    expect(this.view._model_changed['bla']).toBe(true);
   });
 
   it('test-hasChanges', function(){
@@ -217,6 +242,56 @@ describe('BaseViewTest', function(){
     this.view._checkHasChanges();
     let btn = jQuery('.save-btn-container button');
     expect(btn.prop('disabled')).toBe(true);
+  });
+
+  it('test-nclearNameAvailableInfo', function(){
+    this.view._clearNameAvailableInfo();
+    expect(this.view._name_available.is(':visible')).toBe(false);
+    expect(this.view._name_available_indicator.is(':visible')).toBe(false);
+    expect(this.view._name_available_spinner.is(':visible')).toBe(false);
+  });
+
+  it('test-handleNameAvailableInfo-available', function(){
+    spyOn(this.view, '_checkHasChanges');
+    this.view._clearNameAvailableInfo();
+    this.view._handleNameAvailableInfo(true);
+    expect(this.view._name_available.html()).toEqual('');
+  });
+
+  it('test-handleNameAvailableInfo-not-available', function(){
+    spyOn(this.view, '_checkHasChanges');
+    this.view._clearNameAvailableInfo();
+    this.view._handleNameAvailableInfo(false);
+    expect(this.view._name_available.html()).toEqual('Name not available');
+  });
+
+  it('test-checkNameAvailable-same-as-init', async function(){
+    this.view._model_init_values['name'] = 'init_name';
+    spyOn(this.view, '_checkHasChanges');
+    this.view.model.constructor.is_name_available = jasmine.createSpy('available');
+    await this.view._checkNameAvailable('init_name');
+    expect(this.view.model.constructor.is_name_available).not.toHaveBeenCalled();
+  });
+
+  it('test-checkNameAvailable', async function(){
+    spyOn(this.view, '_checkHasChanges');
+    this.view.model.constructor.is_name_available = jasmine.createSpy('available');
+    await this.view._checkNameAvailable('somename');
+    expect(this.view.model.constructor.is_name_available).toHaveBeenCalled();
+  });
+
+  it('test-saveChanges-error', async function(){
+    spyOn(this.view.model, 'save').and.throwError();
+    spyOn(utils, 'showErrorMessage');
+    await this.view._saveChanges();
+    expect(utils.showErrorMessage).toHaveBeenCalled();
+  });
+
+  it('test-saveChanges-ok', async function(){
+    spyOn(this.view.model, 'save');
+    spyOn(utils, 'showSuccessMessage');
+    await this.view._saveChanges();
+    expect(utils.showSuccessMessage).toHaveBeenCalled();
   });
 
 });

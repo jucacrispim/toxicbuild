@@ -14,13 +14,13 @@
         <input type="text" class="form-control" id="repo-branch-name"
 	       placeholder="Branch name. You may use wildcards here.">
 
-      <div class="form-check abc-checkbox abc-checkbox-black">
-	<input class="form-check-input" id="notify-only-latest"
-	       type="checkbox" checked>
-	<label class="form-check-label" for="notify-only-latest">
-	  Only most recent changes
-	</label>
-      </div>
+	<div class="form-check abc-checkbox abc-checkbox-black">
+	  <input class="form-check-input" id="notify-only-latest"
+		 type="checkbox" checked>
+	  <label class="form-check-label" for="notify-only-latest">
+	    Only most recent changes
+	  </label>
+	</div>
 
       </div>
 
@@ -112,12 +112,13 @@
 	</div>
 	<div class="repo-details-name-input col-sm-11 repo-details-input">
 	  <div class="repo-details-input">
-	    <input type="text" class="form-control repo-details-name"
+	    <input type="text"
+		   class="form-control repo-details-name obj-details-name"
 		   data-valuefor="name" required>
 	  </div>
 	  <!-- name available -->
 	  <div class="repo-details-name-available repo-details-label col-sm-3"
-	       id="repo-name-available">
+	       id="obj-name-available">
 
 	    <div class="wait-name-available-spinner">
 	      <span class="spinner icon-spinner-2"></span>
@@ -181,7 +182,7 @@
 	      <span>Builds in parallel:</span>
 	    </div>
 	    <div class="col-sm-2 repo-details-input advanced-item">
-	      <input id="repo-parallel-builds" type="text" class="form-control"
+	      <input class="repo-parallel-builds form-control" type="text"
 		     data-valuefor="parallel_builds">
 	    </div>
 	  </div>
@@ -289,7 +290,7 @@
 
 
 <!-- main settings container -->
-<div class="repo-details-main-container box-shadow-gray">
+<div class="repo-details-main-container details-main-container box-shadow-gray">
   <div class="close-btn">&times;</div>
 
   <!-- loading spinner -->
@@ -333,20 +334,20 @@
     <div id="repo-details-container"></div>
 
       <!-- buttons container -->
-      <div class="repo-details-buttons-container">
+      <div class="obj-details-buttons-container buttons-container">
 	<div class="save-btn-container inner-btn-container">
 	  <button class="btn btn-sm btn-block btn-dark" type="submit"
-		  id="btn-save-repo" disabled>
-	    <span class="spinner icon-spinner-2" id="save-repo-btn-spinner"
+		  id="btn-save-obj" disabled>
+	    <span class="spinner icon-spinner-2" id="save-obj-btn-spinner"
 		  style="display:none">
 	    </span>
-	    <span id="save-repo-btn-text">Save changes</span>
+	    <span id="save-obj-btn-text">Save changes</span>
 	  </button>
 	</div>
 
 	<div class="cancel-btn-container inner-btn-container">
 	  <button class="btn btn-sm btn-light btn-block" type="submit"
-		  id="btn-cancel-save-repo">
+		  id="btn-cancel-save">
 	    <span id="cancel-save-repo-btn-text">Cancel</span>
 	  </button>
 	</div>

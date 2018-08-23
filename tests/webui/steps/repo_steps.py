@@ -3,7 +3,8 @@
 import time
 from behave import when, then, given
 from tests.webui.steps.base_steps import (  # noqa f811
-    given_logged_in_webui, then_sees_message, when_navigate2settings)
+    given_logged_in_webui, then_sees_message, when_navigate2settings,
+    click_add_button)
 from tests.functional import REPO_DIR
 
 
@@ -43,12 +44,12 @@ def fill_repo_url(context):
     url_input.send_keys(REPO_DIR)
 
 
-@when('clicks in the add repo button')
-def click_add_repo_button(context):
+@when('he fills the parallel builds with 2')
+def fill_parallel_builds(context):
     browser = context.browser
-    time.sleep(0.5)
-    btn = browser.find_element_by_id('btn-save-repo')
-    browser.click(btn)
+    el_input = browser.find_elements_by_class_name(
+        'repo-parallel-builds')[1]
+    el_input.send_keys(2)
 
 
 @given('the user is in the repository settings page')
