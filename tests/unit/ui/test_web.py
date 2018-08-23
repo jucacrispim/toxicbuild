@@ -452,7 +452,7 @@ class SlaveRestHandlerTest(TestCase):
         await self.handler.async_prepare()
 
     def test_query_has_pk(self):
-        self.handler.query = {'full_name': 'bla'}
+        self.handler.query = {'name': 'bla'}
         has_pk = self.handler._query_has_pk()
         self.assertTrue(has_pk)
 
