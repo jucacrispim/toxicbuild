@@ -539,7 +539,8 @@ class HoleHandler:
         await slave.save()
         return {'slave-update': 'ok'}
 
-    async def buildset_list(self, repo_name_or_id=None, skip=0, offset=None):
+    async def buildset_list(self, repo_name_or_id=None, skip=0, offset=None,
+                            summary=False):
         """ Lists all buildsets.
 
         If ``repo_name_or_id``, only builders from this repository will be
@@ -547,6 +548,7 @@ class HoleHandler:
         :param repo_name_or_id: Repository's name or id.
         :param skip: skip for buildset list.
         :param offset: offset for buildset list.
+        :param summary: If true, no builds information will be included.
         """
 
         buildsets = BuildSet.objects.no_dereference()
@@ -565,7 +567,7 @@ class HoleHandler:
         buildset_list = []
         buildsets = await buildsets.to_list()
         for b in buildsets:
-            bdict = b.to_dict()
+            bdict = b.to_dict(builds=not summary)
             buildset_list.append(bdict)
 
         return {'buildset-list': buildset_list}

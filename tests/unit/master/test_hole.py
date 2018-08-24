@@ -898,6 +898,21 @@ class HoleHandlerTest(TestCase):
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
+    async def test_buildset_list_summary(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'buildset-list', protocol)
+        buildsets = await handler.buildset_list(self.repo.full_name,
+                                                summary=True)
+        buildsets = buildsets['buildset-list']
+
+        self.assertEqual(len(buildsets), 3)
+        self.assertEqual(len(buildsets[0]['builds']), 0)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
     async def test_buildset_list_without_repo_name(self):
 
         await self._create_test_data()
