@@ -194,6 +194,8 @@ class BuildTest(TestCase):
 
     @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
         spec=build.build_notifications.publish))
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_cancel_impossible(self):
         await self._create_test_data()
@@ -237,9 +239,10 @@ class BuildSetTest(TestCase):
 
     @async_test
     async def tearDown(self):
-        await repository.Repository.drop_collection()
-        await slave.Slave.drop_collection()
         await build.BuildSet.drop_collection()
+        await slave.Slave.drop_collection()
+        await repository.Repository.drop_collection()
+        await users.User.drop_collection()
 
     @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock())
     @async_test
@@ -265,6 +268,15 @@ class BuildSetTest(TestCase):
         await self._create_test_data()
         objdict = self.buildset.to_dict()
         self.assertEqual(len(objdict['builds']), 1)
+        self.assertTrue(objdict['commit_date'])
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_to_dict_no_builds(self):
+        await self._create_test_data()
+        objdict = self.buildset.to_dict(builds=False)
+        self.assertEqual(len(objdict['builds']), 0)
         self.assertTrue(objdict['commit_date'])
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(

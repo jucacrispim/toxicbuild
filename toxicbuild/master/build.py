@@ -180,7 +180,10 @@ class BuildStep(EmbeddedDocument):
     """The total time spen in the step."""
 
     def to_dict(self, output=True):
-        """Returns a dict representation of the BuildStep."""
+        """Returns a dict representation of the BuildStep.
+
+        :param output: Indicates if the output of the step should be included.
+        """
 
         objdict = {'uuid': str(self.uuid), 'name': self.name,
                    'command': self.command, 'status': self.status}
@@ -267,16 +270,15 @@ class Build(EmbeddedDocument):
     """Indicates the branch from which the builders for this build came from.
     This may not be the same as the build branch."""
 
-    def to_dict(self):
+    def to_dict(self, output=True):
         """Transforms the object into a dictionary.
 
-        :param id_as_str: Indicates if the id should be a string or an
-          ObjectId instance."""
+        :param output: Should we include the steps output?"""
 
         objdict = {'uuid': str(self.uuid), 'named_tree': self.named_tree,
                    'branch': self.branch}
 
-        steps = [s.to_dict() for s in self.steps]
+        steps = [s.to_dict(output=output) for s in self.steps]
         objdict['builder'] = {'id': str(self._data.get('builder').id)}
         objdict['steps'] = steps
         objdict['started'] = datetime2string(
@@ -457,8 +459,10 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         ensure_future(buildset.notify('buildset-added'))
         return buildset
 
-    def to_dict(self):
-        """Returns a dict representation of the object"""
+    def to_dict(self, builds=True):
+        """Returns a dict representation of the object
+
+        :param builds: Should the builds be included in the dict?"""
 
         repo_id = str(self._data.get('repository').id)
         objdict = {'id': str(self.id), 'commit': self.commit,
@@ -478,9 +482,10 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
             objdict['total_time'] = ''
 
         objdict['builds'] = []
-        for b in self.builds:
-            bdict = b.to_dict()
-            objdict['builds'].append(bdict)
+        if builds:
+            for b in self.builds:
+                bdict = b.to_dict(output=False)
+                objdict['builds'].append(bdict)
         return objdict
 
     def to_json(self):
