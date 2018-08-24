@@ -294,4 +294,32 @@ describe('BaseFormViewTest', function(){
     expect(utils.showSuccessMessage).toHaveBeenCalled();
   });
 
+  it('test-getRemoveModal', function(){
+    let self = this;
+    expect(function(){self.view._getRemoveModal();}).toThrow(
+      new Error('You must implement _getRemoveModal()'));
+  });
+
+  it('test-removeObj-exeption', async function(){
+    spyOn(this.view.model, 'remove').and.throwError();
+    spyOn(utils, 'showErrorMessage');
+    let modal = jasmine.createSpy('modal');
+    modal.modal = jasmine.createSpy();
+    modal.on = jasmine.createSpy();
+    spyOn(this.view, '_getRemoveModal').and.returnValue(modal);
+    await this.view._removeObj();
+    expect(utils.showErrorMessage).toHaveBeenCalled();
+  });
+
+  it('test-removeObj-ok', async function(){
+    spyOn(this.view.model, 'remove');
+    spyOn(utils, 'showSuccessMessage');
+    let modal = jasmine.createSpy('modal');
+    modal.modal = jasmine.createSpy();
+    modal.on = jasmine.createSpy();
+    spyOn(this.view, '_getRemoveModal').and.returnValue(modal);
+    await this.view._removeObj();
+    expect(utils.showSuccessMessage).toHaveBeenCalled();
+  });
+
 });

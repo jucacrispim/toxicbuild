@@ -23,7 +23,7 @@
 
 	  <div class="add-branch-btn-container inner-btn-container col-sm-4">
 	    <button class="btn btn-sm btn-block btn-danger btn-red" type="submit"
-		    id="btn-remove-slave">
+		    id="btn-remove-obj">
 	      <span class="spinner icon-spinner-2" id="remove-slave-btn-spinner"
 		    style="display:none">
 	      </span>
@@ -134,7 +134,7 @@
       </div>
       <!-- delete button -->
       <div class="delete-btn-container inner-btn-container col-sm-2">
-	<button class="btn btn-sm btn-block btn-danger btn-red btn-delete-repo"
+	<button class="btn btn-sm btn-block btn-danger btn-red btn-delete-slave"
 		type="submit"
 		data-toggle="modal"
 		data-target="#removeSlaveModal">
@@ -163,11 +163,23 @@
   </div>
   <!-- end loading spinner -->
 
+  <!-- navigation pills -->
+  <div class="nav-container">
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+	<a class="nav-link active box-shadow" href="#">
+	  General configurations
+	</a>
+      </li>
+  </div>
+
+  <!-- end navigation pills -->
   <!-- add slave message -->
   <div class="add-slave-message-container row-container col-sm-10">
     <h5><span class="add-slave-message-span">Add slave</span></h5>
   </div>
   <!-- end add slave message -->
+
 
   <!-- left side -->
   <div class="settings-left-side col-sm-9">

@@ -2,120 +2,144 @@
 
 import time
 from behave import when, then, given
-from selenium.common.exceptions import NoSuchElementException
 from tests.webui.steps.base_steps import (  # noqa f811
     given_logged_in_webui)
 
 
-# Scenario: The user inserts a new slave without required information
-
-@when('he clicks in the add slave button')
-def step_impl(context):
+@when('he clicks in the settings button')
+def click_settings_button(context):
     browser = context.browser
-    btn = browser.find_element_by_id('add-slave-btn')
-    browser.click(btn)
+    el = browser.find_elements_by_class_name('fa-wrench')[0]
+    el.click()
+
+    # wait for the settings page
+    browser.wait_text_become_present('Manage slaves')
 
 
-@when('sees the slave modal')  # noqa f401
-def step_impl(context):
+@when('clicks in the Manage slaves menu')
+def click_manage_slave_menu(context):
     browser = context.browser
-    el = browser.find_element_by_id('addSlaveModalLabel')
-    is_present = browser.wait_element_become_visible(el)
-    assert is_present
+    el = browser.find_element_by_id('manage-slaves-link')
+    el.click()
+
+    # here I wait for the slave list page to appear looking for the
+    # help text
+    browser.wait_text_become_present('Slaves are the ones')
 
 
-@when('fills the name field with "{slave_name}"')  # noqa f401
-def step_impl(context, slave_name):
+@when('clicks in the add slave button')
+def click_add_slave_button(context):
     browser = context.browser
-    input_element = browser.find_element_by_id('slave_name')
-    for l in slave_name:
-        browser.click(input_element)
-        input_element.send_keys(l)
+    el = browser.find_elements_by_class_name('fa-plus')[0]
+    el.click()
 
 
-@when('fills the host field with "{slave_host}"')  # noqa f401
-def step_impl(context, slave_host):
+@then('he sees the add slave page')
+def see_add_slave_page(context):
     browser = context.browser
-    input_element = browser.find_element_by_id('slave_host')
-    input_element.send_keys(slave_host)
+    browser.wait_text_become_present('Add slave')
 
 
-@when('fills the port field with "{slave_port}"')  # noqa f401
-def step_impl(context, slave_port):
-    browser = context.browser
-    input_element = browser.find_element_by_id('slave_port')
-    input_element.send_keys(slave_port)
-
-
-# @when('clicks in the save button')  # noqa f401
-# def step_impl(context):
-#     browser = context.browser
-#     btn = browser.find_element_by_id('btn-save-slave')
-#     browser.click(btn)
-
-
-@then('he sees the token field label in red')  # noqa f401
-def step_impl(context):
-    browser = context.browser
-    is_present = browser.find_element_by_class_name('has-error')
-    assert is_present
-
-
-# Scenario: The user inserts a new slave and that works
-
-@given('the user already tried to save a slave')  # noqa f401
-def step_impl(context):
-    browser = context.browser
-    assert browser.find_element_by_id('addSlaveModalLabel').is_displayed()
-    assert browser.find_element_by_class_name('has-error')
-
-
-@when('fills the token field with "{slave_token}"')  # noqa f401
-def step_impl(context, slave_token):
-    browser = context.browser
-    input_element = browser.find_element_by_id('slave_token')
-    input_element.send_keys(slave_token)
-
-
-@then('he sees the new slave in the slave list')  # noqa f401
-def step_impl(context):
-    browser = context.browser
-    txt = 'some-slave'
-    is_present = browser.wait_text_become_present(txt)
-    assert is_present
-
-
-# Scenario: A user removes a slave
-
-@given('a user is logged in the system and has a slave')  # noqa f401
-def step_impl(context):
+@given('the user is in the add slave page')
+def is_in_add_slave_page(self):
     pass
 
 
-@when('he clicks in the edit slave button')  # noqa f401
-def step_impl(context):
-    time.sleep(1)
+@when('he fills the slave name field')
+def fill_slave_name(context):
     browser = context.browser
-    btn = browser.find_element_by_class_name('btn-edit-slave')
+    el = browser.find_elements_by_class_name('slave-details-name')[1]
+    el.send_keys('some-name')
+
+
+@when('fills the host field')
+def fill_slave_host(context):
+    browser = context.browser
+    el = browser.find_elements_by_class_name('slave-details-host')[1]
+    el.send_keys('some.host')
+
+
+@when('fills the port field')
+def fill_slave_port(context):
+    browser = context.browser
+    el = browser.find_elements_by_class_name('slave-details-port')[1]
+    el.send_keys(1234)
+
+
+@when('fills the token field')
+def fill_token_field(context):
+    browser = context.browser
+    el = browser.find_elements_by_class_name('slave-details-token')[1]
+    el.send_keys('some-token')
+
+
+@when('clicks in the save changes button')
+@when('clicks in the add new slave button')
+def click_add_new_slave_button(context):
+    browser = context.browser
+    el = browser.find_element_by_id('btn-save-obj')
+    time.sleep(0.5)
+    el.click()
+
+
+@given('the user is in the slave settings page')
+def is_in_slave_settings_page(context):
+    browser = context.browser
+    browser.wait_text_become_present('General configurations')
+    el = browser.find_elements_by_class_name('btn-delete-slave')[1]
+    browser.wait_element_become_visible(el)
+
+
+@when('he clicks in the use ssl button')
+def click_use_ssl(context):
+    browser = context.browser
+    el = browser.find_element_by_id('slave-use-ssl')
+    browser.click(el)
+
+
+@when('he clicks in the close page button')
+def click_close_btn(context):
+    browser = context.browser
+    btn = browser.find_element_by_class_name('close-btn')
     browser.click(btn)
+    browser.wait_text_become_present('Manage slaves')
 
 
-@when('clicks in the delete button')  # noqa f401
-def step_impl(context):
+@then('he sees the slaves list')
+def see_slave_list(context):
     browser = context.browser
-    btn = browser.find_element_by_id('btn-delete-slave')
-    browser.click(btn)
+    el = browser.find_elements_by_class_name('slave-info')[1]
+    browser.wait_element_become_visible(el)
 
 
-@then('the slave is removed from the slave list')  # noqa f401
-def step_impl(context):
+@given('the user is in the slaves list page')
+def is_in_slaves_list_page(context):
+    pass
+
+
+@when('he navigates to the slave settings page')
+def navigate_to_slave_settings_page(context):
     browser = context.browser
-    try:
-        browser.implicitly_wait(0)
-        rows = browser.find_elements_by_class_name('slave-row')
-    except NoSuchElementException:
-        rows = []
-    finally:
-        browser.implicitly_wait(10)
 
-    assert len(rows) == 1
+    el = browser.find_elements_by_class_name('fa-ellipsis-h')[1]
+    el.click()
+    browser.click_link('Settings')
+    browser.wait_text_become_present('General configurations')
+
+@when('clicks in the delete slave button')
+def click_delete_button(context):
+    browser = context.browser
+
+    el = browser.find_elements_by_class_name('btn-delete-slave')[1]
+    browser.wait_element_become_visible(el)
+
+    browser.click(el)
+
+
+@when('clicks in the delete slave button in the modal')
+def click_delete_button_modal(context):
+    browser = context.browser
+
+    el = browser.find_element_by_id('btn-remove-obj')
+    browser.wait_element_become_visible(el)
+    el.click()

@@ -603,8 +603,9 @@ class DashboardHandler(LoggedTemplateHandler):
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
+    @get('slave/add')
     @get('slave/(\w+/\w+)')
-    def show_slave_details(self, full_name):
+    def show_slave_details(self, full_name=b''):
         full_name = full_name.decode()
         content = self._get_slave_template(full_name)
         context = {'content': content}

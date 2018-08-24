@@ -1,24 +1,40 @@
 Feature: A user inserts and removes a slave in the web interface
 
-    Scenario: The user inserts a new slave without required information
-        Given the user is logged in the web interface
-	When he clicks in the add slave button
-	And sees the slave modal
-	And fills the name field with "some-slave"
-	And fills the host field with "localhost"
-	And fills the port field with "7777"
-	And clicks in the save button
-	Then he sees the token field label in red
+    Scenario: The user navigates to the add slave page
 
-    Scenario: The user inserts a new slave and that works
-        Given the user already tried to save a slave
-	When fills the token field with "slave-secret-token"
-        And clicks in the save button
-	Then he sees the new slave in the slave list
+        Given the user is logged in the web interface
+        When he clicks in the settings button
+        And clicks in the Manage slaves menu
+        And clicks in the add slave button
+        Then he sees the add slave page
+
+    Scenario: The user inserts a new slave
+
+        Given the user is in the add slave page
+        When he fills the slave name field
+        And fills the host field
+        And fills the port field
+        And fills the token field
+        And clicks in the add new slave button
+        Then he sees the "Slave added" message
+
+    Scenario: The user updates slave ssl information
+
+        Given the user is in the slave settings page
+        When he clicks in the use ssl button
+        And clicks in the save changes button
+        Then he sees the "Slave updated" message
+
+    Scenario: The user lists all the slaves
+
+        Given the user is in the slave settings page
+        When he clicks in the close page button
+        Then he sees the slaves list
 
     Scenario: An user removes a slave
-        Given a user is logged in the system and has a slave
-	When he clicks in the edit slave button
-        And sees the slave modal
-	And clicks in the delete button
-	Then the slave is removed from the slave list
+
+        Given the user is in the slaves list page
+        When he navigates to the slave settings page
+        And clicks in the delete slave button
+        And clicks in the delete slave button in the modal
+        Then he sees the "Slave removed" message

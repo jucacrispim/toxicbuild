@@ -329,14 +329,16 @@ class RepositoryAddView extends BaseRepositoryView{
       utils.showErrorMessage('Error adding repository');
       return;
     }
-    $(document).trigger('repo-added', r['full_name']);
+    $(document).trigger('obj-added-using-form', r['full_name']);
   }
 
   _listen2events(template){
     let self = this;
     super._listen2events(template);
 
-    $('#btn-save-obj').on('click', function(e){
+    let btn = $('#btn-save-obj');
+    btn.unbind('click');
+    btn.on('click', function(e){
       self._addRepo();
     });
   }
@@ -358,21 +360,6 @@ class RepositoryDetailsView extends BaseRepositoryView{
   _getRemoveModal(){
     let modal = $('#removeRepoModal');
     return modal;
-  }
-
-  async _removeRepo(){
-    let modal = this._getRemoveModal();
-    try{
-      await this.model.remove();
-      modal.modal('hide');
-      utils.showSuccessMessage('Repository removed');
-    }catch(e){
-      modal.modal('hide');
-      utils.showErrorMessage('Error deleting repository');
-    }
-    modal.on('hidden.bs.modal', function(e){
-      $(document).trigger('repo-removed');
-    });
   }
 
   _hackHelpHeight(steps, type='increase'){
@@ -488,12 +475,6 @@ class RepositoryDetailsView extends BaseRepositoryView{
 
     $('#btn-add-branch').on('click', function(e){
       self._addBranch();
-    });
-
-    // remove repository
-    let remove_btn = $('#btn-remove-repo');
-    remove_btn.on('click', function(e){
-      self._removeRepo();
     });
 
     self._listen2remove_branch_event(template);

@@ -604,6 +604,7 @@ body{
 
 .obj-details-buttons-container{
     float: right;
+    display: none;
     margin-bottom: 25px;
 }
 
@@ -781,6 +782,7 @@ body{
 
 /* repo add page */
 
+.add-slave-message-container,
 .add-repo-message-container{
     display: none;
     margin-bottom: 25px;
@@ -806,6 +808,7 @@ body{
 
 .slave-info-address{
     float: right;
+    margin-right: 15px;
 }
 
 

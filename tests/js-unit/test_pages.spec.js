@@ -151,6 +151,18 @@ describe('BaseFloatingPageTest', function(){
     this.page._animateOpen();
     expect(this.page._container.animate).toHaveBeenCalled();
   });
+
+  it('test_getContainerInner', function(){
+    let self = this;
+    expect(function(){self.page._getContainerInner();}).toThrow(
+      new Error('You must implement _getContainerInner()'));
+  });
+
+  it('test-redir2settings', function(){
+    let self = this;
+    expect(function(){self.page.redir2settings();}).toThrow(
+      new Error('You must implement redir2settings()'));
+  });
 });
 
 describe('BaseRepositoryPageTest', function(){
@@ -180,11 +192,11 @@ describe('RepositoryAddPageTest', function(){
     expect(this.page._animateOpen).toHaveBeenCalled();
   });
 
-  it('test-redir2repo_settings', function(){
+  it('test-redir2settings', function(){
     let full_name = 'ze/repo';
     this.page.router.redir = jasmine.createSpy('redir');
     let expected = '/ze/repo/settings';
-    this.page.redir2repo_settings(full_name);
+    this.page.redir2settings(full_name);
     let called = this.page.router.redir.calls.allArgs()[0][0];
     expect(called).toEqual(expected);
   });
@@ -230,4 +242,47 @@ describe('RepositoryDetailsPageTest', function(){
     expect(jQuery.fn.fadeOut).toHaveBeenCalled();
     expect(angle.hasClass('fa-angle-right'));
   });
+});
+
+
+describe('BaseSlaveDetailsPageTest', function(){
+
+  beforeEach(function(){
+    let router = new DashboardRouter();
+    this.page = new BaseSlaveDetailsPage(router, 'name');
+    this.page.view = new BaseSlaveDetailsView();
+  });
+
+  it('test-render', async function(){
+    spyOn(this.page, '_prepareOpenAnimation');
+    spyOn(this.page, '_listen2events');
+    spyOn(this.page, '_animateOpen');
+    spyOn(this.page.view, 'render_details');
+
+    await this.page.render();
+
+    expect(this.page._prepareOpenAnimation).toHaveBeenCalled();
+    expect(this.page._listen2events).toHaveBeenCalled();
+    expect(this.page._animateOpen).toHaveBeenCalled();
+    expect(this.page.view.render_details).toHaveBeenCalled();
+  });
+});
+
+
+describe('SlaveAddPageTest', function(){
+
+  beforeEach(function(){
+    let router = new DashboardRouter();
+    this.page = new SlaveAddPage(router);
+  });
+
+  it('test-redir2settings', function(){
+    let full_name = 'ze/someslave';
+    this.page.router.redir = jasmine.createSpy('redir');
+    let expected = '/slave/ze/someslave';
+    this.page.redir2settings(full_name);
+    let called = this.page.router.redir.calls.allArgs()[0][0];
+    expect(called).toEqual(expected);
+  });
+
 });

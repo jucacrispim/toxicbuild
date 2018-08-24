@@ -258,6 +258,29 @@ class BaseFormView extends Backbone.View{
     this._save_btn_text.show();
   }
 
+  _getRemoveModal(){
+    throw new Error('You must implement _getRemoveModal()');
+  }
+
+  async _removeObj(){
+    let modal = this._getRemoveModal();
+    let cls_name = this.model.constructor.name;
+    var error = false;
+    try{
+      await this.model.remove();
+      utils.showSuccessMessage(cls_name + ' removed');
+    }catch(e){
+      error = true;
+      utils.showErrorMessage('Error deleting ' + cls_name.toLowerCase());
+    }
+    modal.modal('hide');
+    modal.on('hidden.bs.modal', function(e){
+      if(!error){
+	$(document).trigger('obj-removed-using-form');
+      }
+    });
+  }
+
   _listen2save(template){
     let self = this;
     // save changes when clicking on save button
@@ -265,7 +288,14 @@ class BaseFormView extends Backbone.View{
     save_btn.on('click', function(e){
       self._saveChanges();
     });
+  }
 
+  _listen2remove(template){
+    let self = this;
+    let remove_btn = $('#btn-remove-obj');
+    remove_btn.on('click', function(e){
+      self._removeObj();
+    });
   }
 
   _listen2name_available(template){
@@ -298,6 +328,7 @@ class BaseFormView extends Backbone.View{
     this._listen2input_changes(template);
     this._listen2name_available(template);
     this._listen2save(template);
+    this._listen2remove(template);
   }
 
 }

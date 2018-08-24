@@ -147,7 +147,7 @@ class BaseFloatingPage extends BasePage{
     this._inner = null;
   }
 
-  _listen2events(){
+  _listen2events(template){
     let self = this;
 
     let close_btn = $('.details-main-container .close-btn');
@@ -159,16 +159,34 @@ class BaseFloatingPage extends BasePage{
     cancel_btn.on('click', function(e){
       self.close_page();
     });
+
+    // so, when we render a page, we unbind from these *-using-form events
+    // because only one form action can be performed at the same time.
+    // close on remove
+    $(document).unbind('obj-removed-using-form');
+    $(document).on('obj-removed-using-form', function(e){
+      self.close_page();
+    });
+
+    // redir to settings on add
+    $(document).unbind('obj-added-using-form');
+    $(document).on('obj-added-using-form', function(e, full_name){
+      self.redir2settings(full_name);
+    });
+
+
   }
 
   close_page(){
     this.router.go2lastURL();
   }
 
+  redir2settings(){
+    throw new Error('You must implement redir2settings()');
+  }
+
   _getContainerInner(){
-    this._container = $('.details-main-container');
-    this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
-      '.advanced-help-container').not('.add-repo-message-container');
+    throw new Error("You must implement _getContainerInner()");
   }
 
   _prepareOpenAnimation(){
@@ -208,6 +226,13 @@ class RepositoryAddPage extends BaseRepositoryPage{
     this._inner = null;
   }
 
+  _getContainerInner(){
+    this._container = $('.details-main-container');
+    this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
+      '.advanced-help-container').not('.nav-container');
+  }
+
+
   async render(){
     this.add_message_container = $('.add-repo-message-container');
     this.right_sidebar = $('.settings-right-side');
@@ -221,7 +246,7 @@ class RepositoryAddPage extends BaseRepositoryPage{
     this._animateOpen();
   }
 
-  redir2repo_settings(full_name){
+  redir2settings(full_name){
     let url = '/' + full_name + '/settings';
     this.router.redir(url, true, true);
   }
@@ -229,8 +254,12 @@ class RepositoryAddPage extends BaseRepositoryPage{
   _listen2events(){
     let self = this;
     super._listen2events();
-    $(document).on('repo-added', function(e, full_name){
-      self.redir2repo_settings(full_name);
+    $(document).on('obj-added-using-form', function(e, type, full_name){
+      if (type == 'repository'){
+	self.redir2repo_settings(full_name);
+      }else if (type == 'slave'){
+	self.redir2slave_settings(full_name);
+      }
     });
   }
 }
@@ -262,18 +291,18 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
     }
   }
 
+  _getContainerInner(){
+    this._container = $('.details-main-container');
+    this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
+      '.advanced-help-container').not('.add-repo-message-container');
+  }
+
   _listen2events(){
     let self = this;
 
     super._listen2events();
     $('.repo-config-advanced-span').on('click', function(e){
       self._toggleAdvanced();
-    });
-
-    // close on remove
-    $(document).on('repo-removed', function(e){
-      e.stopImmediatePropagation();
-      self.close_page();
     });
   }
 
@@ -289,14 +318,13 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
 
 }
 
-
-class SlaveDetailsPage extends BaseFloatingPage{
+class BaseSlaveDetailsPage extends BaseFloatingPage{
 
   constructor(router, name){
     super({router: router});
     this.template_url = '/templates/slave-details';
     this.name = name;
-    this.view = new SlaveDetailsView({name: this.name});
+    this.view = null;
   }
 
   async render(){
@@ -305,5 +333,38 @@ class SlaveDetailsPage extends BaseFloatingPage{
     await this.view.render_details();
     this._listen2events();
     this._animateOpen();
+  }
+}
+
+class SlaveDetailsPage extends BaseSlaveDetailsPage{
+
+  constructor(router, name){
+    super(router, name);
+    this.view = new SlaveDetailsView({name: this.name});
+  }
+
+  _getContainerInner(){
+    this._container = $('.details-main-container');
+    this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
+      '.add-slave-message-container');
+  }
+}
+
+class SlaveAddPage extends BaseSlaveDetailsPage{
+
+  constructor(router){
+    super(router);
+    this.view = new SlaveAddView();
+  }
+
+  _getContainerInner(){
+    this._container = $('.details-main-container');
+    this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
+      '.nav-container');
+  }
+
+  redir2settings(full_name){
+    let url = '/slave/' + full_name;
+    this.router.redir(url, true, true);
   }
 }

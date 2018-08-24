@@ -303,5 +303,5 @@ def click_delete_button(context):
 @when('clicks in the delete repo button in the modal')
 def click_delete_button_modal(context):
     browser = context.browser
-    el = browser.find_element_by_id('btn-remove-repo')
+    el = browser.find_element_by_id('btn-remove-obj')
     el.click()

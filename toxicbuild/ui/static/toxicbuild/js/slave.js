@@ -180,4 +180,51 @@ class SlaveDetailsView extends BaseSlaveDetailsView{
     await this.model.fetch({name: this.name});
     super.render_details();
   }
+
+  _getRemoveModal(){
+    let modal = $('#removeSlaveModal');
+    return modal;
+  }
+
+}
+
+
+class SlaveAddView extends BaseSlaveDetailsView{
+
+  render_details(){
+    super.render_details();
+    $('.delete-btn-container').hide();
+    $('#save-obj-btn-text').text('Add slave');
+  }
+
+  async _addSlave(){
+    this.model.set('name', this._model_changed['name']);
+    this.model.set('host', this._model_changed['host']);
+    this.model.set('port', this._model_changed['port']);
+    this.model.set('token', this._model_changed['token']);
+    this.model.set('use_ssl', this._model_changed['use_ssl']);
+    this.model.set('validate_cert', this._model_changed['validate_cert']);
+
+    var r;
+    try{
+      r = await this.model.save();
+      utils.showSuccessMessage('Slave added');
+    }catch(e){
+      console.error(e);
+      utils.showErrorMessage('Error adding slave');
+      return;
+    }
+    $(document).trigger('obj-added-using-form', r['full_name']);
+  }
+
+  _listen2events(template){
+    let self = this;
+    super._listen2events(template);
+
+    let btn = $('#btn-save-obj');
+    btn.unbind('click');
+    btn.on('click', function(e){
+      self._addSlave();
+    });
+  }
 }

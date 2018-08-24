@@ -184,3 +184,45 @@ describe('SlaveDetailsViewTest', function(){
   });
 
 });
+
+
+describe('SlaveAddViewTest', function(){
+
+  beforeEach(function(){
+    this.view = new SlaveAddView();
+    let container = affix(this.view.template_selector);
+    affix(this.view.container_selector);
+    container.affix('input.slave-details-name');
+    container.affix('input.slave-details-host');
+    container.affix('input.slave-details-port');
+    container.affix('input.slave-details-token');
+    container.affix('checkbox.slave-details-use-ssl');
+    container.affix('checkbox.slave-details-verify-cert');
+  });
+
+  it('test-render_details', function(){
+    affix('.delete-btn-container');
+    this.view.render_details();
+    let el = $('.delete-btn-container');
+    expect(el.is('visible')).toBe(false);
+  });
+
+  it('test-addSlave-ok', async function(){
+    spyOn($.fn, 'trigger');
+    spyOn(this.view.model, 'save').and.returnValue({full_name: 'full/some-name'});
+    spyOn(utils, 'showSuccessMessage');
+    this.view._model_changed = {'name': 'some-name'};
+    await this.view._addSlave();
+    expect(this.view.model.get('name')).toEqual('some-name');
+    expect(utils.showSuccessMessage).toHaveBeenCalled();
+  });
+
+  it('test-addSlave-exception', async function(){
+    spyOn(this.view.model, 'save').and.throwError();
+    spyOn(utils, 'showErrorMessage');
+    this.view.model._model_changed = {name: 'some-name'};
+    await this.view._addSlave();
+    expect(utils.showErrorMessage).toHaveBeenCalled();
+  });
+
+});
