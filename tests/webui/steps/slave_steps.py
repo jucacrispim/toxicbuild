@@ -126,6 +126,7 @@ def navigate_to_slave_settings_page(context):
     browser.click_link('Settings')
     browser.wait_text_become_present('General configurations')
 
+
 @when('clicks in the delete slave button')
 def click_delete_button(context):
     browser = context.browser
