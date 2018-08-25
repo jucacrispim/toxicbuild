@@ -197,7 +197,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         if not last_buildset:
             return
 
-        status = last_buildset.get_status()
+        status = last_buildset.status
         i = 1
         while status == BuildSet.PENDING:
             # we do not consider pending builds for the repo status
@@ -211,7 +211,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             if not last_buildset:
                 break
 
-            status = last_buildset.get_status()
+            status = last_buildset.status
 
         return last_buildset
 
@@ -228,7 +228,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         elif not last_buildset:
             status = 'ready'
         else:
-            status = last_buildset.get_status()
+            status = last_buildset.status
 
         return status
 

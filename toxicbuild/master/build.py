@@ -370,6 +370,7 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
     """A list of builds associated with a revision."""
 
     PENDING = Build.PENDING
+    STATUSES = Build.STATUSES
 
     repository = ReferenceField('toxicbuild.master.Repository',
                                 required=True)
@@ -412,6 +413,11 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
     total_time = IntField()
     """The total time spent in the buildset"""
 
+    status = StringField(default=PENDING, choices=STATUSES)
+    """The current status of the buildset. May be on of the values in
+    :attr:`~toxicbuild.master.build.BuildSet.STATUSES`.
+    """
+
     meta = {
         'indexes': [
             'repository'
@@ -428,16 +434,15 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         """Notifies an event to the build_notifications exchange.
 
         :param event_type: The event type to notify about
-        :param status: The status of the buildset. If None, the return
-          of :meth:`~toxicbuild.master.build.Buildset.get_status` will be
-          used."""
+        :param status: The status of the buildset. If None, the value of
+          :attr:`~toxicbuild.master.build.Buildset.status` will be used."""
 
         self.log('notifying buildset {}'.format(event_type), level='debug')
         msg = self.to_dict()
         repo = await self.repository
         msg['repository'] = await repo.to_dict()
         msg['event_type'] = event_type
-        msg['status'] = status or self.get_status()
+        msg['status'] = status or self.status
         msg['repository_id'] = str(repo.id)
         await build_notifications.publish(msg)
 
@@ -467,7 +472,8 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         repo_id = str(self._data.get('repository').id)
         objdict = {'id': str(self.id), 'commit': self.commit,
                    'branch': self.branch, 'author': self.author,
-                   'title': self.title, 'repository': {'id': repo_id}}
+                   'title': self.title, 'repository': {'id': repo_id},
+                   'status': self.status}
         objdict['commit_date'] = datetime2string(self.commit_date)
         objdict['created'] = datetime2string(self.created)
         objdict['started'] = datetime2string(self.started) if self.started \
@@ -492,6 +498,11 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         """Returns a json representation of the object."""
         objdict = self.to_dict()
         return json.dumps(objdict)
+
+    async def update_status(self):
+        status = self.get_status()
+        self.status = status
+        await self.save()
 
     def get_status(self):
         """Returns the status of the BuildSet"""
@@ -738,6 +749,7 @@ class BuildManager(LoggerMixin):
         if not buildset.started:
             buildset.started = localtime2utc(now())
             await buildset.save()
+            await buildset.update_status()
             await buildset.notify('buildset-started', status='running')
 
     async def _set_finished_for_buildset(self, buildset):
@@ -751,6 +763,7 @@ class BuildManager(LoggerMixin):
             buildset.total_time = int((
                 buildset.finished - set_tzinfo(buildset.started, 0)).seconds)
             await buildset.save()
+            await buildset.update_status()
             await buildset.notify('buildset-finished')
 
     async def _execute_builds(self, slave):

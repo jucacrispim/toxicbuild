@@ -475,9 +475,9 @@ class RepositoryTest(TestCase):
                                     status='running', builder=self.builder)
         buildset = await build.BuildSet.create(repository=self.repo,
                                                revision=self.revs[0])
-
         buildset.builds.append(running_build)
         await buildset.save()
+        await buildset.update_status()
         self.assertEqual((await self.repo.get_status()), 'running')
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
@@ -499,8 +499,10 @@ class RepositoryTest(TestCase):
                                                    revision=self.revs[i])
             buildset.builds.append(b)
             await buildset.save()
+            await buildset.update_status()
 
-        self.assertEqual((await self.repo.get_status()), 'success')
+        status = await self.repo.get_status()
+        self.assertEqual(status, 'success')
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -516,6 +518,7 @@ class RepositoryTest(TestCase):
 
         buildset.builds.append(fail_build)
         await buildset.save()
+        await buildset.update_status()
         self.assertEqual((await self.repo.get_status()), 'fail')
 
     @async_test

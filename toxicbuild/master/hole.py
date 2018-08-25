@@ -644,7 +644,7 @@ class HoleHandler:
     async def _get_last_buildset_info(self, repo):
         last_buildset = await repo.get_last_buildset()
         if last_buildset:
-            status = last_buildset.get_status()
+            status = last_buildset.status
 
             started = datetime2string(last_buildset.started) \
                 if last_buildset.started else ''

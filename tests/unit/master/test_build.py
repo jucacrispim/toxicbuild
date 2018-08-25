@@ -300,22 +300,25 @@ class BuildSetTest(TestCase):
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
-    async def test_status_running(self):
+    async def test_get_status_running(self):
         buildset = build.BuildSet()
+        buildset.save = AsyncMagicMock(spec=buildset.save)
         statuses = ['running', 'exception', 'fail',
                     'warning', 'success', 'pending']
         for i in range(5):
             build_inst = build.Build(status=statuses[i])
             buildset.builds.append(build_inst)
 
-        status = buildset.get_status()
+        await buildset.update_status()
+        status = buildset.status
         self.assertEqual(status, 'running')
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
-    async def test_status_exception(self):
+    async def test_get_status_exception(self):
         buildset = build.BuildSet()
+        buildset.save = AsyncMagicMock(spec=buildset.save)
         statuses = ['running', 'exception', 'fail',
                     'warning', 'success', 'pending']
 
@@ -324,14 +327,16 @@ class BuildSetTest(TestCase):
                 build_inst = build.Build(status=statuses[i])
                 buildset.builds.append(build_inst)
 
-        status = buildset.get_status()
+        await buildset.update_status()
+        status = buildset.status
         self.assertEqual(status, 'exception')
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
-    async def test_status_fail(self):
+    async def test_get_status_fail(self):
         buildset = build.BuildSet()
+        buildset.save = AsyncMagicMock(spec=buildset.save)
         statuses = ['running', 'exception', 'fail',
                     'warning', 'success', 'pending']
         for i in range(5):
@@ -339,7 +344,8 @@ class BuildSetTest(TestCase):
                 build_inst = build.Build(status=statuses[i])
                 buildset.builds.append(build_inst)
 
-        status = buildset.get_status()
+        await buildset.update_status()
+        status = buildset.status
         self.assertEqual(status, 'fail')
 
     def test_get_pending_builds(self):
