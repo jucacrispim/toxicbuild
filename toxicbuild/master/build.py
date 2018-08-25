@@ -499,8 +499,12 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         objdict = self.to_dict()
         return json.dumps(objdict)
 
-    async def update_status(self):
-        status = self.get_status()
+    async def update_status(self, status=None):
+        """Updates the status of the buildset.
+
+        :param status: Status to update the buildset. If None,
+          ``self.get_status()`` will be used."""
+        status = status or self.get_status()
         self.status = status
         await self.save()
 
@@ -748,8 +752,8 @@ class BuildManager(LoggerMixin):
     async def _set_started_for_buildset(self, buildset):
         if not buildset.started:
             buildset.started = localtime2utc(now())
+            buildset.status = 'running'
             await buildset.save()
-            await buildset.update_status()
             await buildset.notify('buildset-started', status='running')
 
     async def _set_finished_for_buildset(self, buildset):
