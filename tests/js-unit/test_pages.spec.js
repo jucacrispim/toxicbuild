@@ -125,7 +125,7 @@ describe('BuildSetListPageTest', function(){
 
   beforeEach(function(){
     this.page = new BuildSetListPage({router: jasmine.createSpy('router')});
-    this.page.list_view.render_ = jasmine.createSpy('render-all');
+    this.page.list_view.render_all = jasmine.createSpy('render-all');
   });
 
   it('test-render', async function(){
