@@ -349,13 +349,12 @@ class BuildSetRestHandlerTest(TestCase):
         with self.assertRaises(web.HTTPError):
             self.handler.invalid()
 
+    @patch.object(web.BuildSet, 'list', AsyncMagicMock(spec=web.BuildSet.list))
     @async_test
     async def test_list_for_repo(self):
         self.handler.query = {'repo_name': 'somename'}
-        self.handler.model.list = AsyncMagicMock(
-            spec=self.handler.model.list,
-            return_value=[web.BuildSet(MagicMock(),
-                                       ordered_kwargs={'id': 'someid'})])
+        self.handler.model.list.return_value = [web.BuildSet(
+            MagicMock(), ordered_kwargs={'id': 'someid'})]
         items = await self.handler.list_for_repo()
         self.assertEqual(len(items['items']), 1)
 
