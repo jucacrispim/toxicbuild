@@ -9,8 +9,7 @@ from tests.webui.steps.base_steps import (  # noqa f811
 @when('he clicks in the settings button')
 def click_settings_button(context):
     browser = context.browser
-    el = browser.find_elements_by_class_name('fa-wrench')[0]
-    el.click()
+    browser.click_link('manage')
 
     # wait for the settings page
     browser.wait_text_become_present('Manage slaves')
