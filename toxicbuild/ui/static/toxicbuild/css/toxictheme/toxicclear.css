@@ -424,7 +424,7 @@ body{
     border-left: 5px solid var(--yellow);
 }
 
-#repo-list-container .repo-status-exception{
+.repo-status-exception{
     border-left: 5px solid var(--exception);
 }
 

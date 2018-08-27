@@ -620,6 +620,7 @@ class RepositoryInfoView extends BaseRepositoryView{
       'enabled': {
 	'.repository-info-name': 'name',
 	'.repo-details-link@href': 'details_link',
+	'.repository-info-name-container a@href': 'buildset_list_link',
 	'.repository-info-enabled-container input@checked': 'enabled'}};
 
     this.directive = this.directives[this.list_type];

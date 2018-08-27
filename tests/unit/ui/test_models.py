@@ -438,7 +438,7 @@ class BuildSetTest(TestCase):
             {'id': 'paopofe', 'builds': [{}]}]
         models.BuildSet.get_client.return_value = client
         buildsets = await models.BuildSet.list(requester)
-        self.assertEqual(len(buildsets), 2)
+        self.assertEqual(len(buildsets), 2, buildsets)
         self.assertTrue(len(buildsets[0].builds[0].steps), 1)
 
     @patch.object(models.BuildSet, 'get_client', lambda requester:
