@@ -369,8 +369,9 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
 
     """A list of builds associated with a revision."""
 
+    NO_BUILDS = 'no builds'
     PENDING = Build.PENDING
-    STATUSES = Build.STATUSES
+    STATUSES = [NO_BUILDS] + Build.STATUSES
 
     repository = ReferenceField('toxicbuild.master.Repository',
                                 required=True)
@@ -511,13 +512,13 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
     def get_status(self):
         """Returns the status of the BuildSet"""
 
+        if not self.builds:
+            return self.NO_BUILDS
+
         build_statuses = set([b.status for b in self.builds])
         ordered_statuses = sorted(build_statuses,
                                   key=lambda i: ORDERED_STATUSES.index(i))
-        try:
-            status = ordered_statuses[0]
-        except IndexError:
-            status = 'pending'
+        status = ordered_statuses[0]
 
         return status
 

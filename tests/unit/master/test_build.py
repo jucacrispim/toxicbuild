@@ -337,6 +337,7 @@ class BuildSetTest(TestCase):
     async def test_get_status_fail(self):
         buildset = build.BuildSet()
         buildset.save = AsyncMagicMock(spec=buildset.save)
+
         statuses = ['running', 'exception', 'fail',
                     'warning', 'success', 'pending']
         for i in range(5):
@@ -347,6 +348,14 @@ class BuildSetTest(TestCase):
         await buildset.update_status()
         status = buildset.status
         self.assertEqual(status, 'fail')
+
+    @async_test
+    async def test_get_status_no_builds(self):
+        buildset = build.BuildSet()
+        buildset.save = AsyncMagicMock(spec=buildset.save)
+        await buildset.update_status()
+        status = buildset.status
+        self.assertEqual(status, 'no builds')
 
     def test_get_pending_builds(self):
         buildset = build.BuildSet()
