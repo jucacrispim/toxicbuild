@@ -648,7 +648,7 @@ class DashboardHandler(LoggedTemplateHandler):
         self.render_template(self.skeleton_template, context)
 
     @get('slave/add')
-    @get('slave/'.format(FULL_NAME_REGEX))
+    @get('slave/{}'.format(FULL_NAME_REGEX))
     def show_slave_details(self, full_name=b''):
         full_name = full_name.decode()
         content = self._get_slave_template(full_name)
