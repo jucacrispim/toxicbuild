@@ -431,9 +431,9 @@ class BuildSetTest(TestCase):
     @async_test
     def test_list(self):
         requester = MagicMock()
-        builders = yield from models.BuildSet.list(requester)
-        self.assertEqual(len(builders), 2)
-        self.assertTrue(len(builders[0].builds[0].steps), 1)
+        buildsets = yield from models.BuildSet.list(requester)
+        self.assertEqual(len(buildsets), 2)
+        self.assertTrue(len(buildsets[0].builds[0].steps), 1)
 
     @patch.object(models.BuildSet, 'get_client', lambda requester:
                   get_client_mock(
