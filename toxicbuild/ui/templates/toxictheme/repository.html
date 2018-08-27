@@ -316,8 +316,13 @@
     </ul>
 
     <div class="repo-locations-link-container">
-      <a href="#" title="go to summary"><span class="fas fa-list"></span></a>
-      <a href="#" title="go to warterfall"><span class="fas fa-th"></span></a>
+      <a href="{{ '/' + repo_full_name + '/' }}" title="Summary"
+	 class="repo-summary-link no-decoration">
+	<span class="fas fa-list"></span>
+      </a>
+      <a href="#" title="go to warterfall">
+	<span class="fas fa-th" class="no-decoration"></span>
+      </a>
     </div>
   </div>
   <!-- end navigation pills -->

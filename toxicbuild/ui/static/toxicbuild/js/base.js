@@ -45,7 +45,6 @@ function _getHeaders(){
   return headers;
 }
 
-
 class BaseModel extends Backbone.Model{
 
   constructor(attributes, options){
@@ -329,6 +328,40 @@ class BaseFormView extends Backbone.View{
     this._listen2name_available(template);
     this._listen2save(template);
     this._listen2remove(template);
+  }
+}
+
+
+class BaseListView extends Backbone.View{
+
+
+  _get_view(model){
+    throw new Error('You must implement _get_view()');
+  }
+
+  _render_obj(model){
+    let view = this._get_view(model);
+    let rendered = view.getRendered();
+    this.$el.append(rendered.hide().fadeIn(300));
+    return rendered;
+  }
+
+  _render_list(){
+    $(this._container_selector).html(this.$el);
+    var self = this;
+    this.model.each(function(model){self._render_obj(model);});
+    return true;
+  }
+
+  async _fetch_items(){
+    throw new Error('You must define _fetch_items()');
+  }
+
+  async render_all(){
+    await this._fetch_items();
+    $('.wait-toxic-spinner').hide();
+    $('.top-page-header-info-container').fadeIn();
+    this._render_list();
   }
 
 }

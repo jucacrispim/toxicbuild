@@ -20,7 +20,15 @@
       - "common/js/*.js"
       - "backbone/underscore-min.js"
       - "backbone/backbone-min.js"
-      - "toxicbuild/js/*.js"
+      - "toxicbuild/js/base.js"
+      - "toxicbuild/js/build.js"
+      - "toxicbuild/js/login.js"
+      - "toxicbuild/js/pages.js"
+      - "toxicbuild/js/register.js"
+      - "toxicbuild/js/repository.js"
+      - "toxicbuild/js/routers.js"
+      - "toxicbuild/js/slave.js"
+      - "toxicbuild/js/utils.js"
 
     # stylesheets
     #

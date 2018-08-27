@@ -321,5 +321,52 @@ describe('BaseFormViewTest', function(){
     await this.view._removeObj();
     expect(utils.showSuccessMessage).toHaveBeenCalled();
   });
+});
+
+
+describe('BaseListViewTest', function(){
+
+  beforeEach(function(){
+    this.view = new BaseListView();
+    this.view.model = new BaseCollection();
+  });
+
+  it('test-get_view', function(){
+    let self = this;
+    let model = jasmine.createSpy();
+    expect(function(){self.view._get_view(model);}).toThrow(
+      new Error('You must implement _get_view()'));
+  });
+
+  it('test-fetch_items', async function(){
+    let self = this;
+    let model = jasmine.createSpy();
+    var threw;
+    try{
+      await this.view._fetch_items();
+      threw = false;
+    }catch(e){
+      threw = true;
+    }
+    expect(threw).toBe(true);
+  });
+
+  it('test-render_obj', function (){
+    let view = jasmine.createSpy();
+    let el_rendered  = $('.some-html');
+    el_rendered.html('the content');
+    view.getRendered = jasmine.createSpy().and.returnValue(el_rendered);
+    spyOn(this.view, '_get_view').and.returnValue(view);
+    let rendered = this.view._render_obj();
+    expect(rendered.selector).toEqual('.some-html');
+  });
+
+  it('test-render_all', async function(){
+    spyOn(this.view, '_fetch_items');
+    spyOn(this.view, '_render_list');
+    await this.view.render_all();
+    expect(this.view._fetch_items).toHaveBeenCalled();
+    expect(this.view._render_list).toHaveBeenCalled();
+  });
 
 });

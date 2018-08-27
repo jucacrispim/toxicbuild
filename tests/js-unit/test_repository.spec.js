@@ -586,6 +586,7 @@ describe('RepositoryListViewTest', function(){
     let infos = '.repository-info-name+.repository-info-status';
     infos += '+.buildset-commit+.buildset-title+.buildset-total-time';
     infos += '+.buildset-stated+.buildset-commit-date+.buildset-started';
+    infos += '+.repository-info-name-container a';
     infos += '+.repo-details-link';
     affix('.template .repository-info ' + infos);
     affix('#repo-list-container');

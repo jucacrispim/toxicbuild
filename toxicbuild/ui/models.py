@@ -271,15 +271,18 @@ class BuildSet(BaseModel):
 
     @classmethod
     @asyncio.coroutine
-    def list(cls, requester, repo_name_or_id=None):
+    def list(cls, requester, repo_name_or_id=None, summary=True):
         """Lists buildsets. If ``repo_name_or_id`` only builds of this
         repsitory will be listed.
 
-        :param repo_name: Name of a repository."""
+        :param repo_name: Name of a repository.
+        :param summary: If True, no builds information will be returned.
+        """
 
         with (yield from cls.get_client(requester)) as client:
             buildsets = yield from client.buildset_list(
-                repo_name_or_id=repo_name_or_id, offset=10)
+                repo_name_or_id=repo_name_or_id, offset=10,
+                summary=summary)
 
         buildset_list = [cls(requester, buildset) for buildset in buildsets]
         return buildset_list

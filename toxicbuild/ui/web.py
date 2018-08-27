@@ -34,11 +34,14 @@ from toxicbuild.core.utils import LoggerMixin, string2datetime
 from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
 from toxicbuild.ui.exceptions import BadSettingsType
-from toxicbuild.ui.models import (Repository, Slave, User, Notification)
+from toxicbuild.ui.models import (Repository, Slave, User, Notification,
+                                  BuildSet)
 from toxicbuild.ui.utils import (format_datetime, is_datetime)
 
 
 COOKIE_NAME = 'toxicui'
+
+FULL_NAME_REGEX = '([\w\d\-]+/[\w\d\-]+)'
 
 
 class ToxicRequest(PyroRequest):
@@ -283,6 +286,33 @@ class UserAddRestHandler(ModelRestHandler):
 
         self.set_secure_cookie(COOKIE_NAME, content)
         return {'user-add': r.to_dict()}
+
+
+class BuildSetHandler(ModelRestHandler):
+
+    @post('')
+    @put('')
+    @patch('')
+    @delete('')
+    def invalid(self):
+        raise HTTPError(404)
+
+    @get('')
+    async def list_for_repo(self):
+        try:
+            repo_id = self.query['repo_name']
+        except KeyError:
+            raise HTTPError(400)
+
+        summary = self.query.get('summary', False)
+        r = await self.model.list(
+            self.user, repo_name_or_id=repo_id, summary=summary)
+        items = [i.to_dict() for i in r]
+        return {'items': items}
+
+
+class CookieAuthBuildSetHandler(CookieAuthHandlerMixin, BuildSetHandler):
+    pass
 
 
 class RepositoryRestHandler(ModelRestHandler):
@@ -532,6 +562,7 @@ class DashboardHandler(LoggedTemplateHandler):
     slave_settings_template = 'toxictheme/slave_settings.html'
     repository_template = 'toxictheme/repository.html'
     slave_template = 'toxictheme/slave.html'
+    buildset_list_template = 'toxictheme/buildset_list.html'
 
     def _get_main_template(self):
         rendered = render_template(self.main_template,
@@ -572,6 +603,11 @@ class DashboardHandler(LoggedTemplateHandler):
                                    {'slave_full_name': full_name})
         return rendered
 
+    def _get_buildset_list_template(self, full_name):
+        rendered = render_template(self.buildset_list_template, self.request,
+                                   {'repo_full_name': full_name})
+        return rendered
+
     @get('')
     def show_main(self):
         content = self._get_main_template()
@@ -590,8 +626,16 @@ class DashboardHandler(LoggedTemplateHandler):
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
-    @get('(\w+/\w+)/settings')
+    @get('{}/'.format(FULL_NAME_REGEX))
+    def show_repo_buildset_list(self, full_name):
+        full_name = full_name.decode()
+        content = self._get_buildset_list_template(full_name)
+        context = {'content': content}
+        self.render_template(self.skeleton_template, context)
+
+    @get('{}/settings'.format(FULL_NAME_REGEX))
     def show_repository_details(self, full_name):
+        full_name = full_name.decode()
         content = self._get_repository_template(full_name)
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
@@ -604,7 +648,7 @@ class DashboardHandler(LoggedTemplateHandler):
         self.render_template(self.skeleton_template, context)
 
     @get('slave/add')
-    @get('slave/(\w+/\w+)')
+    @get('slave/'.format(FULL_NAME_REGEX))
     def show_slave_details(self, full_name=b''):
         full_name = full_name.decode()
         content = self._get_slave_template(full_name)
@@ -612,8 +656,10 @@ class DashboardHandler(LoggedTemplateHandler):
         self.render_template(self.skeleton_template, context)
 
     @get('templates/repo-details')
-    def show_repository_details_template(self):
-        content = self._get_repository_template()
+    @get('templates/repo-details/{}'.format(FULL_NAME_REGEX))
+    def show_repository_details_template(self, full_name=b''):
+        full_name = full_name.decode()
+        content = self._get_repository_template(full_name)
         self.write(content)
 
     @get('templates/slave-details')
@@ -631,6 +677,12 @@ class DashboardHandler(LoggedTemplateHandler):
     def show_settings_main_template(self, settings_type):
         settings_type = settings_type.decode()
         content = self._get_settings_main_template(settings_type)
+        self.write(content)
+
+    @get('templates/buildset-list/{}'.format(FULL_NAME_REGEX))
+    def show_repo_buildset_list_template(self, full_name):
+        full_name = full_name.decode()
+        content = self._get_buildset_list_template(full_name)
         self.write(content)
 
 
@@ -656,6 +708,9 @@ notifications_api_url = URLSpec('/api/notification/(.*)$',
 user_add_api = URLSpec('/api/user/(.*)$',
                        UserAddRestHandler, {'model': User})
 
+buildset_api = URLSpec('/api/buildset/(.*)$',
+                       CookieAuthBuildSetHandler, {'model': BuildSet})
+
 api_app = PyroApplication(
     [websocket, repo_api_url, slave_api_url, notifications_api_url,
-     user_add_api])
+     buildset_api, user_add_api])

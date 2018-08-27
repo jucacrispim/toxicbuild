@@ -331,6 +331,40 @@ class UserAddRestHandler(TestCase):
         self.assertTrue(web.User.add.called)
 
 
+class BuildSetRestHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = web.BuildSet
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.CookieAuthBuildSetHandler(application,
+                                                     request,
+                                                     model=self.model)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    def test_invalid(self):
+        with self.assertRaises(web.HTTPError):
+            self.handler.invalid()
+
+    @async_test
+    async def test_list_for_repo(self):
+        self.handler.query = {'repo_name': 'somename'}
+        self.handler.model.list = AsyncMagicMock(
+            spec=self.handler.model.list,
+            return_value=[web.BuildSet(MagicMock(),
+                                       ordered_kwargs={'id': 'someid'})])
+        items = await self.handler.list_for_repo()
+        self.assertEqual(len(items['items']), 1)
+
+    @async_test
+    async def test_list_for_repo_no_repo_name(self):
+        with self.assertRaises(web.HTTPError):
+            await self.handler.list_for_repo()
+
+
 class RepositoryRestHandlerTest(TestCase):
 
     @async_test
@@ -752,6 +786,18 @@ class DashboardHandlerTest(AsyncTestCase):
 
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
+    def test_get_buildset_list_template_slave(self):
+        full_name = 'some/one'
+        self.handler._get_buildset_list_template(full_name)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = ['repo_full_name']
+        self.assertEqual(called_template, self.handler.buildset_list_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
     def test_get_repository_template(self):
         self.handler._get_repository_template()
         called = web.render_template.call_args
@@ -833,12 +879,27 @@ class DashboardHandlerTest(AsyncTestCase):
         self.handler.render_template = MagicMock(
             spec=self.handler.render_template)
 
-        self.handler.show_repository_details('some/repo')
+        self.handler.show_repository_details(b'some/repo')
 
         expected_keys = ['content']
         called_template = self.handler.render_template.call_args[0][0]
         called_context = self.handler.render_template.call_args[0][1]
         self.assertTrue(self.handler._get_repository_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    def test_show_buildset_list(self):
+        self.handler._get_buildset_list_template = MagicMock(
+            spec=self.handler._get_buildset_list_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_repo_buildset_list(b'some/repo')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_buildset_list_template.called)
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 
@@ -877,7 +938,7 @@ class DashboardHandlerTest(AsyncTestCase):
             spec=self.handler._get_repository_template)
         self.handler.write = MagicMock(spec=self.handler.write)
 
-        self.handler.show_repository_details_template()
+        self.handler.show_repository_details_template(b'full/name')
         self.assertTrue(self.handler._get_repository_template.called)
         self.assertTrue(self.handler.write.called)
 
@@ -890,6 +951,15 @@ class DashboardHandlerTest(AsyncTestCase):
         self.assertTrue(self.handler._get_slave_template.called)
         self.assertTrue(self.handler.write.called)
 
+    def test_show_repo_buildset_list_template(self):
+        self.handler._get_buildset_list_template = MagicMock(
+            spec=self.handler._get_buildset_list_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_repo_buildset_list_template(b'some/repo')
+        self.assertTrue(self.handler._get_buildset_list_template.called)
+        self.assertTrue(self.handler.write.called)
+
 
 class ApplicationTest(unittest.TestCase):
 
@@ -898,10 +968,11 @@ class ApplicationTest(unittest.TestCase):
                     '/api/repo/(.*)$',
                     '/api/slave/(.*)$',
                     '/api/notification/(.*)$',
-                    '/api/user/(.*)$']
+                    '/api/user/(.*)$',
+                    '/api/buildset/(.*)$']
 
         for url in web.api_app.urls:
             pat = url.regex.pattern
             self.assertIn(pat, expected)
 
-        self.assertEqual(len(web.api_app.urls), 5)
+        self.assertEqual(len(web.api_app.urls), 6)

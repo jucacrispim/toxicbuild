@@ -70,6 +70,16 @@ var utils = {
     let text = on_text > off_text ? on_text : off_text;
     let width = utils._get_text_width(text) + 30;
     el.parent().attr('style', 'width: ' + width + 'px;');
-  }
+  },
 
+  get_badge_class: function(status){
+    let badge_classes = {'ready': 'secondary',
+			 'running': 'primary',
+			 'exception': 'exception',
+			 'success': 'success',
+			 'pending': 'pending',
+			 'clone-exception': 'exception'};
+    let badge_class = 'badge-' + badge_classes[status];
+    return badge_class;
+  }
 };

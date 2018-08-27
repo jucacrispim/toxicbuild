@@ -69,29 +69,11 @@ describe('SlaveListViewTest', function(){
     affix('.top-page-slaves-info-container');
   });
 
-  it('test-render_slave', function(){
-    let info_view = jasmine.createSpy('SlaveInfoView');
-    info_view.and.returnValue(info_view);
-    info_view.getRendered = jasmine.createSpy(
-      'getRendered').and.returnValue($('something'));
-    this.view._info_view = info_view;
-    this.view._render_slave();
-    expect(info_view.getRendered).toHaveBeenCalled();
-  });
-
   it('test-render_list', function(){
-    spyOn(this.view, '_render_slave');
+    spyOn(this.view, '_render_obj');
     this.view.model.add([{}]);
     this.view._render_list();
-    expect(this.view._render_slave).toHaveBeenCalled();
-  });
-
-  it('test-render_all', async function(){
-    spyOn(this.view.model, 'fetch');
-    spyOn(this.view, '_render_list');
-    await this.view.render_all();
-    expect(this.view.model.fetch).toHaveBeenCalled();
-    expect(this.view._render_list).toHaveBeenCalled();
+    expect(this.view._render_obj).toHaveBeenCalled();
   });
 
 });

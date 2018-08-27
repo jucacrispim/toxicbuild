@@ -165,6 +165,7 @@ class BaseRepositoryView extends BaseFormView{
     let parallel_builds = parseInt(this.model.get('parallel_builds'));
     let commit = last_buildset.commit ? last_buildset.commit.slice(0, 8) : '';
     commit = _.escape(commit);
+    let buildset_list_link = '/' + this.model.escape('full_name') + '/';
     let branches = this.model.get('branches') || [];
     let escaped_branches = [];
     for (let i in branches){
@@ -193,7 +194,7 @@ class BaseRepositoryView extends BaseFormView{
     let kw = {'name': this.model.escape('name'),
 	      'status': status,
 	      'commit': commit,
-	      'title': last_buildset.title,
+	      'title': _.escape(last_buildset.title),
 	      'total_time': last_buildset.total_time,
 	      'started': last_buildset.started,
 	      'enabled': enabled,
@@ -203,18 +204,14 @@ class BaseRepositoryView extends BaseFormView{
 	      'full_name': full_name,
 	      'details_link': details_link,
 	      'parallel_builds': parallel_builds,
-	      'commit_date': last_buildset.commit_date};
+	      'commit_date': last_buildset.commit_date,
+	      'buildset_list_link': buildset_list_link};
 
     return kw;
   }
 
   _get_badge_class(status){
-    let badge_classes = {'ready': 'secondary',
-			 'running': 'primary',
-			 'exception': 'exception',
-			 'clone-exception': 'exception'};
-    let badge_class = 'badge-' + badge_classes[status];
-    return badge_class;
+    return utils.get_badge_class(status);
   }
 
   async _change_enabled(el){
@@ -586,6 +583,7 @@ class RepositoryDetailsView extends BaseRepositoryView{
     // remote host it is marked as changed since the initial model here
     // had no attributes.
     this.model.changed = {};
+
     await super.render_details();
 
     this._setValidations();
@@ -610,6 +608,7 @@ class RepositoryInfoView extends BaseRepositoryView{
     this.directives = {
       'short': {
 	'.repository-info-name': 'name',
+	'.repository-info-name-container a@href': 'buildset_list_link',
 	'.repo-details-link@href': 'details_link',
 	'.repository-info-status': 'status',
 	'.buildset-commit': 'commit',
@@ -679,13 +678,12 @@ class RepositoryListView extends Backbone.View{
   _render_list_if_needed(){
     // Renders the repository list if there are some repositories. If not
     // displays the welcome message
-    $('.top-page-repositories-info-container').fadeIn();
     $('.wait-toxic-spinner').hide();
     if (this.model.length == 0){
       $('#no-repos-info').fadeIn(300);
       return false;
     }
-
+    $('.top-page-repositories-info-container').fadeIn();
     $('#repo-list-container').html(this.$el);
     var self = this;
     this.model.each(function(model){self._render_repo(model);});

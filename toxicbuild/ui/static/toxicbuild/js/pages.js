@@ -138,6 +138,20 @@ class MainPage extends BasePage{
   }
 }
 
+class BuildSetListPage extends BasePage{
+
+  constructor(options){
+    super(options);
+    this.full_name = options.full_name;
+    this.template_url = '/templates/buildset-list/' + this.full_name;
+    this.list_view = new BuildSetListView(this.full_name);
+  }
+
+  async render(){
+    await this.list_view.render_all();
+  }
+}
+
 class BaseFloatingPage extends BasePage{
 
   constructor(options){
@@ -270,6 +284,7 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
     super(router);
     this.repo_details_view = new RepositoryDetailsView(full_name);
     this.nav_pills = null;
+    this.template_url = '/templates/repo-details/' + full_name;
   }
 
   _toggleAdvanced(){

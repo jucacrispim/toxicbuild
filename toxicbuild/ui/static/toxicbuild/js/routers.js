@@ -27,7 +27,8 @@ class DashboardRouter extends Backbone.Router{
 		  'repository/add': 'showRepoAddPage',
 		  'slave/add': 'showSlaveAddPage',
 		  'slave/:owner/:name': 'showSlaveSettingsPage',
-		  ':owner/:name/settings': 'showRepoSettingsPage'};
+		  ':owner/:name/settings': 'showRepoSettingsPage',
+		  ':owner/:name/': 'showBuildSetListPage'};
 
     options['routes'] = routes;
     super(options);
@@ -116,6 +117,13 @@ class DashboardRouter extends Backbone.Router{
 
   async showSlaveAddPage(){
     let page = new SlaveAddPage(this);
+    await this._showPage(page);
+  }
+
+  async showBuildSetListPage(owner, name){
+    let full_name = owner + '/' + name;
+    let page = new BuildSetListPage({router: this,
+				     full_name: full_name});
     await this._showPage(page);
   }
 

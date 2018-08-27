@@ -168,6 +168,11 @@ body{
     color: #fff;
 }
 
+.badge-pending{
+    background-color: var(--yellow);
+    color: #000;
+}
+
 .message-container{
     padding-left: 35px;
     margin-top: -26px;
@@ -370,26 +375,32 @@ body{
     font-size: 0.8em;
 }
 
+#obj-list-container ul,
 #slave-list-container ul,
 #repo-list-container ul{
     list-style: none;
     padding-left: 0;
 }
 
+.obj-main-info,
 #slave-list-container .slave-info-name-container,
 #repo-list-container .repository-info-name-container{
     margin-right: 10px;
 }
 
+.obj-main-info a,
+.obj-main-info a:hover,
 #slave-list-container .slave-info-name-container a:hover,
 #repo-list-container .repository-info-name-container a:hover{
     color: #212529;
 }
 
+.obj-info-container,
 .slave-info-container,
 .repo-info-container{
     float: left;
 }
+
 
 .top-page-slaves-info-container,
 .top-page-repositories-info-container{
@@ -405,15 +416,25 @@ body{
     border-left: 5px solid var(--blue);
 }
 
+.repo-status-success{
+    border-left: 5px solid var(--success);
+}
+
+.repo-status-pending{
+    border-left: 5px solid var(--yellow);
+}
+
 #repo-list-container .repo-status-exception{
     border-left: 5px solid var(--exception);
 }
 
+.obj-info-row,
 .slave-info-row,
 .repository-info-row{
     margin-bottom: 3px;
 }
 
+.obj-info-header,
 .slave-info-header,
 .repository-info-header{
     float: right;
@@ -422,12 +443,14 @@ body{
     color: #bdb8b8;
 }
 
+.obj-info-header:hover,
 .slave-info-header:hover,
 .repository-info-header:hover{
     color: #6d6c6c;
     cursor: pointer;
 }
 
+.obj-main-info,
 .slave-info-name,
 .repository-info-name{
     color: #212529;
@@ -435,6 +458,11 @@ body{
     font-weight: 500;
 }
 
+.buildset-title-container{
+    font-size: 1.0em;
+}
+
+.obj-info-first-row,
 .slave-info-first-row,
 .repository-info-first-row{
     margin-bottom: 20px;
@@ -444,9 +472,19 @@ body{
     margin-bottom: 10px;
 }
 
+.obj-info-small-font{
+    font-size: 0.9em;
+}
+
+
+.obj-info-last-row,
 .slave-info-last-row,
 .repository-info-last-row{
     margin-bottom: 0;
+}
+
+.buildset-total-time-row{
+    display: none;
 }
 
 .buildset-started{
@@ -468,11 +506,13 @@ body{
     font-weight: 500;
 }
 
+.top-page-header-info-container .fa-wrench,
 .top-page-repositories-info-container .fa-wrench{
     transform: rotate(270deg);
     color: #adababcc;
 }
 
+.top-page-header-info-container .fa-wrench:hover,
 .top-page-repositories-info-container .fa-wrench:hover{
     color: #212529;
     cursor: pointer;
@@ -532,9 +572,35 @@ body{
     line-height: 1;
 }
 
+.obj-info-header .dropdown-toggle::after,
 .slave-info-header .dropdown-toggle::after,
 .repository-info-header .dropdown-toggle::after {
     content: none;
+}
+
+.buildset-list-top-page-header-info{
+    display: none;
+    margin-bottom: 10px;
+    margin-top: -10px;
+}
+
+.buildset-list-top-page-header-info .repo-full-name{
+    font-size: 1.4em;
+}
+
+.buildset-list-top-page-header-info .fa-wrench{
+    font-size: 0.9em;
+}
+
+.buildset-list-top-page-header-info a{
+    color: #212529;
+    padding-left: 4px;
+    border-radius: 3px;
+}
+
+.buildset-list-top-page-header-info .link-enabled{
+    color: #f9f9f9;
+    background-color: #212529;
 }
 
 
@@ -823,4 +889,13 @@ body{
 
 .slave-checkbox-row{
     margin-top:45px;
+}
+
+
+.summary-link{
+    margin-left: 25px;
+}
+
+.waterfall-link{
+    margin-left: 0px;
 }

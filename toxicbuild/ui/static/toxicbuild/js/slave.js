@@ -1,4 +1,4 @@
-// Copyright 2016 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2018 Juca Crispim <juca@poraodojuca.net>
 
 // This file is part of toxicbuild.
 
@@ -89,7 +89,7 @@ class SlaveInfoView extends BaseSlaveView{
 
 }
 
-class SlaveListView extends Backbone.View{
+class SlaveListView extends BaseListView{
 
   constructor(){
     let model = new SlaveList();
@@ -97,28 +97,15 @@ class SlaveListView extends Backbone.View{
 		   'model': model};
 
     super(options);
-    this._info_view = SlaveInfoView;
- }
-
-  _render_slave(model){
-    let view = new this._info_view({'model': model});
-    let rendered = view.getRendered();
-    this.$el.append(rendered.hide().fadeIn(300));
-    return rendered;
+    this._container_selector = '#slave-list-container';
   }
 
-  _render_list(){
-    $('#slave-list-container').html(this.$el);
-    var self = this;
-    this.model.each(function(model){self._render_slave(model);});
-    return true;
-  }
-
-  async render_all(){
+  async _fetch_items(){
     await this.model.fetch();
-    $('.wait-toxic-spinner').hide();
-    $('.top-page-slaves-info-container').fadeIn();
-    this._render_list();
+  }
+
+  _get_view(model){
+    return new SlaveInfoView({model: model});
   }
 
 }
