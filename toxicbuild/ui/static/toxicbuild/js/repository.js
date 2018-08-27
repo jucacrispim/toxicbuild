@@ -303,7 +303,7 @@ class RepositoryAddView extends BaseRepositoryView{
     await this.slaves.fetch();
     this._model_init_values = this.model.changed;
     this.model.changed = {};
-    $('#save-repo-btn-text').text('Add repository');
+    $('#save-obj-btn-text').text('Add repository');
     await super.render_details();
     $('.repository-info-enabled-container').hide();
   }
@@ -359,24 +359,6 @@ class RepositoryDetailsView extends BaseRepositoryView{
     return modal;
   }
 
-  _hackHelpHeight(steps, type='increase'){
-    let branches = this.model.get('branches') || [];
-    if (branches.length <= 1 && type == 'increase'){
-      return;
-    }else if (branches.length < 1 && type == 'decrease'){
-      return;
-    }
-
-    let step_modif = type == 'increase' ? 1 : -1;
-    let step_size = 40 * step_modif;
-    let container = $('#branches-config-p');
-    for (let i=0; i < steps; i++){
-      let height = container.height();
-      let new_height = step_size + height;
-      container.height(new_height);
-    }
-  }
-
   _addBranchRow(branch){
     let directive = {'.branch-name': 'name',
 		     '.remove-branch-btn@data-branch': 'name'};
@@ -385,7 +367,6 @@ class RepositoryDetailsView extends BaseRepositoryView{
     let container = $('#repo-details #repo-branches-container');
     this._listen2remove_branch_event(compiled);
     container.append(compiled.hide().fadeIn(300));
-    this._hackHelpHeight(1);
   }
 
   async _addBranch(){
@@ -428,7 +409,6 @@ class RepositoryDetailsView extends BaseRepositoryView{
       return;
     }
     await remove_el.parent().hide();
-    this._hackHelpHeight(1, 'decrease');
     this._handleBrachList(this.model.get('branches').length);
   }
 
@@ -594,7 +574,6 @@ class RepositoryDetailsView extends BaseRepositoryView{
     let enabled = this.model.get('enabled');
     this._setEnabled(enabled, this.container);
     let branches = this.model.get('branches') || [];
-    this._hackHelpHeight(branches.length - 1, 'increase');
   }
 }
 

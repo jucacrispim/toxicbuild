@@ -428,6 +428,7 @@ body{
     border-left: 5px solid var(--exception);
 }
 
+
 .obj-info-row,
 .slave-info-row,
 .repository-info-row{
@@ -666,6 +667,7 @@ body{
 
 .repo-name-group div{
     margin-bottom: 10px;
+    /* padding-bottom: 6px; */
 }
 
 .obj-details-buttons-container{
@@ -681,7 +683,7 @@ body{
 
 #repo-details-container .repository-info-enabled-container{
     float: right;
-    margin-top: 11px;
+    margin-top: 40px;
 }
 
 #available-text{
@@ -719,7 +721,7 @@ body{
 
 #repo-details #branches-list-container,
 #repo-details #slaves-list-container{
-    margin-left: 46px;
+    /* margin-left: 46px; */
     /* border: solid 0.5px #ccc; */
     border-radius: 3px;
     min-height: 44px;
@@ -772,12 +774,12 @@ body{
 }
 
 #parallel-builds-config-p{
-    margin-top: 15px;
-    margin-bottom: 32px;
+    margin-bottom: 10px;
 }
 
 #branches-config-p{
-    height: 90px;
+    /* height: 90px; */
+    /* margin-bottom: 20px; */
 }
 
 #addBranchModal .form-check{
@@ -790,16 +792,19 @@ body{
 }
 
 .parallel-builds-label{
-    min-width: 120px;
     padding-left: 15px;
     padding-right: 15px;
 }
 
 .parallel-builds-container{
-    padding-top: 10px;
-    padding-bottom: 31px;
+    padding-bottom: 5px;
+    margin-top: -34px;
 }
 
+.parallel-builds-container input{
+    max-width: 50px;
+    margin-top: 1px;
+}
 
 .advanced-help-container{
     display: none;

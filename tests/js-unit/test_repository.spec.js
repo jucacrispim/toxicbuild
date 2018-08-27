@@ -464,42 +464,6 @@ describe('RepositoryDetailsViewTest', function(){
     expect(utils.showErrorMessage).toHaveBeenCalled();
   });
 
-  it('test-hackHelpHeight-increase-not-first', function(){
-    let config = affix('#branches-config-p');
-    config.height(10);
-    this.view.model.set('branches', [{}, {}]);
-    this.view._hackHelpHeight(2);
-    config = $('#branches-config-p');
-    expect(config.height()).toEqual(90);
-  });
-
-  it('test-hackHelpHeight-increase-first', function(){
-    let config = affix('#branches-config-p');
-    config.height(10);
-    this.view.model.set('branches', [{}]);
-    this.view._hackHelpHeight(2);
-    config = $('#branches-config-p');
-    expect(config.height()).toEqual(10);
-  });
-
-  it('test-hackHelpHeight-decrease-not-last', function(){
-    let config = affix('#branches-config-p');
-    config.height(100);
-    this.view.model.set('branches', [{}]);
-    this.view._hackHelpHeight(2, 'decrease');
-    config = $('#branches-config-p');
-    expect(config.height()).toEqual(20);
-  });
-
-  it('test-hackHelpHeight-decrease-last', function(){
-    let config = affix('#branches-config-p');
-    config.height(100);
-    this.view.model.set('branches', []);
-    this.view._hackHelpHeight(2, 'decrease');
-    config = $('#branches-config-p');
-    expect(config.height()).toEqual(100);
-  });
-
   it('test-getSlavesKw', async function(){
     let repo_slaves = [{'name': 'bla'}];
     spyOn(this.view.slave_list, 'fetch');

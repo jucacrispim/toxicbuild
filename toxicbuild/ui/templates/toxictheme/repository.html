@@ -102,46 +102,42 @@
 <div class="template">
 
   <div id="repo-details">
-    <div class="form-group repo-name-group">
+    <div class="form-group repo-name-group ">
 
-      <div class="col-sm-12 repo-details-row">
+      <div class="col-sm-12 repo-details-row form-check-inline">
 	<!-- first row -->
 	<!-- name container -->
-	<div class="repo-details-name-label col-sm-1 repo-details-label">
-	  <label for="repo-details-name">Name:</label>
+	<div class="col-sm-6">
+	  <label for="repo-details-name">Name</label>
+	  <input type="text"
+		 class="form-control repo-details-name obj-details-name"
+		 data-valuefor="name" required>
 	</div>
-	<div class="repo-details-name-input col-sm-11 repo-details-input">
-	  <div class="repo-details-input">
-	    <input type="text"
-		   class="form-control repo-details-name obj-details-name"
-		   data-valuefor="name" required>
-	  </div>
-	  <!-- name available -->
-	  <div class="repo-details-name-available repo-details-label col-sm-3"
-	       id="obj-name-available">
 
-	    <div class="wait-name-available-spinner">
-	      <span class="spinner icon-spinner-2"></span>
-	    </div>
+	<!-- name available -->
+	<div class="repo-details-name-available repo-details-label"
+	     id="obj-name-available">
 
-	    <span class="check-error-indicator"></span>
-	    <span id="available-text"></span>
+	  <div class="wait-name-available-spinner">
+	    <span class="spinner icon-spinner-2"></span>
 	  </div>
-	  <!-- end name available -->
+
+	  <span class="check-error-indicator"></span>
+	  <span id="available-text"></span>
 	</div>
+	<!-- end name available -->
+
 	<!-- end name container -->
       </div>
       <!-- end first row -->
 
       <!-- second row -->
-      <div class="col-sm-12 repo-details-row">
+      <div class="col-sm-12 repo-details-row form-check-inline">
 	<!-- url container -->
-	<div class="repo-details-url-label col-sm-1 repo-details-label">
-	  <label for="repo-details-url">URL:</label>
-	</div>
-	<div class="repo-details-url-input col-sm-8 repo-details-input">
+	<div class="col-sm-8">
+	  <label for="repo-details-url">URL</label>
 	  <input  type="text" class="form-control repo-details-url"
-		 data-valuefor="url" required>
+		  data-valuefor="url" required>
 	</div>
 	<!-- end url container -->
 
@@ -176,22 +172,10 @@
 
 	<div id="repo-details-advanced-container">
 
-	  <!-- builds in palallel -->
-	  <div class="row-container parallel-builds-container">
-	    <div class="parallel-builds-label repo-details-label advanced-item">
-	      <span>Builds in parallel:</span>
-	    </div>
-	    <div class="col-sm-2 repo-details-input advanced-item">
-	      <input class="repo-parallel-builds form-control" type="text"
-		     data-valuefor="parallel_builds">
-	    </div>
-	  </div>
-	  <!-- end builds in palallel -->
-
 	  <!-- branches -->
 	  <div class="row-container">
-	    <div class="col-sm-1 repo-details-label advanced-large-item">
-	      <span>Branches:</span>
+	    <div class="">
+	      <span>Branches</span>
 	    </div>
 	    <div id="branches-list-container"
 		 class="col-sm-6 repo-details-input box-shadow-gray-inset advanced-large-item">
@@ -212,18 +196,27 @@
 
 	      </ul>
 	    </div>
-	    <div class="col-sm-4 repo-details-input advanced-large-item">
+	    <div class="col-sm-1 repo-details-input advanced-large-item">
 	      <span class="fas fa-plus add-branch-btn"
 		    title="add branch" data-toggle="modal"
 		    data-target="#addBranchModal"></span>
 	    </div>
+
+
+	    <!-- builds in palallel -->
+	    <div class="row-container parallel-builds-container col-sm-5">
+	      <label>Builds in parallel</label>
+	      <input class="repo-parallel-builds form-control" type="text"
+		     data-valuefor="parallel_builds">
+	    </div>
+	    <!-- end builds in palallel -->
 	  </div>
 	  <!-- end branches -->
 
 	  <!-- slaves -->
 	  <div class="row-container">
-	    <div class="col-sm-1 repo-details-label advanced-large-item">
-	      <span>Slaves:</span>
+	    <div>
+	      <span>Slaves</span>
 	    </div>
 	    <div id="slaves-list-container"
 		 class="col-sm-6 repo-details-input box-shadow-gray-inset advanced-large-item">
@@ -249,19 +242,11 @@
 		</li>
 	      </ul>
 	    </div>
-	    <div class="col-sm-4 repo-details-input advanced-large-item">
-	      <span id="add-slave-btn" class="fas fa-plus" data-toggle="modal"
-		    data-target="#slavesListModal" title="add slave"></span>
-	    </div>
 	  </div>
 	  <!-- end slaves -->
 
 	  <!-- delete repo-->
 	  <div class="row-container">
-
-	  <div class="repo-details-label advanced-large-item delete-repo-label-container">
-	    <span>Delete repository:</span>
-	  </div>
 
 	    <div class="delete-btn-container inner-btn-container col-sm-2">
 	      <button class="btn btn-sm btn-block btn-danger btn-red btn-delete-repo"
@@ -373,13 +358,14 @@
 	</p>
 	<div class="advanced-help-container">
 	  <h5>Advanced configuration</h5>
-	  <p id="parallel-builds-config-p">
-	    Determine how many <b>builds</b> can be executed <b>in parallel</b>
-	    in the repository. If no value there is no limit.
-	  </p>
 	  <p id="branches-config-p">
 	    Define which <b>branches</b> trigger builds. If no branch
 	    configuration, changes in all <b>branches</b> will trigger builds.
+	  </p>
+
+	  <p id="parallel-builds-config-p">
+	    Determine how many <b>builds</b> can be executed <b>in parallel</b>
+	    in the repository. If no value there is no limit.
 	  </p>
 
 	  <p id="slaves-config-p">
