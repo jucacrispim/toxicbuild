@@ -422,15 +422,21 @@ class SlaveTest(TestCase):
 
 class BuildSetTest(TestCase):
 
-    @patch.object(models.BuildSet, 'get_client', lambda requester:
-                  get_client_mock(
-                      requester, [{'id': 'sasdfasf',
-                                   'builds': [{'steps': [{'name': 'unit'}],
-                                               'builder': {'name': 'some'}}]},
-                                  {'id': 'paopofe', 'builds': [{}]}]))
+    @patch.object(models.BuildSet, 'get_client', AsyncMagicMock(
+        spec=models.BuildSet.get_client))
     @async_test
     def test_list(self):
         requester = MagicMock()
+        client = MagicMock()
+        client.__enter__.return_value = client
+        client.buildset_list = AsyncMagicMock()
+        client.buildset_list.return_value = [
+            {'id': 'sasdfasf',
+             'started': '3 9 25 08:53:38 2017 -0000',
+             'builds': [{'steps': [{'name': 'unit'}],
+                         'builder': {'name': 'some'}}]},
+            {'id': 'paopofe', 'builds': [{}]}]
+        models.BuildSet.get_client.return_value = client
         buildsets = yield from models.BuildSet.list(requester)
         self.assertEqual(len(buildsets), 2)
         self.assertTrue(len(buildsets[0].builds[0].steps), 1)

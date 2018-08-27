@@ -769,7 +769,6 @@ class HoleHandlerTest(TestCase):
         await self._create_test_data_owner()
         self.handler.protocol.user.allowed_actions = []
         self.handler.protocol.user.is_superuser = False
-        data = {'host': '127.0.0.1', 'port': 1234}
         with self.assertRaises(hole.NotEnoughPerms):
             await self.handler.slave_add(slave_name='slave',
                                          slave_host='locahost',
