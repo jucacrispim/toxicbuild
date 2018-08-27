@@ -159,10 +159,11 @@ class HoleHandler:
     async def handle(self):
 
         attrname = self.action.replace('-', '_')
-        if attrname not in self._get_action_methods():
+        try:
+            func = getattr(self, attrname)
+        except AttributeError:
             raise UIFunctionNotFound(self.action)
 
-        func = getattr(self, attrname)
         r = func(**self.data)
         if asyncio.coroutines.iscoroutine(r):
             r = await r
