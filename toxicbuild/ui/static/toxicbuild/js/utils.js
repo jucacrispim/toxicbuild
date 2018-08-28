@@ -78,6 +78,7 @@ var utils = {
 			 'exception': 'exception',
 			 'success': 'success',
 			 'pending': 'pending',
+			 'no config': 'secondary',
 			 'clone-exception': 'exception'};
     let badge_class = 'badge-' + badge_classes[status];
     return badge_class;

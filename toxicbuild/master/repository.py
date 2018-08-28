@@ -39,6 +39,8 @@ from toxicbuild.master.exchanges import (update_code, poll_status,
                                          scheduler_action, repo_status_changed,
                                          repo_added, ui_notifications,
                                          repo_notifications)
+from toxicbuild.master.utils import (get_build_config_type,
+                                     get_build_config_filename)
 from toxicbuild.master.signals import (build_started, build_finished)
 from toxicbuild.master.slave import Slave
 
@@ -124,6 +126,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         self.scheduler = scheduler
         self._poller_instance = None
         self.build_manager = BuildManager(self)
+        self.config_type = get_build_config_type()
+        self.config_filename = get_build_config_filename()
+
         self._old_status = None
         self._vcs_instance = None
 
@@ -192,27 +197,11 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         return os.path.join(base_dir, workdir, str(self.id))
 
     async def get_last_buildset(self):
-        last_buildset = await BuildSet.objects(repository=self).order_by(
+        bad_statuses = [BuildSet.PENDING, BuildSet.NO_BUILDS,
+                        BuildSet.NO_CONFIG]
+        last_buildset = await BuildSet.objects(
+            repository=self, status__not__in=bad_statuses).order_by(
             '-created').first()
-        if not last_buildset:
-            return
-
-        status = last_buildset.status
-        i = 1
-        while status == BuildSet.PENDING:
-            # we do not consider pending builds for the repo status
-            start = i
-            stop = start + 1
-            last_buildset = BuildSet.objects(repository=self).order_by(
-                '-created')[start:stop]
-            last_buildset = await last_buildset.first()
-            i += 1
-
-            if not last_buildset:
-                break
-
-            status = last_buildset.status
-
         return last_buildset
 
     async def get_status(self):
@@ -601,7 +590,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await revision.save()
         return revision
 
-    async def add_builds_for_slave(self, buildset, slave, builders=None,
+    async def add_builds_for_slave(self, buildset, slave, conf, builders=None,
                                    builders_origin=None):
         """Adds a buildset to the build queue of a given slave
         for this repository.
@@ -609,10 +598,16 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         :param buildset: An instance of
           :class:`toxicbuild.master.build.BuildSet`.
         :param slave: An instance of :class:`toxicbuild.master.build.Slave`.
+        :param conf: The build configuration for the buidset.
+        :param builders: The builders to use in the buids. If no builds,
+          all builders for the revision will be used.
+        :param builders_origin: Indicates from which branch config the builds
+          came. Useful for merge requests to test agains the tests on the main
+          branch.
         """
         builders = builders or []
         await self.build_manager.add_builds_for_slave(
-            buildset, slave, builders=builders,
+            buildset, slave, conf, builders=builders,
             builders_origin=builders_origin)
 
     async def _check_for_status_change(self, sender, build):
@@ -630,10 +625,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                               new_status=status)
             await self._notify_status_changed(status_msg)
             self._old_status = status
-
-    def log(self, msg, level='info'):
-        msg = '{} [{}]'.format(msg, self.name)
-        super().log(msg, level=level)
 
     async def start_build(self, branch, builder_name=None, named_tree=None,
                           slaves=None, builders_origin=None):
@@ -661,9 +652,17 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                 builders.update({slave: blist})
 
         buildset = await BuildSet.create(repository=self, revision=rev)
+        try:
+            conf = await self.get_config_for(rev)
+        except FileNotFoundError:
+            buildset.status = type(buildset).NO_CONFIG
+            await buildset.save()
+            return
+
         for slave in slaves:
             await self.add_builds_for_slave(buildset, slave,
                                             builders[slave],
+                                            conf,
                                             builders_origin=builders_origin)
 
     async def request_build(self, branch, builder_name=None, named_tree=None,
@@ -714,6 +713,22 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             only_latest = True
 
         return only_latest
+
+    async def get_config_for(self, revision):
+        """Returns the build configuration for a given revision.
+
+        :param revision: A
+          :class`~toxicbuild.master.repository.RepositoryRevision` instance.
+        """
+
+        async with await self.toxicbuild_conf_lock.acquire_write():
+            self.log('checkout on {} to {}'.format(
+                self.url, revision.commit), level='debug')
+            await self.vcs.checkout(revision.commit)
+            conf = await utils.get_config(self.workdir, self.config_type,
+                                          self.config_filename)
+
+        return conf
 
     async def _get_builders(self, slaves, revision):
         builders = {}

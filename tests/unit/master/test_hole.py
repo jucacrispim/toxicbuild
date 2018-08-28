@@ -570,6 +570,8 @@ class HoleHandlerTest(TestCase):
     @patch.object(hole.Repository, '_get_builders',
                   create_autospec(spec=hole.Repository._get_builders,
                                   mock_cls=AsyncMagicMock))
+    @patch.object(hole.Repository, 'get_config_for', AsyncMagicMock(
+        spec=hole.Repository.get_config_for))
     @async_test
     async def test_repo_start_build(self):
         await self._create_test_data()
@@ -595,6 +597,8 @@ class HoleHandlerTest(TestCase):
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(hole.Repository, 'add_builds_for_slave', MagicMock(
         spec=repository.Repository.add_builds_for_slave))
+    @patch.object(hole.Repository, 'get_config_for', AsyncMagicMock(
+        spec=hole.Repository.get_config_for))
     @async_test
     async def test_repo_start_build_with_builder_name(self):
         add_builds_for_slave = MagicMock()
@@ -622,6 +626,8 @@ class HoleHandlerTest(TestCase):
     @patch.object(hole.Repository, '_get_builders',
                   create_autospec(spec=hole.Repository._get_builders,
                                   mock_cls=AsyncMagicMock))
+    @patch.object(hole.Repository, 'get_config_for', AsyncMagicMock(
+        spec=hole.Repository.get_config_for))
     @async_test
     async def test_repo_start_build_with_named_tree(self):
         add_builds_for_slave = MagicMock()
@@ -662,6 +668,8 @@ class HoleHandlerTest(TestCase):
     @patch.object(hole.Repository, '_get_builders',
                   create_autospec(spec=hole.Repository._get_builders,
                                   mock_cls=AsyncMagicMock))
+    @patch.object(hole.Repository, 'get_config_for', AsyncMagicMock(
+        spec=hole.Repository.get_config_for))
     @async_test
     async def test_repo_start_build_with_slave(self):
         await self._create_test_data()

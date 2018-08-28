@@ -22,13 +22,13 @@ from toxicbuild.master import settings
 
 
 def get_build_config_type():
-    """Returns the build config type used by the master"""
+    """Returns the build config type."""
 
     return getattr(settings, 'BUILD_CONFIG_TYPE', 'yaml')
 
 
 def get_build_config_filename():
-    """Returns the build config filename used by the master"""
+    """Returns the build config filename."""
 
     return getattr(settings, 'BUILD_CONFIG_FILENAME', 'toxicbuild.yml')
 

@@ -28,7 +28,7 @@ from unittest import TestCase
 from unittest.mock import patch, Mock, MagicMock
 from toxicbuild.core import utils
 from tests.unit.core import TEST_DATA_DIR
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class UtilsTest(TestCase):
@@ -110,22 +110,6 @@ class UtilsTest(TestCase):
             self.assertIn(var, returned)
             self.assertEqual(returned[var], val)
 
-    # def test_get_envvars_type_error(self):
-    #     envvars = {'PATH': 'PATH:venv/bin',
-    #                'MYPROGRAMVAR': 'something',
-    #                'bla': 1}
-
-    #     expected = {'PATH': '{}:venv/bin'.format(os.environ.get('PATH')),
-    #                 'MYPROGRAMVAR': 'something',
-    #                 'HOME': os.environ.get('HOME', ''),
-    #                 'bla': '1'}
-
-    #     returned = utils._get_envvars(envvars)
-
-    #     for var, val in expected.items():
-    #         self.assertIn(var, returned)
-    #         self.assertEqual(returned[var], val)
-
     def test_load_module_from_file_with_file_not_found(self):
         with self.assertRaises(FileNotFoundError):
             utils.load_module_from_file('/some/file/that/does/not/exist.conf')
@@ -157,6 +141,25 @@ class UtilsTest(TestCase):
     async def test_get_toxicbuildconf_yaml(self):
         config = await utils.get_toxicbuildconf_yaml(TEST_DATA_DIR)
         self.assertTrue(config['builders'][0])
+
+    @patch.object(utils, 'get_toxicbuildconf',
+                  Mock(spec=utils.get_toxicbuildconf))
+    @async_test
+    async def test_get_config_py(self):
+        conf = await utils.get_config('/some/workdir', 'py',
+                                      'toxicbuild.conf')
+        self.assertTrue(utils.get_toxicbuildconf.called)
+        self.assertTrue(conf)
+
+    @patch.object(utils, 'get_toxicbuildconf_yaml',
+                  AsyncMagicMock(spec=utils.get_toxicbuildconf_yaml,
+                                 return_value=True))
+    @async_test
+    async def test_get_config_yaml(self):
+        conf = await utils.get_config('/some/workdir', 'yaml',
+                                      'toxicbuild.yml')
+        self.assertTrue(utils.get_toxicbuildconf_yaml.called)
+        self.assertTrue(conf)
 
     @patch.object(utils.logging, 'info', Mock())
     def test_log(self):

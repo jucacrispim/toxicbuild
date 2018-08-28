@@ -613,7 +613,7 @@ class RepositoryInfoView extends BaseRepositoryView{
     let status = kw['status'];
     let badge_class = this._get_badge_class(status);
     let compiled = $(this.compiled_template(kw));
-    compiled.addClass('repo-status-' + status);
+    compiled.addClass('repo-status-' + status.replace(' ', '-'));
     $('.badge', compiled).addClass(badge_class);
 
     let checkbox = $('.repo-enabled-checkbox', compiled);

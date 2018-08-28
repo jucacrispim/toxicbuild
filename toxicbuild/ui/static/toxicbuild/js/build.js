@@ -81,7 +81,7 @@ class BuildSetInfoView extends Backbone.View{
     }
     let status = kw.status;
     let badge_class = utils.get_badge_class(status);
-    compiled.addClass('repo-status-' + status);
+    compiled.addClass('repo-status-' + status.replace(' ', '-'));
     $('.badge', compiled).addClass(badge_class);
     return compiled;
   }

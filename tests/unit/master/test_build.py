@@ -495,8 +495,9 @@ class BuildManagerTest(TestCase):
         await b.save()
         self.manager.repository = self.repo
         self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
-
+        conf = {'builders': []}
         await self.manager.add_builds_for_slave(self.buildset, self.slave,
+                                                conf,
                                                 [b, self.builder])
         self.assertEqual(len(self.manager.build_queues[self.slave.name]), 1)
         buildset = self.manager.build_queues[self.slave.name][0]
@@ -513,13 +514,13 @@ class BuildManagerTest(TestCase):
     async def test_add_builds(self):
         await self._create_test_data()
         self.manager.repository = self.repo
+        self.manager.repository.get_config_for = AsyncMagicMock(
+            spec=self.manager.repository.get_config_for)
         self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
 
-        @asyncio.coroutine
-        def gb(branch, slave):
-            return [self.builder, self.revision.branch]
-
-        self.manager.get_builders = gb
+        self.manager.get_builders = AsyncMagicMock(
+            spec=self.manager.get_builders,
+            return_value=[self.builder, self.revision.branch])
 
         await self.manager.add_builds([self.revision])
 
@@ -579,7 +580,6 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
-    @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
     @mock.patch.object(build, 'list_builders_from_config',
                        mock.Mock(return_value=[{'name': 'builder-0'},
                                                {'name': 'builder-1'}]))
@@ -593,8 +593,10 @@ class BuildManagerTest(TestCase):
         self.manager.config_type = 'py'
         self.manager.repository.vcs.checkout = asyncio.coroutine(
             lambda *a, **kw: checkout())
+        conf = mock.Mock()
         builders, origin = await self.manager.get_builders(self.slave,
-                                                           self.revision)
+                                                           self.revision,
+                                                           conf)
 
         for b in builders:
             self.assertTrue(isinstance(b, build.Document))
@@ -606,7 +608,6 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
-    @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
     @mock.patch.object(build, 'list_builders_from_config',
                        mock.Mock(side_effect=[[], [{'name': 'builder-0'},
                                                    {'name': 'builder-1'}]]))
@@ -620,14 +621,17 @@ class BuildManagerTest(TestCase):
         await self.repo.bootstrap()
         self.manager.repository = self.repo
         self.manager.config_type = 'py'
+        conf = mock.Mock()
         self.manager.repository.vcs.checkout = asyncio.coroutine(
             lambda *a, **kw: checkout())
         builders, origin = await self.manager.get_builders(self.slave,
-                                                           self.revision)
+                                                           self.revision,
+                                                           conf)
 
         for b in builders:
             self.assertTrue(isinstance(b, build.Document))
 
+        self.assertEqual(origin, 'master')
         self.assertEqual(len(builders), 2)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
@@ -635,25 +639,25 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
-    @mock.patch.object(build, 'get_toxicbuildconf', mock.Mock())
     @mock.patch.object(build, 'list_builders_from_config',
                        mock.Mock(side_effect=AttributeError))
-    @mock.patch.object(build, 'log', mock.Mock())
     @async_test
     async def test_get_builders_with_bad_toxicbuildconf(self):
         await self._create_test_data()
         self.manager.repository = self.repo
         self.repo.schedule = mock.Mock()
+        self.manager.log = mock.Mock()
         await self.repo.bootstrap()
         checkout = mock.MagicMock()
+        conf = mock.Mock()
         self.manager.repository.vcs.checkout = asyncio.coroutine(
             lambda *a, **kw: checkout())
-
         builders, origin = await self.manager.get_builders(self.slave,
-                                                           self.revision)
+                                                           self.revision,
+                                                           conf)
 
         self.assertFalse(builders)
-        self.assertTrue(build.log.called)
+        self.assertTrue(self.manager.log.called)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

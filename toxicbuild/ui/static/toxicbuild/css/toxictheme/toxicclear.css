@@ -407,12 +407,13 @@ body{
     display: none;
 }
 
-#slave-list-container .slave-status-ready,
-#repo-list-container .repo-status-ready{
+.slave-status-ready,
+.repo-status-ready,
+.repo-status-no-config{
     border-left: 5px solid var(--gray);
 }
 
-#repo-list-container .repo-status-running{
+.repo-status-running{
     border-left: 5px solid var(--blue);
 }
 

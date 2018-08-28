@@ -316,6 +316,23 @@ async def get_toxicbuildconf_yaml(directory, filename='toxicbuild.yml'):
         raise ConfigError(err_msg)
 
 
+async def get_config(workdir, config_type, config_filename):
+    """Returns the build configuration for a given repository.
+
+    :param workdir: The directory where config file is located.
+    :param config_type: Which type of configuration we are using,
+      'py' or 'yaml'.
+    :param config_filename: The filename of the config file.
+    """
+
+    if config_type == 'py':
+        conf = get_toxicbuildconf(workdir)
+    else:
+        conf = await get_toxicbuildconf_yaml(workdir, config_filename)
+
+    return conf
+
+
 def _match_branch(branch, builder):
     if not branch or not builder.get('branches') or match_string(
             branch, builder.get('branches')):

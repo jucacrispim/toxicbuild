@@ -370,8 +370,9 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
     """A list of builds associated with a revision."""
 
     NO_BUILDS = 'no builds'
+    NO_CONFIG = 'no config'
     PENDING = Build.PENDING
-    STATUSES = [NO_BUILDS] + Build.STATUSES
+    STATUSES = [NO_BUILDS, NO_CONFIG] + Build.STATUSES
 
     repository = ReferenceField('toxicbuild.master.Repository',
                                 required=True)
@@ -592,8 +593,9 @@ class BuildManager(LoggerMixin):
         """ Adds the builds for a given revision in the build queue.
 
         :param revision: A list of
-          :class:`toxicbuild.master.RepositoryRevision`
-          instances for the build."""
+          :class:`toxicbuild.master.RepositoryRevision` instances for the
+          build.
+        """
 
         last_bs = None
         for revision in revisions:
@@ -603,15 +605,22 @@ class BuildManager(LoggerMixin):
             buildset = await BuildSet.create(repository=self.repository,
                                              revision=revision)
 
+            try:
+                conf = await self.repository.get_config_for(revision)
+            except FileNotFoundError:
+                buildset.status = type(buildset).NO_CONFIG
+                await buildset.save()
+                continue
+
             last_bs = buildset
             slaves = await self.repository.slaves
             for slave in slaves:
-                await self.add_builds_for_slave(buildset, slave)
+                await self.add_builds_for_slave(buildset, slave, conf)
 
         if last_bs and self.repository.notify_only_latest(buildset.branch):
             await self.cancel_previous_pending(buildset)
 
-    async def add_builds_for_slave(self, buildset, slave, builders=None,
+    async def add_builds_for_slave(self, buildset, slave, conf, builders=None,
                                    builders_origin=None):
         """Adds builds for a given slave on a given buildset.
 
@@ -625,7 +634,8 @@ class BuildManager(LoggerMixin):
         revision = await buildset.revision
         if not builders:
             builders, builders_origin = await self.get_builders(slave,
-                                                                revision)
+                                                                revision,
+                                                                conf)
 
         for builder in builders:
             build = Build(repository=self.repository, branch=revision.branch,
@@ -643,44 +653,36 @@ class BuildManager(LoggerMixin):
         if not self.is_building[slave.name]:  # pragma: no branch
             ensure_future(self._execute_builds(slave))
 
-    async def get_builders(self, slave, revision):
+    async def get_builders(self, slave, revision, conf):
         """ Get builders for a given slave and revision.
 
         :param slave: A :class:`toxicbuild.master.slave.Slave` instance.
         :param revision: A
           :class:`toxicbuild.master.repository.RepositoryRevision`.
+        :param conf: The build configuration.
         """
 
-        async with await self.repository.toxicbuild_conf_lock.acquire_write():
-            log('checkout on {} to {}'.format(
-                self.repository.url, revision.commit), level='debug')
-            await self.repository.vcs.checkout(revision.commit)
-            origin = revision.branch
-            try:
-                if self.config_type == 'py':
-                    conf = get_toxicbuildconf(self.repository.workdir)
-                else:
-                    conf = await get_toxicbuildconf_yaml(
-                        self.repository.workdir, self.config_filename)
-
-            except Exception as e:
-                msg = 'Something wrong with your toxicbuild.conf. Original '
-                msg += 'exception was:\n {}'.format(str(e))
-                log(msg, level='warning')
-                return [], origin
-
+        origin = revision.branch
+        try:
             names = self._get_builders_names(conf, revision.branch, slave,
                                              self.config_type)
-            if not names and revision.builders_fallback:
-                origin = revision.builders_fallback
-                names = self._get_builders_names(
-                    conf, revision.builders_fallback, slave, self.config_type)
 
-            builders = []
-            for name in names:
-                builder = await Builder.get_or_create(
-                    name=name, repository=self.repository)
-                builders.append(builder)
+        except AttributeError:
+            self.log('Bad config for {} on {}'.format(self.repository.id,
+                                                      revision.commit),
+                     level='debug')
+            return [], origin
+
+        if not names and revision.builders_fallback:
+            origin = revision.builders_fallback
+            names = self._get_builders_names(
+                conf, revision.builders_fallback, slave, self.config_type)
+
+        builders = []
+        for name in names:
+            builder = await Builder.get_or_create(
+                name=name, repository=self.repository)
+            builders.append(builder)
 
         return builders, origin
 
