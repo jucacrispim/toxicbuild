@@ -134,6 +134,20 @@ describe('BuildSetListPageTest', function(){
   });
 });
 
+describe('WaterfallPageTest', function(){
+
+  beforeEach(function(){
+    this.page = new WaterfallPage({router: jasmine.createSpy('router'),
+				       repo_name: 'some/repo'});
+    this.page.view.render = jasmine.createSpy('render-all');
+  });
+
+  it('test-render', async function(){
+    await this.page.render();
+    expect(this.page.view.render).toHaveBeenCalled();
+  });
+});
+
 describe('BaseFloatingPageTest', function(){
 
   beforeEach(function(){

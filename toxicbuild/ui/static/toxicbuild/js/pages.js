@@ -152,6 +152,22 @@ class BuildSetListPage extends BasePage{
   }
 }
 
+
+class WaterfallPage extends BasePage{
+
+  constructor(options){
+    super(options);
+    this.repo_name = options.repo_name;
+    this.template_url = '/templates/waterfall/' + this.repo_name;
+    this.view = new WaterfallView(this.repo_name);
+  }
+
+  async render(){
+    await this.view.render();
+  }
+
+}
+
 class BaseFloatingPage extends BasePage{
 
   constructor(options){

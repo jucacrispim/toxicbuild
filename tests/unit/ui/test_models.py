@@ -87,6 +87,7 @@ class BaseModelTest(TestCase):
         kw = models.OrderedDict()
         kw['name'] = 'bla'
         kw['other'] = 'ble'
+        kw['somedt'] = '3 10 25 06:50:49 2017 +0000'
         requester = MagicMock()
         instance = models.BaseModel(requester, kw)
 
@@ -95,6 +96,7 @@ class BaseModelTest(TestCase):
         expected = models.OrderedDict()
         expected['name'] = 'bla'
         expected['other'] = 'ble'
+        expected['somedt'] = models.format_datetime(instance.somedt)
         self.assertEqual(expected, instance_dict)
         keys = list(instance_dict.keys())
         self.assertLess(keys.index('name'), keys.index('other'))
@@ -457,6 +459,7 @@ class BuildSetTest(TestCase):
         buildset = buildsets[0]
         b_dict = buildset.to_dict()
         self.assertTrue(b_dict['id'])
+        self.assertTrue(b_dict['builds'][0]['steps'])
 
 
 class BuilderTest(TestCase):
@@ -568,3 +571,14 @@ class NotificationTest(TestCase):
 
         self.assertEqual(expected_url, called_url)
         self.assertEqual(expected_config, called_config)
+
+
+class BuildTest(TestCase):
+
+    def test_to_dict(self):
+        build = models.Build(MagicMock(),
+                             ordered_kwargs={'builder': {'id': 'some-id'},
+                                             'steps': [{'uuid': 'some'}]})
+        d = build.to_dict()
+        self.assertTrue(d['builder']['id'])
+        self.assertTrue(d['steps'][0]['uuid'])

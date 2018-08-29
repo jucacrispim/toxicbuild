@@ -15,6 +15,28 @@
 // You should have received a copy of the GNU General Public License
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+describe('BuildTest', function(){
+
+  it('test_getSteps', function(){
+    let build_info = {'uuid': 'some-uuid',
+		      'steps': [{'command': 'ls'}]};
+    let build = new Build(build_info);
+    expect(build.get('steps')[0] instanceof BuildStep).toBe(true);
+  });
+});
+
+
+describe('BuildSetTest', function(){
+
+  it('test-getBuilds', function(){
+    let buildset_info = {'builds': [{'steps': [{'command': 'bla'}]}]};
+    let buildset = new BuildSet(buildset_info);
+    expect(buildset.get('builds')[0] instanceof Build).toBe(true);
+  });
+
+});
+
+
 describe('BuildsetInfoViewTest', function(){
 
   beforeEach(function(){

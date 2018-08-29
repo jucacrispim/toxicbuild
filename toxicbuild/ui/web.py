@@ -35,7 +35,7 @@ from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
 from toxicbuild.ui.exceptions import BadSettingsType
 from toxicbuild.ui.models import (Repository, Slave, User, Notification,
-                                  BuildSet)
+                                  BuildSet, Builder)
 from toxicbuild.ui.utils import (format_datetime, is_datetime)
 
 
@@ -288,25 +288,28 @@ class UserAddRestHandler(ModelRestHandler):
         return {'user-add': r.to_dict()}
 
 
-class BuildSetHandler(ModelRestHandler):
+class ReadOnlyRestHandler(ModelRestHandler):
 
     @post('')
     @put('')
     @patch('')
     @delete('')
     def invalid(self):
-        raise HTTPError(404)
+        raise HTTPError(405)
+
+
+class BuildSetHandler(ReadOnlyRestHandler):
 
     @get('')
     async def list_for_repo(self):
         try:
-            repo_id = self.query['repo_name']
+            repo_name = self.query['repo_name']
         except KeyError:
             raise HTTPError(400)
 
         summary = self.query.get('summary', False)
         r = await self.model.list(
-            self.user, repo_name_or_id=repo_id, summary=summary)
+            self.user, repo_name_or_id=repo_name, summary=summary)
         items = [i.to_dict() for i in r]
         return {'items': items}
 
@@ -315,8 +318,34 @@ class CookieAuthBuildSetHandler(CookieAuthHandlerMixin, BuildSetHandler):
     pass
 
 
+class WaterfallRestHandler(ReadOnlyRestHandler):
+
+    @get('')
+    async def get_waterfall(self):
+        try:
+            repo_name = self.query['repo_name']
+        except KeyError:
+            raise HTTPError(400)
+
+        buildsets = await self.model.list(self.user, repo_name_or_id=repo_name,
+                                          summary=False)
+        builders = await self._get_builders(buildsets)
+        r = {'builders': [b.to_dict() for b in builders],
+             'buildsets': [b.to_dict() for b in buildsets]}
+        return r
+
+    async def _get_builders(self, buildsets):
+        bids = [b.builder.id for bs in buildsets for b in bs.builds]
+        builders = await Builder.list(self.user, id__in=bids)
+        return builders
+
+
+class CookieAuthWaterfallHandler(CookieAuthHandlerMixin, WaterfallRestHandler):
+    pass
+
+
 class RepositoryRestHandler(ModelRestHandler):
-    """A rest api handler for repositories"""
+    """A rest api handler for repositories."""
 
     @post('add-slave')
     async def add_slave(self):
@@ -563,6 +592,7 @@ class DashboardHandler(LoggedTemplateHandler):
     repository_template = 'toxictheme/repository.html'
     slave_template = 'toxictheme/slave.html'
     buildset_list_template = 'toxictheme/buildset_list.html'
+    waterfall_template = 'toxictheme/waterfall.html'
 
     def _get_main_template(self):
         rendered = render_template(self.main_template,
@@ -608,6 +638,11 @@ class DashboardHandler(LoggedTemplateHandler):
                                    {'repo_full_name': full_name})
         return rendered
 
+    def _get_waterfall_template(self, full_name):
+        rendered = render_template(self.waterfall_template, self.request,
+                                   {'repo_name': full_name})
+        return rendered
+
     @get('')
     def show_main(self):
         content = self._get_main_template()
@@ -630,6 +665,13 @@ class DashboardHandler(LoggedTemplateHandler):
     def show_repo_buildset_list(self, full_name):
         full_name = full_name.decode()
         content = self._get_buildset_list_template(full_name)
+        context = {'content': content}
+        self.render_template(self.skeleton_template, context)
+
+    @get('{}/waterfall'.format(FULL_NAME_REGEX))
+    def show_repo_waterfall(self, full_name):
+        full_name = full_name.decode()
+        content = self._get_waterfall_template(full_name)
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
@@ -685,6 +727,12 @@ class DashboardHandler(LoggedTemplateHandler):
         content = self._get_buildset_list_template(full_name)
         self.write(content)
 
+    @get('templates/waterfall/{}'.format(FULL_NAME_REGEX))
+    def show_repo_waterfall_template(self, full_name):
+        full_name = full_name.decode()
+        content = self._get_waterfall_template(full_name)
+        self.write(content)
+
 
 dashboard = URLSpec('/(.*)$', DashboardHandler)
 
@@ -711,6 +759,10 @@ user_add_api = URLSpec('/api/user/(.*)$',
 buildset_api = URLSpec('/api/buildset/(.*)$',
                        CookieAuthBuildSetHandler, {'model': BuildSet})
 
+waterfall_api = URLSpec('/api/waterfall/(.*)$',
+                        CookieAuthWaterfallHandler,
+                        {'model': BuildSet})
+
 api_app = PyroApplication(
     [websocket, repo_api_url, slave_api_url, notifications_api_url,
-     buildset_api, user_add_api])
+     buildset_api, user_add_api, waterfall_api])

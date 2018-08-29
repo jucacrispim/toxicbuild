@@ -1,0 +1,53 @@
+<div class="template">
+
+<table class="table">
+  <thead>
+    <tr class="waterfall-tr">
+      <th scope="col">
+	<div class="builder-name box-shadow-black"></div>
+      </th>
+    </tr>
+  </thead>
+</table>
+
+
+</div>
+
+
+<div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
+  <span class="spinner icon-spinner-2"></span>
+  <span class="icon-toxicmask"></span>
+</div>
+
+<table id="waterfall-container" class="table">
+  <thead>
+    <tr id="waterfall-header">
+      <th scope="col" class="waterfall-first-col">
+	<span class="repo-full-name">{{ repo_name.split('/')[1] }}</span>
+	<a href="{{ '/' + repo_name + '/settings' }}" class="no-decoration">
+	  <span class="fas fa-wrench"></span>
+	</a>
+	<a href="{{ '/' + repo_name + '/' }}" title="Summary"
+	   class="summary-link link-enabled no-decoration">
+	  <span class="fas fa-list"></span>
+	</a>
+
+	<a href="{{ '/' + repo_name + '/waterfall' }}"
+	   title="Warterfall" class="waterfall-link no-decoration">
+	  <span class="fas fa-th"></span>
+	</a>
+      </th>
+    </tr>
+  </thead>
+</table>
+
+<input type="hidden" value="{{repo_name}}" id="repo_name">
+
+<script>
+  async function init(){
+    let repo_name = $('#repo_name').val();
+    let view = new WaterfallView(repo_name);
+    await view.render();
+  }
+  window.onload = function(){init()};
+</script>

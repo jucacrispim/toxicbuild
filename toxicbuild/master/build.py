@@ -29,11 +29,10 @@ from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                ReferenceField, DateTimeField, UUIDField,
                                IntField)
-from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
-                                   list_builders_from_config, datetime2string,
+from toxicbuild.core.utils import (now, list_builders_from_config,
+                                   datetime2string,
                                    format_timedelta, LoggerMixin,
-                                   localtime2utc, set_tzinfo,
-                                   get_toxicbuildconf_yaml)
+                                   localtime2utc, set_tzinfo)
 from toxicbuild.master.document import ExternalRevisionIinfo
 from toxicbuild.master.exceptions import (DBError, ImpossibleCancellation)
 from toxicbuild.master.exchanges import build_notifications

@@ -22,8 +22,49 @@ class BuildSet extends BaseModel{
 
   constructor(attributes, options){
     super(attributes, options);
-    this._api_url = TOXIC_SLAVE_API_URL;
+    this._api_url = TOXIC_BUILDSET_API_URL;
+    let builds  = attributes ? attributes.builds : [];
+    this.attributes['builds'] = this._getBuilds(builds);
   }
+
+  _getBuilds(builds_info){
+    let builds = [];
+
+    for (let i in builds_info){
+      let build_info = builds_info[i];
+      let build = new Build(build_info);
+      builds.push(build);
+    }
+    return builds;
+  }
+}
+
+class Builder extends BaseModel{
+
+}
+
+class Build extends BaseModel{
+
+  constructor(attributes, options){
+    super(attributes, options);
+    let steps = attributes ? attributes.steps : [];
+    this.attributes['steps'] = this._getSteps(steps);
+  }
+
+  _getSteps(steps){
+    let build_steps = new Array();
+    for (let i in steps){
+      let step = steps[i];
+      let build_step = new BuildStep(step);
+      build_steps.push(build_step);
+    }
+    return build_steps;
+  }
+
+}
+
+class BuildStep extends BaseModel{
+
 }
 
 class BuildSetList extends BaseCollection{
@@ -35,6 +76,13 @@ class BuildSetList extends BaseCollection{
   }
 }
 
+
+class BuilderList extends BaseCollection{
+  constructor(models, options){
+    super(models, options);
+    this.model = Builder;
+  }
+}
 
 class BuildSetInfoView extends Backbone.View{
 

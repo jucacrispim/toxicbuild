@@ -331,6 +331,23 @@ class UserAddRestHandler(TestCase):
         self.assertTrue(web.User.add.called)
 
 
+class ReadOnlyRestHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.ReadOnlyRestHandler(application,
+                                               request)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    def test_invalid(self):
+        with self.assertRaises(web.HTTPError):
+            self.handler.invalid()
+
+
 class BuildSetRestHandlerTest(TestCase):
 
     @async_test
@@ -345,10 +362,6 @@ class BuildSetRestHandlerTest(TestCase):
         self.handler._get_user_from_cookie = MagicMock()
         await self.handler.async_prepare()
 
-    def test_invalid(self):
-        with self.assertRaises(web.HTTPError):
-            self.handler.invalid()
-
     @patch.object(web.BuildSet, 'list', AsyncMagicMock(spec=web.BuildSet.list))
     @async_test
     async def test_list_for_repo(self):
@@ -362,6 +375,52 @@ class BuildSetRestHandlerTest(TestCase):
     async def test_list_for_repo_no_repo_name(self):
         with self.assertRaises(web.HTTPError):
             await self.handler.list_for_repo()
+
+
+class WaterfallRestHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = web.BuildSet
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.CookieAuthWaterfallHandler(application,
+                                                      request,
+                                                      model=self.model)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    @patch.object(web.BuildSet, 'list', AsyncMagicMock(spec=web.BuildSet.list))
+    @patch.object(web.WaterfallRestHandler, '_get_builders', AsyncMagicMock(
+        spec=web.WaterfallRestHandler._get_builders))
+    @async_test
+    async def test_get_waterfall(self):
+        web.BuildSet.list.return_value = [web.BuildSet(MagicMock(), {})]
+        web.WaterfallRestHandler._get_builders.return_value = [
+            web.Builder(MagicMock(), {})]
+        self.handler.query = {'repo_name': 'some/repo'}
+        r = await self.handler.get_waterfall()
+        self.assertTrue(r)
+
+    @async_test
+    async def test_get_waterfall_no_repo_name(self):
+        with self.assertRaises(web.HTTPError):
+            await self.handler.get_waterfall()
+
+    @patch.object(web.Builder, 'list', AsyncMagicMock(spec=web.Builder.list))
+    @async_test
+    async def test_get_builders(self):
+        buildsets = [web.BuildSet(
+            MagicMock(), ordered_kwargs={'id': 'someid',
+                                         'builds': [
+                                             {'builder': {'id': 'some-id'}}]})]
+
+        await self.handler._get_builders(buildsets)
+
+        called = web.Builder.list.call_args[1]
+        expected = {'id__in': ['some-id']}
+        self.assertEqual(called, expected)
 
 
 class RepositoryRestHandlerTest(TestCase):
@@ -785,7 +844,7 @@ class DashboardHandlerTest(AsyncTestCase):
 
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
-    def test_get_buildset_list_template_slave(self):
+    def test_get_buildset_list_template(self):
         full_name = 'some/one'
         self.handler._get_buildset_list_template(full_name)
         called = web.render_template.call_args
@@ -793,6 +852,18 @@ class DashboardHandlerTest(AsyncTestCase):
         called_context = called[0][2]
         expected_keys = ['repo_full_name']
         self.assertEqual(called_template, self.handler.buildset_list_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_waterfall_template(self):
+        full_name = 'some/one'
+        self.handler._get_waterfall_template(full_name)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = ['repo_name']
+        self.assertEqual(called_template, self.handler.waterfall_template)
         self.assertEqual(expected_keys, list(called_context.keys()))
 
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
@@ -902,6 +973,21 @@ class DashboardHandlerTest(AsyncTestCase):
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 
+    def test_show_waterfall(self):
+        self.handler._get_waterfall_template = MagicMock(
+            spec=self.handler._get_waterfall_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_repo_waterfall(b'some/repo')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_waterfall_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
     def test_show_slave_details(self):
         self.handler._get_slave_template = MagicMock(
             spec=self.handler._get_slave_template)
@@ -959,6 +1045,15 @@ class DashboardHandlerTest(AsyncTestCase):
         self.assertTrue(self.handler._get_buildset_list_template.called)
         self.assertTrue(self.handler.write.called)
 
+    def test_show_repo_waterfall_template(self):
+        self.handler._get_waterfall_template = MagicMock(
+            spec=self.handler._get_waterfall_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_repo_waterfall_template(b'some/repo')
+        self.assertTrue(self.handler._get_waterfall_template.called)
+        self.assertTrue(self.handler.write.called)
+
 
 class ApplicationTest(unittest.TestCase):
 
@@ -968,10 +1063,11 @@ class ApplicationTest(unittest.TestCase):
                     '/api/slave/(.*)$',
                     '/api/notification/(.*)$',
                     '/api/user/(.*)$',
-                    '/api/buildset/(.*)$']
+                    '/api/buildset/(.*)$',
+                    '/api/waterfall/(.*)$']
 
         for url in web.api_app.urls:
             pat = url.regex.pattern
             self.assertIn(pat, expected)
 
-        self.assertEqual(len(web.api_app.urls), 6)
+        self.assertEqual(len(web.api_app.urls), 7)

@@ -96,6 +96,10 @@ class BaseModel:
             objattr = getattr(self, attr)
             is_ref = attr == 'references'
             if not (callable(objattr) and not is_ref):  # pragma no branch
+
+                if isinstance(objattr, datetime.datetime):
+                    objattr = format_datetime(objattr)
+
                 d[attr] = objattr
 
         return d
@@ -265,6 +269,12 @@ class Build(BaseModel):
     references = {'steps': Step,
                   'builder': Builder}
 
+    def to_dict(self):
+        d = super().to_dict()
+        d['builder'] = d['builder'].to_dict()
+        d['steps'] = [s.to_dict() for s in d.get('steps', [])]
+        return d
+
 
 class BuildSet(BaseModel):
     references = {'builds': Build}
@@ -289,10 +299,7 @@ class BuildSet(BaseModel):
 
     def to_dict(self):
         d = super().to_dict()
-        for k, v in d.items():
-            if isinstance(v, datetime.datetime):
-                d[k] = format_datetime(v)
-
+        d['builds'] = [b.to_dict() for b in d.get('builds', [])]
         return d
 
 

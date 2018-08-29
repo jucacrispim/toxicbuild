@@ -905,3 +905,40 @@ body{
 .waterfall-link{
     margin-left: 0px;
 }
+
+
+/* waterfall */
+
+.builder-name{
+    padding: 10px;
+    border-radius: 3px;
+    margin-left: 20px;
+}
+
+.builder-exception{
+    background-color: var(--exception);
+    color: #fff;
+}
+
+.builder-pending{
+    background-color: var(--yellow);
+    color: #212529;
+}
+
+#waterfall-container .table td, .table th {
+    padding: 0;
+    border: 0;
+}
+
+#waterfall-container thead th {
+    border: 0;
+}
+
+#waterfall-container{
+    margin-top: -14px;
+    display: none;
+}
+
+.waterfall-first-col{
+    width: 160px;
+}

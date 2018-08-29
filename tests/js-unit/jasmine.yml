@@ -29,6 +29,7 @@
       - "toxicbuild/js/routers.js"
       - "toxicbuild/js/slave.js"
       - "toxicbuild/js/utils.js"
+      - "toxicbuild/js/waterfall.js"
 
     # stylesheets
     #
