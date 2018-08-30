@@ -613,18 +613,18 @@ class RepositoryTest(TestCase):
         await self.repo._check_for_status_change(Mock(), Mock())
         self.assertTrue(repository.repo_status_changed.publish.called)
 
-    @patch.object(repository, 'BuildManager', MagicMock(
-        spec=repository.BuildManager, autospec=True))
     @async_test
     async def test_get_builders(self):
         await self._create_db_revisions()
         slaves = [MagicMock(spec='toxicbuild.master.slave.Slave',
                             autospec=True)]
-        self.repo.build_manager.get_builders = create_autospec(
-            spec=self.repo.build_manager.get_builders, mock_cls=AsyncMagicMock)
+        self.repo.build_manager.get_builders = AsyncMagicMock(
+            spec=self.repo.build_manager.get_builders, autospec=True)
         self.repo.build_manager.get_builders.return_value = [self.builder], \
             'master'
-        builders, origin = await self.repo._get_builders(slaves, self.revision)
+        conf = MagicMock()
+        builders, origin = await self.repo._get_builders(slaves, self.revision,
+                                                         conf)
         self.assertEqual(list(builders.values())[0], [self.builder])
 
     @async_test
@@ -639,8 +639,7 @@ class RepositoryTest(TestCase):
             spec=self.repo.get_latest_revision_for_branch,
             mock_cls=AsyncMagicMock)
         self.repo.get_latest_revision_for_branch.return_value = self.revision
-        self.repo._get_builders = create_autospec(
-            spec=self.repo._get_builders, mock_cls=AsyncMagicMock)
+        self.repo._get_builders = AsyncMagicMock(spec=self.repo._get_builders)
         self.repo._get_builders.return_value = {self.slave: ['bla']}, 'master'
 
         await self.repo.start_build('master')

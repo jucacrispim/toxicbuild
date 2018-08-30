@@ -641,16 +641,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                                                branch=branch,
                                                commit=named_tree)
 
-        if not builder_name:
-            builders, builders_origin = await self._get_builders(slaves, rev)
-        else:
-            builders_origin = None
-            blist = [(await Builder.get(name=builder_name,
-                                        repository=self))]
-            builders = {}
-            for slave in slaves:
-                builders.update({slave: blist})
-
         buildset = await BuildSet.create(repository=self, revision=rev)
         try:
             conf = await self.get_config_for(rev)
@@ -658,6 +648,17 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             buildset.status = type(buildset).NO_CONFIG
             await buildset.save()
             return
+
+        if not builder_name:
+            builders, builders_origin = await self._get_builders(slaves, rev,
+                                                                 conf)
+        else:
+            builders_origin = None
+            blist = [(await Builder.get(name=builder_name,
+                                        repository=self))]
+            builders = {}
+            for slave in slaves:
+                builders.update({slave: blist})
 
         for slave in slaves:
             await self.add_builds_for_slave(buildset, slave,
@@ -730,12 +731,12 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         return conf
 
-    async def _get_builders(self, slaves, revision):
+    async def _get_builders(self, slaves, revision, conf):
         builders = {}
         origin = None
         for slave in slaves:
             builders[slave], origin = await self.build_manager.get_builders(
-                slave, revision)
+                slave, revision, conf)
 
         return builders, origin
 
