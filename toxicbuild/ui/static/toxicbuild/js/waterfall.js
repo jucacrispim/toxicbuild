@@ -100,7 +100,6 @@ class WaterfallStepView extends BaseWaterfallView{
     let rendered = super.getRendered();
     let kw = this._get_kw();
     rendered.addClass('step-' + kw.status);
-    console.log(rendered);
     return rendered;
   }
 
@@ -124,7 +123,7 @@ class WaterfallBuildView extends BaseWaterfallView{
 
   getRendered(){
     let rendered = super.getRendered();
-    jQuery('.build-info-row', rendered).addClass(
+    $('.build-info-row', rendered).addClass(
       'build-' + this.build.escape('status'));
 
     let steps = this.build.get('steps');
@@ -144,9 +143,11 @@ class WaterfallBuildSetView extends BaseWaterfallView{
 
   constructor(options){
     super(options);
+    this.builders = options.builders;
     this.buildset = options.buildset;
     this.directive = {'.buildset-commit': 'commit',
-		      '.buildset-branch': 'branch'};
+		      '.buildset-branch': 'branch',
+		      '.commit-title': 'title'};
     this.template_selector = '.template .waterfall-buildset-info-container';
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
@@ -155,19 +156,42 @@ class WaterfallBuildSetView extends BaseWaterfallView{
   _get_kw(){
     let commit = this.buildset.escape('commit').slice(0, 8);
     let branch = this.buildset.escape('branch');
-    return {commit: commit, branch: branch};
+    let title = this.buildset.escape('title');
+    return {commit: commit, branch: branch, title: title};
+  }
+
+  _getBuilderBuids(builds){
+    let builder_builds = builds.reduce(function(obj, build){
+      let builder = build.get('builder');
+      obj[builder.id] = build;
+      return obj;
+    }, {});
+    return builder_builds;
+  }
+
+  _getBuildView(build){
+    return new WaterfallBuildView({build: build});
   }
 
   getRendered(){
+    let self = this;
+
     let rendered = super.getRendered();
     let el = $(document.createElement('tr'));
     el.append(rendered);
+
     let builds = this.buildset.get('builds');
-    for (let i in builds){
-      let build = builds[i];
-      let view = new WaterfallBuildView({build: build});
-      el.append(view.getRendered());
-    }
+    let builder_builds = this._getBuilderBuids(builds);
+    this.builders.each(function(builder){
+      let build = builder_builds[builder.id];
+      if (build){
+	let view = self._getBuildView(build);
+	el.append(view.getRendered());
+      }else{
+	el.append(document.createElement('td'));
+      }
+    });
+
     let outer = $(document.createElement('div'));
     outer.append(el);
     return outer;
@@ -194,9 +218,12 @@ class WaterfallView extends Backbone.View{
   }
 
   _renderBody(){
+    let self = this;
+
     let body = '';
     this.model.buildsets.each(function(e){
-      let view = new WaterfallBuildSetView({buildset: e});
+      let view = new WaterfallBuildSetView({buildset: e,
+					    builders: self.model.builders});
       body += view.getRendered().html();
     });
     return $(body);

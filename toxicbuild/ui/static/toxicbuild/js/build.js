@@ -78,10 +78,13 @@ class BuildSetList extends BaseCollection{
 
 
 class BuilderList extends BaseCollection{
+
   constructor(models, options){
     super(models, options);
     this.model = Builder;
+    this.comparator = 'name';
   }
+
 }
 
 class BuildSetInfoView extends Backbone.View{

@@ -914,12 +914,15 @@ body{
 .builder-name{
     padding: 10px;
     border-radius: 3px;
-    margin-left: 20px;
+    margin-left: 28px;
 }
 
 #waterfall-container ul{
     list-style: none;
-    padding-left: 20px;
+    padding-left: 0;
+    margin-left: 26px;
+    padding: 0;
+    background-color: #e0dcdc;
 }
 
 .step-exception,
@@ -942,6 +945,13 @@ body{
     color: #fff;
 }
 
+.build-running,
+.step-running,
+.builder-running{
+    background-color: #31b0d5;
+    color: #fff;
+}
+
 #waterfall-container .table td, .table th {
     padding: 0;
     border: 0;
@@ -954,7 +964,7 @@ body{
 }
 
 #waterfall-container{
-    margin-top: -14px;
+    margin-top: -17px;
     display: none;
 }
 
@@ -968,5 +978,25 @@ body{
 
 .build-info-row{
     padding: 10px;
-    border-radius: 5px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    margin-bottom: 1px;
+}
+
+#waterfall-container td{
+    vertical-align: top;
+    padding: 0px;
+    margin: 0;
+}
+
+#waterfall-body tr:first-child ul{
+    margin-top: 10px;
+}
+
+#waterfall-body .build-info-list li:last-child{
+    margin-bottom: 0px;
+}
+
+.waterfall-buildset-info-container{
+    font-size: 0.9em;
 }
