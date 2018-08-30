@@ -402,7 +402,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                    'external': external}
 
             # Sends a message to the queue that is consumed by the pollers
-            await update_code.publish(msg)
+            ensure_future(update_code.publish(msg))
             msg = await self._wait_update()
 
         self.clone_status = msg.body['clone_status']
@@ -661,9 +661,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                 builders.update({slave: blist})
 
         for slave in slaves:
-            await self.add_builds_for_slave(buildset, slave,
-                                            builders[slave],
-                                            conf,
+            await self.add_builds_for_slave(buildset, slave, conf,
+                                            builders=builders[slave],
                                             builders_origin=builders_origin)
 
     async def request_build(self, branch, builder_name=None, named_tree=None,

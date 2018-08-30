@@ -227,6 +227,7 @@ class RepositoryTest(TestCase):
     @async_test
     async def test_update_code(self):
         self.repo.clone_status = 'cloning'
+
         uuid4_ret = exchange.uuid4()
         exchange.uuid4.return_value = uuid4_ret
         queue_name = '{}-consumer-queue-{}'.format(repository.poll_status.name,
