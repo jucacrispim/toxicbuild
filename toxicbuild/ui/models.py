@@ -486,8 +486,8 @@ class Repository(BaseModel):
 class Notification(BaseModel):
     """Integration with the notifications api."""
 
-    api_url = settings.NOTIFICATIONS_API_URL
-    api_token = settings.NOTIFICATIONS_API_TOKEN
+    api_url = getattr(settings, 'NOTIFICATIONS_API_URL', None)
+    api_token = getattr(settings, 'NOTIFICATIONS_API_TOKEN', None)
 
     def __init__(self, ordered_kwargs):
         super().__init__(None, ordered_kwargs)

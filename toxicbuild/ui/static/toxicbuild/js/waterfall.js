@@ -37,8 +37,18 @@ class Waterfall{
   }
 }
 
+class BaseWaterfallView extends Backbone.View{
 
-class WaterfallBuilderView extends Backbone.View{
+  getRendered(){
+    let kw = this._get_kw();
+    let compiled = $(this.compiled_template(kw));
+    return compiled;
+  }
+
+}
+
+
+class WaterfallBuilderView extends BaseWaterfallView{
 
   constructor(options){
     if (!options || !options.builder){
@@ -59,21 +69,109 @@ class WaterfallBuilderView extends Backbone.View{
   }
 
   getRendered(){
-    let kw = this._get_kw();
-    let compiled = $(this.compiled_template(kw));
+    let compiled = super.getRendered();
     $('.builder-name', compiled).addClass(
-      'builder-' + kw.status);
+      'builder-' + this.builder.escape('status'));
     return compiled;
   }
 }
 
-class WaterfallBuildView extends Backbone.View{
+
+class WaterfallStepView extends BaseWaterfallView{
+
+  constructor(options){
+    super(options);
+    this.step = options.step;
+    this.directive = {'.step-status': 'status',
+		      '.step-name': 'name'};
+    this.template_selector = '.template .waterfall-step-info';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+  }
+
+  _get_kw(){
+    let status = this.step.escape('status');
+    let name = this.step.escape('name');
+    return {status: status,
+	    name: name};
+  }
+
+  getRendered(){
+    let rendered = super.getRendered();
+    let kw = this._get_kw();
+    rendered.addClass('step-' + kw.status);
+    console.log(rendered);
+    return rendered;
+  }
+
+}
+
+class WaterfallBuildView extends BaseWaterfallView{
 
   constructor(options){
     super(options);
     this.build = options.build;
+    this.directive = {'.build-info-status': 'status'};
+    this.template_selector = '.template .waterfall-build-info-container';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
   }
 
+  _get_kw(){
+    let status = this.build.escape('status');
+    return {status: status};
+  }
+
+  getRendered(){
+    let rendered = super.getRendered();
+    jQuery('.build-info-row', rendered).addClass(
+      'build-' + this.build.escape('status'));
+
+    let steps = this.build.get('steps');
+    for (let i in steps){
+      let step = steps[i];
+      let view = new WaterfallStepView({step: step});
+      rendered.append(view.getRendered());
+    }
+    let el = $(document.createElement('td'));
+    el.append(rendered);
+    return el;
+  }
+}
+
+
+class WaterfallBuildSetView extends BaseWaterfallView{
+
+  constructor(options){
+    super(options);
+    this.buildset = options.buildset;
+    this.directive = {'.buildset-commit': 'commit',
+		      '.buildset-branch': 'branch'};
+    this.template_selector = '.template .waterfall-buildset-info-container';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+  }
+
+  _get_kw(){
+    let commit = this.buildset.escape('commit').slice(0, 8);
+    let branch = this.buildset.escape('branch');
+    return {commit: commit, branch: branch};
+  }
+
+  getRendered(){
+    let rendered = super.getRendered();
+    let el = $(document.createElement('tr'));
+    el.append(rendered);
+    let builds = this.buildset.get('builds');
+    for (let i in builds){
+      let build = builds[i];
+      let view = new WaterfallBuildView({build: build});
+      el.append(view.getRendered());
+    }
+    let outer = $(document.createElement('div'));
+    outer.append(el);
+    return outer;
+  }
 }
 
 
@@ -95,11 +193,25 @@ class WaterfallView extends Backbone.View{
     return $(header);
   }
 
+  _renderBody(){
+    let body = '';
+    this.model.buildsets.each(function(e){
+      let view = new WaterfallBuildSetView({buildset: e});
+      body += view.getRendered().html();
+    });
+    return $(body);
+  }
+
   async render(){
     await this.model.fetch();
     let header = this._renderHeader();
     let header_container = $('#waterfall-header');
     header_container.append(header);
+
+    let body = this._renderBody();
+    let body_container = $('#waterfall-body');
+    body_container.append(body);
+
     $('.wait-toxic-spinner').hide();
     $('#waterfall-container').fadeIn(300);
   }

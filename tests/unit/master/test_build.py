@@ -98,6 +98,7 @@ class BuildTest(TestCase):
         self.buildset.builds[0].total_time = 1
         bd = self.buildset.builds[0].to_dict()
         self.assertEqual(bd['total_time'], '0:00:01')
+        self.assertTrue(bd['status'])
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

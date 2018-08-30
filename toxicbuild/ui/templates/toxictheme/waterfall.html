@@ -1,15 +1,44 @@
 <div class="template">
 
-<table class="table">
-  <thead>
-    <tr class="waterfall-tr">
-      <th scope="col">
-	<div class="builder-name box-shadow-black"></div>
-      </th>
-    </tr>
-  </thead>
-</table>
+  <table>
 
+    <thead>
+      <tr class="waterfall-tr">
+	<th scope="col" class="builder-name-col builder-col">
+	  <div class="builder-name box-shadow-black"></div>
+	</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr>
+	<div class="">
+	  <th scope="col" class="waterfall-first-col waterfall-buildset-info-container">
+	    <span class="buildset-commit"></span><br/>
+	    <span class="buildset-branch"></span>
+	  </th>
+	</div>
+
+	<div>
+	  <td scope="row">
+	    <ul class="build-info-list waterfall-build-info-container">
+	      <!-- the build row info-->
+	      <li class="build-info-row box-shadow-light">
+		Build - <span class="build-info-status"></span>
+	      </li>
+	    </ul>
+	  </td>
+
+	  <!-- the step row info-->
+	  <li class="build-info-row box-shadow-light waterfall-step-info">
+	    <span class="step-name"></span> - <span class="step-status"></span>
+	  </li>
+	</div>
+      </tr>
+
+    </tbody>
+
+  </table>
 
 </div>
 
@@ -19,7 +48,7 @@
   <span class="icon-toxicmask"></span>
 </div>
 
-<table id="waterfall-container" class="table">
+<table id="waterfall-container">
   <thead>
     <tr id="waterfall-header">
       <th scope="col" class="waterfall-first-col">
@@ -27,6 +56,7 @@
 	<a href="{{ '/' + repo_name + '/settings' }}" class="no-decoration">
 	  <span class="fas fa-wrench"></span>
 	</a>
+	<br/>
 	<a href="{{ '/' + repo_name + '/' }}" title="Summary"
 	   class="summary-link link-enabled no-decoration">
 	  <span class="fas fa-list"></span>
@@ -39,6 +69,9 @@
       </th>
     </tr>
   </thead>
+
+  <tbody id="waterfall-body">
+  </tbody>
 </table>
 
 <input type="hidden" value="{{repo_name}}" id="repo_name">

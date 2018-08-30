@@ -2,6 +2,7 @@
 :root{
     --red-light: rgb(226, 112, 123);
     --exception: #9a009c;
+    --green-light: #3bc03b;
 }
 body{
     background-color: #f9f9f9;
@@ -374,6 +375,7 @@ body{
 #bollocks-message{
     font-size: 0.8em;
 }
+
 
 #obj-list-container ul,
 #slave-list-container ul,
@@ -915,14 +917,29 @@ body{
     margin-left: 20px;
 }
 
+#waterfall-container ul{
+    list-style: none;
+    padding-left: 20px;
+}
+
+.step-exception,
+.build-exception,
 .builder-exception{
     background-color: var(--exception);
     color: #fff;
 }
 
+.build-pending,
 .builder-pending{
     background-color: var(--yellow);
     color: #212529;
+}
+
+.build-success,
+.step-success,
+.builder-success{
+    background-color: var(--green-light);
+    color: #fff;
 }
 
 #waterfall-container .table td, .table th {
@@ -932,6 +949,8 @@ body{
 
 #waterfall-container thead th {
     border: 0;
+    padding-left: 0;
+    margin-left:;
 }
 
 #waterfall-container{
@@ -941,4 +960,13 @@ body{
 
 .waterfall-first-col{
     width: 160px;
+}
+
+#waterfall-container th{
+    font-weight: normal;
+}
+
+.build-info-row{
+    padding: 10px;
+    border-radius: 5px;
 }

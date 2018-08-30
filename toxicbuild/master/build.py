@@ -275,7 +275,7 @@ class Build(EmbeddedDocument):
         :param output: Should we include the steps output?"""
 
         objdict = {'uuid': str(self.uuid), 'named_tree': self.named_tree,
-                   'branch': self.branch}
+                   'branch': self.branch, 'status': self.status}
 
         steps = [s.to_dict(output=output) for s in self.steps]
         objdict['builder'] = {'id': str(self._data.get('builder').id)}
