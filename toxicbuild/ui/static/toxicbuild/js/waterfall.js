@@ -145,9 +145,9 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     super(options);
     this.builders = options.builders;
     this.buildset = options.buildset;
-    this.directive = {'.buildset-commit': 'commit',
-		      '.buildset-branch': 'branch',
-		      '.commit-title': 'title'};
+    this.directive = {'.buildset-branch': 'branch',
+		      '.commit-title': 'title',
+		      '.buildset-total-time': 'total_time'};
     this.template_selector = '.template .waterfall-buildset-info-container';
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
@@ -157,7 +157,9 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     let commit = this.buildset.escape('commit').slice(0, 8);
     let branch = this.buildset.escape('branch');
     let title = this.buildset.escape('title');
-    return {commit: commit, branch: branch, title: title};
+    let total_time = this.buildset.escape('total_time');
+    return {commit: commit, branch: branch, title: title,
+	    total_time: total_time};
   }
 
   _getBuilderBuids(builds){

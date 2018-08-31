@@ -137,7 +137,7 @@ body{
 }
 
 .box-shadow{
-    box-shadow: 0em 0rem 0.5rem 0.1rem hsla(0, 0%, 0%, 0.15);
+    box-shadow: 0em 0rem 0.5rem 0.1rem hsla(0, 0%, 0%, 0.19);
 }
 
 .box-shadow-light{
@@ -510,6 +510,7 @@ body{
     font-weight: 500;
 }
 
+.fa-wrench,
 .top-page-header-info-container .fa-wrench,
 .top-page-repositories-info-container .fa-wrench{
     transform: rotate(270deg);
@@ -913,7 +914,7 @@ body{
 
 .builder-name{
     padding: 10px;
-    border-radius: 3px;
+    border-radius: 0 0 3px 3px;
     margin-left: 28px;
 }
 
@@ -921,7 +922,7 @@ body{
     list-style: none;
     padding-left: 0;
     margin-left: 26px;
-    padding: 0;
+    padding: 0px;
     background-color: #e0dcdc;
 }
 
@@ -945,10 +946,19 @@ body{
     color: #fff;
 }
 
+.build-fail,
+.step-fail,
+.builder-fail{
+    /* background-color: var(--danger); */
+    background-color: #d9534f;
+    color: #fff;
+}
+
 .build-running,
 .step-running,
 .builder-running{
     background-color: #31b0d5;
+    /* background-color: var(--blue); */
     color: #fff;
 }
 
@@ -960,7 +970,7 @@ body{
 #waterfall-container thead th {
     border: 0;
     padding-left: 0;
-    margin-left:;
+    margin-left: 0;
 }
 
 #waterfall-container{
@@ -969,7 +979,8 @@ body{
 }
 
 .waterfall-first-col{
-    width: 160px;
+    max-width: 160px;
+    overflow: hidden;
 }
 
 #waterfall-container th{
@@ -999,4 +1010,24 @@ body{
 
 .waterfall-buildset-info-container{
     font-size: 0.9em;
+}
+
+#waterfall-container .summary-link{
+    margin-left: 0;
+}
+
+#waterfall-container .fa-wrench{
+    font-size: 0.9em;
+}
+
+#waterfall-container .link-enabled{
+    color: #f9f9f9;
+    background-color: #212529;
+}
+
+#waterfall-header a{
+    color: #212529;
+    padding-left: 4px;
+    padding-right: 4px;
+    border-radius: 3px;
 }
