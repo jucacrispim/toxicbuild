@@ -99,6 +99,8 @@ describe('WaterfallBuildSetViewTest', function(){
     let template = $('.waterfall-buildset-info-container');
     template.affix('.buildset-commit');
     template.affix('.buildset-branch');
+    template.affix('.commit-title');
+    template.affix('.buildset-total-time');
     let buildset = new BuildSet();
     let builders = new BuilderList();
     this.view = new WaterfallBuildSetView({buildset: buildset,
