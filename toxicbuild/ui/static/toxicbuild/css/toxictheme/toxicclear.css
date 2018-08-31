@@ -3,7 +3,11 @@
     --red-light: rgb(226, 112, 123);
     --exception: #9a009c;
     --green-light: #3bc03b;
+    --black-almost-there: #212529;
+    --gray-dark:  #4c4a49;
+    --gray-light: #D0D0D0;
 }
+
 body{
     background-color: #f9f9f9;
 }
@@ -216,8 +220,8 @@ body{
 
 .abc-checkbox-black input[type="checkbox"]:checked + label::before,
 .abc-checkbox-black input[type="radio"]:checked + label::before {
-    background-color: #212529;
-    border-color: #212529;
+    background-color: var(--black-almost-there);
+    border-color: var(--black-almost-there);
 }
 
 .abc-checkbox label::after{
@@ -394,7 +398,7 @@ body{
 .obj-main-info a:hover,
 #slave-list-container .slave-info-name-container a:hover,
 #repo-list-container .repository-info-name-container a:hover{
-    color: #212529;
+    color: var(--black-almost-there);
 }
 
 .obj-info-container,
@@ -457,7 +461,7 @@ body{
 .obj-main-info,
 .slave-info-name,
 .repository-info-name{
-    color: #212529;
+    color: var(--black-almost-there);
     font-size: 1.2em;
     font-weight: 500;
 }
@@ -519,7 +523,7 @@ body{
 
 .top-page-header-info-container .fa-wrench:hover,
 .top-page-repositories-info-container .fa-wrench:hover{
-    color: #212529;
+    color: var(--black-almost-there);
     cursor: pointer;
 }
 
@@ -539,7 +543,7 @@ body{
 }
 
 .top-page-repositories-info-container .fa-github{
-    color: #212529;
+    color: var(--black-almost-there);
 }
 
 .repository-info-enabled-container{
@@ -598,14 +602,14 @@ body{
 }
 
 .buildset-list-top-page-header-info a{
-    color: #212529;
+    color: var(--black-almost-there);
     padding-left: 4px;
     border-radius: 3px;
 }
 
 .buildset-list-top-page-header-info .link-enabled{
     color: #f9f9f9;
-    background-color: #212529;
+    background-color: var(--black-almost-there);
 }
 
 
@@ -826,7 +830,7 @@ body{
 }
 
 .repo-locations-link-container a{
-    color: #212529;
+    color: var(--black-almost-there);
     margin-right: 6px;
 }
 
@@ -933,10 +937,11 @@ body{
     color: #fff;
 }
 
+
 .build-pending,
 .builder-pending{
     background-color: var(--yellow);
-    color: #212529;
+    color: var(--black-almost-there);
 }
 
 .build-success,
@@ -988,7 +993,7 @@ body{
 }
 
 .build-info-row{
-    padding: 10px;
+    padding: 12px;
     border-radius: 4px;
     font-size: 0.9em;
     margin-bottom: 1px;
@@ -1022,12 +1027,32 @@ body{
 
 #waterfall-container .link-enabled{
     color: #f9f9f9;
-    background-color: #212529;
+    background-color: var(--black-almost-there);
 }
 
 #waterfall-header a{
-    color: #212529;
+    color: var(--black-almost-there);
     padding-left: 4px;
     padding-right: 4px;
     border-radius: 3px;
+}
+
+.waterfall-build-info-container .fa-info{
+    float: right;
+    margin-left: 15px;
+    margin-top: 2px;
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--black-almost-there);
+    border-radius: 10px;
+    padding-left: 4.7px;
+    padding-top: 2px;
+    color: var(--black-almost-there);
+    font-size: 0.6em;
+}
+
+.waterfall-build-info-container .fa-info:hover{
+    color: var(--gray-dark);
+    border: 2px solid var(--gray-dark);
 }
