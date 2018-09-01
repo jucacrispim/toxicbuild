@@ -402,8 +402,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                    'external': external}
 
             # Sends a message to the queue that is consumed by the pollers
+            t = ensure_future(self._wait_update())
             ensure_future(update_code.publish(msg))
-            msg = await self._wait_update()
+            msg = await t
 
         self.clone_status = msg.body['clone_status']
         await self.save()

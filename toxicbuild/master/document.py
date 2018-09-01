@@ -63,7 +63,7 @@ class OwnedDocument(Document):
         :param kwargs: kwargs to match the repository.
         """
         obj = await cls.objects.get(**kwargs)
-        has_perms = await obj._check_perms(user)
+        has_perms = await obj.check_perms(user)
         if not has_perms:
             msg = 'The user {} has no permissions for this object'.format(
                 user.id)
@@ -122,7 +122,7 @@ class OwnedDocument(Document):
 
         return qs
 
-    async def _check_perms(self, user):
+    async def check_perms(self, user):
         if user.is_superuser:
             return True
 

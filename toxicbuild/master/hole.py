@@ -35,7 +35,7 @@ from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import (LoggerMixin, datetime2string,
                                    format_timedelta)
 from toxicbuild.master import settings
-from toxicbuild.master.build import BuildSet, Builder
+from toxicbuild.master.build import BuildSet, Builder, Build
 from toxicbuild.master.consumers import RepositoryMessageConsumer
 from toxicbuild.master.repository import Repository
 from toxicbuild.master.exceptions import (UIFunctionNotFound,
@@ -142,6 +142,7 @@ class HoleHandler:
     * `slave-remove`
     * `slave-update`
     * `buildset-list`
+    * `build-get`
     * `builder-show`
     * `list-funcs`
     * `user-add`
@@ -572,6 +573,16 @@ class HoleHandler:
             buildset_list.append(bdict)
 
         return {'buildset-list': buildset_list}
+
+    async def build_get(self, build_uuid):
+        build = await Build.get(build_uuid)
+        repo = await build.repository
+        has_perms = await repo.check_perms(self.protocol.user)
+        if not has_perms:
+            raise NotEnoughPerms
+
+        bdict = build.to_dict(output=True)
+        return {'build-get': bdict}
 
     async def builder_list(self, **kwargs):
         """List builders.

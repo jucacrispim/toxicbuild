@@ -99,6 +99,7 @@ class BuildTest(TestCase):
         bd = self.buildset.builds[0].to_dict()
         self.assertEqual(bd['total_time'], '0:00:01')
         self.assertTrue(bd['status'])
+        self.assertTrue(bd['output'])
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -171,9 +172,14 @@ class BuildTest(TestCase):
     async def test_get(self):
         await self._create_test_data()
         b = self.buildset.builds[0]
-        r = await build.Build.get(str(b.uuid))
+        r = await build.Build.get(b.uuid)
         self.buildset.builds[0]
         self.assertEqual(b, r)
+
+    @async_test
+    async def test_get_no_build(self):
+        with self.assertRaises(build.Build.DoesNotExist):
+            await build.Build.get(build.uuid4())
 
     @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
         spec=build.build_notifications.publish))

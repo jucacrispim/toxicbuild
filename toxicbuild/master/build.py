@@ -23,7 +23,7 @@ from asyncio import ensure_future
 from collections import defaultdict, deque
 from datetime import timedelta
 import json
-from uuid import uuid4
+from uuid import uuid4, UUID
 from mongoengine.queryset import queryset_manager
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
@@ -171,7 +171,6 @@ class BuildStep(EmbeddedDocument):
     finished = DateTimeField(default=None)
     """When the step finished. It msut be in UTC."""
 
-    # the index of the step in the build.
     index = IntField(requred=True)
     """The index of the step in the build."""
 
@@ -188,7 +187,7 @@ class BuildStep(EmbeddedDocument):
                    'command': self.command, 'status': self.status}
 
         if output:
-            objdict['output'] = output
+            objdict['output'] = self.output
 
         if not self.started:
             objdict['started'] = None
@@ -217,6 +216,8 @@ class Build(EmbeddedDocument):
     """ A set of steps for a repository. This is the object that stores
     the build data. The build is carried by the slave.
     """
+
+    DoesNotExist = Builder.DoesNotExist
 
     PENDING = 'pending'
     CANCELLED = 'cancelled'
@@ -269,15 +270,19 @@ class Build(EmbeddedDocument):
     """Indicates the branch from which the builders for this build came from.
     This may not be the same as the build branch."""
 
-    def to_dict(self, output=True):
+    def to_dict(self, output=True, steps_output=None):
         """Transforms the object into a dictionary.
 
-        :param output: Should we include the steps output?"""
+        :param output: Should we include the build output?
+        :param steps_output: Should we include the steps output? If None, the
+          the value of ``output`` will be used.
+        """
 
         objdict = {'uuid': str(self.uuid), 'named_tree': self.named_tree,
                    'branch': self.branch, 'status': self.status}
 
-        steps = [s.to_dict(output=output) for s in self.steps]
+        steps_output = output if steps_output is None else steps_output
+        steps = [s.to_dict(output=steps_output) for s in self.steps]
         objdict['builder'] = {'id': str(self._data.get('builder').id)}
         objdict['steps'] = steps
         objdict['started'] = datetime2string(
@@ -294,6 +299,8 @@ class Build(EmbeddedDocument):
             objdict['external'] = self.external.to_dict()
         else:
             objdict['external'] = {}
+
+        objdict['output'] = self.output if output else ''
         return objdict
 
     def to_json(self):
@@ -309,7 +316,7 @@ class Build(EmbeddedDocument):
         result = await qs.update(set__builds__S=self)
 
         if not result:
-            msg = 'This EmbeddedDocument was not save to database.'
+            msg = 'This Build was not saved to database.'
             msg += ' You can\'t update it.'
             raise DBError(msg)
 
@@ -327,7 +334,7 @@ class Build(EmbeddedDocument):
         output = []
         for step in self.steps:
             output.append(step.command + '\n')
-            output.append(step.output)
+            output.append(step.output or '')
 
         return ''.join(output)
 
@@ -337,10 +344,28 @@ class Build(EmbeddedDocument):
 
         :param uuid: The uuid of the build."""
 
-        buildset = await BuildSet.objects.get(builds__uuid=uuid)
-        for build in buildset.builds:  # pragma no branch
-            if str(build.uuid) == str(uuid):  # pragma no branch
-                return build
+        if isinstance(uuid, str):
+            uuid = UUID(uuid)
+
+        pipeline = [
+            {"$match": {"builds.uuid": uuid}},
+            {"$project": {
+                "builds": {
+                    "$filter": {
+                        "input": "$builds", "as": "build",
+                        "cond": {"$eq": ["$$build.uuid", uuid]}}}
+            }}
+        ]
+
+        r = await BuildSet.objects.aggregate(*pipeline).to_list(1)
+        try:
+            build_doc = r[0]['builds'][0]
+        except IndexError:
+            raise Build.DoesNotExist
+        else:
+            build = cls(**build_doc)
+
+        return build
 
     async def notify(self, event_type):
         """Send a notification to the `build_notification` exchange
