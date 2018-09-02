@@ -142,4 +142,4 @@ class BuildsetUtilsTest(TestCase):
         expected = {'id__in': [str(b.id) for b in [self.builder]]}
         self.assertEqual(expected, called_args)
 
-        self.assertEqual(returned[0].id, self.builder.id)
+        self.assertEqual(returned[0].id, str(self.builder.id))

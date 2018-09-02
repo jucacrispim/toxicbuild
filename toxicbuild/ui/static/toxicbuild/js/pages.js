@@ -177,7 +177,7 @@ class BaseFloatingPage extends BasePage{
     this._inner = null;
   }
 
-  _listen2events(template){
+  _listen2events(){
     let self = this;
 
     let close_btn = $('.details-main-container .close-btn');
@@ -231,6 +231,40 @@ class BaseFloatingPage extends BasePage{
     this._container.animate({'margin': '-10px', 'min-height': '89vh'}, 400,
 			    function(){self._inner.fadeIn(100);
 				       self.right_sidebar.fadeIn(100);});
+  }
+
+}
+
+
+class BuildDetailsPage extends BaseFloatingPage{
+
+  constructor(options){
+    super(options);
+    this.build_uuid = options ? options.build_uuid : '';
+    this.template_url = '/templates/build/' + this.build_uuid;
+    this.view = new BuildDetailsView({build_uuid: this.build_uuid});
+  }
+
+  _getContainerInner(){
+    this._container = $('.details-main-container');
+    this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
+      '.advanced-help-container').not('.nav-container');
+  }
+
+  async render(){
+
+    this._prepareOpenAnimation();
+    await this.view.render();
+    this._listen2events();
+    $('.wait-toxic-spinner').hide();
+    this._animateOpen();
+  }
+
+  _animateOpen(){
+    let self = this;
+
+    this._container.animate({'margin': '-10px', 'min-height': '89vh'}, 400,
+			    function(){self._inner.fadeIn(100);});
   }
 
 }

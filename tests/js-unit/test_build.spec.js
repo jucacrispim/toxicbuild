@@ -36,6 +36,32 @@ describe('BuildSetTest', function(){
 
 });
 
+describe('BuildDetailsViewTest', function(){
+
+  beforeEach(function(){
+    affix('.template #build-details');
+    let container = $('#build-details');
+    container.affix('.build-command');
+    container.affix('.build-status');
+    container.affix('.build-output');
+    container.affix('.build-started');
+    container.affix('.builder-name');
+    container.affix('.commit-title');
+    container.affix('.commit-branch');
+    container.affix('.repo-name');
+    container.affix('.build-total-time');
+    this.view = new BuildDetailsView({build_uuid: 'some-uuid'});
+  });
+
+  it('test-render', async function(){
+    spyOn(this.view.model, 'fetch');
+    this.view.model.set({repository: {name: 'bla'}});
+    this.view.model.set({builder: {name: 'ble'}});
+    await this.view.render();
+    expect($('.wait-toxic-spinner').is('visible')).toBe(false);
+    expect(this.view.model.fetch).toHaveBeenCalled();
+  });
+});
 
 describe('BuildsetInfoViewTest', function(){
 

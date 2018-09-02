@@ -163,7 +163,7 @@ class BuildTest(TestCase):
     async def test_get_output(self):
         await self._create_test_data()
         build = self.buildset.builds[0]
-        expected = 'some command\nsome output'
+        expected = 'some command\nsome output\n\n'
         self.assertEqual(expected, build.output)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
@@ -1184,7 +1184,7 @@ class BuilderTest(TestCase):
         await slave_inst.save()
         builder = await build.Builder.create(repository=repo, name='b1')
         objdict = await builder.to_dict()
-        self.assertEqual(objdict['id'], builder.id)
+        self.assertEqual(objdict['id'], str(builder.id))
         self.assertTrue(objdict['status'])
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(

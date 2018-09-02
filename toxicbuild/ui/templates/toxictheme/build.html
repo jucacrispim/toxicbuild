@@ -1,0 +1,92 @@
+<!-- main build detaile container -->
+<div class="details-main-container box-shadow-gray">
+  <div class="close-btn">&times;</div>
+
+  <!-- loading spinner -->
+  <div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
+    <span class="spinner icon-spinner-2"></span>
+    <span class="icon-toxicmask"></span>
+  </div>
+  <!-- end loading spinner -->
+
+  <!-- navigation pills -->
+  <div class="nav-container">
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+	<a class="nav-link active box-shadow" href="#">
+	  General configurations
+	</a>
+      </li>
+  </div>
+
+  <!-- end navigation pills -->
+
+  <div class="build-details-container"></div>
+
+</div>
+
+
+<!-- template -->
+<div class="template">
+
+  <div id="build-details">
+    <div class="inner-container">
+      <span class="repo-name"></span> - <span class="builder-name"></span>
+      <span class="build-status badge" data-toggle="tooltip">
+      </span>
+      <br/>
+
+      <div class="build-commit-row">
+	<span class="commit-title" data-toggle="tooltip"
+	      title="commit title"></span>
+	<b><span class="commit-branch" data-toggle="tooltip"
+		 title="commit branch"></span></b>
+      </div>
+
+      <span class="far fa-calendar-check" data-toggle="tooltip"
+	    title="started at"></span>
+      <span class="build-started" data-toggle="tooltip"
+	    title="started at"></span><br/>
+
+      <span class="far fa-clock" data-toggle="tooltip"
+	    title="duration"></span>
+      <span class="build-total-time" data-toggle="tooltip"
+	    title="duration"></span><br/>
+    </div>
+
+    <span class="fas fa-arrow-circle-down follow-output"></span>
+    <pre class="build-output">
+    </pre>
+
+
+    <!-- buttons container -->
+    <div class="obj-details-buttons-container buttons-container">
+
+      <div class="cancel-btn-container inner-btn-container">
+	<button class="btn btn-sm btn-dark btn-block" type="submit"
+		id="btn-cancel-save">
+	  <span id="cancel-save-slave-btn-text">Close</span>
+	</button>
+      </div>
+
+    </div>
+      <!-- end buttons container -->
+
+  </div>
+
+</div>
+<!-- end template -->
+
+
+<input type="hidden" value="{{build_uuid}}" id="build-uuid">
+
+<script>
+  async function init(){
+    let build_uuid = jQuery('#build-uuid').val();
+    let page;
+    page = new BuildDetailsPage({router: router, build_uuid: build_uuid});
+    await page.render();
+  }
+
+  window.onload = function(){init()};
+</script>

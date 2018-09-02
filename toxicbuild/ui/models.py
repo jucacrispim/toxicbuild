@@ -275,6 +275,18 @@ class Build(BaseModel):
         d['steps'] = [s.to_dict() for s in d.get('steps', [])]
         return d
 
+    @classmethod
+    @asyncio.coroutine
+    def get(cls, requester, uuid):
+        """Returns information about abuild.
+        :param uuid: The uuid of the build."""
+
+        with (yield from cls.get_client(requester)) as client:
+            build_dict = yield from client.build_get(build_uuid=uuid)
+
+        build = cls(requester, build_dict)
+        return build
+
 
 class BuildSet(BaseModel):
     references = {'builds': Build}

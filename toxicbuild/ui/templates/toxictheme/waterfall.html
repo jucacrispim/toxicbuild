@@ -32,8 +32,13 @@
 	      <!-- the build row info-->
 	      <li class="build-info-row">
 		Build - <span class="build-info-status"></span>
-		<span class="fas fa-info" data-toggle="tooltip"
-		      title="build details"></span>
+
+		<a href="" class="build-details-link">
+		  <span class="fas fa-info" data-toggle="tooltip"
+			title="build details">
+		  </span>
+		</a>
+
 	      </li>
 	    </ul>
 	  </td>
@@ -88,8 +93,8 @@
 <script>
   async function init(){
     let repo_name = $('#repo_name').val();
-    let view = new WaterfallView(repo_name);
-    await view.render();
+    let page = new WaterfallPage({router: router, repo_name: repo_name});
+    await page.render();
   }
   window.onload = function(){init()};
 </script>

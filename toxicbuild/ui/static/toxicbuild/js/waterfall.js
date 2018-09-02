@@ -110,7 +110,8 @@ class WaterfallBuildView extends BaseWaterfallView{
   constructor(options){
     super(options);
     this.build = options.build;
-    this.directive = {'.build-info-status': 'status'};
+    this.directive = {'.build-info-status': 'status',
+		      '.build-details-link @href': 'build_details_link'};
     this.template_selector = '.template .waterfall-build-info-container';
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
@@ -118,7 +119,8 @@ class WaterfallBuildView extends BaseWaterfallView{
 
   _get_kw(){
     let status = this.build.escape('status');
-    return {status: status};
+    let build_details_link = '/build/' + this.build.get('uuid');
+    return {status: status, build_details_link: build_details_link};
   }
 
   getRendered(){

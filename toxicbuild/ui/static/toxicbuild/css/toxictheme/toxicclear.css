@@ -173,10 +173,16 @@ body{
     color: #fff;
 }
 
+.badge-fail{
+    background-color: #d9534f;
+    color: #fff;
+}
+
 .badge-pending{
     background-color: var(--yellow);
     color: #000;
 }
+
 
 .message-container{
     padding-left: 35px;
@@ -654,8 +660,8 @@ body{
     margin-right: 55px;
 }
 
-/* repo details page */
 
+.details-main-container,
 .slave-details-main-container,
 .repo-details-main-container{
     position: absolute;
@@ -1055,4 +1061,44 @@ body{
 .waterfall-build-info-container .fa-info:hover{
     color: var(--gray-dark);
     border: 2px solid var(--gray-dark);
+}
+
+.build-details-container pre{
+    background-color: #000;
+    color: #11e436;
+    padding: 10px;
+    margin-top: 10px;
+    white-space: pre-wrap;
+}
+
+#build-details span{
+    font-size: 0.9em;
+}
+
+#build-details .repo-name,
+#build-details .builder-name{
+    font-size: 1em;
+    margin-left: 0;
+}
+
+#build-details .repo-name{
+    margin-right: 10px;
+}
+
+
+#build-details .commit-branch{
+    margin-left: 20px;
+}
+
+#build-details .fa-arrow-circle-down{
+    position: absolute;
+    right: 20px;
+    color: #fff;
+    margin-top: 20px;
+    font-size: 1.4em;
+    cursor: pointer;
+}
+
+#build-details .build-commit-row{
+    margin-bottom: 8px;
 }

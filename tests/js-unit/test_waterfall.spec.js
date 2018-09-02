@@ -80,6 +80,7 @@ describe('WaterfallBuildViewTest', function(){
     let template = $('.waterfall-build-info-container');
     template.affix('.build-info-status');
     template.affix('.build-info-row');
+    template.affix('.build-details-link');
     let build = new Build();
     this.view = new WaterfallBuildView({build: build});
   });

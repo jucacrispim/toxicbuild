@@ -582,3 +582,12 @@ class BuildTest(TestCase):
         d = build.to_dict()
         self.assertTrue(d['builder']['id'])
         self.assertTrue(d['steps'][0]['uuid'])
+
+    @patch.object(models.Build, 'get_client', lambda requester:
+                  get_client_mock(requester,
+                                  {'uuid': 'some-uuid', 'output': 'bla'}))
+    @async_test
+    def test_get(self):
+        requester = MagicMock()
+        build = yield from models.Build.get(requester, 'some-uuid')
+        self.assertEqual(build.output, 'bla')

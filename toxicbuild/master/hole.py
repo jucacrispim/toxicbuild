@@ -35,7 +35,7 @@ from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import (LoggerMixin, datetime2string,
                                    format_timedelta)
 from toxicbuild.master import settings
-from toxicbuild.master.build import BuildSet, Builder, Build
+from toxicbuild.master.build import BuildSet, Builder
 from toxicbuild.master.consumers import RepositoryMessageConsumer
 from toxicbuild.master.repository import Repository
 from toxicbuild.master.exceptions import (UIFunctionNotFound,
@@ -574,14 +574,27 @@ class HoleHandler:
 
         return {'buildset-list': buildset_list}
 
+    def _get_build(self, buildset, build_uuid):
+        for build in buildset.builds:  # pragma no branch
+            if str(build_uuid) == str(build.uuid):  # pragma no branch
+                return build
+
     async def build_get(self, build_uuid):
-        build = await Build.get(build_uuid)
+        buildset = await BuildSet.objects.filter(
+            builds__uuid=build_uuid).first()
+        build = self._get_build(buildset, build_uuid)
+        builder = await build.builder
         repo = await build.repository
         has_perms = await repo.check_perms(self.protocol.user)
         if not has_perms:
             raise NotEnoughPerms
 
-        bdict = build.to_dict(output=True)
+        bdict = build.to_dict(output=True, steps_output=False)
+        bdict['repository'] = await repo.to_dict()
+        bdict['builder'] = await builder.to_dict()
+        bdict['commit'] = buildset.commit
+        bdict['commit_title'] = buildset.title
+        bdict['commit_branch'] = buildset.branch
         return {'build-get': bdict}
 
     async def builder_list(self, **kwargs):
@@ -594,7 +607,7 @@ class HoleHandler:
         blist = []
 
         for b in builders:
-            blist.append((await b.to_dict(id_as_str=True)))
+            blist.append((await b.to_dict()))
 
         return {'builder-list': blist}
 

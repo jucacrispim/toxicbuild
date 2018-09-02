@@ -35,7 +35,7 @@ from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
 from toxicbuild.ui.exceptions import BadSettingsType
 from toxicbuild.ui.models import (Repository, Slave, User, Notification,
-                                  BuildSet, Builder)
+                                  BuildSet, Builder, Build)
 from toxicbuild.ui.utils import (format_datetime, is_datetime)
 
 
@@ -318,6 +318,23 @@ class CookieAuthBuildSetHandler(CookieAuthHandlerMixin, BuildSetHandler):
     pass
 
 
+class BuildHandler(ReadOnlyRestHandler):
+
+    @get('')
+    async def get_build(self):
+        try:
+            build_uuid = self.query['build_uuid']
+        except KeyError:
+            raise HTTPError(400)
+
+        build = await self.model.get(self.user, build_uuid)
+        return build.to_dict()
+
+
+class CookieAuthBuildHandler(CookieAuthHandlerMixin, BuildHandler):
+    pass
+
+
 class WaterfallRestHandler(ReadOnlyRestHandler):
 
     @get('')
@@ -593,6 +610,7 @@ class DashboardHandler(LoggedTemplateHandler):
     slave_template = 'toxictheme/slave.html'
     buildset_list_template = 'toxictheme/buildset_list.html'
     waterfall_template = 'toxictheme/waterfall.html'
+    build_template = 'toxictheme/build.html'
 
     def _get_main_template(self):
         rendered = render_template(self.main_template,
@@ -641,6 +659,11 @@ class DashboardHandler(LoggedTemplateHandler):
     def _get_waterfall_template(self, full_name):
         rendered = render_template(self.waterfall_template, self.request,
                                    {'repo_name': full_name})
+        return rendered
+
+    def _get_build_template(self, build_uuid):
+        rendered = render_template(self.build_template, self.request,
+                                   {'build_uuid': build_uuid})
         return rendered
 
     @get('')
@@ -697,6 +720,13 @@ class DashboardHandler(LoggedTemplateHandler):
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
+    @get('build/([\d\w\-]+)')
+    def show_build_details(self, build_uuid):
+        build_uuid = build_uuid.decode()
+        content = self._get_build_template(build_uuid)
+        context = {'content': content}
+        self.render_template(self.skeleton_template, context)
+
     @get('templates/repo-details')
     @get('templates/repo-details/{}'.format(FULL_NAME_REGEX))
     def show_repository_details_template(self, full_name=b''):
@@ -725,6 +755,12 @@ class DashboardHandler(LoggedTemplateHandler):
     def show_repo_buildset_list_template(self, full_name):
         full_name = full_name.decode()
         content = self._get_buildset_list_template(full_name)
+        self.write(content)
+
+    @get('templates/build/([\d\w\-]+)')
+    def show_build_template(self, build_uuid):
+        build_uuid = build_uuid.decode()
+        content = self._get_build_template(build_uuid)
         self.write(content)
 
     @get('templates/waterfall/{}'.format(FULL_NAME_REGEX))
@@ -759,10 +795,13 @@ user_add_api = URLSpec('/api/user/(.*)$',
 buildset_api = URLSpec('/api/buildset/(.*)$',
                        CookieAuthBuildSetHandler, {'model': BuildSet})
 
+build_api = URLSpec('/api/build/(.*)$',
+                    CookieAuthBuildHandler, {'model': Build})
+
 waterfall_api = URLSpec('/api/waterfall/(.*)$',
                         CookieAuthWaterfallHandler,
                         {'model': BuildSet})
 
 api_app = PyroApplication(
     [websocket, repo_api_url, slave_api_url, notifications_api_url,
-     buildset_api, user_add_api, waterfall_api])
+     buildset_api, user_add_api, waterfall_api, build_api])

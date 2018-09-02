@@ -918,6 +918,9 @@ class HoleHandlerTest(TestCase):
         build_r = (await self.handler.build_get(
             build_inst.uuid))['build-get']
         self.assertTrue(build_r['output'])
+        self.assertTrue(build_r['repository']['name'])
+        self.assertTrue(build_r['builder']['name'])
+        self.assertTrue(build_r['commit'])
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

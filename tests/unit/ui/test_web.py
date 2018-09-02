@@ -377,6 +377,34 @@ class BuildSetRestHandlerTest(TestCase):
             await self.handler.list_for_repo()
 
 
+class BuildHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = web.Build
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.CookieAuthBuildHandler(application,
+                                                  request,
+                                                  model=self.model)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    @async_test
+    async def test_get_build_no_uuid(self):
+        with self.assertRaises(web.HTTPError):
+            await self.handler.get_build()
+
+    @patch.object(web.Build, 'get', AsyncMagicMock(spec=web.Build.get))
+    @async_test
+    async def test_get_build(self):
+        self.handler.query = {'build_uuid': 'some-uuid'}
+        web.Build.get.return_value = web.Build(MagicMock(), {'builder': {}})
+        await self.handler.get_build()
+        self.assertTrue(web.Build.get.called)
+
+
 class WaterfallRestHandlerTest(TestCase):
 
     @async_test
@@ -878,6 +906,16 @@ class DashboardHandlerTest(AsyncTestCase):
 
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
+    def test_get_build_template(self):
+        self.handler._get_build_template('some-uuid')
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        self.assertEqual(called_template, self.handler.build_template)
+        self.assertEqual(called_context, {'build_uuid': 'some-uuid'})
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
     def test_get_slave_template(self):
         self.handler._get_slave_template()
         called = web.render_template.call_args
@@ -973,6 +1011,21 @@ class DashboardHandlerTest(AsyncTestCase):
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 
+    def test_show_build_details(self):
+        self.handler._get_build_template = MagicMock(
+            spec=self.handler._get_build_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_build_details(b'some-uuid')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_build_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
     def test_show_waterfall(self):
         self.handler._get_waterfall_template = MagicMock(
             spec=self.handler._get_waterfall_template)
@@ -1045,6 +1098,15 @@ class DashboardHandlerTest(AsyncTestCase):
         self.assertTrue(self.handler._get_buildset_list_template.called)
         self.assertTrue(self.handler.write.called)
 
+    def test_show_build_template(self):
+        self.handler._get_build_template = MagicMock(
+            spec=self.handler._get_build_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_build_template(b'some-uuid')
+        self.assertTrue(self.handler._get_build_template.called)
+        self.assertTrue(self.handler.write.called)
+
     def test_show_repo_waterfall_template(self):
         self.handler._get_waterfall_template = MagicMock(
             spec=self.handler._get_waterfall_template)
@@ -1058,16 +1120,14 @@ class DashboardHandlerTest(AsyncTestCase):
 class ApplicationTest(unittest.TestCase):
 
     def test_urls(self):
-        expected = ['/api/socks/(.*)$',
-                    '/api/repo/(.*)$',
-                    '/api/slave/(.*)$',
-                    '/api/notification/(.*)$',
-                    '/api/user/(.*)$',
-                    '/api/buildset/(.*)$',
-                    '/api/waterfall/(.*)$']
+        expected = set(['/api/socks/(.*)$',
+                        '/api/repo/(.*)$',
+                        '/api/slave/(.*)$',
+                        '/api/notification/(.*)$',
+                        '/api/user/(.*)$',
+                        '/api/buildset/(.*)$',
+                        '/api/build/(.*)$',
+                        '/api/waterfall/(.*)$'])
 
-        for url in web.api_app.urls:
-            pat = url.regex.pattern
-            self.assertIn(pat, expected)
-
-        self.assertEqual(len(web.api_app.urls), 7)
+        urls = set([url.regex.pattern for url in web.api_app.urls])
+        self.assertEqual(urls, expected)

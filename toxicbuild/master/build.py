@@ -50,7 +50,7 @@ class SerializeMixin:
 
     """Simple mixin to serialization relatad stuff."""
 
-    def to_dict(self, id_as_str=False):
+    def to_dict(self, id_as_str=True):
         """ Transforms a Document into a dictionary.
 
         :param id_as_str: If true, transforms the id field into a string.
@@ -63,7 +63,7 @@ class SerializeMixin:
     async def async_to_json(self):
         """Async version of to_json. Expects a to_dict coroutine."""
 
-        objdict = await self.to_dict(id_as_str=True)
+        objdict = await self.to_dict()
         return json.dumps(objdict)
 
 
@@ -127,12 +127,10 @@ class Builder(SerializeMixin, Document):
 
         return status
 
-    async def to_dict(self, id_as_str=False):
-        """Returns a dictionary for this builder.
+    async def to_dict(self):
+        """Returns a dictionary for this builder."""
 
-        :param id_as_str: If true, the object id will be converted to string"""
-
-        objdict = super().to_dict(id_as_str=id_as_str)
+        objdict = super().to_dict(id_as_str=True)
         objdict['status'] = await self.get_status()
         return objdict
 
@@ -335,6 +333,7 @@ class Build(EmbeddedDocument):
         for step in self.steps:
             output.append(step.command + '\n')
             output.append(step.output or '')
+            output.append('\n\n')
 
         return ''.join(output)
 

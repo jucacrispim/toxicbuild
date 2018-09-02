@@ -80,7 +80,8 @@ var utils = {
 			 'pending': 'pending',
 			 'no config': 'secondary',
 			 'clone-exception': 'exception'};
-    let badge_class = 'badge-' + badge_classes[status];
+    let status_class = badge_classes[status] || status;
+    let badge_class = 'badge-' + status_class;
     return badge_class;
   }
 };
