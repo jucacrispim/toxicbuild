@@ -166,6 +166,7 @@ class BaseRepositoryView extends BaseFormView{
     let commit = last_buildset.commit ? last_buildset.commit.slice(0, 8) : '';
     commit = _.escape(commit);
     let buildset_list_link = '/' + this.model.escape('full_name') + '/';
+    let waterfall_link = '/' + this.model.escape('full_name') + '/' + 'waterfall';
     let branches = this.model.get('branches') || [];
     let escaped_branches = [];
     for (let i in branches){
@@ -205,7 +206,8 @@ class BaseRepositoryView extends BaseFormView{
 	      'details_link': details_link,
 	      'parallel_builds': parallel_builds,
 	      'commit_date': last_buildset.commit_date,
-	      'buildset_list_link': buildset_list_link};
+	      'buildset_list_link': buildset_list_link,
+	      'waterfall_link': waterfall_link};
 
     return kw;
   }
@@ -588,6 +590,7 @@ class RepositoryInfoView extends BaseRepositoryView{
       'short': {
 	'.repository-info-name': 'name',
 	'.repository-info-name-container a@href': 'buildset_list_link',
+	'.repository-info-status-container a@href': 'waterfall_link',
 	'.repo-details-link@href': 'details_link',
 	'.repository-info-status': 'status',
 	'.buildset-commit': 'commit',
