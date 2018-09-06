@@ -142,6 +142,7 @@ class HoleHandler:
     * `slave-remove`
     * `slave-update`
     * `buildset-list`
+    * `buildset-get`
     * `build-get`
     * `builder-show`
     * `list-funcs`
@@ -553,7 +554,7 @@ class HoleHandler:
         :param summary: If true, no builds information will be included.
         """
 
-        buildsets = BuildSet.objects.no_dereference()
+        buildsets = BuildSet.objects
         if repo_name_or_id:
             kw = self._get_kw_for_name_or_id(repo_name_or_id)
             repository = await Repository.get_for_user(
@@ -573,6 +574,21 @@ class HoleHandler:
             buildset_list.append(bdict)
 
         return {'buildset-list': buildset_list}
+
+    async def buildset_get(self, buildset_id):
+        """Returns information about a specific buildset.
+
+        :param buildset_id: The id of the buildset.
+        """
+        buildset = await BuildSet.aggregate_get(id=buildset_id)
+        repo = await buildset.repository
+        has_perms = await repo.check_perms(self.protocol.user)
+        if not has_perms:
+            raise NotEnoughPerms
+
+        bdict = buildset.to_dict()
+        bdict['repository'] = await repo.to_dict()
+        return {'buildset-get': bdict}
 
     def _get_build(self, buildset, build_uuid):
         for build in buildset.builds:  # pragma no branch
@@ -595,6 +611,7 @@ class HoleHandler:
         bdict['commit'] = buildset.commit
         bdict['commit_title'] = buildset.title
         bdict['commit_branch'] = buildset.branch
+        bdict['commit_author'] = buildset.author
         return {'build-get': bdict}
 
     async def builder_list(self, **kwargs):

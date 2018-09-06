@@ -883,6 +883,31 @@ class HoleHandlerTest(TestCase):
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
+    async def test_buildset_get_no_perms(self):
+        await self._create_test_data()
+        buildset = self.buildset
+        user = MagicMock()
+        user.id = 'some-id'
+        user.is_superuser = False
+        self.protocol.user = user
+        with self.assertRaises(hole.NotEnoughPerms):
+            await self.handler.buildset_get(buildset.id)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_buildset_get(self):
+        await self._create_test_data()
+        buildset = self.buildset
+        user = MagicMock()
+        user.id = 'some-id'
+        self.protocol.user = user
+        b = (await self.handler.buildset_get(buildset.id))['buildset-get']
+        self.assertTrue(b['id'])
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
     async def test_builder_list(self):
         await self._create_test_data()
         handler = hole.HoleHandler({}, 'builder-list', MagicMock())
@@ -1007,6 +1032,7 @@ class HoleHandlerTest(TestCase):
                     'slave_remove': handler.slave_remove,
                     'slave_update': handler.slave_update,
                     'buildset_list': handler.buildset_list,
+                    'buildset_get': handler.buildset_get,
                     'builder_list': handler.builder_list,
                     'builder_show': handler.builder_show,
                     'build_get': handler.build_get,

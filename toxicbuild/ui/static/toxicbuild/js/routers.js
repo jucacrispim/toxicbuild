@@ -30,13 +30,14 @@ class DashboardRouter extends Backbone.Router{
 		  ':owner/:name/settings': 'showRepoSettingsPage',
 		  ':owner/:name/waterfall': 'showWaterfallPage',
 		  ':owner/:name/': 'showBuildSetListPage',
-		  'build/:build_uuid': 'showBuildDetaisPage'};
+		  'build/:build_uuid': 'showBuildDetaisPage',
+		  'buildset/:buildset_id': 'showBuildSetDetaisPage'};
 
     options['routes'] = routes;
     super(options);
     this.template_container = jQuery('#main-area-container');
     this.main_template = '/templates/main';
-    this._last_url = null;
+    this._last_urls = new Array();
   }
 
   _getCurrentPath(){
@@ -45,7 +46,7 @@ class DashboardRouter extends Backbone.Router{
 
   navigate(fragment, options){
     if (!options || !options.replace){
-      this._last_url = this._getCurrentPath();
+      this._last_urls.push(this._getCurrentPath());
     }
     let r = super.navigate(fragment, options);
     return r;
@@ -68,7 +69,7 @@ class DashboardRouter extends Backbone.Router{
   }
 
   go2lastURL(){
-    let url = this._last_url || '/';
+    let url = this._last_urls.pop() || '/';
     this.redir(url);
   }
 
@@ -139,6 +140,12 @@ class DashboardRouter extends Backbone.Router{
   async showBuildDetaisPage(build_uuid){
     let page = new BuildDetailsPage({router: this,
 				     build_uuid: build_uuid});
+    await this._showPage(page);
+  }
+
+  async showBuildSetDetaisPage(buildset_id){
+    let page = new BuildSetDetailsPage({router: this,
+					buildset_id: buildset_id});
     await this._showPage(page);
   }
 

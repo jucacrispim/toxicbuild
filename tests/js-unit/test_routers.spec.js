@@ -84,7 +84,7 @@ describe('DashboarRouterTest', function(){
 
   it('test-go2lastURL', function(){
     spyOn(this.router, 'redir');
-    this.router._last_url = '/some/thing';
+    this.router._last_urls = ['/some/thing'];
     this.router.go2lastURL();
     expect(this.router.redir).toHaveBeenCalled();
   });
@@ -97,13 +97,13 @@ describe('DashboarRouterTest', function(){
 
   it('test-navigate-replace', function(){
     this.router.navigate('/bla/ble', {'replace': true});
-    expect(this.router._last_url).toBe(null);
+    expect(this.router._last_urls.length).toEqual(0);
   });
 
   it('test-navigate-dont-replace', function(){
     spyOn(this.router, '_getCurrentPath').and.returnValue('/bla/bli');
     this.router.navigate('/bla/ble');
-    expect(this.router._last_url).not.toBe(null);
+    expect(this.router._last_urls.length).toEqual(1);
   });
 
 });

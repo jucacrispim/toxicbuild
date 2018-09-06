@@ -314,6 +314,18 @@ class BuildSet(BaseModel):
         d['builds'] = [b.to_dict() for b in d.get('builds', [])]
         return d
 
+    @classmethod
+    async def get(cls, requester, buildset_id):
+        """Returns an instance of BuildSet.
+
+        :param buildset_id: The id of the buildset to get.
+        """
+
+        with (await cls.get_client(requester)) as client:
+            buildset = await client.buildset_get(buildset_id=buildset_id)
+
+        return cls(requester, buildset)
+
 
 class Repository(BaseModel):
 

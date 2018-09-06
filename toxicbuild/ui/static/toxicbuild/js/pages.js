@@ -236,7 +236,25 @@ class BaseFloatingPage extends BasePage{
 }
 
 
-class BuildDetailsPage extends BaseFloatingPage{
+class BaseOneSideFloatingPage extends BaseFloatingPage{
+
+  _getContainerInner(){
+    this._container = $('.details-main-container');
+    this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
+      '.advanced-help-container').not('.nav-container');
+  }
+
+  _animateOpen(){
+    let self = this;
+
+    this._container.animate({'margin': '-10px', 'min-height': '89vh'}, 400,
+			    function(){self._inner.fadeIn(100);});
+  }
+
+}
+
+
+class BuildDetailsPage extends BaseOneSideFloatingPage{
 
   constructor(options){
     super(options);
@@ -245,10 +263,23 @@ class BuildDetailsPage extends BaseFloatingPage{
     this.view = new BuildDetailsView({build_uuid: this.build_uuid});
   }
 
-  _getContainerInner(){
-    this._container = $('.details-main-container');
-    this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
-      '.advanced-help-container').not('.nav-container');
+  async render(){
+
+    this._prepareOpenAnimation();
+    await this.view.render();
+    this._listen2events();
+    $('.wait-toxic-spinner').hide();
+    this._animateOpen();
+  }
+}
+
+class BuildSetDetailsPage extends BaseOneSideFloatingPage{
+
+  constructor(options){
+    super(options);
+    this.buildset_id = options ? options.buildset_id : '';
+    this.template_url = '/templates/buildset/' + this.buildset_id;
+    this.view = new BuildSetDetailsView({buildset_id: this.buildset_id});
   }
 
   async render(){
@@ -260,13 +291,15 @@ class BuildDetailsPage extends BaseFloatingPage{
     this._animateOpen();
   }
 
-  _animateOpen(){
-    let self = this;
-
-    this._container.animate({'margin': '-10px', 'min-height': '89vh'}, 400,
-			    function(){self._inner.fadeIn(100);});
+  close_page(){
+    let url = this.router._last_urls.pop();
+    while (url && (url.indexOf('/build/') == 0
+		   || url.indexOf('/buildset/') == 0)){
+      url = this.router._last_urls.pop();
+    }
+    this.router._last_urls.push(url);
+    super.close_page();
   }
-
 }
 
 class BaseRepositoryPage extends BaseFloatingPage{

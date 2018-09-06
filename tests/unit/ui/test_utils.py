@@ -106,13 +106,15 @@ class BuildsetUtilsTest(TestCase):
         self.buildset = BuildSet(revision=self.revision,
                                  repository=self.repository,
                                  branch='master', commit='asdf',
-                                 commit_date=datetime.now())
+                                 commit_date=datetime.now(),
+                                 number=1)
         self.slave = Slave(name='someslave', host='localhost', port=1234,
                            token='adfs', owner=self.user)
         await self.slave.save()
         self.build = Build(repository=self.repository,
                            branch='master', named_tree='asdf',
-                           slave=self.slave, builder=self.builder)
+                           slave=self.slave, builder=self.builder,
+                           number=1)
         self.buildset.builds.append(self.build)
         await self.buildset.save()
 

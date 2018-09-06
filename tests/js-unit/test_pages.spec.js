@@ -313,3 +313,23 @@ describe('SlaveAddPageTest', function(){
   });
 
 });
+
+describe('BuildSetDetailsPageTest', function(){
+  beforeEach(function(){
+    let router = new DashboardRouter();
+    this.page = new BuildSetDetailsPage({router: router});
+  });
+
+  it('test-close_page-no-url', function(){
+    this.page.close_page();
+    expect(this.page.router._last_urls.pop()).toBe('/');
+  });
+
+  it('test-close_page-with-url', function(){
+    spyOn(BaseFloatingPage.prototype, 'close_page');
+    this.page.router._last_urls = ['/my/repo', '/build/some-build'];
+    this.page.close_page();
+    expect(this.page.router._last_urls.pop()).toBe('/my/repo');
+  });
+
+});

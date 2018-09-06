@@ -14,8 +14,10 @@
       <tr>
 	<div class="">
 	  <th scope="col" class="waterfall-first-col waterfall-buildset-info-container">
-	    <strong><span class="commit-title" data-toggle="tooltip"
-			  title="commit title"></span></strong><br/>
+	    <a class="buildset-details-link">
+	      <strong><span class="commit-title" data-toggle="tooltip"
+			    title="commit title"></span></strong>
+	    </a><br/>
 	    <span class="buildset-branch" data-toggle="tooltip"
 		  title="branch"></span><br/>
 	    <span class="far fa-clock" data-toggle="tooltip"
@@ -31,7 +33,8 @@
 	    <ul class="build-info-list waterfall-build-info-container box-white box-shadow">
 	      <!-- the build row info-->
 	      <li class="build-info-row">
-		Build - <span class="build-info-status"></span>
+		Build #<b><span class="build-info-number"></span></b> -
+		<span class="build-info-status"></span>
 
 		<a href="" class="build-details-link">
 		  <span class="fas fa-info" data-toggle="tooltip"

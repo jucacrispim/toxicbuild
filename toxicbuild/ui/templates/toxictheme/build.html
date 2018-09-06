@@ -30,19 +30,16 @@
 <div class="template">
 
   <div id="build-details">
-    <div class="inner-container">
-      <span class="repo-name"></span> - <span class="builder-name"></span>
+    <div class="repo-name-container col-sm-10">
+      <span class="repo-name"></span> - <span class="build-label">Build</span>
+      <b>#<span class="build-number"></span></b>
       <span class="build-status badge" data-toggle="tooltip">
       </span>
-      <br/>
-
-      <div class="build-commit-row">
-	<span class="commit-title" data-toggle="tooltip"
-	      title="commit title"></span>
-	<b><span class="commit-branch" data-toggle="tooltip"
-		 title="commit branch"></span></b>
+    </div>
+    <div class="inner-container-left col-sm-6">
+      <div class="build-builder-row">
+	<span>Builder:</span> <b><span class="builder-name"></span></b>
       </div>
-
       <span class="far fa-calendar-check" data-toggle="tooltip"
 	    title="started at"></span>
       <span class="build-started" data-toggle="tooltip"
@@ -53,10 +50,20 @@
       <span class="build-total-time" data-toggle="tooltip"
 	    title="duration"></span><br/>
     </div>
+    <div class="inner-container-right col-sm-5">
+      <div class="build-commit-row">
+	<span>Author: </span><b><span class="commit-author"></span></b><br/>
+	<span>Title: </span><b><span class="commit-title"></span></b><br/>
+	<span>Branch: </span><b><span class="commit-branch"></b></span>
+      </div>
 
-    <span class="fas fa-arrow-circle-down follow-output"></span>
-    <pre class="build-output">
-    </pre>
+    </div>
+
+    <div class="col-sm-12 build-output-container">
+      <span class="fas fa-arrow-circle-down follow-output"></span>
+      <pre class="build-output">
+      </pre>
+    </div>
 
 
     <!-- buttons container -->
@@ -70,7 +77,7 @@
       </div>
 
     </div>
-      <!-- end buttons container -->
+    <!-- end buttons container -->
 
   </div>
 

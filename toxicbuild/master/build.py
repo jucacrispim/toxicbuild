@@ -268,6 +268,18 @@ class Build(EmbeddedDocument):
     """Indicates the branch from which the builders for this build came from.
     This may not be the same as the build branch."""
 
+    number = IntField(required=True, default=0)
+    """A sequencial number for builds in the repository"""
+
+    def _get_builder_dict(self):
+        builder = self._data.get('builder')
+        d = {'id': str(builder.id)}
+        builder_name = getattr(builder, 'name', None)
+        if builder_name:
+            d['name'] = builder_name
+
+        return d
+
     def to_dict(self, output=True, steps_output=None):
         """Transforms the object into a dictionary.
 
@@ -277,11 +289,12 @@ class Build(EmbeddedDocument):
         """
 
         objdict = {'uuid': str(self.uuid), 'named_tree': self.named_tree,
-                   'branch': self.branch, 'status': self.status}
+                   'branch': self.branch, 'status': self.status,
+                   'number': self.number}
 
         steps_output = output if steps_output is None else steps_output
         steps = [s.to_dict(output=steps_output) for s in self.steps]
-        objdict['builder'] = {'id': str(self._data.get('builder').id)}
+        objdict['builder'] = self._get_builder_dict()
         objdict['steps'] = steps
         objdict['started'] = datetime2string(
             self.started) if self.started else ''
@@ -443,6 +456,9 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
     :attr:`~toxicbuild.master.build.BuildSet.STATUSES`.
     """
 
+    number = IntField(required=True)
+    """A sequencial number for the buildsets in the repository"""
+
     meta = {
         'indexes': [
             'repository'
@@ -472,6 +488,16 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         await build_notifications.publish(msg)
 
     @classmethod
+    async def _get_next_number(cls, repository):
+        buildset = cls.objects.filter(repository=repository).order_by('number')
+        buildset = await buildset.first()
+        if buildset:
+            n = buildset.number + 1
+        else:
+            n = 1
+        return n
+
+    @classmethod
     async def create(cls, repository, revision):
         """Creates a new buildset.
 
@@ -479,12 +505,12 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         :param revision: An instance of `toxicbuild.master.RepositoryRevision`.
         :param save: Indicates if the instance should be saved to database.
         """
-
+        number = await cls._get_next_number(repository)
         buildset = cls(repository=repository, revision=revision,
                        commit=revision.commit,
                        commit_date=revision.commit_date,
                        branch=revision.branch, author=revision.author,
-                       title=revision.title)
+                       title=revision.title, number=number)
         await buildset.save()
         ensure_future(buildset.notify('buildset-added'))
         return buildset
@@ -498,7 +524,7 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         objdict = {'id': str(self.id), 'commit': self.commit,
                    'branch': self.branch, 'author': self.author,
                    'title': self.title, 'repository': {'id': repo_id},
-                   'status': self.status}
+                   'status': self.status, 'number': self.number}
         objdict['commit_date'] = datetime2string(self.commit_date)
         objdict['created'] = datetime2string(self.created)
         objdict['started'] = datetime2string(self.started) if self.started \
@@ -550,6 +576,66 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         """Returns the pending builds of the buildset."""
 
         return [b for b in self.builds if b.status == Build.PENDING]
+
+    @classmethod
+    def _from_aggregate(cls, doc):
+        doc['id'] = doc['_id']
+        del doc['_id']
+        for build in doc['builds']:
+            builder_doc = build['builder']
+            builder_doc['id'] = builder_doc['_id']
+            del builder_doc['_id']
+            builder = Builder(**builder_doc)
+            build['builder'] = builder
+        buildset = cls(**doc)
+        return buildset
+
+    @classmethod
+    async def aggregate_get(cls, **kwargs):
+        """Returns information about a buildset Uses the aggregation
+        framework to $lookup on builds' builder name and on repository.
+        I does not returns steps information, only buildset and builds
+        information.
+
+        :param kwargs: Named arguments to match the buildset.
+        """
+
+        pipeline = [
+            {'$unwind': '$builds'},
+            {'$lookup': {'from': 'builder',
+                         'localField': 'builds.builder',
+                         'foreignField': '_id',
+                         'as': 'builder_doc'}},
+
+            {'$project':
+             {'build': {"uuid": "$builds.uuid",
+                        "status": "$builds.status",
+                        "builder": {'$arrayElemAt': ["$builder_doc", 0]}},
+              'doc': "$$ROOT"}},
+
+            {'$group': {'_id': '$_id', 'builds': {'$push': "$build"},
+                        'doc': {'$first': '$doc'}}},
+
+            {"$project":
+             {"builds": "$builds",
+              "status": "$doc.status",
+              'repository': '$doc.repository',
+              'commit_date': '$doc.commit_date',
+              'started': '$doc.started',
+              'finished': '$doc.finished',
+              'total_time': '$doc.total_time',
+              "branch": "$doc.branch",
+              "title": "$doc.title",
+              "body": "$doc.body",
+              "number": "$doc.number",
+              'commit': '$doc.commit',
+              'author': '$doc.author'}},
+
+        ]
+        buildset_doc = (await cls.objects(**kwargs).aggregate(
+            *pipeline).to_list(1))[0]
+        buildset = cls._from_aggregate(buildset_doc)
+        return buildset
 
     async def get_builds_for(self, builder=None, branch=None):
         """Returns the builds for a specific builder and/or branch.
@@ -643,6 +729,17 @@ class BuildManager(LoggerMixin):
         if last_bs and self.repository.notify_only_latest(buildset.branch):
             await self.cancel_previous_pending(buildset)
 
+    async def _get_highest_build_number(self):
+        buildset = await BuildSet.objects(
+            repository=self.repository, builds__number__gt=0).order_by(
+                'builds__number').first()
+        if not buildset:
+            highest = 0
+        else:
+            highest = max([b.number for b in buildset.builds]) \
+                if buildset.builds else 0
+        return highest
+
     async def add_builds_for_slave(self, buildset, slave, conf, builders=None,
                                    builders_origin=None):
         """Adds builds for a given slave on a given buildset.
@@ -660,17 +757,20 @@ class BuildManager(LoggerMixin):
                                                                 revision,
                                                                 conf)
 
+        last_build = await self._get_highest_build_number()
         for builder in builders:
+            last_build += 1
             build = Build(repository=self.repository, branch=revision.branch,
                           named_tree=revision.commit, slave=slave,
-                          builder=builder, builders_from=builders_origin)
+                          builder=builder, builders_from=builders_origin,
+                          number=last_build)
 
             buildset.builds.append(build)
             await buildset.save()
             build_added.send(str(self.repository.id), build=build)
 
-            self.log('build added for named_tree {} on branch {}'.format(
-                revision.commit, revision.branch), level='debug')
+            self.log('build {} added for named_tree {} on branch {}'.format(
+                last_build, revision.commit, revision.branch), level='debug')
 
         self.build_queues[slave.name].append(buildset)
         if not self.is_building[slave.name]:  # pragma: no branch

@@ -78,6 +78,7 @@ describe('WaterfallBuildViewTest', function(){
   beforeEach(function(){
     affix('.template .waterfall-build-info-container');
     let template = $('.waterfall-build-info-container');
+    template.affix('.build-info-number');
     template.affix('.build-info-status');
     template.affix('.build-info-row');
     template.affix('.build-details-link');

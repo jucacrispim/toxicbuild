@@ -100,6 +100,8 @@ class BuildDetailsView extends Backbone.View{
 		      '.build-started': 'started',
 		      '.builder-name': 'builder_name',
 		      '.repo-name': 'repo_name',
+		      '.build-number': 'build_number',
+		      '.commit-author': 'commit_author',
 		      '.commit-title': 'commit_title',
 		      '.commit-branch': 'commit_branch',
 		      '.build-total-time': 'total_time'};
@@ -122,10 +124,14 @@ class BuildDetailsView extends Backbone.View{
     let builder_name = _.escape(this.model.get('builder').name);
     let commit_title = this.model.escape('commit_title');
     let commit_branch = this.model.escape('commit_branch');
+    let build_number = this.model.get('number');
+    let commit_author = this.model.escape('commit_author');
     return {command: command, status: status, output: output,
 	    started: started, total_time: total_time,
+	    build_number: build_number,
 	    repo_name: repo_name, builder_name: builder_name,
-	    commit_title: commit_title, commit_branch: commit_branch};
+	    commit_title: commit_title, commit_branch: commit_branch,
+	    commit_author: commit_author};
   }
 
   _scrollToBottom(){
@@ -161,7 +167,101 @@ class BuildDetailsView extends Backbone.View{
 
 }
 
-class BuildSetInfoView extends Backbone.View{
+class BaseBuildSetView extends Backbone.View{
+
+ _get_kw(){
+   let title = this.model.escape('title');
+   let body = this.model.escape('body') || '<no body>';
+   let status = this.model.get('status');
+   let commit = this.model.get('commit').substr(0, 16);
+   let date = this.model.get('commit_date');
+   let branch = this.model.get('branch');
+   let started = this.model.get('started');
+   let finished = this.model.get('finished');
+   let total_time = this.model.get('total_time');
+   let buildset_details_link = '/buildset/' + this.model.get('id');
+   let repo = this.model.get('repository');
+   let repo_name = _.escape(repo.name);
+   let number = this.model.get('number');
+   let builds = this.model.get('builds');
+   let author = this.model.escape('author');
+
+   let escaped_builds = new Array();
+
+   for (let i in builds){
+     let build = builds[i];
+     let escaped_build = {id: build.uuid,
+			  name: _.escape(build.name),
+			  status_class: ' build-' + build.status,
+			  status: build.status,
+			  details_link: '/build/' + build.uuid,
+			  builder: {id: build.builder.id,
+				    name: _.escape(build.builder.name)}};
+     escaped_builds.push(escaped_build);
+   }
+
+   return {title: title, body: body, status: status, commit: commit,
+	   date: date, started: started, finished: finished,
+	   branch: branch, total_time: total_time,
+	   repo_name: repo_name, number: number,
+	   buildset_details_link: buildset_details_link,
+	   builds: escaped_builds, author: author};
+ }
+}
+
+
+class BuildSetDetailsView extends BaseBuildSetView{
+
+  constructor(options){
+    options = options || {'tagName': 'div'};
+    options.model = options.model || new BuildSet();
+    super(options);
+    this.buildset_id = options.buildset_id;
+    this.directive = {
+      '.repo-name': 'repo_name',
+      '.buildset-number': 'number',
+      '.builder-build-li': {
+	'build<-builds': {'.builder-name': 'build.builder.name',
+			  '.build-status': 'build.status',
+			  '@class+': 'build.status_class',
+			  '.build-details-link@href': 'build.details_link',
+			 }
+      },
+      '.commit-title': 'title',
+      '.commit-branch': 'branch',
+      '.commit-author': 'author',
+      '.buildset-status': 'status',
+      '.buildset-commit': 'commit',
+      '.buildset-commit-date': 'date',
+      '.buildset-started': 'started',
+      '.buildset-total-time': 'total_time',
+      '.buildset-commit-body': 'body',
+    };
+
+    this.template_selector = '.template #buildset-details';
+    this.container_selector = '#buildset-details-container';
+  }
+
+  async render(){
+    await this.model.fetch({buildset_id: this.buildset_id});
+
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+
+    $('.wait-toxic-spinner').hide();
+
+    let kw = this._get_kw();
+    let compiled = $(this.compiled_template(kw));
+    let badge_class = utils.get_badge_class(kw.status);
+    $('.buildset-status', compiled).addClass(badge_class);
+    $('.obj-details-buttons-container', compiled).show();
+    this.container = $(this.container_selector);
+    this.container.html(compiled);
+  }
+
+}
+
+class BuildSetInfoView extends BaseBuildSetView{
 
   constructor(options){
     options = options || {'tagName': 'div'};
@@ -175,28 +275,14 @@ class BuildSetInfoView extends Backbone.View{
       '.buildset-commit': 'commit',
       '.buildset-commit-date': 'date',
       '.buildset-started': 'started',
-      '.buildset-total-time': 'total_time'
+      '.buildset-total-time': 'total_time',
+      '.buildset-title-container a@href': 'buildset_details_link',
     };
 
     this.template_selector = '.template .buildset-info';
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
   }
-
- _get_kw(){
-   let title = this.model.escape('title');
-   let body = this.model.escape('body');
-   let status = this.model.get('status');
-   let commit = this.model.get('commit');
-   let date = this.model.get('commit_date');
-   let branch = this.model.get('branch');
-   let started = this.model.get('started');
-   let finished = this.model.get('finished');
-   let total_time = this.model.get('total_time');
-   return {title: title, body: body, status: status, commit: commit,
-	   date: date, started: started, finished: finished,
-	   branch: branch, total_time: total_time};
- }
 
   getRendered(){
     let kw = this._get_kw();

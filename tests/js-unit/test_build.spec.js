@@ -42,6 +42,8 @@ describe('BuildDetailsViewTest', function(){
     affix('.template #build-details');
     let container = $('#build-details');
     container.affix('.build-command');
+    container.affix('.build-number');
+    container.affix('.commit-author');
     container.affix('.build-status');
     container.affix('.build-output');
     container.affix('.build-started');
@@ -75,6 +77,7 @@ describe('BuildsetInfoViewTest', function(){
     container.affix('.buildset-commit-date');
     container.affix('.buildset-started');
     container.affix('.buildset-total-time');
+    container.affix('.buildset-title-container a');
     this.view = new BuildSetInfoView();
   });
 
@@ -109,7 +112,7 @@ describe('BuildSetListViewTest', function(){
     container.affix('.buildset-commit-date');
     container.affix('.buildset-started');
     container.affix('.buildset-total-time');
-
+    container.affix('.buildset-title-container a');
     this.view = new BuildSetListView('some/repo');
   });
 

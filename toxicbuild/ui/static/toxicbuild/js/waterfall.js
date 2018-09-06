@@ -111,7 +111,8 @@ class WaterfallBuildView extends BaseWaterfallView{
     super(options);
     this.build = options.build;
     this.directive = {'.build-info-status': 'status',
-		      '.build-details-link @href': 'build_details_link'};
+		      '.build-details-link @href': 'build_details_link',
+		      '.build-info-number': 'number'};
     this.template_selector = '.template .waterfall-build-info-container';
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
@@ -119,8 +120,10 @@ class WaterfallBuildView extends BaseWaterfallView{
 
   _get_kw(){
     let status = this.build.escape('status');
+    let number = this.build.get('number');
     let build_details_link = '/build/' + this.build.get('uuid');
-    return {status: status, build_details_link: build_details_link};
+    return {status: status, build_details_link: build_details_link,
+	    number: number};
   }
 
   getRendered(){
@@ -149,6 +152,7 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     this.buildset = options.buildset;
     this.directive = {'.buildset-branch': 'branch',
 		      '.commit-title': 'title',
+		      '.buildset-details-link @href': '/buildset/#{id}',
 		      '.buildset-total-time': 'total_time'};
     this.template_selector = '.template .waterfall-buildset-info-container';
     this.compiled_template = $p(this.template_selector).compile(
@@ -156,12 +160,13 @@ class WaterfallBuildSetView extends BaseWaterfallView{
   }
 
   _get_kw(){
+    let id = this.buildset.get('id');
     let commit = this.buildset.escape('commit').slice(0, 8);
     let branch = this.buildset.escape('branch');
     let title = this.buildset.escape('title');
     let total_time = this.buildset.escape('total_time');
     return {commit: commit, branch: branch, title: title,
-	    total_time: total_time};
+	    total_time: total_time, id: id};
   }
 
   _getBuilderBuids(builds){

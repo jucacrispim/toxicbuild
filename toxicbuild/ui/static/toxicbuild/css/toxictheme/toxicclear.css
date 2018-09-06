@@ -387,6 +387,7 @@ body{
 }
 
 
+.buildset-builds-container ul,
 #obj-list-container ul,
 #slave-list-container ul,
 #repo-list-container ul{
@@ -936,6 +937,11 @@ body{
     background-color: #e0dcdc;
 }
 
+#waterfall-container a.buildset-details-link,
+#waterfall-container a.buildset-details-link:hover{
+    color: var(--black-almost-there);
+}
+
 .step-exception,
 .build-exception,
 .builder-exception{
@@ -1043,6 +1049,7 @@ body{
     border-radius: 3px;
 }
 
+.build-info-row .fa-info,
 .waterfall-build-info-container .fa-info{
     float: right;
     margin-left: 15px;
@@ -1071,14 +1078,23 @@ body{
     white-space: pre-wrap;
 }
 
+.build-builder-row,
 #build-details span{
     font-size: 0.9em;
 }
 
+.build-builder-row{
+    margin-bottom: 10px;
+}
+
 #build-details .repo-name,
 #build-details .builder-name{
-    font-size: 1em;
+    padding-left: 0;
     margin-left: 0;
+}
+
+#build-details .repo-name{
+    font-size: 1.0em;
 }
 
 #build-details .repo-name{
@@ -1087,7 +1103,7 @@ body{
 
 
 #build-details .commit-branch{
-    margin-left: 20px;
+    /* margin-left: 20px; */
 }
 
 #build-details .fa-arrow-circle-down{
@@ -1097,8 +1113,69 @@ body{
     margin-top: 20px;
     font-size: 1.4em;
     cursor: pointer;
+    opacity: 0.5;
 }
 
-#build-details .build-commit-row{
-    margin-bottom: 8px;
+#build-details .fa-arrow-circle-down:hover{
+    opacity: 1;
+}
+
+#build-details .build-output-container,
+#build-details .inner-container-right,
+#build-details .inner-container-left{
+    float: left;
+}
+
+#build-details .repo-name-container{
+    float: left;
+}
+
+#buildset-details .buildset-label,
+#build-details .build-label{
+    margin-left: 10px;
+}
+
+#buildset-details .repo-name{
+    margin-right: 10px;
+}
+
+#buildset-details .badge,
+#build-details .badge{
+    margin-left: 20px;
+}
+
+.buildset-details-header{
+    margin-bottom: 20px;
+}
+
+#buildset-details .builder-name{
+    margin: 0px;
+}
+
+#buildset-details .build-info-row{
+    margin-bottom: 10px;
+}
+
+#buildset-details .build-status{
+    padding: 10px;
+}
+
+#buildset-details .col-sm-4{
+    float: left;
+}
+
+#buildset-details .buildset-builds-container{
+    padding-left: 0;
+}
+
+#buildset-container .buildset-info-container{
+    font-size: 0.9em;
+}
+
+#buildset-container .buttons-container{
+    margin-top: 20px;
+}
+
+#buildset-container .cancel-btn-container{
+    float: right;
 }

@@ -461,6 +461,19 @@ class BuildSetTest(TestCase):
         self.assertTrue(b_dict['id'])
         self.assertTrue(b_dict['builds'][0]['steps'])
 
+    @patch.object(models.BuildSet, 'get_client', lambda requester:
+                  get_client_mock(
+                      requester,
+                      {'id': 'sasdfasf',
+                       'started': '3 9 25 08:53:38 2017 -0000',
+                       'builds': [{'steps': [{'name': 'unit'}],
+                                   'builder': {'name': 'some'}}]}))
+    @async_test
+    async def test_get(self):
+        requester = MagicMock()
+        buildset = await models.BuildSet.get(requester, 'some-id')
+        self.assertTrue(buildset.id)
+
 
 class BuilderTest(TestCase):
 

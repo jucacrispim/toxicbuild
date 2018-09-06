@@ -300,18 +300,30 @@ class ReadOnlyRestHandler(ModelRestHandler):
 
 class BuildSetHandler(ReadOnlyRestHandler):
 
-    @get('')
-    async def list_for_repo(self):
-        try:
-            repo_name = self.query['repo_name']
-        except KeyError:
-            raise HTTPError(400)
-
+    async def _list(self, repo_name):
         summary = self.query.get('summary', False)
         r = await self.model.list(
             self.user, repo_name_or_id=repo_name, summary=summary)
         items = [i.to_dict() for i in r]
         return {'items': items}
+
+    async def _get(self, buildset_id):
+        buildset = await self.model.get(self.user, buildset_id)
+        return buildset.to_dict()
+
+    @get('')
+    async def list_or_get(self):
+        repo_name = self.query.get('repo_name')
+        buildset_id = self.query.get('buildset_id')
+
+        if repo_name:
+            r = await self._list(repo_name)
+        elif buildset_id:
+            r = await self._get(buildset_id)
+        else:
+            raise HTTPError(400)
+
+        return r
 
 
 class CookieAuthBuildSetHandler(CookieAuthHandlerMixin, BuildSetHandler):
@@ -611,6 +623,7 @@ class DashboardHandler(LoggedTemplateHandler):
     buildset_list_template = 'toxictheme/buildset_list.html'
     waterfall_template = 'toxictheme/waterfall.html'
     build_template = 'toxictheme/build.html'
+    buildset_template = 'toxictheme/buildset.html'
 
     def _get_main_template(self):
         rendered = render_template(self.main_template,
@@ -666,6 +679,11 @@ class DashboardHandler(LoggedTemplateHandler):
                                    {'build_uuid': build_uuid})
         return rendered
 
+    def _get_buildset_template(self, buildset_id):
+        rendered = render_template(self.buildset_template, self.request,
+                                   {'buildset_id': buildset_id})
+        return rendered
+
     @get('')
     def show_main(self):
         content = self._get_main_template()
@@ -688,6 +706,13 @@ class DashboardHandler(LoggedTemplateHandler):
     def show_repo_buildset_list(self, full_name):
         full_name = full_name.decode()
         content = self._get_buildset_list_template(full_name)
+        context = {'content': content}
+        self.render_template(self.skeleton_template, context)
+
+    @get('buildset/([\d\w\-]+)')
+    def show_buildset_details(self, buildset_id):
+        buildset_id = buildset_id.decode()
+        content = self._get_buildset_template(buildset_id)
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
@@ -761,6 +786,12 @@ class DashboardHandler(LoggedTemplateHandler):
     def show_build_template(self, build_uuid):
         build_uuid = build_uuid.decode()
         content = self._get_build_template(build_uuid)
+        self.write(content)
+
+    @get('templates/buildset/([\d\w\-]+)')
+    def show_buildset_template(self, buildset_id):
+        buildset_id = buildset_id.decode()
+        content = self._get_buildset_template(buildset_id)
         self.write(content)
 
     @get('templates/waterfall/{}'.format(FULL_NAME_REGEX))

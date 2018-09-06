@@ -130,9 +130,10 @@
     showRepos();
   };
 
-  function showRepos(){
+  async function showRepos(){
     var repo_list = new RepositoryListView('short');
-    repo_list.render_enabled();
+    await repo_list.render_enabled();
+    router.setUpLinks();
   };
 
   window.onload = function(){init()};
