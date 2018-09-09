@@ -57,9 +57,22 @@ class BaseModel extends Backbone.Model{
     return _getHeaders();
   }
 
+  async _request2api(method, url, body){
+    let headers = this._getHeaders();
+    let resp = await $.ajax(
+      {'url': url, 'data': JSON.stringify(body), 'type': method,
+       'contentType': "application/json", 'headers': headers});
+
+    return resp;
+  }
+
+  async _post2api(url, body){
+    let r = await this._request2api('post', url, body);
+    return r;
+  }
+
   sync(method, model, options){
     let url = _get_url(method, this, false);
-    // options.attrs = _.extend(this._changes, options.attrs);
     options.url = url;
     let headers = this._getHeaders();
     options.headers = headers;
@@ -105,7 +118,8 @@ class BaseModel extends Backbone.Model{
 class BaseCollection extends Backbone.Collection{
 
   parse(data){
-    return data.items;
+    data = data.items;
+    return data;
   }
 
   sync(method, model, options){

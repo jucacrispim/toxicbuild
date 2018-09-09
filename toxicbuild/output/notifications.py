@@ -154,10 +154,12 @@ class Notification(LoggerMixin, Plugin, Document, metaclass=MetaNotification):
         try:
             fdict = {'pretty_name': field.pretty_name,
                      'name': field.name,
+                     'required': field.required,
                      'type': _TRANSLATE_TABLE[type(field)]}
         except (KeyError, AttributeError):
             fdict = {'pretty_name': '',
                      'name': field.name,
+                     'required': field.required,
                      'type': _TRANSLATE_TABLE[type(field)]}
 
         return fdict
@@ -197,6 +199,9 @@ class Notification(LoggerMixin, Plugin, Document, metaclass=MetaNotification):
         fields['pretty_name'] = cls.pretty_name
         fields['description'] = cls.description
         fields['events'] = cls.events
+        fields.move_to_end('branches')
+        fields.move_to_end('statuses')
+        del fields['id']
         del fields['_name']
         del fields['_pretty_name']
         del fields['_description']

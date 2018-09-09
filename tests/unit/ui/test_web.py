@@ -628,17 +628,19 @@ class NotificationRestHandlerTest(TestCase):
         self.assertTrue(web.Notification.update.called)
 
     @patch.object(web.Notification, 'list', AsyncMagicMock(
-        spec=web.Notification.list))
+        spec=web.Notification.list, return_value=[]))
     @async_test
     async def test_list_no_repo_id(self):
+        self.handler.query = {}
         await self.handler.list()
         self.assertTrue(web.Notification.list.called)
 
     @patch.object(web.Notification, 'list', AsyncMagicMock(
-        spec=web.Notification.list))
+        spec=web.Notification.list, return_value=[]))
     @async_test
     async def test_list(self):
-        await self.handler.list(b'some-repo-id')
+        self.handler.query = {'repo_id': 'some-id'}
+        await self.handler.list()
         self.assertTrue(web.Notification.list.called)
 
 
@@ -935,6 +937,17 @@ class DashboardHandlerTest(AsyncTestCase):
 
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
+    def test_get_notifications_template(self):
+        self.handler._get_notifications_template('my/repo', 'repo-id')
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        self.assertEqual(called_template, self.handler.notifications_template)
+        self.assertEqual(called_context, {'repo_full_name': 'my/repo',
+                                          'repo_id': 'repo-id'})
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
     def test_get_slave_template(self):
         self.handler._get_slave_template()
         called = web.render_template.call_args
@@ -1012,6 +1025,24 @@ class DashboardHandlerTest(AsyncTestCase):
         called_template = self.handler.render_template.call_args[0][0]
         called_context = self.handler.render_template.call_args[0][1]
         self.assertTrue(self.handler._get_repository_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get, return_value=MagicMock()))
+    @async_test
+    async def test_show_repository_notifications(self):
+        self.handler._get_notifications_template = MagicMock(
+            spec=self.handler._get_notifications_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        await self.handler.show_repository_notifications(b'some/repo')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_notifications_template.called)
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 
@@ -1112,6 +1143,18 @@ class DashboardHandlerTest(AsyncTestCase):
 
         self.handler.show_repository_details_template(b'full/name')
         self.assertTrue(self.handler._get_repository_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get, return_value=MagicMock()))
+    @async_test
+    async def test_show_repository_notifications_template(self):
+        self.handler._get_notifications_template = MagicMock(
+            spec=self.handler._get_notifications_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        await self.handler.show_repository_notifications_template(b'full/name')
+        self.assertTrue(self.handler._get_notifications_template.called)
         self.assertTrue(self.handler.write.called)
 
     def test_show_slave_details_template(self):

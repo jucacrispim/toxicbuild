@@ -528,6 +528,7 @@ body{
     color: #adababcc;
 }
 
+.fa-wrench:hover,
 .top-page-header-info-container .fa-wrench:hover,
 .top-page-repositories-info-container .fa-wrench:hover{
     color: var(--black-almost-there);
@@ -627,7 +628,7 @@ body{
 }
 
 .nav-pills{
-    margin-bottom: 10px;
+    /* margin-bottom: 10px; */
 }
 
 .nav-pills .nav-link, .nav-pills .show>.nav-link{
@@ -832,7 +833,7 @@ body{
 .repo-locations-link-container{
     padding: 10px;
     margin-left: 15px;
-    margin-bottom: 10px;
+    /* margin-bottom: 10px; */
     font-size: 1.2em;
 }
 
@@ -1177,5 +1178,41 @@ body{
 }
 
 #buildset-container .cancel-btn-container{
+    float: right;
+}
+
+.notification-item{
+    list-style: none;
+    float: left;
+    min-width: 48%;
+    margin-right: 10px;
+}
+
+#repo-notifications-container ul{
+    padding-left: 0;
+}
+
+.notification-item:nth-child(2n) + li{
+    clear: both;
+}
+
+#notificationModal img,
+.notification-item img{
+    width: 25px;
+    height: 25px;
+}
+
+
+#notification-config-advanced{
+    display: none;
+    margin-top: 10px;
+}
+
+#notificationModal input{
+    margin-bottom: 10px;
+}
+
+.notification-item .fa-check{
+    color: var(--success);
     float: right;
 }

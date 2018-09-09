@@ -416,6 +416,35 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
 
 }
 
+class RepositoryNotificationsPage extends BaseFloatingPage{
+
+  constructor(options){
+    super(options);
+    this.repo_name = options.repo_name;
+    this.nav_pills = null;
+    this.template_url = '/templates/repo-notifications/' + this.repo_name;
+  }
+
+  _getContainerInner(){
+    this._container = $('.details-main-container');
+    this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
+      '.advanced-help-container').not('.add-repo-message-container');
+  }
+
+
+  async render(){
+    let repo_id = $('#repo-id').val();
+    this.view = new NotificationListView(repo_id);
+    this.nav_pills = $('.nav-container');
+    this.right_sidebar = $('.settings-right-side');
+    this._prepareOpenAnimation();
+    await this.view.render_all();
+    $('.wait-toxic-spinner').hide();
+    this._listen2events();
+    this._animateOpen();
+  }
+}
+
 class BaseSlaveDetailsPage extends BaseFloatingPage{
 
   constructor(router, name){

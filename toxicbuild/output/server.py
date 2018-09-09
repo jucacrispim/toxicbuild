@@ -140,6 +140,14 @@ class NotificationWebHandler(LoggerMixin, BasePyroAuthHandler):
                 **self.body)
         return {notification_name: 'updated'}
 
+    def _parse_value(self, value):
+        if isinstance(value, list):
+            value = [str(v) for v in value]
+        else:
+            value = str(value)
+
+        return value
+
     def _merge_notif_values(self, schemas, notifs):
         notifs_tb = {n.name: n for n in notifs}
         for schema in schemas:
@@ -151,9 +159,11 @@ class NotificationWebHandler(LoggerMixin, BasePyroAuthHandler):
             for fname, fconfig in schema.items():
                 try:
                     attr = getattr(notif, fname)
-                    fconfig['value'] = str(attr) if attr else attr
+                    fconfig['value'] = self._parse_value(attr)
                 except TypeError:
                     pass
+
+            schema['enabled'] = True
 
     @get('list/(.*)')
     async def list_notifications(self, repo_id=None):

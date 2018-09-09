@@ -24,22 +24,6 @@ describe('RepositoryTest', function(){
     this.model = new Repository();
   });
 
-  it('test-post2api', async function(){
-    $.ajax.and.returnValue(JSON.stringify({'some': 'thing'}));
-    let url = 'http://bla.nada/';
-    let body = {'some': 'data'};
-    let repo = new Repository();
-    await repo._post2api(url, body);
-    let called = $.ajax.calls.allArgs()[0][0];
-    let called_keys = [];
-    for(let key in called){
-      called_keys.push(key);
-    }
-
-    let expected = ['url', 'data', 'type', 'contentType', 'headers'];
-    expect(called_keys).toEqual(expected);
-  });
-
   it('test-add-slave', async function(){
     $.ajax.and.returnValue(JSON.stringify({'some': 'thing'}));
     let slave = new Slave();

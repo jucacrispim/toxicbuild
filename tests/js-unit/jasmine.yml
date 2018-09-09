@@ -30,6 +30,7 @@
       - "toxicbuild/js/slave.js"
       - "toxicbuild/js/utils.js"
       - "toxicbuild/js/waterfall.js"
+      - "toxicbuild/js/notification.js"
 
     # stylesheets
     #

@@ -22,6 +22,22 @@ describe("BaseModelTest", function(){
     this.model = new BaseModel({'id': 'some-id'});
   });
 
+  it('test-post2api', async function(){
+    $.ajax.and.returnValue(JSON.stringify({'some': 'thing'}));
+    let url = 'http://bla.nada/';
+    let body = {'some': 'data'};
+    let model = new BaseModel();
+    await model._post2api(url, body);
+    let called = $.ajax.calls.allArgs()[0][0];
+    let called_keys = [];
+    for(let key in called){
+      called_keys.push(key);
+    }
+
+    let expected = ['url', 'data', 'type', 'contentType', 'headers'];
+    expect(called_keys).toEqual(expected);
+  });
+
   it('test-get-url-delete', function(){
     let method = 'delete';
     this.model._api_url = 'http://bla.com/api/';

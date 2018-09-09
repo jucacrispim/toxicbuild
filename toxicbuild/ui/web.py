@@ -444,7 +444,7 @@ class RepositoryRestHandler(ModelRestHandler):
         return {'repo-disable': 'disabled'}
 
 
-class NotificationRestHandler(ModelRestHandler):
+class NotificationRestHandler(ReadOnlyRestHandler):
     """Handler for enable/disable/update notifications for
     repositories.
     """
@@ -470,11 +470,12 @@ class NotificationRestHandler(ModelRestHandler):
         await Notification.update(repo_id, notif_name, **self.body)
         return {notif_name: 'updated'}
 
-    @get('list/(.*)')
-    async def list(self, repo_id=None):
-        repo_id = repo_id.decode() if repo_id else None
+    @get('')
+    async def list(self):
+        repo_id = self.query.get('repo_id')
         r = await Notification.list(repo_id)
-        return r
+        items = [i.to_dict() for i in r]
+        return {'items': items}
 
 
 class CookieAuthNotificationRestHandler(CookieAuthHandlerMixin,
@@ -624,6 +625,7 @@ class DashboardHandler(LoggedTemplateHandler):
     waterfall_template = 'toxictheme/waterfall.html'
     build_template = 'toxictheme/build.html'
     buildset_template = 'toxictheme/buildset.html'
+    notifications_template = 'toxictheme/notifications.html'
 
     def _get_main_template(self):
         rendered = render_template(self.main_template,
@@ -684,6 +686,12 @@ class DashboardHandler(LoggedTemplateHandler):
                                    {'buildset_id': buildset_id})
         return rendered
 
+    def _get_notifications_template(self, repo_name, repo_id):
+        rendered = render_template(self.notifications_template, self.request,
+                                   {'repo_full_name': repo_name,
+                                    'repo_id': repo_id})
+        return rendered
+
     @get('')
     def show_main(self):
         content = self._get_main_template()
@@ -730,6 +738,14 @@ class DashboardHandler(LoggedTemplateHandler):
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
+    @get('{}/notifications'.format(FULL_NAME_REGEX))
+    async def show_repository_notifications(self, full_name):
+        full_name = full_name.decode()
+        repo = await Repository.get(self.user, repo_name_or_id=full_name)
+        content = self._get_notifications_template(full_name, str(repo.id))
+        context = {'content': content}
+        self.render_template(self.skeleton_template, context)
+
     @get('repository/add')
     def show_repo_add(self):
         full_name = ''
@@ -757,6 +773,13 @@ class DashboardHandler(LoggedTemplateHandler):
     def show_repository_details_template(self, full_name=b''):
         full_name = full_name.decode()
         content = self._get_repository_template(full_name)
+        self.write(content)
+
+    @get('templates/repo-notifications/{}'.format(FULL_NAME_REGEX))
+    async def show_repository_notifications_template(self, full_name):
+        full_name = full_name.decode()
+        repo = await Repository.get(self.user, repo_name_or_id=full_name)
+        content = self._get_notifications_template(full_name, str(repo.id))
         self.write(content)
 
     @get('templates/slave-details')

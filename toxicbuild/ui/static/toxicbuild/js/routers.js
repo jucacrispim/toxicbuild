@@ -28,6 +28,7 @@ class DashboardRouter extends Backbone.Router{
 		  'slave/add': 'showSlaveAddPage',
 		  'slave/:owner/:name': 'showSlaveSettingsPage',
 		  ':owner/:name/settings': 'showRepoSettingsPage',
+		  ':owner/:name/notifications': 'showRepoNotificationsPage',
 		  ':owner/:name/waterfall': 'showWaterfallPage',
 		  ':owner/:name/': 'showBuildSetListPage',
 		  'build/:build_uuid': 'showBuildDetaisPage',
@@ -146,6 +147,13 @@ class DashboardRouter extends Backbone.Router{
   async showBuildSetDetaisPage(buildset_id){
     let page = new BuildSetDetailsPage({router: this,
 					buildset_id: buildset_id});
+    await this._showPage(page);
+  }
+
+  async showRepoNotificationsPage(owner,name){
+    let full_name = owner + '/' + name;
+    let page = new RepositoryNotificationsPage({router: this,
+						repo_name: full_name});
     await this._showPage(page);
   }
 

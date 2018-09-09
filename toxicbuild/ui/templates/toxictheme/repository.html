@@ -273,7 +273,6 @@
 </div>
 <!-- end template -->
 
-
 <!-- main settings container -->
 <div class="repo-details-main-container details-main-container box-shadow-gray">
   <div class="close-btn">&times;</div>
@@ -289,12 +288,14 @@
   <div class="nav-container">
     <ul class="nav nav-pills">
       <li class="nav-item">
-	<a class="nav-link active box-shadow" href="#">
+	<a class="nav-link active box-shadow"
+	   href="{{ '/' + repo_full_name + '/notifications' }}">
 	  General configurations
 	</a>
       </li>
       <li class="nav-item">
-	<a class="nav-link" href="#">
+	<a class="nav-link"
+	   href="{{ '/' + repo_full_name + '/notifications' }}">
 	  Notifications
 	</a>
       </li>
@@ -372,10 +373,10 @@
 	    <b>Slaves</b> are the ones who execute the builds. You need at least
 	    one <b>slave</b> or no builds will be created.
 	  </p>
-	</div>
-      </span>
-    </div>
-  </div>
+       </div>
+     </span>
+   </div>
+ </div>
 <!-- end right side -->
 
 </div>
@@ -394,6 +395,7 @@
     }
 
     await page.render();
+    router.setUpLinks();
   }
 
   window.onload = function(){init()};

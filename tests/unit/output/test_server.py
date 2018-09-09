@@ -210,7 +210,8 @@ class NotificationWebHandlerTest(TestCase):
     async def test_list_notifications_repo_id(self):
         obj_id = ObjectId()
         slack_notif = SlackNotification(webhook_url='https://bla.nada',
-                                        repository_id=obj_id)
+                                        repository_id=obj_id,
+                                        statuses=['success', 'fail'])
         await slack_notif.save()
 
         notif = (await self.handler.list_notifications(
@@ -219,6 +220,7 @@ class NotificationWebHandlerTest(TestCase):
             if schema['name'] == 'slack-notification':
                 self.assertEqual(schema['webhook_url']['value'],
                                  'https://bla.nada')
+                self.assertEqual(schema['statuses']['value'][0], 'success')
         self.assertEqual(len(notif), 3)
 
     @async_test

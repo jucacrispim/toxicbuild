@@ -29,4 +29,5 @@ class ToxicWebMainContextProcessor(ContextProcessor):
                                          settings.HOLE_PORT)
         return {'master_location': master_location,
                 'version': VERSION,
-                'api_url': settings.API_URL}
+                'api_url': settings.API_URL,
+                'static_url': settings.STATIC_URL}

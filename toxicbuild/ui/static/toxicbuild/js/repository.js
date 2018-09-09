@@ -24,15 +24,6 @@ class Repository extends BaseModel{
     this._api_url = TOXIC_REPO_API_URL;
   }
 
-  async _post2api(url, body){
-    let headers = this._getHeaders();
-    let resp = await $.ajax(
-      {'url': url, 'data': JSON.stringify(body), 'type': 'post',
-       'contentType': "application/json", 'headers': headers});
-
-    return resp;
-  }
-
   async add_slave(slave_id){
     let url = this._api_url + 'add-slave?' + 'id=' + this.id;
     let body = {'id': slave_id};

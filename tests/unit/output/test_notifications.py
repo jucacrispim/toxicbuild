@@ -77,7 +77,7 @@ class NotificationTest(TestCase):
 
     def test_translate_schema(self):
         translation = notifications.Notification.get_schema(to_serialize=True)
-        keys = {'id', 'name', 'pretty_name', 'description', '_cls',
+        keys = {'name', 'pretty_name', 'description', '_cls',
                 'branches', 'statuses', 'repository_id'}
         self.assertEqual(set(translation.keys()), keys)
 
