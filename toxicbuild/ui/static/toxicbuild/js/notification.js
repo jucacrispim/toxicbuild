@@ -150,6 +150,8 @@ class NotificationConfigView extends Backbone.View{
     let repo_id = $('#repo-id').val();
     let enabled = this.model.get('enabled');
     let modal = $('#notificationModal');
+    let name = this.model.get('name');
+    let check = $('#' + name + '-is-enabled');
     try{
       if (enabled){
 	await this.model.update(repo_id, data);
@@ -162,6 +164,7 @@ class NotificationConfigView extends Backbone.View{
 	utils.showSuccessMessage(this.model.get('pretty_name') +
 				 ' notification enabled');
       }
+      check.show();
       this._mergeSaveData(data, true);
     }catch(e){
       modal.modal('hide');
@@ -172,12 +175,14 @@ class NotificationConfigView extends Backbone.View{
   async disableNotification(){
     let repo_id = $('#repo-id').val();
     let modal = $('#notificationModal');
+    let name = this.model.get('name');
     try{
       await this.model.disable(repo_id);
       modal.modal('hide');
       utils.showSuccessMessage(this.model.get('pretty_name') +
 			       ' notification disabled');
       this._mergeSaveData({}, false);
+      $('#' + name + '-is-enabled').hide();
     }catch(e){
       modal.modal('hide');
       utils.showErrorMessage('Error disabling notification');
@@ -220,14 +225,18 @@ class NotificationConfigView extends Backbone.View{
 
   _listen2save(template){
     let self = this;
-    $('#btn-enable-notification').on('click', async function(){
+    let btn = $('#btn-enable-notification');
+    btn.unbind('click');
+    btn.on('click', async function(){
       await self.saveNotification();
     });
   }
 
   _listen2disable(template){
     let self = this;
-    $('#btn-remove-obj').on('click', async function(){
+    let btn = $('#btn-remove-obj');
+    btn.unbind('click');
+    btn.on('click', async function(){
       await self.disableNotification();
     });
   }
@@ -251,23 +260,27 @@ class NotificationConfigView extends Backbone.View{
 
     this._listen2changes(template);
     this._listen2save(template);
+
     this._listen2disable(template);
   }
 
-  _handleButtons(){
+  _handleButtons(template){
     let enabled = this.model.get('enabled');
     let disable_btn = $('.disable-notif-btn-container');
+
     if (enabled){
       disable_btn.show();
+      $('#enable-notification-btn-text').html('Update');
     }else{
       disable_btn.hide();
+      $('#enable-notification-btn-text').html('Enable');
     }
   }
 
   render(){
     let rendered = this.getRendered();
     this._listen2events(rendered);
-    this._handleButtons();
+    this._handleButtons(rendered);
     $('#notification-modal-icon').prop('src', this.model.getIcon());
     $('.modal-title').text(this.model.get('pretty_name'));
     $('#notification-modal-body').append(rendered);
@@ -286,6 +299,7 @@ class NotificationInfoView extends Backbone.View{
       '.notification-pretty-name': 'pretty_name',
       '.notification-img @src': 'img',
       '.notification-cid @data-cid': 'cid',
+      '.fa-check @id': '#{name}-is-enabled',
     };
 
     this.template_selector = '.template .notification-item';
@@ -295,12 +309,14 @@ class NotificationInfoView extends Backbone.View{
   }
 
   _get_kw(){
+    let name = this.model.get('name');
     let pretty_name = this.model.get('pretty_name');
     let img = this.model.getIcon();
     let cid = this.model.cid;
     let enabled = this.model.get('enabled');
     return {pretty_name: pretty_name, img: img,
-	    cid: cid, enabled: enabled};
+	    cid: cid, enabled: enabled,
+	    name: name};
   }
 
   getRendered(){

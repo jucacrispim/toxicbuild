@@ -36,7 +36,7 @@
 	      <span class="spinner icon-spinner-2" id="add-branch-btn-spinner"
 		    style="display:none">
 	      </span>
-	      <span id="add-branch-btn-text">Enable</span>
+	      <span id="enable-notification-btn-text">Enable</span>
 	    </button>
 	  </div>
 
@@ -53,7 +53,7 @@
 	  <div class="cancel-btn-container inner-btn-container">
 	    <button class="btn btn-sm btn-light btn-block" type="submit"
 		    id="btn-cancel-remove-slave" data-dismiss="modal">
-	      <span id="cancel-remove-slave-btn-text">Cancel</span>
+	      <span id="disable-notification-btn-text">Cancel</span>
 	    </button>
 	  </div>
 
@@ -141,7 +141,13 @@
       <span>
 	<h5>Notifications</h5>
 	<p id="basic-config-p">
-	  Notifications may be used to inform about the status of builds.
+	  Notifications are used to send information about builds to third
+	  party services.
+	</p>
+
+	<p>
+	  You may configure wich <b>branches</b> and <b>statuses</b>
+	  trigger notifications.
 	</p>
       </span>
     </div>

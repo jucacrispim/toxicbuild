@@ -155,10 +155,20 @@ describe('BaseFloatingPageTest', function(){
     this.page = new BaseFloatingPage({router: router});
   });
 
-  it('test-close-page', function(){
+  it('test-close_page', function(){
     spyOn(this.page.router, 'go2lastURL');
+    spyOn(this.page, '_set_last_url');
     this.page.close_page();
     expect(this.page.router.go2lastURL).toHaveBeenCalled();
+    expect(this.page._set_last_url).not.toHaveBeenCalled();
+  });
+
+  it('test-close_page-reject-regex', function(){
+    spyOn(this.page.router, 'go2lastURL');
+    spyOn(this.page, '_set_last_url');
+    this.page.close_page(/someregex/);
+    expect(this.page.router.go2lastURL).toHaveBeenCalled();
+    expect(this.page._set_last_url).toHaveBeenCalled();
   });
 
   it('test-prepareOpenAnimation', function(){
@@ -189,6 +199,13 @@ describe('BaseFloatingPageTest', function(){
     let self = this;
     expect(function(){self.page.redir2settings();}).toThrow(
       new Error('You must implement redir2settings()'));
+  });
+
+  it('test-set_last_url', function(){
+    this.page.router._last_urls = ['/ok/url', '/bad/url', '/bad-other/url/1'];
+    let reject_regex = /^\/bad(.*)\//;
+    this.page._set_last_url(reject_regex);
+    expect(this.page.router._last_urls[0]).toEqual('/ok/url');
   });
 });
 
@@ -326,7 +343,7 @@ describe('BuildSetDetailsPageTest', function(){
   });
 
   it('test-close_page-with-url', function(){
-    spyOn(BaseFloatingPage.prototype, 'close_page');
+    spyOn(this.page.router, 'go2lastURL');
     this.page.router._last_urls = ['/my/repo', '/build/some-build'];
     this.page.close_page();
     expect(this.page.router._last_urls.pop()).toBe('/my/repo');

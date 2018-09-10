@@ -177,6 +177,14 @@ class BaseFloatingPage extends BasePage{
     this._inner = null;
   }
 
+  _set_last_url(reject_regex){
+    let url = this.router._last_urls.pop();
+    while(url && url.match(reject_regex)){
+      url = this.router._last_urls.pop();
+    }
+    this.router._last_urls.push(url);
+  }
+
   _listen2events(){
     let self = this;
 
@@ -207,7 +215,10 @@ class BaseFloatingPage extends BasePage{
 
   }
 
-  close_page(){
+  close_page(reject_regex=null){
+    if (reject_regex){
+      this._set_last_url(reject_regex);
+    }
     this.router.go2lastURL();
   }
 
@@ -292,13 +303,8 @@ class BuildSetDetailsPage extends BaseOneSideFloatingPage{
   }
 
   close_page(){
-    let url = this.router._last_urls.pop();
-    while (url && (url.indexOf('/build/') == 0
-		   || url.indexOf('/buildset/') == 0)){
-      url = this.router._last_urls.pop();
-    }
-    this.router._last_urls.push(url);
-    super.close_page();
+    let reject_regex = /^\/build(set|)\/.*/;
+    super.close_page(reject_regex);
   }
 }
 
@@ -442,6 +448,11 @@ class RepositoryNotificationsPage extends BaseFloatingPage{
     $('.wait-toxic-spinner').hide();
     this._listen2events();
     this._animateOpen();
+  }
+
+  close_page(){
+    let regex = /\/(settings|notifications)$/;
+    super.close_page(regex);
   }
 }
 

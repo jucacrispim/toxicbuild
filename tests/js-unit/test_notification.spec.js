@@ -195,6 +195,7 @@ describe('NotificationInfoViewTest', function(){
     let container = $('.notification-item');
     container.affix('.notification-pretty-name');
     container.affix('img.notification-img');
+    container.affix('.fa-check');
     container.affix('.notification-cid');
     this.view = new NotificationInfoView();
   });
