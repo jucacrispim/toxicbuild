@@ -457,8 +457,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             sched_msg = {'type': 'add-update-code',
                          'repository_id': str(self.id)}
 
-            f = scheduler_action.publish(sched_msg)
-            ensure_future(f)
+            ensure_future(scheduler_action.publish(sched_msg))
 
         # adding start_pending
         start_pending_hash = self.scheduler.add(

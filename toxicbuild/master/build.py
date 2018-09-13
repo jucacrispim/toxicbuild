@@ -369,7 +369,7 @@ class Build(EmbeddedDocument):
             }}
         ]
 
-        r = await BuildSet.objects.aggregate(*pipeline).to_list(1)
+        r = await BuildSet.objects().aggregate(*pipeline).to_list(1)
         try:
             build_doc = r[0]['builds'][0]
         except IndexError:
@@ -468,7 +468,6 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
     @queryset_manager
     def objects(doc_cls, queryset):  # pylint: disable=no-self-argument
         """The default querymanager for BuildSet"""
-
         return queryset.order_by('created')
 
     async def notify(self, event_type, status=None):
