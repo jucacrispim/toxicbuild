@@ -98,6 +98,7 @@
     let repo_name = $('#repo_name').val();
     let page = new WaterfallPage({router: router, repo_name: repo_name});
     await page.render();
+    router.setUpLinks();
   }
   window.onload = function(){init()};
 </script>

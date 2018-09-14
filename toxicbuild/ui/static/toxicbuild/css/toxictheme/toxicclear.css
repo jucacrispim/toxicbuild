@@ -989,6 +989,8 @@ body{
     border: 0;
     padding-left: 0;
     margin-left: 0;
+    vertical-align: top;
+    padding-top: 2px;
 }
 
 #waterfall-container{
