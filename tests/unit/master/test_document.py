@@ -130,6 +130,7 @@ class OwnedDocuentTest(TestCase):
 
         repo = TestDoc(owner=org, name='bla')
         await repo.save()
+        repo = await TestDoc.objects.get(id=repo.id)
         allowed = await repo.get_allowed_users()
         allowed_users = await allowed.to_list()
         self.assertEqual(len(allowed_users), 2)

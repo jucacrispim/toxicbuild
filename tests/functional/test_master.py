@@ -24,7 +24,8 @@ from toxicbuild.master.repository import Repository
 from toxicbuild.master.users import User
 from toxicbuild.master.exchanges import scheduler_action
 from tests import async_test
-from tests.functional import (BaseFunctionalTest, DummyMasterHoleClient)
+from tests.functional import (BaseFunctionalTest, DummyMasterHoleClient,
+                              STREAM_EVENT_TYPES)
 
 
 class DummyUIClient(DummyMasterHoleClient):
@@ -57,7 +58,8 @@ class DummyUIClient(DummyMasterHoleClient):
     def get_stream(self):
 
         action = 'stream'
-        self.write({'action': action, 'body': {}})
+        self.write({'action': action,
+                    'body': {'event_types': STREAM_EVENT_TYPES}})
 
         resp = yield from self.get_response()
         while resp:
@@ -67,7 +69,7 @@ class DummyUIClient(DummyMasterHoleClient):
     @asyncio.coroutine
     def wait_clone(self):
         yield from self.write({'action': 'stream', 'token': '123',
-                               'body': {},
+                               'body': {'event_types': STREAM_EVENT_TYPES},
                                'user_id': str(self.user.id)})
         while True:
             r = yield from self.get_response()
@@ -238,9 +240,10 @@ class ToxicMasterTest(BaseFunctionalTest):
     def test_11_stream_step_output(self):
 
         with (yield from get_dummy_client(self.user)) as client:
-            yield from client.write({'action': 'stream', 'token': '123',
-                                     'body': {},
-                                     'user_id': str(self.user.id)})
+            yield from client.write({
+                'action': 'stream', 'token': '123',
+                'body': {'event_types': STREAM_EVENT_TYPES},
+                'user_id': str(self.user.id)})
 
             with (yield from get_dummy_client(self.user)) as bclient:
                 yield from bclient.start_build()

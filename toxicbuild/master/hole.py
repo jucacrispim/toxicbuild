@@ -29,6 +29,7 @@ import inspect
 import json
 import signal
 import ssl
+import sys
 import traceback
 from bson.objectid import ObjectId
 from toxicbuild.core import BaseToxicProtocol
@@ -734,6 +735,7 @@ class UIStreamHandler(LoggerMixin):
 
     def __init__(self, protocol):
         self.protocol = protocol
+        self.body = self.protocol.data.get('body') or {}
 
         def connection_lost_cb(exc):  # pragma no cover
             self._disconnectfromsignals()
@@ -755,30 +757,37 @@ class UIStreamHandler(LoggerMixin):
     async def build_added(self, sender, **kw):
         await self.send_info('build_added', sender=sender, **kw)
 
-    async def build_cancelled_fn(self, sender, **kw):
+    async def build_cancelled(self, sender, **kw):
         self.log('Got build-cancelled signal', level='debug')
         await self.send_info('build_cancelled', sender=sender, **kw)
 
-    async def _connect2signals(self):
+    async def _connect2signals(self, event_types):
+
+        if 'repo_status_changed' in event_types or 'repo_added' in event_types:
+            ensure_future((self._handle_ui_notifications()))
+            to_remove = ['repo_status_changed', 'repo_added']
+            for rm in to_remove:
+                try:
+                    event_types.remove(rm)
+                except ValueError:
+                    pass
+
         repos = await Repository.list_for_user(self.protocol.user)
         async for repo in repos:
-            self._connect_repo(repo)
-        ensure_future(self._handle_ui_notifications())
+            self._connect_repo(repo, event_types)
+        ensure_future
 
-    def _connect_repo(self, repo):
-        step_started.connect(self.step_started, sender=str(repo.id))
-        step_finished.connect(self.step_finished, sender=str(repo.id))
-        build_started.connect(self.build_started, sender=str(repo.id))
-        build_finished.connect(self.build_finished, sender=str(repo.id))
-        build_added.connect(self.build_added, sender=str(repo.id))
-        build_cancelled.connect(self.build_cancelled_fn, sender=str(repo.id))
-        step_output_arrived.connect(self.send_step_output_info,
-                                    sender=str(repo.id))
+    def _connect_repo(self, repo, event_types):
+        hole = sys.modules[__name__]
+
+        for event in event_types:
+            signal = getattr(hole, event)
+            meth = getattr(self, event)
+            signal.connect(meth, sender=str(repo.id))
 
     async def _handle_ui_notifications(self):
         async with await ui_notifications.consume(routing_key=str(
                 self.protocol.user.id)) as consumer:
-
             while True:
                 msg = await consumer.fetch_message()
                 self.log('Got msg type {}'.format(msg.body['msg_type']))
@@ -815,16 +824,17 @@ class UIStreamHandler(LoggerMixin):
         ensure_future(ui_notifications.publish(
             {'msg_type': 'stop_consumption'}, routing_key=str(
                 self.protocol.user.id)))
-        step_output_arrived.disconnect(self.send_step_output_info)
+        step_output_arrived.disconnect(self.step_output_arrived)
         step_started.disconnect(self.step_started)
         step_finished.disconnect(self.step_finished)
         build_started.disconnect(self.build_started)
         build_finished.disconnect(self.build_finished)
         build_added.disconnect(self.build_added)
-        build_cancelled.disconnect(self.build_cancelled_fn)
+        build_cancelled.disconnect(self.build_cancelled)
 
     async def handle(self):
-        await self._connect2signals()
+        event_types = self.body['event_types']
+        await self._connect2signals(event_types)
         await self.protocol.send_response(code=0, body={'stream': 'ok'})
 
     async def send_info(self, info_type, sender, build=None, step=None):
@@ -882,7 +892,7 @@ class UIStreamHandler(LoggerMixin):
         f = ensure_future(self.send_response(code=0, body=rdict))
         return f
 
-    def send_step_output_info(self, repo, step_info):
+    def step_output_arrived(self, repo, step_info):
         """Called by the signal ``step_output_arrived``.
 
         :param repo: The repository that is building something.
@@ -896,6 +906,7 @@ class UIStreamHandler(LoggerMixin):
         try:
             await self.protocol.send_response(code=code, body=body)
         except (ConnectionResetError, AttributeError):
+            self.log('Error sending response', level='warning')
             self.protocol._transport.close()
             self._disconnectfromsignals()
 

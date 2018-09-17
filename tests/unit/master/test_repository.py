@@ -85,7 +85,7 @@ class RepositoryTest(TestCase):
         await self.repo.request_code_update()
         self.GOT_MSG = False
         async with await repository.repo_notifications.consume(
-                routing_key='update-code-requested', timeout=0.5) as consumer:
+                routing_key='update-code-requested', timeout=5) as consumer:
             try:
                 async for msg in consumer:
                     await msg.acknowledge()
@@ -586,9 +586,9 @@ class RepositoryTest(TestCase):
 
         self.assertEqual((await self.repo.get_status()), 'ready')
 
-    @patch.object(repository, 'repo_status_changed', Mock())
+    @patch.object(repository, 'repo_status_changed', AsyncMagicMock())
     @async_test
-    async def test_check_for_status_change_not_changing(self):
+    async def test_check_for_status_change(self):
         self.repo._old_status = 'running'
 
         @asyncio.coroutine
@@ -597,21 +597,10 @@ class RepositoryTest(TestCase):
 
         self.repo.get_status = get_status
 
-        await self.repo._check_for_status_change(Mock(), Mock())
-        self.assertFalse(repository.repo_status_changed.send.called)
-
-    @patch.object(repository, 'repo_status_changed', AsyncMagicMock())
-    @async_test
-    async def test_check_for_status_change_changing(self):
-        self.repo._old_status = 'running'
-
-        @asyncio.coroutine
-        def get_status():
-            return 'success'
-
-        self.repo.get_status = get_status
-
-        await self.repo._check_for_status_change(Mock(), Mock())
+        b = build.BuildSet(repository=self.repo,
+                           commit_date=datetime.datetime.now(),
+                           started=datetime.datetime.now())
+        await self.repo._check_for_status_change(str(self.repo.id), b)
         self.assertTrue(repository.repo_status_changed.publish.called)
 
     @async_test

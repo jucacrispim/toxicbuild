@@ -36,7 +36,8 @@ from toxicbuild.core.utils import (now, list_builders_from_config,
 from toxicbuild.master.document import ExternalRevisionIinfo
 from toxicbuild.master.exceptions import (DBError, ImpossibleCancellation)
 from toxicbuild.master.exchanges import build_notifications
-from toxicbuild.master.signals import build_added, build_cancelled
+from toxicbuild.master.signals import (build_added, build_cancelled,
+                                       buildset_started, buildset_finished)
 from toxicbuild.master.utils import (get_build_config_type,
                                      get_build_config_filename)
 
@@ -731,7 +732,7 @@ class BuildManager(LoggerMixin):
     async def _get_highest_build_number(self):
         buildset = await BuildSet.objects(
             repository=self.repository, builds__number__gt=0).order_by(
-                'builds__number').first()
+                '-builds__number').first()
         if not buildset:
             highest = 0
         else:
@@ -878,6 +879,7 @@ class BuildManager(LoggerMixin):
         if not buildset.started:
             buildset.started = localtime2utc(now())
             buildset.status = 'running'
+            buildset_started.send(str(self.repository.id), buildset=buildset)
             await buildset.save()
             await buildset.notify('buildset-started', status='running')
 
@@ -893,6 +895,7 @@ class BuildManager(LoggerMixin):
                 buildset.finished - set_tzinfo(buildset.started, 0)).seconds)
             await buildset.save()
             await buildset.update_status()
+            buildset_finished.send(str(self.repository.id), buildset=buildset)
             await buildset.notify('buildset-finished')
 
     async def _execute_builds(self, slave):

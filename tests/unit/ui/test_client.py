@@ -70,9 +70,9 @@ class UIHoleClientTest(TestCase):
         requester = MagicMock()
         requester.id = 'some-id'
         client = UIHoleClient(requester, 'localhost', 7777)
-        yield from client.connect2stream()
+        yield from client.connect2stream({'event_types': []})
         called = client.request2server.call_args[0]
-        expected = ('stream', {'user_id': 'some-id'})
+        expected = ('stream', {'user_id': 'some-id', 'event_types': []})
         self.assertEqual(called, expected)
 
     @patch.object(UIHoleClient, 'request2server', MagicMock())

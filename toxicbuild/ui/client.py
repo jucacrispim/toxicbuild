@@ -66,11 +66,12 @@ class UIHoleClient(BaseToxicClient):
         return response['body'][action]
 
     @asyncio.coroutine
-    def connect2stream(self):
+    def connect2stream(self, body):
         """Connects the client to the master's hole stream."""
 
         action = 'stream'
-        body = {'user_id': str(self.requester.id)}
+        user_body = {'user_id': str(self.requester.id)}
+        body.update(user_body)
 
         yield from self.request2server(action, body)
 

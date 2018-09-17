@@ -374,6 +374,11 @@ class BaseFunctionalTest(TestCase):
         return tornado.ioloop.IOLoop.instance()
 
 
+STREAM_EVENT_TYPES = ['build_added', 'build_started', 'build_finished',
+                      'step_started', 'step_finished', 'step_output_arrived',
+                      'repo_status_changed', 'repo_added']
+
+
 class DummyMasterHoleClient(BaseToxicClient):
 
     def __init__(self, user, *args, **kwargs):
@@ -417,7 +422,7 @@ class DummyMasterHoleClient(BaseToxicClient):
 
     async def wait_clone(self):
         await self.write({'action': 'stream', 'token': '123',
-                          'body': {},
+                          'body': {'event_types': STREAM_EVENT_TYPES},
                           'user_id': str(self.user.id)})
         while True:
             r = await self.get_response()
@@ -442,7 +447,7 @@ class DummyMasterHoleClient(BaseToxicClient):
 
     async def wait_build_complete(self):
         await self.write({'action': 'stream', 'token': '123',
-                          'body': {},
+                          'body': {'event_types': STREAM_EVENT_TYPES},
                           'user_id': str(self.user.id)})
 
         # this ugly part here it to wait for the right message

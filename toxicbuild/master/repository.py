@@ -41,7 +41,7 @@ from toxicbuild.master.exchanges import (update_code, poll_status,
                                          repo_notifications)
 from toxicbuild.master.utils import (get_build_config_type,
                                      get_build_config_filename)
-from toxicbuild.master.signals import (build_started, build_finished)
+from toxicbuild.master.signals import (buildset_started, buildset_finished)
 from toxicbuild.master.slave import Slave
 
 # The thing here is: When a repository poller is scheduled, I need to
@@ -467,8 +467,10 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             self.url)] = start_pending_hash
 
         # connecting to build signals
-        build_started.connect(self._check_for_status_change)
-        build_finished.connect(self._check_for_status_change)
+        buildset_started.connect(self._check_for_status_change,
+                                 sender=str(self.id))
+        buildset_finished.connect(self._check_for_status_change,
+                                  sender=str(self.id))
 
     @classmethod
     async def schedule_all(cls):
@@ -610,7 +612,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             buildset, slave, conf, builders=builders,
             builders_origin=builders_origin)
 
-    async def _check_for_status_change(self, sender, build):
+    async def _check_for_status_change(self, sender, buildset):
         """Called when a build is started or finished. If this event
         makes the repository change its status publishes in the
         ``repo_status_changed`` exchange.
@@ -618,13 +620,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         :param sender: The object that sent the signal
         :param build: The build that was started or finished"""
 
-        status = await self.get_status()
-        if status != self._old_status:
-            status_msg = dict(repository_id=str(self.id),
-                              old_status=self._old_status,
-                              new_status=status)
-            await self._notify_status_changed(status_msg)
-            self._old_status = status
+        status_msg = buildset.to_dict(builds=False)
+        await self._notify_status_changed(status_msg)
 
     async def start_build(self, branch, builder_name=None, named_tree=None,
                           slaves=None, builders_origin=None):

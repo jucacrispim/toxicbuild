@@ -1224,13 +1224,25 @@ class UIStreamHandlerTest(TestCase):
         self.handler._handle_repo_added = AsyncMagicMock()
         self.handler._handle_ui_notifications = AsyncMagicMock(
             spec=self.handler._handle_ui_notifications)
-        await self.handler._connect2signals()
+        event_types = ['step_started', 'step_finished', 'build_started',
+                       'build_finished', 'build_cancelled',
+                       'step_output_arrived', 'build_added']
+
+        await self.handler._connect2signals(event_types)
         self.assertTrue(all([hole.step_started.connect.called,
                              hole.step_finished.connect.called,
                              hole.build_started.connect.called,
                              hole.build_finished.connect.called,
                              hole.build_added.connect.called,
                              hole.step_output_arrived.connect.called]))
+
+    @async_test
+    async def test_connect2signals_repo_status(self):
+        self.handler._handle_ui_notifications = AsyncMagicMock(
+            spec=self.handler._handle_ui_notifications)
+
+        event_types = ['repo_status_changed']
+        await self.handler._connect2signals(event_types)
         self.assertTrue(self.handler._handle_ui_notifications.called)
 
     @patch.object(hole, 'ui_notifications', AsyncMagicMock())
@@ -1320,13 +1332,14 @@ class UIStreamHandlerTest(TestCase):
     async def test_build_cancelled_fn(self):
         send_info = AsyncMagicMock()
         self.handler.send_info = send_info
-        await self.handler.build_cancelled_fn(Mock())
+        await self.handler.build_cancelled(Mock())
         called = send_info.call_args[0][0]
         self.assertEqual(called, 'build_cancelled')
 
     @async_test
     async def test_handle(self):
-        self.handler._connect2signals = AsyncMagicMock()
+        self.handler._connect2signals = AsyncMagicMock(
+            spec=hole.UIStreamHandler._connect2signals)
         send_response = MagicMock()
         self.handler.protocol.send_response = asyncio.coroutine(
             lambda *a, **kw: send_response(*a, **kw))
@@ -1512,8 +1525,8 @@ class UIStreamHandlerTest(TestCase):
         self.handler.protocol.send_response = sr
 
         info = {'uuid': 'some-uuid', 'output': 'bla!'}
-        f = self.handler.send_step_output_info(repo=testrepo,
-                                               step_info=info)
+        f = self.handler.step_output_arrived(repo=testrepo,
+                                             step_info=info)
         await f
 
         self.assertEqual(self.BODY['uuid'], 'some-uuid')

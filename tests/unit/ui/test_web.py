@@ -64,11 +64,16 @@ class CookieAuthHandlerMixinTest(TestCase):
 
     def setUp(self):
         super().setUp()
+
+        class TestHandler(web.CookieAuthHandlerMixin, web.BasePyroHandler):
+            pass
+
         request = MagicMock()
         request.cookies = {}
         application = MagicMock()
         application.settings = {'cookie_secret': 'bladjfçajf'}
-        self.handler = web.CookieAuthHandlerMixin(application, request=request)
+
+        self.handler = TestHandler(application, request=request)
 
     @async_test
     async def test_prepare_without_cookie(self):
@@ -657,6 +662,12 @@ class StreamHandlerTest(AsyncTestCase):
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
+    def test_prepare(self):
+        self.handler._get_user = MagicMock()
+
+        self.handler.prepare()
+        self.handler._get_user.called
+
     def test_get_repo_id(self):
         self.handler.request.arguments = {'repo_id': [b'asdf']}
         repo_id = self.handler._get_repo_id()
@@ -674,11 +685,9 @@ class StreamHandlerTest(AsyncTestCase):
     @patch.object(web, 'StreamConnector', MagicMock())
     @gen_test
     def test_open(self):
-        self.handler.async_prepare = AsyncMagicMock()
         self.handler.request.arguments = {'repo_id': [b'asdf']}
         plug = MagicMock()
         web.StreamConnector.plug = asyncio.coroutine(lambda *a, **kw: plug())
-        self.handler.prepare()
         f = self.handler.open('repo-status')
         yield from f
         self.assertTrue(plug.called)
@@ -774,8 +783,6 @@ class StreamHandlerTest(AsyncTestCase):
 
     @patch.object(web, 'StreamConnector', MagicMock())
     def test_on_close(self):
-        self.handler.async_prepare = AsyncMagicMock()
-        self.handler.prepare()
         self.handler.on_close()
         self.assertTrue(web.StreamConnector.unplug.called)
 

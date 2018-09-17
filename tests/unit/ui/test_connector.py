@@ -42,7 +42,7 @@ class StreamConnectorTest(TestCase):
 
         connectors.StreamConnector._listen = _listen
         inst = yield from connectors.StreamConnector._prepare_instance(
-            user, 'repo-id')
+            user, 'repo-id', [])
         yield from asyncio.sleep(0)
         self.assertEqual(inst.clients_connected, 1)
         self.assertTrue(listen.called)
@@ -61,23 +61,27 @@ class StreamConnectorTest(TestCase):
 
         connectors.StreamConnector._listen = _listen
         inst = yield from connectors.StreamConnector._prepare_instance(user,
-                                                                       None)
+                                                                       None,
+                                                                       [])
         yield from asyncio.sleep(0)
         self.assertEqual(inst.clients_connected, 1)
         self.assertTrue(listen.called)
-        self.assertIn(('some-id', connectors.StreamConnector.NONE_REPO_ID),
-                      connectors.StreamConnector._instances)
+        key = ('some-id', connectors.StreamConnector.NONE_REPO_ID,
+               ','.join([]))
+        self.assertIn(key, connectors.StreamConnector._instances)
 
     @async_test
     def test_prepare_instance(self):
         repo_id = 'some-repo-id'
         user = MagicMock()
         user.id = 'some-id'
-        connector = connectors.StreamConnector(user, repo_id)
+        connector = connectors.StreamConnector(user, repo_id, [])
         connector.clients_connected += 1
-        connectors.StreamConnector._instances = {(user.id, repo_id): connector}
+        connectors.StreamConnector._instances = {
+            (user.id, repo_id, ''): connector}
         inst = yield from connectors.StreamConnector._prepare_instance(user,
-                                                                       repo_id)
+                                                                       repo_id,
+                                                                       [])
         self.assertIs(inst, connector)
         self.assertEqual(connector.clients_connected, 2)
 
@@ -86,9 +90,11 @@ class StreamConnectorTest(TestCase):
         user = MagicMock()
         user.id = 'some-id'
         inst.clients_connected = 1
+        event_types = ['build_started', 'build_finished']
         connectors.StreamConnector._instances = {
-            ('some-id', 'some-repo'): inst}
-        connectors.StreamConnector._release_instance(user, 'some-repo')
+            ('some-id', 'some-repo', ','.join(event_types)): inst}
+        connectors.StreamConnector._release_instance(user, 'some-repo',
+                                                     event_types)
         self.assertTrue(inst._disconnect.called)
         self.assertFalse(connectors.StreamConnector._instances)
 
@@ -97,9 +103,11 @@ class StreamConnectorTest(TestCase):
         inst.clients_connected = 1
         user = MagicMock()
         user.id = 'some-id'
-        connectors.StreamConnector._instances = {
-            (user.id, connectors.StreamConnector.NONE_REPO_ID): inst}
-        connectors.StreamConnector._release_instance(user, None)
+        event_types = ['build_started', 'build_finished']
+        key = (user.id, connectors.StreamConnector.NONE_REPO_ID, ','.join(
+            event_types))
+        connectors.StreamConnector._instances = {key: inst}
+        connectors.StreamConnector._release_instance(user, None, event_types)
         self.assertTrue(inst._disconnect.called)
         self.assertFalse(connectors.StreamConnector._instances)
 
@@ -108,11 +116,15 @@ class StreamConnectorTest(TestCase):
         inst.clients_connected = 2
         user = MagicMock()
         user.id = 'some-id'
-        connectors.StreamConnector._instances = {(user.id, 'some-repo'): inst}
-        connectors.StreamConnector._release_instance(user, 'some-repo')
+        connectors.StreamConnector._instances = {
+            (user.id, 'some-repo', 'build_started,build_finished'): inst}
+        event_types = ['build_started', 'build_finished']
+        connectors.StreamConnector._release_instance(user, 'some-repo',
+                                                     event_types)
         self.assertFalse(inst.disconnect.called)
         self.assertEqual(connectors.StreamConnector._instances[
-            (user.id, 'some-repo')].clients_connected, 1)
+            (user.id, 'some-repo', 'build_started,build_finished')
+        ].clients_connected, 1)
 
     @patch.object(connectors, 'get_hole_client', MagicMock())
     @async_test
@@ -128,7 +140,7 @@ class StreamConnectorTest(TestCase):
             return client
 
         connectors.get_hole_client = get_hole_client
-        c = connectors.StreamConnector(user, 'http://bla.com/repo.git')
+        c = connectors.StreamConnector(user, 'http://bla.com/repo.git', [])
         yield from c._connect()
         self.assertTrue(client.connect2stream.called)
         self.assertTrue(c._connected)
@@ -138,7 +150,7 @@ class StreamConnectorTest(TestCase):
         user = MagicMock()
         user.id = 'some-id'
 
-        c = connectors.StreamConnector(user, 'http://bla.com/repo.git')
+        c = connectors.StreamConnector(user, 'http://bla.com/repo.git', [])
         c.log = MagicMock()
         c._connected = True
         yield from c._connect()
@@ -148,7 +160,7 @@ class StreamConnectorTest(TestCase):
         user = MagicMock()
         user.id = 'some-id'
 
-        c = connectors.StreamConnector(user, 'https://ble.net/repo.git')
+        c = connectors.StreamConnector(user, 'https://ble.net/repo.git', [])
         c.client = MagicMock()
         c._disconnect()
         self.assertTrue(c.client.disconnect.called)
@@ -158,7 +170,7 @@ class StreamConnectorTest(TestCase):
         user = MagicMock()
         user.id = 'some-id'
 
-        c = connectors.StreamConnector(user, 'https://ble.net/repo.git')
+        c = connectors.StreamConnector(user, 'https://ble.net/repo.git', [])
         body = {'build': {'repository': {'id': 'repo-build-id'}}}
         repo_id = c._get_repo_id(body)
         self.assertEqual(repo_id, 'repo-build-id')
@@ -167,7 +179,7 @@ class StreamConnectorTest(TestCase):
         user = MagicMock()
         user.id = 'some-id'
 
-        c = connectors.StreamConnector(user, 'https://ble.net/repo.git')
+        c = connectors.StreamConnector(user, 'https://ble.net/repo.git', [])
         body = {'repository': {'id': 'repo-build-id'}}
         repo_id = c._get_repo_id(body)
         self.assertEqual(repo_id, 'repo-build-id')
@@ -178,7 +190,7 @@ class StreamConnectorTest(TestCase):
         user = MagicMock()
         user.id = 'some-id'
 
-        inst = connectors.StreamConnector(user, 'some-repo')
+        inst = connectors.StreamConnector(user, 'some-repo', [])
         inst._connect = MagicMock()
         inst.log = MagicMock()
         inst._connected = True
@@ -199,7 +211,7 @@ class StreamConnectorTest(TestCase):
         user.id = 'some-id'
 
         try:
-            inst = connectors.StreamConnector(user, 'some-repo')
+            inst = connectors.StreamConnector(user, 'some-repo', [])
             inst._connect = MagicMock()
             inst.client = MagicMock()
 
@@ -227,7 +239,7 @@ class StreamConnectorTest(TestCase):
         user.id = 'some-id'
 
         try:
-            inst = connectors.StreamConnector(user, 'other-repo')
+            inst = connectors.StreamConnector(user, 'other-repo', [])
             inst._connect = MagicMock()
             inst.client = MagicMock()
 
@@ -255,7 +267,7 @@ class StreamConnectorTest(TestCase):
         user.id = 'some-id'
 
         try:
-            inst = connectors.StreamConnector(user, 'other-repo')
+            inst = connectors.StreamConnector(user, 'other-repo', [])
             inst._connect = MagicMock()
             inst.client = MagicMock()
 
@@ -289,7 +301,9 @@ class StreamConnectorTest(TestCase):
         def callback(msg):
             return None
 
-        yield from connectors.StreamConnector.plug(user, repo_id, callback)
+        yield from connectors.StreamConnector.plug(user, repo_id,
+                                                   ['some-event', 'other'],
+                                                   callback)
         self.assertTrue(connectors.message_arrived.connect.called)
         self.assertTrue(connectors.StreamConnector._prepare_instance.called)
 
@@ -305,7 +319,8 @@ class StreamConnectorTest(TestCase):
         def callback(msg):
             return None
 
-        yield from connectors.StreamConnector.plug(user, repo_id, callback)
+        yield from connectors.StreamConnector.plug(user, repo_id, ['event'],
+                                                   callback)
         called_kw = connectors.message_arrived.connect.call_args[1]
         self.assertFalse(called_kw)
         self.assertTrue(connectors.message_arrived.connect.called)
@@ -321,6 +336,7 @@ class StreamConnectorTest(TestCase):
         def callback(msg):
             return None
 
-        connectors.StreamConnector.unplug(user, repo_id, callback)
+        event_types = ['build_started', 'build_finished']
+        connectors.StreamConnector.unplug(user, repo_id, event_types, callback)
         self.assertTrue(connectors.message_arrived.disconnect.called)
         self.assertTrue(connectors.StreamConnector._release_instance.called)
