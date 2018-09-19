@@ -19,6 +19,7 @@ describe('BasePageTest', function(){
 
   beforeEach(function(){
     spyOn(jQuery, 'ajax');
+    window.wsconsumer = new StreamConsumer();
     affix('#main-area-container');
     this.page = new BasePage({router: jasmine.createSpy('router')});
     this.page.template_container.html = jasmine.createSpy('html_call');
@@ -29,7 +30,6 @@ describe('BasePageTest', function(){
     expect(this.page.template_container.html).toHaveBeenCalled();
   });
 });
-
 
 describe('SettingsPageTest', function(){
 

@@ -24,6 +24,7 @@ class BasePage extends Backbone.View{
   }
 
   async fetch_template(){
+    wsconsumer.disconnect();
     let template = await $.ajax({'url': this.template_url});
     this.template_container.html(template);
   }

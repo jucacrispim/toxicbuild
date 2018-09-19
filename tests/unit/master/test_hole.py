@@ -1195,6 +1195,8 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'ui_notifications', AsyncMagicMock())
     @patch.object(hole, 'build_added', Mock())
     @patch.object(hole, 'step_output_arrived', Mock())
+    @patch.object(hole, 'buildset_started', Mock())
+    @patch.object(hole, 'buildset_finished', Mock())
     def test_disconnectfromsignals(self):
 
         self.handler._disconnectfromsignals()
@@ -1203,6 +1205,8 @@ class UIStreamHandlerTest(TestCase):
                              hole.build_started.disconnect.called,
                              hole.build_finished.disconnect.called,
                              hole.build_added.disconnect.called,
+                             hole.buildset_started.disconnect.called,
+                             hole.buildset_finished.disconnect.called,
                              hole.step_output_arrived.disconnect.called]))
         self.assertTrue(hole.ui_notifications.publish.called)
         kw = hole.ui_notifications.publish.call_args[1]
@@ -1214,6 +1218,8 @@ class UIStreamHandlerTest(TestCase):
     @patch.object(hole, 'build_finished', Mock())
     @patch.object(hole, 'build_added', Mock())
     @patch.object(hole, 'step_output_arrived', Mock())
+    @patch.object(hole, 'buildset_started', Mock())
+    @patch.object(hole, 'buildset_finished', Mock())
     @async_test
     async def test_connect2signals(self):
 
@@ -1226,7 +1232,8 @@ class UIStreamHandlerTest(TestCase):
             spec=self.handler._handle_ui_notifications)
         event_types = ['step_started', 'step_finished', 'build_started',
                        'build_finished', 'build_cancelled',
-                       'step_output_arrived', 'build_added']
+                       'step_output_arrived', 'build_added',
+                       'buildset_started', 'buildset_finished']
 
         await self.handler._connect2signals(event_types)
         self.assertTrue(all([hole.step_started.connect.called,
@@ -1234,14 +1241,16 @@ class UIStreamHandlerTest(TestCase):
                              hole.build_started.connect.called,
                              hole.build_finished.connect.called,
                              hole.build_added.connect.called,
+                             hole.buildset_started.connect.called,
+                             hole.buildset_finished.connect.called,
                              hole.step_output_arrived.connect.called]))
 
     @async_test
-    async def test_connect2signals_repo_status(self):
+    async def test_connect2signals_repo_added(self):
         self.handler._handle_ui_notifications = AsyncMagicMock(
             spec=self.handler._handle_ui_notifications)
 
-        event_types = ['repo_status_changed']
+        event_types = ['repo_added']
         await self.handler._connect2signals(event_types)
         self.assertTrue(self.handler._handle_ui_notifications.called)
 
@@ -1320,6 +1329,26 @@ class UIStreamHandlerTest(TestCase):
         self.assertEqual(called, 'build_finished')
 
     @async_test
+    async def test_buildset_started(self):
+        self.handler.send_buildset_info = AsyncMagicMock(
+            spec=self.handler.send_buildset_info)
+
+        await self.handler.buildset_started(Mock(), buildset=Mock())
+
+        called = self.handler.send_buildset_info.call_args[0][0]
+        self.assertEqual(called, 'buildset_started')
+
+    @async_test
+    async def test_buildset_finished(self):
+        self.handler.send_buildset_info = AsyncMagicMock(
+            spec=self.handler.send_buildset_info)
+
+        await self.handler.buildset_finished(Mock(), buildset=Mock())
+
+        called = self.handler.send_buildset_info.call_args[0][0]
+        self.assertEqual(called, 'buildset_finished')
+
+    @async_test
     async def test_build_added(self):
         send_info = MagicMock()
         self.handler.send_info = asyncio.coroutine(
@@ -1348,6 +1377,18 @@ class UIStreamHandlerTest(TestCase):
 
         self.assertTrue(self.handler._connect2signals.called)
         self.assertTrue(send_response.called)
+
+    @async_test
+    async def test_send_buildset_info(self):
+        buildset = Mock()
+        buildset.to_dict.return_value = {}
+        event_type = 'buildset_started'
+        self.handler.send_response = AsyncMagicMock(
+            spec=self.handler.send_response)
+
+        await self.handler.send_buildset_info(event_type, buildset)
+
+        self.assertTrue(self.handler.send_response.called)
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -1487,9 +1528,9 @@ class UIStreamHandlerTest(TestCase):
 
         self.handler.send_response = sr
         msg = AsyncMagicMock()
-        msg.body = dict(repository_id=testrepo.id,
-                        old_status='running',
-                        new_status='fail')
+        msg.body = dict(repository_id=str(testrepo.id),
+                        new_status='fail',
+                        old_status='running')
         await self.handler.send_repo_status_info(msg)
 
         await asyncio.sleep(0)

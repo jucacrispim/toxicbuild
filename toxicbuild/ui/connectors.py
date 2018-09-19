@@ -111,8 +111,11 @@ class StreamConnector(LoggerMixin):
 
             repo_id = self._get_repo_id(body)
             event = body.get('event_type')
-            allowed_events = ['repo_status_changed']
-            if repo_id == self.repo_id or event in allowed_events:
+            # there are the events that don't need a repo_id to be
+            # delivered for the client.
+            no_repo_events = ['repo_status_changed', 'buildset_started',
+                              'buildset_finished']
+            if repo_id == self.repo_id or event in no_repo_events:
                 self.log('message {} arrived for {}'.format(event, repo_id),
                          level='debug')
                 message_arrived.send(repo_id, **body)

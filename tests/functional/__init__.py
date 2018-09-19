@@ -376,7 +376,7 @@ class BaseFunctionalTest(TestCase):
 
 STREAM_EVENT_TYPES = ['build_added', 'build_started', 'build_finished',
                       'step_started', 'step_finished', 'step_output_arrived',
-                      'repo_status_changed', 'repo_added']
+                      'repo_added', 'buildset_started', 'buildset_finished']
 
 
 class DummyMasterHoleClient(BaseToxicClient):

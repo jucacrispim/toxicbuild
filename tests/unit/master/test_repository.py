@@ -586,23 +586,6 @@ class RepositoryTest(TestCase):
 
         self.assertEqual((await self.repo.get_status()), 'ready')
 
-    @patch.object(repository, 'repo_status_changed', AsyncMagicMock())
-    @async_test
-    async def test_check_for_status_change(self):
-        self.repo._old_status = 'running'
-
-        @asyncio.coroutine
-        def get_status():
-            return 'running'
-
-        self.repo.get_status = get_status
-
-        b = build.BuildSet(repository=self.repo,
-                           commit_date=datetime.datetime.now(),
-                           started=datetime.datetime.now())
-        await self.repo._check_for_status_change(str(self.repo.id), b)
-        self.assertTrue(repository.repo_status_changed.publish.called)
-
     @async_test
     async def test_get_builders(self):
         await self._create_db_revisions()

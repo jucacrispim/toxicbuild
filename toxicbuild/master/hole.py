@@ -46,7 +46,8 @@ from toxicbuild.master.slave import Slave
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,
                                        build_added, build_cancelled,
-                                       step_output_arrived)
+                                       step_output_arrived,
+                                       buildset_started, buildset_finished)
 from toxicbuild.master.users import User, Organization
 
 
@@ -761,14 +762,24 @@ class UIStreamHandler(LoggerMixin):
         self.log('Got build-cancelled signal', level='debug')
         await self.send_info('build_cancelled', sender=sender, **kw)
 
+    async def buildset_started(self, sender, **kw):
+        self.log('Sending info to buildset_started', level='debug')
+        await self.send_buildset_info('buildset_started', kw['buildset'])
+
+    async def buildset_finished(self, sender, **kw):
+        self.log('Sending info to buildset_finished', level='debug')
+        await self.send_buildset_info('buildset_finished', kw['buildset'])
+
     async def _connect2signals(self, event_types):
 
-        if 'repo_status_changed' in event_types or 'repo_added' in event_types:
+        is_repo_added = 'repo_added' in event_types
+        is_repo_status_changed = 'repo_status_changed' in event_types
+        if is_repo_added or is_repo_status_changed:
             ensure_future((self._handle_ui_notifications()))
-            to_remove = ['repo_status_changed', 'repo_added']
-            for rm in to_remove:
+            to_delete = ['repo_added', 'repo_status_changed']
+            for name in to_delete:
                 try:
-                    event_types.remove(rm)
+                    event_types.remove(name)
                 except ValueError:
                     pass
 
@@ -781,6 +792,7 @@ class UIStreamHandler(LoggerMixin):
         hole = sys.modules[__name__]
 
         for event in event_types:
+            self.log('connecting to {}'.format(event), level='debug')
             signal = getattr(hole, event)
             meth = getattr(self, event)
             signal.connect(meth, sender=str(repo.id))
@@ -831,11 +843,18 @@ class UIStreamHandler(LoggerMixin):
         build_finished.disconnect(self.build_finished)
         build_added.disconnect(self.build_added)
         build_cancelled.disconnect(self.build_cancelled)
+        buildset_started.disconnect(self.buildset_started)
+        buildset_finished.disconnect(self.buildset_finished)
 
     async def handle(self):
         event_types = self.body['event_types']
         await self._connect2signals(event_types)
         await self.protocol.send_response(code=0, body={'stream': 'ok'})
+
+    async def send_buildset_info(self, event_type, buildset):
+        buildset_dict = buildset.to_dict(builds=False)
+        buildset_dict['event_type'] = event_type
+        ensure_future(self.send_response(code=0, body=buildset_dict))
 
     async def send_info(self, info_type, sender, build=None, step=None):
         repo = await Repository.objects.get(id=sender)

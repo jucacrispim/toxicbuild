@@ -115,8 +115,19 @@ class RepositoryList extends BaseCollection{
 
   constructor(models, options){
     super(models, options);
+    let self = this;
     this.model = Repository;
     this.url = TOXIC_REPO_API_URL;
+    $(document).on('buildset_started buildset_finished', function(e, data){
+      self.updateRepoStatus(data);
+    });
+  }
+
+  updateRepoStatus(msg){
+    let repo = this.get(msg['repository']['id']);
+    let attrs = {'status': msg['status'],
+		 'last_buildset': msg};
+    repo.set(attrs);
   }
 
 }
@@ -585,10 +596,7 @@ class RepositoryInfoView extends BaseRepositoryView{
 	'.repo-details-link@href': 'details_link',
 	'.repository-info-status': 'status',
 	'.buildset-commit': 'commit',
-	'.buildset-title': 'title',
-	'.buildset-total-time': 'total_time',
-	'.buildset-started': 'started',
-	'.buildset-commit-date': 'commit_date'},
+	'.buildset-title': 'title'},
 
       'enabled': {
 	'.repository-info-name': 'name',
@@ -600,6 +608,9 @@ class RepositoryInfoView extends BaseRepositoryView{
     this.template_selector = '.template .repository-info';
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
+
+    let self = this;
+    this.model.on({'change': function(){self.render();}});
   }
 
   render(){
@@ -609,6 +620,11 @@ class RepositoryInfoView extends BaseRepositoryView{
     let compiled = $(this.compiled_template(kw));
     compiled.addClass('repo-status-' + status.replace(' ', '-'));
     $('.badge', compiled).addClass(badge_class);
+
+    let spinner_cog = $('.fa-cog', compiled);
+    if (status != 'running'){
+      spinner_cog.hide();
+    }
 
     let checkbox = $('.repo-enabled-checkbox', compiled);
     utils.checkboxToggle(checkbox);
@@ -623,7 +639,8 @@ class RepositoryInfoView extends BaseRepositoryView{
     else{
       $('.repository-info-last-buildset', compiled).show();
     }
-    return compiled;
+    this.$el.html(compiled);
+    return this;
   }
 }
 
@@ -644,12 +661,13 @@ class RepositoryListView extends Backbone.View{
   _render_repo(model){
     let view = new RepositoryInfoView({'model': model},
 				      this.list_type);
-    let rendered = view.render();
+    let rendered = view.render().$el;
     this.$el.append(rendered.hide().fadeIn(300));
     return rendered;
   }
 
   _render_list_if_needed(){
+    wsconsumer.connectTo('repo-status');
     // Renders the repository list if there are some repositories. If not
     // displays the welcome message
     $('.wait-toxic-spinner').hide();

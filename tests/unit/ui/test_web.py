@@ -695,13 +695,6 @@ class StreamHandlerTest(AsyncTestCase):
         self.assertEqual(self.handler.action, 'repo-status')
 
     @gen_test
-    def test_bad_message_type_logger(self):
-        self.handler.log = MagicMock()
-        self.handler._bad_message_type_logger(
-            {'event_type': 'unknown'})
-        self.assertTrue(self.handler.log.called)
-
-    @gen_test
     def test_receiver(self):
         sender = MagicMock()
         message = {'event_type': 'build_started'}

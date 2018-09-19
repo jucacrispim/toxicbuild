@@ -148,6 +148,25 @@ describe('RepositoryTest', function(){
   });
 });
 
+describe('RepositoryListTest', function(){
+
+  beforeEach(function(){
+    this.list = new RepositoryList();
+  });
+
+  it('test-updateRepoStatus', function(){
+    let model = new Repository();
+    model.set('status', 'somestatus');
+    model.set('id', 'myid');
+    this.list.set(model);
+
+    let msg = {'repository': {'id': 'myid'}, 'status': 'otherstatus'};
+    this.list.updateRepoStatus(msg);
+    expect(model.get('status')).toEqual('otherstatus');
+  });
+
+});
+
 describe('BaseRepositoryViewTest', function(){
 
   beforeEach(function(){

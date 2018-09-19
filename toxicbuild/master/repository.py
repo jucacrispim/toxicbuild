@@ -466,12 +466,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         _scheduler_hashes['{}-start-pending'.format(
             self.url)] = start_pending_hash
 
-        # connecting to build signals
-        buildset_started.connect(self._check_for_status_change,
-                                 sender=str(self.id))
-        buildset_finished.connect(self._check_for_status_change,
-                                  sender=str(self.id))
-
     @classmethod
     async def schedule_all(cls):
         """ Schedule all repositories. """
@@ -611,17 +605,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await self.build_manager.add_builds_for_slave(
             buildset, slave, conf, builders=builders,
             builders_origin=builders_origin)
-
-    async def _check_for_status_change(self, sender, buildset):
-        """Called when a build is started or finished. If this event
-        makes the repository change its status publishes in the
-        ``repo_status_changed`` exchange.
-
-        :param sender: The object that sent the signal
-        :param build: The build that was started or finished"""
-
-        status_msg = buildset.to_dict(builds=False)
-        await self._notify_status_changed(status_msg)
 
     async def start_build(self, branch, builder_name=None, named_tree=None,
                           slaves=None, builders_origin=None):

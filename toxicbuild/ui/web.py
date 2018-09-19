@@ -85,7 +85,7 @@ def _create_cookie_content(user):
     return content
 
 
-class CookieAuthHandlerMixin(LoggerMixin, BasePyroHandler):
+class CookieAuthHandlerMixin(LoggerMixin):
     """A mixin that checks if the requester is logged by looking
     for a cookie."""
 
@@ -93,11 +93,15 @@ class CookieAuthHandlerMixin(LoggerMixin, BasePyroHandler):
         self.user = None
         super().__init__(*args, **kwargs)
 
-    async def async_prepare(self):
+    def _get_user(self):
         user = self._get_user_from_cookie()
         if not user:
             raise HTTPError(403)
+
         self.user = user
+
+    async def async_prepare(self):
+        self._get_user()
         await super().async_prepare()
         return True
 
@@ -506,6 +510,10 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
         super().__init__(*args, **kwargs)
         self.action = None
         self.repo_id = None
+        self.body = None
+
+    def prepare(self):
+        self._get_user()
 
     def initialize(self):
         self.action = None
@@ -521,15 +529,13 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
                        'step_output_info': self._send_step_output_info}
         # maps actions to message (event) types
         self.action_messages = {'repo-status': ['repo_status_changed',
-                                                'repo_added'],
+                                                'repo_added',
+                                                'buildset_started',
+                                                'buildset_finished'],
                                 'builds': ['build_started', 'build_finished',
                                            'build_added', 'step_started',
                                            'step_finished', 'build_cancelled'],
                                 'step-output': ['step_output_info']}
-
-    def _bad_message_type_logger(self, message):
-        msg = 'Bad. message type: {}'.format(message['event_type'])
-        self.log(msg, level='warning')
 
     def _get_repo_id(self):
         repo_id = None
@@ -545,9 +551,10 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
 
     def open(self, action):
         self.action = action
+        self.body = self.action_messages[self.action]
         self.repo_id = self._get_repo_id()
         f = ensure_future(StreamConnector.plug(
-            self.user, self.repo_id, self.receiver))
+            self.user, self.repo_id, self.body, self.receiver))
         return f
 
     def receiver(self, sender, **message):
@@ -558,7 +565,7 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
             msg = 'leaving receiver'
             self.log(msg, level='debug')
             return
-        outfn = self.events.get(message_type, self._bad_message_type_logger)
+        outfn = self.events.get(message_type, self._send_raw_info)
         try:
             outfn(message)
         except Exception:
@@ -600,11 +607,13 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
             self._format_info_dt(buildset)
 
     def _send_raw_info(self, info):
+        self._format_info_dt(info)
         self.write2sock(info)
 
     def on_close(self):
         self.log('connection closed', level='debug')
-        StreamConnector.unplug(self.user, self.repo_id, self.receiver)
+        StreamConnector.unplug(self.user, self.repo_id, self.body,
+                               self.receiver)
 
     def write2sock(self, body):
         try:
