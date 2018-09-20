@@ -197,9 +197,6 @@ class LoggerMixin:
 
     """A simple mixin to use log on a class."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     @classmethod
     def log_cls(cls, msg, level='info'):
         log('[{}] {} '.format(cls.__name__, msg), level)
