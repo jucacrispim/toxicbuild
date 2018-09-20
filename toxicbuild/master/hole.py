@@ -791,7 +791,6 @@ class UIStreamHandler(LoggerMixin):
         repos = await Repository.list_for_user(self.protocol.user)
         async for repo in repos:
             self._connect_repo(repo, event_types)
-        ensure_future
 
     def _connect_repo(self, repo, event_types):
         hole = sys.modules[__name__]
@@ -833,7 +832,7 @@ class UIStreamHandler(LoggerMixin):
             return
 
         ensure_future(self.send_repo_added_info(msg))
-        self._connect_repo(repo)
+        self._connect_repo(repo, ['buildset_started', 'buildset_finished'])
 
     def _disconnectfromsignals(self):
         self.log('Disconnecting from signals', level='debug')
