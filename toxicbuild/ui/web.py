@@ -532,30 +532,30 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
                                                 'repo_added',
                                                 'buildset_started',
                                                 'buildset_finished'],
+                                'repo-buildsets': ['buildset_started',
+                                                   'buildset_finished',
+                                                   'buildset_added'],
                                 'builds': ['build_started', 'build_finished',
                                            'build_added', 'step_started',
                                            'step_finished', 'build_cancelled'],
                                 'step-output': ['step_output_info']}
 
-    def _get_repo_id(self):
-        repo_id = None
-        keys = ['repo_id', 'repository_id']
-        for key in keys:
-            try:
-                repo_id = self.request.arguments.get(key)[0].decode()
-                break
-            except TypeError:
-                pass
+    async def _get_repo_id(self):
+        try:
+            repo_name = self.request.arguments.get('repo_name')[0].decode()
+        except TypeError:
+            return
 
-        return repo_id
+        repo = await Repository.get(self.user, repo_name_or_id=repo_name)
+        return repo.id
 
-    def open(self, action):
+    async def open(self, action):
         self.action = action
         self.body = self.action_messages[self.action]
-        self.repo_id = self._get_repo_id()
-        f = ensure_future(StreamConnector.plug(
-            self.user, self.repo_id, self.body, self.receiver))
-        return f
+        self.repo_id = await self._get_repo_id()
+        r = await StreamConnector.plug(
+            self.user, self.repo_id, self.body, self.receiver)
+        return r
 
     def receiver(self, sender, **message):
         message_type = message.get('event_type')
@@ -601,6 +601,10 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
         created = info.get('created')
         if created and is_datetime(created):
             info['created'] = format_datetime(string2datetime(created))
+
+        commit_date = info.get('commit_date')
+        if commit_date and is_datetime(commit_date):
+            info['commit_date'] = format_datetime(string2datetime(commit_date))
 
         buildset = info.get('buildset')
         if buildset:

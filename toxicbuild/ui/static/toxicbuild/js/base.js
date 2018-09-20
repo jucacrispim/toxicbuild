@@ -353,10 +353,14 @@ class BaseListView extends Backbone.View{
     throw new Error('You must implement _get_view()');
   }
 
-  _render_obj(model){
+  _render_obj(model, prepend=false){
     let view = this._get_view(model);
     let rendered = view.getRendered();
-    this.$el.append(rendered.hide().fadeIn(300));
+    if (prepend){
+      this.$el.prepend(rendered.hide().fadeIn(300));
+    }else{
+      this.$el.append(rendered.hide().fadeIn(300));
+    }
     return rendered;
   }
 

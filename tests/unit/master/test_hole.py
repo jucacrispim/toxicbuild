@@ -1349,6 +1349,16 @@ class UIStreamHandlerTest(TestCase):
         self.assertEqual(called, 'buildset_finished')
 
     @async_test
+    async def test_buildset_added(self):
+        self.handler.send_buildset_info = AsyncMagicMock(
+            spec=self.handler.send_buildset_info)
+
+        await self.handler.buildset_added(Mock(), buildset=Mock())
+
+        called = self.handler.send_buildset_info.call_args[0][0]
+        self.assertEqual(called, 'buildset_added')
+
+    @async_test
     async def test_build_added(self):
         send_info = MagicMock()
         self.handler.send_info = asyncio.coroutine(

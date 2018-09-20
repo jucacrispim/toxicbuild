@@ -37,7 +37,8 @@ from toxicbuild.master.document import ExternalRevisionIinfo
 from toxicbuild.master.exceptions import (DBError, ImpossibleCancellation)
 from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import (build_added, build_cancelled,
-                                       buildset_started, buildset_finished)
+                                       buildset_started, buildset_finished,
+                                       buildset_added)
 from toxicbuild.master.utils import (get_build_config_type,
                                      get_build_config_filename)
 
@@ -719,6 +720,7 @@ class BuildManager(LoggerMixin):
             except FileNotFoundError:
                 buildset.status = type(buildset).NO_CONFIG
                 await buildset.save()
+                buildset_added.send(str(self.repository.id), buildset=buildset)
                 continue
 
             last_bs = buildset
@@ -773,6 +775,9 @@ class BuildManager(LoggerMixin):
                 last_build, revision.commit, revision.branch), level='debug')
 
         self.build_queues[slave.name].append(buildset)
+        # We send the buildset_added signal here so we already have all
+        # information about builds.
+        buildset_added.send(str(self.repository.id), buildset=buildset)
         if not self.is_building[slave.name]:  # pragma: no branch
             ensure_future(self._execute_builds(slave))
 

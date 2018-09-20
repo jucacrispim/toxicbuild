@@ -47,7 +47,8 @@ from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,
                                        build_added, build_cancelled,
                                        step_output_arrived,
-                                       buildset_started, buildset_finished)
+                                       buildset_started, buildset_finished,
+                                       buildset_added)
 from toxicbuild.master.users import User, Organization
 
 
@@ -770,6 +771,10 @@ class UIStreamHandler(LoggerMixin):
         self.log('Sending info to buildset_finished', level='debug')
         await self.send_buildset_info('buildset_finished', kw['buildset'])
 
+    async def buildset_added(self, sender, **kw):
+        self.log('Sending info to buildset_added', level='debug')
+        await self.send_buildset_info('buildset_added', kw['buildset'])
+
     async def _connect2signals(self, event_types):
 
         is_repo_added = 'repo_added' in event_types
@@ -845,6 +850,7 @@ class UIStreamHandler(LoggerMixin):
         build_cancelled.disconnect(self.build_cancelled)
         buildset_started.disconnect(self.buildset_started)
         buildset_finished.disconnect(self.buildset_finished)
+        buildset_added.disconnect(self.buildset_added)
 
     async def handle(self):
         event_types = self.body['event_types']

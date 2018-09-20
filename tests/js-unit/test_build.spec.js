@@ -33,6 +33,20 @@ describe('BuildSetTest', function(){
     let buildset = new BuildSet(buildset_info);
     expect(buildset.get('builds')[0] instanceof Build).toBe(true);
   });
+});
+
+describe('BuildSetLisTest', function(){
+  beforeEach(function(){
+    this.list = new BuildSetList();
+  });
+
+  it('test-updateBuildSet', function(){
+    this.list.add({'id': 'some-id'});
+    let data = {'id': 'some-id', 'title' :'some title'};
+    this.list.updateBuildSet(data);
+    let model = this.list.get('some-id');
+    expect(model.get('title')).toEqual('some title');
+  });
 
 });
 
@@ -97,6 +111,15 @@ describe('BuildsetInfoViewTest', function(){
     this.view.getRendered();
     expect($.fn.show).toHaveBeenCalled();
   });
+
+  it('test-getRendered-not-running', function(){
+    spyOn(this.view, '_get_kw').and.returnValue({status: 'fail'});
+
+    spyOn($.fn, 'show');
+    let r = this.view.getRendered();
+    expect($('.fa-cog', r).is('visible')).toBe(false);
+  });
+
 });
 
 
@@ -113,6 +136,7 @@ describe('BuildSetListViewTest', function(){
     container.affix('.buildset-started');
     container.affix('.buildset-total-time');
     container.affix('.buildset-title-container a');
+    spyOn(BuildSetListView.prototype, '_connect2ws');
     this.view = new BuildSetListView('some/repo');
   });
 

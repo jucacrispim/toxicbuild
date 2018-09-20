@@ -643,6 +643,8 @@ class RepositoryTest(TestCase):
         self.assertFalse(self.repo.get_latest_revision_for_branch.called)
         self.assertFalse(self.repo._get_builders.called)
 
+    @patch.object(repository.buildset_added, 'send', Mock(
+        spec=repository.buildset_added.send))
     @async_test
     async def test_start_build_no_conf(self):
         await self._create_db_revisions()
@@ -654,6 +656,7 @@ class RepositoryTest(TestCase):
                                     named_tree='asdf', slaves=[self.slave])
 
         self.assertFalse(self.repo.add_builds_for_slave.called)
+        self.assertTrue(repository.buildset_added.send.called)
 
     @patch.object(repository, 'repo_notifications', AsyncMagicMock(
         spec=repository.repo_notifications))

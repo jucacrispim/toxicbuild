@@ -41,7 +41,8 @@ from toxicbuild.master.exchanges import (update_code, poll_status,
                                          repo_notifications)
 from toxicbuild.master.utils import (get_build_config_type,
                                      get_build_config_filename)
-from toxicbuild.master.signals import (buildset_started, buildset_finished)
+from toxicbuild.master.signals import (buildset_started, buildset_finished,
+                                       buildset_added)
 from toxicbuild.master.slave import Slave
 
 # The thing here is: When a repository poller is scheduled, I need to
@@ -627,6 +628,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         except FileNotFoundError:
             buildset.status = type(buildset).NO_CONFIG
             await buildset.save()
+            buildset_added.send(str(self.id), buildset=buildset)
             return
 
         if not builder_name:

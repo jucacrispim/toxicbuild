@@ -124,6 +124,7 @@ describe('MainPageTest', function(){
 describe('BuildSetListPageTest', function(){
 
   beforeEach(function(){
+    spyOn(BuildSetListView.prototype, '_connect2ws');
     this.page = new BuildSetListPage({router: jasmine.createSpy('router')});
     this.page.list_view.render_all = jasmine.createSpy('render-all');
   });

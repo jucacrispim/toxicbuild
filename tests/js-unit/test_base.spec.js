@@ -377,6 +377,16 @@ describe('BaseListViewTest', function(){
     expect(rendered.selector).toEqual('.some-html');
   });
 
+  it('test-render_obj-prepend', function (){
+    let view = jasmine.createSpy();
+    let el_rendered  = $('.some-html');
+    el_rendered.html('the content');
+    view.getRendered = jasmine.createSpy().and.returnValue(el_rendered);
+    spyOn(this.view, '_get_view').and.returnValue(view);
+    let rendered = this.view._render_obj(jasmine.createSpy(), false);
+    expect(rendered.selector).toEqual('.some-html');
+  });
+
   it('test-render_all', async function(){
     spyOn(this.view, '_fetch_items');
     spyOn(this.view, '_render_list');

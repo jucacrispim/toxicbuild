@@ -553,6 +553,8 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
+    @mock.patch.object(build.buildset_added, 'send', mock.Mock(
+        spec=build.buildset_added.send))
     @async_test
     async def test_add_builds_for_slave(self):
         await self._create_test_data()
@@ -571,6 +573,7 @@ class BuildManagerTest(TestCase):
         # It already has two builds from _create_test_data and more two
         # from .add_builds_for_slave
         self.assertEqual(len(buildset.builds), 4)
+        self.assertTrue(build.buildset_added.send.called)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

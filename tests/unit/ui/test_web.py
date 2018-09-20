@@ -668,29 +668,29 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler.prepare()
         self.handler._get_user.called
 
-    def test_get_repo_id(self):
-        self.handler.request.arguments = {'repo_id': [b'asdf']}
-        repo_id = self.handler._get_repo_id()
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get, return_value=web.Repository(MagicMock(),
+                                                             {'id': 'asdf'})))
+    @async_test
+    async def test_get_repo_id(self):
+        self.handler.request.arguments = {'repo_name': [b'my/repo']}
+        repo_id = await self.handler._get_repo_id()
         self.assertEqual(repo_id, 'asdf')
 
-    def test_get_repo_id_with_repository_id(self):
-        self.handler.request.arguments = {'repository_id': [b'asdf']}
-        repo_id = self.handler._get_repo_id()
-        self.assertEqual(repo_id, 'asdf')
-
-    def test_get_repo_id_type_error(self):
-        repo_id = self.handler._get_repo_id()
+    @async_test
+    async def test_get_repo_id_type_error(self):
+        repo_id = await self.handler._get_repo_id()
         self.assertIsNone(repo_id)
 
     @patch.object(web, 'StreamConnector', MagicMock())
-    @gen_test
-    def test_open(self):
-        self.handler.request.arguments = {'repo_id': [b'asdf']}
-        plug = MagicMock()
-        web.StreamConnector.plug = asyncio.coroutine(lambda *a, **kw: plug())
-        f = self.handler.open('repo-status')
-        yield from f
-        self.assertTrue(plug.called)
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        return_value=MagicMock()))
+    @async_test
+    async def test_open(self):
+        self.handler.request.arguments = {'repo_name': [b'asdf']}
+        web.StreamConnector.plug = AsyncMagicMock()
+        await self.handler.open('repo-status')
+        self.assertTrue(web.StreamConnector.plug.called)
         self.assertTrue(self.handler.repo_id)
         self.assertEqual(self.handler.action, 'repo-status')
 
@@ -755,10 +755,12 @@ class StreamHandlerTest(AsyncTestCase):
         utils.settings.DTFORMAT = '%d/%m/%Y %H:%M:%S'
         info = {'buildset': {'started': '3 9 25 08:53:38 2017 -0000',
                              'finished': '3 9 25 08:53:44 2017 -0000',
-                             'created': '3 9 25 08:53:44 2017 -0000'}}
+                             'created': '3 9 25 08:53:44 2017 -0000',
+                             'commit_date': '3 9 25 08:53:44 2017 -0000'}}
         self.handler._format_info_dt(info)
         self.assertFalse(info['buildset']['created'].endswith('0000'))
         self.assertFalse(info['buildset']['started'].endswith('0000'))
+        self.assertFalse(info['buildset']['commit_date'].endswith('0000'))
 
     def test_write2sock(self):
         body = {'some': 'response'}

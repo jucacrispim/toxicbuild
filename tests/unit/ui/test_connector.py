@@ -267,7 +267,8 @@ class StreamConnectorTest(TestCase):
         user.id = 'some-id'
 
         try:
-            inst = connectors.StreamConnector(user, 'other-repo', [])
+            inst = connectors.StreamConnector(
+                user, connectors.StreamConnector.NONE_REPO_ID, [])
             inst._connect = MagicMock()
             inst.client = MagicMock()
 

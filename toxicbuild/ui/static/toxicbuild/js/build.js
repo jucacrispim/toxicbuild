@@ -73,8 +73,22 @@ class BuildSetList extends BaseCollection{
 
   constructor(models, options){
     super(models, options);
+    let self = this;
     this.model = BuildSet;
     this.url = TOXIC_BUILDSET_API_URL;
+
+    $(document).on('buildset_added', function(e, data){
+      self.add(data);
+    });
+
+    $(document).on('buildset_started buildset_finished', function(e, data){
+      self.updateBuildSet(data);
+    });
+  }
+
+  updateBuildSet(data){
+    let buildset = this.get(data.id);
+    buildset.set(data);
   }
 }
 
@@ -282,19 +296,28 @@ class BuildSetInfoView extends BaseBuildSetView{
     this.template_selector = '.template .buildset-info';
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
+
+    let self = this;
+    this.model.on({'change': function(){self.getRendered();}});
   }
 
   getRendered(){
     let kw = this._get_kw();
+    kw.total_time = kw.total_time || '<still running>';
     let compiled = $(this.compiled_template(kw));
     if (kw.started){
       $('.buildset-total-time-row', compiled).show();
     }
     let status = kw.status;
+
+    if (kw.status != 'running'){
+      $('.fa-cog', compiled).hide();
+    }
     let badge_class = utils.get_badge_class(status);
     compiled.addClass('repo-status-' + status.replace(' ', '-'));
     $('.badge', compiled).addClass(badge_class);
-    return compiled;
+    this.$el.html(compiled);
+    return this.$el;
   }
 }
 
@@ -308,6 +331,17 @@ class BuildSetListView extends BaseListView{
     super(options);
     this._container_selector = '#obj-list-container';
     this.repo_name = repo_name;
+    let self = this;
+    this._connect2ws();
+
+    model.on('add', function(buildset){
+      self._render_obj(buildset, true);
+    });
+  }
+
+  _connect2ws(){
+    let path = 'repo-buildsets?repo_name=' + this.repo_name;
+    wsconsumer.connectTo(path);
   }
 
   async _fetch_items(){
