@@ -421,6 +421,11 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
     this._animateOpen();
   }
 
+  close_page(){
+    let regex = /\/repository\/add$/;
+    super.close_page(regex);
+  }
+
 }
 
 class RepositoryNotificationsPage extends BaseFloatingPage{
