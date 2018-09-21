@@ -195,7 +195,8 @@ def after_feature(context, feature):
     async def delete(context):
         await del_slave(context)
         await del_repo(context)
-        await User.drop_collection()
+        await User.objects(username='already-exists').delete()
+        await User.objects(username='already-existsa-good-username').delete()
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(delete(context))
