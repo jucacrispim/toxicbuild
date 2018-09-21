@@ -173,7 +173,8 @@ def before_feature(context, feature):
     async def create(context):
         await create_slave(context)
 
-        if 'waterfall.feature' in feature.filename:
+        if 'waterfall.feature' in feature.filename or \
+           'notifications.feature' in feature.filename:
             await create_repo(context)
 
         elif 'register.feature' in feature.filename:
@@ -194,6 +195,7 @@ def after_feature(context, feature):
     async def delete(context):
         await del_slave(context)
         await del_repo(context)
+        await User.drop_collection()
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(delete(context))
