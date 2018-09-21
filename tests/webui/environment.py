@@ -128,10 +128,10 @@ def del_repo(context):
     repos = yield from Repository.list(context.user)
     for repo in repos:
         try:
-            yield from repo.delete()
-            yield from scheduler_action.declare()
-            yield from scheduler_action.queue_delete()
-            yield from scheduler_action.connection.disconnect()
+            yield from repo.remove()
+            # yield from scheduler_action.declare()
+            # yield from scheduler_action.queue_delete()
+            # yield from scheduler_action.connection.disconnect()
         except Exception as e:
             log('Error deleting repo ' + str(e), level='warning')
 
