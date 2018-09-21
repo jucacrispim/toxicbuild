@@ -120,6 +120,28 @@ describe('BuildsetInfoViewTest', function(){
     expect($('.fa-cog', r).is('visible')).toBe(false);
   });
 
+  it('test-rescheduleBuildSet', async function(){
+    spyOn(this.view, '_get_kw').and.returnValue({status: 'fail'});
+    spyOn(Repository.prototype, 'start_build');
+    this.view.model.set('repository', {'id': 'some-repo-id'});
+    this.view.model.set('branch', 'master');
+    this.view.model.set('commit', 'asdf123');
+    spyOn(utils, 'showSuccessMessage');
+    await this.view.rescheduleBuildSet();
+    expect(utils.showSuccessMessage).toHaveBeenCalled();
+  });
+
+  it('test-rescheduleBuildSet-error', async function(){
+    spyOn(this.view, '_get_kw').and.returnValue({status: 'fail'});
+    spyOn(Repository.prototype, 'start_build').and.throwError();
+    this.view.model.set('repository', {'id': 'some-repo-id'});
+    this.view.model.set('branch', 'master');
+    this.view.model.set('commit', 'asdf123');
+    spyOn(utils, 'showErrorMessage');
+    await this.view.rescheduleBuildSet();
+    expect(utils.showErrorMessage).toHaveBeenCalled();
+  });
+
 });
 
 

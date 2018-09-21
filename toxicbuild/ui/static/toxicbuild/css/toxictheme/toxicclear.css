@@ -477,6 +477,12 @@ body{
     font-size: 1.0em;
 }
 
+.buildset-info-status-container .fa-redo{
+    font-size: 0.8em;
+    margin-left: 5px;
+    cursor: pointer;
+}
+
 .obj-info-first-row,
 .slave-info-first-row,
 .repository-info-first-row{

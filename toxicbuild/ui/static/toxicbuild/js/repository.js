@@ -82,8 +82,7 @@ class Repository extends BaseModel{
 		    slaves=null, builders_origin=null){
     let url = this._api_url + 'start-build?id=' + this.id;
     let body = {'branch': branch, 'builder_name': builder_name,
-		'named_tree': named_tree, 'slaves': slaves,
-		'builders_origin': builders_origin};
+		'named_tree': named_tree, 'slaves': slaves};
     return this._post2api(url, body);
   }
 
