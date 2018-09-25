@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import time
 from behave import when, then, given
 from selenium.common.exceptions import StaleElementReferenceException
 from tests.webui.steps.base_steps import (  # noqa f811
@@ -34,6 +33,12 @@ def is_in_buildset_list_page(context):
 def click_reschedule_button(context):
     browser = context.browser
     el = browser.find_elements_by_class_name('fa-redo')[1]
+    try:
+        browser.wait_element_become_visible(el)
+    except StaleElementReferenceException:
+        el = browser.find_elements_by_class_name('fa-redo')[1]
+        browser.wait_element_become_visible(el)
+
     browser.wait_element_become_visible(el)
     el.click()
 
