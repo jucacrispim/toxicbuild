@@ -29,9 +29,18 @@ describe('StreamConsumerTest', function(){
 
   it('test-disconnect', function(){
     spyOn(this.consumer, 'ws');
+    this.consumer.ws.readyState = 1;
     this.consumer.ws.close = jasmine.createSpy();
     this.consumer.disconnect();
     expect(this.consumer.ws.close).toHaveBeenCalled();
+  });
+
+  it('test-disconnect-not-connected', function(){
+    spyOn(this.consumer, 'ws');
+    this.consumer.ws.readyState = 3;
+    this.consumer.ws.close = jasmine.createSpy();
+    this.consumer.disconnect();
+    expect(this.consumer.ws.close).not.toHaveBeenCalled();
   });
 
   it('test-handleMessage', async function(){

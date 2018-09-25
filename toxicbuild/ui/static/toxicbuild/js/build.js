@@ -362,10 +362,6 @@ class BuildSetListView extends BaseListView{
     this.repo_name = repo_name;
     let self = this;
     this._connect2ws();
-
-    model.on('add', function(buildset){
-      self._render_obj(buildset, true);
-    });
   }
 
   _connect2ws(){
@@ -374,10 +370,19 @@ class BuildSetListView extends BaseListView{
   }
 
   async _fetch_items(){
+    let self = this;
+
     let kw = {data: {repo_name: this.repo_name,
 		     summary: true}};
     await this.model.fetch(kw);
     $('.buildset-list-top-page-header-info').fadeIn(300);
+
+    // we need to connect to the event after we fetch the data
+    // otherwise will have duplicates in the list.
+    this.model.on('add', function(buildset){
+      self._render_obj(buildset, true);
+    });
+
   }
 
   _get_view(model){

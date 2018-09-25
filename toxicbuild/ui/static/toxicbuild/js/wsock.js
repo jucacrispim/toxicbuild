@@ -34,7 +34,7 @@ class StreamConsumer{
   }
 
   disconnect(){
-    if (this.ws){
+    if (this.ws && this.ws.readyState == 1){
       this.ws.close();
     }
   }

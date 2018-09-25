@@ -128,7 +128,7 @@ def del_repo(context):
     repos = yield from Repository.list(context.user)
     for repo in repos:
         try:
-            yield from repo.remove()
+            yield from repo.delete()
             # yield from scheduler_action.declare()
             # yield from scheduler_action.queue_delete()
             # yield from scheduler_action.connection.disconnect()
@@ -170,14 +170,17 @@ def before_feature(context, feature):
     :param context: Behave's context.
     :param feature: The feature being executed."""
 
+    fname = feature.filename.split(os.path.sep)[-1]
+
     async def create(context):
         await create_slave(context)
 
-        if 'waterfall.feature' in feature.filename or \
-           'notifications.feature' in feature.filename:
+        create_repo_features = ['waterfall.feature', 'notifications.feature',
+                                'buildset.feature']
+        if fname in create_repo_features:
             await create_repo(context)
 
-        elif 'register.feature' in feature.filename:
+        elif fname == 'register.feature':
             await create_root_user(context)
 
     loop = asyncio.get_event_loop()

@@ -45,6 +45,22 @@ class SeleniumBrowser(webdriver.Chrome):
         raise SeleniumBrowserException(
             'text %s not present after %s seconds' % (text, timeout))
 
+    def wait_text_vanishes(self, text, timeout=30):
+        """Waits until a text is not present anyomore in the page source.
+
+        :param text: The text that should be present in the page.
+        :param timeout: timeout in seconds for the operation."""
+
+        r = int(timeout * 10)
+
+        for index in range(r):
+            time.sleep(0.1)
+            if text not in self.page_source:
+                return True
+
+        raise SeleniumBrowserException(
+            'text %s did not vanish after %s seconds' % (text, timeout))
+
     def do_login(self, url, username, passwd):
         """Do login in the web interface.
 
@@ -96,3 +112,34 @@ class SeleniumBrowser(webdriver.Chrome):
 
         raise SeleniumBrowserException(
             'The element %s not visible after %s seconds' % (el, timeout))
+
+    def wait_element_become_hidden(self, el, timeout=10):
+        """Waits until an element become hidden.
+
+        :param el: A page element
+        :param timeout: Timeout for the operation."""
+
+        r = int(timeout * 10)
+
+        for index in range(r):
+            time.sleep(0.1)
+            if not el.is_displayed():
+                return True
+
+        raise SeleniumBrowserException(
+            'The element %s not hidden after %s seconds' % (el, timeout))
+
+    def wait_element_become_present(self, fn, timeout=10):
+        """Waits until an element is present in the DOM.
+
+        :param fn: A function that should return an element. If no return value
+          tries again until timeout is reached.
+        :param timeout: Timeout for the operation."""
+
+        r = int(timeout * 10)
+
+        for index in range(r):
+            time.sleep(0.1)
+            el = fn()
+            if el:
+                return el
