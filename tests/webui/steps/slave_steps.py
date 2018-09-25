@@ -107,7 +107,16 @@ def click_close_btn(context):
 @then('he sees the slaves list')
 def see_slave_list(context):
     browser = context.browser
-    el = browser.find_elements_by_class_name('slave-info')[1]
+
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('slave-info')[1]
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
     browser.wait_element_become_visible(el)
 
 
