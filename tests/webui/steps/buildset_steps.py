@@ -9,7 +9,17 @@ from tests.webui.steps.base_steps import (  # noqa f811
 @when('he clicks in the summary link')
 def click_summary_link(context):
     browser = context.browser
-    el = browser.find_elements_by_xpath('//a[@title="Summary"]')[1]
+
+    def fn():
+        try:
+            el = browser.find_elements_by_xpath('//a[@title="Summary"]')[1]
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
+
     el.click()
     el = browser.find_element_by_class_name('fa-th')
     browser.wait_element_become_visible(el)
@@ -32,11 +42,20 @@ def is_in_buildset_list_page(context):
 @when('he clicks in the reschedule button')
 def click_reschedule_button(context):
     browser = context.browser
-    el = browser.find_elements_by_class_name('fa-redo')[1]
+
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('fa-redo')[1]
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
     try:
         browser.wait_element_become_visible(el)
     except StaleElementReferenceException:
-        el = browser.find_elements_by_class_name('fa-redo')[1]
+        el = browser.wait_element_become_present(fn)
         browser.wait_element_become_visible(el)
 
     browser.wait_element_become_visible(el)
