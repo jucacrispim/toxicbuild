@@ -223,6 +223,46 @@ class BaseBuildSetView extends Backbone.View{
  }
 }
 
+class BuildInfoView extends Backbone.View{
+
+  constructor(options){
+    options = options || {'tagName': 'li'};
+    options.model = options.model || new Build();
+    super(options);
+    this.$el.addClass('builder-build-li build-info-row box-shadow');
+
+    this.directive = {'.builder-name': 'builder_name',
+		      '.build-status': 'status',
+		      '.build-details-link @href': 'details_link'};
+
+    this.template_selector = '.template .builder-build-container';
+    this.container_selector = '.builds-ul';
+
+  }
+
+  _get_kw(){
+    let uuid = this.model.get('uuid');
+    let name = _.escape(this.model.get('builder').name);
+    let status = this.model.get('status');
+    let details_link = '/build/' + uuid;
+    let builder = {'id': this.model.get('builder').id,
+		   'name': _.escape(this.model.get('builder').name)};
+    return {uuid: uuid, builder_name: name, status: status,
+	    details_link: details_link, builder: builder};
+  }
+
+  render(){
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+
+    let kw = this._get_kw();
+    let compiled = $(this.compiled_template(kw));
+    let status_class = 'build-' + kw.status;
+    this.$el.addClass(status_class);
+    this.$el.append(compiled);
+    return this;
+  }
+}
 
 class BuildSetDetailsView extends BaseBuildSetView{
 
@@ -234,13 +274,6 @@ class BuildSetDetailsView extends BaseBuildSetView{
     this.directive = {
       '.repo-name': 'repo_name',
       '.buildset-number': 'number',
-      '.builder-build-li': {
-	'build<-builds': {'.builder-name': 'build.builder.name',
-			  '.build-status': 'build.status',
-			  '@class+': 'build.status_class',
-			  '.build-details-link@href': 'build.details_link',
-			 }
-      },
       '.commit-title': 'title',
       '.commit-branch': 'branch',
       '.commit-author': 'author',
@@ -256,6 +289,12 @@ class BuildSetDetailsView extends BaseBuildSetView{
     this.container_selector = '#buildset-details-container';
   }
 
+  _connect2ws(){
+    let repo_id = $('#repo-id');
+    let path = 'buildset-info?repo_id=' + repo_id;
+    wsconsumer.connectTo(path);
+  }
+
   async render(){
     await this.model.fetch({buildset_id: this.buildset_id});
 
@@ -266,6 +305,14 @@ class BuildSetDetailsView extends BaseBuildSetView{
 
     let kw = this._get_kw();
     let compiled = $(this.compiled_template(kw));
+
+    let builds_container = $('.builds-ul', compiled);
+
+    for (let i in this.model.get('builds')){
+      let build = new Build(this.model.get('builds')[i]);
+      let build_view = new BuildInfoView({model: build});
+      builds_container.append(build_view.render().$el);
+    }
     let badge_class = utils.get_badge_class(kw.status);
     $('.buildset-status', compiled).addClass(badge_class);
     $('.obj-details-buttons-container', compiled).show();
@@ -300,6 +347,7 @@ class BuildSetInfoView extends BaseBuildSetView{
     let self = this;
     this.model.on({'change': function(){self.getRendered();}});
   }
+
 
   getRendered(){
     let self = this;

@@ -9,14 +9,6 @@
 
     <div class="buildset-builds-container col-sm-4">
       <ul class="builds-ul">
-	<li class="builder-build-li build-info-row box-shadow">
-	  <span class="builder-name"></span>-<span class="build-status"></span>
-	  <a href="" class="build-details-link">
-	    <span class="fas fa-info" data-toggle="tooltip"
-		  title="build details">
-	    </span>
-	  </a>
-	</li>
       </ul>
     </div>
     <div class="buildset-info-container col-sm-4">
@@ -42,6 +34,17 @@
     </div>
 
   </div>
+
+  <!-- builds info -->
+  <div class="builder-build-container">
+    <span class="builder-name"></span>-<span class="build-status"></span>
+    <a href="" class="build-details-link">
+      <span class="fas fa-info" data-toggle="tooltip"
+	    title="build details">
+      </span>
+    </a>
+  </div>
+
 </div>
 
 <!-- main build detaile container -->
@@ -80,12 +83,13 @@
       </div>
 
     </div>
-      <!-- end buttons container -->
+    <!-- end buttons container -->
 
 </div>
 
 
 <input type="hidden" value="{{buildset_id}}" id="buildset-id">
+<input type="hidden" value="{{repo_id}}" id="repo-id">
 
 <script>
   async function init(){

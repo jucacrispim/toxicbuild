@@ -33,6 +33,12 @@ class BaseModelTest(TestCase):
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
+    def test_get_ref_cls(self):
+        cls = 'toxicbuild.ui.models.BuildSet'
+        model = models.BaseModel(MagicMock(), ordered_kwargs={})
+        new_cls = model._get_ref_cls(cls)
+        self.assertIs(new_cls, models.BuildSet)
+
     @patch.object(models, 'get_hole_client', MagicMock(
         spec=models.get_hole_client))
     @async_test
@@ -450,8 +456,10 @@ class BuildSetTest(TestCase):
                           {'id': 'sasdfasf',
                            'started': '3 9 25 08:53:38 2017 -0000',
                            'builds': [{'steps': [{'name': 'unit'}],
-                                       'builder': {'name': 'some'}}]},
-                          {'id': 'paopofe', 'builds': [{}]}]))
+                                       'builder': {'name': 'some'}}],
+                           'repository': {'id': 'some-id'}},
+                          {'id': 'paopofe', 'builds': [{}],
+                           'repository': {'id': 'some-id'}}]))
     @async_test
     async def test_to_dict(self):
         requester = MagicMock()
@@ -460,6 +468,7 @@ class BuildSetTest(TestCase):
         b_dict = buildset.to_dict()
         self.assertTrue(b_dict['id'])
         self.assertTrue(b_dict['builds'][0]['steps'])
+        self.assertTrue(b_dict['repository'])
 
     @patch.object(models.BuildSet, 'get_client', lambda requester:
                   get_client_mock(

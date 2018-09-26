@@ -672,10 +672,16 @@ class StreamHandlerTest(AsyncTestCase):
         spec=web.Repository.get, return_value=web.Repository(MagicMock(),
                                                              {'id': 'asdf'})))
     @async_test
-    async def test_get_repo_id(self):
+    async def test_get_repo_id_repo_name(self):
         self.handler.request.arguments = {'repo_name': [b'my/repo']}
         repo_id = await self.handler._get_repo_id()
         self.assertEqual(repo_id, 'asdf')
+
+    @async_test
+    async def test_get_repo_id(self):
+        self.handler.request.arguments = {'repo_id': [b'some-id']}
+        repo_id = await self.handler._get_repo_id()
+        self.assertEqual(repo_id, 'some-id')
 
     @async_test
     async def test_get_repo_id_type_error(self):
@@ -930,12 +936,13 @@ class DashboardHandlerTest(AsyncTestCase):
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
     def test_get_buildset_template(self):
-        self.handler._get_buildset_template('some-buildset-id')
+        self.handler._get_buildset_template('some-buildset-id', 'some-repo-id')
         called = web.render_template.call_args
         called_template = called[0][0]
         called_context = called[0][2]
         self.assertEqual(called_template, self.handler.buildset_template)
-        self.assertEqual(called_context, {'buildset_id': 'some-buildset-id'})
+        self.assertEqual(called_context, {'buildset_id': 'some-buildset-id',
+                                          'repo_id': 'some-repo-id'})
 
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
@@ -1063,13 +1070,15 @@ class DashboardHandlerTest(AsyncTestCase):
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 
-    def test_show_buildset_details(self):
+    @patch.object(web.BuildSet, 'get', AsyncMagicMock(spec=web.BuildSet.get))
+    @async_test
+    async def test_show_buildset_details(self):
         self.handler._get_buildset_template = MagicMock(
-            spec=self.handler._get_buildset_template)
+            spec=type(self.handler)._get_buildset_template)
         self.handler.render_template = MagicMock(
             spec=self.handler.render_template)
 
-        self.handler.show_buildset_details(b'some-buildset-id')
+        await self.handler.show_buildset_details(b'some-buildset-id')
 
         expected_keys = ['content']
         called_template = self.handler.render_template.call_args[0][0]
@@ -1177,12 +1186,14 @@ class DashboardHandlerTest(AsyncTestCase):
         self.assertTrue(self.handler._get_buildset_list_template.called)
         self.assertTrue(self.handler.write.called)
 
-    def test_show_buildset_template(self):
+    @patch.object(web.BuildSet, 'get', AsyncMagicMock(spec=web.BuildSet.get))
+    @async_test
+    async def test_show_buildset_template(self):
         self.handler._get_buildset_template = MagicMock(
             spec=self.handler._get_build_template)
         self.handler.write = MagicMock(spec=self.handler.write)
 
-        self.handler.show_buildset_template(b'some-buildset-id')
+        await self.handler.show_buildset_template(b'some-buildset-id')
         self.assertTrue(self.handler._get_buildset_template.called)
         self.assertTrue(self.handler.write.called)
 

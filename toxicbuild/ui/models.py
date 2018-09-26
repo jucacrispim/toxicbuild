@@ -21,6 +21,7 @@
 import asyncio
 from collections import OrderedDict
 import datetime
+import importlib
 import json
 from toxicbuild.core import requests
 from toxicbuild.core.utils import string2datetime
@@ -48,6 +49,7 @@ class BaseModel:
         self.__ordered__ = [k for k in ordered_kwargs.keys()]
 
         for name, cls in self.references.items():
+            cls = self._get_ref_cls(cls)
             if not isinstance(ordered_kwargs.get(name), (dict, cls)):
                 ordered_kwargs[name] = [cls(requester, kw) if not
                                         isinstance(kw, cls)
@@ -71,6 +73,13 @@ class BaseModel:
 
     def __hash__(self):
         return hash(self.id)
+
+    def _get_ref_cls(self, cls):
+        if isinstance(cls, str):
+            module, cls_name = cls.rsplit('.', 1)
+            module = importlib.import_module(module)
+            cls = getattr(module, cls_name)
+        return cls
 
     @classmethod
     @asyncio.coroutine
@@ -288,51 +297,12 @@ class Build(BaseModel):
         return build
 
 
-class BuildSet(BaseModel):
-    references = {'builds': Build}
-
-    @classmethod
-    @asyncio.coroutine
-    def list(cls, requester, repo_name_or_id=None, summary=True):
-        """Lists buildsets. If ``repo_name_or_id`` only builds of this
-        repsitory will be listed.
-
-        :param repo_name: Name of a repository.
-        :param summary: If True, no builds information will be returned.
-        """
-
-        with (yield from cls.get_client(requester)) as client:
-            buildsets = yield from client.buildset_list(
-                repo_name_or_id=repo_name_or_id, offset=10,
-                summary=summary)
-
-        buildset_list = [cls(requester, buildset) for buildset in buildsets]
-        return buildset_list
-
-    def to_dict(self):
-        d = super().to_dict()
-        d['builds'] = [b.to_dict() for b in d.get('builds', [])]
-        return d
-
-    @classmethod
-    async def get(cls, requester, buildset_id):
-        """Returns an instance of BuildSet.
-
-        :param buildset_id: The id of the buildset to get.
-        """
-
-        with (await cls.get_client(requester)) as client:
-            buildset = await client.buildset_get(buildset_id=buildset_id)
-
-        return cls(requester, buildset)
-
-
 class Repository(BaseModel):
 
     """Class representing a repository."""
 
     references = {'slaves': Slave,
-                  'last_buildset': BuildSet}
+                  'last_buildset': 'toxicbuild.ui.models.BuildSet'}
 
     @classmethod
     @asyncio.coroutine
@@ -505,6 +475,48 @@ class Repository(BaseModel):
             resp = await client.repo_disable(repo_name_or_id=self.id)
 
         return resp
+
+
+class BuildSet(BaseModel):
+    references = {'builds': Build,
+                  'repository': Repository}
+
+    @classmethod
+    @asyncio.coroutine
+    def list(cls, requester, repo_name_or_id=None, summary=True):
+        """Lists buildsets. If ``repo_name_or_id`` only builds of this
+        repsitory will be listed.
+
+        :param repo_name: Name of a repository.
+        :param summary: If True, no builds information will be returned.
+        """
+
+        with (yield from cls.get_client(requester)) as client:
+            buildsets = yield from client.buildset_list(
+                repo_name_or_id=repo_name_or_id, offset=10,
+                summary=summary)
+
+        buildset_list = [cls(requester, buildset) for buildset in buildsets]
+        return buildset_list
+
+    def to_dict(self):
+        d = super().to_dict()
+        d['builds'] = [b.to_dict() for b in d.get('builds', [])]
+        d['repository'] = self.repository.to_dict() if self.repository \
+            else None
+        return d
+
+    @classmethod
+    async def get(cls, requester, buildset_id):
+        """Returns an instance of BuildSet.
+
+        :param buildset_id: The id of the buildset to get.
+        """
+
+        with (await cls.get_client(requester)) as client:
+            buildset = await client.buildset_get(buildset_id=buildset_id)
+
+        return cls(requester, buildset)
 
 
 class Notification(BaseModel):

@@ -538,9 +538,13 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
                                 'builds': ['build_started', 'build_finished',
                                            'build_added', 'step_started',
                                            'step_finished', 'build_cancelled'],
+                                'buildset-info': ['build_started',
+                                                  'build_finished'],
                                 'step-output': ['step_output_info']}
 
     async def _get_repo_id(self):
+        if 'repo_id' in self.request.arguments.keys():
+            return self.request.arguments['repo_id'][0].decode()
         try:
             repo_name = self.request.arguments.get('repo_name')[0].decode()
         except TypeError:
@@ -694,9 +698,10 @@ class DashboardHandler(LoggedTemplateHandler):
                                    {'build_uuid': build_uuid})
         return rendered
 
-    def _get_buildset_template(self, buildset_id):
+    def _get_buildset_template(self, buildset_id, repo_id):
         rendered = render_template(self.buildset_template, self.request,
-                                   {'buildset_id': buildset_id})
+                                   {'buildset_id': buildset_id,
+                                    'repo_id': repo_id})
         return rendered
 
     def _get_notifications_template(self, repo_name, repo_id):
@@ -731,9 +736,11 @@ class DashboardHandler(LoggedTemplateHandler):
         self.render_template(self.skeleton_template, context)
 
     @get('buildset/([\d\w\-]+)')
-    def show_buildset_details(self, buildset_id):
+    async def show_buildset_details(self, buildset_id):
         buildset_id = buildset_id.decode()
-        content = self._get_buildset_template(buildset_id)
+        buildset = await BuildSet.get(self.user, buildset_id)
+        repo_id = buildset.repository.id
+        content = self._get_buildset_template(buildset_id, repo_id)
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
@@ -825,9 +832,11 @@ class DashboardHandler(LoggedTemplateHandler):
         self.write(content)
 
     @get('templates/buildset/([\d\w\-]+)')
-    def show_buildset_template(self, buildset_id):
+    async def show_buildset_template(self, buildset_id):
         buildset_id = buildset_id.decode()
-        content = self._get_buildset_template(buildset_id)
+        buildset = await BuildSet.get(self.user, buildset_id)
+        repo_id = buildset.repository.id
+        content = self._get_buildset_template(buildset_id, repo_id)
         self.write(content)
 
     @get('templates/waterfall/{}'.format(FULL_NAME_REGEX))
