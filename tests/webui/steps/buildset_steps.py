@@ -30,7 +30,6 @@ def click_summary_link(context):
         browser.wait_element_become_visible(el)
 
 
-
 @then('he sees the buildset list page')
 def see_buildset_list_page(context):
     browser = context.browser
