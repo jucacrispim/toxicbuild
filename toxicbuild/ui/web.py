@@ -539,7 +539,9 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
                                            'build_added', 'step_started',
                                            'step_finished', 'build_cancelled'],
                                 'buildset-info': ['build_started',
-                                                  'build_finished'],
+                                                  'build_finished',
+                                                  'buildset_started',
+                                                  'buildset_finished'],
                                 'step-output': ['step_output_info']}
 
     async def _get_repo_id(self):

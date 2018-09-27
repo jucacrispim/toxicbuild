@@ -33,6 +33,9 @@ class Waterfall{
     let buildsets = r.buildsets;
     let builders = r.builders;
     this.buildsets.reset(buildsets);
+    this.buildsets.each(function(b){
+      utils.setBuildsForBuildSet(b);
+    });
     this.builders.reset(builders);
   }
 }

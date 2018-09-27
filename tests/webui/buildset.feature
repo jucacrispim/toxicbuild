@@ -17,3 +17,9 @@ Feature: A user reschedule a buildset and see its details
         Given the user already rescheduled a buildset
         When he clicks in the buildset details link
         Then he sees the buildset details page
+
+    Scenario: A user waits for the builds to complete
+
+        Given the user is in the buildset details page
+        When the builds start
+        Then he waits for the builds to complete

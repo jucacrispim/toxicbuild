@@ -18,6 +18,9 @@
 class BasePage extends Backbone.View{
 
   constructor(options){
+    $(document).unbind(
+      'buildset_started buildset_finished build_startd buid_finished');
+
     super();
     this.router = options.router;
     this.template_container = $('#main-area-container');

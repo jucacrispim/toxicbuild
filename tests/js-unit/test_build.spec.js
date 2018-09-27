@@ -28,11 +28,42 @@ describe('BuildTest', function(){
 
 describe('BuildSetTest', function(){
 
-  it('test-getBuilds', function(){
-    let buildset_info = {'builds': [{'steps': [{'command': 'bla'}]}]};
-    let buildset = new BuildSet(buildset_info);
-    expect(buildset.get('builds')[0] instanceof Build).toBe(true);
+  beforeEach(function(){
+    let buildset_info = {'builds': [{'uuid': 'some-uuid',
+				     'steps': [{'command': 'bla'}]}]};
+    this.buildset = new BuildSet(buildset_info);
+
   });
+
+  it('test-getBuilds', function(){
+    this.buildset.attributes.builds = this.buildset._getBuilds(
+      this.buildset.get('builds'));
+    expect(this.buildset.get('builds')[0] instanceof Build).toBe(true);
+  });
+
+  it('test-getBuild', function(){
+    this.buildset.attributes.builds = this.buildset._getBuilds(
+      this.buildset.get('builds'));
+    expect(this.buildset._getBuild('some-uuid').get('uuid')).toEqual(
+      'some-uuid');
+  });
+
+  it('test-getBuild-error', function(){
+    let self = this;
+    this.buildset.attributes.builds = this.buildset._getBuilds(
+      this.buildset.get('builds'));
+    expect(function(){self.buildset._getBuild('bad-uuid');}).toThrow();
+  });
+
+  it('test-updateBuild', function(){
+    let data = {'status': 'success', 'uuid': 'some-uuid'};
+    this.buildset.attributes.builds = this.buildset._getBuilds(
+      this.buildset.get('builds'));
+    this.buildset._updateBuild(data);
+    let build = this.buildset._getBuild('some-uuid');
+    expect(build.get('status')).toEqual('success');
+  });
+
 });
 
 describe('BuildSetLisTest', function(){

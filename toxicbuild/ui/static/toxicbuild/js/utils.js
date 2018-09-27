@@ -83,5 +83,9 @@ var utils = {
     let status_class = badge_classes[status] || status;
     let badge_class = 'badge-' + status_class;
     return badge_class;
+  },
+
+  setBuildsForBuildSet: function(buildset){
+    buildset.attributes['builds'] = buildset._getBuilds(buildset.get('builds'));
   }
 };

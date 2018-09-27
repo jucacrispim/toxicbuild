@@ -24,8 +24,11 @@ class BuildSet extends BaseModel{
   constructor(attributes, options){
     super(attributes, options);
     this._api_url = TOXIC_BUILDSET_API_URL;
-    let builds  = attributes ? attributes.builds : [];
-    this.attributes['builds'] = this._getBuilds(builds);
+    let builds  = this.attributes ? this.attributes.builds : [];
+    let self = this;
+    $(document).on('build_started build_finished', function(e, data){
+      self._updateBuild(data);
+    });
   }
 
   _getBuilds(builds_info){
@@ -38,6 +41,22 @@ class BuildSet extends BaseModel{
     }
     return builds;
   }
+
+  _getBuild(uuid){
+    let builds = this.get('builds');
+    for (let i in builds){
+      let build = builds[i];
+      if (build.get('uuid') == uuid){
+	return build;
+      }
+    }
+    throw new Error('No Build ' + uuid);
+  }
+
+  _updateBuild(data){
+    let build = this._getBuild(data.uuid);
+    build.set('status', data.status);
+  }
 }
 
 class Builder extends BaseModel{
@@ -47,6 +66,8 @@ class Builder extends BaseModel{
 class Build extends BaseModel{
 
   constructor(attributes, options){
+    options = options || {};
+    options.idAttribute = 'uuid';
     super(attributes, options);
     this._api_url = TOXIC_BUILD_API_URL;
     let steps = attributes ? attributes.steps : [];
@@ -204,13 +225,13 @@ class BaseBuildSetView extends Backbone.View{
 
    for (let i in builds){
      let build = builds[i];
-     let escaped_build = {id: build.uuid,
-			  name: _.escape(build.name),
+     let escaped_build = {id: build.get('uuid'),
+			  name: build.escape('name'),
 			  status_class: ' build-' + build.status,
 			  status: build.status,
-			  details_link: '/build/' + build.uuid,
-			  builder: {id: build.builder.id,
-				    name: _.escape(build.builder.name)}};
+			  details_link: '/build/' + build.get('uuid'),
+			  builder: {id: build.get('builder').id,
+				    name: _.escape(build.get('builder').name)}};
      escaped_builds.push(escaped_build);
    }
 
@@ -229,6 +250,7 @@ class BuildInfoView extends Backbone.View{
     options = options || {'tagName': 'li'};
     options.model = options.model || new Build();
     super(options);
+    let self = this;
     this.$el.addClass('builder-build-li build-info-row box-shadow');
 
     this.directive = {'.builder-name': 'builder_name',
@@ -238,6 +260,7 @@ class BuildInfoView extends Backbone.View{
     this.template_selector = '.template .builder-build-container';
     this.container_selector = '.builds-ul';
 
+    this.model.on({'change': function(){self.render();}});
   }
 
   _get_kw(){
@@ -258,6 +281,10 @@ class BuildInfoView extends Backbone.View{
     let kw = this._get_kw();
     let compiled = $(this.compiled_template(kw));
     let status_class = 'build-' + kw.status;
+
+    this.$el.removeClass('build-running');
+    this.$el.html('');
+
     this.$el.addClass(status_class);
     this.$el.append(compiled);
     return this;
@@ -284,20 +311,32 @@ class BuildSetDetailsView extends BaseBuildSetView{
       '.buildset-total-time': 'total_time',
       '.buildset-commit-body': 'body',
     };
+    let self = this;
+
+    $(document).on('buildset_started buildset_finished', function(e, data){
+      self.model.set(data);
+      self.render();
+    });
 
     this.template_selector = '.template #buildset-details';
     this.container_selector = '#buildset-details-container';
   }
 
   _connect2ws(){
-    let repo_id = $('#repo-id');
+    let repo_id = $('#repo-id').val();
     let path = 'buildset-info?repo_id=' + repo_id;
     wsconsumer.connectTo(path);
   }
 
-  async render(){
-    await this.model.fetch({buildset_id: this.buildset_id});
+  _setBuilds(buildset){
+    utils.setBuildsForBuildSet(buildset);
+  }
 
+  async render(){
+    let self = this;
+
+    await this.model.fetch({buildset_id: this.buildset_id});
+    this._setBuilds(this.model);
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
 
@@ -309,15 +348,20 @@ class BuildSetDetailsView extends BaseBuildSetView{
     let builds_container = $('.builds-ul', compiled);
 
     for (let i in this.model.get('builds')){
-      let build = new Build(this.model.get('builds')[i]);
+      let build = this.model.get('builds')[i];
       let build_view = new BuildInfoView({model: build});
       builds_container.append(build_view.render().$el);
     }
     let badge_class = utils.get_badge_class(kw.status);
+
+    if (kw.status != 'running'){
+      $('.fa-cog', compiled).hide();
+    }
     $('.buildset-status', compiled).addClass(badge_class);
     $('.obj-details-buttons-container', compiled).show();
     this.container = $(this.container_selector);
     this.container.html(compiled);
+    this._connect2ws();
   }
 
 }
