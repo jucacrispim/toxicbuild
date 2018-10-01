@@ -40,8 +40,9 @@ def see_buildset_list_page(context):
 
 @given('the user is in the buildset list page')
 def is_in_buildset_list_page(context):
-    browser = context.browser
-    browser.wait_text_vanishes('badge-primary')
+    # browser = context.browser
+    # browser.wait_text_vanishes('badge-primary')
+    pass
 
 
 @when('he clicks in the reschedule button')
