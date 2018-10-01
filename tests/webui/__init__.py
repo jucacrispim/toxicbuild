@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 # package with behave tests
 
+import os
 import time
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
+from toxicbuild.core.utils import now, datetime2string
 
 
 class SeleniumBrowserException(Exception):
@@ -28,6 +30,18 @@ class SeleniumBrowser(webdriver.Chrome):
 
         action = ActionChains(self).click(element)
         action.perform()
+
+    def _get_screenshot_filename(self):
+        ts = str(int(time.time()))
+        dt = datetime2string(now(), dtformat='%Y/%m/%d')
+        fname = '{}.png'.format(ts)
+        return dt, fname
+
+    def save_screenshot(self):
+        path, fname = self._get_screenshot_filename()
+        path = os.path.join('artifacts', path)
+        os.makedirs(path, exist_ok=True)
+        self.get_screenshot_as_file(os.path.join(path, fname))
 
     def wait_text_become_present(self, text, timeout=30):
         """Waits until a text is present in the page source.
@@ -143,3 +157,18 @@ class SeleniumBrowser(webdriver.Chrome):
             el = fn()
             if el:
                 return el
+
+
+def take_screenshot(fn):
+
+    def wrapper(context, *args, **kwargs):
+        try:
+            r = fn(context, *args, **kwargs)
+        except Exception as e:
+            browser = context.browser
+            browser.save_screenshot()
+            raise e
+
+        return r
+
+    return wrapper

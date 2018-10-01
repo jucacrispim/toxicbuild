@@ -2,6 +2,7 @@
 
 from behave import when, then, given
 from selenium.common.exceptions import StaleElementReferenceException
+from tests.webui import take_screenshot
 from tests.webui.steps.base_steps import (  # noqa f811
     given_logged_in_webui, then_sees_message)
 
@@ -31,6 +32,7 @@ def click_summary_link(context):
 
 
 @then('he sees the buildset list page')
+@take_screenshot
 def see_buildset_list_page(context):
     browser = context.browser
     el_list = browser.find_elements_by_class_name('buildset-info')
