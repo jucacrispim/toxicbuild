@@ -1410,7 +1410,7 @@ class UIStreamHandlerTest(TestCase):
         self.assertTrue(build_dict['builder']['name'])
 
         self.assertTrue(self.handler.send_response.called)
-        bdict = self.handler.send_response.call_args[1]['body']
+        # bdict = self.handler.send_response.call_args[1]['body']
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
