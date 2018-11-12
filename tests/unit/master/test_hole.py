@@ -1390,15 +1390,27 @@ class UIStreamHandlerTest(TestCase):
 
     @async_test
     async def test_send_buildset_info(self):
-        buildset = Mock()
-        buildset.to_dict.return_value = {}
+        repo = await repository.Repository.create(name='name',
+                                                  url='git@git.nada',
+                                                  owner=self.owner,
+                                                  update_seconds=300,
+                                                  vcs_type='git')
+        builder = build.Builder(name='bla')
+        b = build.Build()
+        b.builder = builder
+        buildset = build.BuildSet(repository=repo, started=datetime.now(),
+                                  commit_date=datetime.now(), builds=[b])
         event_type = 'buildset_started'
         self.handler.send_response = AsyncMagicMock(
             spec=self.handler.send_response)
 
         await self.handler.send_buildset_info(event_type, buildset)
+        buildset_dict = self.handler.send_response.call_args[1]['body']
+        build_dict = buildset_dict['builds'][0]
+        self.assertTrue(build_dict['builder']['name'])
 
         self.assertTrue(self.handler.send_response.called)
+        bdict = self.handler.send_response.call_args[1]['body']
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

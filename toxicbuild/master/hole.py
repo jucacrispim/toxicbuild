@@ -857,7 +857,7 @@ class UIStreamHandler(LoggerMixin):
         await self.protocol.send_response(code=0, body={'stream': 'ok'})
 
     async def send_buildset_info(self, event_type, buildset):
-        buildset_dict = buildset.to_dict(builds=False)
+        buildset_dict = buildset.to_dict(builds=True)
         buildset_dict['event_type'] = event_type
         ensure_future(self.send_response(code=0, body=buildset_dict))
 

@@ -29,6 +29,29 @@ describe('WaterfallTest', function(){
     expect(this.waterfall.buildsets.length).toEqual(1);
     expect(this.waterfall.builders.length).toEqual(1);
   });
+
+  it('test_getBuildsetBuilders', async function(){
+    let data = {builds: [{builder: {name: 'builder0', id: 'id0'}},
+			 {builder: {name: 'builder1', id: 'id1'}}]};
+    let builders = this.waterfall._getBuildsetBuilders(data);
+    expect(builders.length).toEqual(2);
+  });
+
+  it('test-setWaterfallBuilds', function(){
+    let self = this;
+
+    let build = new Build({uuid: 'bla'});
+    this.waterfall.buildsets.reset([{builds: [build]}]);
+    this.waterfall._setWaterfallBuilds(this.waterfall.buildsets.models);
+
+    let has_keys = function(){
+      for (let k in self.waterfall._builds){
+	return true;
+      }
+      return false;
+    }();
+    expect(has_keys).toBe(true);
+  });
 });
 
 describe('WaterfallBuilderViewTest', function(){
@@ -49,7 +72,7 @@ describe('WaterfallBuilderViewTest', function(){
 
   it('test-getRendered', function(){
     let r = this.view.getRendered();
-    expect(Boolean(r.length)).toBe(true);
+    expect(Boolean(r.$el.html().length)).toBe(true);
   });
 
 });
@@ -76,14 +99,64 @@ describe('WaterfallStepViewTest', function(){
 describe('WaterfallBuildViewTest', function(){
 
   beforeEach(function(){
+    affix('.template .waterfall-step-info');
+    let template = $('.waterfall-step-info');
+    template.affix('.step-status');
+    template.affix('.step-name');
     affix('.template .waterfall-build-info-container');
-    let template = $('.waterfall-build-info-container');
+    template = $('.waterfall-build-info-container');
     template.affix('.build-info-number');
     template.affix('.build-info-status');
     template.affix('.build-info-row');
     template.affix('.build-details-link');
     let build = new Build();
     this.view = new WaterfallBuildView({build: build});
+  });
+
+  it('test-addStep', async function(){
+    this.view.$el = $('<td><ul></ul></td>');
+    let step = new BuildStep({uuid: 'some-uuid'});
+    this.view.build.get('steps').add([step]);
+    expect($('li', this.view.$el).length).toEqual(1);
+    let timeout = 100;
+    let i = 0;
+    while (this.view.__add_step_lock && i < timeout){
+      await utils.sleep(10);
+      i += 1;
+    }
+    expect(this.view.__add_step_lock).toBe(null);
+  });
+
+  it('test-addStep-locked', async function(){
+    spyOn(utils, 'sleep');
+    let self = this;
+    utils.sleep = function(p){self.view.__add_step_lock = null;};
+    this.view.$el = $('<td><ul></ul></td>');
+    let step = new BuildStep({uuid: 'some-uuid'});
+    this.view.build.get('steps').add([step]);
+
+    let timeout = 100;
+    let i = 0;
+    while (this.view.__add_step_lock && i < timeout){
+      await utils.sleep(10);
+      i += 1;
+    }
+
+    expect(this.view.__add_step_lock).toBe(null);
+  });
+
+  it('test-reRenderInfo', function(){
+    this.view.$el.affix('li.build-info-row');
+    let el = $('li.build-info-row', this.view.$el);
+    this.view.build.set('status', 'success');
+    el.affix('.build-info-status');
+    el = $('li.build-info-row', this.view.$el);
+
+    let txt_el = $('.build-info-status', this.view.$el);
+    txt_el.text('fail');
+    this.view.reRenderInfo();
+    txt_el = $('.build-info-status', this.view.$el);
+    expect(txt_el.text()).toEqual('success');
   });
 
   it('test-getRendered', function(){
@@ -158,26 +231,128 @@ describe('WaterfallViewTest', function(){
 
   beforeEach(function(){
     affix('#waterfall-header');
+    affix('#waterfall-body');
     affix('.template .waterfall-tr');
     let template = $('.waterfall-tr');
     template.affix('.builder-name');
+    let el = template.affix('.waterfall-buildset-info-container');
+    el.affix('.buildset-branch');
+    el.affix('.commit-title');
+    el.affix('.buildset-details-link');
+    el.affix('.buildset-total-time');
 
     this.view = new WaterfallView('some/repo');
   });
 
+  it('test-addStep', function(){
+    let data = {'uuid': 'some-uuid', build: {uuid: 'build-uuid'}};
+    let build = new Build({uuid: 'build-uuid'});
+    this.view.model._builds[build.get('uuid')] = build;
+    spyOn(BuildStepList.prototype, 'add');
+    this.view._addStep(data);
+    expect(BuildStepList.prototype.add).toHaveBeenCalled();
+  });
+
+  it('test-updateStep', function(){
+    let data = {'uuid': 'some-uuid'};
+    let step = new BuildStep(data);
+    this.view.model._steps[data.uuid] = step;
+    let new_data = {uuid: 'some-uuid', status: 'fail'};
+    this.view._updateStep(new_data);
+    expect(step.get('status')).toEqual('fail');
+  });
+
   it('test-renderHeader', function(){
     this.view.model.builders.add({'name': 'bla'});
-    let header = this.view._renderHeader();
+    this.view._renderHeader();
+    let header = $('#waterfall-header');
     expect(header.length).toEqual(1);
+  });
+
+  it('test-renderBody', function(){
+    this.view.model.buildsets.add({'repository': {}, builds: []});
+    this.view._renderBody();
+    let body = $('#waterfall-body');
+    expect(body.length).toEqual(1);
+  });
+
+  it('test-addNewBuilders', function(){
+    let el = affix('.builder-name');
+    el.html('builder-0');
+    el = affix('.builder-name');
+    el.html('builder-1');
+
+    this.view.model.builders.reset([{name: 'builder-0'},
+				    {name: 'builder-1'},
+				    {name: 'builder-2'}]);
+
+    this.view._addNewBuilder = jasmine.createSpy();
+
+    this.view._addNewBuilders();
+
+    expect(this.view._addNewBuilder).toHaveBeenCalled();
+  });
+
+  it('test-addNewBuilders-no-new-builders', function(){
+    let el = affix('.builder-name');
+    el.html('builder-0');
+    el = affix('.builder-name');
+    el.html('builder-1');
+
+    this.view.model.builders.reset([{name: 'builder-0'},
+				    {name: 'builder-1'}]);
+
+    this.view._addNewBuilder = jasmine.createSpy();
+
+    this.view._addNewBuilders();
+
+    expect(this.view._addNewBuilder).not.toHaveBeenCalled();
+  });
+
+  it('test-addBuilder2Header', function(){
+    let el =  $('#waterfall-header');
+    el.append('<th>first-col</th>');
+    el.append('<th class="builder-name">builder-0</th>');
+    el.append('<th class="builder-name">builder-2</th>');
+
+    let builder = new Builder({name: 'builder-1'});
+    let builder_names = ['builder-0', 'builder-2'];
+    let insert_index = -1 * utils.binarySearch(builder_names, builder.get('name'));
+    this.view._addBuilder2Header(builder, insert_index);
+    let header = $('#waterfall-header');
+    expect(header.html().indexOf('builder-1') >= 0).toBe(true);
+  });
+
+  it('test-addBuilderColumn', function(){
+    let el = $('#waterfall-body');
+    el.append('<th>first</th>');
+    el.append('<td></td>');
+    el.append('<td></td>');
+
+    this.view._addBuilderColumn(1);
+    el = $('#waterfall-body');
+
+    let placeholder = $('.build-placeholder', el);
+    expect(el.length).toEqual(1);
+  });
+
+  it('test-addNewBuildSet', function(){
+    let build = new Build({uuid: 'asdf', builder: {id: '123'}});
+    this.view.model.buildsets.add([{builds: [build]}]);
+    spyOn(jQuery.fn, 'prepend');
+    this.view._addNewBuildSet();
+    expect(jQuery.fn.prepend).toHaveBeenCalled();
   });
 
   it('test-render', async function(){
     spyOn(this.view.model, 'fetch');
-    spyOn(this.view, '_renderHeader').and.returnValue('bla');
+    spyOn(this.view, '_renderHeader');
+    spyOn(this.view, '_renderBody');
+    wsconsumer = jasmine.createSpy();
+    wsconsumer.connectTo = jasmine.createSpy();
     await this.view.render();
-    let header_container = $('#waterfall-header');
-    let header = header_container.html();
-    expect(header).toEqual('bla');
+    expect(this.view._renderHeader).toHaveBeenCalled();
+    expect(this.view._renderBody).toHaveBeenCalled();
   });
 
 });

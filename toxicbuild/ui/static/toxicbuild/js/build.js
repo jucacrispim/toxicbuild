@@ -26,9 +26,11 @@ class BuildSet extends BaseModel{
     this._api_url = TOXIC_BUILDSET_API_URL;
     let builds  = this.attributes ? this.attributes.builds : [];
     let self = this;
-    $(document).on('build_started build_finished', function(e, data){
-      self._updateBuild(data);
-    });
+    if (options && !options.no_events){
+      $(document).on('build_started build_finished', function(e, data){
+	self._updateBuild(data);
+      });
+    }
   }
 
   _getBuilds(builds_info){
@@ -70,8 +72,8 @@ class Build extends BaseModel{
     options.idAttribute = 'uuid';
     super(attributes, options);
     this._api_url = TOXIC_BUILD_API_URL;
-    let steps = attributes ? attributes.steps : [];
-    this.attributes['steps'] = this._getSteps(steps);
+    let steps = attributes && attributes.steps ? attributes.steps : [];
+    this.set('steps', this._getSteps(steps));
   }
 
   _getSteps(steps){
@@ -81,13 +83,29 @@ class Build extends BaseModel{
       let build_step = new BuildStep(step);
       build_steps.push(build_step);
     }
-    return build_steps;
+    let steps_list = new BuildStepList();
+    steps_list.reset(steps);
+    return steps_list;
   }
 
 }
 
 class BuildStep extends BaseModel{
 
+  constructor(attributes, options){
+    options = options || {};
+    options.idAttribute = 'uuid';
+    super(attributes, options);
+  }
+
+}
+
+class BuildStepList extends BaseCollection{
+
+  constructor(models, options){
+    super(models, options);
+    this.model = BuildStep;
+  }
 }
 
 class BuildSetList extends BaseCollection{
@@ -225,13 +243,20 @@ class BaseBuildSetView extends Backbone.View{
 
    for (let i in builds){
      let build = builds[i];
-     let escaped_build = {id: build.get('uuid'),
-			  name: build.escape('name'),
-			  status_class: ' build-' + build.status,
-			  status: build.status,
-			  details_link: '/build/' + build.get('uuid'),
-			  builder: {id: build.get('builder').id,
-				    name: _.escape(build.get('builder').name)}};
+     let escaped_build;
+     try{
+       escaped_build = {id: build.get('uuid'),
+			name: build.escape('name'),
+			status_class: ' build-' + build.status,
+			status: build.status,
+			details_link: '/build/' + build.get('uuid'),
+			builder: {id: build.get('builder').id,
+				  name: _.escape(build.get('builder').name)}};
+     }catch(e){
+       if (!e instanceof TypeError){
+	 throw e;
+       }
+     }
      escaped_builds.push(escaped_build);
    }
 
@@ -243,6 +268,7 @@ class BaseBuildSetView extends Backbone.View{
 	   builds: escaped_builds, author: author};
  }
 }
+
 
 class BuildInfoView extends Backbone.View{
 

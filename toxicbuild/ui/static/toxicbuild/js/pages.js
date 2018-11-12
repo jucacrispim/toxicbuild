@@ -19,7 +19,8 @@ class BasePage extends Backbone.View{
 
   constructor(options){
     $(document).unbind(
-      'buildset_started buildset_finished build_startd buid_finished');
+      'buildset_started buildset_finished build_started build_finished \
+buildset_added');
 
     super();
     this.router = options.router;

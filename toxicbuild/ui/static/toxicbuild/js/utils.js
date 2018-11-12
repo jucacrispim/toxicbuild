@@ -87,5 +87,41 @@ var utils = {
 
   setBuildsForBuildSet: function(buildset){
     buildset.attributes['builds'] = buildset._getBuilds(buildset.get('builds'));
+  },
+
+  binarySearch: function(arr, value){
+    let low = 0;
+    let high = arr.length - 1;
+    let mid;
+
+    while (low <= high){
+      mid = Math.floor((low + high) / 2);
+
+      let val = arr[mid];
+
+      if (val < value){
+	low = mid + 1;
+      }
+      else if (val > value){
+	high = mid - 1;
+      }
+      else{
+	return mid;
+      }
+    };
+    return -(low);
+  },
+
+  tableSlideDown: function(el,tag_name,  ms, cb){
+    el.wrapInner('<div style="display: none;" />')
+      .parent()
+      .find(tag_name + ' > div')
+      .slideDown(ms, function(){
+	cb = cb || function(){};
+	cb();
+	var $set = $(this);
+	$set.replaceWith($set.contents());
+      });
   }
+
 };

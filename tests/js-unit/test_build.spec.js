@@ -21,7 +21,7 @@ describe('BuildTest', function(){
     let build_info = {'uuid': 'some-uuid',
 		      'steps': [{'command': 'ls'}]};
     let build = new Build(build_info);
-    expect(build.get('steps')[0] instanceof BuildStep).toBe(true);
+    expect(build.get('steps').models[0] instanceof BuildStep).toBe(true);
   });
 });
 

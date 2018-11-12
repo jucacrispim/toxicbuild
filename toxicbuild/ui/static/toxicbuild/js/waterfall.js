@@ -24,19 +24,90 @@ class Waterfall{
     this.repo_name = repo_name;
     this.buildsets = new BuildSetList();
     this.builders = new BuilderList();
+
+    // unbinding the stuff from BuildSet here so we bind it to the
+    // waterfall stuff.
+    let self = this;
+    $(document).unbind('build_started build_finished');
+
+    $(document).on('build_started build_finished', function(e, data){
+      self._updateBuild(data);
+    });
     this._api_url = TOXIC_WATERFALL_API_URL;
+
+    // we need this so we can update the builds/steps when we get a message
+    // from the server
+    this._builds = {};
+    this._steps = {};
+  }
+
+  _setWaterfallBuilds(buildsets){
+    let self = this;
+    _.each(buildsets, function(b){
+      let builds = b.get('builds');
+      _.each(builds, function(build){
+	self._builds[build.get('uuid')] = build;
+	let steps = build.get('steps');
+	steps.each(function(step){
+	  self._steps[step.get('uuid')] = step;
+	});
+      });
+    });
+  }
+
+  _updateBuild(data){
+    let build = this._builds[data.uuid];
+    build.set('status', data.status);
   }
 
   async fetch(){
+    // unbind and bind again (in the end) so the event is not triggered by
+    // reset();
+    $(document).unbind('buildset_added');
+    let self = this;
     let url = this._api_url + '?repo_name=' + this.repo_name;
     let r = await $.ajax({url: url});
     let buildsets = r.buildsets;
     let builders = r.builders;
-    this.buildsets.reset(buildsets);
+    this.buildsets.reset(buildsets, {no_events: true});
     this.buildsets.each(function(b){
       utils.setBuildsForBuildSet(b);
     });
+    this._setWaterfallBuilds(this.buildsets.models);
     this.builders.reset(builders);
+
+    $(document).on('buildset_added', function(e, data){
+      self._addBuildSet(data);
+    });
+  }
+
+  _getBuildsetBuilders(data){
+    let builders = new Array();
+    for (let i in data.builds){
+      let build_dict = data.builds[i];
+      let builder = new Builder(build_dict.builder);
+      builders.push(builder);
+    }
+    return builders;
+  }
+
+  _addBuildSet(data){
+    let builders = this._getBuildsetBuilders(data);
+    let new_builders = new Array();
+    for (let i in builders){
+      let builder = builders[i];
+      if (this.builders.indexOf(builder) == -1){
+	this.builders.add(builder);
+      }
+    }
+    let builds = [];
+    data.builds.map(function(e, i){
+      builds.push(new Build(e));
+    });
+    data.builds = builds;
+    let buildset = new BuildSet(data, {no_events: true});
+    this.buildsets.add([buildset], {at: 0});
+    this._setWaterfallBuilds([this.buildsets.models[0]]);
   }
 }
 
@@ -57,6 +128,7 @@ class WaterfallBuilderView extends BaseWaterfallView{
     if (!options || !options.builder){
       throw new Error('You must pass a builder');
     }
+    options.tagName = 'th';
     super(options);
     this.builder = options.builder;
     this.directive = {'.builder-name': 'name'};
@@ -75,7 +147,8 @@ class WaterfallBuilderView extends BaseWaterfallView{
     let compiled = super.getRendered();
     $('.builder-name', compiled).addClass(
       'builder-' + this.builder.escape('status'));
-    return compiled;
+    this.$el.html($('div', compiled));
+    return this;
   }
 }
 
@@ -83,13 +156,19 @@ class WaterfallBuilderView extends BaseWaterfallView{
 class WaterfallStepView extends BaseWaterfallView{
 
   constructor(options){
+    options.tagName = 'li';
     super(options);
+    let self = this;
     this.step = options.step;
     this.directive = {'.step-status': 'status',
 		      '.step-name': 'name'};
     this.template_selector = '.template .waterfall-step-info';
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
+
+    this.step.on({change: function(){
+      self.render();
+    }});
   }
 
   _get_kw(){
@@ -99,19 +178,29 @@ class WaterfallStepView extends BaseWaterfallView{
 	    name: name};
   }
 
-  getRendered(){
+  render(){
     let rendered = super.getRendered();
     let kw = this._get_kw();
     rendered.addClass('step-' + kw.status);
-    return rendered;
+    this.$el.removeClass();
+    this.$el.addClass('step-' + kw.status + ' build-info-row');
+    this.$el.html(rendered.html());
+    return this;
+  }
+
+  getRendered(){
+    return this.render().$el;
   }
 
 }
 
+
 class WaterfallBuildView extends BaseWaterfallView{
 
   constructor(options){
+    options.tagName = 'td';
     super(options);
+    let self = this;
     this.build = options.build;
     this.directive = {'.build-info-status': 'status',
 		      '.build-details-link @href': 'build_details_link',
@@ -119,6 +208,16 @@ class WaterfallBuildView extends BaseWaterfallView{
     this.template_selector = '.template .waterfall-build-info-container';
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
+
+    this.build.on({'change': function(){
+      self.reRenderInfo();
+    }});
+
+    this.build.get('steps').on({'add': function(){
+      self._addStep();
+    }});
+
+    this.__add_step_lock = null;
   }
 
   _get_kw(){
@@ -129,20 +228,49 @@ class WaterfallBuildView extends BaseWaterfallView{
 	    number: number};
   }
 
-  getRendered(){
+  async _addStep(){
+    let self = this;
+
+    while (this.__add_step_lock){
+      await utils.sleep(200);
+    }
+    this.__add_step_lock = true;
+    let steps = this.build.get('steps');
+    let step = steps.models[steps.length - 1];
+    let view = new WaterfallStepView({step: step});
+    let rendered = view.getRendered();
+    $('ul', this.$el).append(rendered);
+    let el = $('li', this.$el)[$('li', this.$el).length - 1];
+
+    let cb = function(){self.__add_step_lock = null;};
+    utils.tableSlideDown($(el), 'li', 400, cb);
+  }
+
+  reRenderInfo(){
+    let status = this.build.get('status');
+    let el = $($('.build-info-row', this.$el)[0]);
+    el.removeClass();
+    el.addClass('build-info-row build-' + status);
+    $('.build-info-status', el).text(status);
+  }
+
+  render(){
     let rendered = super.getRendered();
     $('.build-info-row', rendered).addClass(
       'build-' + this.build.escape('status'));
 
     let steps = this.build.get('steps');
-    for (let i in steps){
-      let step = steps[i];
+    steps.each(function(step){
       let view = new WaterfallStepView({step: step});
       rendered.append(view.getRendered());
-    }
-    let el = $(document.createElement('td'));
-    el.append(rendered);
-    return el;
+    });
+    this.$el.html('');
+    this.$el.append(rendered);
+  }
+
+  getRendered(){
+    this.render();
+    return this.$el;
   }
 }
 
@@ -150,6 +278,8 @@ class WaterfallBuildView extends BaseWaterfallView{
 class WaterfallBuildSetView extends BaseWaterfallView{
 
   constructor(options){
+    options = options || {};
+    options.tagName = 'tr';
     super(options);
     this.builders = options.builders;
     this.buildset = options.buildset;
@@ -189,8 +319,7 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     let self = this;
 
     let rendered = super.getRendered();
-    let el = $(document.createElement('tr'));
-    el.append(rendered);
+    this.$el.append(rendered);
 
     let builds = this.buildset.get('builds');
     let builder_builds = this._getBuilderBuids(builds);
@@ -198,15 +327,13 @@ class WaterfallBuildSetView extends BaseWaterfallView{
       let build = builder_builds[builder.id];
       if (build){
 	let view = self._getBuildView(build);
-	el.append(view.getRendered());
+	self.$el.append(view.getRendered());
       }else{
-	el.append(document.createElement('td'));
+	self.$el.append(document.createElement('td'));
       }
     });
 
-    let outer = $(document.createElement('div'));
-    outer.append(el);
-    return outer;
+    return this;
   }
 }
 
@@ -215,42 +342,124 @@ class WaterfallView extends Backbone.View{
 
   constructor(repo_name){
     super();
+    let self = this;
     this.repo_name = repo_name;
     this.model = new Waterfall(this.repo_name);
+    this.model.buildsets.on({'add': function(){
+      self._addNewBuilders();
+      self._addNewBuildSet();
+    }});
+
+    $(document).on('step_started', function(e, data){
+      self._addStep(data);
+    });
+
+    $(document).on('step_finished', function(e, data){
+      self._updateStep(data);
+    });
+  }
+
+  _addStep(data){
+    let build = this.model._builds[data.build.uuid];
+    let steps = build.get('steps');
+    let step = new BuildStep(data);
+    this.model._steps[step.get('uuid')] = step;
+    steps.add([step]);
+  }
+
+  _updateStep(data){
+    let step = this.model._steps[data.uuid];
+    step.set(data);
   }
 
   _renderHeader(){
-    let header = '';
+    let header_container = $('#waterfall-header');
 
     this.model.builders.each(function(e){
       let view = new WaterfallBuilderView({builder: e});
-      header += view.getRendered().html();
+      let el = view.getRendered().$el;
+      header_container.append(el);
     });
-    return $(header);
   }
 
   _renderBody(){
     let self = this;
 
-    let body = '';
+    let body_container = $('#waterfall-body');
     this.model.buildsets.each(function(e){
       let view = new WaterfallBuildSetView({buildset: e,
 					    builders: self.model.builders});
-      body += view.getRendered().html();
+      body_container.append(view.getRendered().$el);
     });
-    return $(body);
+  }
+
+  _addBuilder2Header(builder, insert_index){
+    let header_container = $('#waterfall-header');
+    let builder_view = new WaterfallBuilderView({builder: builder});
+    let el = builder_view.getRendered().$el;
+
+    header_container.children().eq(insert_index).after(el);
+  }
+
+  _addBuilderColumn(insert_index){
+    let self = this;
+
+    let body_container = $('#waterfall-body');
+    $('tr', body_container).each(function(i, e){
+      e.children().eq(insert_index).after('<td class="build-placeholder"></td>');
+    });
+  }
+
+  _addNewBuilder(builder, builder_names){
+    let insert_index = -1 * utils.binarySearch(builder_names, builder.get('name'));
+    this._addBuilder2Header(builder, insert_index);
+    this._addBuilderColumn(insert_index);
+  }
+
+  _addNewBuilders(){
+    let self = this;
+
+    let builder_els = $('.builder-name').slice(1);
+    let builder_names = [];
+    builder_els.map(function(i, e){builder_names.push($(e).html());});
+    this.model.builders.each(function(e){
+      let name = e.get('name');
+
+      if (builder_names.indexOf(name) < 0){
+	self._addNewBuilder(e, builder_names);
+      }
+    });
+  }
+
+  _addNewBuildSet(){
+    let body_container = $('#waterfall-body');
+    let buildset = this.model.buildsets.models[0];
+    let view = new WaterfallBuildSetView({buildset: buildset,
+					  builders: this.model.builders});
+    let view_el = view.getRendered().$el;
+    body_container.prepend(view_el.hide().fadeIn(700));
+
+    // so, this mess here is to slideDown the table row.
+    // tks to `wiks` on stackoverflow!!
+    let tags = ['td', 'th'];
+    for (let i in tags){
+      let tag = tags[i];
+      let el = view_el.find(tag);
+      utils.tableSlideDown(el, tag, 700);
+    }
+  }
+
+  _connect2ws(){
+    let repo_name = $('#repo_name').val();
+    let path = 'waterfall-info?repo_name=' + repo_name;
+    wsconsumer.connectTo(path);
   }
 
   async render(){
     await this.model.fetch();
-    let header = this._renderHeader();
-    let header_container = $('#waterfall-header');
-    header_container.append(header);
-
-    let body = this._renderBody();
-    let body_container = $('#waterfall-body');
-    body_container.append(body);
-
+    this._renderHeader();
+    this._renderBody();
+    this._connect2ws();
     $('.wait-toxic-spinner').hide();
     $('#waterfall-container').fadeIn(300);
   }
