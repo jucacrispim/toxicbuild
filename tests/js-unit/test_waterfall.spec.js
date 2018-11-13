@@ -84,7 +84,10 @@ describe('WaterfallStepViewTest', function(){
     template.affix('.step-status');
     template.affix('.step-name');
     let step = new BuildStep();
-    this.view = new WaterfallStepView({step: step});
+    let build_view = jasmine.createSpy();
+    build_view._addStep = jasmine.createSpy();
+    this.view = new WaterfallStepView({step: step,
+				       build_view: build_view});
   });
 
   it('test-getRendered', function(){
@@ -113,17 +116,39 @@ describe('WaterfallBuildViewTest', function(){
     this.view = new WaterfallBuildView({build: build});
   });
 
+  it('test-stepOk2Add-first-step', function(){
+    let step = new BuildStep({index: 0});
+    let ok = this.view._stepOk2Add(step);
+    expect(ok).toBe(true);
+  });
+
+  it('test-stepOk2Add-step-ok', function(){
+    this.view._last_step = 0;
+    let step = new BuildStep({index: 1});
+    let ok = this.view._stepOk2Add(step);
+    expect(ok).toBe(true);
+  });
+
+  it('test-stepOk2Add-step-not-ok', function(){
+    let step = new BuildStep({index: 1});
+    let ok = this.view._stepOk2Add(step);
+    expect(ok).toBe(false);
+  });
+
   it('test-addStep', async function(){
+    spyOn(this.view, '_stepOk2Add').and.returnValue(true);
     this.view.$el = $('<td><ul></ul></td>');
     let step = new BuildStep({uuid: 'some-uuid'});
+    this.view._step_queue.push(step);
     this.view.build.get('steps').add([step]);
-    expect($('li', this.view.$el).length).toEqual(1);
+
     let timeout = 100;
     let i = 0;
     while (this.view.__add_step_lock && i < timeout){
       await utils.sleep(10);
       i += 1;
     }
+    expect($('li', this.view.$el).length).toEqual(1);
     expect(this.view.__add_step_lock).toBe(null);
   });
 
@@ -133,16 +158,68 @@ describe('WaterfallBuildViewTest', function(){
     utils.sleep = function(p){self.view.__add_step_lock = null;};
     this.view.$el = $('<td><ul></ul></td>');
     let step = new BuildStep({uuid: 'some-uuid'});
+    this.view.__add_step_lock = true;
     this.view.build.get('steps').add([step]);
 
     let timeout = 100;
     let i = 0;
+
     while (this.view.__add_step_lock && i < timeout){
       await utils.sleep(10);
       i += 1;
     }
 
     expect(this.view.__add_step_lock).toBe(null);
+  });
+
+  it('test-addStep-not-ok', async function(){
+    spyOn(this.view, '_stepOk2Add').and.returnValue(false);
+    this.view._step_queue[0] = jasmine.createSpy();
+    let r = await this.view._addStep();
+    expect(r).toBe(false);
+  });
+
+  it('test-addStep-no-step', async function(){
+    spyOn(this.view, '_stepOk2Add').and.returnValue(true);
+    let r = await this.view._addStep();
+    expect(r).toBe(false);
+  });
+
+  it('test-add2StepQueue-no-queue', function(){
+    spyOn(this.view, '_addStep');
+    let step = new BuildStep({uuid: 'some-uuid', index: 0});
+    this.view.build.get('steps').models.push(step);
+    this.view.build.get('steps').length = 1;
+    this.view._add2StepQueue();
+    expect(this.view._step_queue.length).toEqual(1);
+  });
+
+  it('test-add2StepQueue-greater', function(){
+    spyOn(this.view, '_addStep');
+    let step = new BuildStep({uuid: 'some-uuid', index: 0});
+    this.view._step_queue.push(step);
+    this.view.build.get('steps').models.push(step);
+    step = new BuildStep({uuid: 'other-uuid', index: 1});
+    this.view.build.get('steps').models.push(step);
+    this.view.build.get('steps').length = 2;
+    this.view._add2StepQueue();
+    let last_step = this.view._step_queue[1];
+    expect(this.view._step_queue.length).toEqual(2);
+    expect(last_step.get('index')).toEqual(1);
+  });
+
+  it('test-add2StepQueue-lesser', function(){
+    spyOn(this.view, '_addStep');
+    let step = new BuildStep({uuid: 'some-uuid', index: 1});
+    this.view._step_queue.push(step);
+    this.view.build.get('steps').models.push(step);
+    step = new BuildStep({uuid: 'other-uuid', index: 0});
+    this.view.build.get('steps').models.push(step);
+    this.view.build.get('steps').length = 2;
+    this.view._add2StepQueue();
+    let last_step = this.view._step_queue[1];
+    expect(this.view._step_queue.length).toEqual(2);
+    expect(last_step.get('index')).toEqual(1);
   });
 
   it('test-reRenderInfo', function(){

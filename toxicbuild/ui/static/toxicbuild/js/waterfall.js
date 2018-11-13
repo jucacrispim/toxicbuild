@@ -160,6 +160,7 @@ class WaterfallStepView extends BaseWaterfallView{
     super(options);
     let self = this;
     this.step = options.step;
+    this.build_view = options.build_view;
     this.directive = {'.step-status': 'status',
 		      '.step-name': 'name'};
     this.template_selector = '.template .waterfall-step-info';
@@ -168,6 +169,7 @@ class WaterfallStepView extends BaseWaterfallView{
 
     this.step.on({change: function(){
       self.render();
+      self.build_view._addStep();
     }});
   }
 
@@ -214,9 +216,11 @@ class WaterfallBuildView extends BaseWaterfallView{
     }});
 
     this.build.get('steps').on({'add': function(){
-      self._addStep();
+      self._add2StepQueue();
     }});
 
+    this._step_queue = new Array();
+    this._last_step = null;
     this.__add_step_lock = null;
   }
 
@@ -228,6 +232,30 @@ class WaterfallBuildView extends BaseWaterfallView{
 	    number: number};
   }
 
+  async _add2StepQueue(){
+    let length = this._step_queue.length;
+    let step = this._step_queue[length - 1];
+    let steps = this.build.get('steps');
+    let new_step = steps.models[steps.length -1];
+
+    if (!step || new_step.get('index') > step.get('index')){
+      this._step_queue.push(new_step);
+    }else{
+      this._step_queue.splice(0, 0, new_step);
+    }
+    await this._addStep();
+  }
+
+  _stepOk2Add(step){
+    let index = step.get('index');
+    if (this._last_step == null && index == 0){
+      return true;
+    }else if (this._last_step != null && this._last_step + 1 == index){
+      return true;
+    }
+    return false;
+  }
+
   async _addStep(){
     let self = this;
 
@@ -235,15 +263,24 @@ class WaterfallBuildView extends BaseWaterfallView{
       await utils.sleep(200);
     }
     this.__add_step_lock = true;
-    let steps = this.build.get('steps');
-    let step = steps.models[steps.length - 1];
-    let view = new WaterfallStepView({step: step});
+    let step = this._step_queue[0];
+
+    if (!step || !this._stepOk2Add(step)){
+      this.__add_step_lock = null;
+      return false;
+    }
+    this._step_queue.shift();
+    let view = new WaterfallStepView({step: step, build_view: self});
     let rendered = view.getRendered();
     $('ul', this.$el).append(rendered);
     let el = $('li', this.$el)[$('li', this.$el).length - 1];
 
-    let cb = function(){self.__add_step_lock = null;};
+    let cb = function(){
+      self.__add_step_lock = null;
+      self._last_step = step.get('index');
+    };
     utils.tableSlideDown($(el), 'li', 400, cb);
+    return true;
   }
 
   reRenderInfo(){
@@ -255,13 +292,15 @@ class WaterfallBuildView extends BaseWaterfallView{
   }
 
   render(){
+    let self = this;
+
     let rendered = super.getRendered();
     $('.build-info-row', rendered).addClass(
       'build-' + this.build.escape('status'));
 
     let steps = this.build.get('steps');
     steps.each(function(step){
-      let view = new WaterfallStepView({step: step});
+      let view = new WaterfallStepView({step: step, build_view: self});
       rendered.append(view.getRendered());
     });
     this.$el.html('');

@@ -30,10 +30,12 @@ class BuildStepTest(TestCase):
 
     def test_to_dict(self):
         bs = build.BuildStep(name='bla', command='ls', status='fail',
-                             started=now(), finished=now())
+                             started=now(), finished=now(),
+                             index=1)
 
         objdict = bs.to_dict()
         self.assertTrue(objdict['started'])
+        self.assertIsNotNone(objdict.get('index'))
 
     def test_to_dict_total_time(self):
         bs = build.BuildStep(

@@ -184,7 +184,8 @@ class BuildStep(EmbeddedDocument):
         """
 
         objdict = {'uuid': str(self.uuid), 'name': self.name,
-                   'command': self.command, 'status': self.status}
+                   'command': self.command, 'status': self.status,
+                   'index': self.index}
 
         if output:
             objdict['output'] = self.output
