@@ -17,6 +17,8 @@
 
 var TOXIC_WATERFALL_API_URL = window.TOXIC_API_URL + 'waterfall/';
 
+// this is here because of my lack of knowledge in js.
+var _waterfall_builds = {};
 
 class Waterfall{
 
@@ -25,10 +27,12 @@ class Waterfall{
     this.buildsets = new BuildSetList();
     this.builders = new BuilderList();
 
+    $(document).off('buildset_added');
+
     // unbinding the stuff from BuildSet here so we bind it to the
     // waterfall stuff.
     let self = this;
-    $(document).unbind('build_started build_finished');
+    $(document).off('build_started build_finished');
 
     $(document).on('build_started build_finished', function(e, data){
       self._updateBuild(data);
@@ -37,7 +41,10 @@ class Waterfall{
 
     // we need this so we can update the builds/steps when we get a message
     // from the server
-    this._builds = {};
+    this._builds = _waterfall_builds;
+    for (let key in this._builds){
+      delete this._builds[key];
+    }
     this._steps = {};
   }
 
@@ -46,7 +53,7 @@ class Waterfall{
     _.each(buildsets, function(b){
       let builds = b.get('builds');
       _.each(builds, function(build){
-	self._builds[build.get('uuid')] = build;
+	self.setBuild(build);
 	let steps = build.get('steps');
 	steps.each(function(step){
 	  self._steps[step.get('uuid')] = step;
@@ -60,10 +67,20 @@ class Waterfall{
     build.set('status', data.status);
   }
 
+  _addStep(data){
+    let build = this.getBuild(data.build.uuid);
+    let steps = build.get('steps');
+    let step = new BuildStep(data);
+    this._steps[step.get('uuid')] = step;
+    steps.add([step]);
+  }
+
+  _updateStep(data){
+    let step = this._steps[data.uuid];
+    step.set(data);
+  }
+
   async fetch(){
-    // unbind and bind again (in the end) so the event is not triggered by
-    // reset();
-    $(document).unbind('buildset_added');
     let self = this;
     let url = this._api_url + '?repo_name=' + this.repo_name;
     let r = await $.ajax({url: url});
@@ -76,9 +93,6 @@ class Waterfall{
     this._setWaterfallBuilds(this.buildsets.models);
     this.builders.reset(builders);
 
-    $(document).on('buildset_added', function(e, data){
-      self._addBuildSet(data);
-    });
   }
 
   _getBuildsetBuilders(data){
@@ -100,14 +114,19 @@ class Waterfall{
 	this.builders.add(builder);
       }
     }
-    let builds = [];
-    data.builds.map(function(e, i){
-      builds.push(new Build(e));
-    });
-    data.builds = builds;
+
     let buildset = new BuildSet(data, {no_events: true});
+    utils.setBuildsForBuildSet(buildset);
     this.buildsets.add([buildset], {at: 0});
     this._setWaterfallBuilds([this.buildsets.models[0]]);
+  }
+
+  getBuild(uuid){
+    return this._builds[uuid];
+  }
+
+  setBuild(build){
+    this._builds[build.get('uuid')] = build;
   }
 }
 
@@ -390,25 +409,17 @@ class WaterfallView extends Backbone.View{
     }});
 
     $(document).on('step_started', function(e, data){
-      self._addStep(data);
+      self.model._addStep(data);
     });
 
     $(document).on('step_finished', function(e, data){
-      self._updateStep(data);
+      self.model._updateStep(data);
     });
-  }
 
-  _addStep(data){
-    let build = this.model._builds[data.build.uuid];
-    let steps = build.get('steps');
-    let step = new BuildStep(data);
-    this.model._steps[step.get('uuid')] = step;
-    steps.add([step]);
-  }
+    $(document).on('buildset_added', function(e, data){
+      self.model._addBuildSet(data);
+    });
 
-  _updateStep(data){
-    let step = this.model._steps[data.uuid];
-    step.set(data);
   }
 
   _renderHeader(){

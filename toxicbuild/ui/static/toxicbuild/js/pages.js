@@ -18,9 +18,9 @@
 class BasePage extends Backbone.View{
 
   constructor(options){
-    $(document).unbind(
-      'buildset_started buildset_finished build_started build_finished \
-buildset_added');
+    $(document).off(
+      'buildset_started buildset_finished build_started build_finished');
+    $(document).off('buildset_added');
 
     super();
     this.router = options.router;
@@ -29,7 +29,6 @@ buildset_added');
 
   async fetch_template(){
     wsconsumer.disconnect();
-    wsconsumer = new StreamConsumer();
     let template = await $.ajax({'url': this.template_url});
     this.template_container.html(template);
   }

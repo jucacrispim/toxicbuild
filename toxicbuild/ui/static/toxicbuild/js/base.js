@@ -376,6 +376,7 @@ class BaseListView extends Backbone.View{
   }
 
   async render_all(){
+    wsconsumer.disconnect();
     await this._fetch_items();
     $('.wait-toxic-spinner').hide();
     $('.top-page-header-info-container').fadeIn();

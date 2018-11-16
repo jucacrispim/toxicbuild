@@ -141,6 +141,7 @@ class StreamConnector(LoggerMixin):
         inst = cls._instances.get(key)
         if not inst:
             inst = cls(user, repo_id, events)
+            inst.log('New connection instance', level='debug')
             cls._instances[key] = inst
             ensure_future(inst._listen())
 

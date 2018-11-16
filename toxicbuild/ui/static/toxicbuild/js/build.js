@@ -479,7 +479,6 @@ class BuildSetListView extends BaseListView{
     this._container_selector = '#obj-list-container';
     this.repo_name = repo_name;
     let self = this;
-    this._connect2ws();
   }
 
   _connect2ws(){
@@ -493,6 +492,7 @@ class BuildSetListView extends BaseListView{
     let kw = {data: {repo_name: this.repo_name,
 		     summary: true}};
     await this.model.fetch(kw);
+    this._connect2ws();
     $('.buildset-list-top-page-header-info').fadeIn(300);
 
     // we need to connect to the event after we fetch the data

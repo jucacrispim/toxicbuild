@@ -22,6 +22,24 @@ describe('WaterfallTest', function(){
     spyOn($, 'ajax');
   });
 
+  it('test-addStep', function(){
+    let data = {'uuid': 'some-uuid', build: {uuid: 'build-uuid'}};
+    let build = new Build({uuid: 'build-uuid'});
+    this.waterfall._builds[build.get('uuid')] = build;
+    spyOn(BuildStepList.prototype, 'add');
+    this.waterfall._addStep(data);
+    expect(BuildStepList.prototype.add).toHaveBeenCalled();
+  });
+
+  it('test-updateStep', function(){
+    let data = {'uuid': 'some-uuid'};
+    let step = new BuildStep(data);
+    this.waterfall._steps[data.uuid] = step;
+    let new_data = {uuid: 'some-uuid', status: 'fail'};
+    this.waterfall._updateStep(new_data);
+    expect(step.get('status')).toEqual('fail');
+  });
+
   it('test-fetch', async function(){
     $.ajax.and.returnValue({buildsets: [{}],
 			    builders: [{}]});
@@ -51,6 +69,12 @@ describe('WaterfallTest', function(){
       return false;
     }();
     expect(has_keys).toBe(true);
+  });
+
+  it('test-getBuild', function(){
+    let build = jasmine.createSpy();
+    this.waterfall._builds['some-build'] = build;
+    expect(this.waterfall.getBuild('some-build')).toBe(build);
   });
 });
 
@@ -319,24 +343,6 @@ describe('WaterfallViewTest', function(){
     el.affix('.buildset-total-time');
 
     this.view = new WaterfallView('some/repo');
-  });
-
-  it('test-addStep', function(){
-    let data = {'uuid': 'some-uuid', build: {uuid: 'build-uuid'}};
-    let build = new Build({uuid: 'build-uuid'});
-    this.view.model._builds[build.get('uuid')] = build;
-    spyOn(BuildStepList.prototype, 'add');
-    this.view._addStep(data);
-    expect(BuildStepList.prototype.add).toHaveBeenCalled();
-  });
-
-  it('test-updateStep', function(){
-    let data = {'uuid': 'some-uuid'};
-    let step = new BuildStep(data);
-    this.view.model._steps[data.uuid] = step;
-    let new_data = {uuid: 'some-uuid', status: 'fail'};
-    this.view._updateStep(new_data);
-    expect(step.get('status')).toEqual('fail');
   });
 
   it('test-renderHeader', function(){
