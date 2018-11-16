@@ -27,3 +27,4 @@ tests/functional/data/slave/src/
 /sock_send_test.py
 /toxicbuild/ui/static/toxicbuild/js/.tern-port
 /tests/js-unit/.tern-port
+artifacts/
