@@ -158,6 +158,21 @@ class SeleniumBrowser(webdriver.Chrome):
             if el:
                 return el
 
+    def wait_element_be_removed(self, fn, timeout=10):
+        """Waits until an element is not present in the DOM anymore.
+
+        :param fn: A function that should return an element. If return value
+          is true, tries again until timeout is reached.
+        :param timeout: Timeout for the operation."""
+
+        r = int(timeout * 10)
+
+        for index in range(r):
+            time.sleep(0.1)
+            el = fn()
+            if not el:
+                return el
+
 
 def take_screenshot(fn):
 

@@ -9,7 +9,7 @@ from tests.webui.steps.base_steps import (  # noqa f811
 @when('he clicks in the waterfall button')
 def step_impl(context):
     browser = context.browser
-    btn = browser.find_element_by_id('btn-status-repo-bla')
+    btn = browser.find_elements_by_class_name('badge')[1]
     browser.click(btn)
     time.sleep(0.2)
 
@@ -17,7 +17,8 @@ def step_impl(context):
 @then('he sees a list of builds in the waterfall')  # noqa f401
 def step_impl(context):
     browser = context.browser
-    elements = browser.find_elements_by_class_name('builder-column')
+    elements = browser.find_elements_by_class_name(
+        'waterfall-buildset-info-container')
     timeout = 5
     c = 0
     while not bool(elements) and c < timeout:
@@ -33,80 +34,65 @@ def step_impl(context):
     pass
 
 
-@when('he sees the builds running')  # noqa f401
+@when('he clicks in the reschedule buildset button')  # noqa f401
 def step_impl(context):
     browser = context.browser
-    elements = browser.find_elements_by_class_name('step-running')
-    assert elements
+
+    def fn():
+        try:
+            btn = browser.find_elements_by_class_name('fa-redo')[1]
+        except IndexError:
+            btn = None
+
+        return btn
+
+    btn = browser.wait_element_become_present(fn)
+    btn.click()
 
 
-@then('he waits for all builds to complete')  # noqa f401
-def step_impl(context):
+@given('already rescheduled a buildset')
+def reschedule_buildset(context):
     browser = context.browser
-    timeout = 5
-    c = 0
-    running = browser.find_elements_by_class_name('step-running')
-    while bool(running) and c < timeout:
-        time.sleep(1)
-        running = browser.find_elements_by_class_name('step-running')
-        c += 1
 
-    assert bool(running) is False
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('build-pending')[0]
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
+    assert el
 
 
-@when('he clicks in the buildset details button')      # noqa f401
-def step_impl(context):
+@when('The builds start running')
+def builds_start_running(context):
     browser = context.browser
-    time.sleep(1)
-    btn = browser.find_element_by_class_name('btn-buildset-details')
-    browser.click(btn)
-    time.sleep(0.2)
-    browser.click(btn)
+
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('build-running')[0]
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
+    assert el
 
 
-@then('he sees the buildset details modal')  # noqa 401
-def step_impl(context):
+@then('he waits for the builds complete')
+def wait_builds_complete(context):
     browser = context.browser
-    el = browser.find_element_by_id('buildsetDetailsModal')
-    is_visible = browser.wait_element_become_visible(el)
-    assert is_visible
 
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('build-running')[0]
+        except IndexError:
+            el = None
 
-@then('closes the details modal')  # noqa f401
-def step_impl(context):
-    browser = context.browser
-    btn = browser.find_element_by_class_name('close')
-    browser.click(btn)
+        return el
 
-
-@when('he clicks in the step details button')  # noqa f401
-def step_impl(context):
-    browser = context.browser
-    btn = browser.find_element_by_class_name('btn-step-details')
-    browser.click(btn)
-    time.sleep(0.2)
-
-
-@then('he sees the step details modal')  # noqa f401
-def step_impl(context):
-    browser = context.browser
-    el = browser.find_element_by_id('stepDetailsModal')
-    is_visible = browser.wait_element_become_visible(el)
-    assert is_visible
-
-
-@when('he clicks in the reschedule build button')  # noqa f401
-def step_impl(context):
-    browser = context.browser
-    browser.get(browser.current_url)
-    btn = browser.find_element_by_class_name('btn-rebuild-build')
-    browser.click(btn)
-    time.sleep(0.5)
-
-
-@when('cancels the newly added build')  # noqa f401
-def step_impl(context):
-    browser = context.browser
-    btn = browser.find_element_by_class_name('btn-cancel-build')
-    browser.click(btn)
-    time.sleep(0.5)
+    el = browser.wait_element_be_removed(fn)
+    assert not el
