@@ -477,6 +477,7 @@ body{
     font-size: 1.0em;
 }
 
+#waterfall-container .fa-redo,
 .buildset-info-status-container .fa-redo{
     font-size: 0.8em;
     margin-left: 5px;

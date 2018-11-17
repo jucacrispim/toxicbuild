@@ -122,6 +122,25 @@ var utils = {
 	var $set = $(this);
 	$set.replaceWith($set.contents());
       });
+  },
+
+  async rescheduleBuildSet(buildset, el_container){
+    let repo = new Repository({'id': buildset.get('repository').id});
+    let branch = buildset.get('branch');
+    let named_tree = buildset.get('commit');
+
+    let spinner = $('.spinner-reschedule-buildset', el_container);
+    let retry_btn = $('.fa-redo', el_container);
+    retry_btn.hide();
+    spinner.show();
+    try{
+      await repo.start_build(branch, null, named_tree);
+      utils.showSuccessMessage('Buildset re-scheduled');
+    }catch(e){
+      utils.showErrorMessage('Error re-scheduling buildset');
+    }
+    retry_btn.show();
+    spinner.hide();
   }
 
 };

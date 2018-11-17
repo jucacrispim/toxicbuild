@@ -430,7 +430,6 @@ class BuildSetInfoView extends BaseBuildSetView{
     }
     let status = kw.status;
 
-
     $('.fa-redo', compiled).on('click', function(){
       self.rescheduleBuildSet(compiled);
     });
@@ -449,22 +448,7 @@ class BuildSetInfoView extends BaseBuildSetView{
   }
 
   async rescheduleBuildSet(el_container){
-    let repo = new Repository({'id': this.model.get('repository').id});
-    let branch = this.model.get('branch');
-    let named_tree = this.model.get('commit');
-
-    let spinner = $('.spinner-reschedule-buildset', el_container);
-    let retry_btn = $('.fa-redo', el_container);
-    retry_btn.hide();
-    spinner.show();
-    try{
-      await repo.start_build(branch, null, named_tree);
-      utils.showSuccessMessage('Buildset re-scheduled');
-    }catch(e){
-      utils.showErrorMessage('Error re-scheduling buildset');
-    }
-    retry_btn.show();
-    spinner.hide();
+    utils.rescheduleBuildSet(this.model, el_container);
   }
 }
 

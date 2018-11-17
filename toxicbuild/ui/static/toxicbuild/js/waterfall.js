@@ -188,7 +188,8 @@ class WaterfallStepView extends BaseWaterfallView{
 
     this.step.on({change: function(){
       self.render();
-      self.build_view._addStep();
+      console.log('render step');
+      // self.build_view._addStep();
     }});
   }
 
@@ -390,6 +391,11 @@ class WaterfallBuildSetView extends BaseWaterfallView{
 	self.$el.append(document.createElement('td'));
       }
     });
+
+    $('.fa-redo', this.$el).on('click', function(){
+      utils.rescheduleBuildSet(self.buildset, self.$el);
+    });
+
 
     return this;
   }
