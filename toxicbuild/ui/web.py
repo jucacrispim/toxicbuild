@@ -546,6 +546,7 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
                                 'waterfall-info': ['buildset_added',
                                                    'build_started',
                                                    'build_finished',
+                                                   'buildset_started',
                                                    'buildset_finished',
                                                    'step_started',
                                                    'step_finished'],

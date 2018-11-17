@@ -350,6 +350,8 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     options = options || {};
     options.tagName = 'tr';
     super(options);
+    let self = this;
+
     this.builders = options.builders;
     this.buildset = options.buildset;
     this.directive = {'.buildset-branch': 'branch',
@@ -359,6 +361,12 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     this.template_selector = '.template .waterfall-buildset-info-container';
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
+
+    this.counter = new TimeCounter();
+
+    this.buildset.on({change: function(){
+      self.reRenderInfo();
+    }});
   }
 
   _get_kw(){
@@ -384,6 +392,32 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     return new WaterfallBuildView({build: build});
   }
 
+  reRenderInfo(){
+    let self = this;
+
+    let rendered = super.getRendered();
+    let first_col = $('.waterfall-first-col', this.$el);
+    first_col.html(rendered.html());
+    $('.fa-redo', first_col).on('click', function(){
+      utils.rescheduleBuildSet(self.buildset, self.$el);
+    });
+
+    if (!this.buildset.get('finished')){
+      let self = this;
+
+      let cb = function(secs){
+	let f = utils.formatSeconds(secs);
+	let el = $('.buildset-total-time', self.$el);
+	el.text(f);
+      };
+
+      this.counter.start(cb);
+    }else{
+      this.counter.stop();
+    }
+
+  }
+
   getRendered(){
     let self = this;
 
@@ -405,7 +439,6 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     $('.fa-redo', this.$el).on('click', function(){
       utils.rescheduleBuildSet(self.buildset, self.$el);
     });
-
 
     return this;
   }

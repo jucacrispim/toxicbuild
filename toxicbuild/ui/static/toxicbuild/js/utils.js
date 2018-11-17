@@ -141,6 +141,33 @@ var utils = {
     }
     retry_btn.show();
     spinner.hide();
+  },
+
+  formatSeconds(secs){
+    let d = new Date(secs * 1000);
+    return d.toISOString().substr(11, 8);
   }
 
 };
+
+
+class TimeCounter{
+
+  constructor(){
+    this.secs = 0;
+    this._stop = false;
+  }
+
+  async start(cb){
+    while (!this._stop){
+      cb(this.secs);
+      await utils.sleep(1000);
+      this.secs += 1;
+    }
+    this._stop = false;
+  }
+
+  stop(){
+    this._stop = true;
+  }
+}

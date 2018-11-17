@@ -290,8 +290,8 @@ describe('WaterfallBuildViewTest', function(){
 describe('WaterfallBuildSetViewTest', function(){
 
   beforeEach(function(){
-    affix('.template .waterfall-buildset-info-container');
-    let template = $('.waterfall-buildset-info-container');
+    affix('.template .waterfall-buildset-info-container.waterfall-first-col');
+    let template = $('.waterfall-first-col');
     template.affix('.buildset-commit');
     template.affix('.buildset-details-link');
     template.affix('.buildset-branch');
@@ -301,6 +301,16 @@ describe('WaterfallBuildSetViewTest', function(){
     let builders = new BuilderList();
     this.view = new WaterfallBuildSetView({buildset: buildset,
 					   builders: builders});
+  });
+
+  it('test-reRenderInfo', function(){
+    let el = $(document.createElement('td'));
+    el.html('html');
+    spyOn(BaseWaterfallView.prototype, 'getRendered').and.returnValue(el);
+    this.view.$el.affix('.waterfall-first-col');
+    this.view.reRenderInfo();
+    let first_col = $('.waterfall-first-col', this.view.$el);
+    expect(first_col.html()).toEqual('html');
   });
 
   it('test-getRendered-builder-ok', function(){
