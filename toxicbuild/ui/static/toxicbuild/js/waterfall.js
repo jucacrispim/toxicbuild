@@ -188,7 +188,6 @@ class WaterfallStepView extends BaseWaterfallView{
 
     this.step.on({change: function(){
       self.render();
-      console.log('render step');
       // self.build_view._addStep();
     }});
   }
