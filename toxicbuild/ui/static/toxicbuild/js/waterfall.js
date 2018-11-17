@@ -188,7 +188,7 @@ class WaterfallStepView extends BaseWaterfallView{
 
     this.step.on({change: function(){
       self.render();
-      // self.build_view._addStep();
+      self.build_view._addStep();
     }});
   }
 
@@ -414,10 +414,12 @@ class WaterfallView extends Backbone.View{
     }});
 
     $(document).on('step_started', function(e, data){
+      console.log('step', data.name, 'started');
       self.model._addStep(data);
     });
 
     $(document).on('step_finished', function(e, data){
+      console.log('step', data.name, 'finished');
       self.model._updateStep(data);
     });
 
