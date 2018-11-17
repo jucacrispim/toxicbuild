@@ -36,9 +36,17 @@ def click_summary_link(context):
 @take_screenshot
 def see_buildset_list_page(context):
     browser = context.browser
-    el_list = browser.find_elements_by_class_name('buildset-info')
 
-    assert len(el_list) > 1
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('buildset-info')[1]
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
+    assert el
 
 
 @given('the user is in the buildset list page')
