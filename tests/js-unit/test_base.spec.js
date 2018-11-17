@@ -343,6 +343,7 @@ describe('BaseFormViewTest', function(){
 describe('BaseListViewTest', function(){
 
   beforeEach(function(){
+    window.wsconsumer = jasmine.createSpy();
     this.view = new BaseListView();
     this.view.model = new BaseCollection();
   });
@@ -388,6 +389,8 @@ describe('BaseListViewTest', function(){
   });
 
   it('test-render_all', async function(){
+    window.wsconsumer.disconnect = jasmine.createSpy();
+    window.wsconsumer.connectTo = jasmine.createSpy();
     spyOn(this.view, '_fetch_items');
     spyOn(this.view, '_render_list');
     await this.view.render_all();

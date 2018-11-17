@@ -342,6 +342,8 @@ describe('WaterfallViewTest', function(){
     el.affix('.buildset-details-link');
     el.affix('.buildset-total-time');
 
+    window.wsconsumer = jasmine.createSpy();
+
     this.view = new WaterfallView('some/repo');
   });
 
@@ -431,8 +433,7 @@ describe('WaterfallViewTest', function(){
     spyOn(this.view.model, 'fetch');
     spyOn(this.view, '_renderHeader');
     spyOn(this.view, '_renderBody');
-    wsconsumer = jasmine.createSpy();
-    wsconsumer.connectTo = jasmine.createSpy();
+    window.wsconsumer.connectTo = jasmine.createSpy();
     await this.view.render();
     expect(this.view._renderHeader).toHaveBeenCalled();
     expect(this.view._renderBody).toHaveBeenCalled();
