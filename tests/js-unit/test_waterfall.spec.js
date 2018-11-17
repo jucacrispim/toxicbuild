@@ -31,6 +31,18 @@ describe('WaterfallTest', function(){
     expect(BuildStepList.prototype.add).toHaveBeenCalled();
   });
 
+  it('test-addStep-finished', function(){
+    let data = {'uuid': 'some-uuid', build: {uuid: 'build-uuid'}};
+    let build = new Build({uuid: 'build-uuid'});
+    this.waterfall._builds[build.get('uuid')] = build;
+    this.waterfall._finished_steps_data['some-uuid'] = {'some': 'data'};
+    spyOn(BuildStepList.prototype, 'add');
+    spyOn(this.waterfall, '_updateStep');
+    this.waterfall._addStep(data);
+    expect(BuildStepList.prototype.add).toHaveBeenCalled();
+    expect(this.waterfall._updateStep).toHaveBeenCalled();
+  });
+
   it('test-updateStep', function(){
     let data = {'uuid': 'some-uuid'};
     let step = new BuildStep(data);
@@ -38,6 +50,13 @@ describe('WaterfallTest', function(){
     let new_data = {uuid: 'some-uuid', status: 'fail'};
     this.waterfall._updateStep(new_data);
     expect(step.get('status')).toEqual('fail');
+  });
+
+  it('test-updateStep-no-step', function(){
+    let data = {'uuid': 'some-uuid'};
+    let step = new BuildStep(data);
+    this.waterfall._updateStep(data);
+    expect(this.waterfall._finished_steps_data['some-uuid']).toBe(data);
   });
 
   it('test-fetch', async function(){

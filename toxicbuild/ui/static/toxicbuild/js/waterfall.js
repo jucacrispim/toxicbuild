@@ -46,6 +46,7 @@ class Waterfall{
       delete this._builds[key];
     }
     this._steps = {};
+    this._finished_steps_data = {};
   }
 
   _setWaterfallBuilds(buildsets){
@@ -73,11 +74,21 @@ class Waterfall{
     let step = new BuildStep(data);
     this._steps[step.get('uuid')] = step;
     steps.add([step]);
+
+    // checking if the step already finished
+    let finished_data = this._finished_steps_data[data.uuid];
+    if (finished_data){
+      this._updateStep(data);
+    }
   }
 
   _updateStep(data){
     let step = this._steps[data.uuid];
-    step.set(data);
+    if (!step){
+      this._finished_steps_data[data.uuid] = data;
+    }else{
+      step.set(data);
+    }
   }
 
   async fetch(){
@@ -414,12 +425,10 @@ class WaterfallView extends Backbone.View{
     }});
 
     $(document).on('step_started', function(e, data){
-      console.log('step', data.name, 'started');
       self.model._addStep(data);
     });
 
     $(document).on('step_finished', function(e, data){
-      console.log('step', data.name, 'finished');
       self.model._updateStep(data);
     });
 
