@@ -124,7 +124,7 @@ def see_buildset_details(context):
         return el
 
     el = browser.wait_element_become_present(fn)
-    browser.wait_element_become_visible(el)
+    assert el
 
 
 @given('the user is in the buildset details page')
@@ -136,11 +136,31 @@ def is_in_buildset_details_page(context):
 @take_screenshot
 def builds_start(context):
     browser = context.browser
-    browser.wait_text_become_present('badge-primary')
+
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('badge-primary')[0]
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
+    assert el
 
 
 @then('he waits for the builds to complete')
 @take_screenshot
 def wait_builds_to_complete(context):
     browser = context.browser
-    browser.wait_text_vanishes('badge-primary')
+
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('badge-primary')[0]
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_be_removed(fn)
+    assert not el
