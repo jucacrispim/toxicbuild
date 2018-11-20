@@ -27,7 +27,7 @@ describe('DashboarRouterTest', function(){
     this.third_a.attr('href', '/some/where');
   });
 
-  it('test-setup-links', function(){
+  it('test-setupLinks', function(){
     spyOn(this.router, 'navigate');
     this.router.setUpLinks();
     this.first_a.click();
@@ -35,6 +35,18 @@ describe('DashboarRouterTest', function(){
     this.third_a.click();
     expect(this.router.navigate.calls.allArgs().length).toEqual(1);
   });
+
+  it('test-setupLinks-container', function(){
+    spyOn(this.router, 'navigate');
+    affix('.link-container');
+    let container = $('.link-container');
+    container.affix('a');
+    let link = $('a', container);
+    this.router.setUpLinks(container);
+    link.click();
+    expect(this.router.navigate.calls.allArgs().length).toEqual(1);
+  });
+
 
   it('test-showPage', async function(){
     let page = jasmine.createSpy('test-page');

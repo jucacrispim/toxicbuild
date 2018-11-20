@@ -53,9 +53,15 @@ class DashboardRouter extends Backbone.Router{
     return r;
   }
 
-  setUpLinks(){
+  setUpLinks(container){
     let self = this;
-    jQuery('a').each(function(i, el){
+    let el_list;
+    if (container){
+      el_list = $('a', container);
+    }else{
+      el_list = $('a');
+    }
+    el_list.each(function(i, el){
       jQuery(el).click(function(e){
 	let a_el = jQuery(this);
 	let href = a_el.attr('href');

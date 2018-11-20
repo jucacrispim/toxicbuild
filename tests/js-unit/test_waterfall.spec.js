@@ -280,6 +280,10 @@ describe('WaterfallBuildViewTest', function(){
   });
 
   it('test-getRendered', function(){
+    let router = jasmine.createSpy();
+    router.setUpLinks = jasmine.createSpy();
+    window.router = router;
+
     this.view.build.set('status', 'fail');
     let rendered = this.view.getRendered();
     let el = $('.build-info-row', rendered);
@@ -314,6 +318,9 @@ describe('WaterfallBuildSetViewTest', function(){
   });
 
   it('test-getRendered-builder-ok', function(){
+    let router = jasmine.createSpy();
+    router.setUpLinks = jasmine.createSpy();
+    window.router = router;
     let view = jasmine.createSpy();
     view.getRendered = jasmine.createSpy();
 
@@ -331,6 +338,10 @@ describe('WaterfallBuildSetViewTest', function(){
   });
 
   it('test-getRendered-builder-not-ok', function(){
+    let router = jasmine.createSpy();
+    router.setUpLinks = jasmine.createSpy();
+    window.router = router;
+
     let view = jasmine.createSpy();
     view.getRendered = jasmine.createSpy();
 

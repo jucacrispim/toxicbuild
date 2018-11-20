@@ -335,6 +335,7 @@ class WaterfallBuildView extends BaseWaterfallView{
     });
     this.$el.html('');
     this.$el.append(rendered);
+    router.setUpLinks(this.$el);
   }
 
   getRendered(){
@@ -401,6 +402,8 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     $('.fa-redo', first_col).on('click', function(){
       utils.rescheduleBuildSet(self.buildset, self.$el);
     });
+
+    router.setUpLinks(first_col);
 
     if (!this.buildset.get('finished')){
       let self = this;
