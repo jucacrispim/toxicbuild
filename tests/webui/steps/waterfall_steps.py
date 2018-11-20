@@ -2,11 +2,13 @@
 
 import time
 from behave import when, then, given
+from tests.webui import take_screenshot
 from tests.webui.steps.base_steps import (  # noqa f811
     given_logged_in_webui, then_sees_message)
 
 
 @when('he clicks in the waterfall button')
+@take_screenshot
 def step_impl(context):
     browser = context.browser
     btn = browser.find_elements_by_class_name('badge')[1]
@@ -15,6 +17,7 @@ def step_impl(context):
 
 
 @then('he sees a list of builds in the waterfall')  # noqa f401
+@take_screenshot
 def step_impl(context):
     browser = context.browser
     elements = browser.find_elements_by_class_name(
@@ -35,6 +38,7 @@ def step_impl(context):
 
 
 @when('he clicks in the reschedule buildset button')  # noqa f401
+@take_screenshot
 def step_impl(context):
     browser = context.browser
 
@@ -51,6 +55,7 @@ def step_impl(context):
 
 
 @given('already rescheduled a buildset')
+@take_screenshot
 def reschedule_buildset(context):
     browser = context.browser
 
@@ -67,6 +72,7 @@ def reschedule_buildset(context):
 
 
 @when('The builds start running')
+@take_screenshot
 def builds_start_running(context):
     browser = context.browser
 
@@ -83,6 +89,7 @@ def builds_start_running(context):
 
 
 @then('he waits for the builds complete')
+@take_screenshot
 def wait_builds_complete(context):
     browser = context.browser
 
