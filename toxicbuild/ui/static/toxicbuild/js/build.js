@@ -26,7 +26,7 @@ class BuildSet extends BaseModel{
     this._api_url = TOXIC_BUILDSET_API_URL;
     let builds  = this.attributes ? this.attributes.builds : [];
     let self = this;
-    if (options && !options.no_events){
+    if (!options || (options && !options.no_events)){
       $(document).on('build_started build_finished', function(e, data){
 	self._updateBuild(data);
       });
@@ -148,6 +148,8 @@ class BuildDetailsView extends Backbone.View{
     options = options || {'tagName': 'div'};
     options.model = options.model || new Build();
     super(options);
+    let self = this;
+
     this.directive = {'.build-status': 'status',
 		      '.build-output': 'output',
 		      '.build-started': 'started',
@@ -165,6 +167,26 @@ class BuildDetailsView extends Backbone.View{
     this.compiled_template = null;
     this.container_selector = '.build-details-container';
     this.container = null;
+
+    $(document).on('build_started', function(e, data){
+      self._renderStarted(data);
+    });
+
+    $(document).on('build_finished', function(e, data){
+      self._renderFinished(data);
+    });
+
+  }
+
+  _renderStarted(data){
+    this.model.set('status', 'running');
+    this.model.set('started', data.started);
+    this.render(false);
+  }
+
+  _renderFinished(data){
+    this.model.set('status', data.status);
+    this.model.set('finished', data.finished);
   }
 
   _get_kw(){
@@ -200,8 +222,10 @@ class BuildDetailsView extends Backbone.View{
     });
   }
 
-  async render(){
-    await this.model.fetch({build_uuid: this.build_uuid});
+  async render(fetch=true){
+    if (fetch){
+      await this.model.fetch({build_uuid: this.build_uuid});
+    }
 
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
@@ -472,6 +496,7 @@ class BuildSetListView extends BaseListView{
 
   async _fetch_items(){
     let self = this;
+    $(document).off('build_started build_finished');
 
     let kw = {data: {repo_name: this.repo_name,
 		     summary: true}};

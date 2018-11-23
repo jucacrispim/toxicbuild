@@ -108,6 +108,15 @@ describe('BuildDetailsViewTest', function(){
     expect($('.wait-toxic-spinner').is('visible')).toBe(false);
     expect(this.view.model.fetch).toHaveBeenCalled();
   });
+
+  it('test-render-no-fetch', async function(){
+    spyOn(this.view.model, 'fetch');
+    this.view.model.set({repository: {name: 'bla'}});
+    this.view.model.set({builder: {name: 'ble'}});
+    await this.view.render(false);
+    expect($('.wait-toxic-spinner').is('visible')).toBe(false);
+    expect(this.view.model.fetch).not.toHaveBeenCalled();
+  });
 });
 
 describe('BuildsetInfoViewTest', function(){
