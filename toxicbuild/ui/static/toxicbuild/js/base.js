@@ -357,7 +357,8 @@ class BaseListView extends Backbone.View{
     let view = this._get_view(model);
     let rendered = view.getRendered();
     if (prepend){
-      this.$el.prepend(rendered.hide().fadeIn(300));
+      this.$el.prepend(rendered.hide());
+      rendered.slideDown('slow');
     }else{
       this.$el.append(rendered.hide().fadeIn(300));
     }

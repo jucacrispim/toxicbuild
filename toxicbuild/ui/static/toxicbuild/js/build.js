@@ -468,6 +468,7 @@ class BuildSetInfoView extends BaseBuildSetView{
     compiled.addClass('repo-status-' + status.replace(' ', '-'));
     $('.badge', compiled).addClass(badge_class);
     this.$el.html(compiled);
+    router.setUpLinks(this.$el);
     return this.$el;
   }
 

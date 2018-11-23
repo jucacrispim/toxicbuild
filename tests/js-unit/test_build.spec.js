@@ -122,6 +122,8 @@ describe('BuildDetailsViewTest', function(){
 describe('BuildsetInfoViewTest', function(){
 
   beforeEach(function(){
+    window.router = jasmine.createSpy();
+    window.router.setUpLinks = jasmine.createSpy();
     affix('.template .buildset-info');
     let container = $('.buildset-info');
     container.affix('.buildset-title');

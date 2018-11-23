@@ -309,7 +309,7 @@ class WaterfallBuildView extends BaseWaterfallView{
       self.__add_step_lock = null;
       self._last_step = step.get('index');
     };
-    utils.tableSlideDown($(el), 'li', 400, cb);
+    utils.wrapperSlideDown($(el), 600, cb);
     return true;
   }
 
@@ -547,7 +547,7 @@ class WaterfallView extends Backbone.View{
     for (let i in tags){
       let tag = tags[i];
       let el = view_el.find(tag);
-      utils.tableSlideDown(el, tag, 700);
+      utils.wrapperSlideDown(el, 600);
     }
   }
 

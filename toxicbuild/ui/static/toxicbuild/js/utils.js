@@ -112,10 +112,10 @@ var utils = {
     return -(low);
   },
 
-  tableSlideDown: function(el,tag_name,  ms, cb){
+  wrapperSlideDown: function(el, ms, cb){
     el.wrapInner('<div style="display: none;" />')
       .parent()
-      .find(tag_name + ' > div')
+      .find(el.prop('tagName') + ' > div')
       .slideDown(ms, function(){
 	cb = cb || function(){};
 	cb();
