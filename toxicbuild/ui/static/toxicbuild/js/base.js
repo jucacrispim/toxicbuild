@@ -385,3 +385,44 @@ class BaseListView extends Backbone.View{
   }
 
 }
+
+
+class BaseBuildDetailsView extends Backbone.View{
+
+  constructor(options){
+    super(options);
+    this.build = options ? options.build : new Build();
+    this._step_queue = new Array();
+  }
+
+  async _add2StepQueue(steps){
+    let length = this._step_queue.length;
+    let step = this._step_queue[length - 1];
+    if (!steps){
+      steps = this.build.get('steps');
+    }
+    let new_step = steps.models[steps.length -1];
+
+    if (!step || new_step.get('index') > step.get('index')){
+      this._step_queue.push(new_step);
+    }else{
+      this._step_queue.splice(0, 0, new_step);
+    }
+    await this._addStep();
+  }
+
+  _stepOk2Add(step){
+    let index = step.get('index');
+    if (this._last_step == null && index == 0){
+      return true;
+    }else if (this._last_step != null && this._last_step + 1 == index){
+      return true;
+    }
+    return false;
+  }
+
+  async _addStep(){
+    throw new Error('You must implement _addStep');
+  }
+
+}

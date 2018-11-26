@@ -1086,6 +1086,7 @@ body{
     padding: 10px;
     margin-top: 10px;
     white-space: pre-wrap;
+    min-height: 60px;
 }
 
 .build-builder-row,

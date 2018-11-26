@@ -714,20 +714,6 @@ class StreamHandlerTest(AsyncTestCase):
         yield from asyncio.sleep(0.001)
         self.assertTrue(sbi.called)
 
-    @gen_test
-    def test_receiver_wrong_action(self):
-        sender = MagicMock()
-        message = {'event_type': 'build_started'}
-        sbi = MagicMock()
-
-        self.handler._send_build_info = sbi
-
-        self.handler.events['build_started'] = self.handler._send_build_info
-        self.handler.action = 'build-step'
-        self.handler.receiver(sender, **message)
-        yield from asyncio.sleep(0.001)
-        self.assertFalse(sbi.called)
-
     @patch.object(web.traceback, 'format_exc', MagicMock())
     @gen_test
     def test_receiver_exception(self):
@@ -789,9 +775,9 @@ class StreamHandlerTest(AsyncTestCase):
 
     def test_send_step_output_info(self):
         self.handler.request.arguments = {
-            'uuid': ['sfdaf1'.encode('utf-8')]}
+            'uuid': ['some-uuid'.encode('utf-8')]}
 
-        info = {'uuid': 'sfdaf1'}
+        info = {'uuid': 'sfdaf1', 'build': {'uuid': 'some-uuid'}}
         self.handler.write2sock = MagicMock()
         self.handler._send_step_output_info(info)
         self.assertTrue(self.handler.write2sock.called)
@@ -800,7 +786,7 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler.request.arguments = {
             'uuid': ['sfdafs1'.encode('utf-8')]}
 
-        info = {'uuid': 'sfdaf1'}
+        info = {'uuid': 'sfdaf1', 'build': {'uuid': 'some-uuid'}}
         self.handler.write2sock = MagicMock()
         self.handler._send_step_output_info(info)
         self.assertFalse(self.handler.write2sock.called)

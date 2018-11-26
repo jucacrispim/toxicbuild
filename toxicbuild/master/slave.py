@@ -286,6 +286,8 @@ class Slave(OwnedDocument, LoggerMixin):
 
         step.output = ''.join([step.output or '', output])
         info['repository'] = {'id': str(repo.id)}
+        info['build'] = {'uuid': str(build.uuid),
+                         'repository': {'id': str(repo.id)}}
         step_output_arrived.send(str(repo.id), step_info=info)
 
         # the thing here is that while we are waiting for the step,

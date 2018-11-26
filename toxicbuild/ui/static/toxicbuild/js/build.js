@@ -70,10 +70,15 @@ class Build extends BaseModel{
   constructor(attributes, options){
     options = options || {};
     options.idAttribute = 'uuid';
-    super(attributes, options);
-    this._api_url = TOXIC_BUILD_API_URL;
     let steps = attributes && attributes.steps ? attributes.steps : [];
-    this.set('steps', this._getSteps(steps));
+
+    super(attributes, options);
+
+    let new_steps = this._getSteps(steps);
+
+    this._api_url = TOXIC_BUILD_API_URL;
+
+    this.set('steps', new_steps);
   }
 
   _getSteps(steps){
@@ -84,7 +89,7 @@ class Build extends BaseModel{
       build_steps.push(build_step);
     }
     let steps_list = new BuildStepList();
-    steps_list.reset(steps);
+    steps_list.reset(build_steps);
     return steps_list;
   }
 
@@ -142,12 +147,16 @@ class BuilderList extends BaseCollection{
 
 }
 
-class BuildDetailsView extends Backbone.View{
+class BuildDetailsView extends BaseBuildDetailsView{
 
   constructor(options){
     options = options || {'tagName': 'div'};
     options.model = options.model || new Build();
     super(options);
+    this._started_steps = [];
+    this._finished_steps = [];
+    this._output_queue = {};
+
     let self = this;
 
     this.directive = {'.build-status': 'status',
@@ -161,12 +170,14 @@ class BuildDetailsView extends Backbone.View{
 		      '.commit-branch': 'commit_branch',
 		      '.build-total-time': 'total_time'};
 
-    this.model = options.model;
+    this.model = this.build = options.model;
     this.build_uuid = options.build_uuid;
     this.template_selector = '#build-details';
     this.compiled_template = null;
     this.container_selector = '.build-details-container';
     this.container = null;
+
+    this._scroll = false;
 
     $(document).on('build_started', function(e, data){
       self._renderStarted(data);
@@ -176,6 +187,91 @@ class BuildDetailsView extends Backbone.View{
       self._renderFinished(data);
     });
 
+    $(document).on('step_output_info', function(e, data){
+      self._add2OutputQueue(data);
+    });
+
+    let steps = this.model.get('steps');
+
+    $(document).on('step_started', function(e, data){
+      if (data.build.uuid != self.build_uuid){
+	return;
+      }
+      let step = new BuildStep(data);
+      steps.add([step]);
+    });
+
+    steps.on({'add': function(){
+      self._add2StepQueue(steps);
+    }});
+  }
+
+  async _addStep(){
+
+    let step = this._step_queue[0];
+
+    if (!step || !this._stepOk2Add(step)){
+      return false;
+    }
+
+    this._step_queue.shift();
+
+    let output_el = $('.build-output');
+    let command = step.get('command') + '\n';
+    output_el.append(command);
+
+    this._last_step = step.get('index');
+    this._started_steps.push(step.get('uuid'));
+    this.setOutput(command);
+    this._addStepOutput(step.get('uuid'));
+
+    return true;
+  }
+
+  setOutput(output_line){
+    let output = this.build.get('output') || '';
+    output += output_line;
+    this.build.set('output', output);
+  }
+
+  _add2OutputQueue(data){
+    let step_uuid = data.uuid;
+    let queue = this._output_queue[step_uuid];
+    if (!queue){
+      queue = [];
+      this._output_queue[step_uuid] = queue;
+    }
+
+    queue.push(data);
+    this._addStepOutput(step_uuid);
+  }
+
+  _addStepOutput(step_uuid){
+
+    if (this._started_steps.indexOf(step_uuid) < 0){
+      return false;
+    }
+
+    let output_queue = this._output_queue[step_uuid];
+
+    if (!output_queue){
+      return false;
+    }
+
+    let output_el = $('.build-output');
+    let output = output_queue.shift();
+    while (output){
+      let output_line = output.output;
+      this.setOutput(output_line);
+      output_el.append(output_line);
+      output = output_queue.shift();
+    }
+
+    if(this._scroll){
+      this._scrollToBottom();
+    }
+
+    return true;
   }
 
   _renderStarted(data){
@@ -187,6 +283,8 @@ class BuildDetailsView extends Backbone.View{
   _renderFinished(data){
     this.model.set('status', data.status);
     this.model.set('finished', data.finished);
+    this.model.set('total_time', data.total_time);
+    this.render(false);
   }
 
   _get_kw(){
@@ -219,12 +317,30 @@ class BuildDetailsView extends Backbone.View{
 
     $('.follow-output', template).on('click', function(){
       self._scrollToBottom();
+      self._scroll = true;
+    });
+  }
+
+  _setStartedSteps(){
+    let self = this;
+
+    let new_steps = this.model._getSteps(this.model.get('steps'));
+    this.model.set('steps', new_steps);
+
+    this.model.get('steps').each(function(step){
+      self._last_step = step.get('index');
+      self._started_steps.push(step.get('uuid'));
     });
   }
 
   async render(fetch=true){
     if (fetch){
       await this.model.fetch({build_uuid: this.build_uuid});
+      let repo = this.model.get('repository');
+      let path = 'build-info?repo_id=' + repo.id + '&uuid=' + this.model.get(
+	'uuid');
+      this._setStartedSteps();
+      wsconsumer.connectTo(path);
     }
 
     this.compiled_template = $p(this.template_selector).compile(
@@ -236,7 +352,8 @@ class BuildDetailsView extends Backbone.View{
     let compiled = $(this.compiled_template(kw));
     this._listen2events(compiled);
     let badge_class = utils.get_badge_class(kw.status);
-    $('.build-status', compiled).addClass(badge_class);
+    $('.build-status', compiled).removeClass().addClass(
+      'build-status badge ' + badge_class);
     $('.obj-details-buttons-container', compiled).show();
     this.container = $(this.container_selector);
     this.container.html(compiled);

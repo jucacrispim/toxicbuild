@@ -538,11 +538,19 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
                                 'builds': ['build_started', 'build_finished',
                                            'build_added', 'step_started',
                                            'step_finished', 'build_cancelled'],
+
+                                'build-info': ['build_started',
+                                               'build_finished',
+                                               'step_started',
+                                               'step_finished',
+                                               'step_output_arrived'],
+
                                 'buildset-info': ['build_started',
                                                   'build_finished',
                                                   'buildset_added',
                                                   'buildset_started',
                                                   'buildset_finished'],
+
                                 'waterfall-info': ['buildset_added',
                                                    'build_started',
                                                    'build_finished',
@@ -550,6 +558,7 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
                                                    'buildset_finished',
                                                    'step_started',
                                                    'step_finished'],
+
                                 'step-output': ['step_output_info']}
 
     async def _get_repo_id(self):
@@ -564,6 +573,7 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
         return repo.id
 
     async def open(self, action):
+        self.log('connecting {} to ws'.format(action), level='debug')
         self.action = action
         self.body = self.action_messages[self.action]
         self.repo_id = await self._get_repo_id()
@@ -575,10 +585,6 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
         message_type = message.get('event_type')
         msg = 'message arrived: {}'.format(message_type)
         self.log(msg, level='debug')
-        if message_type not in self.action_messages.get(self.action, []):
-            msg = 'leaving receiver'
-            self.log(msg, level='debug')
-            return
         outfn = self.events.get(message_type, self._send_raw_info)
         try:
             outfn(message)
@@ -590,9 +596,9 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
         """Sends information about step output to the ws client.
 
         :param info: Message sent by the master"""
-        step_uuid = self.request.arguments.get('uuid')[0].decode()
-        uuid = info.get('uuid')
-        if step_uuid == uuid:
+        build_uuid = self.request.arguments.get('uuid')[0].decode()
+        uuid = info.get('build').get('uuid')
+        if build_uuid == uuid:
             self.write2sock(info)
 
     def _send_build_info(self, info):

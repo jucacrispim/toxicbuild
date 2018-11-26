@@ -141,7 +141,7 @@ class Waterfall{
   }
 }
 
-class BaseWaterfallView extends Backbone.View{
+class BaseWaterfallView extends BaseBuildDetailsView{
 
   getRendered(){
     let kw = this._get_kw();
@@ -249,7 +249,6 @@ class WaterfallBuildView extends BaseWaterfallView{
       self._add2StepQueue();
     }});
 
-    this._step_queue = new Array();
     this._last_step = null;
     this.__add_step_lock = null;
   }
@@ -260,30 +259,6 @@ class WaterfallBuildView extends BaseWaterfallView{
     let build_details_link = '/build/' + this.build.get('uuid');
     return {status: status, build_details_link: build_details_link,
 	    number: number};
-  }
-
-  async _add2StepQueue(){
-    let length = this._step_queue.length;
-    let step = this._step_queue[length - 1];
-    let steps = this.build.get('steps');
-    let new_step = steps.models[steps.length -1];
-
-    if (!step || new_step.get('index') > step.get('index')){
-      this._step_queue.push(new_step);
-    }else{
-      this._step_queue.splice(0, 0, new_step);
-    }
-    await this._addStep();
-  }
-
-  _stepOk2Add(step){
-    let index = step.get('index');
-    if (this._last_step == null && index == 0){
-      return true;
-    }else if (this._last_step != null && this._last_step + 1 == index){
-      return true;
-    }
-    return false;
   }
 
   async _addStep(){

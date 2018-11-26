@@ -101,6 +101,8 @@ describe('BuildDetailsViewTest', function(){
   });
 
   it('test-render', async function(){
+    window.wsconsumer = jasmine.createSpy();
+    window.wsconsumer.connectTo = jasmine.createSpy();
     spyOn(this.view.model, 'fetch');
     this.view.model.set({repository: {name: 'bla'}});
     this.view.model.set({builder: {name: 'ble'}});
@@ -117,6 +119,65 @@ describe('BuildDetailsViewTest', function(){
     expect($('.wait-toxic-spinner').is('visible')).toBe(false);
     expect(this.view.model.fetch).not.toHaveBeenCalled();
   });
+
+  it('test-addStep-no-step', async function(){
+    this.view._step_queue = [];
+    let r = await this.view._addStep();
+    expect(r).toBe(false);
+  });
+
+  it('test-addStep-not-ok', async function(){
+    let step = new BuildStep({uuid: 'some-uuid'});
+    this.view._step_queue = [step];
+    spyOn(this.view, '_stepOk2Add').and.returnValue(false);
+    let r = await this.view._addStep();
+    expect(r).toBe(false);
+  });
+
+  it('test-addStep-ok', async function(){
+    let step = new BuildStep({uuid: 'some-uuid', index: 0});
+    this.view._step_queue = [step];
+    spyOn(this.view, '_stepOk2Add').and.returnValue(true);
+    let r = await this.view._addStep();
+    expect(r).toBe(true);
+    expect(this.view._last_step).toEqual(0);
+    expect(this.view._started_steps.indexOf('some-uuid') >= 0).toBe(true);
+  });
+
+  it('test-add2OutputQueue-no-queue', function(){
+    let data = {uuid: 'some-uuid'};
+    this.view._add2OutputQueue(data);
+    expect(this.view._output_queue['some-uuid'][0]).toEqual(data);
+  });
+
+  it('test-add2OutputQueue', function(){
+    let data = {uuid: 'some-uuid'};
+    this.view._output_queue['some-uuid'] = [data];
+    this.view._add2OutputQueue(data);
+    expect(this.view._output_queue['some-uuid'][1]).toEqual(data);
+  });
+
+  it('test-addStepOutput-not-started', function(){
+    let step_uuid = 'some-uuid';
+    let r = this.view._addStepOutput(step_uuid);
+    expect(r).toBe(false);
+  });
+
+  it('test-addStepOutput-no-queue', function(){
+    let step_uuid = 'some-uuid';
+    this.view._started_steps.push(step_uuid);
+    let r = this.view._addStepOutput(step_uuid);
+    expect(r).toBe(false);
+  });
+
+  it('test-addStepOutput-ok', function(){
+    let step_uuid = 'some-uuid';
+    this.view._output_queue['some-uuid'] = [{output: 'some thing'}];
+    this.view._started_steps.push(step_uuid);
+    let r = this.view._addStepOutput(step_uuid);
+    expect(r).toBe(true);
+  });
+
 });
 
 describe('BuildsetInfoViewTest', function(){
