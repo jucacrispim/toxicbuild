@@ -15,7 +15,7 @@ sphinx-pdj-theme==0.1.2
 pytz==2018.4
 pylint==2.1.1
 pylint-plugin-utils==0.4
-pylint-mongoengine==0.2
+pylint-mongoengine==0.2.1
 pyyaml==3.10
 mongomotor==0.14.0
 motor==2.0.0
