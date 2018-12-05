@@ -64,6 +64,8 @@ class SettingsPage extends BasePage{
       this.list_view = new RepositoryListView('enabled');
     }else if(settings_type == 'slaves'){
       this.list_view = new SlaveListView();
+    }else if(settings_type == 'ui'){
+      this.list_view = new UISettingsView();
     }
   }
 
@@ -81,6 +83,12 @@ class SettingsPage extends BasePage{
       e.preventDefault();
       await self.render_main('repositories');
     });
+
+    $('#manage-ui-link').on('click', async function(e){
+      e.preventDefault();
+      await self.render_main('ui');
+    });
+
     self._already_listen = true;
     return true;
   }
@@ -96,6 +104,7 @@ class SettingsPage extends BasePage{
   _handle_navigation(settings_type){
     $('#manage-slaves-link').removeClass('active box-shadow');
     $('#manage-repositories-link').removeClass('active box-shadow');
+    $('#manage-ui-link').removeClass('active box-shadow');
     $('#manage-' + settings_type + '-link').addClass('active box-shadow');
   }
 

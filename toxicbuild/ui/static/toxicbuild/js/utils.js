@@ -146,6 +146,17 @@ var utils = {
   formatSeconds(secs){
     let d = new Date(secs * 1000);
     return d.toISOString().substr(11, 8);
+  },
+
+  setTheme(){
+    var cookie = Cookies.get('dark-theme');
+    if(cookie){
+      $('body').removeClass('dark-theme').addClass('dark-theme');
+    }
+    else{
+      $('body').removeClass('dark-theme');
+    }
+
   }
 
 };

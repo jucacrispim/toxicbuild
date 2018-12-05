@@ -32,6 +32,7 @@
       - "toxicbuild/js/waterfall.js"
       - "toxicbuild/js/wsock.js"
       - "toxicbuild/js/notification.js"
+      - "toxicbuild/js/ui_settings.js"
 
     # stylesheets
     #

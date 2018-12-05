@@ -19,6 +19,8 @@
 	  rel="stylesheet">
     <link href="{{static_url}}toxicbuild/css/toxictheme/toxicclear.css"
 	  rel="stylesheet">
+    <link href="{{static_url}}toxicbuild/css/toxictheme/toxicdark.css"
+	  rel="stylesheet">
     {% end %}
   </head>
 
@@ -43,6 +45,12 @@
 
 	    <div class="dropdown-menu box-shadow-gray dropdown-arrow"
 		 aria-labelledby="navbar-dropdown">
+
+              <a class="dropdown-item dropdown-item-logout"
+		 href="/settings/ui">
+		UI settings
+	      </a>
+	      <div class="dropdown-divider"></div>
               <a class="dropdown-item dropdown-item-logout" href="/logout"
 		 data-noroute="true">
 		Logout
@@ -97,6 +105,11 @@
 
     <!-- Include your js in this block. -->
     {% block js_bottom%}{% end %}
+
+    <script>
+      utils.setTheme();
+    </script>
+
   </body>
 
 </html>

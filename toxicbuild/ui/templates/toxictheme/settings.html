@@ -15,6 +15,13 @@
 	  Manage slaves
 	</a>
       </li>
+
+      <li class="nav-item">
+	<a class="nav-link {% if settings_type == 'ui' %} active box-shadow {% end %}" href="/settings/ui" data-noroute=true id="manage-ui-link">
+	  UI settings
+	</a>
+      </li>
+
     </ul>
   </div>
   <!-- end navigation -->
@@ -33,6 +40,10 @@
 
     {% if settings_type == 'slaves' %}
       {% include "slave_settings.html" %}
+    {% end %}
+
+    {% if settings_type == 'ui' %}
+      {% include "ui_settings.html" %}
     {% end %}
 
   </div>

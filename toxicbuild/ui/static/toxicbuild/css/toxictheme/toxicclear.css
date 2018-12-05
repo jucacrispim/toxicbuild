@@ -161,7 +161,7 @@ body{
 }
 
 .box-white{
-    border: 1px solid #ccc;
+    /* border: 1px solid #ccc; */
     border-radius: 5px;
     background-color: #fff;
     padding: 15px;
@@ -630,6 +630,10 @@ body{
 
 /* settings page */
 
+#ui-settings-container{
+    display: none;
+}
+
 .nav-container{
     display:none;
 }
@@ -642,6 +646,7 @@ body{
     color: #4e4e4f;
     background-color: #ede8e8;
     border-color: #dee2e6 #dee2e6 #fff;
+    margin-left: 3px;
 }
 
 .nav-pills .nav-link.active, .nav-pills .show>.nav-link{
@@ -653,6 +658,7 @@ body{
 .settings-left-side{
     float:left;
     position: relative;
+    padding-top: 7px;
 }
 
 .settings-right-side{

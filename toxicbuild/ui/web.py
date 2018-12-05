@@ -652,6 +652,7 @@ class DashboardHandler(LoggedTemplateHandler):
     settings_template = 'toxictheme/settings.html'
     repo_settings_template = 'toxictheme/repo_settings.html'
     slave_settings_template = 'toxictheme/slave_settings.html'
+    ui_settings_template = 'toxictheme/ui_settings.html'
     repository_template = 'toxictheme/repository.html'
     slave_template = 'toxictheme/slave.html'
     buildset_list_template = 'toxictheme/buildset_list.html'
@@ -682,6 +683,10 @@ class DashboardHandler(LoggedTemplateHandler):
         elif settings_type == 'slaves':
             context = {}
             template = self.slave_settings_template
+
+        elif settings_type == 'ui':
+            context = {}
+            template = self.ui_settings_template
 
         else:
             raise BadSettingsType(settings_type)
@@ -737,7 +742,7 @@ class DashboardHandler(LoggedTemplateHandler):
         content = self._get_main_template()
         self.write(content)
 
-    @get('settings/(slaves|repositories)')
+    @get('settings/(slaves|repositories|ui)')
     def show_settings(self, settings_type):
         settings_type = settings_type.decode()
         content = self._get_settings_template(settings_type)
@@ -823,13 +828,13 @@ class DashboardHandler(LoggedTemplateHandler):
         content = self._get_slave_template()
         self.write(content)
 
-    @get('templates/settings/(slaves|repositories)')
+    @get('templates/settings/(slaves|repositories|ui)')
     def show_settings_template(self, settings_type):
         settings_type = settings_type.decode()
         content = self._get_settings_template(settings_type)
         self.write(content)
 
-    @get('templates/settings/main/(slaves|repositories)')
+    @get('templates/settings/main/(slaves|repositories|ui)')
     def show_settings_main_template(self, settings_type):
         settings_type = settings_type.decode()
         content = self._get_settings_main_template(settings_type)
