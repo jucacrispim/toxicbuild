@@ -176,7 +176,7 @@ def before_feature(context, feature):
         await create_slave(context)
 
         create_repo_features = ['waterfall.feature', 'notifications.feature',
-                                'buildset.feature']
+                                'buildset.feature', 'build.feature']
         if fname in create_repo_features:
             await create_repo(context)
 
