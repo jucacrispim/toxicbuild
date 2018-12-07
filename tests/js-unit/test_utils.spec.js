@@ -25,8 +25,10 @@ describe('loadTranslationsTest', function(){
 
   it('test-locale-en-us', async function(){
     spyOn(Cookies, 'get').and.returnValue('en_US');
+    spyOn(i18n.translator, 'reset');
     let r = await utils.loadTranslations();
-    expect(r).toBe(false);
+    expect(r).toBe(true);
+    expect(i18n.translator.reset).toHaveBeenCalled();
   });
 
   it('test-bad-request', async function(){
@@ -43,6 +45,7 @@ describe('loadTranslationsTest', function(){
     spyOn(i18n.translator, 'add');
     let r = await utils.loadTranslations();
     expect(r).toBe(true);
+    expect(i18n.translator.add).toHaveBeenCalled();
   });
 
 });

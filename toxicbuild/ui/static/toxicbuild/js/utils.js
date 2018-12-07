@@ -161,8 +161,13 @@ var utils = {
 
   async loadTranslations(static_url){
     let locale = Cookies.get('ui_locale');
-    if (!locale || locale == 'en_US'){
+    if (!locale){
       return false;
+    }
+
+    if (locale == 'en_US'){
+      i18n.translator.reset();
+      return true;
     }
 
     let r;

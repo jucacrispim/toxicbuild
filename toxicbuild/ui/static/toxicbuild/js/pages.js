@@ -49,6 +49,7 @@ class SettingsPage extends BasePage{
     this._already_listen = false;
 
     $(document).on('locale-changed', function(){
+      utils.loadTranslations(STATIC_URL);
       self._reRender();
     });
   }
