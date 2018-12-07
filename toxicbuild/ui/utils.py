@@ -17,8 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+from http.cookies import Morsel
 import re
 import pytz
+
 from toxicbuild.core.utils import DTFORMAT, datetime2string
 from toxicbuild.ui import settings
 
@@ -45,13 +47,16 @@ def _get_timezone():
     return tz
 
 
-def format_datetime(dt):
+def format_datetime(dt, dtformat=None):
     """Formats a datetime object according to the
     timezone and format specified in the config file.
 
-    :param dt: A datetime object."""
+    :param dt: A datetime object.
+    :param dtformat: The format for the datetime."""
 
-    dtformat = _get_dtformat()
+    if not dtformat:
+        dtformat = _get_dtformat()
+
     tz = _get_timezone()
 
     if tz:
@@ -115,3 +120,14 @@ async def get_builders_for_buildsets(user, buildsets):
             build.builder = builders_dict[build.builder.id]
 
     return sorted(builders, key=lambda b: b.name)
+
+
+def get_defaulte_locale_morsel():
+    """Returns a :class:`~http.cookies.Morsel` instance with
+    `en_US` as its value.
+    """
+
+    locale_str = 'en_US'
+    m = Morsel()
+    m.set('locale', locale_str, locale_str)
+    return m

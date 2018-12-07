@@ -95,8 +95,10 @@ class BaseModel:
         client = yield from get_hole_client(requester, **client_settings)
         return client
 
-    def to_dict(self):
-        """Transforms a model into a dict."""
+    def to_dict(self, dtformat=None):
+        """Transforms a model into a dict.
+
+        :param dtformat: Format for datetimes."""
 
         attrs = [a for a in self.__ordered__ if not a.startswith('_')]
 
@@ -107,14 +109,20 @@ class BaseModel:
             if not (callable(objattr) and not is_ref):  # pragma no branch
 
                 if isinstance(objattr, datetime.datetime):
-                    objattr = format_datetime(objattr)
+                    objattr = format_datetime(objattr, dtformat)
 
                 d[attr] = objattr
 
         return d
 
-    def to_json(self):
-        """Transforms a model into a json."""
+    def to_json(self, *args, **kwargs):
+        """Transforms a model into a json.
+
+        :param args: Positional arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        :param kwargs: Named arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        """
 
         d = self.to_dict()
         return json.dumps(d)
@@ -278,10 +286,17 @@ class Build(BaseModel):
     references = {'steps': Step,
                   'builder': Builder}
 
-    def to_dict(self):
-        d = super().to_dict()
-        d['builder'] = d['builder'].to_dict()
-        d['steps'] = [s.to_dict() for s in d.get('steps', [])]
+    def to_dict(self, *args, **kwargs):
+        """Converts a build object in to a dictionary.
+
+        :param args: Positional arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        :param kwargs: Named arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        """
+        d = super().to_dict(*args, **kwargs)
+        d['builder'] = d['builder'].to_dict(*args, **kwargs)
+        d['steps'] = [s.to_dict(*args, **kwargs) for s in d.get('steps', [])]
         return d
 
     @classmethod
@@ -444,13 +459,19 @@ class Repository(BaseModel):
                 named_tree=named_tree, slaves=slaves or [])
         return resp
 
-    def to_dict(self):
-        """Transforms a repository into a dictionary."""
+    def to_dict(self, *args, **kwargs):
+        """Transforms a repository into a dictionary.
 
-        d = super().to_dict()
-        d['slaves'] = [s.to_dict() for s in d['slaves']]
+        :param args: Positional arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        :param kwargs: Named arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        """
+
+        d = super().to_dict(*args, **kwargs)
+        d['slaves'] = [s.to_dict(*args, **kwargs) for s in d['slaves']]
         if self.last_buildset:
-            d['last_buildset'] = self.last_buildset.to_dict()
+            d['last_buildset'] = self.last_buildset.to_dict(*args, **kwargs)
         return d
 
     async def cancel_build(self, build_uuid):
@@ -499,11 +520,18 @@ class BuildSet(BaseModel):
         buildset_list = [cls(requester, buildset) for buildset in buildsets]
         return buildset_list
 
-    def to_dict(self):
-        d = super().to_dict()
-        d['builds'] = [b.to_dict() for b in d.get('builds', [])]
-        d['repository'] = self.repository.to_dict() if self.repository \
-            else None
+    def to_dict(self, *args, **kwargs):
+        """Returns a dictionary based in a BuildSet object.
+
+        :param args: Positional arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        :param kwargs: Named arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        """
+        d = super().to_dict(*args, **kwargs)
+        d['builds'] = [b.to_dict(*args, **kwargs) for b in d.get('builds', [])]
+        d['repository'] = self.repository.to_dict(*args, **kwargs) \
+            if self.repository else None
         return d
 
     @classmethod

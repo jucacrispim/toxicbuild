@@ -58,12 +58,20 @@ class UtilsDateTimeTest(TestCase):
         self.assertIsNone(tz)
 
     @patch.object(utils, 'settings', Mock())
-    def test_format_datetime(self):
+    def test_format_datetime_no_dtformat(self):
         utils.settings.TIMEZONE = 'America/Sao_Paulo'
         utils.settings.DTFORMAT = utils.DTFORMAT
         dt = localtime2utc(now())
         formated = utils.format_datetime(dt)
         self.assertFalse(formated.endswith('0000'))
+
+    @patch.object(utils, 'settings', Mock())
+    def test_format_datetime(self):
+        utils.settings.TIMEZONE = 'UTC'
+        dt = localtime2utc(now())
+        dtformat = '%z'
+        formated = utils.format_datetime(dt, dtformat)
+        self.assertEqual(formated, '+0000')
 
     @patch.object(utils, 'settings', Mock())
     def test_format_datetime_bad_tz(self):

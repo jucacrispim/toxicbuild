@@ -23,6 +23,7 @@ from tornado import locale
 from http.cookies import Morsel
 
 from toxicbuild import VERSION
+from toxicbuild.ui.utils import get_defaulte_locale_morsel
 
 
 class ToxicWebMainContextProcessor(ContextProcessor):
@@ -42,13 +43,8 @@ class ToxicWebTranslationProcessor(ContextProcessor):
 
     def get_context(self):
 
-        def get_morsel():
-            locale_str = 'en_US'
-            m = Morsel()
-            m.set(locale_str, locale_str, locale_str)
-            return m
-
-        user_locale = self.request.cookies.get('ui_locale', get_morsel())
+        user_locale = self.request.cookies.get(
+            'ui_locale', get_defaulte_locale_morsel())
         user_locale = locale.get(user_locale.value)
         translate = user_locale.translate
 

@@ -36,12 +36,21 @@ from toxicbuild.ui.connectors import StreamConnector
 from toxicbuild.ui.exceptions import BadSettingsType
 from toxicbuild.ui.models import (Repository, Slave, User, Notification,
                                   BuildSet, Builder, Build)
-from toxicbuild.ui.utils import (format_datetime, is_datetime)
+from toxicbuild.ui.utils import (format_datetime, is_datetime,
+                                 get_defaulte_locale_morsel)
 
 
 COOKIE_NAME = 'toxicui'
 
 FULL_NAME_REGEX = '([\w\d\-]+/[\w\d\-]+)'
+
+
+def _get_dtformat(request):
+    formats = {'en_US': '%m/%d/%Y %H:%M:%S %z',
+               'pt_BR': '%d/%m/%Y %H:%M:%S %z'}
+    locale = request.cookies.get(
+        'ui_locale', get_defaulte_locale_morsel()).value
+    return formats.get(locale)
 
 
 class ToxicRequest(PyroRequest):
@@ -217,6 +226,7 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
         self.body = None
         self.query = None
         self.user = None
+        self._dtformat = None
         super().__init__(*args, **kwargs)
 
     async def async_prepare(self):
@@ -226,6 +236,7 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
             self.body = json.loads(self.request.body)
 
         self.query = ToxicRequest(self.request.arguments)
+        self._dtformat = _get_dtformat(self.request)
 
     @post('')
     async def add(self):
@@ -239,10 +250,10 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
     async def get_or_list(self):
         if self._query_has_pk():
             item = await self.model.get(self.user, **self.query)
-            resp = item.to_json()
+            resp = item.to_json(dtformat=self._dtformat)
         else:
             items = await self.model.list(self.user, **self.query)
-            r = {'items': [i.to_dict() for i in items]}
+            r = {'items': [i.to_dict(dtformat=self._dtformat) for i in items]}
             resp = json.dumps(r)
 
         return resp
@@ -289,7 +300,7 @@ class UserAddRestHandler(ModelRestHandler):
         content = _create_cookie_content(r)
 
         self.set_secure_cookie(COOKIE_NAME, content)
-        return {'user-add': r.to_dict()}
+        return {'user-add': r.to_dict(dtformat=self._dtformat)}
 
 
 class ReadOnlyRestHandler(ModelRestHandler):
@@ -308,12 +319,12 @@ class BuildSetHandler(ReadOnlyRestHandler):
         summary = self.query.get('summary', False)
         r = await self.model.list(
             self.user, repo_name_or_id=repo_name, summary=summary)
-        items = [i.to_dict() for i in r]
+        items = [i.to_dict(dtformat=self._dtformat) for i in r]
         return {'items': items}
 
     async def _get(self, buildset_id):
         buildset = await self.model.get(self.user, buildset_id)
-        return buildset.to_dict()
+        return buildset.to_dict(dtformat=self._dtformat)
 
     @get('')
     async def list_or_get(self):
@@ -344,7 +355,7 @@ class BuildHandler(ReadOnlyRestHandler):
             raise HTTPError(400)
 
         build = await self.model.get(self.user, build_uuid)
-        return build.to_dict()
+        return build.to_dict(dtformat=self._dtformat)
 
 
 class CookieAuthBuildHandler(CookieAuthHandlerMixin, BuildHandler):
@@ -363,8 +374,10 @@ class WaterfallRestHandler(ReadOnlyRestHandler):
         buildsets = await self.model.list(self.user, repo_name_or_id=repo_name,
                                           summary=False)
         builders = await self._get_builders(buildsets)
-        r = {'builders': [b.to_dict() for b in builders],
-             'buildsets': [b.to_dict() for b in buildsets]}
+        r = {'builders': [b.to_dict(dtformat=self._dtformat)
+                          for b in builders],
+             'buildsets': [b.to_dict(dtformat=self._dtformat)
+                           for b in buildsets]}
         return r
 
     async def _get_builders(self, buildsets):
@@ -478,7 +491,7 @@ class NotificationRestHandler(ReadOnlyRestHandler):
     async def list(self):
         repo_id = self.query.get('repo_id')
         r = await Notification.list(repo_id)
-        items = [i.to_dict() for i in r]
+        items = [i.to_dict(dtformat=self._dtformat) for i in r]
         return {'items': items}
 
 
@@ -511,9 +524,11 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
         self.action = None
         self.repo_id = None
         self.body = None
+        self._dtformat = None
 
     def prepare(self):
         self._get_user()
+        self._dtformat = _get_dtformat(self.request)
 
     def initialize(self):
         self.action = None
@@ -612,19 +627,23 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
     def _format_info_dt(self, info):
         started = info.get('started')
         if started and is_datetime(started):
-            info['started'] = format_datetime(string2datetime(started))
+            info['started'] = format_datetime(string2datetime(started),
+                                              self._dtformat)
 
         finished = info.get('finished')
         if finished and is_datetime(finished):
-            info['finished'] = format_datetime(string2datetime(finished))
+            info['finished'] = format_datetime(string2datetime(finished),
+                                               self._dtformat)
 
         created = info.get('created')
         if created and is_datetime(created):
-            info['created'] = format_datetime(string2datetime(created))
+            info['created'] = format_datetime(string2datetime(created),
+                                              self._dtformat)
 
         commit_date = info.get('commit_date')
         if commit_date and is_datetime(commit_date):
-            info['commit_date'] = format_datetime(string2datetime(commit_date))
+            info['commit_date'] = format_datetime(string2datetime(commit_date),
+                                                  self._dtformat)
 
         buildset = info.get('buildset')
         if buildset:
