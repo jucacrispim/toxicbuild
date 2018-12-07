@@ -870,6 +870,18 @@ class DashboardHandlerTest(AsyncTestCase):
 
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
+    def test_get_settings_main_template_ui(self):
+        settings_type = 'ui'
+        self.handler._get_settings_main_template(settings_type)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = []
+        self.assertEqual(called_template, self.handler.ui_settings_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
     def test_get_settings_main_template_bad_settings(self):
         settings_type = 'bad'
         with self.assertRaises(web.BadSettingsType):

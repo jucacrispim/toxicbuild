@@ -20,7 +20,6 @@
 from pyrocumulus.conf import settings
 from pyrocumulus.web.template import ContextProcessor
 from tornado import locale
-from tornado.escape import xhtml_unescape
 
 from toxicbuild import VERSION
 
