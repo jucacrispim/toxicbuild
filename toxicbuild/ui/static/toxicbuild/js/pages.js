@@ -39,6 +39,7 @@ class SettingsPage extends BasePage{
 
   constructor(options){
     super(options);
+    let self = this;
     this.right_sidebar = null;
     this.nav_pills = null;
     this.template_url = this._get_template_url(options.settings_type);
@@ -46,6 +47,15 @@ class SettingsPage extends BasePage{
     this.main_template_container = this._get_main_template_container();
     this._set_list_view(options.settings_type);
     this._already_listen = false;
+
+    $(document).on('locale-changed', function(){
+      self._reRender();
+    });
+  }
+
+  async _reRender(){
+    await this.fetch_template();
+    await this.render();
   }
 
   _get_main_template_container(){
@@ -114,8 +124,8 @@ class SettingsPage extends BasePage{
     return path != next;
   }
 
-  async render_main(settings_type){
-    if(!this._checkRenderPath(settings_type)){
+  async render_main(settings_type, force=false){
+    if(!this._checkRenderPath(settings_type) && !force){
       return;
     }
     let href = '/settings/' + settings_type;

@@ -157,6 +157,24 @@ var utils = {
       $('body').removeClass('dark-theme');
     }
 
+  },
+
+  async loadTranslations(static_url){
+    let locale = Cookies.get('ui_locale');
+    if (!locale || locale == 'en_US'){
+      return false;
+    }
+
+    let r;
+    let kw = {url: static_url + 'toxicbuild/i18n/' + locale + '.json',
+	      'Content-Type': 'application/json'};
+    try{
+      r = await $.ajax(kw);
+    }catch(e){
+      return false;
+    }
+    i18n.translator.add(r);
+    return true;
   }
 
 };

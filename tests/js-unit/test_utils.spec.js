@@ -15,6 +15,38 @@
 // You should have received a copy of the GNU General Public License
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+describe('loadTranslationsTest', function(){
+
+  it('test-no-language-cookie', async function(){
+    spyOn(Cookies, 'get').and.returnValue(null);
+    let r = await utils.loadTranslations();
+    expect(r).toBe(false);
+  });
+
+  it('test-locale-en-us', async function(){
+    spyOn(Cookies, 'get').and.returnValue('en_US');
+    let r = await utils.loadTranslations();
+    expect(r).toBe(false);
+  });
+
+  it('test-bad-request', async function(){
+    spyOn(Cookies, 'get').and.returnValue('pt_BR');
+    spyOn($, 'ajax').and.throwError();
+    let r = await utils.loadTranslations();
+    expect(r).toBe(false);
+  });
+
+  it('test-ok', async function(){
+    spyOn(Cookies, 'get').and.returnValue('pt_BR');
+    spyOn($, 'ajax');
+    spyOn(JSON, 'parse');
+    spyOn(i18n.translator, 'add');
+    let r = await utils.loadTranslations();
+    expect(r).toBe(true);
+  });
+
+});
+
 describe('TimeCounterTest', function(){
 
   beforeEach(function(){

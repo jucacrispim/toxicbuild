@@ -48,12 +48,12 @@
 
               <a class="dropdown-item dropdown-item-logout"
 		 href="/settings/ui">
-		UI settings
+		{{translate('UI settings')}}
 	      </a>
 	      <div class="dropdown-divider"></div>
               <a class="dropdown-item dropdown-item-logout" href="/logout"
 		 data-noroute="true">
-		Logout
+		{{translate('Logout')}}
 	      </a>
 	    </div>
 	  </div>
@@ -105,10 +105,6 @@
 
     <!-- Include your js in this block. -->
     {% block js_bottom%}{% end %}
-
-    <script>
-      utils.setTheme();
-    </script>
 
   </body>
 

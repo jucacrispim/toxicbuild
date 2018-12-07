@@ -196,7 +196,7 @@ class NotificationConfigView extends Backbone.View{
     for (let k in fields){
       let value = fields[k].value || '';
       let label = $(document.createElement('label'));
-      label.text(k);
+      label.text(i18n(k));
 
       let required = fields[k].required;
       let input = $(document.createElement('input'));

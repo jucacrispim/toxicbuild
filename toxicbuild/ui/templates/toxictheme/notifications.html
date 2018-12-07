@@ -17,7 +17,7 @@
 	      class="fas fa-angle-right cursor-pointer">
 	</span>
 	<span class="notification-config-advanced-span cursor-pointer">
-	  <b>Advanced</b>
+	  <b>{{translate('Advanced')}}</b>
 	</span>
 
 	<div id="notification-config-advanced">
@@ -36,7 +36,7 @@
 	      <span class="spinner icon-spinner-2" id="add-branch-btn-spinner"
 		    style="display:none">
 	      </span>
-	      <span id="enable-notification-btn-text">Enable</span>
+	      <span id="enable-notification-btn-text">{{translate('Enable')}}</span>
 	    </button>
 	  </div>
 
@@ -46,14 +46,14 @@
 	      <span class="spinner icon-spinner-2"
 		    id="remove-slave-btn-spinner" style="display:none">
 	      </span>
-	      <span id="disable-notification-btn-text">Disable</span>
+	      <span id="disable-notification-btn-text">{{translate('Disable')}}</span>
 	    </button>
 	  </div>
 
 	  <div class="cancel-btn-container inner-btn-container">
 	    <button class="btn btn-sm btn-light btn-block" type="submit"
 		    id="btn-cancel-remove-slave" data-dismiss="modal">
-	      <span id="disable-notification-btn-text">Cancel</span>
+	      <span id="disable-notification-btn-text">{{translate('Cancel')}}</span>
 	    </button>
 	  </div>
 
@@ -97,13 +97,13 @@
     <ul class="nav nav-pills">
       <li class="nav-item">
 	<a class="nav-link" href="{{ '/' + repo_full_name + '/settings' }}">
-	  General configurations
+	  {{translate('General configurations')}}
 	</a>
       </li>
       <li class="nav-item ">
 	<a class="nav-link active box-shadow"
 	   href="{{ '/' + repo_full_name + '/notifications' }}">
-	  Notifications
+	  {{translate('Notifications')}}
 	</a>
       </li>
     </ul>
@@ -122,7 +122,7 @@
 
   <!-- notifications message -->
   <div class="add-repo-message-container row-container col-sm-10">
-    <h5><span class="add-repo-message-span">Notifications</span></h5>
+    <h5><span class="add-repo-message-span">{{translate('Notifications')}}</span></h5>
   </div>
   <!-- end notifications message -->
 
@@ -139,15 +139,13 @@
   <div class="settings-right-side col-sm-3">
     <div>
       <span>
-	<h5>Notifications</h5>
+	<h5>{{translate('Notifications')}}</h5>
 	<p id="basic-config-p">
-	  Notifications are used to send information about builds to third
-	  party services.
+	  {% raw translate('Notifications are used to send information about builds to third party services.') %}
 	</p>
 
 	<p>
-	  You may configure wich <b>branches</b> and <b>statuses</b>
-	  trigger notifications.
+	  {% raw translate('You may configure wich <b>branches</b> and <b>statuses</b> trigger notifications.') %}
 	</p>
       </span>
     </div>

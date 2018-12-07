@@ -290,6 +290,7 @@ class BuildDetailsView extends BaseBuildDetailsView{
   _get_kw(){
     let command = this.model.escape('command');
     let status = this.model.escape('status');
+    let status_translation = i18n(status);
     let output = this.model.escape('output');
     let started = this.model.get('started');
     let total_time = this.model.get('total_time');
@@ -299,7 +300,8 @@ class BuildDetailsView extends BaseBuildDetailsView{
     let commit_branch = this.model.escape('commit_branch');
     let build_number = this.model.get('number');
     let commit_author = this.model.escape('commit_author');
-    return {command: command, status: status, output: output,
+    return {command: command, status: status_translation, output: output,
+	    'original_status': status,
 	    started: started, total_time: total_time,
 	    build_number: build_number,
 	    repo_name: repo_name, builder_name: builder_name,
@@ -351,7 +353,7 @@ class BuildDetailsView extends BaseBuildDetailsView{
     let kw = this._get_kw();
     let compiled = $(this.compiled_template(kw));
     this._listen2events(compiled);
-    let badge_class = utils.get_badge_class(kw.status);
+    let badge_class = utils.get_badge_class(kw.original_status);
     $('.build-status', compiled).removeClass().addClass(
       'build-status badge ' + badge_class);
     $('.obj-details-buttons-container', compiled).show();
@@ -366,7 +368,9 @@ class BaseBuildSetView extends Backbone.View{
  _get_kw(){
    let title = this.model.escape('title');
    let body = this.model.escape('body') || '<no body>';
+   body = i18n(body);
    let status = this.model.get('status');
+   let status_translation = i18n(status);
    let commit = this.model.get('commit').substr(0, 16);
    let date = this.model.get('commit_date');
    let branch = this.model.get('branch');
@@ -401,7 +405,8 @@ class BaseBuildSetView extends Backbone.View{
      escaped_builds.push(escaped_build);
    }
 
-   return {title: title, body: body, status: status, commit: commit,
+   return {title: title, body: body, status: status_translation,
+	   commit: commit, original_status: status,
 	   date: date, started: started, finished: finished,
 	   branch: branch, total_time: total_time,
 	   repo_name: repo_name, number: number,
@@ -434,10 +439,12 @@ class BuildInfoView extends Backbone.View{
     let uuid = this.model.get('uuid');
     let name = _.escape(this.model.get('builder').name);
     let status = this.model.get('status');
+    let status_translation = i18n(status);
     let details_link = '/build/' + uuid;
     let builder = {'id': this.model.get('builder').id,
 		   'name': _.escape(this.model.get('builder').name)};
-    return {uuid: uuid, builder_name: name, status: status,
+    return {uuid: uuid, builder_name: name, status: status_translation,
+	    original_status: status,
 	    details_link: details_link, builder: builder};
   }
 
@@ -447,7 +454,7 @@ class BuildInfoView extends Backbone.View{
 
     let kw = this._get_kw();
     let compiled = $(this.compiled_template(kw));
-    let status_class = 'build-' + kw.status;
+    let status_class = 'build-' + kw.original_status;
 
     this.$el.removeClass('build-running');
     this.$el.html('');
@@ -519,7 +526,7 @@ class BuildSetDetailsView extends BaseBuildSetView{
       let build_view = new BuildInfoView({model: build});
       builds_container.append(build_view.render().$el);
     }
-    let badge_class = utils.get_badge_class(kw.status);
+    let badge_class = utils.get_badge_class(kw.original_status);
 
     if (kw.status != 'running'){
       $('.fa-cog', compiled).hide();
@@ -569,7 +576,7 @@ class BuildSetInfoView extends BaseBuildSetView{
     if (kw.started){
       $('.buildset-total-time-row', compiled).show();
     }
-    let status = kw.status;
+    let status = kw.original_status;
 
     $('.fa-redo', compiled).on('click', function(){
       self.rescheduleBuildSet(compiled);

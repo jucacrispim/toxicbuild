@@ -25,14 +25,21 @@ class UISettingsView extends Backbone.View{
 
   render_all(){
     let self = this;
-    let check_el = $('.form-check-input');
+    let check_el = $('#use-dark-theme');
 
     this._setCheckbox(check_el);
+    this._setLanguageSelect();
 
     check_el.change(function(){
-      let el = $($('.form-check-input')[0]);
+      let el = $('#use-dark-theme');
       let enabled = el.is(':checked');
       self.setThemeCookie(enabled);
+    });
+
+    let select_el = $('#locale-selection');
+    select_el.change(function(){
+      self.setLocaleCookie(this.value);
+      $(document).trigger('locale-changed');
     });
 
     $('.wait-toxic-spinner').hide();
@@ -49,6 +56,11 @@ class UISettingsView extends Backbone.View{
     }
   }
 
+  _setLanguageSelect(){
+    let locale = this._getUsedLocale();
+    $('#locale-selection').val(locale);
+  }
+
   setThemeCookie(enabled){
     if (enabled){
       $('body').addClass(this.cookie_name);
@@ -57,7 +69,14 @@ class UISettingsView extends Backbone.View{
       $('body').removeClass(this.cookie_name);
       Cookies.remove(this.cookie_name);
     }
+  }
 
+  _getUsedLocale(){
+    return Cookies.get('ui_locale') || 'en_US';
+  }
+
+  setLocaleCookie(locale){
+    Cookies.set('ui_locale', locale);
   }
 
 }

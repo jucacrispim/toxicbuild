@@ -13,25 +13,25 @@
       </ul>
     </div>
     <div class="buildset-info-container col-sm-4">
-      <span>Author: </span><b><span class="commit-author"></span></b><br/>
-      <span>Title: </span><b><span class="commit-title"></span></b><br/>
-      <span>Branch: </span><b><span class="commit-branch"></b></span><br/>
-      <span>Commit: </span><b><span class="buildset-commit"></b></span><br/>
-      <span>Body: </span><b><span class="buildset-commit-body"></b></span>
+      <span>{{translate('Author')}}: </span><b><span class="commit-author"></span></b><br/>
+      <span>{{translate('Title')}}: </span><b><span class="commit-title"></span></b><br/>
+      <span>{% raw translate('Branch') %}: </span><b><span class="commit-branch"></b></span><br/>
+      <span>{% raw translate('Commit') %}: </span><b><span class="buildset-commit"></b></span><br/>
+      <span>{{translate('Body')}}: </span><b><span class="buildset-commit-body"></b></span>
     </div>
     <div class="col-sm-4 buildset-info-container">
       <span class="far fa-calendar-alt" data-toggle="tooltip"
-	    title="commit date"></span>
+	    title="{{translate('commit date')}}"></span>
       <span class="buildset-commit-date" data-toggle="tooltip"
-	    title="commit date"></span><br/>
+	    title="{{translate('commit date')}}"></span><br/>
       <span class="far fa-calendar-check" data-toggle="tooltip"
-	    title="started at"></span>
+	    title="{{translate('started at')}}"></span>
       <span class="buildset-started" data-toggle="tooltip"
-	    title="started at"></span><br/>
+	    title="{{translate('started at')}}"></span><br/>
       <span class="far fa-clock" data-toggle="tooltip"
-	    title="duration"></span>
+	    title="{{translate('duration')}}"></span>
       <span class="buildset-total-time" data-toggle="tooltip"
-	    title="duration"></span>
+	    title="{{translate('duration')}}"></span>
     </div>
 
   </div>
@@ -79,7 +79,7 @@
       <div class="cancel-btn-container inner-btn-container">
 	<button class="btn btn-sm btn-dark btn-block" type="submit"
 		id="btn-cancel-save">
-	  <span id="cancel-save-slave-btn-text">Close</span>
+	  <span id="cancel-save-slave-btn-text">{{translate('Close')}}</span>
 	</button>
       </div>
 

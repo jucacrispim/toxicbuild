@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,6 +19,9 @@
 
 from pyrocumulus.conf import settings
 from pyrocumulus.web.template import ContextProcessor
+from tornado import locale
+from tornado.escape import xhtml_unescape
+
 from toxicbuild import VERSION
 
 
@@ -31,3 +34,15 @@ class ToxicWebMainContextProcessor(ContextProcessor):
                 'version': VERSION,
                 'api_url': settings.API_URL,
                 'static_url': settings.STATIC_URL}
+
+
+class ToxicWebTranslationProcessor(ContextProcessor):
+    """Includes a ``translate`` function in the context to internatinalize
+    the string shown to the users."""
+
+    def get_context(self):
+        user_locale = self.request.cookies.get('ui_locale', 'en_US')
+        user_locale = locale.get(user_locale.value)
+        translate = user_locale.translate
+
+        return {'translate': translate}

@@ -5,6 +5,7 @@ import os
 import pkg_resources
 import shutil
 import sys
+from tornado import locale
 from tornado.platform.asyncio import AsyncIOMainLoop
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
@@ -13,9 +14,16 @@ from toxicbuild.core.utils import bcrypt, changedir, SettingsPatcher
 # pylint: disable=global-statement
 
 here = os.path.dirname(os.path.abspath(__file__))
-translations = os.path.join(here, 'translations')
 
-gettext.install('toxicbuild.ui', translations)
+# translations for cli
+cli_translations = os.path.join(here, 'translations')
+gettext.install('toxicbuild.ui', cli_translations)
+
+
+# translations for ui
+web_translations = os.path.join(here, 'translations', 'web')
+locale.load_translations(web_translations)
+
 
 ENVVAR = 'TOXICUI_SETTINGS'
 DEFAULT_SETTINGS = 'toxicui.conf'

@@ -1,0 +1,11 @@
+{
+  "values":{
+    "Recipients": "Destinatários",
+    "exception": "exceção",
+    "success": "sucesso",
+    "fail": "falha",
+    "pending": "pendente",
+    "running": "executando",
+    "<no body>": "<sem corpo>"
+  }
+}

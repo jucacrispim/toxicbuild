@@ -4,7 +4,9 @@
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h6 class="modal-title" id="exampleModalLabel">Delete slave</h6>
+        <h6 class="modal-title" id="exampleModalLabel">
+	  {{translate('Delete slave')}}
+	</h6>
         <button type="button" class="close" data-dismiss="modal"
 		aria-label="Close">
           <span aria-hidden="true">&times;</span>
@@ -13,8 +15,7 @@
       <div class="modal-body">
 
 	<span>
-	  Are you sure you want to delete this slave? This action can't
-	  be undone.
+	  {{translate('Are you sure you want to delete this slave? This action can\'t be undone.')}}
 	</span>
 
       </div>
@@ -27,14 +28,14 @@
 	      <span class="spinner icon-spinner-2" id="remove-slave-btn-spinner"
 		    style="display:none">
 	      </span>
-	      <span id="remove-slave-btn-text">Delete</span>
+	      <span id="remove-slave-btn-text">{{translate('Delete')}}</span>
 	    </button>
 	  </div>
 
 	  <div class="cancel-btn-container inner-btn-container">
 	    <button class="btn btn-sm btn-light btn-block" type="submit"
 		    id="btn-cancel-remove-slave" data-dismiss="modal">
-	      <span id="cancel-remove-slave-btn-text">Cancel</span>
+	      <span id="cancel-remove-slave-btn-text">{{translate('Cancel')}}</span>
 	    </button>
 	  </div>
 
@@ -54,7 +55,7 @@
       <div class="col-sm-12 slave-details-row row-container form-check form-check-inline">
 	<!-- name container -->
 	<div class="slave-name-container col-sm-6">
-	  <label for="slave-details-name">Name:</label>
+	  <label for="slave-details-name">{{translate('Name')}}:</label>
 	  <input type="text"
 		 class="form-control slave-details-name obj-details-name"
 		 data-valuefor="name" required>
@@ -81,14 +82,14 @@
       <div class="col-sm-12 slave-details-row row-container form-check form-check-inline">
 	<!-- host -->
 	<div class="slave-host-container col-sm-10">
-	  <label for="slave-details-host">Host:</label>
+	  <label for="slave-details-host">{{translate('Host')}}:</label>
 	  <input  type="text" class="form-control slave-details-host"
 		  data-valuefor="host" required>
 	</div>
 	<!-- end host -->
 	<!-- port -->
 	<div class="slave-port-container col-sm-2">
-	  <label for="slave-details-port">Port:</label>
+	  <label for="slave-details-port">{{translate('Port')}}:</label>
 	  <input  type="text" class="form-control slave-details-port"
 		  data-valuefor="port" required>
 	</div>
@@ -102,7 +103,7 @@
 	<!-- token container-->
 	<div class="slave-token-container col-sm-6">
 	  <!-- token -->
-	  <label for="slave-details-token">Token:</label>
+	  <label for="slave-details-token">{{translate('Token')}}:</label>
 	  <input  type="text" class="form-control slave-details-token"
 		data-valuefor="token" required>
 	  <!-- end token -->
@@ -117,7 +118,7 @@
 	      <input class="form-check-input slave-details-use-ssl"
 		     type="checkbox" checked data-valuefor="use_ssl">
 	      <label for="slave-use-ssl">
-		Use SSL
+		{{translate('Use SSL')}}
 	      </label>
 	    </div>
 	    <!-- end use_ssl -->
@@ -126,7 +127,9 @@
 	      <input type="checkbox"
 		     class="form-check-input slave-details-verify-cert"
 		     data-valuefor="validate_cert">
-	      <label for="slave-verify-cert">Validate ceritificate</label>
+	      <label for="slave-verify-cert">
+		{{translate('Validate ceritificate')}}
+	      </label>
 	    </div>
 	    <!-- end use_ssl -->
 	</div>
@@ -141,7 +144,7 @@
 	  <span class="spinner icon-spinner-2" id="delete-slave-btn-spinner"
 		style="display:none">
 	  </span>
-	  <span id="delete-slave-btn-text">Delete</span>
+	  <span id="delete-slave-btn-text">{{translate('Delete')}}</span>
 	</button>
       </div>
       <!-- end delete button -->
@@ -168,7 +171,7 @@
     <ul class="nav nav-pills">
       <li class="nav-item">
 	<a class="nav-link active box-shadow" href="#">
-	  General configurations
+	  {{translate('General configurations')}}
 	</a>
       </li>
   </div>
@@ -176,7 +179,7 @@
   <!-- end navigation pills -->
   <!-- add slave message -->
   <div class="add-slave-message-container row-container col-sm-10">
-    <h5><span class="add-slave-message-span">Add slave</span></h5>
+    <h5><span class="add-slave-message-span">{{translate('Add slave')}}</span></h5>
   </div>
   <!-- end add slave message -->
 
@@ -194,14 +197,14 @@
 	    <span class="spinner icon-spinner-2" id="save-obj-btn-spinner"
 		  style="display:none">
 	    </span>
-	    <span id="save-obj-btn-text">Save changes</span>
+	    <span id="save-obj-btn-text">{{translate('Save changes')}}</span>
 	  </button>
 	</div>
 
 	<div class="cancel-btn-container inner-btn-container">
 	  <button class="btn btn-sm btn-light btn-block" type="submit"
 		  id="btn-cancel-save">
-	    <span id="cancel-save-slave-btn-text">Cancel</span>
+	    <span id="cancel-save-slave-btn-text">{{translate('Cancel')}}</span>
 	  </button>
 	</div>
 
@@ -215,18 +218,15 @@
   <div class="settings-right-side col-sm-3">
     <div>
       <span>
-	<h5>Slave configuration</h5>
+	<h5>{{translate('Slave configuration')}}</h5>
 	<p>
-	  Give a <b>name</b> to your slave and inform its <b>host</b> and
-	  <b>port</b>.
+	  {% raw translate('Give a <b>name</b> to your slave and inform its <b>host</b> and <b>port</b>.') %}
 	</p>
 	<p>
-	  Provide a <b>token</b> for authentication. The token was generated
-	  in the intallation of toxicslave.
+	  {% raw translate('Provide a <b>token</b> for authentication. The token was generated in the intallation of toxicslave.') %}
 	</p>
-	<p>Check <b>use ssl</b> if the slave uses secure connection. If the
-	  slave uses a self signed certificate, you should not
-	  <b>verify certificate</b>.
+	<p>
+	  {% raw translate('Check <b>use ssl</b> if the slave uses secure connection. If the slave uses a self signed certificate you should not <b>verify certificate</b>.') %}
 	</p>
       </span>
     </div>

@@ -7,18 +7,18 @@
       <li class="nav-item">
 	<a class="nav-link {% if settings_type == 'repositories' %} active box-shadow {% end %}" href="/settings/repositories" data-noroute=true
 	   id="manage-repositories-link">
-	  Manage repositories
+	  {{ translate('Manage repositories') }}
 	</a>
       </li>
       <li class="nav-item">
 	<a class="nav-link {% if settings_type == 'slaves' %} active box-shadow {% end %}" href="/settings/slaves" data-noroute=true id="manage-slaves-link">
-	  Manage slaves
+	  {{ translate('Manage slaves') }}
 	</a>
       </li>
 
       <li class="nav-item">
 	<a class="nav-link {% if settings_type == 'ui' %} active box-shadow {% end %}" href="/settings/ui" data-noroute=true id="manage-ui-link">
-	  UI settings
+	  {{ translate('UI settings') }}
 	</a>
       </li>
 

@@ -21,6 +21,7 @@
 <script src="{{static_url}}bootstrap/js/bootstrap-toggle.min.js"></script>
 <script src="{{static_url}}common/js/js.cookie.js"></script>
 <script src="{{static_url}}common/js/pure.js"></script>
+<script src="{{static_url}}common/js/i18n.min.js"></script>
 <script src="{{static_url}}backbone/underscore-min.js"></script>
 <script src="{{static_url}}backbone/backbone-min.js"></script>
 <script src="{{static_url}}toxicbuild/js/utils.js"></script>
@@ -36,6 +37,9 @@
 <script src="{{static_url}}toxicbuild/js/notification.js"></script>
 
 <script>
+  utils.setTheme();
+  utils.loadTranslations("{{static_url}}");
+
   var router;
   var wsconsumer;
   jQuery(function(){

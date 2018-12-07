@@ -200,6 +200,7 @@ describe('BuildsetInfoViewTest', function(){
 
   it('test-getRendered-not-started', function(){
     spyOn(this.view, '_get_kw').and.returnValue({status: 'fail',
+						 original_status: 'fail',
 						 started: null});
     spyOn($.fn, 'show');
     this.view.getRendered();
@@ -208,6 +209,7 @@ describe('BuildsetInfoViewTest', function(){
 
   it('test-getRendered-started', function(){
     spyOn(this.view, '_get_kw').and.returnValue({status: 'fail',
+						 original_status: 'fail',
 						 started: 'some str datetime'});
 
     spyOn($.fn, 'show');
@@ -216,7 +218,8 @@ describe('BuildsetInfoViewTest', function(){
   });
 
   it('test-getRendered-not-running', function(){
-    spyOn(this.view, '_get_kw').and.returnValue({status: 'fail'});
+    spyOn(this.view, '_get_kw').and.returnValue({status: 'fail',
+						 original_status: 'fail',});
 
     spyOn($.fn, 'show');
     let r = this.view.getRendered();
@@ -224,7 +227,8 @@ describe('BuildsetInfoViewTest', function(){
   });
 
   it('test-rescheduleBuildSet', async function(){
-    spyOn(this.view, '_get_kw').and.returnValue({status: 'fail'});
+    spyOn(this.view, '_get_kw').and.returnValue({status: 'fail',
+						 original_status: 'fail',});
     spyOn(Repository.prototype, 'start_build');
     this.view.model.set('repository', {'id': 'some-repo-id'});
     this.view.model.set('branch', 'master');
@@ -235,7 +239,8 @@ describe('BuildsetInfoViewTest', function(){
   });
 
   it('test-rescheduleBuildSet-error', async function(){
-    spyOn(this.view, '_get_kw').and.returnValue({status: 'fail'});
+    spyOn(this.view, '_get_kw').and.returnValue({status: 'fail',
+						 original_status: 'fail',});
     spyOn(Repository.prototype, 'start_build').and.throwError();
     this.view.model.set('repository', {'id': 'some-repo-id'});
     this.view.model.set('branch', 'master');

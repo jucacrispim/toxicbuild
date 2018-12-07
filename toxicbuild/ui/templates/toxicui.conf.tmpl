@@ -11,7 +11,7 @@ HOLE_TOKEN = '{{HOLE_TOKEN}}'
 # pyrocumulus/tornado settings
 TORNADO_PORT = 8888
 TORNADO_OPTS = {'cookie_secret': '{{COOKIE_SECRET}}',
-	        'xsrf_cookies': True}
+                'xsrf_cookies': True}
 STATIC_URL = '/static/'
 STATIC_DIRS = [pkg_resources.resource_filename('toxicbuild.ui', 'static')]
 TEMPLATE_DIRS = [pkg_resources.resource_filename('toxicbuild.ui', 'templates')]
@@ -25,7 +25,8 @@ API_URL = 'http://localhost:8888/api/'
 
 CONTEXT_PROCESSORS = [
     'pyrocumulus.web.template.ContextProcessor',
-    'toxicbuild.ui.context_processors.ToxicWebMainContextProcessor']
+    'toxicbuild.ui.context_processors.ToxicWebMainContextProcessor',
+    'toxicbuild.ui.context_processors.ToxicWebTranslationProcessor']
 
 NOTIFICATIONS_API_URL = 'http://localhost:9234/'
 NOTIFICATIONS_API_TOKEN = '{{NOTIFICATIONS_API_TOKEN}}'

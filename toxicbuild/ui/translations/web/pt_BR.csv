@@ -1,0 +1,73 @@
+Your Repositories,Seus repositórios
+Manage repositories,Gerenciar repositórios
+Manage slaves,Gerenciar escravos
+UI settings,Configurações de UI
+enabled,habilitado
+disabled,desabilitado
+Repositories,Repositórios
+Repositories are where your code is located.,Repositórios são one seu código está localizado.
+You may <a href="/repository/add">add</a> or <a href="#">import</a> them.,Você pode <a href="/repository/add">adicioná-los</a> ou <a href="#">importá-los</a>.
+See also,Veja também
+Repository configuration,Configuração de repositório
+Once a repository is enabled all configured checks and tests will be executed when a change is detected.,Uma vez que um repositório esteja habilitado todas as verificações e tests serão executadas assim que uma alteração for detectada.
+Build configuration,Configuração de <i>build</i>
+Slaves,Escravos
+Slaves are the ones who actually do the work. They execute the builds and send its results back to the master when it's done.,Escravos são os que realmente fazer o trabalho. Eles executam os <i>builds</i> e enviam os resultados para o mestre quando os <i>builds</i> estiverem prontos.
+If no slaves you will not be able to execute builds.,Se não houverem escravos você não será capaz de executar <i>builds</i>.
+Slave configuration,Configuração de escravo
+Here you can configure language| date format and theme used.,Aqui você pode configurar o idioma| o formato de data e tema usados.
+Language,Idioma
+Use dark theme,Usar tema escuro
+Settings,Configurações
+Only most recent changes,Somente alterações mais recentes
+Add branch,Adicionar <i>branch</i>
+Cancel,Cancelar
+Delete repository,Excluir repositório
+Are you sure you want to delete this repository? This action can't be undone. Tem certeza que deseja excluir este repositório? Esta ação não pode ser desfeita.
+Delete,Excluir
+Name,Nome
+Advanced,Avançado
+Branches,<i>Branches</i>
+No branch configuration.,Nenhuma configuração de <i>branch</i>.
+Builds in parallel,<i>Builds</i> em paralelo
+Slaves,Escravos
+General configurations,Configurações gerais
+Notifications,Notificações
+Add repository,Adicionar repositório
+Save changes,Salvar alterações
+Basic configuration,Configuração básica
+Give a <b>name</b> to your repository and provide a clone <b>url</b>.,Dê um <b>nome</b> ao seu repositório e forneça uma <b>url</b> para cloná-lo.
+Advanced configuration,Configuração avançada
+Define which <b>branches</b> trigger builds. If no branch configuration| changes in all <b>branches</b> will trigger builds.,Defina quais <i><b>branches</b></i> disparam <i>builds</i>. Se não houver configuração de <i>branch</i>| alterações in todos os <i><b>branches</b></i> dispararão <i>builds</i>
+Determine how many <b>builds</b> can be executed <b>in parallel</b> in the repository. If no value there is no limit.,Determine quantos <i><b>builds</b></i> podem ser executados <b>em paralelo</b> no repositório. Se não houver valor não há limite.
+<b>Slaves</b> are the ones who execute the builds. You need at least one <b>slave</b> or no builds will be created.,<b>Escravos</b> são os que executam os <i>builds</i>. Você precisa de pelo menos um <b>escravo</b> ou nenhum <i>build</i> será criado.
+Enable,Habilitar
+Disable,Desabilitar
+Notifications,Notificações
+Notifications are used to send information about builds to third party services.,Notificações são usadas para enviar informações sobre <i>builds</i> para serviços de terceiros.
+You may configure wich <b>branches</b> and <b>statuses</b> trigger notifications.,Você pode configurar quais <i><b>branches</b></i> e status disparam notificações.
+Branch name. You may use wildcards here.,Nome do branch. Você pode usar wildcards aqui.
+Delete slave, Excluir escravo
+Are you sure you want to delete this slave? This action can't be undone.,Tem certeza que quer excluir este escravo? Esta ação não pode ser desfeita.
+Host,Host
+Port,Porta
+Use SSL,Usar SSL
+Validate ceritificate,Validar certificado
+Add slave,Adicionar escravo
+Give a <b>name</b> to your slave and inform its <b>host</b> and <b>port</b>.,Dê um <b>nome</b> ao seu escravo e informe seu <i><b>host</b></i> e <b>porta</b>.
+Provide a <b>token</b> for authentication. The token was generated in the intallation of toxicslave.,Forneça um <b>token</b> para autenticação. O token foi gerado na instalação do toxicslave.
+Check <b>use ssl</b> if the slave uses secure connection. If the slave uses a self signed certificate you should not <b>verify certificate</b>.,Marque <b>usar SSL</b> se o escravo usa uma conexão segura. Se o escravo usa um certificado auto-assinado você não deveria <b>validar certificado</b>.
+Author,Autor
+Title,Título
+Branch,<i>Branch</i>
+Commit,<i>Commit</i>
+Body,Corpo
+commit date,data do commit
+started at,iniciado em
+duration,duração
+Close,Fechar
+Builder,<i>Builder</i>
+commit title,título do commit
+Manage your repositories,Gerencie seus repositórios
+Summary,Sumário
+Logout,Sair

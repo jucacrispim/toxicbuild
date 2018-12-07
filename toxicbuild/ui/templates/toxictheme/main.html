@@ -32,7 +32,7 @@
 	<div class="dropdown-menu dropdown-menu-right box-shadow-gray"
 	     aria-labelledby="dropdown-menu-ellipsis">
 	  <a class="dropdown-item repo-details-link" href="">
-	    Settings
+	    {{translate('Settings')}}
 	  </a>
 	</div>
 
@@ -42,7 +42,7 @@
       <div class="repository-info-row repository-info-first-row">
 	<!-- repo name -->
 	<div class="repo-info-container repository-info-name-container">
-	  <a href="#" data-toggle="tooltip" title="Summary">
+	  <a href="#" data-toggle="tooltip" title="{{translate('Summary')}}">
 	    <span class="repository-info-name"></span>
 	  </a>
 	</div>
@@ -83,7 +83,7 @@
 	    </span>
 	    <!-- commit title -->
 	    <span class="buildset-title" data-toggle="tooltip"
-		  title="commit title">
+		  title="{{translate('commit title')}}">
 	    </span>
 	  </div>
 	  <!-- end buildset first row -->
@@ -114,8 +114,9 @@
 </div>
 
 <div class="top-page-repositories-info-container">
-  Your Repositories <a href="/settings/repositories" data-toggle="tooltip"
-			  title="Manage your repositories">
+  {{ translate('Your Repositories') }}
+  <a href="/settings/repositories" data-toggle="tooltip"
+     title="{{translate('Manage your repositories')}}">
     <span class="fas fa-wrench"></span>
   </a>
 </div>

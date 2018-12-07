@@ -4,7 +4,9 @@
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h6 class="modal-title" id="exampleModalLabel">Add branch</h6>
+        <h6 class="modal-title" id="exampleModalLabel">
+	  {% raw translate('Add branch') %}
+	</h6>
         <button type="button" class="close" data-dismiss="modal"
 		aria-label="Close">
           <span aria-hidden="true">&times;</span>
@@ -12,13 +14,13 @@
       </div>
       <div class="modal-body">
         <input type="text" class="form-control" id="repo-branch-name"
-	       placeholder="Branch name. You may use wildcards here.">
+	       placeholder="{% raw translate('Branch name. You may use wildcards here.') %}">
 
 	<div class="form-check abc-checkbox abc-checkbox-black">
 	  <input class="form-check-input" id="notify-only-latest"
 		 type="checkbox" checked>
 	  <label class="form-check-label" for="notify-only-latest">
-	    Only most recent changes
+	    {{translate('Only most recent changes')}}
 	  </label>
 	</div>
 
@@ -32,7 +34,9 @@
 	      <span class="spinner icon-spinner-2" id="add-branch-btn-spinner"
 		    style="display:none">
 	      </span>
-	      <span id="add-branch-btn-text">Add branch</span>
+	      <span id="add-branch-btn-text">
+		{% raw translate('Add branch') %}
+	      </span>
 	    </button>
 	  </div>
 
@@ -42,7 +46,7 @@
 	      <span class="spinner icon-spinner-2" id="save-repo-btn-spinner"
 		    style="display:none">
 	      </span>
-	      <span id="cancel-save-repo-btn-text">Cancel</span>
+	      <span id="cancel-save-repo-btn-text">{{translate('Cancel')}}</span>
 	    </button>
 	  </div>
 
@@ -58,7 +62,9 @@
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h6 class="modal-title" id="exampleModalLabel">Delete repository</h6>
+        <h6 class="modal-title" id="exampleModalLabel">
+	  {{translate('Delete repository')}}
+	</h6>
         <button type="button" class="close" data-dismiss="modal"
 		aria-label="Close">
           <span aria-hidden="true">&times;</span>
@@ -67,8 +73,7 @@
       <div class="modal-body">
 
 	<span>
-	  Are you sure you want to delete this repository? This action can't
-	  be undone.
+	  {{translate('Are you sure you want to delete this repository? This action can\'t be undone.')}}
 	</span>
 
       </div>
@@ -81,14 +86,14 @@
 	      <span class="spinner icon-spinner-2" id="remove-repo-btn-spinner"
 		    style="display:none">
 	      </span>
-	      <span id="remove-repo-btn-text">Delete</span>
+	      <span id="remove-repo-btn-text">{{translate('Delete')}}</span>
 	    </button>
 	  </div>
 
 	  <div class="cancel-btn-container inner-btn-container">
 	    <button class="btn btn-sm btn-light btn-block" type="submit"
 		    id="btn-cancel-remove-repo">
-	      <span id="cancel-remove-repo-btn-text">Cancel</span>
+	      <span id="cancel-remove-repo-btn-text">{{translate('Cancel')}}</span>
 	    </button>
 	  </div>
 
@@ -108,7 +113,7 @@
 	<!-- first row -->
 	<!-- name container -->
 	<div class="col-sm-6">
-	  <label for="repo-details-name">Name</label>
+	  <label for="repo-details-name">{{translate('Name')}}</label>
 	  <input type="text"
 		 class="form-control repo-details-name obj-details-name"
 		 data-valuefor="name" required>
@@ -148,7 +153,8 @@
 	  </div>
 
 	  <input type="checkbox" class="enabled-checkbox repo-enabled-checkbox"
-		 data-on="enabled" data-off="disabled"
+		 data-on="{{translate('enabled')}}"
+		 data-off="{{translate('disabled')}}"
 		 data-onstyle="success" data-offstyle="secondary"
 		 data-style="checkbox-rounded checkbox-sm"
 		 data-width="1pz" data-height="1pz">
@@ -167,7 +173,7 @@
 	      class="fas fa-angle-right cursor-pointer">
 	</span>
 	<span class="repo-config-advanced-span cursor-pointer">
-	  <b>Advanced</b>
+	  <b>{{translate('Advanced')}}</b>
 	</span>
 
 	<div id="repo-details-advanced-container">
@@ -175,14 +181,14 @@
 	  <!-- branches -->
 	  <div class="row-container">
 	    <div class="">
-	      <span>Branches</span>
+	      <span>{% raw translate('Branches') %}</span>
 	    </div>
 	    <div id="branches-list-container"
 		 class="col-sm-6 repo-details-input box-shadow-gray-inset advanced-large-item">
 	      <ul class="repo-branches-ul" id="repo-branches-container">
 		<li class="box-shadow box-white no-item-placeholder"
 		    id="no-branch-placeholder">
-		  No branch configuration.
+		  {% raw translate('No branch configuration.')%}
 		</li>
 
 		<li class="repo-branches-li box-shadow-light box-white">
@@ -205,7 +211,7 @@
 
 	    <!-- builds in palallel -->
 	    <div class="row-container parallel-builds-container col-sm-5">
-	      <label>Builds in parallel</label>
+	      <label>{% raw translate('Builds in parallel')%}</label>
 	      <input class="repo-parallel-builds form-control" type="text"
 		     data-valuefor="parallel_builds">
 	    </div>
@@ -216,7 +222,7 @@
 	  <!-- slaves -->
 	  <div class="row-container">
 	    <div>
-	      <span>Slaves</span>
+	      <span>{{translate('Slaves')}}</span>
 	    </div>
 	    <div id="slaves-list-container"
 		 class="col-sm-6 repo-details-input box-shadow-gray-inset advanced-large-item">
@@ -230,7 +236,8 @@
 
 		  <input type="checkbox"
 			 class="enabled-checkbox slave-enabled-checkbox"
-			 data-on="enabled" data-off="disabled"
+			 data-on="{{translate('enabled')}}"
+			 data-off="{{translate('disabled')}}"
 			 data-onstyle="success" data-offstyle="secondary"
 			 data-style="checkbox-rounded checkbox-sm"
 			 data-width="1pz" data-height="1pz">
@@ -256,7 +263,7 @@
 		<span class="spinner icon-spinner-2" id="delete-repo-btn-spinner"
 		      style="display:none">
 		</span>
-		<span id="delete-repo-btn-text">Delete</span>
+		<span id="delete-repo-btn-text">{{translate('Delete')}}</span>
 	      </button>
 	    </div>
 	  </div>
@@ -290,13 +297,13 @@
       <li class="nav-item">
 	<a class="nav-link active box-shadow"
 	   href="{{ '/' + repo_full_name + '/settings' }}">
-	  General configurations
+	  {{translate('General configurations')}}
 	</a>
       </li>
       <li class="nav-item">
 	<a class="nav-link"
 	   href="{{ '/' + repo_full_name + '/notifications' }}">
-	  Notifications
+	  {{translate('Notifications')}}
 	</a>
       </li>
     </ul>
@@ -315,7 +322,7 @@
 
   <!-- add repo message -->
   <div class="add-repo-message-container row-container col-sm-10">
-    <h5><span class="add-repo-message-span">Add repository</span></h5>
+    <h5><span class="add-repo-message-span">{{translate('Add repository')}}</span></h5>
   </div>
   <!-- end add repo message -->
 
@@ -332,14 +339,14 @@
 	    <span class="spinner icon-spinner-2" id="save-obj-btn-spinner"
 		  style="display:none">
 	    </span>
-	    <span id="save-obj-btn-text">Save changes</span>
+	    <span id="save-obj-btn-text">{{translate('Save changes')}}</span>
 	  </button>
 	</div>
 
 	<div class="cancel-btn-container inner-btn-container">
 	  <button class="btn btn-sm btn-light btn-block" type="submit"
 		  id="btn-cancel-save">
-	    <span id="cancel-save-repo-btn-text">Cancel</span>
+	    <span id="cancel-save-repo-btn-text">{{translate('Cancel')}}</span>
 	  </button>
 	</div>
 
@@ -353,25 +360,22 @@
   <div class="settings-right-side col-sm-3">
     <div>
       <span>
-	<h5>Basic configuration</h5>
+	<h5>{{translate('Basic configuration')}}</h5>
 	<p id="basic-config-p">
-	  Give a <b>name</b> to your repository and provide a clone <b>url</b>.
+	  {% raw translate('Give a <b>name</b> to your repository and provide a clone <b>url</b>.') %}
 	</p>
 	<div class="advanced-help-container">
-	  <h5>Advanced configuration</h5>
+	  <h5>{{translate('Advanced configuration')}}</h5>
 	  <p id="branches-config-p">
-	    Define which <b>branches</b> trigger builds. If no branch
-	    configuration, changes in all <b>branches</b> will trigger builds.
+	    {% raw translate('Define which <b>branches</b> trigger builds. If no branch configuration| changes in all <b>branches</b> will trigger builds.').replace('|', ',') %}
 	  </p>
 
 	  <p id="parallel-builds-config-p">
-	    Determine how many <b>builds</b> can be executed <b>in parallel</b>
-	    in the repository. If no value there is no limit.
+	    {% raw translate('Determine how many <b>builds</b> can be executed <b>in parallel</b> in the repository. If no value there is no limit.') %}
 	  </p>
 
 	  <p id="slaves-config-p">
-	    <b>Slaves</b> are the ones who execute the builds. You need at least
-	    one <b>slave</b> or no builds will be created.
+	    {% raw translate('<b>Slaves</b> are the ones who execute the builds. You need at least one <b>slave</b> or no builds will be created.') %}
 	  </p>
        </div>
      </span>

@@ -57,3 +57,7 @@ body.dark-theme{
 .dark-theme .modal-content {
     background-color:  #4c4a49;
 }
+
+.dark-theme .repo-locations-link-container a {
+    color: #D0D0D0;
+ }

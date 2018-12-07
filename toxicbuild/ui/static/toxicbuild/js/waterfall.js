@@ -170,7 +170,9 @@ class WaterfallBuilderView extends BaseWaterfallView{
   _get_kw(){
     let name = this.builder.escape('name');
     let status = this.builder.escape('status');
-    return {name: name, status: status};
+    let status_translation = i18n(status);
+    return {name: name, status: status_translation,
+	    original_status: status};
   }
 
   getRendered(){
@@ -205,17 +207,19 @@ class WaterfallStepView extends BaseWaterfallView{
 
   _get_kw(){
     let status = this.step.escape('status');
+    let status_translation = i18n(status);
     let name = this.step.escape('name');
-    return {status: status,
+    return {status: status_translation,
+	    original_status: status,
 	    name: name};
   }
 
   render(){
     let rendered = super.getRendered();
     let kw = this._get_kw();
-    rendered.addClass('step-' + kw.status);
+    rendered.addClass('step-' + kw.original_status);
     this.$el.removeClass();
-    this.$el.addClass('step-' + kw.status + ' build-info-row');
+    this.$el.addClass('step-' + kw.original_status + ' build-info-row');
     this.$el.html(rendered.html());
     return this;
   }
@@ -255,9 +259,12 @@ class WaterfallBuildView extends BaseWaterfallView{
 
   _get_kw(){
     let status = this.build.escape('status');
+    let status_translation = i18n(status);
     let number = this.build.get('number');
     let build_details_link = '/build/' + this.build.get('uuid');
-    return {status: status, build_details_link: build_details_link,
+    return {status: status_translation,
+	    original_status: status,
+	    build_details_link: build_details_link,
 	    number: number};
   }
 

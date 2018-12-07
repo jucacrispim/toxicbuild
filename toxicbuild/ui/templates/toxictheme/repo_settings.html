@@ -12,7 +12,7 @@
 	  <div class="dropdown-menu dropdown-menu-right box-shadow-gray"
 	       aria-labelledby="dropdown-menu-ellipsis">
 	    <a class="dropdown-item repo-details-link" href="">
-	      Settings
+	      {{translate('Settings')}}
 	    </a>
 	  </div>
 	</div>
@@ -33,7 +33,8 @@
 
 	    <input type="checkbox"
 		   class="enabled-checkbox repo-enabled-checkbox"
-		   data-on="enabled" data-off="disabled"
+		   data-on="{{ translate('enabled') }}"
+		   data-off="{{ translate('disabled') }}"
 		   data-onstyle="success" data-offstyle="secondary"
 		   data-style="checkbox-rounded checkbox-sm"
 		   data-width="1pz" data-height="1pz">
@@ -76,22 +77,21 @@
 <div class="settings-right-side col-sm-3">
   <div>
     <span>
-      <h5>Repositories</h5>
+      <h5>{{ translate('Repositories') }}</h5>
       <p>
-	Repositories are where your code is located. You may
-	<a href="/repository/add">add</a> or <a href="#">import</a> them.
+	{{ translate('Repositories are where your code is located.') }}
+	{% raw translate('You may <a href="/repository/add">add</a> or <a href="#">import</a> them.') %}
 
       </p>
-	<b>See also:</b>
-	<ul><li><a href="#">Repository configuration</a></li></ul>
+      <b>{{translate('See also')}}:</b>
+	<ul><li><a href="#">{{translate('Repository configuration')}}</a></li></ul>
       <p>
       </p>
       <p>
-	Once a repository is enabled all configured checks and tests
-	will be executed when a change is detected.
+	{{translate('Once a repository is enabled all configured checks and tests will be executed when a change is detected.')}}
       </p>
-      <b>See also:</b>
-      <ul><li><a href="#">Build configuration</a></li></ul>
+      <b>{{translate('See also')}}:</b>
+      <ul><li><a href="#">{% raw translate('Build configuration') %}</a></li></ul>
       <p>
       </p>
 

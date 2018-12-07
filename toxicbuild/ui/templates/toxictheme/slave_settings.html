@@ -12,7 +12,7 @@
 	  <div class="dropdown-menu dropdown-menu-right box-shadow-gray"
 	       aria-labelledby="dropdown-menu-ellipsis">
 	    <a class="dropdown-item slave-details-link" href="">
-	      Settings
+	      {{translate('Settings')}}
 	    </a>
 	  </div>
 	</div>
@@ -58,16 +58,15 @@
 <div class="settings-right-side col-sm-3">
   <div>
     <span>
-      <h5>Slaves</h5>
+      <h5>{{translate('Slaves')}}</h5>
       <p>
-	Slaves are the ones who actually do the work. They execute the builds
-	and send its results back to the master when it's done.
+	{% raw translate('Slaves are the ones who actually do the work. They execute the builds and send its results back to the master when it\'s done.') %}
 
-	<p> If no slaves, you will not be able to execute builds.</p>
+	<p>{% raw translate('If no slaves you will not be able to execute builds.') %}</p>
 
       </p>
-	<b>See also:</b>
-	<ul><li><a href="#">Slave configuration</a></li></ul>
+	<b>{{translate('See also')}}:</b>
+	<ul><li><a href="#">{{translate('Slave configuration')}}</a></li></ul>
       <p>
       </p>
 

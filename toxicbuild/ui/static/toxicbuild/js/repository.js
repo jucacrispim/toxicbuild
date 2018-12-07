@@ -162,6 +162,7 @@ class BaseRepositoryView extends BaseFormView{
 
   _get_kw(){
     let status = this.model.escape('status');
+    let status_translation = i18n(status);
     let last_buildset = this.model.get('last_buildset') || {};
     let parallel_builds = parseInt(this.model.get('parallel_builds'));
     let commit = last_buildset.commit ? last_buildset.commit.slice(0, 8) : '';
@@ -194,7 +195,8 @@ class BaseRepositoryView extends BaseFormView{
     let url = this.model.escape('url');
 
     let kw = {'name': this.model.escape('name'),
-	      'status': status,
+	      'status': status_translation,
+	      'original_status': status,
 	      'commit': commit,
 	      'title': _.escape(last_buildset.title),
 	      'total_time': last_buildset.total_time,
@@ -614,7 +616,7 @@ class RepositoryInfoView extends BaseRepositoryView{
 
   render(){
     let kw = this._get_kw();
-    let status = kw['status'];
+    let status = kw['original_status'];
     let badge_class = this._get_badge_class(status);
     let compiled = $(this.compiled_template(kw));
     compiled.addClass('repo-status-' + status.replace(' ', '-'));

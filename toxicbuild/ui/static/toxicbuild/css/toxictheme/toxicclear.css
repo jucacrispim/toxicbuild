@@ -840,7 +840,7 @@ body{
 }
 
 #btn-save-obj{
-    width: 110px;
+    /* width: 110px; */
 }
 
 .repo-locations-link-container{
@@ -1231,4 +1231,8 @@ body{
 .notification-item .fa-check{
     color: var(--success);
     float: right;
+}
+
+#locale-selection-container .col-sm-4{
+    padding-left: 0px;
 }

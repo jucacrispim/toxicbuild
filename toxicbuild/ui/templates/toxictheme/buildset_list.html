@@ -32,7 +32,7 @@
 	<div class="bj-info-container buildset-info-status-container">
 	  <a href="#">
 	    <span class="buildset-status badge" data-toggle="tooltip"
-		  title="Go to waterfall">
+		  title="Waterfall">
 	    </span>
 	  </a>
 	  <span class="fas fa-cog fa-spin"></span>
@@ -76,7 +76,7 @@
 
 	  <!-- buildset second row -->
 	  <div class="obj-info-row"
-	       data-toggle="tooltip" title="commit date">
+	       data-toggle="tooltip" title="{{translate('commit date')}}">
 	    <span class="far fa-calendar-alt"></span>
 	    <span class="buildset-commit-date"></span>
 	  </div>
@@ -84,13 +84,13 @@
 
 	  <div class="obj-info-row buildset-total-time-row">
 	    <span class="far fa-calendar-check" data-toggle="tooltip"
-		  title="started at"></span>
+		  title="{{translate('started at')}}"></span>
 	    <span class="buildset-started" data-toggle="tooltip"
-		  title="started at"></span>
+		  title="{{translate('started at')}}"></span>
 	    <span class="far fa-clock" data-toggle="tooltip"
-		  title="duration"></span>
+		  title="{{translate('duration')}}"></span>
 	    <span class="buildset-total-time" data-toggle="tooltip"
-		  title="duration"></span>
+		  title="{{translate('duration')}}"></span>
 	  </div>
 	</div>
       </div>
@@ -108,7 +108,7 @@
   <a href="{{ '/' + repo_full_name + '/settings' }}" class="no-decoration">
     <span class="fas fa-wrench"></span>
   </a>
-  <a href="{{ '/' + repo_full_name + '/' }}" title="Summary"
+  <a href="{{ '/' + repo_full_name + '/' }}" title="{{translate('Summary')}}"
      class="summary-link link-enabled no-decoration">
     <span class="fas fa-list"></span>
   </a>

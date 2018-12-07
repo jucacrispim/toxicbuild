@@ -55,4 +55,10 @@ describe('UISettingsViewTest', function(){
     expect(check_el.prop).not.toHaveBeenCalled();
   });
 
+  it('test-setLocaleCookie', function(){
+    spyOn(Cookies, 'set');
+    this.view.setLocaleCookie();
+    expect(Cookies.set).toHaveBeenCalled();
+  });
+
 });

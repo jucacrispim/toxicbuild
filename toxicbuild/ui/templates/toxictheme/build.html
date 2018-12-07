@@ -38,23 +38,23 @@
     </div>
     <div class="inner-container-left col-sm-6">
       <div class="build-builder-row">
-	<span>Builder:</span> <b><span class="builder-name"></span></b>
+	<span>{% raw translate('Builder') %}:</span> <b><span class="builder-name"></span></b>
       </div>
       <span class="far fa-calendar-check" data-toggle="tooltip"
-	    title="started at"></span>
+	    title="{{translate('started at')}}"></span>
       <span class="build-started" data-toggle="tooltip"
-	    title="started at"></span><br/>
+	    title="{{translate('started at')}}"></span><br/>
 
       <span class="far fa-clock" data-toggle="tooltip"
-	    title="duration"></span>
+	    title="{{translate('duration')}}"></span>
       <span class="build-total-time" data-toggle="tooltip"
-	    title="duration"></span><br/>
+	    title="{{translate('duration')}}"></span><br/>
     </div>
     <div class="inner-container-right col-sm-5">
       <div class="build-commit-row">
-	<span>Author: </span><b><span class="commit-author"></span></b><br/>
-	<span>Title: </span><b><span class="commit-title"></span></b><br/>
-	<span>Branch: </span><b><span class="commit-branch"></b></span>
+	<span>{{translate('Author')}}: </span><b><span class="commit-author"></span></b><br/>
+	<span>{{translate('Title')}}: </span><b><span class="commit-title"></span></b><br/>
+	<span>{% raw translate('Branch') %}: </span><b><span class="commit-branch"></b></span>
       </div>
 
     </div>
@@ -72,7 +72,7 @@
       <div class="cancel-btn-container inner-btn-container">
 	<button class="btn btn-sm btn-dark btn-block" type="submit"
 		id="btn-cancel-save">
-	  <span id="cancel-save-slave-btn-text">Close</span>
+	  <span id="cancel-save-slave-btn-text">{{translate('Close')}}</span>
 	</button>
       </div>
 
