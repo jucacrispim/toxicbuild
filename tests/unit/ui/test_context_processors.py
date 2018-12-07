@@ -51,3 +51,11 @@ class ToxicWebTranslationProcessorTest(TestCase):
         r = set(self.processor.get_context().keys())
 
         self.assertEqual(r, expected_keys)
+
+    @mock.patch.object(context_processors.locale, 'get', mock.Mock())
+    def test_get_context_missing(self):
+        expected_keys = {'translate'}
+        self.processor.request.cookies = {}
+        r = set(self.processor.get_context().keys())
+
+        self.assertEqual(r, expected_keys)

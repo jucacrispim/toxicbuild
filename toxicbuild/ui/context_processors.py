@@ -20,6 +20,7 @@
 from pyrocumulus.conf import settings
 from pyrocumulus.web.template import ContextProcessor
 from tornado import locale
+from http.cookies import Morsel
 
 from toxicbuild import VERSION
 
@@ -40,7 +41,14 @@ class ToxicWebTranslationProcessor(ContextProcessor):
     the string shown to the users."""
 
     def get_context(self):
-        user_locale = self.request.cookies.get('ui_locale', 'en_US')
+
+        def get_morsel():
+            locale_str = 'en_US'
+            m = Morsel()
+            m.set(locale_str, locale_str, locale_str)
+            return m
+
+        user_locale = self.request.cookies.get('ui_locale', get_morsel())
         user_locale = locale.get(user_locale.value)
         translate = user_locale.translate
 
