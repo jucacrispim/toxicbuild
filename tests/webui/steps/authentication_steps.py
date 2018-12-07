@@ -77,5 +77,5 @@ def step_impl(context):
     browser = context.browser
     el = browser.find_element_by_class_name('nav-link')
     browser.click(el)
-    el = browser.find_element_by_class_name('dropdown-item-logout')
+    el = browser.find_elements_by_class_name('dropdown-item-logout')[-1]
     browser.click(el)
