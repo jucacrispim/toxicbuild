@@ -20,7 +20,6 @@
 from pyrocumulus.conf import settings
 from pyrocumulus.web.template import ContextProcessor
 from tornado import locale
-from http.cookies import Morsel
 
 from toxicbuild import VERSION
 from toxicbuild.ui.utils import get_defaulte_locale_morsel
