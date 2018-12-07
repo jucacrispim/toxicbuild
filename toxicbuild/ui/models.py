@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -95,10 +95,12 @@ class BaseModel:
         client = yield from get_hole_client(requester, **client_settings)
         return client
 
-    def to_dict(self, dtformat=None):
+    def to_dict(self, dtformat=None, tzname=None):
         """Transforms a model into a dict.
 
-        :param dtformat: Format for datetimes."""
+        :param dtformat: Format for datetimes.
+        :param tzname: A timezone name.
+        """
 
         attrs = [a for a in self.__ordered__ if not a.startswith('_')]
 
@@ -109,7 +111,7 @@ class BaseModel:
             if not (callable(objattr) and not is_ref):  # pragma no branch
 
                 if isinstance(objattr, datetime.datetime):
-                    objattr = format_datetime(objattr, dtformat)
+                    objattr = format_datetime(objattr, dtformat, tzname)
 
                 d[attr] = objattr
 

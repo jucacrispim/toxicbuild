@@ -37,27 +37,27 @@ def _get_dtformat():
     return dtformat
 
 
-def _get_timezone():
+def _get_timezone(tzname):
     try:
-        tz = settings.TIMEZONE
-        tz = pytz.timezone(tz)
-    except (AttributeError, pytz.UnknownTimeZoneError):
+        tz = pytz.timezone(tzname or '')
+    except pytz.UnknownTimeZoneError:
         tz = None
 
     return tz
 
 
-def format_datetime(dt, dtformat=None):
+def format_datetime(dt, dtformat=None, tzname=None):
     """Formats a datetime object according to the
     timezone and format specified in the config file.
 
     :param dt: A datetime object.
-    :param dtformat: The format for the datetime."""
+    :param dtformat: The format for the datetime.
+    :param tzname: A timezone name."""
 
     if not dtformat:
         dtformat = _get_dtformat()
 
-    tz = _get_timezone()
+    tz = _get_timezone(tzname)
 
     if tz:
         dt = dt.astimezone(tz)
@@ -130,4 +130,15 @@ def get_defaulte_locale_morsel():
     locale_str = 'en_US'
     m = Morsel()
     m.set('locale', locale_str, locale_str)
+    return m
+
+
+def get_default_timezone_morsel():
+    """Returns a :class:`~http.cookies.Morsel` instance with
+    `UTC` as its value.
+    """
+
+    tzname = 'UTC'
+    m = Morsel()
+    m.set('locale', tzname, tzname)
     return m

@@ -175,6 +175,21 @@ var utils = {
     }
     i18n.translator.add(r);
     return true;
+  },
+
+  getClientTZ(){
+    let tz;
+    try{
+      tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }catch(e){
+      tz = 'UTC';
+    }
+    return tz;
+  },
+
+  setTZCookie(){
+    let tz = utils.getClientTZ();
+    Cookies.set('tzname', tz);
   }
 
 };

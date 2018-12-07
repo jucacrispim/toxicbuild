@@ -37,7 +37,8 @@ from toxicbuild.ui.exceptions import BadSettingsType
 from toxicbuild.ui.models import (Repository, Slave, User, Notification,
                                   BuildSet, Builder, Build)
 from toxicbuild.ui.utils import (format_datetime, is_datetime,
-                                 get_defaulte_locale_morsel)
+                                 get_defaulte_locale_morsel,
+                                 get_default_timezone_morsel)
 
 
 COOKIE_NAME = 'toxicui'
@@ -46,11 +47,15 @@ FULL_NAME_REGEX = '([\w\d\-]+/[\w\d\-]+)'
 
 
 def _get_dtformat(request):
-    formats = {'en_US': '%m/%d/%Y %H:%M:%S %z',
-               'pt_BR': '%d/%m/%Y %H:%M:%S %z'}
+    formats = {'en_US': '%m/%d/%Y %H:%M:%S',
+               'pt_BR': '%d/%m/%Y %H:%M:%S'}
     locale = request.cookies.get(
         'ui_locale', get_defaulte_locale_morsel()).value
     return formats.get(locale)
+
+
+def _get_timezone(request):
+    return request.cookies.get('tzname', get_default_timezone_morsel()).value
 
 
 class ToxicRequest(PyroRequest):
@@ -227,6 +232,7 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
         self.query = None
         self.user = None
         self._dtformat = None
+        self._tzname = None
         super().__init__(*args, **kwargs)
 
     async def async_prepare(self):
@@ -237,6 +243,7 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
 
         self.query = ToxicRequest(self.request.arguments)
         self._dtformat = _get_dtformat(self.request)
+        self._tzname = _get_timezone(self.request)
 
     @post('')
     async def add(self):
@@ -250,10 +257,12 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
     async def get_or_list(self):
         if self._query_has_pk():
             item = await self.model.get(self.user, **self.query)
-            resp = item.to_json(dtformat=self._dtformat)
+            resp = item.to_json(dtformat=self._dtformat, tzname=self._tzname)
         else:
             items = await self.model.list(self.user, **self.query)
-            r = {'items': [i.to_dict(dtformat=self._dtformat) for i in items]}
+            r = {'items': [
+                i.to_dict(dtformat=self._dtformat, tzname=self._tzname)
+                for i in items]}
             resp = json.dumps(r)
 
         return resp
@@ -300,7 +309,8 @@ class UserAddRestHandler(ModelRestHandler):
         content = _create_cookie_content(r)
 
         self.set_secure_cookie(COOKIE_NAME, content)
-        return {'user-add': r.to_dict(dtformat=self._dtformat)}
+        return {'user-add': r.to_dict(dtformat=self._dtformat,
+                                      tzname=self._tzname)}
 
 
 class ReadOnlyRestHandler(ModelRestHandler):
@@ -319,12 +329,13 @@ class BuildSetHandler(ReadOnlyRestHandler):
         summary = self.query.get('summary', False)
         r = await self.model.list(
             self.user, repo_name_or_id=repo_name, summary=summary)
-        items = [i.to_dict(dtformat=self._dtformat) for i in r]
+        items = [i.to_dict(dtformat=self._dtformat, tzname=self._tzname)
+                 for i in r]
         return {'items': items}
 
     async def _get(self, buildset_id):
         buildset = await self.model.get(self.user, buildset_id)
-        return buildset.to_dict(dtformat=self._dtformat)
+        return buildset.to_dict(dtformat=self._dtformat, tzname=self._tzname)
 
     @get('')
     async def list_or_get(self):
@@ -355,7 +366,7 @@ class BuildHandler(ReadOnlyRestHandler):
             raise HTTPError(400)
 
         build = await self.model.get(self.user, build_uuid)
-        return build.to_dict(dtformat=self._dtformat)
+        return build.to_dict(dtformat=self._dtformat, tzname=self._tzname)
 
 
 class CookieAuthBuildHandler(CookieAuthHandlerMixin, BuildHandler):
@@ -374,9 +385,11 @@ class WaterfallRestHandler(ReadOnlyRestHandler):
         buildsets = await self.model.list(self.user, repo_name_or_id=repo_name,
                                           summary=False)
         builders = await self._get_builders(buildsets)
-        r = {'builders': [b.to_dict(dtformat=self._dtformat)
+        r = {'builders': [b.to_dict(dtformat=self._dtformat,
+                                    tzname=self._tzname)
                           for b in builders],
-             'buildsets': [b.to_dict(dtformat=self._dtformat)
+             'buildsets': [b.to_dict(dtformat=self._dtformat,
+                                     tzname=self._tzname)
                            for b in buildsets]}
         return r
 
@@ -491,7 +504,8 @@ class NotificationRestHandler(ReadOnlyRestHandler):
     async def list(self):
         repo_id = self.query.get('repo_id')
         r = await Notification.list(repo_id)
-        items = [i.to_dict(dtformat=self._dtformat) for i in r]
+        items = [i.to_dict(dtformat=self._dtformat,
+                           tzname=self._tzname) for i in r]
         return {'items': items}
 
 

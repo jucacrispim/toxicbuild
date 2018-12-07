@@ -77,4 +77,25 @@ describe('utilsTest', function(){
     let formated = utils.formatSeconds(secs);
     expect(formated).toEqual('00:01:15');
   });
+
+  it('test-setTZCookie', function(){
+    spyOn(utils, 'getClientTZ');
+    spyOn(Cookies, 'set');
+
+    utils.setTZCookie();
+    expect(Cookies.set).toHaveBeenCalled();
+  });
+
+  it('test-getClientTZ-ok', function(){
+    let e = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    let r = utils.getClientTZ();
+    expect(r).toEqual(e);
+  });
+
+  it('test-getClientTZ-error', function(){
+    spyOn(Intl, 'DateTimeFormat').and.throwError();
+    let e = 'UTC';
+    let r = utils.getClientTZ();
+    expect(r).toEqual(e);
+  });
 });
