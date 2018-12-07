@@ -299,7 +299,7 @@ class ModelRestHandlerTest(TestCase):
         self.assertEqual(resp, {'delete': 'ok'})
 
 
-class UserAddRestHandler(TestCase):
+class UserPublicRestHandler(TestCase):
 
     @async_test
     async def setUp(self):
@@ -308,8 +308,8 @@ class UserAddRestHandler(TestCase):
         request.body = web.json.dumps({})
         application.ui_methods = {}
         application.settings = {'cookie_secret': 'sdf'}
-        self.handler = web.UserAddRestHandler(application, request,
-                                              model=self.model)
+        self.handler = web.UserPublicRestHandler(application, request,
+                                                 model=self.model)
         self.handler._get_user_from_cookie = MagicMock()
         await self.handler.async_prepare()
 

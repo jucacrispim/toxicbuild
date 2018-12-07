@@ -287,7 +287,7 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
         return 'id' in self.query.keys()
 
 
-class UserAddRestHandler(ModelRestHandler):
+class UserPublicRestHandler(ModelRestHandler):
     """A rest api handler to add new users.
     """
 
@@ -919,8 +919,8 @@ slave_api_url = URLSpec('/api/slave/(.*)', CookieAuthSlaveRestHandler,
                         slave_kwargs)
 notifications_api_url = URLSpec('/api/notification/(.*)$',
                                 CookieAuthNotificationRestHandler)
-user_add_api = URLSpec('/api/user/(.*)$',
-                       UserAddRestHandler, {'model': User})
+user_add_api = URLSpec('/api/public/user/(.*)$',
+                       UserPublicRestHandler, {'model': User})
 
 buildset_api = URLSpec('/api/buildset/(.*)$',
                        CookieAuthBuildSetHandler, {'model': BuildSet})

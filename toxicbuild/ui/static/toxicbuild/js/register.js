@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-var TOXIC_USER_API_URL = window.TOXIC_API_URL + 'user/';
+var TOXIC_USER_API_URL = window.TOXIC_API_URL + 'public/user/';
 
 
 class RegisterHandler{
