@@ -165,6 +165,17 @@ class User(BaseModel):
         return user
 
     @classmethod
+    async def change_password(cls, requester, old_password,
+                              new_password):
+        kw = {'username_or_email': requester.email,
+              'old_password': old_password,
+              'new_password': new_password}
+
+        with (await cls.get_client(requester)) as client:
+            await client.user_change_password(**kw)
+        return True
+
+    @classmethod
     async def add(cls, email, username, password,
                   allowed_actions):
         requester = cls._get_root_user()

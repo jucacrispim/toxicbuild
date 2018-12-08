@@ -313,6 +313,18 @@ class UserPublicRestHandler(ModelRestHandler):
                                       tzname=self._tzname)}
 
 
+class UserRestHandler(CookieAuthHandlerMixin, ModelRestHandler):
+
+    @post('change-password')
+    async def change_password(self):
+        old_password = self.body['old_password']
+        new_password = self.body['new_password']
+
+        r = await self.model.change_password(self.user, old_password,
+                                             new_password)
+        return {'user-change-password': r}
+
+
 class ReadOnlyRestHandler(ModelRestHandler):
 
     @post('')
@@ -686,6 +698,7 @@ class DashboardHandler(LoggedTemplateHandler):
     repo_settings_template = 'toxictheme/repo_settings.html'
     slave_settings_template = 'toxictheme/slave_settings.html'
     ui_settings_template = 'toxictheme/ui_settings.html'
+    user_settings_template = 'toxictheme/user_settings.html'
     repository_template = 'toxictheme/repository.html'
     slave_template = 'toxictheme/slave.html'
     buildset_list_template = 'toxictheme/buildset_list.html'
@@ -720,6 +733,10 @@ class DashboardHandler(LoggedTemplateHandler):
         elif settings_type == 'ui':
             context = {}
             template = self.ui_settings_template
+
+        elif settings_type == 'user':
+            context = {}
+            template = self.user_settings_template
 
         else:
             raise BadSettingsType(settings_type)
@@ -775,7 +792,7 @@ class DashboardHandler(LoggedTemplateHandler):
         content = self._get_main_template()
         self.write(content)
 
-    @get('settings/(slaves|repositories|ui)')
+    @get('settings/(slaves|repositories|ui|user)')
     def show_settings(self, settings_type):
         settings_type = settings_type.decode()
         content = self._get_settings_template(settings_type)
@@ -867,7 +884,7 @@ class DashboardHandler(LoggedTemplateHandler):
         content = self._get_settings_template(settings_type)
         self.write(content)
 
-    @get('templates/settings/main/(slaves|repositories|ui)')
+    @get('templates/settings/main/(slaves|repositories|ui|user)')
     def show_settings_main_template(self, settings_type):
         settings_type = settings_type.decode()
         content = self._get_settings_main_template(settings_type)
@@ -922,6 +939,8 @@ notifications_api_url = URLSpec('/api/notification/(.*)$',
 user_add_api = URLSpec('/api/public/user/(.*)$',
                        UserPublicRestHandler, {'model': User})
 
+user_api = URLSpec('/api/user/(.*)$', UserRestHandler, {'model': User})
+
 buildset_api = URLSpec('/api/buildset/(.*)$',
                        CookieAuthBuildSetHandler, {'model': BuildSet})
 
@@ -934,4 +953,4 @@ waterfall_api = URLSpec('/api/waterfall/(.*)$',
 
 api_app = PyroApplication(
     [websocket, repo_api_url, slave_api_url, notifications_api_url,
-     buildset_api, user_add_api, waterfall_api, build_api])
+     buildset_api, user_add_api, waterfall_api, build_api, user_api])

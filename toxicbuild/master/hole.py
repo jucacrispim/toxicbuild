@@ -229,7 +229,7 @@ class HoleHandler:
         return {'user-remove': 'ok'}
 
     async def user_authenticate(self, username_or_email, password):
-        """Authenticates an user. Returns user.to_dict() is
+        """Authenticates an user. Returns user.to_dict() if
         authenticated. Raises ``InvalidCredentials`` if a user with
         this credentials does not exist.
 
@@ -238,6 +238,20 @@ class HoleHandler:
 
         user = await User.authenticate(username_or_email, password)
         return {'user-authenticate': user.to_dict()}
+
+    async def user_change_password(self, username_or_email, old_password,
+                                   new_password):
+        """Changes a user password. First authenticates the user, if
+        authentication is ok then changes the password.
+
+        :param username_or_email: Username or email to use to authenticate.
+        :param old_password: User's old password. Used to authenticate.
+        :param new_password: The new password.
+        """
+        user = await User.authenticate(username_or_email, old_password)
+        user.set_password(new_password)
+        await user.save()
+        return {'user-change-password': 'ok'}
 
     async def user_get(self, **kw):
         """Returns information about a specific user.

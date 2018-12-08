@@ -630,8 +630,21 @@ body{
 
 /* settings page */
 
+#user-settings-container,
 #ui-settings-container{
     display: none;
+}
+
+.change-password-title{
+    margin-bottom: 15px;
+}
+
+#change-password-container .form-group .form-control{
+    margin-bottom: 10px;
+}
+
+#change-password-container .col-sm-6{
+    padding-left: 0;
 }
 
 .nav-container{
@@ -1233,7 +1246,7 @@ body{
     float: right;
 }
 
-#locale-selection-container .col-sm-4{
+#change-password-container .col-sm-4,#locale-selection-container .col-sm-4{
     padding-left: 0px;
 }
 

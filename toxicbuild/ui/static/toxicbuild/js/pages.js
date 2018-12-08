@@ -77,6 +77,8 @@ class SettingsPage extends BasePage{
       this.list_view = new SlaveListView();
     }else if(settings_type == 'ui'){
       this.list_view = new UISettingsView();
+    }else if(settings_type == 'user'){
+      this.list_view = new UserSettingsView();
     }
   }
 
@@ -100,6 +102,11 @@ class SettingsPage extends BasePage{
       await self.render_main('ui');
     });
 
+    $('#manage-user-link').on('click', async function(e){
+      e.preventDefault();
+      await self.render_main('user');
+    });
+
     self._already_listen = true;
     return true;
   }
@@ -116,6 +123,7 @@ class SettingsPage extends BasePage{
     $('#manage-slaves-link').removeClass('active box-shadow');
     $('#manage-repositories-link').removeClass('active box-shadow');
     $('#manage-ui-link').removeClass('active box-shadow');
+    $('#manage-user-link').removeClass('active box-shadow');
     $('#manage-' + settings_type + '-link').addClass('active box-shadow');
   }
 

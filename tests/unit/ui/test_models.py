@@ -190,6 +190,16 @@ class UserTest(TestCase):
                   get_client_mock(None, {'id': 'some-id',
                                          'email': 'some-email@bla.com'}))
     @async_test
+    async def test_change_password(self):
+        requester = MagicMock()
+        requester.email = 'a@a.com'
+        ok = await models.User.change_password(requester, 'oldpwd', 'newpwd')
+        self.assertTrue(ok)
+
+    @patch.object(models.BaseModel, 'get_client', lambda requester:
+                  get_client_mock(None, {'id': 'some-id',
+                                         'email': 'some-email@bla.com'}))
+    @async_test
     async def test_add(self):
         user = await models.User.add('some-email@bla.com',
                                      'some-guy', 'asdf',

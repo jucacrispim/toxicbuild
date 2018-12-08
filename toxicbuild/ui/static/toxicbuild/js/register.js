@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-var TOXIC_USER_API_URL = window.TOXIC_API_URL + 'public/user/';
+var TOXIC_USER_PUBLIC_API_URL = window.TOXIC_API_URL + 'public/user/';
 
 
 class RegisterHandler{
@@ -27,7 +27,7 @@ class RegisterHandler{
 
   async _isAvailable(what){
     let value = $('#' + what).val();
-    let url = TOXIC_USER_API_URL + 'check?' + what + '=' + value;
+    let url = TOXIC_USER_PUBLIC_API_URL + 'check?' + what + '=' + value;
     let r = await $.ajax({'url': url});
     return !r['check-exists'];
   }
@@ -69,7 +69,7 @@ class RegisterHandler{
     let headers = {'X-XSRFToken': xsrf_token};
 
     try{
-      await $.ajax({'url': TOXIC_USER_API_URL, 'type': 'post',
+      await $.ajax({'url': TOXIC_USER_PUBLIC_API_URL, 'type': 'post',
 		    'data': JSON.stringify(data), 'headers': headers});
       this._redir('/');
     }catch(e){

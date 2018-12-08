@@ -1,0 +1,54 @@
+<!-- left side -->
+<div class="settings-left-side col-sm-9">
+  <!-- main area left side -->
+  <div id="user-settings-container">
+    <div id="change-password-container">
+      <div class="form-group col-sm-4">
+
+	<div class="change-password-title">
+	  <h6>{{translate('Change password')}}</h6>
+	</div>
+
+	<input class="form-control" type="password" id="current-password"
+	       placeholder="{{translate('current password')}}">
+	<input class="form-control" type="password" id="new-password"
+	       placeholder="{{translate('new password')}}">
+	<input class="form-control" type="password" id="confirm-new-password"
+	       placeholder="{{translate('confirm new password')}}">
+
+	<div class="col-sm-6">
+	  <button class="btn btn-sm btn-block btn-dark" type="submit"
+		  id="btn-change-password">
+
+	    <span class="spinner icon-spinner-2"
+		  id="change-password-btn-spinner"
+		  style="display:none">
+	    </span>
+	    <span id="change-password-btn-text">
+	      {% raw translate('Change password') %}
+	    </span>
+
+	  </button>
+	</div>
+
+      </div>
+    </div>
+
+
+  </div>
+  <!-- end main area left side -->
+</div>
+
+<!-- righ  side -->
+<div class="settings-right-side col-sm-3">
+  <div>
+    <span>
+      <h5>{{translate('User settings')}}</h5>
+      <p>
+	{{translate('Change your user information here.')}}
+      </p>
+
+    </span>
+  </div>
+</div>
+<!-- end right side -->

@@ -281,6 +281,15 @@ class HoleHandlerTest(TestCase):
         user_id = response['user-authenticate']['id']
         self.assertEqual(str(self.owner.id), user_id)
 
+    @patch.object(hole.User, 'authenticate', AsyncMagicMock(
+        return_value=Mock()))
+    @async_test
+    async def test_user_change_password(self):
+        user = hole.User.authenticate.return_value
+        await self.handler.user_change_password('some@one.net', 'old-password',
+                                                'new-password')
+        self.assertTrue(user.set_password.called)
+
     @async_test
     async def test_user_get(self):
         await self._create_test_data_owner()

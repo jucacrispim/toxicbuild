@@ -22,6 +22,12 @@
 	</a>
       </li>
 
+      <li class="nav-item">
+	<a class="nav-link {% if settings_type == 'user' %} active box-shadow {% end %}" href="/settings/user" data-noroute=true id="manage-user-link">
+	  {{ translate('User settings') }}
+	</a>
+      </li>
+
     </ul>
   </div>
   <!-- end navigation -->
@@ -44,6 +50,10 @@
 
     {% if settings_type == 'ui' %}
       {% include "ui_settings.html" %}
+    {% end %}
+
+    {% if settings_type == 'user' %}
+      {% include "user_settings.html" %}
     {% end %}
 
   </div>

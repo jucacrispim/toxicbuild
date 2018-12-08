@@ -336,6 +336,26 @@ class UserPublicRestHandler(TestCase):
         self.assertTrue(web.User.add.called)
 
 
+class UserRestHandlerTest(TestCase):
+
+    def setUp(self):
+        application, request = MagicMock(), MagicMock()
+        application.ui_methods = {}
+        self.handler = web.UserRestHandler(application, request,
+                                           model=web.User)
+
+    @async_test
+    async def test_change_password(self):
+        self.handler.body = {'username_or_email': 'a@a.com',
+                             'old_password': 'old-password',
+                             'new_password': 'new-password'}
+
+        self.handler.model.change_password = AsyncMagicMock(
+            spec=self.handler.model.change_password, return_value=True)
+        await self.handler.change_password()
+        self.assertTrue(self.handler.model.change_password.called)
+
+
 class ReadOnlyRestHandlerTest(TestCase):
 
     @async_test
@@ -878,6 +898,18 @@ class DashboardHandlerTest(AsyncTestCase):
         called_context = called[0][2]
         expected_keys = []
         self.assertEqual(called_template, self.handler.ui_settings_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_settings_main_template_user(self):
+        settings_type = 'user'
+        self.handler._get_settings_main_template(settings_type)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = []
+        self.assertEqual(called_template, self.handler.user_settings_template)
         self.assertEqual(expected_keys, list(called_context.keys()))
 
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',

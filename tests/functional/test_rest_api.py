@@ -45,6 +45,42 @@ def tearDownModule():
     stop_output()
 
 
+def _do_login():
+    session = requests.session()
+    url = settings.LOGIN_URL
+    session.post(url, data=json.dumps({
+        'username_or_email': 'a@a.com',
+        'password': '123'}))
+    return session
+
+
+class UserRestAPITest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.user = UserDBModel(email='a@a.com',
+                                allowed_actions=['add_repo', 'add_slave'])
+        self.user.set_password('123')
+        await self.user.save()
+        self.session = _do_login()
+
+    @async_test
+    async def tearDown(self):
+        await UserDBModel.drop_collection()
+        self.session.close()
+
+    @async_test
+    async def test_user_change_password(self):
+        url = settings.USER_API_URL
+        data = {'old_password': '123',
+                'new_password': '456'}
+
+        self.session.post(url + 'change-password', data=json.dumps(data))
+
+        r = await type(self.user).authenticate('a@a.com', '456')
+        self.assertTrue(r)
+
+
 class RepositoryRestAPITest(TestCase):
 
     @async_test
@@ -58,11 +94,7 @@ class RepositoryRestAPITest(TestCase):
                                   port=1234, use_ssl=False,
                                   owner=self.user, token='some-token')
         await self.slave.save()
-
-        url = settings.LOGIN_URL
-        self.session.post(url, data=json.dumps({
-            'username_or_email': 'a@a.com',
-            'password': '123'}))
+        self.session = _do_login()
 
     @async_test
     async def tearDown(self):
@@ -158,12 +190,7 @@ class SlaveRestAPITest(TestCase):
                                 allowed_actions=['add_repo', 'add_slave'])
         self.user.set_password('123')
         await self.user.save()
-        self.session = requests.session()
-
-        url = settings.LOGIN_URL
-        self.session.post(url, data=json.dumps({
-            'username_or_email': 'a@a.com',
-            'password': '123'}))
+        self.session = _do_login()
 
     @async_test
     async def tearDown(self):
@@ -212,12 +239,7 @@ class NotificationRestApiTest(TestCase):
         self.user.set_password('123')
         await self.user.save()
 
-        self.session = requests.session()
-
-        url = settings.LOGIN_URL
-        self.session.post(url, data=json.dumps({
-            'username_or_email': 'a@a.com',
-            'password': '123'}))
+        self.session = _do_login()
 
     @async_test
     async def tearDown(self):
