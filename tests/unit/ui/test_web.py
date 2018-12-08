@@ -1244,19 +1244,3 @@ class DashboardHandlerTest(AsyncTestCase):
         self.handler.show_repo_waterfall_template(b'some/repo')
         self.assertTrue(self.handler._get_waterfall_template.called)
         self.assertTrue(self.handler.write.called)
-
-
-class ApplicationTest(unittest.TestCase):
-
-    def test_urls(self):
-        expected = set(['/api/socks/(.*)$',
-                        '/api/repo/(.*)$',
-                        '/api/slave/(.*)$',
-                        '/api/notification/(.*)$',
-                        '/api/user/(.*)$',
-                        '/api/buildset/(.*)$',
-                        '/api/build/(.*)$',
-                        '/api/waterfall/(.*)$'])
-
-        urls = set([url.regex.pattern for url in web.api_app.urls])
-        self.assertEqual(urls, expected)

@@ -286,6 +286,7 @@ class HoleHandlerTest(TestCase):
     @async_test
     async def test_user_change_password(self):
         user = hole.User.authenticate.return_value
+        user.save = AsyncMagicMock()
         await self.handler.user_change_password('some@one.net', 'old-password',
                                                 'new-password')
         self.assertTrue(user.set_password.called)
@@ -1018,42 +1019,6 @@ class HoleHandlerTest(TestCase):
                        in handler._get_action_methods().keys()])
         funcs = sorted(list(funcs.keys()))
         self.assertEqual(funcs, keys)
-
-    def test_get_action_methods(self):
-        handler = hole.HoleHandler({}, 'action', MagicMock())
-        expected = {'list_funcs': handler.list_funcs,
-                    'repo_add': handler.repo_add,
-                    'repo_get': handler.repo_get,
-                    'repo_list': handler.repo_list,
-                    'repo_remove': handler.repo_remove,
-                    'repo_update': handler.repo_update,
-                    'repo_add_slave': handler.repo_add_slave,
-                    'repo_remove_slave': handler.repo_remove_slave,
-                    'repo_add_branch': handler.repo_add_branch,
-                    'repo_remove_branch': handler.repo_remove_branch,
-                    'repo_start_build': handler.repo_start_build,
-                    'repo_cancel_build': handler.repo_cancel_build,
-                    'repo_enable': handler.repo_enable,
-                    'repo_disable': handler.repo_disable,
-                    'slave_add': handler.slave_add,
-                    'slave_get': handler.slave_get,
-                    'slave_list': handler.slave_list,
-                    'slave_remove': handler.slave_remove,
-                    'slave_update': handler.slave_update,
-                    'buildset_list': handler.buildset_list,
-                    'buildset_get': handler.buildset_get,
-                    'builder_list': handler.builder_list,
-                    'builder_show': handler.builder_show,
-                    'build_get': handler.build_get,
-                    'user_add': handler.user_add,
-                    'user_remove': handler.user_remove,
-                    'user_authenticate': handler.user_authenticate,
-                    'user_get': handler.user_get,
-                    'user_exists': handler.user_exists}
-
-        action_methods = handler._get_action_methods()
-
-        self.assertEqual(action_methods, expected)
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
