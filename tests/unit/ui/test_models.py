@@ -187,8 +187,7 @@ class UserTest(TestCase):
         self.assertEqual(user.id, 'some-id')
 
     @patch.object(models.BaseModel, 'get_client', lambda requester:
-                  get_client_mock(None, {'id': 'some-id',
-                                         'email': 'some-email@bla.com'}))
+                  get_client_mock(None, 'ok'))
     @async_test
     async def test_change_password(self):
         requester = MagicMock()
