@@ -9,6 +9,21 @@
     "<no body>": "<sem corpo>",
     "Password confirmation does not match": "Confirmação de senha não bate",
     "Password changed": "Senha alterada",
-    "Error changing password": "Erro alterando senha"
+    "Error changing password": "Erro alterando senha",
+    " updated": " atualizado",
+    "Error updating ": "Erro atualizando ",
+    " removed": " removido",
+    "Error deleting ": "Erro apagando ",
+    "Buildset re-scheduled": "Buildset re-agendado",
+    "Error re-scheduing buildset": "Erro re-agendando buildset",
+    "notification updated": "notificação atualizada",
+    "notification enabled": "notificação habilitada",
+    "Error on notifications": "Erro com notificações",
+    "notification disabled": "notificação desabilitada",
+    "Error disabling notification": "Erro desabilitando notificação",
+    "Repository added": "Repositório adicionado",
+    "Error adding repository": "Erro adicionando repositório",
+    "Slave added": "Escravo adicionado",
+    "Error adding slave": "Erro adicionando escravo"
   }
 }

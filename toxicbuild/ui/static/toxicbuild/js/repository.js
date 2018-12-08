@@ -325,10 +325,10 @@ class RepositoryAddView extends BaseRepositoryView{
     var r;
     try{
       r = await this.model.save();
-      utils.showSuccessMessage('Repository added');
+      utils.showSuccessMessage(i18n('Repository added'));
     }catch(e){
       console.error(e);
-      utils.showErrorMessage('Error adding repository');
+      utils.showErrorMessage(i18n('Error adding repository'));
       return;
     }
     $(document).trigger('obj-added-using-form', r['full_name']);

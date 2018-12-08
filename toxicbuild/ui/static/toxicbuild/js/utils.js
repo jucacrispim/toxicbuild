@@ -135,9 +135,9 @@ var utils = {
     spinner.show();
     try{
       await repo.start_build(branch, null, named_tree);
-      utils.showSuccessMessage('Buildset re-scheduled');
+      utils.showSuccessMessage(i18n('Buildset re-scheduled'));
     }catch(e){
-      utils.showErrorMessage('Error re-scheduling buildset');
+      utils.showErrorMessage(i18n('Error re-scheduling buildset'));
     }
     retry_btn.show();
     spinner.hide();

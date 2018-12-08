@@ -195,10 +195,10 @@ class SlaveAddView extends BaseSlaveDetailsView{
     var r;
     try{
       r = await this.model.save();
-      utils.showSuccessMessage('Slave added');
+      utils.showSuccessMessage(i18n('Slave added'));
     }catch(e){
       console.error(e);
-      utils.showErrorMessage('Error adding slave');
+      utils.showErrorMessage(i18n('Error adding slave'));
       return;
     }
     $(document).trigger('obj-added-using-form', r['full_name']);

@@ -155,20 +155,20 @@ class NotificationConfigView extends Backbone.View{
     try{
       if (enabled){
 	await this.model.update(repo_id, data);
-	utils.showSuccessMessage(this.model.get('pretty_name') +
-				 ' notification updated');
+	utils.showSuccessMessage(this.model.get('pretty_name') + ': ' +
+				 i18n('notification updated'));
 	modal.modal('hide');
       }else{
 	await this.model.enable(repo_id, data);
 	modal.modal('hide');
-	utils.showSuccessMessage(this.model.get('pretty_name') +
-				 ' notification enabled');
+	utils.showSuccessMessage(this.model.get('pretty_name') + ": " +
+				 i18n('notification enabled'));
       }
       check.show();
       this._mergeSaveData(data, true);
     }catch(e){
       modal.modal('hide');
-      utils.showErrorMessage('Error on notifications');
+      utils.showErrorMessage(i18n('Error on notifications'));
     }
   }
 
@@ -179,13 +179,13 @@ class NotificationConfigView extends Backbone.View{
     try{
       await this.model.disable(repo_id);
       modal.modal('hide');
-      utils.showSuccessMessage(this.model.get('pretty_name') +
-			       ' notification disabled');
+      utils.showSuccessMessage(this.model.get('pretty_name') + ': ' +
+			       i18n('notification disabled'));
       this._mergeSaveData({}, false);
       $('#' + name + '-is-enabled').hide();
     }catch(e){
       modal.modal('hide');
-      utils.showErrorMessage('Error disabling notification');
+      utils.showErrorMessage(i18n('Error disabling notification'));
     }
 
   }
