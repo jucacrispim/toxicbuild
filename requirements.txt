@@ -7,7 +7,7 @@ bcrypt==3.1.4
 behave==1.2.5
 blinker==1.4
 Sphinx==1.7.5
-coverage==4.2
+coverage==4.5.2
 cryptography==2.3
 greenlet==0.4.5
 docutils==0.12
