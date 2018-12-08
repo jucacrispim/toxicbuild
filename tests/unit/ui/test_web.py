@@ -18,7 +18,6 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 import tornado
