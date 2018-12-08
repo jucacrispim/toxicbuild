@@ -283,8 +283,11 @@ body{
 
 .navbar-nav .dropdown-menu{
     position: absolute;
-    left: -116px;
-    top: 44px;
+    /* left: -116px; */
+    /* top: 44px; */
+    top: 42px;
+    right: 10px;
+    left: auto;
 }
 
 .navbar-nav .fas{
@@ -315,7 +318,7 @@ body{
   border-right: 6px solid transparent;
   border-bottom: 6px solid #ffffff;
   border-left: 6px solid transparent;
-  content: '';
+  /* content: ''; */
 }
 
 .dropdown-item{

@@ -878,7 +878,7 @@ class DashboardHandler(LoggedTemplateHandler):
         content = self._get_slave_template()
         self.write(content)
 
-    @get('templates/settings/(slaves|repositories|ui)')
+    @get('templates/settings/(slaves|repositories|ui|user)')
     def show_settings_template(self, settings_type):
         settings_type = settings_type.decode()
         content = self._get_settings_template(settings_type)
