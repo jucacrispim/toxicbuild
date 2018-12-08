@@ -344,7 +344,7 @@ class UserRestHandlerTest(TestCase):
                                            model=web.User)
 
     @async_test
-    async def test_change_password(self):
+    async def test_change_user_password(self):
         self.handler.body = {'username_or_email': 'a@a.com',
                              'old_password': 'old-password',
                              'new_password': 'new-password'}
