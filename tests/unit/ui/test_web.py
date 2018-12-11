@@ -353,6 +353,8 @@ class UserPublicRestHandler(TestCase):
         self.assertTrue(self.model.request_password_reset.called_with(
             email, url))
 
+    @patch.object(web.User, 'request_password_reset', AsyncMagicMock(
+        side_effect=web.UserDoesNotExist))
     @async_test
     async def test_request_password_reset_bad_user(self):
         email = 'a@a.com'
@@ -360,8 +362,6 @@ class UserPublicRestHandler(TestCase):
         self.handler.body = {
             'email': email,
             'reset_password_url': url}
-        self.handler.model.request_password_reset = AsyncMagicMock(
-            side_effect=web.UserDoesNotExist)
 
         with self.assertRaises(web.HTTPError):
             await self.handler.request_password_reset()
@@ -378,14 +378,14 @@ class UserPublicRestHandler(TestCase):
         self.assertTrue(self.model.change_password_with_token.called_with(
             token, password))
 
+    @patch.object(web.User, 'change_password_with_token', AsyncMagicMock(
+        side_effect=web.BadResetPasswordToken))
     @async_test
     async def test_change_password_with_token_bad_token(self):
         token = 'asdf'
         password = '123'
         self.handler.body = {'token': token,
                              'password': password}
-        self.handler.model.change_password_with_token = AsyncMagicMock(
-            side_effect=web.BadResetPasswordToken)
 
         with self.assertRaises(web.HTTPError):
             await self.handler.change_password_with_token()
