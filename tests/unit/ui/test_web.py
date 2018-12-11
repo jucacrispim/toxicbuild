@@ -340,6 +340,7 @@ class UserPublicRestHandler(TestCase):
         self.assertTrue(user.to_dict.called)
         self.assertTrue(web.User.add.called)
 
+    @patch.object(web.User, 'request_password_reset', AsyncMagicMock())
     @async_test
     async def test_request_password_reset(self):
         email = 'a@a.com'
@@ -347,7 +348,6 @@ class UserPublicRestHandler(TestCase):
         self.handler.body = {
             'email': email,
             'reset_password_url': url}
-        self.handler.model.request_password_reset = AsyncMagicMock()
         await self.handler.request_password_reset()
 
         self.assertTrue(self.model.request_password_reset.called_with(
