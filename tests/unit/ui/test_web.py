@@ -366,13 +366,13 @@ class UserPublicRestHandler(TestCase):
         with self.assertRaises(web.HTTPError):
             await self.handler.request_password_reset()
 
+    @patch.object(web.User, 'change_password_with_token', AsyncMagicMock())
     @async_test
     async def test_change_password_with_token(self):
         token = 'asdf'
         password = '123'
         self.handler.body = {'token': token,
                              'password': password}
-        self.handler.model.change_password_with_token = AsyncMagicMock()
         await self.handler.change_password_with_token()
 
         self.assertTrue(self.model.change_password_with_token.called_with(
