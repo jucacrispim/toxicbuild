@@ -27,6 +27,10 @@
     "Error adding slave": "Erro adicionando escravo",
     "An email was sent to the address": "Um e-mail foi enviado ao endereço",
     "Error requesting password reset": "Erro requisitando alteração de senha",
-    "Error changing password": "Erro alterando senha"
+    "Error changing password": "Erro alterando senha",
+    "Repository": "Repositório",
+    "Slave": "Escravo",
+    "repository": "repositório",
+    "slave": "escravo"
   }
 }

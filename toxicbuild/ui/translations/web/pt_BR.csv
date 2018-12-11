@@ -23,7 +23,7 @@ Only most recent changes,Somente alterações mais recentes
 Add branch,Adicionar <i>branch</i>
 Cancel,Cancelar
 Delete repository,Excluir repositório
-Are you sure you want to delete this repository? This action can't be undone. Tem certeza que deseja excluir este repositório? Esta ação não pode ser desfeita.
+Are you sure you want to delete this repository? This action can't be undone.,Tem certeza que deseja excluir este repositório? Esta ação não pode ser desfeita.
 Delete,Excluir
 Name,Nome
 Advanced,Avançado
@@ -48,7 +48,7 @@ Notifications are used to send information about builds to third party services.
 You may configure wich <b>branches</b> and <b>statuses</b> trigger notifications.,Você pode configurar quais <i><b>branches</b></i> e status disparam notificações.
 Branch name. You may use wildcards here.,Nome do branch. Você pode usar wildcards aqui.
 Delete slave, Excluir escravo
-Are you sure you want to delete this slave? This action can't be undone.,Tem certeza que quer excluir este escravo? Esta ação não pode ser desfeita.
+Are you sure you want to delete this slave? This action can\'t be undone.,Tem certeza que quer excluir este escravo? Esta ação não pode ser desfeita.
 Host,Host
 Port,Porta
 Use SSL,Usar SSL

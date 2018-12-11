@@ -261,11 +261,11 @@ class BaseFormView extends Backbone.View{
       let changed = this._model_changed;
       await this.model.save(null, {attrs: changed});
       $.extend(this._model_init_values, changed);
-      utils.showSuccessMessage(cls_name + i18n(' updated'));
+      utils.showSuccessMessage(i18n(cls_name) + i18n(' updated'));
     }catch(e){
       console.error(e);
       this._save_btn.prop('disabled', false);
-      utils.showErrorMessage(i18n('Error updating ') + cls_name);
+      utils.showErrorMessage(i18n('Error updating ') + i18n(cls_name));
     }
     this._save_btn_spinner.hide();
     this._save_btn_text.show();
@@ -281,10 +281,10 @@ class BaseFormView extends Backbone.View{
     var error = false;
     try{
       await this.model.remove();
-      utils.showSuccessMessage(cls_name + i18n(' removed'));
+      utils.showSuccessMessage(i18n(cls_name) + i18n(' removed'));
     }catch(e){
       error = true;
-      utils.showErrorMessage(i18n('Error deleting ') + cls_name.toLowerCase());
+      utils.showErrorMessage(i18n('Error deleting ') + i18n(cls_name.toLowerCase()));
     }
     modal.modal('hide');
     modal.on('hidden.bs.modal', function(e){
