@@ -34,7 +34,7 @@ import traceback
 from bson.objectid import ObjectId
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import (LoggerMixin, datetime2string,
-                                   format_timedelta)
+                                   format_timedelta, now, localtime2utc)
 from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder
 from toxicbuild.master.consumers import RepositoryMessageConsumer
@@ -49,7 +49,7 @@ from toxicbuild.master.signals import (step_started, step_finished,
                                        step_output_arrived,
                                        buildset_started, buildset_finished,
                                        buildset_added)
-from toxicbuild.master.users import User, Organization
+from toxicbuild.master.users import User, Organization, ResetUserPasswordToken
 
 
 class UIHole(BaseToxicProtocol, LoggerMixin):
@@ -106,12 +106,25 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
             await handler.handle()
             status = 0
 
+        except User.DoesNotExist:
+            msg = "Invalid user"
+            status = 2
+            await self.send_response(code=status, body={'error': msg})
+            self.close_connection()
+
         except NotEnoughPerms:
             msg = 'User {} does not have enough permissions.'.format(
                 str(self.user.id))
             self.log(msg, level='warning')
             status = 3
             await self.send_response(code=status, body={'error': msg})
+
+        except ResetUserPasswordToken.DoesNotExist:
+            msg = 'Bad reset password token'
+            self.log(msg, level='warning')
+            status = 4
+            await self.send_response(code=status, body={'error': msg})
+
         except Exception:
             msg = traceback.format_exc()
             status = 1
@@ -252,6 +265,30 @@ class HoleHandler:
         user.set_password(new_password)
         await user.save()
         return {'user-change-password': 'ok'}
+
+    async def user_send_reset_password_email(self, email, subject, message):
+        """Sends an email to a user with a link to reset his/her password.
+
+        :param email: The user email.
+        :param subject: The email subject.
+        :param message: The email message.
+        """
+
+        user = await User.objects.get(email=email)
+        obj = await ResetUserPasswordToken.create(user)
+        await obj.send_reset_email(subject, message)
+        return {'user-send-reset-password-email': 'ok'}
+
+    async def user_change_password_with_token(self, token, password):
+
+        n = localtime2utc(now())
+
+        obj = await ResetUserPasswordToken.objects.get(token=token,
+                                                       expires__gte=n)
+        user = await obj.user
+        user.set_password(password)
+        await user.save()
+        return {'user-change-password-with-token': 'ok'}
 
     async def user_get(self, **kw):
         """Returns information about a specific user.

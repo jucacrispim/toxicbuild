@@ -25,6 +25,12 @@
   </head>
 
   <body>
+
+    <script>
+      var TOXIC_API_URL = "{{api_url}}";
+      var STATIC_URL = "{{static_url}}"
+    </script>
+
     <nav class="navbar navbar-dark bg-dark p-0">
 
       <div class="container-fluid toxiclogo-container">
@@ -109,7 +115,8 @@
     </div>
 
     <!-- Include your js in this block. -->
-    {% block js_bottom%}{% end %}
+    {% block js_bottom%}
+    {% end %}
 
   </body>
 

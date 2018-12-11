@@ -21,7 +21,8 @@ import asyncio
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.ui import settings
-from toxicbuild.ui.exceptions import UserDoesNotExist, NotEnoughPerms
+from toxicbuild.ui.exceptions import (UserDoesNotExist, NotEnoughPerms,
+                                      BadResetPasswordToken)
 
 
 class UIHoleClient(BaseToxicClient):
@@ -88,6 +89,9 @@ class UIHoleClient(BaseToxicClient):
 
         if 'code' in response and int(response['code']) == 3:
             raise NotEnoughPerms(response['body']['error'])
+
+        if 'code' in response and int(response['code']) == 4:
+            raise BadResetPasswordToken(response['body']['error'])
 
         return response
 

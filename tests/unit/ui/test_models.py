@@ -196,6 +196,25 @@ class UserTest(TestCase):
         self.assertTrue(ok)
 
     @patch.object(models.BaseModel, 'get_client', lambda requester:
+                  get_client_mock(None, 'ok'))
+    @async_test
+    async def test_change_password_with_token(self):
+        requester = MagicMock()
+        requester.email = 'a@a.com'
+        ok = await models.User.change_password_with_token('token', 'newpwd')
+        self.assertTrue(ok)
+
+    @patch.object(models.BaseModel, 'get_client', lambda requester:
+                  get_client_mock(None, 'ok'))
+    @async_test
+    async def test_request_password_reset(self):
+        requester = MagicMock()
+        requester.email = 'a@a.com'
+        ok = await models.User.request_password_reset(
+            'a@a.com', 'https://bla.nada/reset?token={token}')
+        self.assertTrue(ok)
+
+    @patch.object(models.BaseModel, 'get_client', lambda requester:
                   get_client_mock(None, {'id': 'some-id',
                                          'email': 'some-email@bla.com'}))
     @async_test

@@ -17,12 +17,19 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+from datetime import timedelta
+import secrets
+
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, UUIDField, ListField,
                                ReferenceField, EmbeddedDocumentListField,
-                               BooleanField, EmailField)
+                               BooleanField, EmailField, DateTimeField)
 from mongomotor.queryset import PULL
-from toxicbuild.core.utils import bcrypt_string, compare_bcrypt_string
+
+from toxicbuild.core.mail import MailSender
+from toxicbuild.core.utils import (bcrypt_string, compare_bcrypt_string,
+                                   now, localtime2utc)
+from toxicbuild.master import settings
 from toxicbuild.master.exceptions import InvalidCredentials
 
 
@@ -117,6 +124,53 @@ class User(Document):
 
     def set_password(self, password):
         self.password = bcrypt_string(password)
+
+
+class ResetUserPasswordToken(Document):
+
+    TOKEN_LEN = 64
+
+    user = ReferenceField(User, required=True)
+    email = StringField(required=True)
+    token = StringField(required=True)
+    expires = DateTimeField(required=True)
+
+    @classmethod
+    async def create(cls, user):
+        """Creates a new reset token for a given user.
+
+        :param user: An instance of :class:`~toxicbuild.master.users.User`
+        """
+
+        token = secrets.token_urlsafe(cls.TOKEN_LEN)
+        expires = localtime2utc(now()) + timedelta(days=1)
+        obj = cls(user=user, token=token, expires=expires, email=user.email)
+        await obj.save()
+        return obj
+
+    def _get_smtp_settings(self):
+        smtp_settings = {'host': settings.SMTP_HOST,
+                         'port': settings.SMTP_PORT,
+                         'mail_from': settings.SMTP_MAIL_FROM,
+                         'username': settings.SMTP_USERNAME,
+                         'password': settings.SMTP_PASSWORD,
+                         'validate_certs': settings.SMTP_VALIDATE_CERTS,
+                         'starttls': settings.SMTP_STARTTLS}
+        return smtp_settings
+
+    async def send_reset_email(self, subject, msg):
+        """Sends an email with information on how to reset a password.
+
+        :param recipient: The recipient email address.
+        :param subject: The subject of the e-mail.
+        :param msg: The body of the email. If you have a {token} field
+          in the body, the expire token will be included. It usually is
+          is inserted in the reset url."""
+
+        body = msg.format(token=self.token)
+        smtp_settings = self._get_smtp_settings()
+        async with MailSender([self.email], **smtp_settings) as sender:
+            await sender.send(subject, body)
 
 
 class Team(EmbeddedDocument):

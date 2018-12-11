@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+var TOXIC_USER_PUBLIC_API_URL = window.TOXIC_API_URL + 'public/user/';
+
 var RED = 'rgb(226, 112, 123)';
 
 function _disable_button(){
@@ -59,6 +61,12 @@ function getRedir(){
   return params.get('redirect') || '/';
 }
 
+function _getHeaders(){
+  let xsrf_token = Cookies.get('_xsrf');
+  let headers = {'X-XSRFToken': xsrf_token};
+  return headers;
+}
+
 async function doLogin(_location=null){
   let form = jQuery('#form-signin');
   let location = _location || window.location;
@@ -69,8 +77,7 @@ async function doLogin(_location=null){
 
   _disable_button();
 
-  let xsrf_token = Cookies.get('_xsrf');
-  let headers = {'X-XSRFToken': xsrf_token};
+  let headers = _getHeaders();
   let username_or_email = jQuery('#inputUsername').val().trim();
   let password = jQuery('#inputPassword').val().trim();
 
@@ -94,6 +101,80 @@ async function doLogin(_location=null){
     r = false;
   };
   return r;
+}
+
+function _getResetPasswordURL(){
+  let protocol = window.location.protocol;
+  let hostname = window.location.hostname;
+  let path = '/reset-password?token={token}';
+
+  let url = protocol + '//' + hostname + path;
+  return url;
+}
+
+async function requestChangePassword(){
+  let url = TOXIC_USER_PUBLIC_API_URL + 'request-password-reset';
+  let email = $('#change-password-email').val();
+  let reset_url = _getResetPasswordURL();
+  let headers = _getHeaders();
+  let data = {url: url, data: JSON.stringify({email: email,
+					      reset_password_url: reset_url}),
+	      headers: headers,
+	      type: 'post'};
+
+  let modal = $('#forgotPasswordModal');
+  try{
+    await $.ajax(data);
+    modal.modal('hide');
+    utils.showSuccessMessage(i18n(
+      'An email was sent to the address'));
+  }catch(e){
+    modal.modal('hide');
+    if (e.status == 400){
+      utils.showErrorMessage(i18n('This email does not have an account'));
+    }else{
+      utils.showErrorMessage(i18n('Error requesting password reset'));
+    }
+  }
+}
+
+
+async function changePasswordWithToken(){
+  let url = TOXIC_USER_PUBLIC_API_URL + 'change-password-with-token';
+
+  let passwd = $('#inputPassword').val();
+  let confirm = $('#inputPasswordConfirm').val();
+
+  if (passwd != confirm){
+    utils.showErrorMessage(i18n('Password confirmation does not match'));
+    return;
+  }
+
+  let token = $('#token').val();
+  let headers = _getHeaders();
+  let json_data = JSON.stringify({'password': passwd,
+				  'token': token});
+  let data = {url: url, data: json_data,
+	      headers: headers,
+	      type: 'post'};
+
+  $('#change-password-btn-text').hide();
+  $('#change-password-btn-spinner').show();
+  try{
+    await $.ajax(data);
+    $('#change-password-input-container').hide();
+    $('#password-changed-message').show();
+  }catch(e){
+    if (e.status == 400){
+      utils.showErrorMessage(i18n('Invalid token'));
+    }else{
+      utils.showErrorMessage(i18n('Error changing password'));
+    }
+  }
+
+  $('#change-password-btn-text').show();
+  $('#change-password-btn-spinner').hide();
+
 }
 
 // Connecting to events
@@ -124,4 +205,18 @@ jQuery('#form-signin').validate({
 // button action
 jQuery('#btn-login').on('click', function(){
   doLogin();
+});
+
+
+$('#btn-request-password-reset').on('click', function(){
+  requestChangePassword();
+});
+
+$('#forgotPasswordModal').on('show.bs.modal', function(){
+  $('#change-password-email').val('');
+});
+
+
+$('#btn-change-password').on('click', function(){
+  changePasswordWithToken();
 });

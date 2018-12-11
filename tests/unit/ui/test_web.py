@@ -222,6 +222,12 @@ class LoginHandlerTest(TestCase):
         template = self.handler.render_template.call_args[0][0]
         self.assertEqual(template, self.handler.login_template)
 
+    def test_show_reset_password_page(self):
+        self.handler.render_template = MagicMock()
+        self.handler.show_reset_password_page()
+        template = self.handler.render_template.call_args[0][0]
+        self.assertEqual(template, self.handler.reset_password_template)
+
 
 @patch.object(models.Repository, 'get_client', AsyncMagicMock(
     spec=models.Repository.get_client, return_value=MagicMock()))
@@ -333,6 +339,56 @@ class UserPublicRestHandler(TestCase):
         user = web.User.add.return_value
         self.assertTrue(user.to_dict.called)
         self.assertTrue(web.User.add.called)
+
+    @async_test
+    async def test_request_password_reset(self):
+        email = 'a@a.com'
+        url = 'http://bla.nada/reset?token={token}'
+        self.handler.body = {
+            'email': email,
+            'reset_password_url': url}
+        self.handler.model.request_password_reset = AsyncMagicMock()
+        await self.handler.request_password_reset()
+
+        self.assertTrue(self.model.request_password_reset.called_with(
+            email, url))
+
+    @async_test
+    async def test_request_password_reset_bad_user(self):
+        email = 'a@a.com'
+        url = 'http://bla.nada/reset?token={token}'
+        self.handler.body = {
+            'email': email,
+            'reset_password_url': url}
+        self.handler.model.request_password_reset = AsyncMagicMock(
+            side_effect=web.UserDoesNotExist)
+
+        with self.assertRaises(web.HTTPError):
+            await self.handler.request_password_reset()
+
+    @async_test
+    async def test_change_password_with_token(self):
+        token = 'asdf'
+        password = '123'
+        self.handler.body = {'token': token,
+                             'password': password}
+        self.handler.model.change_password_with_token = AsyncMagicMock()
+        await self.handler.change_password_with_token()
+
+        self.assertTrue(self.model.change_password_with_token.called_with(
+            token, password))
+
+    @async_test
+    async def test_change_password_with_token_bad_token(self):
+        token = 'asdf'
+        password = '123'
+        self.handler.body = {'token': token,
+                             'password': password}
+        self.handler.model.change_password_with_token = AsyncMagicMock(
+            side_effect=web.BadResetPasswordToken)
+
+        with self.assertRaises(web.HTTPError):
+            await self.handler.change_password_with_token()
 
 
 class UserRestHandlerTest(TestCase):

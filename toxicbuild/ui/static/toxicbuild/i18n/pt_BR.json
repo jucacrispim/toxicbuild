@@ -24,6 +24,9 @@
     "Repository added": "Repositório adicionado",
     "Error adding repository": "Erro adicionando repositório",
     "Slave added": "Escravo adicionado",
-    "Error adding slave": "Erro adicionando escravo"
+    "Error adding slave": "Erro adicionando escravo",
+    "An email was sent to the address": "Um e-mail foi enviado ao endereço",
+    "Error requesting password reset": "Erro requisitando alteração de senha",
+    "Error changing password": "Erro alterando senha"
   }
 }

@@ -81,6 +81,39 @@ class UIHoleTest(TestCase):
         status = await uihole.client_connected()
         self.assertEqual(status, 2)
 
+    @patch.object(hole.HoleHandler, 'handle', MagicMock())
+    @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
+    @async_test
+    async def test_client_connected_user_does_not_exist_handle(self):
+        send_response = MagicMock()
+        hole.BaseToxicProtocol.send_response = asyncio.coroutine(
+            lambda *a, **kw: send_response(*a, **kw))
+        hole.HoleHandler.handle = AsyncMagicMock(
+            side_effect=hole.User.DoesNotExist)
+        uihole = hole.UIHole(Mock())
+        uihole._stream_writer = Mock()
+        uihole._get_user = AsyncMagicMock()
+        uihole.data = {}
+        status = await uihole.client_connected()
+        self.assertEqual(status, 2)
+
+    @patch.object(hole.HoleHandler, 'handle', MagicMock())
+    @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
+    @async_test
+    async def test_client_connected_bad_reset_token(self):
+        send_response = MagicMock()
+        hole.BaseToxicProtocol.send_response = asyncio.coroutine(
+            lambda *a, **kw: send_response(*a, **kw))
+        hole.HoleHandler.handle = AsyncMagicMock(
+            side_effect=hole.ResetUserPasswordToken.DoesNotExist)
+        uihole = hole.UIHole(Mock())
+        uihole._stream_writer = Mock()
+        uihole.log = Mock()
+        uihole._get_user = AsyncMagicMock()
+        uihole.data = {}
+        status = await uihole.client_connected()
+        self.assertEqual(status, 4)
+
     @patch.object(hole, 'UIStreamHandler', Mock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
     @async_test
@@ -290,6 +323,33 @@ class HoleHandlerTest(TestCase):
         await self.handler.user_change_password('some@one.net', 'old-password',
                                                 'new-password')
         self.assertTrue(user.set_password.called)
+
+    @patch.object(hole, 'User', AsyncMagicMock())
+    @patch.object(hole, 'ResetUserPasswordToken', AsyncMagicMock())
+    @async_test
+    async def test_user_send_reset_password_email(self):
+        email = 'a@a.com'
+        subject = 'email subject'
+        message = 'email message'
+        await self.handler.user_send_reset_password_email(email, subject,
+                                                          message)
+        obj = hole.ResetUserPasswordToken.create.return_value
+        self.assertTrue(obj.send_reset_email.called_with('subject, message'))
+
+    @patch.object(hole.ResetUserPasswordToken, 'objects', AsyncMagicMock())
+    @async_test
+    async def test_user_change_password_with_token(self):
+        user = hole.User()
+        user.save = AsyncMagicMock()
+        user.set_password = Mock()
+        obj = hole.ResetUserPasswordToken(user=user)
+        hole.ResetUserPasswordToken.objects.get.return_value = obj
+
+        await self.handler.user_change_password_with_token(
+            'some-token', '123')
+
+        self.assertTrue(user.set_password.called)
+        self.assertTrue(user.save.called)
 
     @async_test
     async def test_user_get(self):

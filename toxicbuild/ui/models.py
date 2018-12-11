@@ -176,6 +176,43 @@ class User(BaseModel):
         return True
 
     @classmethod
+    async def request_password_reset(cls, email, reset_link):
+        """Request the reset of the user's password. Sends an
+        email with a link to reset the password.
+        """
+        subject = 'Reset password requested'
+
+        message = "Follow the link {} to reset your password.".format(
+            reset_link)
+
+        requester = cls._get_root_user()
+        kw = {'email': email,
+              'subject': subject,
+              'message': message}
+
+        with (await cls.get_client(requester)) as client:
+            await client.user_send_reset_password_email(**kw)
+
+        return True
+
+    @classmethod
+    async def change_password_with_token(cls, token, password):
+        """Changes the user password using a token. The token
+        was generated when ``request_password_reset`` was called and
+        a link with the token was sent to the user email.
+        """
+
+        kw = {'token': token,
+              'password': password}
+
+        requester = cls._get_root_user()
+
+        with (await cls.get_client(requester)) as client:
+            await client.user_change_password_with_token(**kw)
+
+        return True
+
+    @classmethod
     async def add(cls, email, username, password,
                   allowed_actions):
         requester = cls._get_root_user()

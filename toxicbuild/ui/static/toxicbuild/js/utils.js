@@ -164,7 +164,6 @@ var utils = {
     if (!locale){
       return false;
     }
-
     if (locale == 'en_US'){
       i18n.translator.reset();
       return true;

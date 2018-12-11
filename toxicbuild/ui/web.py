@@ -33,7 +33,8 @@ from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.core.utils import LoggerMixin, string2datetime
 from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
-from toxicbuild.ui.exceptions import BadSettingsType
+from toxicbuild.ui.exceptions import (BadSettingsType, UserDoesNotExist,
+                                      BadResetPasswordToken)
 from toxicbuild.ui.models import (Repository, Slave, User, Notification,
                                   BuildSet, Builder, Build)
 from toxicbuild.ui.utils import (format_datetime, is_datetime,
@@ -189,11 +190,19 @@ class RegisterHandler(BaseNotLoggedTemplate):
 class LoginHandler(BaseNotLoggedTemplate):
 
     login_template = 'toxictheme/login.html'
+    reset_password_template = 'toxictheme/reset_password.html'
 
     @get('login')
     def show_login_page(self):
         self.set_xsrf_cookie()
         self.render_template(self.login_template, {})
+        return ''
+
+    @get('reset-password')
+    def show_reset_password_page(self):
+        self.set_xsrf_cookie()
+        token = self.get_argument('token', None)
+        self.render_template(self.reset_password_template, {'token': token})
         return ''
 
     @post('login')
@@ -311,6 +320,26 @@ class UserPublicRestHandler(ModelRestHandler):
         self.set_secure_cookie(COOKIE_NAME, content)
         return {'user-add': r.to_dict(dtformat=self._dtformat,
                                       tzname=self._tzname)}
+
+    @post('request-password-reset')
+    async def request_password_reset(self):
+        email = self.body['email']
+        url = self.body['reset_password_url']
+        try:
+            await self.model.request_password_reset(email, url)
+        except UserDoesNotExist:
+            raise HTTPError(400)
+        return {'request-password-reset': True}
+
+    @post('change-password-with-token')
+    async def change_password_with_token(self):
+        token = self.body['token']
+        password = self.body['password']
+        try:
+            await self.model.change_password_with_token(token, password)
+        except BadResetPasswordToken:
+            raise HTTPError(400)
+        return {'change-password-with-token': True}
 
 
 class UserRestHandler(CookieAuthHandlerMixin, ModelRestHandler):
@@ -919,7 +948,7 @@ class DashboardHandler(LoggedTemplateHandler):
 
 dashboard = URLSpec('/(.*)$', DashboardHandler)
 
-login = URLSpec('/(login|logout)', LoginHandler)
+login = URLSpec('/(login|logout|reset-password)', LoginHandler)
 register = URLSpec('/(register)', RegisterHandler)
 
 app = PyroApplication([register, login, dashboard])

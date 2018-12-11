@@ -298,6 +298,10 @@ body{
     color: #ccc;
 }
 
+#password-changed-message{
+    display: none;
+}
+
 .dropdown-arrow:before {
   position: absolute;
   top: -7px;
