@@ -79,14 +79,14 @@
 
       <!-- Error alert -->
       {% block messages %}
-      <div class="alert alert-danger alert-dismissible box-shadow-black col-sm-4"
+      <div class="alert alert-danger alert-dismissible box-shadow-black "
 	   role="alert">
 
 	<div class="alert-inner-container">
 	  <span class="fas fa-exclamation-triangle"></span>
 	  <div id="error-container" class="message-container">
 	  </div>
-	  <button type="button" class="close close-msg" data-dismiss="alert"
+	  <button type="button" class="close close-msg"
 		  aria-label="Close"><span aria-hidden="true">&times;</span>
 	  </button>
 	</div>
@@ -94,13 +94,13 @@
       </div>
 
       <!-- Success alert -->
-      <div class="alert alert-success alert-dismissible box-shadow-black col-sm-4"
+      <div class="alert alert-success alert-dismissible box-shadow-black"
 	   role="alert">
 	<span class="fas fa-check-circle"></span>
 	<div class="alert-inner-container">
 	  <div id="success-container" class="message-container">
 	  </div>
-	  <button type="button" class="close close-msg" data-dismiss="alert"
+	  <button type="button" class="close close-msg"
 		  aria-label="Close"><span aria-hidden="true">&times;</span>
 	  </button>
 	</div>
@@ -116,8 +116,20 @@
 
     <!-- Include your js in this block. -->
     {% block js_bottom%}
+    <script src="{{static_url}}jquery/jquery.min.js"></script>
+    <script src="{{static_url}}toxicbuild/js/utils.js"></script>
     {% end %}
 
+    <script>
+      $('.alert-success .close').on('click', function(){
+	utils.hideSuccessMessage();
+      });
+
+      $('.alert-danger .close').on('click', function(){
+	utils.hideErrorMessage();
+      });
+
+    </script>
   </body>
 
 </html>

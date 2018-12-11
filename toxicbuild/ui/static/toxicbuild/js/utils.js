@@ -20,12 +20,13 @@ TOXICDEBUG = false;
 SETTIMEOUT_MILIS = 5000;
 
 var utils = {
-  success_message: jQuery('.alert-success'),
   error_message: jQuery('.alert-danger'),
+  success_message: jQuery('.alert-success'),
 
-  hideSuccessMessage: function(message_container){
+
+  hideSuccessMessage: function(){
     var self = this;
-    message_container.fadeOut();
+    self.success_message.fadeOut();
   },
 
   sleep: function(ms) {
@@ -36,20 +37,20 @@ var utils = {
     var self = this;
     jQuery('#success-container').text(message);
     self.success_message.fadeIn();
-    setTimeout(function(){self.hideSuccessMessage(self.success_message);},
+    setTimeout(function(){self.hideSuccessMessage();},
 	       SETTIMEOUT_MILIS);
   },
 
   hideErrorMessage: function(message_container){
     var self = this;
-    message_container.fadeOut();
+    self.error_message.fadeOut();
   },
 
   showErrorMessage: function(message){
     var self = this;
     jQuery('#error-container').text(message);
     self.error_message.fadeIn();
-    setTimeout(function(){self.hideErrorMessage(self.error_message);},
+    setTimeout(function(){self.hideErrorMessage();},
 	       SETTIMEOUT_MILIS);
   },
 
