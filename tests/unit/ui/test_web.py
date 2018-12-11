@@ -399,14 +399,14 @@ class UserRestHandlerTest(TestCase):
         self.handler = web.UserRestHandler(application, request,
                                            model=web.User)
 
+    @patch.object(web.User, 'change_password', AsyncMagicMock(
+        return_value=None))
     @async_test
     async def test_change_user_password(self):
         self.handler.body = {'username_or_email': 'a@a.com',
                              'old_password': 'old-password',
                              'new_password': 'new-password'}
 
-        self.handler.model.change_password = AsyncMagicMock(
-            spec=self.handler.model.change_password, return_value=True)
         await self.handler.change_password()
         self.assertTrue(self.handler.model.change_password.called)
 
