@@ -19,7 +19,7 @@ pyyaml==3.10
 mongomotor==0.14.0
 motor==2.0.0
 mongoengine==0.15.0
-asyncblink==0.3.1
+asyncblink==0.3.2
 mando==0.6.4
 pep8==1.6.2
 tornado==5.0.2
