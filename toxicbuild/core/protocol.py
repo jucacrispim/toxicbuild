@@ -18,10 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-try:
-    from asyncio import ensure_future
-except ImportError:  # pragma: no cover
-    from asyncio import async as ensure_future
+from asyncio import ensure_future
 from collections import OrderedDict
 import json
 import time

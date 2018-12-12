@@ -23,10 +23,7 @@
 # !!!!!!
 
 import asyncio
-try:
-    from asyncio import async as ensure_future
-except ImportError:  # pragma no cover
-    from asyncio import ensure_future
+from asyncio import ensure_future
 
 from asyncblink import signal
 from toxicbuild.core.utils import LoggerMixin
