@@ -42,6 +42,7 @@ DEFAULT_SETTINGS = 'toxicoutput.conf'
 
 dbconn = None
 settings = None
+pyrocommand = None
 
 
 def create_settings_and_connect():
@@ -260,16 +261,17 @@ def stop(workdir, pidfile=PIDFILE, kill=False):
 
 
 @command
-def restart(workdir, pidfile=PIDFILE):
+def restart(workdir, pidfile=PIDFILE, loglevel='info'):
     """Restarts toxicbuild output
 
     The instance of toxicoutput in ``workdir`` will be restarted.
     :param workdir: Workdir for instance to be killed.
     :param --pidfile: Name of the file to use as pidfile.
+    :param --loglevel: Level for logging messages.
     """
 
     stop(workdir, pidfile=pidfile)
-    start(workdir, pidfile=pidfile, daemonize=True)
+    start(workdir, pidfile=pidfile, daemonize=True, loglevel=loglevel)
 
 
 @command

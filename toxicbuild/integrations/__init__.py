@@ -25,7 +25,6 @@ import os
 import pkg_resources
 import shutil
 import sys
-from pyrocumulus.commands.base import get_command
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import changedir, SettingsPatcher
@@ -36,6 +35,7 @@ ENVVAR = 'TOXICINTEGRATIONS_SETTINGS'
 DEFAULT_SETTINGS = 'toxicintegrations.conf'
 
 settings = None
+pyrocommand = None
 
 
 def create_settings():
@@ -155,6 +155,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         create_settings()
         SettingsPatcher().patch_pyro_settings(settings)
 
+        from pyrocumulus.commands.base import get_command
         from toxicbuild.master.exchanges import connect_exchanges
 
         loop = asyncio.get_event_loop()
@@ -164,7 +165,12 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
 
         sys.argv = ['pyromanager.py', '']
 
-        command = get_command('runtornado')()
+        global pyrocommand
+
+        if not pyrocommand:
+            pyrocommand = command = get_command('runtornado')()
+        else:
+            command = pyrocommand
 
         command.kill = False
         user_msg = 'Starting ToxicIntegrations. Listening on port {}'
@@ -214,9 +220,16 @@ def stop(workdir, pidfile=PIDFILE):
         create_settings()
         SettingsPatcher().patch_pyro_settings(settings)
 
+        from pyrocumulus.commands.base import get_command
+
         sys.argv = ['pyromanager.py', '']
 
-        command = get_command('runtornado')()
+        global pyrocommand
+
+        if not pyrocommand:
+            pyrocommand = command = get_command('runtornado')()
+        else:
+            command = pyrocommand
 
         command.pidfile = pidfile
         command.kill = True
@@ -224,16 +237,17 @@ def stop(workdir, pidfile=PIDFILE):
 
 
 @command
-def restart(workdir, pidfile=PIDFILE):
+def restart(workdir, pidfile=PIDFILE, loglevel='info'):
     """Restarts toxicmaster integrations
 
     The instance of toxicintegrations in ``workdir`` will be restarted.
     :param workdir: Workdir for instance to be killed.
     :param --pidfile: Name of the file to use as pidfile.
+    :param --loglevel: Level for logging messages.
     """
 
     stop(workdir, pidfile=pidfile)
-    start(workdir, pidfile=pidfile, daemonize=True)
+    start(workdir, pidfile=pidfile, daemonize=True, loglevel=loglevel)
 
 
 if __name__ == '__main__':

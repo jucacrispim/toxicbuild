@@ -25,7 +25,6 @@ from toxicbuild.core.cmd import command, main
 from toxicbuild.integrations import create as create_integrations
 from toxicbuild.master import create as create_master
 from toxicbuild.master import create_user
-from toxicbuild.master import create_settings_and_connect
 from toxicbuild.output import create as create_output, create_auth_token
 from toxicbuild.slave import create as create_slave
 from toxicbuild.ui import create as create_ui
@@ -98,16 +97,18 @@ def stop(workdir):  # pragma no cover
 
 
 @command
-def restart(workdir):
+def restart(workdir, loglevel='info'):
     """Restarts toxicbuild
 
     The instances of master, slave and web ui in ``workdir`` will be restarted.
 
     :param workdir: Workdir for master to be killed.
+    :param --loglevel: Level for logging messages.
     """
 
-    stop(workdir)
-    start(workdir)
+    # daemonize=False because we don't use the --daemonize param for
+    # restart as it is ALWAYS daemonized anyway
+    _call_processes(workdir, loglevel, daemonize=False)
 
 
 def _run_slave(workdir, loglevel, daemonize):

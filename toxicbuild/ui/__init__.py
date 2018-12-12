@@ -170,16 +170,17 @@ def stop(workdir, pidfile=None):
 
 
 @command
-def restart(workdir, pidfile=None):
+def restart(workdir, pidfile=None, loglevel='info'):
     """Restarts the web interface
 
     The instance of toxicweb in ``workdir`` will be restarted.
     :param workdir: Workdir for master to be killed.
     :param --pidfile: Name of the file to use as pidfile.
+    :param --loglevel: Level for logging messages.
     """
 
     stop(workdir, pidfile=pidfile)
-    start(workdir, pidfile=pidfile, daemonize=True)
+    start(workdir, pidfile=pidfile, daemonize=True, loglevel=loglevel)
 
 
 @command
