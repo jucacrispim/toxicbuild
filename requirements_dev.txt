@@ -1,6 +1,6 @@
-aiohttp==1.0.5
+aiohttp==3.4.4
 aiozk==0.7.0
-aioamqp==0.10.0
+aioamqp==0.12.0
 asyncamqp==0.1.4
 aiosmtplib==1.0.2
 alabaster==0.7.10
@@ -43,7 +43,7 @@ mando==0.6.4
 MarkupSafe==1.0
 mccabe==0.3.1
 mock==1.0.1
-mongoengine==0.15.0
+mongoengine==0.16.3
 mongomotor==0.14.0
 motor==2.0.0
 multidict==2.1.2
@@ -60,7 +60,7 @@ pycodestyle==2.2.0
 pycparser==2.14
 pyflakes==1.2.3
 Pygments==2.0.2
-pymongo==3.7.1
+pymongo==3.7.2
 pyrocumulus==0.12.2
 PyJWT==1.5.3
 pytz==2018.4

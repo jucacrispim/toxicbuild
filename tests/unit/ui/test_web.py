@@ -21,7 +21,6 @@ import asyncio
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 import tornado
-from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.ui import web, models, utils
 from tests import AsyncMagicMock, async_test, create_autospec
 
@@ -725,7 +724,7 @@ class NotificationRestHandlerTest(TestCase):
 
 
 @patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
-class StreamHandlerTest(AsyncTestCase):
+class StreamHandlerTest(TestCase):
 
     def setUp(self):
         super().setUp()
@@ -775,8 +774,8 @@ class StreamHandlerTest(AsyncTestCase):
         self.assertTrue(self.handler.repo_id)
         self.assertEqual(self.handler.action, 'repo-status')
 
-    @gen_test
-    def test_receiver(self):
+    @async_test
+    async def test_receiver(self):
         sender = MagicMock()
         message = {'event_type': 'build_started'}
         sbi = MagicMock()
@@ -786,12 +785,12 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler.events['build_started'] = self.handler._send_build_info
         self.handler.action = 'builds'
         self.handler.receiver(sender, **message)
-        yield from asyncio.sleep(0.001)
+        await asyncio.sleep(0.001)
         self.assertTrue(sbi.called)
 
     @patch.object(web.traceback, 'format_exc', MagicMock())
-    @gen_test
-    def test_receiver_exception(self):
+    @async_test
+    async def test_receiver_exception(self):
         sender = MagicMock()
         message = {'event_type': 'build_started'}
         sbi = MagicMock(side_effect=Exception)
@@ -802,7 +801,7 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler.action = 'builds'
         self.handler.log = MagicMock()
         self.handler.receiver(sender, **message)
-        yield from asyncio.sleep(0.001)
+        await asyncio.sleep(0.001)
         self.assertTrue(sbi.called)
         self.assertTrue(web.traceback.format_exc.called)
         self.assertTrue(self.handler.log.called)
@@ -866,7 +865,6 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler._send_step_output_info(info)
         self.assertFalse(self.handler.write2sock.called)
 
-    @gen_test
     def test_send_build_info(self):
         self.handler.request.arguments = {
             'repository_id': ['1'.encode('utf-8')]}
@@ -877,7 +875,6 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler._send_build_info(info)
         self.assertTrue(self.handler.write2sock.called)
 
-    @gen_test
     def test_send_raw_info(self):
         info = {'event_type': 'repo_status_changed',
                 'status': 'other'}
@@ -887,7 +884,7 @@ class StreamHandlerTest(AsyncTestCase):
         self.assertTrue(self.handler.write2sock.called)
 
 
-class DashboardHandlerTest(AsyncTestCase):
+class DashboardHandlerTest(TestCase):
 
     def setUp(self):
         super().setUp()

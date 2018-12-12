@@ -1,6 +1,6 @@
-aiohttp==1.0.5
+aiohttp==3.4.4
 aiozk==0.7.0
-aioamqp==0.10.0
+aioamqp==0.12.0
 asyncamqp==0.1.4
 aiosmtplib==1.0.2
 bcrypt==3.1.4
@@ -18,7 +18,7 @@ pylint-mongoengine==0.2.1
 pyyaml==3.10
 mongomotor==0.14.0
 motor==2.0.0
-mongoengine==0.15.0
+mongoengine==0.16.3
 asyncblink==0.3.2
 mando==0.6.4
 pep8==1.6.2
@@ -32,7 +32,7 @@ flake8==2.4.1
 twine==1.8.1
 xenon==0.5.4
 cffi==1.11.5
-pymongo==3.7.1
+pymongo==3.7.2
 jasmine==3.1.1
 jasmine-core==3.1.0
 toxicjasmine==0.1.1
