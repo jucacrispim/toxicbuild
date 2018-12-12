@@ -71,7 +71,7 @@ def _request(method, url, **kwargs):
         text = yield from resp.text()
         yield from resp.release()
     finally:
-        client.close()
+        yield from client.close()
 
     return Response(status, text)
 

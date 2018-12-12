@@ -238,7 +238,7 @@ class BuildsetTest(BaseUITest):
             await self.repo.delete()
 
         if hasattr(self, 'slave'):
-            await  self.slave.delete()
+            await self.slave.delete()
 
         await self.user.delete()
 

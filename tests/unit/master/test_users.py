@@ -217,6 +217,6 @@ class ResetUserPasswordTokenTest(TestCase):
         sender = AsyncMagicMock()
         users.MailSender.return_value = sender
 
-        await  obj.send_reset_email('he', 'ho {token}')
+        await obj.send_reset_email('he', 'ho {token}')
 
         self.assertTrue(sender.send.called)

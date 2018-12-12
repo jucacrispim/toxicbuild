@@ -251,6 +251,7 @@ class NotificationRestApiTest(TestCase):
         url = settings.NOTIFICATION_API_URL + 'custom-webhook/some-id'
         data = {'webhook_url': 'http://bla.nada'}
         r = self.session.post(url, data=json.dumps(data))
+        r.connection.close()
         self.assertTrue(r.status_code, 200)
 
     def test_disable(self):
@@ -258,7 +259,9 @@ class NotificationRestApiTest(TestCase):
 
         data = {'webhook_url': 'http://bla.nada'}
         r = self.session.post(url, data=json.dumps(data))
+        r.connection.close()
         self.assertTrue(r.status_code, 200)
 
         r = self.session.delete(url)
+        r.connection.close()
         self.assertTrue(r.status_code, 200)
