@@ -85,3 +85,6 @@ New to ToxicBuild?,Novo no ToxicBuild?
 Sign up!,Cadastre-se!
 Insert your email,Insira seu e-mail
 Password changed. Go to the <a href="/login">login page</a>,Senha alterada. Vá para a <a href="/login"> página de login</a>
+Welcome to ToxicBuild,Bem-vindo ao ToxicBuild
+You have no enabled repositories.,Você não tem repositórios habilitados.
+<a href="/repository/add">Add</a> or <a href="#">import</a> to start or <a href="/settings/repositories">manage</a> your repositories.,<a href="/repository/add">Adicione</a> ou <a href="#">importe</a> para começar ou <a href="/settings/repositories">gerencie</a> seus repositórios.
