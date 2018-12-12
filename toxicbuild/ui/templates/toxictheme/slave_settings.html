@@ -1,0 +1,76 @@
+<!-- template container -->
+<div class="template">
+  <ul id="slave-list-ul">
+    <!-- The item template -->
+    <li class="slave-info box-white box-shadow slave-status-ready">
+	<!-- header -->
+	<div class="slave-info-header dropdown">
+	  <span class="fas fa-ellipsis-h dropdown-toggle"
+		id="dropdown-menu-ellipsis"
+		data-toggle="dropdown"></span>
+
+	  <div class="dropdown-menu dropdown-menu-right box-shadow-gray"
+	       aria-labelledby="dropdown-menu-ellipsis">
+	    <a class="dropdown-item slave-details-link" href="">
+	      {{translate('Settings')}}
+	    </a>
+	  </div>
+	</div>
+	<!-- end header -->
+
+	<!-- first row-->
+	<div class="slave-info-row slave-info-first-row">
+	  <!-- slave name -->
+	  <div class="slave-info-container slave-info-name-container">
+	    <span class="slave-info-name"></span>
+	  </div>
+	  <!-- slave repo name -->
+	  <!-- slave address -->
+	  <div class="slave-info-container slave-info-address">
+	    <span class="slave-info-host"></span>:<span class="slave-info-port"></span>
+	  </div>
+	  <!-- end slave address -->
+	</div>
+	<!-- end first row -->
+    </li>
+    <!-- end item template -->
+  </ul>
+</div>
+<!-- end template container -->
+
+
+<!-- left side -->
+<div class="settings-left-side col-sm-9">
+  <div class="top-page-slaves-info-container top-page-header-info-container">
+    <!-- add icon -->
+    <a href="/slave/add" class="no-decoration">
+      <span class="fas fa-plus" data-toogle="tooltip" title="Add"></span>
+    </a>
+    <!-- end add icon -->
+  </div>
+  <!-- main area left side -->
+  <div id="slave-list-container">
+  </div>
+  <!-- end main area left side -->
+</div>
+
+<!-- righ  side -->
+<div class="settings-right-side col-sm-3">
+  <div>
+    <span>
+      <h5>{{translate('Slaves')}}</h5>
+      <p>
+	{% raw translate('Slaves are the ones who actually do the work. They execute the builds and send its results back to the master when it\'s done.') %}
+
+	<p>{% raw translate('If no slaves you will not be able to execute builds.') %}</p>
+
+      </p>
+	<b>{{translate('See also')}}:</b>
+	<ul><li><a href="#">{{translate('Slave configuration')}}</a></li></ul>
+      <p>
+      </p>
+
+    </span>
+  </div>
+</div>
+<!-- end right side -->

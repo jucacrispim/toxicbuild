@@ -18,22 +18,17 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future, gather
-from collections import defaultdict
 from datetime import timedelta
 import hashlib
 import hmac
-import json
 import jwt
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, DateTimeField, IntField,
                                ReferenceField, EmbeddedDocumentListField)
 from toxicbuild.core import requests
 from toxicbuild.core.utils import (string2datetime, now, localtime2utc,
-                                   LoggerMixin, utc2localtime,
-                                   datetime2string)
+                                   LoggerMixin, utc2localtime)
 from toxicbuild.integrations import settings
-from toxicbuild.master.build import BuildSet
-from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.repository import Repository, RepositoryBranch
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.users import User
@@ -378,7 +373,7 @@ class GithubInstallation(LoggerMixin, Document):
             full_name=repo_info['full_name'])
         self.repositories.append(gh_repo)
         await self.save()
-        await repo.enable_plugin('github-check-run', installation=self)
+        # await repo.enable_plugin('github-check-run', installation=self)
 
         if clone:
             await repo.request_code_update()
@@ -466,110 +461,3 @@ class GithubInstallation(LoggerMixin, Document):
 
 
 GithubInstallation.ensure_indexes()
-
-
-class GithubCheckRun(MasterPlugin):
-    """A plugin that creates a check run reacting to a buildset that
-    was added, started or finished."""
-
-    type = 'notification'
-    """The type of the plugin. This is a notification plugin."""
-
-    name = 'github-check-run'
-    """The name of the plugin"""
-
-    events = ['buildset-added', 'buildset-started', 'buildset-finished']
-    """Events that trigger the plugin."""
-
-    no_list = True
-
-    run_name = 'ToxicBuild CI'
-    """The name displayed on github."""
-
-    installation = ReferenceField(GithubInstallation)
-    """The :class:`~toxicbuild.integrations.github.GithubInstallation`
-      that owns the plugin"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.sender = None
-
-    async def _get_repo_full_name(self, repo):
-        full_name = None
-
-        installation = await self.installation
-
-        for inst_repo in installation.repositories:
-            if str(repo.id) == inst_repo.repository_id:
-                full_name = inst_repo.full_name
-                break
-
-        if not full_name:
-            raise BadRepository
-
-        return full_name
-
-    async def run(self, sender, info):
-        """Runs the plugin.
-
-        :param sender: The :class:`~toxicbuild.master.repository.Repository`
-          that is running the plugin.
-        :param info: The information that is being sent."""
-
-        self.log('Sending notification to github for buildset {}'.format(
-            info['id']), level='info')
-        self.log('Info is: {}'.format(info), level='debug')
-
-        self.sender = sender
-
-        status = info['status']
-        status_tb = defaultdict(lambda: 'completed')
-        status_tb.update({'pending': 'queued',
-                          'running': 'in_progress'})
-        run_status = status_tb[status]
-
-        conclusion_tb = defaultdict(lambda: 'failure')
-        conclusion_tb.update({'success': 'success'})
-        conclusion = conclusion_tb[status]
-
-        buildset = await BuildSet.objects.get(id=info['id'])
-        await self._send_message(buildset, run_status, conclusion)
-
-    def _get_payload(self, buildset, run_status, conclusion):
-
-        payload = {'name': self.run_name,
-                   'head_branch': buildset.branch,
-                   'head_sha': buildset.commit,
-                   'status': run_status}
-
-        if buildset.started:
-            started_at = datetime2string(buildset.started,
-                                         dtformat="%Y-%m-%dT%H:%M:%S%z")
-            started_at = started_at.replace('+0000', 'Z')
-            payload.update({'started_at': started_at})
-
-        if run_status == 'completed':
-            completed_at = datetime2string(buildset.finished,
-                                           dtformat="%Y-%m-%dT%H:%M:%S%z")
-            completed_at = completed_at.replace('+0000', 'Z')
-            payload.update(
-                {'completed_at': completed_at,
-                 'conclusion': conclusion})
-
-        return payload
-
-    async def _send_message(self, buildset, run_status, conclusion):
-        self.log('sending check run to github', level='debug')
-        repo = await buildset.repository
-        full_name = await self._get_repo_full_name(repo)
-        install = await self.installation
-        url = GITHUB_API_URL + 'repos/{}/check-runs'.format(
-            full_name)
-        payload = self._get_payload(buildset, run_status, conclusion)
-        header = await install._get_header(
-            accept='application/vnd.github.antiope-preview+json')
-        data = json.dumps(payload)
-        r = await requests.post(url, headers=header, data=data)
-        if r.status != 201:
-            raise BadRequestToGithubAPI(r.status, r.text, url)
-        self.log(r.text, level='debug')

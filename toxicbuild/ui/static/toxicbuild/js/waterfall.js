@@ -1,710 +1,550 @@
-var CURRENT_STEP_SHOWN = null;
-var FOLLOW_STEP_OUTPUT = false;
+// Copyright 2018 Juca Crispim <juca@poraodojuca.net>
 
-jQuery('#stepDetailsModal').on('show.bs.modal', function (event) {
-  FOLLOW_STEP_OUTPUT = false;
-  jQuery('#follow-step-output').text('Follow output');
+// This file is part of toxicbuild.
 
-  var button = jQuery(event.relatedTarget);
-  var command = button.data('step-command');
-  var output = button.data('step-output');
-  var status = button.data('step-status');
-  var start = button.data('step-start');
-  var end = button.data('step-end');
-  var uuid = button.data('step-uuid');
-  var total = button.data('step-total-time');
+// toxicbuild is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 
-  var modal = jQuery(this);
-  modal.find('#step-command').text(command);
-  modal.find('#step-output').text(output);
-  modal.find('#step-status').text(status);
-  modal.find('#step-start').text(start);
-  modal.find('#step-end').text(end);
-  modal.find('#step-total-time').text(total);
-  CURRENT_STEP_SHOWN = uuid;
-  var element = document.getElementById('step-output');
-  element.scrollIntoView(false);
-});
+// toxicbuild is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
 
-jQuery('#buildsetDetailsModal').on('show.bs.modal', function (event) {
-  var button = jQuery(event.relatedTarget);
-  var commit = button.data('buildset-commit');
-  var author = button.data('buildset-commit-author');
-  var title = button.data('buildset-commit-title');
-  var created = button.data('buildset-created');
-  var branch = button.data('buildset-branch');
-  var started = button.data('buildset-started');
-  var finished = button.data('buildset-finished');
-  var total = button.data('buildset-total-time');
+// You should have received a copy of the GNU General Public License
+// along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-  var modal = jQuery(this);
-  modal.find('#buildset-commit').text(commit);
-  modal.find('#buildset-commit-author').text(author);
-  modal.find('#buildset-commit-title').text(title);
-  modal.find('#buildset-created').text(created);
-  modal.find('#buildset-branch').text(branch);
-  modal.find('#buildset-started').text(started);
-  modal.find('#buildset-finished').text(finished);
-  modal.find('#buildset-total-time').text(total);
-});
+var TOXIC_WATERFALL_API_URL = window.TOXIC_API_URL + 'waterfall/';
 
-jQuery('#buildDetailsModal').on('show.bs.modal', function (event) {
-  var button = jQuery(event.relatedTarget);
-  var commit = button.data('buildset-commit');
-  var author = button.data('buildset-commit-author');
-  var title = button.data('buildset-commit-title');
-  var created = button.data('build-created');
-  var branch = button.data('build-branch');
-  var started = button.data('build-started');
-  var finished = button.data('build-finished');
-  var total = button.data('build-total-time');
+// this is here because of my lack of knowledge in js.
+var _waterfall_builds = {};
 
-  var modal = jQuery(this);
-  modal.find('#buildset-commit').text(commit);
-  modal.find('#buildset-commit-author').text(author);
-  modal.find('#buildset-commit-title').text(title);
-  modal.find('#buildset-created').text(created);
-  modal.find('#buildset-branch').text(branch);
-  modal.find('#buildset-started').text(started);
-  modal.find('#buildset-finished').text(finished);
-  modal.find('#buildset-total-time').text(total);
-});
+class Waterfall{
 
-jQuery('#follow-step-output').on('click', function(event){
-  FOLLOW_STEP_OUTPUT = !FOLLOW_STEP_OUTPUT;
-  if (FOLLOW_STEP_OUTPUT){
-    jQuery("#stepDetailsModal").scrollTop($("#step-output")[0].scrollHeight);
-    jQuery('#follow-step-output').text('Stop following output');
-  }
-  else{
-    jQuery('#follow-step-output').text('Follow output');
-  }
-})
+  constructor(repo_name){
+    this.repo_name = repo_name;
+    this.buildsets = new BuildSetList();
+    this.builders = new BuilderList();
 
+    $(document).off('buildset_added');
 
-function rebuildBuildset(button){
-  var named_tree = button.data('buildset-commit');
-  var branch = button.data('buildset-branch');
-  var url = '/api/repo/start-build';
-  var repo_name = jQuery('#waterfall-repo-name').val();
-  var data = {name: repo_name, named_tree: named_tree, branch: branch};
-  var success_cb = function(response){
-    utils.showSuccessMessage('Buildset re-scheduled.');
-  };
+    // unbinding the stuff from BuildSet here so we bind it to the
+    // waterfall stuff.
+    let self = this;
+    $(document).off('build_started build_finished');
 
-  var error_cb = function(response){
-    utils.showErrorMessage('Error re-scheduling buildset!');
-  };
+    $(document).on('build_started build_finished', function(e, data){
+      self._updateBuild(data);
+    });
+    this._api_url = TOXIC_WATERFALL_API_URL;
 
-  utils.sendAjax('post', url, data, success_cb, error_cb);
-}
-
-jQuery('.btn-rebuild-buildset').on('click', function(event){
-  var button = jQuery(this);
-  rebuildBuildset(button);
-});
-
-
-function rebuildBuild(button){
-  var named_tree = button.data('buildset-commit');
-  var branch = button.data('buildset-branch');
-  var builder_name = button.data('builder-name');
-  var url = '/api/repo/start-build';
-  var repo_name = jQuery('#waterfall-repo-name').val();
-  utils.log('rebuild build for ' + repo_name);
-  var data = {name: repo_name, named_tree: named_tree, branch: branch,
-	      builder_name: builder_name};
-  var success_cb = function(response){
-    utils.showSuccessMessage('Build re-scheduled.');
-  };
-
-  var error_cb = function(response){
-    utils.showErrorMessage('Error re-scheduling build!');
-  };
-
-  utils.sendAjax('post', url, data, success_cb, error_cb);
-}
-
-jQuery('.btn-rebuild-build').on('click', function(event){
-  var button = jQuery(this);
-  rebuildBuild(button);
-});
-
-function cancelBuild(button){
-  var url = '/api/repo/cancel-build';
-  var repo_name = jQuery('#waterfall-repo-name').val();
-  var build_uuid = button.data('build-uuid');
-  var data = {'name': repo_name, 'build_uuid': build_uuid};
-  var success_cb = function(response){
-    utils.showSuccessMessage('Build cancelled.');
-  };
-
-  var error_cb = function(response){
-    utils.showErrorMessage('Error cancelling build!');
-  };
-
-  utils.sendAjax('post', url, data, success_cb, error_cb);
-}
-
-jQuery('.btn-cancel-build').on('click', function(event){
-  var button = jQuery(this);
-  cancelBuild(button);
-});
-
-
-
-function sticky_relocate() {
-  var BUILDER_SIZE = [];
-  jQuery('.builder').each(function (){
-    BUILDER_SIZE.push(jQuery(this).outerWidth());
-  });
-  var i = 0;
-  jQuery('.builder').each(function(){
-    var window_top = jQuery(window).scrollTop();
-    var div_top = jQuery(this).offset().top;
-    if (window_top >= div_top && window_top > 52){
-      jQuery(this).outerWidth(BUILDER_SIZE[i]);
-      jQuery(this).addClass('builder-stick');
+    // we need this so we can update the builds/steps when we get a message
+    // from the server
+    this._builds = _waterfall_builds;
+    for (let key in this._builds){
+      delete this._builds[key];
     }
-    else{
-      jQuery('.builder').each(function(){
-      	jQuery(this).removeClass('builder-stick');
-      });
+    this._steps = {};
+    this._finished_steps_data = {};
+  }
 
+  _setWaterfallBuilds(buildsets){
+    let self = this;
+    _.each(buildsets, function(b){
+      let builds = b.get('builds');
+      _.each(builds, function(build){
+	self.setBuild(build);
+	let steps = build.get('steps');
+	steps.each(function(step){
+	  self._steps[step.get('uuid')] = step;
+	});
+      });
+    });
+  }
+
+  _updateBuild(data){
+    let build = this._builds[data.uuid];
+    build.set('status', data.status);
+  }
+
+  _addStep(data){
+    let build = this.getBuild(data.build.uuid);
+    let steps = build.get('steps');
+    let step = new BuildStep(data);
+    this._steps[step.get('uuid')] = step;
+    steps.add([step]);
+
+    // checking if the step already finished
+    let finished_data = this._finished_steps_data[data.uuid];
+    if (finished_data){
+      this._updateStep(data);
     }
-    i += 1;
-  });
+  }
+
+  _updateStep(data){
+    let step = this._steps[data.uuid];
+    if (!step){
+      this._finished_steps_data[data.uuid] = data;
+    }else{
+      step.set(data);
+    }
+  }
+
+  async fetch(){
+    let self = this;
+    let url = this._api_url + '?repo_name=' + this.repo_name;
+    let r = await $.ajax({url: url});
+    let buildsets = r.buildsets;
+    let builders = r.builders;
+    this.buildsets.reset(buildsets, {no_events: true});
+    this.buildsets.each(function(b){
+      utils.setBuildsForBuildSet(b);
+    });
+    this._setWaterfallBuilds(this.buildsets.models);
+    this.builders.reset(builders);
+
+  }
+
+  _getBuildsetBuilders(data){
+    let builders = new Array();
+    for (let i in data.builds){
+      let build_dict = data.builds[i];
+      let builder = new Builder(build_dict.builder);
+      builders.push(builder);
+    }
+    return builders;
+  }
+
+  _addBuildSet(data){
+    let builders = this._getBuildsetBuilders(data);
+    let new_builders = new Array();
+    for (let i in builders){
+      let builder = builders[i];
+      if (this.builders.indexOf(builder) == -1){
+	this.builders.add(builder);
+      }
+    }
+
+    let buildset = new BuildSet(data, {no_events: true});
+    utils.setBuildsForBuildSet(buildset);
+    this.buildsets.add([buildset], {at: 0});
+    this._setWaterfallBuilds([this.buildsets.models[0]]);
+  }
+
+  getBuild(uuid){
+    return this._builds[uuid];
+  }
+
+  setBuild(build){
+    this._builds[build.get('uuid')] = build;
+  }
 }
 
-jQuery(function(){
-  // jQuery('.builder').each(function (){
-  //   BUILDER_SIZE.push(jQuery(this).outerWidth());
-  // });
-  $(window).scroll(sticky_relocate);
-});
+class BaseWaterfallView extends BaseBuildDetailsView{
+
+  getRendered(){
+    let kw = this._get_kw();
+    let compiled = $(this.compiled_template(kw));
+    return compiled;
+  }
+
+}
 
 
-var BUILDSET_TEMPLATE  = `
-    <tr class="waterfall-row">
-      <td class="buildsets-column">
-	<ul>
-	  <li class="buildset" id="buildset-{{buildset.id}}">
-	    commit: {{buildset.commit8}}<br/>
-	    branch: {{buildset.branch}}<br/>
-	    <button type="button" class=" btn btn-default btn-rebuild btn-transparent btn-buildset-details btn-sm"
-		    data-toggle="modal"
-		    data-target="#buildsetDetailsModal"
-		    data-dismiss="modal"
-		    data-buildset-commit="{{buildset.commit}}"
-		    data-buildset-branch="{{buildset.branch}}"
-		    data-buildset-commit-author="{{buildset.author}}"
-		    data-buildset-commit-title="{{buildset.title}}"
-		    data-buildset-created="{{buildset.created}}"
-                    data-buildset-started="{{buildset.started}}"
-                    data-buildset-finished="{{buildset.finished}}"
-                    data-buildset-total-time="{{buildset.total_time}}">
-	      <span data-toggle="tooltip" title="Buildset details" data-placement="right">
+class WaterfallBuilderView extends BaseWaterfallView{
 
-		<span class="glyphicon glyphicon-modal-window" aria-hidden="true"></span>
-	      </span>
-	    </button>
+  constructor(options){
+    if (!options || !options.builder){
+      throw new Error('You must pass a builder');
+    }
+    options.tagName = 'th';
+    super(options);
+    this.builder = options.builder;
+    this.directive = {'.builder-name': 'name'};
+    this.template_selector = '.template .waterfall-tr';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+  }
 
-	    <span data-toggle="tooltip" title="Re-schedule buildset" data-placement="right">
-	      <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-buildset btn-sm"
-		      data-buildset-commit="{{buildset.commit}}"
-		      data-buildset-branch="{{buildset.branch}}">
+  _get_kw(){
+    let name = this.builder.escape('name');
+    let status = this.builder.escape('status');
+    let status_translation = i18n(status);
+    return {name: name, status: status_translation,
+	    original_status: status};
+  }
 
-		<span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>
-	      </button>
-	     </span>
+  getRendered(){
+    let compiled = super.getRendered();
+    $('.builder-name', compiled).addClass(
+      'builder-' + this.builder.escape('status'));
+    this.$el.html($('div', compiled));
+    return this;
+  }
+}
 
-	  </li>
-	</ul>
-      </td>
-    </tr>
-  `;
 
-var BUILD_TEMPLATE = `
-<ul>
-  <li class="step step-{{build.status}}" id="build-info-{{build.id}}">
-    Build - {{build.status}}
-    <i class="fa fa-3x fa-fw toxic-spinner-running" id="spinner-build-{{build.uuid}}" style="display:none"></i>
+class WaterfallStepView extends BaseWaterfallView{
 
-	    <span data-toggle="tooltip" title="Cancel build" data-placement="right" id="cancel-build-btn-{{build.uuid}}">
-	      <button type="button" class="btn btn-default btn-cancel-build btn-transparent btn-sm"
-		      data-repository-id="{{repository.id}}"
-		      data-build-uuid="{{build.uuid}}">
-		<span class="glyphicon glyphicon-remove-sign" aria-hidden="true"></span>
-	      </button>
-	    </span>
+  constructor(options){
+    options.tagName = 'li';
+    super(options);
+    let self = this;
+    this.step = options.step;
+    this.build_view = options.build_view;
+    this.directive = {'.step-status': 'status',
+		      '.step-name': 'name'};
+    this.template_selector = '.template .waterfall-step-info';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
 
-    <span data-toggle="tooltip" title="Re-schedule build" data-placement="right" style="display:none" class="rebuild-icon" id="reschedule-build-btn-{{build.uuid}}">
-      <button type="button" class="btn btn-default btn-rebuild btn-transparent btn-rebuild-build btn-sm"
-        data-buildset-commit="{{buildset.commit}}"
-        data-buildset-branch="{{buildset.branch}}"
-        data-builder-name="{{build.builder.name}}">
+    this.step.on({change: function(){
+      self.render();
+      self.build_view._addStep();
+    }});
+  }
 
-        <span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>
-      </button>
-    </span>
+  _get_kw(){
+    let status = this.step.escape('status');
+    let status_translation = i18n(status);
+    let name = this.step.escape('name');
+    return {status: status_translation,
+	    original_status: status,
+	    name: name};
+  }
 
-    <span data-toggle="tooltip" title="Build details" data-placement="right" class="build-details-btn">
-      <button type="button" class="btn btn-default btn-build-details btn-transparent btn-build-details-build btn-sm"
-	      data-buildset-commit="{{buildset.commit}}"
-	      data-buildset-branch="{{buildset.branch}}"
-	      data-builder-name="{{build.builder.name}}"
-	      data-buildset-commit-author="{{buildset.author}}"
-	      data-buildset-commit-title="{{buildset.title}}"
-	      data-build-created="{{buildset.created}}"
-	      data-build-started="{{build.started}}"
-	      data-build-finished="{{build.finished}}"
-	      data-build-total-time="{{build.total_time}}"
-	      data-toggle="modal"
-	      data-target="#buildDetailsModal">
-	<span class="glyphicon glyphicon-modal-window" aria-hidden="true"></span>
-      </button>
-    </span>
+  render(){
+    let rendered = super.getRendered();
+    let kw = this._get_kw();
+    rendered.addClass('step-' + kw.original_status);
+    this.$el.removeClass();
+    this.$el.addClass('step-' + kw.original_status + ' build-info-row');
+    this.$el.html(rendered.html());
+    return this;
+  }
 
-  </li>
-</ul>
-  `;
+  getRendered(){
+    return this.render().$el;
+  }
 
-var STEP_TEMPLATE = `
-	  <li class="step step-{{step.status}}" id="step-{{step.uuid}}">
-	    <div class="build-step-info-container">
-	      {{step.name}} - {{step.status}}
-	      <button type="button" class="btn btn-default btn-step-details btn-transparent btn-sm"
-		      data-toggle="modal"
-		      data-target="#stepDetailsModal"
-		      data-dismiss="modal"
-                      data-step-uuid="{{step.uuid}}"
-		      data-step-command="{{step.command}}"
-		      data-step-output="{{step.output}}"
-		      data-step-status="{{step.status}}"
-		      data-step-start="{{step.started}}"
-		      data-step-end="{{step.finished}}"
-                      data-step-total-time="{{step.total_time}}">
-		<span data-toggle="tooltip" title="Step details" data-placement="right">
-		  <span class="glyphicon glyphicon-modal-window" aria-hidden="true"></span>
-		</span>
+}
 
-	      </button>
-	    </div>
-	  </li>
-`
 
-var BUILDERS = [];
+class WaterfallBuildView extends BaseWaterfallView{
 
-function StepOutputSentinel(uuid, repo_id){
-  // Entity responsible for changing the step output
-  // acording to the info sent by the server.
+  constructor(options){
+    options.tagName = 'td';
+    super(options);
+    let self = this;
+    this.build = options.build;
+    this.directive = {'.build-info-status': 'status',
+		      '.build-details-link @href': 'build_details_link',
+		      '.build-info-number': 'number'};
+    this.template_selector = '.template .waterfall-build-info-container';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
 
-  var host = window.location.host;
-  var obj = {
-    url: 'ws://' + host + '/api/socks/step-output?uuid=' + uuid +
-      '&repository_id=' + repo_id,
-    ws: null,
-    old_output: '{{step.output}}',
+    this.build.on({'change': function(){
+      self.reRenderInfo();
+    }});
 
-    init: function(){
-      var self = this;
-      self.ws = new WebSocket(self.url);
-      self.ws.onmessage = function(event){
-	self.handleEvent(self, event);
+    this.build.get('steps').on({'add': function(){
+      self._add2StepQueue();
+    }});
+
+    this._last_step = null;
+    this.__add_step_lock = null;
+  }
+
+  _get_kw(){
+    let status = this.build.escape('status');
+    let status_translation = i18n(status);
+    let number = this.build.get('number');
+    let build_details_link = '/build/' + this.build.get('uuid');
+    return {status: status_translation,
+	    original_status: status,
+	    build_details_link: build_details_link,
+	    number: number};
+  }
+
+  async _addStep(){
+    let self = this;
+
+    while (this.__add_step_lock){
+      await utils.sleep(200);
+    }
+    this.__add_step_lock = true;
+    let step = this._step_queue[0];
+
+    if (!step || !this._stepOk2Add(step)){
+      this.__add_step_lock = null;
+      return false;
+    }
+    this._step_queue.shift();
+    let view = new WaterfallStepView({step: step, build_view: self});
+    let rendered = view.getRendered();
+    $('ul', this.$el).append(rendered);
+    let el = $('li', this.$el)[$('li', this.$el).length - 1];
+
+    let cb = function(){
+      self.__add_step_lock = null;
+      self._last_step = step.get('index');
+    };
+    utils.wrapperSlideDown($(el), 600, cb);
+    return true;
+  }
+
+  reRenderInfo(){
+    let status = this.build.get('status');
+    let el = $($('.build-info-row', this.$el)[0]);
+    el.removeClass();
+    el.addClass('build-info-row build-' + status);
+    $('.build-info-status', el).text(status);
+  }
+
+  render(){
+    let self = this;
+
+    let rendered = super.getRendered();
+    $('.build-info-row', rendered).addClass(
+      'build-' + this.build.escape('status'));
+
+    let steps = this.build.get('steps');
+    steps.each(function(step){
+      let view = new WaterfallStepView({step: step, build_view: self});
+      rendered.append(view.getRendered());
+    });
+    this.$el.html('');
+    this.$el.append(rendered);
+    router.setUpLinks(this.$el);
+  }
+
+  getRendered(){
+    this.render();
+    return this.$el;
+  }
+}
+
+
+class WaterfallBuildSetView extends BaseWaterfallView{
+
+  constructor(options){
+    options = options || {};
+    options.tagName = 'tr';
+    super(options);
+    let self = this;
+
+    this.builders = options.builders;
+    this.buildset = options.buildset;
+    this.directive = {'.buildset-branch': 'branch',
+		      '.commit-title': 'title',
+		      '.buildset-details-link @href': '/buildset/#{id}',
+		      '.buildset-total-time': 'total_time'};
+    this.template_selector = '.template .waterfall-buildset-info-container';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+
+    this.counter = new TimeCounter();
+
+    this.buildset.on({change: function(){
+      self.reRenderInfo();
+    }});
+  }
+
+  _get_kw(){
+    let id = this.buildset.get('id');
+    let commit = this.buildset.escape('commit').slice(0, 8);
+    let branch = this.buildset.escape('branch');
+    let title = this.buildset.escape('title');
+    let total_time = this.buildset.escape('total_time');
+    return {commit: commit, branch: branch, title: title,
+	    total_time: total_time, id: id};
+  }
+
+  _getBuilderBuids(builds){
+    let builder_builds = builds.reduce(function(obj, build){
+      let builder = build.get('builder');
+      obj[builder.id] = build;
+      return obj;
+    }, {});
+    return builder_builds;
+  }
+
+  _getBuildView(build){
+    return new WaterfallBuildView({build: build});
+  }
+
+  reRenderInfo(){
+    let self = this;
+
+    let rendered = super.getRendered();
+    let first_col = $('.waterfall-first-col', this.$el);
+    first_col.html(rendered.html());
+    $('.fa-redo', first_col).on('click', function(){
+      utils.rescheduleBuildSet(self.buildset, self.$el);
+    });
+
+    router.setUpLinks(first_col);
+
+    if (!this.buildset.get('finished')){
+      let self = this;
+
+      let cb = function(secs){
+	let f = utils.formatSeconds(secs);
+	let el = $('.buildset-total-time', self.$el);
+	el.text(f);
       };
-    },
 
-    handleEvent: function(self, event){
-      var data = jQuery.parseJSON(event.data);
-      var step_el = jQuery('#step-' + data.uuid);
-      var button = jQuery('button', step_el);
-      self.old_output = button.data('step-output');
-      var new_output = self.old_output + data.output;
-      button.data('step-output', new_output);
-      self.old_output = new_output;
-      if (CURRENT_STEP_SHOWN == data.uuid){
-	var modal = jQuery('#stepDetailsModal');
-	modal.find('#step-output').text(new_output);
-	if (FOLLOW_STEP_OUTPUT){
-	  jQuery("#stepDetailsModal").scrollTop($("#step-output")[0].scrollHeight);
-	}
+      this.counter.start(cb);
+    }else{
+      this.counter.stop();
+    }
+
+  }
+
+  getRendered(){
+    let self = this;
+
+    let rendered = super.getRendered();
+    this.$el.append(rendered);
+
+    let builds = this.buildset.get('builds');
+    let builder_builds = this._getBuilderBuids(builds);
+    this.builders.each(function(builder){
+      let build = builder_builds[builder.id];
+      if (build){
+	let view = self._getBuildView(build);
+	self.$el.append(view.getRendered());
+      }else{
+	self.$el.append(document.createElement('td'));
       }
-    },
+    });
 
-  };
-  obj.init();
-  return obj
-};
+    $('.fa-redo', this.$el).on('click', function(){
+      utils.rescheduleBuildSet(self.buildset, self.$el);
+    });
 
-function WaterfallManager(){
-  var id = jQuery('#waterfall-repo-id').val();
-  var host = window.location.host;
+    return this;
+  }
+}
 
-  obj = {
-    url: 'ws://' + host + '/api/socks/builds?repository_id=' + id,
-    ws: null,
-    _repository_id: id,
-    _build_last_step: {},
-    _step_started_queue: [],
-    _step_finished_queue: [],
-    _build_started_queue: [],
-    _build_finished_queue: [],
-    _step_sentinels: {},
-    _step_output: {},
 
-    init: function(){
-      var self = this;
-      self.ws = new WebSocket(self.url);
-      self.ws.onmessage = function(event){
-	self.handleEvent(self, event);
-      };
-    },
+class WaterfallView extends Backbone.View{
 
-    handleEvent: function(self, event){
-      var data = jQuery.parseJSON(event.data);
-      console.log(data.event_type);
-      if (data.event_type == 'build_added'){
-	self.handleBuildAdded(data);
-      }else if (data.event_type == 'build_started'){
-	self.handleBuildStarted(data);
-      }else if (data.event_type == 'build_finished'){
-	self.handleBuildFinished(data);
-      }else if (data.event_type == 'step_started'){
-	self.handleStepStarted(data);
-      }else if (data.event_type == 'step_finished'){
-	self.handleStepFinished(data);
-      }else if (data.event_type == 'build_cancelled'){
-	self.handleBuildCancelled(data);
+  constructor(repo_name){
+    super();
+    let self = this;
+    this.repo_name = repo_name;
+    this.model = new Waterfall(this.repo_name);
+    this.model.buildsets.on({'add': function(){
+      self._addNewBuilders();
+      self._addNewBuildSet();
+    }});
+
+    $(document).on('step_started', function(e, data){
+      self.model._addStep(data);
+    });
+
+    $(document).on('step_finished', function(e, data){
+      self.model._updateStep(data);
+    });
+
+    $(document).on('buildset_added', function(e, data){
+      self.model._addBuildSet(data);
+    });
+
+  }
+
+  _renderHeader(){
+    let header_container = $('#waterfall-header');
+
+    this.model.builders.each(function(e){
+      let view = new WaterfallBuilderView({builder: e});
+      let el = view.getRendered().$el;
+      header_container.append(el);
+    });
+  }
+
+  _renderBody(){
+    let self = this;
+
+    let body_container = $('#waterfall-body');
+    this.model.buildsets.each(function(e){
+      let view = new WaterfallBuildSetView({buildset: e,
+					    builders: self.model.builders});
+      body_container.append(view.getRendered().$el);
+    });
+  }
+
+  _addBuilder2Header(builder, insert_index){
+    let header_container = $('#waterfall-header');
+    let builder_view = new WaterfallBuilderView({builder: builder});
+    let el = builder_view.getRendered().$el;
+
+    header_container.children().eq(insert_index).after(el);
+  }
+
+  _addBuilderColumn(insert_index){
+    let self = this;
+
+    let body_container = $('#waterfall-body');
+    $('tr', body_container).each(function(i, e){
+      e.children().eq(insert_index).after('<td class="build-placeholder"></td>');
+    });
+  }
+
+  _addNewBuilder(builder, builder_names){
+    let insert_index = -1 * utils.binarySearch(builder_names, builder.get('name'));
+    this._addBuilder2Header(builder, insert_index);
+    this._addBuilderColumn(insert_index);
+  }
+
+  _addNewBuilders(){
+    let self = this;
+
+    let builder_els = $('.builder-name').slice(1);
+    let builder_names = [];
+    builder_els.map(function(i, e){builder_names.push($(e).html());});
+    this.model.builders.each(function(e){
+      let name = e.get('name');
+
+      if (builder_names.indexOf(name) < 0){
+	self._addNewBuilder(e, builder_names);
       }
-    },
+    });
+  }
 
-    handleStepStarted: function(step, from_queue){
-      // insert the info about a step in the waterfall
-      var self = this;
-      var template = STEP_TEMPLATE.replace(/{{step.uuid}}/g, step.uuid);
-      template = template.replace(/{{step.status}}/g, step.status);
-      template = template.replace(/{{step.name}}/g, step.name);
-      template = template.replace(/{{step.command}}/g, step.command);
-      //template = template.replace(/{{step.output}}/g, "No output...");
-      template = template.replace(/{{step.started}}/g, step.started);
-      template = template.replace(/{{step.finished}}/g, 'Step still running');
-      template = template.replace(/{{step.total_time}}/g, 'Step still running');
+  _addNewBuildSet(){
+    let body_container = $('#waterfall-body');
+    let buildset = this.model.buildsets.models[0];
+    let view = new WaterfallBuildSetView({buildset: buildset,
+					  builders: this.model.builders});
+    let view_el = view.getRendered().$el;
+    body_container.prepend(view_el.hide().fadeIn(700));
 
-      var build = step.build
-      var build_el = jQuery('#build-info-' + build.uuid);
-      // if there is no build_el we store the step in a query and after
-      // the build is present we insert the build info.
-      if (!build_el.length){
-	self._step_started_queue.push(step);
-	return false;
-      };
-      // here we handle the case when the information about one step
-      // arrived before the information about a previous step.
-      if ((typeof self._build_last_step[build.uuid] != 'undefined' &&
-      	   self._build_last_step[build.uuid] < step.index -1) ||
-      	  (typeof self._build_last_step[build.uuid] == 'undefined' &&
-	   step.index != 0)){
+    // so, this mess here is to slideDown the table row.
+    // tks to `wiks` on stackoverflow!!
+    let tags = ['td', 'th'];
+    for (let i in tags){
+      let tag = tags[i];
+      let el = view_el.find(tag);
+      utils.wrapperSlideDown(el, 600);
+    }
+  }
 
-	var steps_count = jQuery('.build-step-info-container',
-				 build_el.parent()).length;
-      	if (self._step_started_queue.indexOf(step) < 0 &&
-	    steps_count - 1 > step.index){
-      	  self._step_started_queue.push(step);
-      	  return false;
-      	};
-      };
-      template = jQuery(template);
-      template.hide();
-      build_el.parent().append(template);
-      template.slideDown('slow');
-      self._step_sentinels[step.uuid] = StepOutputSentinel(step.uuid,
-							   self._repository_id);
-      self._build_last_step[build.uuid] = step.index;
-      if (!from_queue){
-	self._handleStepQueue(build);
-      }
-      return true;
-    },
+  _connect2ws(){
+    let repo_name = $('#repo_name').val();
+    let path = 'waterfall-info?repo_name=' + repo_name;
+    wsconsumer.connectTo(path);
+  }
 
-    handleStepFinished: function(step){
-      var self = this;
-
-      var step_el = jQuery('#step-' + step.uuid);
-      if (!step_el.length){
-	self._step_finished_queue.push(step);
-	return false;
-      };
-
-      try{
-      	self._step_sentinels[step.uuid].ws.close();
-      } catch(e){
-      	utils.log(e);
-      };
-
-      delete self._step_sentinels[step.uuid];
-      var html = step_el.html();
-      step_el.removeClass('step-running').addClass('step-' + step.status);
-      html = html.replace('Step still running', step.finished);
-      html = html.replace('Step still running', step.total_time);
-      html = html.replace('{{step.output}}', step.output.replace(/"/g, "'"));
-      html = html.replace(/running/g, step.status);
-      step_el.html(html);
-      return true;
-    },
-
-    handleBuildStarted: function(build){
-      var self = this;
-
-      var build_el = jQuery('#build-info-' + build.uuid);
-      var details_btn = jQuery(jQuery('.btn-build-details', build_el)[0]);
-      details_btn.attr('data-build-started', build.started);
-      var cancel_btn = jQuery('#cancel-build-btn-' + build.uuid);
-      cancel_btn.hide();
-      if (build_el.length == 0){
-	self._build_started_queue.push(build);
-	return false;
-      };
-
-      var html = build_el.html().replace(/pending/, 'running');
-      html = html.replace(/{{build.uuid}}/g, build.uuid);
-      build_el.html(html);
-      build_el.removeClass('step-pending').addClass('step-running');
-
-      var spinner = jQuery('#spinner-build-' + build.uuid);
-      spinner.show();
-
-      var builder_input = jQuery('#builder-' + build.builder.id);
-      var builder_status = builder_input.val();
-      if (builder_status != 'running'){
-	builder_input.parent().removeClass('builder-' + builder_status);
-	builder_input.parent().addClass('builder-running');
-	builder_input.val('running');
-      }
-      self._handleBuildSetStarted(build.buildset);
-    },
-
-    handleBuildFinished: function(build){
-      var self = this;
-
-      var build_el = jQuery('#build-info-' + build.uuid);
-      if (!build_el.length){
-	self._build_finished_queue.push(build);
-	return false;
-      }
-
-      var details_btn = jQuery(jQuery('.btn-build-details', build_el)[0]);
-      details_btn.attr('data-build-finished', build.finished);
-      details_btn.attr('data-build-total-time', build.total_time);
-
-
-      var spinner = jQuery('#spinner-build-' + build.uuid);
-      spinner.hide();
-
-      build_el.html(build_el.html().replace(/running/, build.status));
-      jQuery('.rebuild-icon', build_el).show();
-
-      jQuery('.btn-rebuild-build', build_el).on('click', function(event){
-	var button = jQuery(this);
-	rebuildBuild(button);
-      });
-
-      build_el.removeClass('step-running').addClass('step-' + build.status);
-
-      var builder_input = jQuery('#builder-' + build.builder.id);
-      var builder_status = builder_input.val();
-      builder_input.parent().removeClass('builder-running');
-      builder_input.parent().removeClass('builder-pending');
-      builder_input.parent().addClass('builder-' + build.status);
-      builder_input.val(build.status);
-      self._handleBuildSetFinished(build.buildset);
-      return true;
-    },
-
-    handleBuildAdded: function(build){
-      var self = this;
-      var buildset = build.buildset;
-      var buildset_li = jQuery('#buildset-' + buildset.id);
-      if (!buildset_li.length){
-	self._addBuildSet(buildset);
-      };
-      self._addBuild(build);
-    },
-
-    handleBuildCancelled: function(build){
-      var self = this;
-      var build_el = jQuery('#build-info-' + build.uuid);
-      var build_btn = jQuery('#cancel-build-btn-' + build.uuid);
-      build_btn.hide();
-      jQuery('#reschedule-build-btn-' + build.uuid).show();
-      var html = build_el.html().replace(/pending/, 'cancelled');
-      html = html.replace(/{{build.uuid}}/g, build.uuid);
-      build_el.html(html);
-      build_el.removeClass('step-pending').addClass('step-cancelled');
-    },
-
-    _handleBuildQueue: function(build){
-      var self = this;
-      // here we handle the started builds in queue.
-      var new_builds_queue = [];
-      for (i in self._build_started_queue){
-	var enqueued_build = self._build_started_queue[i];
-	if (enqueued_build.id == build.id){
-	  self.handleBuildStarted(build);
-	  self._handleStepQueue(build);
-	}else{
-	  new_builds_queue.push(build);
-	};
-      };
-
-      // here we handle the finished builds in queue.
-      var new_builds_queue = [];
-      for (i in self._build_finished_queue){
-	var enqueued_build = self._build_finished_queue[i];
-	if (enqueued_build.id == build.id){
-	  self.handleBuildFinished(build);
-	  self._handleStepQueue(build);
-	}else{
-	  new_builds_queue.push(build);
-	};
-      };
-
-      self._build_finished_queue = new_builds_queue;
-    },
-
-    _handleStepQueue: function(build){
-      var self = this;
-
-      // here we handle the started steps in queue.
-      var new_steps_queue = [];
-      self._step_started_queue.sort(function(a, b){return a.index - b.index});
-
-      for (i in self._step_started_queue){
-	var step = self._step_started_queue[i];
-	if (step.build.id == build.id){
-	  self.handleStepStarted(step, true);
-	}else{
-	  new_steps_queue.push(step);
-	};
-      };
-      self._step_started_queue = new_steps_queue;
-
-      // here we handle the finished steps in queue.
-      var new_steps_queue = [];
-      self._step_finished_queue.sort(function(a, b){return a.index - b.index});
-
-      for (i in self._step_finished_queue){
-	var step = self._step_finished_queue[i];
-	if (step.build.id == build.id){
-	  self.handleStepFinished(step);
-	}else{
-	  new_steps_queue.push(step);
-	};
-      };
-      self._step_finished_queue = new_steps_queue;
-    },
-
-    _handleBuildSetStarted: function(buildset){
-      var buildset_li = jQuery('#buildset-' + buildset.id);
-      var buildset_btn = jQuery('button', buildset_li);
-      if(!buildset_btn.data('buildset-started')){
-	buildset_btn.data('buildset-started', buildset.started);
-      };
-    },
-
-    _handleBuildSetFinished: function(buildset){
-      // this is wrong. We shouldn't set these everytime
-      // a step finishes, but only when the last step of the
-      // buildset finishes, but I don't know how to to that.
-      var buildset_li = jQuery('#buildset-' + buildset.id);
-      var buildset_btn = jQuery('button', buildset_li);
-      buildset_btn.data('buildset-finished', buildset.finished);
-      buildset_btn.data('buildset-total-time', buildset.total_time);
-    },
-
-    _addBuildSet: function(buildset){
-      var self = this;
-
-      var template = BUILDSET_TEMPLATE.replace(/{{buildset.id}}/g, buildset.id);
-      template = template.replace(/{{buildset.commit}}/g, buildset.commit);
-      template = template.replace(/{{buildset.commit8}}/g, buildset.commit.slice(0, 8));
-      template = template.replace(/{{buildset.author}}/g, buildset.author);
-      template = template.replace(/{{buildset.branch}}/g, buildset.branch);
-      template = template.replace(/{{buildset.title}}/g, buildset.title);
-      template = template.replace(/{{buildset.created}}/g, buildset.created);
-      template = template.replace(/{{buildset.started}}/g, buildset.started);
-      template = template.replace(/{{buildset.finished}}/g, buildset.finished);
-      template = template.replace(/{{buildset.total_time}}/g, buildset.total_time);
-      var first_row = jQuery('#waterfall-first-row');
-      jQuery(template).insertAfter(first_row);
-
-      var buildset_el = jQuery('#buildset-' + buildset.id).parent().parent().parent();
-
-      jQuery('.btn-rebuild-buildset', buildset_el).on('click', function(event){
-	var button = jQuery(this);
-	rebuildBuildset(button);
-      });
-
-      for (i = 0; i <= buildset.builds.length; i++){
-	var builder = BUILDERS[i];
-	if (!builder){return false}
-	var parsed_builder = jQuery.parseJSON(builder);
-	builder = parsed_builder;
-
-	buildset_el.append('<td class="builder-column" id="build-builder-'+ builder.id +'"></td>');
-      };
-
-    },
-
-    _addBuild: function(build){
-      var self = this;
-      var builder = self._getBuilder(build.builder.id);
-      var buildset = build.buildset;
-      var build_el = jQuery('#build-builder-' + build.builder.id);
-
-      if (!build_el.length){
-	var buildset_el = jQuery('#buildset-' + buildset.id).parent().parent().parent();
-	buildset_el.append('<td class="builder-column" id="build-builder-'+ build.builder.id +'"></td>');
-	build_el = jQuery('#build-builder-' + build.builder.id);
-      };
-
-      template = BUILD_TEMPLATE.replace(/{{build.status}}/g, build.status);
-      template = template.replace(/{{buildset.title}}/g, buildset.title);
-      template = template.replace(/{{buildset.author}}/g, buildset.author);
-      template = template.replace(/{{buildset.created}}/g, buildset.created);
-      template = template.replace(/{{buildset.commit}}/g, buildset.commit);
-      template = template.replace(/{{build.id}}/g, build.uuid);
-      template = template.replace(/{{buildset.branch}}/g, buildset.branch);
-      template = template.replace(/{{build.started}}/g, build.started);
-      template = template.replace(/{{build.finished}}/g, build.finished);
-      template = template.replace(/{{build.total_time}}/g, build.total_time);
-      template = template.replace(/{{build.uuid}}/g, build.uuid);
-      var repo_id = jQuery('#waterfall-repo-id').val();
-      template = template.replace(/{{repository.id}}/g, repo_id);
-      var builder_name = builder ? builder.name : 'new-builder';
-      template = template.replace(/{{build.builder.name}}/g, builder_name);
-      jQuery(build_el).append(template);
-      self._handleBuildQueue(build);
-      self._handleStepQueue(build);
-
-      jQuery('.btn-cancel-build', build_el).on('click', function(event){
-	var button = jQuery(this);
-	cancelBuild(button);
-      });
-
-    },
-
-    _getBuilder: function(builder_id){
-      for (i = 0; i < BUILDERS.length; i++){
-	var builder = jQuery.parseJSON(BUILDERS[i]);
-	if (builder_id == builder.id){
-	  return builder;
-	};
-      };
-    },
-  };
-
-  obj.init();
-  return obj;
-};
-
-var manager = WaterfallManager();
+  async render(){
+    await this.model.fetch();
+    this._renderHeader();
+    this._renderBody();
+    this._connect2ws();
+    $('.wait-toxic-spinner').hide();
+    $('#waterfall-container').fadeIn(300);
+  }
+}

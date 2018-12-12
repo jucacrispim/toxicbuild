@@ -18,7 +18,7 @@
 
 import asyncio
 from toxicbuild.master.users import User
-from tests.functional.webui import SeleniumBrowser
+from tests.webui import SeleniumBrowser
 from tests.integrations_functional import start_all, stop_all
 
 

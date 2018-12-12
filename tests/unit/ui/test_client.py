@@ -22,7 +22,7 @@ from unittest import TestCase
 from unittest.mock import MagicMock, patch
 from toxicbuild.ui.client import (UIHoleClient, get_hole_client,
                                   ToxicClientException, UserDoesNotExist,
-                                  NotEnoughPerms)
+                                  NotEnoughPerms, BadResetPasswordToken)
 from tests import async_test, AsyncMagicMock
 
 
@@ -70,9 +70,9 @@ class UIHoleClientTest(TestCase):
         requester = MagicMock()
         requester.id = 'some-id'
         client = UIHoleClient(requester, 'localhost', 7777)
-        yield from client.connect2stream()
+        yield from client.connect2stream({'event_types': []})
         called = client.request2server.call_args[0]
-        expected = ('stream', {'user_id': 'some-id'})
+        expected = ('stream', {'user_id': 'some-id', 'event_types': []})
         self.assertEqual(called, expected)
 
     @patch.object(UIHoleClient, 'request2server', MagicMock())
@@ -121,6 +121,16 @@ class UIHoleClientTest(TestCase):
         requester.id = 'some-id'
         client = UIHoleClient(requester, 'localhost', 7777)
         with self.assertRaises(NotEnoughPerms):
+            await client.get_response()
+
+    @patch.object(UIHoleClient, 'read', AsyncMagicMock(
+        return_value={'code': '4', 'body': {'error': 'bla'}}))
+    @async_test
+    async def test_get_response_bad_reset_token(self):
+        requester = MagicMock()
+        requester.id = 'some-id'
+        client = UIHoleClient(requester, 'localhost', 7777)
+        with self.assertRaises(BadResetPasswordToken):
             await client.get_response()
 
     @patch.object(UIHoleClient, 'read', AsyncMagicMock(

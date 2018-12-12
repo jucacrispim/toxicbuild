@@ -15,10 +15,23 @@ STATIC_URL = '/static/'
 STATIC_DIRS = [pkg_resources.resource_filename('toxicbuild.ui', 'static')]
 TEMPLATE_DIRS = [pkg_resources.resource_filename('toxicbuild.ui', 'templates')]
 
-APPLICATIONS = ['toxicbuild.ui.web.app',
-                'toxicbuild.ui.web.static_app',
-                'toxicbuild.ui.web.api_app']
+COMMAND_PACKAGES = []
+
+
+APPLICATIONS = [
+    'toxicbuild.ui.web.static_app',
+    'toxicbuild.ui.web.api_app',
+    'toxicbuild.ui.web.app'
+]
 
 CONTEXT_PROCESSORS = [
     'pyrocumulus.web.template.ContextProcessor',
-    'toxicbuild.ui.context_processors.ToxicWebMainContextProcessor']
+    'toxicbuild.ui.context_processors.ToxicWebMainContextProcessor',
+    'toxicbuild.ui.context_processors.ToxicWebTranslationProcessor']
+
+
+API_URL = 'http://localhost:8888/api/'
+
+NOTIFICATIONS_API_TOKEN = '{{NOTIFICATIONS_API_TOKEN}}'
+NOTIFICATIONS_API_URL = 'http://localhost:9432'
+ROOT_USER_ID = '{{ROOT_USER_ID}}'

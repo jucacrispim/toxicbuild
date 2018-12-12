@@ -307,7 +307,7 @@ class Waterfall:
         BaseModel._client = self.client
         try:
             buildsets = await BuildSet.list(self.client.user,
-                                            repo_name=self.repo_name)
+                                            repo_name_or_id=self.repo_name)
             builders = await get_builders_for_buildsets(
                 self.client.user, buildsets)
             return self._format_waterfall(builders, buildsets)

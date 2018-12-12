@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{% block title %}Toxicbuild{% end %}</title>
+
+    {% block stylesheet %}
+    <link href="{{static_url}}bootstrap/css/bootstrap.min.css"
+	  rel="stylesheet">
+    <link href="{{static_url}}bootstrap/css/bootstrap-toggle.min.css"
+	  rel="stylesheet">
+    <link href="{{static_url}}bootstrap/css/awesome-bootstrap-checkbox.css"
+	  rel="stylesheet">
+    <link href="{{static_url}}fontawesome/css/all.css" rel="stylesheet">
+    <link href="{{static_url}}toxicbuild/css/toxictheme/fonts.css"
+	  rel="stylesheet">
+    <link href="{{static_url}}toxicbuild/css/toxictheme/toxicclear.css"
+	  rel="stylesheet">
+    <link href="{{static_url}}toxicbuild/css/toxictheme/toxicdark.css"
+	  rel="stylesheet">
+    {% end %}
+  </head>
+
+  <body>
+
+    <script>
+      var TOXIC_API_URL = "{{api_url}}";
+      var STATIC_URL = "{{static_url}}"
+    </script>
+
+    <nav class="navbar navbar-dark bg-dark p-0">
+
+      <div class="container-fluid toxiclogo-container">
+        <a class="navbar-brand" href="/">
+	  <img class="img-logo" src="{{static_url}}toxicbuild/img/Logo.svg"/>
+	</a>
+      </div>
+
+      {% block logout_link %}
+      <ul class="navbar-nav">
+	<li class="nav-item dropdown">
+	  <div class="container logout-link-container">
+	    <a href="#" class="nav-link" role="button"
+	       data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+	       id="navbar-dropdown">
+	      <span class="fas fa-angle-down"></span>
+	    </a>
+
+	    <div class="dropdown-menu  box-shadow-gray dropdown-arrow"
+		 aria-labelledby="navbar-dropdown">
+
+              <a class="dropdown-item dropdown-item-logout"
+		 href="/settings/user">
+		{{translate('User settings')}}
+	      </a>
+
+              <a class="dropdown-item dropdown-item-logout"
+		 href="/settings/ui">
+		{{translate('UI settings')}}
+	      </a>
+	      <div class="dropdown-divider"></div>
+              <a class="dropdown-item dropdown-item-logout" href="/logout"
+		 data-noroute="true">
+		{{translate('Logout')}}
+	      </a>
+	    </div>
+	  </div>
+	</li>
+      </ul>
+      {% end %}
+
+    </nav>
+
+    <!-- The main space of the page-->
+    <div class="container-fluid toxic-main-area">
+
+      <!-- Error alert -->
+      {% block messages %}
+      <div class="alert alert-danger alert-dismissible box-shadow-black "
+	   role="alert">
+
+	<div class="alert-inner-container">
+	  <span class="fas fa-exclamation-triangle"></span>
+	  <div id="error-container" class="message-container">
+	  </div>
+	  <button type="button" class="close close-msg"
+		  aria-label="Close"><span aria-hidden="true">&times;</span>
+	  </button>
+	</div>
+
+      </div>
+
+      <!-- Success alert -->
+      <div class="alert alert-success alert-dismissible box-shadow-black"
+	   role="alert">
+	<span class="fas fa-check-circle"></span>
+	<div class="alert-inner-container">
+	  <div id="success-container" class="message-container">
+	  </div>
+	  <button type="button" class="close close-msg"
+		  aria-label="Close"><span aria-hidden="true">&times;</span>
+	  </button>
+	</div>
+
+      </div>
+      {% end %}
+
+      <div class="jumbotron-fluid background-main">
+	<!-- When creating a new page, change this block -->
+	{% block main_area %}{% end %}
+      </div>
+    </div>
+
+    <!-- Include your js in this block. -->
+    {% block js_bottom%}
+    <script src="{{static_url}}jquery/jquery.min.js"></script>
+    <script src="{{static_url}}toxicbuild/js/utils.js"></script>
+    {% end %}
+
+    <script>
+      $('.alert-success .close').on('click', function(){
+	utils.hideSuccessMessage();
+      });
+
+      $('.alert-danger .close').on('click', function(){
+	utils.hideErrorMessage();
+      });
+
+    </script>
+  </body>
+
+</html>

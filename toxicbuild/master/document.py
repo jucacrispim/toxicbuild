@@ -37,8 +37,22 @@ class OwnedDocument(Document):
     """
 
     owner = GenericReferenceField(required=True)
+    """The user or organization who owns the document"""
+
+    name = StringField(required=True)
+    """The name of the document."""
+
+    full_name = StringField(required=True, unique=True)
+    """Full name of the document in the form `owner-name/doc-name`"""
 
     meta = {'abstract': True}
+
+    async def save(self, *args, **kwargs):
+        if not self.full_name:
+            owner = await self.owner
+            self.full_name = '{}/{}'.format(owner.name, self.name)
+        r = await super().save(*args, **kwargs)
+        return r
 
     @classmethod
     async def get_for_user(cls, user, **kwargs):
@@ -49,7 +63,7 @@ class OwnedDocument(Document):
         :param kwargs: kwargs to match the repository.
         """
         obj = await cls.objects.get(**kwargs)
-        has_perms = await obj._check_perms(user)
+        has_perms = await obj.check_perms(user)
         if not has_perms:
             msg = 'The user {} has no permissions for this object'.format(
                 user.id)
@@ -108,7 +122,7 @@ class OwnedDocument(Document):
 
         return qs
 
-    async def _check_perms(self, user):
+    async def check_perms(self, user):
         if user.is_superuser:
             return True
 

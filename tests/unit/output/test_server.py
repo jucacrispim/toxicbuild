@@ -17,57 +17,52 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+from bson import ObjectId
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from toxicbuild.core.exchange import JsonAckMessage
-from toxicbuild.master.plugins import NotificationPlugin
-from toxicbuild.master.repository import Repository
-from toxicbuild.master.users import User
 from toxicbuild.output import server
 from toxicbuild.output.exchanges import connect_exchanges, disconnect_exchanges
+from toxicbuild.output.notifications import (Notification, SlackNotification)
 from tests import async_test, AsyncMagicMock
 
 
-class OutputMethodServerTest(TestCase):
+class OutputMessageHandlerTest(TestCase):
 
     @async_test
     async def setUp(self):
         await connect_exchanges()
-        self.server = server.OutputMethodServer()
-        self.user = User(email='a@a.com')
-        await self.user.save()
-        self.repo = Repository(name='my-repo',
-                               url='http://somewhere.com/bla.git',
-                               vcs_type='git', update_seconds=100,
-                               owner=self.user)
-        await self.repo.save()
-        await self.repo.enable_plugin('custom-webhook',
-                                      webhook_url='http://bla.com')
+        self.server = server.OutputMessageHandler()
+        self.obj_id = ObjectId()
+        self.notification = SlackNotification(webhook_url='https://bla.nada',
+                                              repository_id=self.obj_id)
+        await self.notification.save()
 
+    @patch('aioamqp.protocol.logger')
     @async_test
-    async def tearDown(self):
-        await Repository.drop_collection()
-        await User.drop_collection()
+    async def tearDown(self, *args, **kwargs):
         await disconnect_exchanges()
+        await Notification.drop_collection()
 
-    @patch.object(NotificationPlugin, 'run', AsyncMagicMock(
-        spec=NotificationPlugin.run))
+    @patch.object(Notification, 'run', AsyncMagicMock(
+        spec=Notification.run))
     @async_test
-    async def test_run_plugins(self):
-        msg = {'repository_id': str(self.repo.id),
-               'event_type': 'build-finished'}
-        await self.server.run_plugins(msg)
-        self.assertTrue(NotificationPlugin.run.called)
+    async def test_run_notifications(self):
+        msg = {'repository_id': self.obj_id,
+               'event_type': 'buildset-finished'}
+        await self.server.run_notifications(msg)
+        self.assertTrue(Notification.run.called)
 
     @patch.object(server, 'repo_notifications', AsyncMagicMock(
         spec=server.repo_notifications))
-    @patch.object(server.OutputMethodServer, 'run_plugins', AsyncMagicMock(
-        spec=server.OutputMethodServer.run_plugins))
+    @patch.object(server.OutputMessageHandler, 'run_notifications',
+                  AsyncMagicMock(
+                      spec=server.OutputMessageHandler.run_notifications))
     @async_test
     async def test_handle_repo_notifications(self):
         msg = AsyncMagicMock(spec=JsonAckMessage)
         msg.body = {'event_type': 'repo-added',
-                    'repository_id': str(self.repo.id)}
+                    'repository_id': self.obj_id}
         consumer = server.repo_notifications.consume.return_value
 
         async def fm(cancel_on_timeout):
@@ -77,17 +72,18 @@ class OutputMethodServerTest(TestCase):
         consumer.fetch_message = fm
 
         await self.server._handle_repo_notifications()
-        self.assertTrue(self.server.run_plugins.called)
+        self.assertTrue(self.server.run_notifications.called)
 
     @patch.object(server, 'repo_notifications', AsyncMagicMock(
         spec=server.repo_notifications))
-    @patch.object(server.OutputMethodServer, 'run_plugins', AsyncMagicMock(
-        spec=server.OutputMethodServer.run_plugins))
+    @patch.object(server.OutputMessageHandler, 'run_notifications',
+                  AsyncMagicMock(
+                      spec=server.OutputMessageHandler.run_notifications))
     @async_test
     async def test_handle_repo_notifications_timeout(self):
         msg = AsyncMagicMock(spec=JsonAckMessage)
         msg.body = {'event_type': 'repo-added',
-                    'repository_id': str(self.repo.id)}
+                    'repository_id': self.obj_id}
         consumer = server.repo_notifications.consume.return_value
 
         async def fm(cancel_on_timeout):
@@ -97,17 +93,18 @@ class OutputMethodServerTest(TestCase):
         consumer.fetch_message = fm
 
         await self.server._handle_repo_notifications()
-        self.assertFalse(self.server.run_plugins.called)
+        self.assertFalse(self.server.run_notifications.called)
 
     @patch.object(server, 'build_notifications', AsyncMagicMock(
         spec=server.build_notifications))
-    @patch.object(server.OutputMethodServer, 'run_plugins', AsyncMagicMock(
-        spec=server.OutputMethodServer.run_plugins))
+    @patch.object(server.OutputMessageHandler, 'run_notifications',
+                  AsyncMagicMock(
+                      spec=server.OutputMessageHandler.run_notifications))
     @async_test
     async def test_handle_build_notifications(self):
         msg = AsyncMagicMock(spec=JsonAckMessage)
         msg.body = {'event_type': 'build-added',
-                    'repository_id': str(self.repo.id)}
+                    'repository_id': self.obj_id}
 
         consumer = server.build_notifications.consume.return_value
 
@@ -118,7 +115,7 @@ class OutputMethodServerTest(TestCase):
         consumer.fetch_message = fm
 
         await self.server._handle_build_notifications()
-        self.assertTrue(self.server.run_plugins.called)
+        self.assertTrue(self.server.run_notifications.called)
 
     @patch.object(server, 'sleep', AsyncMagicMock())
     @async_test
@@ -152,3 +149,90 @@ class OutputMethodServerTest(TestCase):
         self.server.shutdown = AsyncMagicMock()
         self.server.sync_shutdown()
         self.assertTrue(self.server.shutdown.called)
+
+
+class NotificationWebHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        request = MagicMock()
+        request.cookies = {}
+        application = MagicMock()
+        self.handler = server.NotificationWebHandler(application,
+                                                     request=request)
+
+    @async_test
+    async def tearDown(self):
+        await server.Notification.drop_collection()
+
+    @async_test
+    async def test_async_prepare(self):
+        self.handler.request.body = '{"some": "thing"}'
+        await self.handler.async_prepare()
+        self.assertTrue(self.handler.body['some'])
+
+    @async_test
+    async def test_async_prepare_no_body(self):
+        self.handler.request.body = None
+        await self.handler.async_prepare()
+        self.assertIsNone(self.handler.body)
+
+    @async_test
+    async def test_enable_notification(self):
+        obj_id = ObjectId()
+        self.handler.body = {'repository_id': str(obj_id),
+                             'webhook_url': 'https://bla.nada'}
+        await self.handler.enable_notification(b'custom-webhook')
+        qs = Notification.objects.filter(repository_id=str(obj_id))
+        count = await qs.count()
+        self.assertEqual(count, 1)
+
+    @async_test
+    async def test_disable_notification(self):
+        obj_id = ObjectId()
+        self.handler.body = {'repository_id': str(obj_id),
+                             'webhook_url': 'https://bla.nada'}
+        await self.handler.enable_notification(b'custom-webhook')
+
+        self.handler.body = {'repository_id': str(obj_id)}
+        await self.handler.disable_notification(b'custom-webhook')
+        qs = Notification.objects.filter(repository_id=str(obj_id))
+        count = await qs.count()
+        self.assertEqual(count, 0)
+
+    @async_test
+    async def test_list_notifications(self):
+        notif = (await self.handler.list_notifications())['notifications']
+        self.assertTrue(notif[0]['name'])
+        self.assertEqual(len(notif), 3)
+
+    @async_test
+    async def test_list_notifications_repo_id(self):
+        obj_id = ObjectId()
+        slack_notif = SlackNotification(webhook_url='https://bla.nada',
+                                        repository_id=obj_id,
+                                        statuses=['success', 'fail'])
+        await slack_notif.save()
+
+        notif = (await self.handler.list_notifications(
+            bytes(str(obj_id), encoding='utf-8')))['notifications']
+        for schema in notif:
+            if schema['name'] == 'slack-notification':
+                self.assertEqual(schema['webhook_url']['value'],
+                                 'https://bla.nada')
+                self.assertEqual(schema['statuses']['value'][0], 'success')
+        self.assertEqual(len(notif), 3)
+
+    @async_test
+    async def test_update_notification(self):
+        obj_id = ObjectId()
+        slack_notif = SlackNotification(webhook_url='https://bla.nada',
+                                        repository_id=obj_id)
+        await slack_notif.save()
+
+        self.handler.body = {'repository_id': str(obj_id),
+                             'webhook_url': 'https://bla.tudo'}
+        await self.handler.update_notification(b'slack-notification')
+
+        notif = await SlackNotification.objects.get(repository_id=obj_id)
+        self.assertEqual(notif.webhook_url, 'https://bla.tudo')

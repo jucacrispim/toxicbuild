@@ -39,10 +39,9 @@ from toxicbuild.master.exchanges import (update_code, poll_status,
                                          scheduler_action, repo_status_changed,
                                          repo_added, ui_notifications,
                                          repo_notifications)
-from toxicbuild.master.fields import (IgnoreUnknownListField,
-                                      HandleUnknownEmbeddedDocumentField)
-from toxicbuild.master.plugins import MasterPlugin
-from toxicbuild.master.signals import (build_started, build_finished)
+from toxicbuild.master.utils import (get_build_config_type,
+                                     get_build_config_filename)
+from toxicbuild.master.signals import buildset_added
 from toxicbuild.master.slave import Slave
 
 # The thing here is: When a repository poller is scheduled, I need to
@@ -72,9 +71,6 @@ class RepositoryBranch(EmbeddedDocument):
 class Repository(OwnedDocument, utils.LoggerMixin):
     """Repository is where you store your code and where toxicbuild
     looks for incomming changes."""
-
-    name = StringField(required=True, unique=True)
-    """The name of the repository."""
 
     url = StringField(required=True, unique=True)
     """The url of the repository."""
@@ -108,20 +104,18 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     the repo was imported from an external service that sends webhooks
     (or something else) this should be False."""
 
-    plugins = IgnoreUnknownListField(
-        HandleUnknownEmbeddedDocumentField(MasterPlugin))
-    """The list of plugins enabled for this reposiory."""
-
     parallel_builds = IntField()
     """Max number of builds in parallel that this repo exeutes
     If None, there's no limit for parallel builds.
     """
 
+    enabled = BooleanField(default=True)
+    """Indicates if this repository is enabled to run builds."""
+
     meta = {
         'ordering': ['name'],
     }
 
-    _plugins_instances = {}
     _running_builds = 0
     _stop_consuming_messages = False
 
@@ -132,6 +126,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         self.scheduler = scheduler
         self._poller_instance = None
         self.build_manager = BuildManager(self)
+        self.config_type = get_build_config_type()
+        self.config_filename = get_build_config_filename()
+
         self._old_status = None
         self._vcs_instance = None
 
@@ -163,20 +160,19 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         """Returns the number of running builds among all the repos."""
         return cls._running_builds
 
-    async def to_dict(self, id_as_str=False):
+    async def to_dict(self):
         """Returns a dict representation of the object."""
 
-        my_dict = {'id': self.id, 'name': self.name, 'url': self.url,
+        my_dict = {'id': str(self.id), 'name': self.name, 'url': self.url,
+                   'full_name': self.full_name,
                    'update_seconds': self.update_seconds,
                    'vcs_type': self.vcs_type,
                    'branches': [b.to_dict() for b in self.branches],
-                   'slaves': [s.to_dict(id_as_str)
+                   'slaves': [s.to_dict(True)
                               for s in (await self.slaves)],
-                   'plugins': [p.to_dict() for p in self.plugins],
+                   'enabled': self.enabled,
                    'parallel_builds': self.parallel_builds,
                    'clone_status': self.clone_status}
-        if id_as_str:
-            my_dict['id'] = str(self.id)
 
         return my_dict
 
@@ -200,13 +196,20 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         workdir = workdir.strip()
         return os.path.join(base_dir, workdir, str(self.id))
 
+    async def get_last_buildset(self):
+        bad_statuses = [BuildSet.PENDING, BuildSet.NO_BUILDS,
+                        BuildSet.NO_CONFIG]
+        last_buildset = await BuildSet.objects(
+            repository=self, status__not__in=bad_statuses).order_by(
+            '-created').first()
+        return last_buildset
+
     async def get_status(self):
         """Returns the status for the repository. The status is the
         status of the last buildset created for this repository that is
         not pending."""
 
-        last_buildset = await BuildSet.objects(repository=self).order_by(
-            '-created').first()
+        last_buildset = await self.get_last_buildset()
 
         clone_statuses = ['cloning', 'clone-exception']
         if not last_buildset and self.clone_status in clone_statuses:
@@ -214,27 +217,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         elif not last_buildset:
             status = 'ready'
         else:
-            status = last_buildset.get_status()
-            i = 1
-            while status == BuildSet.PENDING:
-                # we do not consider pending builds for the repo status
-                start = i
-                stop = start + 1
-                last_buildset = BuildSet.objects(repository=self).order_by(
-                    '-created')[start:stop]
-                last_buildset = await last_buildset.first()
+            status = last_buildset.status
 
-                if not last_buildset:
-                    status = 'ready'
-                    break
-
-                status = last_buildset.get_status()
-                i += 1
         return status
 
     @classmethod
     async def _notify_repo_creation(cls, repo):
-        repo_added_msg = await repo.to_dict(id_as_str=True)
+        repo_added_msg = await repo.to_dict()
         await repo_added.publish(repo_added_msg)
         repo_added_msg['msg_type'] = 'repo_added'
         async for user in await repo.get_allowed_users():
@@ -266,6 +255,16 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         if repo.schedule_poller:
             repo.schedule()
         return repo
+
+    async def save(self, *args, **kwargs):
+        set_full_name = (hasattr(self, '_changed_fields') and
+                         ('name' in self._changed_fields or
+                          'owner' in self._changed_fields))
+        if set_full_name or not self.full_name:
+            owner = await self.owner
+            self.full_name = '{}/{}'.format(owner.name, self.name)
+        r = await super().save(*args, **kwargs)
+        return r
 
     async def remove(self):
         """ Removes all builds and builders and revisions related to the
@@ -403,8 +402,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                    'external': external}
 
             # Sends a message to the queue that is consumed by the pollers
-            await update_code.publish(msg)
-            msg = await self._wait_update()
+            t = ensure_future(self._wait_update())
+            ensure_future(update_code.publish(msg))
+            msg = await t
 
         self.clone_status = msg.body['clone_status']
         await self.save()
@@ -448,7 +448,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
           ``self.build_manager.start_pending``.
         * Connects to ``build_started`` and ``build_finished`` signals
           to handle changing of status.
-        * Runs the enabled plugins."""
+        """
 
         self.log('Scheduling {url}'.format(url=self.url))
 
@@ -457,8 +457,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             sched_msg = {'type': 'add-update-code',
                          'repository_id': str(self.id)}
 
-            f = scheduler_action.publish(sched_msg)
-            ensure_future(f)
+            ensure_future(scheduler_action.publish(sched_msg))
 
         # adding start_pending
         start_pending_hash = self.scheduler.add(
@@ -466,10 +465,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         _scheduler_hashes['{}-start-pending'.format(
             self.url)] = start_pending_hash
-
-        # connecting to build signals
-        build_started.connect(self._check_for_status_change)
-        build_finished.connect(self._check_for_status_change)
 
     @classmethod
     async def schedule_all(cls):
@@ -591,52 +586,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await revision.save()
         return revision
 
-    async def enable_plugin(self, plugin_name, **plugin_config):
-        """Enables a plugin to this repository.
-
-        :param plugin_name: The name of the plugin that is being enabled.
-        :param plugin_config: A dictionary containing the plugin's
-          configuration."""
-
-        plugin_cls = MasterPlugin.get_plugin(name=plugin_name)
-        plugin = plugin_cls(**plugin_config)
-        self.plugins.append(plugin)
-        await self.save()
-
-    def get_plugins_for_event(self, event):
-        """Returns the plugins that react for a given event.
-
-        :param event: The event for the plugins to react"""
-        return [p for p in self.plugins if event in p.events or not p.events]
-
-    def _match_kw(self, plugin, **kwargs):
-        """True if the plugin's attributes match the
-        kwargs.
-
-        :param plugin: A plugin instance.
-        :param kwargs: kwargs to match the plugin"""
-
-        for k, v in kwargs.items():
-            try:
-                attr = getattr(plugin, k)
-            except AttributeError:
-                return False
-            else:
-                if attr != v:
-                    return False
-
-        return True
-
-    async def disable_plugin(self, **kwargs):
-        """Disables a plugin to the repository.
-
-        :param kwargs: kwargs to match the plugin."""
-        matched = [p for p in self.plugins if self._match_kw(p, **kwargs)]
-        for p in matched:
-            self.plugins.remove(p)
-        await self.save()
-
-    async def add_builds_for_slave(self, buildset, slave, builders=None,
+    async def add_builds_for_slave(self, buildset, slave, conf, builders=None,
                                    builders_origin=None):
         """Adds a buildset to the build queue of a given slave
         for this repository.
@@ -644,31 +594,17 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         :param buildset: An instance of
           :class:`toxicbuild.master.build.BuildSet`.
         :param slave: An instance of :class:`toxicbuild.master.build.Slave`.
+        :param conf: The build configuration for the buidset.
+        :param builders: The builders to use in the buids. If no builds,
+          all builders for the revision will be used.
+        :param builders_origin: Indicates from which branch config the builds
+          came. Useful for merge requests to test agains the tests on the main
+          branch.
         """
         builders = builders or []
         await self.build_manager.add_builds_for_slave(
-            buildset, slave, builders=builders,
+            buildset, slave, conf, builders=builders,
             builders_origin=builders_origin)
-
-    async def _check_for_status_change(self, sender, build):
-        """Called when a build is started or finished. If this event
-        makes the repository change its status publishes in the
-        ``repo_status_changed`` exchange.
-
-        :param sender: The object that sent the signal
-        :param build: The build that was started or finished"""
-
-        status = await self.get_status()
-        if status != self._old_status:
-            status_msg = dict(repository_id=str(self.id),
-                              old_status=self._old_status,
-                              new_status=status)
-            await self._notify_status_changed(status_msg)
-            self._old_status = status
-
-    def log(self, msg, level='info'):
-        msg = '{} [{}]'.format(msg, self.name)
-        super().log(msg, level=level)
 
     async def start_build(self, branch, builder_name=None, named_tree=None,
                           slaves=None, builders_origin=None):
@@ -685,8 +621,18 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                                                branch=branch,
                                                commit=named_tree)
 
+        buildset = await BuildSet.create(repository=self, revision=rev)
+        try:
+            conf = await self.get_config_for(rev)
+        except FileNotFoundError:
+            buildset.status = type(buildset).NO_CONFIG
+            await buildset.save()
+            buildset_added.send(str(self.id), buildset=buildset)
+            return
+
         if not builder_name:
-            builders, builders_origin = await self._get_builders(slaves, rev)
+            builders, builders_origin = await self._get_builders(slaves, rev,
+                                                                 conf)
         else:
             builders_origin = None
             blist = [(await Builder.get(name=builder_name,
@@ -695,10 +641,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             for slave in slaves:
                 builders.update({slave: blist})
 
-        buildset = await BuildSet.create(repository=self, revision=rev)
         for slave in slaves:
-            await self.add_builds_for_slave(buildset, slave,
-                                            builders[slave],
+            await self.add_builds_for_slave(buildset, slave, conf,
+                                            builders=builders[slave],
                                             builders_origin=builders_origin)
 
     async def request_build(self, branch, builder_name=None, named_tree=None,
@@ -719,6 +664,14 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         :param build_uuid: The uuid of the build."""
 
         await self.build_manager.cancel_build(build_uuid)
+
+    async def enable(self):
+        self.enabled = True
+        await self.save()
+
+    async def disable(self):
+        self.enabled = False
+        await self.save()
 
     def get_branch(self, branch_name):
         """Returns an instance of
@@ -742,11 +695,28 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         return only_latest
 
-    async def _get_builders(self, slaves, revision):
+    async def get_config_for(self, revision):
+        """Returns the build configuration for a given revision.
+
+        :param revision: A
+          :class`~toxicbuild.master.repository.RepositoryRevision` instance.
+        """
+
+        async with await self.toxicbuild_conf_lock.acquire_write():
+            self.log('checkout on {} to {}'.format(
+                self.url, revision.commit), level='debug')
+            await self.vcs.checkout(revision.commit)
+            conf = await utils.get_config(self.workdir, self.config_type,
+                                          self.config_filename)
+
+        return conf
+
+    async def _get_builders(self, slaves, revision, conf):
         builders = {}
+        origin = None
         for slave in slaves:
             builders[slave], origin = await self.build_manager.get_builders(
-                slave, revision)
+                slave, revision, conf)
 
         return builders, origin
 

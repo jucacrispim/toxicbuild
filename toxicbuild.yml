@@ -30,6 +30,11 @@ FUNCTIONAL_TESTS:  &FUNCTIONAL_TESTS
    timeout: 20
 
 
+JS_UNIT_TESTS:  &JS_UNIT_TESTS
+  name: JS unit tests
+  command: ./build-scripts/run_jasmine_tests.sh
+  timeout: 20
+
 SELENIUM_TESTS:  &SELENIUM_TESTS
   name: Selenium tests for web ui
   command: ./build-scripts/run_selenium_tests.sh
@@ -177,6 +182,7 @@ SELENIUM_BUILDER:  &SELENIUM_BUILDER
 
   steps:
     - <<: *INSTALL_MONGODB
+    - <<: *JS_UNIT_TESTS
     - <<: *SELENIUM_TESTS
     - <<: *INTEGRATION_TESTS
 

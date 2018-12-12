@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,10 +20,15 @@
 
 import asyncio
 from collections import OrderedDict
+import datetime
+import importlib
 import json
+from toxicbuild.core import requests
 from toxicbuild.core.utils import string2datetime
+from toxicbuild.ui import settings
 from toxicbuild.ui.client import get_hole_client
-from toxicbuild.ui.utils import is_datetime, get_client_settings
+from toxicbuild.ui.utils import (is_datetime, get_client_settings,
+                                 format_datetime)
 
 
 class BaseModel:
@@ -44,6 +49,7 @@ class BaseModel:
         self.__ordered__ = [k for k in ordered_kwargs.keys()]
 
         for name, cls in self.references.items():
+            cls = self._get_ref_cls(cls)
             if not isinstance(ordered_kwargs.get(name), (dict, cls)):
                 ordered_kwargs[name] = [cls(requester, kw) if not
                                         isinstance(kw, cls)
@@ -68,6 +74,13 @@ class BaseModel:
     def __hash__(self):
         return hash(self.id)
 
+    def _get_ref_cls(self, cls):
+        if isinstance(cls, str):
+            module, cls_name = cls.rsplit('.', 1)
+            module = importlib.import_module(module)
+            cls = getattr(module, cls_name)
+        return cls
+
     @classmethod
     @asyncio.coroutine
     def get_client(cls, requester):
@@ -82,8 +95,12 @@ class BaseModel:
         client = yield from get_hole_client(requester, **client_settings)
         return client
 
-    def to_dict(self):
-        """Transforms a model into a dict."""
+    def to_dict(self, dtformat=None, tzname=None):
+        """Transforms a model into a dict.
+
+        :param dtformat: Format for datetimes.
+        :param tzname: A timezone name.
+        """
 
         attrs = [a for a in self.__ordered__ if not a.startswith('_')]
 
@@ -92,23 +109,50 @@ class BaseModel:
             objattr = getattr(self, attr)
             is_ref = attr == 'references'
             if not (callable(objattr) and not is_ref):  # pragma no branch
+
+                if isinstance(objattr, datetime.datetime):
+                    objattr = format_datetime(objattr, dtformat, tzname)
+
                 d[attr] = objattr
 
         return d
 
-    def to_json(self):
-        """Transforms a model into a json."""
+    def to_json(self, *args, **kwargs):
+        """Transforms a model into a json.
+
+        :param args: Positional arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        :param kwargs: Named arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        """
 
         d = self.to_dict()
         return json.dumps(d)
 
+    @classmethod
+    def _handle_name_or_id(cls, prefix, kw):
+        name = kw.pop('name', None)
+        key = '{}_name_or_id'.format(prefix)
+        if name:
+            kw[key] = name
+
+        obj_id = kw.pop('id', None)
+        if obj_id:
+            kw[key] = obj_id
+
 
 class User(BaseModel):
+    """A user created in the master"""
 
     def __init__(self, requester, ordered_kwargs):
         if requester is None:
             requester = self
         super().__init__(requester, ordered_kwargs)
+
+    @classmethod
+    def _get_root_user(cls):
+        root_id = settings.ROOT_USER_ID
+        return cls(None, {'id': root_id})
 
     @classmethod
     async def authenticate(cls, username_or_email, password):
@@ -121,8 +165,57 @@ class User(BaseModel):
         return user
 
     @classmethod
-    async def add(cls, requester, email, username, password,
+    async def change_password(cls, requester, old_password,
+                              new_password):
+        kw = {'username_or_email': requester.email,
+              'old_password': old_password,
+              'new_password': new_password}
+
+        with (await cls.get_client(requester)) as client:
+            await client.user_change_password(**kw)
+        return True
+
+    @classmethod
+    async def request_password_reset(cls, email, reset_link):
+        """Request the reset of the user's password. Sends an
+        email with a link to reset the password.
+        """
+        subject = 'Reset password requested'
+
+        message = "Follow the link {} to reset your password.".format(
+            reset_link)
+
+        requester = cls._get_root_user()
+        kw = {'email': email,
+              'subject': subject,
+              'message': message}
+
+        with (await cls.get_client(requester)) as client:
+            await client.user_send_reset_password_email(**kw)
+
+        return True
+
+    @classmethod
+    async def change_password_with_token(cls, token, password):
+        """Changes the user password using a token. The token
+        was generated when ``request_password_reset`` was called and
+        a link with the token was sent to the user email.
+        """
+
+        kw = {'token': token,
+              'password': password}
+
+        requester = cls._get_root_user()
+
+        with (await cls.get_client(requester)) as client:
+            await client.user_change_password_with_token(**kw)
+
+        return True
+
+    @classmethod
+    async def add(cls, email, username, password,
                   allowed_actions):
+        requester = cls._get_root_user()
         kw = {'username': username,
               'email': email,
               'password': password, 'allowed_actions': allowed_actions}
@@ -137,6 +230,17 @@ class User(BaseModel):
         with (await type(self).get_client(self.requester)) as client:
             resp = await client.user_remove(**kw)
         return resp
+
+    @classmethod
+    async def exists(cls, **kwargs):
+        """Checks if a user with some given information exists.
+
+        :param kwargs: Named arguments to match the user"""
+        requester = cls._get_root_user()
+        with (await cls.get_client(requester)) as client:
+            exists = await client.user_exists(**kwargs)
+
+        return exists
 
 
 class Slave(BaseModel):
@@ -174,6 +278,7 @@ class Slave(BaseModel):
         :param requester: The user who is requesting the operation.
         :param kwargs: kwargs to get the slave."""
 
+        cls._handle_name_or_id('slave', kwargs)
         with (yield from cls.get_client(requester)) as client:
             slave_dict = yield from client.slave_get(**kwargs)
         slave = cls(requester, slave_dict)
@@ -196,7 +301,7 @@ class Slave(BaseModel):
         """Delete a slave."""
 
         with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.slave_remove(slave_name=self.name)
+            resp = yield from client.slave_remove(slave_name_or_id=self.id)
         return resp
 
     @asyncio.coroutine
@@ -204,226 +309,8 @@ class Slave(BaseModel):
         """Updates a slave"""
 
         with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.slave_update(slave_name=self.name,
+            resp = yield from client.slave_update(slave_name_or_id=self.id,
                                                   **kwargs)
-        return resp
-
-
-class Plugin(BaseModel):
-    """A repository plugin."""
-
-    @classmethod
-    def list(cls, requester):
-        """Lists all plugins available in the master.
-
-        :param requester: The user who is requesting the operation."""
-
-        with (yield from cls.get_client(requester)) as client:
-            resp = yield from client.plugins_list()
-
-        plugins = [cls(requester, p) for p in resp]
-        return plugins
-
-    @classmethod
-    def get(cls, requester, name):
-        """Return the schema for a specific plugin
-
-        :param requester: The user who is requesting the operation.
-        :param name: The name of the plugin"""
-
-        with (yield from cls.get_client(requester)) as client:
-            resp = yield from client.plugin_get(name=name)
-
-        return cls(requester, resp)
-
-
-class Repository(BaseModel):
-
-    """Class representing a repository."""
-
-    references = {'slaves': Slave,
-                  'plugins': Plugin}
-
-    @classmethod
-    @asyncio.coroutine
-    def add(cls, requester, name, url, owner, vcs_type, update_seconds=300,
-            slaves=None, parallel_builds=None):
-        """Adds a new repository.
-
-        :param requester: The user who is requesting the operation.
-        :param name: Repository's name.
-        :param url: Repository's url.
-        :param owner: The repository owner
-        :param vcs_type: VCS type used on the repository.
-        :param update_seconds: Interval to update the repository code.
-        :param slaves: List with slave names for this reporitory.
-        :params parallel_builds: How many paralles builds this repository
-          executes. If None, there is no limit."""
-
-        kw = {'repo_name': name, 'repo_url': url, 'vcs_type': vcs_type,
-              'update_seconds': update_seconds,
-              'parallel_builds': parallel_builds,
-              'owner_id': str(owner.id)}
-
-        kw.update({'slaves': slaves or []})
-        with (yield from cls.get_client(requester)) as client:
-            repo_dict = yield from client.repo_add(**kw)
-
-        repo = cls(requester, repo_dict)
-        return repo
-
-    @classmethod
-    @asyncio.coroutine
-    def get(cls, requester, **kwargs):
-        """Returns a repository.
-
-        :param requester: The user who is requesting the operation.
-        :param kwargs: kwargs to get the repository."""
-
-        with (yield from cls.get_client(requester)) as client:
-            repo_dict = yield from client.repo_get(**kwargs)
-        repo = cls(requester, repo_dict)
-        return repo
-
-    @classmethod
-    @asyncio.coroutine
-    def list(cls, requester):
-        """Lists all repositories.
-
-        :param requester: The user who is requesting the operation."""
-
-        with (yield from cls.get_client(requester)) as client:
-            repos = yield from client.repo_list()
-        repo_list = [cls(requester, repo) for repo in repos]
-        return repo_list
-
-    @asyncio.coroutine
-    def delete(self):
-        """Delete a repository."""
-
-        with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_remove(repo_name=self.name)
-        return resp
-
-    @asyncio.coroutine
-    def add_slave(self, slave):
-        """Adds a slave to the repository.
-
-        :param slave: A Slave instance."""
-
-        with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_add_slave(repo_name=self.name,
-                                                    slave_name=slave.name)
-        return resp
-
-    @asyncio.coroutine
-    def remove_slave(self, slave):
-        """Removes a slave from the repository.
-
-        :param slave: A Slave instance.
-        """
-
-        with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_remove_slave(repo_name=self.name,
-                                                       slave_name=slave.name)
-        return resp
-
-    @asyncio.coroutine
-    def add_branch(self, branch_name, notify_only_latest):
-        """Adds a branch config to a repositoiry.
-
-        :param branch_name: The name of the branch.
-        :param notify_only_latest: If we should create builds for all
-          revisions or only for the lastest one."""
-
-        with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_add_branch(
-                repo_name=self.name, branch_name=branch_name,
-                notify_only_latest=notify_only_latest)
-
-        return resp
-
-    @asyncio.coroutine
-    def remove_branch(self, branch_name):
-        """Removes a branch config from a repository.
-
-        :param branch_name: The name of the branch."""
-        with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_remove_branch(
-                repo_name=self.name, branch_name=branch_name)
-
-        return resp
-
-    @asyncio.coroutine
-    def update(self, **kwargs):
-        """Updates a slave"""
-        with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_update(repo_name=self.name,
-                                                 **kwargs)
-        return resp
-
-    @asyncio.coroutine
-    def start_build(self, branch, builder_name=None, named_tree=None,
-                    slaves=None):
-        """Starts a (some) build(s) for a repository.
-
-        :param branch: The name of the branch.
-        :param builder_name: The name of the builder that will execute
-          the build
-        :param named_tree: The named_tree that will be builded. If no
-          named_tree the last one will be used.
-        :param slaves: A list with names of slaves that will execute
-          the builds. If no slave is supplied all will be used."""
-
-        with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_start_build(
-                repo_name=self.name, branch=branch, builder_name=builder_name,
-                named_tree=named_tree, slaves=slaves or [])
-        return resp
-
-    def to_dict(self):
-        """Transforms a repository into a dictionary."""
-
-        d = super().to_dict()
-        d['slaves'] = [s.to_dict() for s in d['slaves']]
-        d['plugins'] = [p.to_dict() for p in d['plugins']]
-        return d
-
-    @asyncio.coroutine
-    def enable_plugin(self, plugin_name, **kwargs):
-        """Enables a plugin to a repository.
-
-        :param plugin_name: The plugin's name.
-        :param kwargs: kwargs used to configure the plugin.
-        """
-
-        with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_enable_plugin(
-                repo_name=self.name, plugin_name=plugin_name, **kwargs)
-
-        return resp
-
-    @asyncio.coroutine
-    def disable_plugin(self, **kwargs):
-        """Disables a plugin from a repository.
-
-        :param kwargs: kwargs to match the plugin."""
-
-        with (yield from self.get_client(self.requester)) as client:
-            resp = yield from client.repo_disable_plugin(
-                repo_name=self.name, **kwargs)
-
-        return resp
-
-    async def cancel_build(self, build_uuid):
-        """Cancels a build from the repository.
-
-        :param build_uuid: The uuid of the build."""
-
-        with await self.get_client(self.requester) as client:
-            resp = await client.repo_cancel_build(repo_name_or_id=self.id,
-                                                  build_uuid=build_uuid)
-
         return resp
 
 
@@ -449,21 +336,341 @@ class Build(BaseModel):
     references = {'steps': Step,
                   'builder': Builder}
 
+    def to_dict(self, *args, **kwargs):
+        """Converts a build object in to a dictionary.
 
-class BuildSet(BaseModel):
-    references = {'builds': Build}
+        :param args: Positional arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        :param kwargs: Named arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        """
+        d = super().to_dict(*args, **kwargs)
+        d['builder'] = d['builder'].to_dict(*args, **kwargs)
+        d['steps'] = [s.to_dict(*args, **kwargs) for s in d.get('steps', [])]
+        return d
 
     @classmethod
     @asyncio.coroutine
-    def list(cls, requester, repo_name=None):
-        """Lists buildsets. If ``repo_name`` only builds of this
-        repsitory will be listed.
-
-        :param repo_name: Name of a repository."""
+    def get(cls, requester, uuid):
+        """Returns information about abuild.
+        :param uuid: The uuid of the build."""
 
         with (yield from cls.get_client(requester)) as client:
-            buildsets = yield from client.buildset_list(repo_name=repo_name,
-                                                        offset=10)
+            build_dict = yield from client.build_get(build_uuid=uuid)
+
+        build = cls(requester, build_dict)
+        return build
+
+
+class Repository(BaseModel):
+
+    """Class representing a repository."""
+
+    references = {'slaves': Slave,
+                  'last_buildset': 'toxicbuild.ui.models.BuildSet'}
+
+    @classmethod
+    @asyncio.coroutine
+    def add(cls, requester, name, url, owner, vcs_type, update_seconds=300,
+            slaves=None, parallel_builds=None):
+        """Adds a new repository.
+
+        :param requester: The user who is requesting the operation.
+        :param name: Repository's name.
+        :param url: Repository's url.
+        :param owner: The repository owner
+        :param vcs_type: VCS type used on the repository.
+        :param update_seconds: Interval to update the repository code.
+        :param slaves: List with slave names for this reporitory.
+        :params parallel_builds: How many paralles builds this repository
+          executes. If None, there is no limit."""
+
+        kw = {'repo_name': name, 'repo_url': url, 'vcs_type': vcs_type,
+              'update_seconds': update_seconds,
+              'parallel_builds': parallel_builds,
+              'owner_id': str(owner.id)}
+
+        kw.update({'slaves': slaves or []})
+
+        with (yield from cls.get_client(requester)) as client:
+            repo_dict = yield from client.repo_add(**kw)
+
+        repo = cls(requester, repo_dict)
+        return repo
+
+    @classmethod
+    @asyncio.coroutine
+    def get(cls, requester, **kwargs):
+        """Returns a repository.
+
+        :param requester: The user who is requesting the operation.
+        :param kwargs: kwargs to get the repository."""
+
+        cls._handle_name_or_id('repo', kwargs)
+        with (yield from cls.get_client(requester)) as client:
+            repo_dict = yield from client.repo_get(**kwargs)
+        repo = cls(requester, repo_dict)
+        return repo
+
+    @classmethod
+    @asyncio.coroutine
+    def list(cls, requester, **kwargs):
+        """Lists all repositories.
+
+        :param requester: The user who is requesting the operation."""
+
+        with (yield from cls.get_client(requester)) as client:
+            repos = yield from client.repo_list(**kwargs)
+        repo_list = [cls(requester, repo) for repo in repos]
+        return repo_list
+
+    @asyncio.coroutine
+    def delete(self):
+        """Delete a repository."""
+
+        with (yield from self.get_client(self.requester)) as client:
+            resp = yield from client.repo_remove(repo_name_or_id=self.id)
+        return resp
+
+    @asyncio.coroutine
+    def add_slave(self, slave):
+        """Adds a slave to the repository.
+
+        :param slave: A Slave instance."""
+
+        with (yield from self.get_client(self.requester)) as client:
+            resp = yield from client.repo_add_slave(repo_name_or_id=self.id,
+                                                    slave_name_or_id=slave.id)
+        return resp
+
+    @asyncio.coroutine
+    def remove_slave(self, slave):
+        """Removes a slave from the repository.
+
+        :param slave: A Slave instance.
+        """
+
+        with (yield from self.get_client(self.requester)) as client:
+            resp = yield from client.repo_remove_slave(
+                repo_name_or_id=self.id, slave_name_or_id=slave.id)
+        return resp
+
+    @asyncio.coroutine
+    def add_branch(self, branch_name, notify_only_latest):
+        """Adds a branch config to a repositoiry.
+
+        :param branch_name: The name of the branch.
+        :param notify_only_latest: If we should create builds for all
+          revisions or only for the lastest one."""
+
+        with (yield from self.get_client(self.requester)) as client:
+            resp = yield from client.repo_add_branch(
+                repo_name_or_id=self.id, branch_name=branch_name,
+                notify_only_latest=notify_only_latest)
+
+        return resp
+
+    @asyncio.coroutine
+    def remove_branch(self, branch_name):
+        """Removes a branch config from a repository.
+
+        :param branch_name: The name of the branch."""
+        with (yield from self.get_client(self.requester)) as client:
+            resp = yield from client.repo_remove_branch(
+                repo_name_or_id=self.id, branch_name=branch_name)
+
+        return resp
+
+    @asyncio.coroutine
+    def update(self, **kwargs):
+        """Updates a slave"""
+        with (yield from self.get_client(self.requester)) as client:
+            resp = yield from client.repo_update(repo_name_or_id=self.id,
+                                                 **kwargs)
+        return resp
+
+    @asyncio.coroutine
+    def start_build(self, branch, builder_name=None, named_tree=None,
+                    slaves=None):
+        """Starts a (some) build(s) for a repository.
+
+        :param branch: The name of the branch.
+        :param builder_name: The name of the builder that will execute
+          the build
+        :param named_tree: The named_tree that will be builded. If no
+          named_tree the last one will be used.
+        :param slaves: A list with names of slaves that will execute
+          the builds. If no slave is supplied all will be used."""
+
+        with (yield from self.get_client(self.requester)) as client:
+            resp = yield from client.repo_start_build(
+                repo_name_or_id=self.id, branch=branch,
+                builder_name=builder_name,
+                named_tree=named_tree, slaves=slaves or [])
+        return resp
+
+    def to_dict(self, *args, **kwargs):
+        """Transforms a repository into a dictionary.
+
+        :param args: Positional arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        :param kwargs: Named arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        """
+
+        d = super().to_dict(*args, **kwargs)
+        d['slaves'] = [s.to_dict(*args, **kwargs) for s in d['slaves']]
+        if self.last_buildset:
+            d['last_buildset'] = self.last_buildset.to_dict(*args, **kwargs)
+        return d
+
+    async def cancel_build(self, build_uuid):
+        """Cancels a build from the repository.
+
+        :param build_uuid: The uuid of the build."""
+
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_cancel_build(repo_name_or_id=self.id,
+                                                  build_uuid=build_uuid)
+
+        return resp
+
+    async def enable(self):
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_enable(repo_name_or_id=self.id)
+
+        return resp
+
+    async def disable(self):
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_disable(repo_name_or_id=self.id)
+
+        return resp
+
+
+class BuildSet(BaseModel):
+    references = {'builds': Build,
+                  'repository': Repository}
+
+    @classmethod
+    @asyncio.coroutine
+    def list(cls, requester, repo_name_or_id=None, summary=True):
+        """Lists buildsets. If ``repo_name_or_id`` only builds of this
+        repsitory will be listed.
+
+        :param repo_name: Name of a repository.
+        :param summary: If True, no builds information will be returned.
+        """
+
+        with (yield from cls.get_client(requester)) as client:
+            buildsets = yield from client.buildset_list(
+                repo_name_or_id=repo_name_or_id, offset=10,
+                summary=summary)
 
         buildset_list = [cls(requester, buildset) for buildset in buildsets]
         return buildset_list
+
+    def to_dict(self, *args, **kwargs):
+        """Returns a dictionary based in a BuildSet object.
+
+        :param args: Positional arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        :param kwargs: Named arguments passed to
+          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+        """
+        d = super().to_dict(*args, **kwargs)
+        d['builds'] = [b.to_dict(*args, **kwargs) for b in d.get('builds', [])]
+        d['repository'] = self.repository.to_dict(*args, **kwargs) \
+            if self.repository else None
+        return d
+
+    @classmethod
+    async def get(cls, requester, buildset_id):
+        """Returns an instance of BuildSet.
+
+        :param buildset_id: The id of the buildset to get.
+        """
+
+        with (await cls.get_client(requester)) as client:
+            buildset = await client.buildset_get(buildset_id=buildset_id)
+
+        return cls(requester, buildset)
+
+
+class Notification(BaseModel):
+    """Integration with the notifications api."""
+
+    api_url = getattr(settings, 'NOTIFICATIONS_API_URL', None)
+    api_token = getattr(settings, 'NOTIFICATIONS_API_TOKEN', None)
+
+    def __init__(self, ordered_kwargs):
+        super().__init__(None, ordered_kwargs)
+
+    @classmethod
+    def _get_headers(cls):
+        return {'Authorization': 'token {}'.format(cls.api_token)}
+
+    @classmethod
+    def _get_notif_url(cls, notif_name):
+        url = '{}/{}'.format(cls.api_url, notif_name)
+        return url
+
+    @classmethod
+    async def list(cls, obj_id=None):
+        """Lists all the notifications available.
+
+        :param obj_id: The of of an repository. If not None, the notifications
+          will return the values of the configuration for that repository."""
+
+        url = '{}/list/'.format(cls.api_url)
+        if obj_id:
+            url += obj_id
+        headers = cls._get_headers()
+        r = await requests.get(url, headers=headers)
+        notifications = r.json()['notifications']
+        return [cls(n) for n in notifications]
+
+    @classmethod
+    async def enable(cls, repo_id, notif_name, **config):
+        """Enables a notification for a given repository.
+
+        :param repo_id: The id of the repository to enable the notification.
+        :param notif_name: The name of the notification.
+        :param config: A dictionary with the config values for the
+          notification.
+        """
+
+        url = cls._get_notif_url(notif_name)
+        config['repository_id'] = repo_id
+        headers = cls._get_headers()
+        r = await requests.post(url, headers=headers, data=json.dumps(config))
+        return r
+
+    @classmethod
+    async def disable(cls, repo_id, notif_name):
+        """Disables a notification for a given repository.
+
+        :param repo_id: The id of the repository to enable the notification.
+        :param notif_name: The name of the notification.
+        """
+        url = cls._get_notif_url(notif_name)
+        config = {'repository_id': repo_id}
+        headers = cls._get_headers()
+        r = await requests.delete(url, headers=headers,
+                                  data=json.dumps(config))
+        return r
+
+    @classmethod
+    async def update(cls, repo_id, notif_name, **config):
+        """Updates a notification for a given repository.
+
+        :param repo_id: The id of the repository to enable the notification.
+        :param notif_name: The name of the notification.
+        :param config: A dictionary with the new config values for the
+          notification.
+        """
+        url = cls._get_notif_url(notif_name)
+        config['repository_id'] = repo_id
+        headers = cls._get_headers()
+        r = await requests.put(url, headers=headers, data=json.dumps(config))
+        return r

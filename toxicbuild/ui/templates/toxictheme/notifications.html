@@ -1,0 +1,172 @@
+<!-- confirm delete repo modal -->
+<div class="modal fade" id="notificationModal" tabindex="-1" role="dialog"
+     aria-labelledby="notificationModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <img id="notification-modal-icon"/><h6 class="modal-title"></h6>
+        <button type="button" class="close" data-dismiss="modal"
+		aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+	<div  id="notification-modal-body"></div>
+
+	<span id="advanced-angle-span"
+	      class="fas fa-angle-right cursor-pointer">
+	</span>
+	<span class="notification-config-advanced-span cursor-pointer">
+	  <b>{{translate('Advanced')}}</b>
+	</span>
+
+	<div id="notification-config-advanced">
+	  <label>Branches</label>
+	  <input class="form-control" type="text" valuefor="branches">
+	  <label>Statuses</label>
+	  <input class="form-control" type="text" valuefor="statuses">
+	</div>
+      </div>
+
+      <div class="modal-footer">
+
+	  <div class="add-branch-btn-container inner-btn-container col-sm-4">
+	    <button class="btn btn-sm btn-block btn-dark" type="submit"
+		    id="btn-enable-notification" disabled>
+	      <span class="spinner icon-spinner-2" id="add-branch-btn-spinner"
+		    style="display:none">
+	      </span>
+	      <span id="enable-notification-btn-text">{{translate('Enable')}}</span>
+	    </button>
+	  </div>
+
+	  <div class="disable-notif-btn-container inner-btn-container col-sm-4">
+	    <button class="btn btn-sm btn-block btn-danger btn-red"
+		    type="submit" id="btn-remove-obj">
+	      <span class="spinner icon-spinner-2"
+		    id="remove-slave-btn-spinner" style="display:none">
+	      </span>
+	      <span id="disable-notification-btn-text">{{translate('Disable')}}</span>
+	    </button>
+	  </div>
+
+	  <div class="cancel-btn-container inner-btn-container">
+	    <button class="btn btn-sm btn-light btn-block" type="submit"
+		    id="btn-cancel-remove-slave" data-dismiss="modal">
+	      <span id="disable-notification-btn-text">{{translate('Cancel')}}</span>
+	    </button>
+	  </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<!-- end confirm delete slave modal -->
+
+<div class="template">
+
+  <ul class="notification-list-ul">
+    <li class="notification-item box-white box-shadow-light">
+      <img class="notification-img"/>
+      <span class="notification-pretty-name"></span>
+      <a href="#" class="no-decoration" data-toggle="tooltip"
+	 title="configure">
+	<span class="fas fa-wrench notification-cid" data-toggle="modal"
+	      data-target="#notificationModal"></span>
+      </a>
+      <span class="fas fa-check"></span>
+    </li>
+  </ul>
+
+</div>
+
+
+<!-- main settings container -->
+<div class="repo-details-main-container details-main-container box-shadow-gray">
+  <div class="close-btn">&times;</div>
+
+  <!-- loading spinner -->
+  <div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
+    <span class="spinner icon-spinner-2"></span>
+    <span class="icon-toxicmask"></span>
+  </div>
+  <!-- end loading spinner -->
+
+  <!-- navigation pills -->
+  <div class="nav-container">
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+	<a class="nav-link" href="{{ '/' + repo_full_name + '/settings' }}">
+	  {{translate('General configurations')}}
+	</a>
+      </li>
+      <li class="nav-item ">
+	<a class="nav-link active box-shadow"
+	   href="{{ '/' + repo_full_name + '/notifications' }}">
+	  {{translate('Notifications')}}
+	</a>
+      </li>
+    </ul>
+
+    <div class="repo-locations-link-container">
+      <a href="{{ '/' + repo_full_name + '/' }}" title="Summary"
+	 class="repo-summary-link no-decoration">
+	<span class="fas fa-list"></span>
+      </a>
+      <a href="{{ '/' + repo_full_name + '/waterfall' }}" title="warterfall">
+	<span class="fas fa-th" class="no-decoration"></span>
+      </a>
+    </div>
+  </div>
+  <!-- end navigation pills -->
+
+  <!-- notifications message -->
+  <div class="add-repo-message-container row-container col-sm-10">
+    <h5><span class="add-repo-message-span">{{translate('Notifications')}}</span></h5>
+  </div>
+  <!-- end notifications message -->
+
+  <!-- left side -->
+  <div class="settings-left-side col-sm-9">
+
+    <div id="repo-notifications-container"></div>
+
+
+  </div>
+  <!-- end left side -->
+
+  <!-- righ  side -->
+  <div class="settings-right-side col-sm-3">
+    <div>
+      <span>
+	<h5>{{translate('Notifications')}}</h5>
+	<p id="basic-config-p">
+	  {% raw translate('Notifications are used to send information about builds to third party services.') %}
+	</p>
+
+	<p>
+	  {% raw translate('You may configure wich <b>branches</b> and <b>statuses</b> trigger notifications.') %}
+	</p>
+      </span>
+    </div>
+  </div>
+<!-- end right side -->
+
+</div>
+
+
+<input type="hidden" value="{{repo_id}}" id="repo-id">
+
+<script>
+  async function init(){
+    let repo_id = jQuery('#repo-id').val();
+    let page;
+    page = new RepositoryNotificationsPage({router: router,
+					    repo_name: '{{repo_full_name}}'});
+    await page.render();
+    router.setUpLinks();
+
+  }
+
+  window.onload = function(){init()};
+</script>

@@ -23,21 +23,22 @@ from asyncio import ensure_future
 from collections import defaultdict, deque
 from datetime import timedelta
 import json
-from uuid import uuid4
+from uuid import uuid4, UUID
 from mongoengine.queryset import queryset_manager
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                ReferenceField, DateTimeField, UUIDField,
                                IntField)
-from toxicbuild.core.utils import (log, get_toxicbuildconf, now,
-                                   list_builders_from_config, datetime2string,
+from toxicbuild.core.utils import (now, list_builders_from_config,
+                                   datetime2string,
                                    format_timedelta, LoggerMixin,
-                                   localtime2utc, set_tzinfo,
-                                   get_toxicbuildconf_yaml)
+                                   localtime2utc, set_tzinfo)
 from toxicbuild.master.document import ExternalRevisionIinfo
 from toxicbuild.master.exceptions import (DBError, ImpossibleCancellation)
 from toxicbuild.master.exchanges import build_notifications
-from toxicbuild.master.signals import build_added, build_cancelled
+from toxicbuild.master.signals import (build_added, build_cancelled,
+                                       buildset_started, buildset_finished,
+                                       buildset_added)
 from toxicbuild.master.utils import (get_build_config_type,
                                      get_build_config_filename)
 
@@ -51,7 +52,7 @@ class SerializeMixin:
 
     """Simple mixin to serialization relatad stuff."""
 
-    def to_dict(self, id_as_str=False):
+    def to_dict(self, id_as_str=True):
         """ Transforms a Document into a dictionary.
 
         :param id_as_str: If true, transforms the id field into a string.
@@ -64,7 +65,7 @@ class SerializeMixin:
     async def async_to_json(self):
         """Async version of to_json. Expects a to_dict coroutine."""
 
-        objdict = await self.to_dict(id_as_str=True)
+        objdict = await self.to_dict()
         return json.dumps(objdict)
 
 
@@ -128,12 +129,10 @@ class Builder(SerializeMixin, Document):
 
         return status
 
-    async def to_dict(self, id_as_str=False):
-        """Returns a dictionary for this builder.
+    async def to_dict(self):
+        """Returns a dictionary for this builder."""
 
-        :param id_as_str: If true, the object id will be converted to string"""
-
-        objdict = super().to_dict(id_as_str=id_as_str)
+        objdict = super().to_dict(id_as_str=True)
         objdict['status'] = await self.get_status()
         return objdict
 
@@ -172,25 +171,31 @@ class BuildStep(EmbeddedDocument):
     finished = DateTimeField(default=None)
     """When the step finished. It msut be in UTC."""
 
-    # the index of the step in the build.
     index = IntField(requred=True)
     """The index of the step in the build."""
 
     total_time = IntField()
     """The total time spen in the step."""
 
-    def to_dict(self):
-        """Returns a dict representation of the BuildStep."""
+    def to_dict(self, output=True):
+        """Returns a dict representation of the BuildStep.
 
-        objdict = json.loads(super().to_json())
-        objdict['uuid'] = str(self.uuid)
-        keys = objdict.keys()
-        if 'started' not in keys:
+        :param output: Indicates if the output of the step should be included.
+        """
+
+        objdict = {'uuid': str(self.uuid), 'name': self.name,
+                   'command': self.command, 'status': self.status,
+                   'index': self.index}
+
+        if output:
+            objdict['output'] = self.output
+
+        if not self.started:
             objdict['started'] = None
         else:
             objdict['started'] = datetime2string(self.started)
 
-        if 'finished' not in keys:
+        if not self.finished:
             objdict['finished'] = None
         else:
             objdict['finished'] = datetime2string(self.finished)
@@ -212,6 +217,8 @@ class Build(EmbeddedDocument):
     """ A set of steps for a repository. This is the object that stores
     the build data. The build is carried by the slave.
     """
+
+    DoesNotExist = Builder.DoesNotExist
 
     PENDING = 'pending'
     CANCELLED = 'cancelled'
@@ -264,16 +271,33 @@ class Build(EmbeddedDocument):
     """Indicates the branch from which the builders for this build came from.
     This may not be the same as the build branch."""
 
-    def to_dict(self, id_as_str=False):
+    number = IntField(required=True, default=0)
+    """A sequencial number for builds in the repository"""
+
+    def _get_builder_dict(self):
+        builder = self._data.get('builder')
+        d = {'id': str(builder.id)}
+        builder_name = getattr(builder, 'name', None)
+        if builder_name:
+            d['name'] = builder_name
+
+        return d
+
+    def to_dict(self, output=True, steps_output=None):
         """Transforms the object into a dictionary.
 
-        :param id_as_str: Indicates if the id should be a string or an
-          ObjectId instance."""
+        :param output: Should we include the build output?
+        :param steps_output: Should we include the steps output? If None, the
+          the value of ``output`` will be used.
+        """
 
-        steps = [s.to_dict() for s in self.steps]
-        objdict = json.loads(super().to_json())
-        objdict['builder']['id'] = objdict['builder']['$oid']
-        objdict['uuid'] = str(self.uuid)
+        objdict = {'uuid': str(self.uuid), 'named_tree': self.named_tree,
+                   'branch': self.branch, 'status': self.status,
+                   'number': self.number}
+
+        steps_output = output if steps_output is None else steps_output
+        steps = [s.to_dict(output=steps_output) for s in self.steps]
+        objdict['builder'] = self._get_builder_dict()
         objdict['steps'] = steps
         objdict['started'] = datetime2string(
             self.started) if self.started else ''
@@ -289,12 +313,14 @@ class Build(EmbeddedDocument):
             objdict['external'] = self.external.to_dict()
         else:
             objdict['external'] = {}
+
+        objdict['output'] = self.output if output else ''
         return objdict
 
     def to_json(self):
         """Returns a json representation of the buld."""
 
-        objdict = self.to_dict(id_as_str=True)
+        objdict = self.to_dict()
         return json.dumps(objdict)
 
     async def update(self):
@@ -304,7 +330,7 @@ class Build(EmbeddedDocument):
         result = await qs.update(set__builds__S=self)
 
         if not result:
-            msg = 'This EmbeddedDocument was not save to database.'
+            msg = 'This Build was not saved to database.'
             msg += ' You can\'t update it.'
             raise DBError(msg)
 
@@ -322,7 +348,8 @@ class Build(EmbeddedDocument):
         output = []
         for step in self.steps:
             output.append(step.command + '\n')
-            output.append(step.output)
+            output.append(step.output or '')
+            output.append('\n\n')
 
         return ''.join(output)
 
@@ -332,10 +359,28 @@ class Build(EmbeddedDocument):
 
         :param uuid: The uuid of the build."""
 
-        buildset = await BuildSet.objects.get(builds__uuid=uuid)
-        for build in buildset.builds:  # pragma no branch
-            if str(build.uuid) == str(uuid):  # pragma no branch
-                return build
+        if isinstance(uuid, str):
+            uuid = UUID(uuid)
+
+        pipeline = [
+            {"$match": {"builds.uuid": uuid}},
+            {"$project": {
+                "builds": {
+                    "$filter": {
+                        "input": "$builds", "as": "build",
+                        "cond": {"$eq": ["$$build.uuid", uuid]}}}
+            }}
+        ]
+
+        r = await BuildSet.objects().aggregate(*pipeline).to_list(1)
+        try:
+            build_doc = r[0]['builds'][0]
+        except IndexError:
+            raise Build.DoesNotExist
+        else:
+            build = cls(**build_doc)
+
+        return build
 
     async def notify(self, event_type):
         """Send a notification to the `build_notification` exchange
@@ -359,11 +404,14 @@ class Build(EmbeddedDocument):
         build_cancelled.send(str(repo.id), build=self)
 
 
-class BuildSet(SerializeMixin, Document):
+class BuildSet(SerializeMixin, LoggerMixin, Document):
 
     """A list of builds associated with a revision."""
 
+    NO_BUILDS = 'no builds'
+    NO_CONFIG = 'no config'
     PENDING = Build.PENDING
+    STATUSES = [NO_BUILDS, NO_CONFIG] + Build.STATUSES
 
     repository = ReferenceField('toxicbuild.master.Repository',
                                 required=True)
@@ -406,6 +454,14 @@ class BuildSet(SerializeMixin, Document):
     total_time = IntField()
     """The total time spent in the buildset"""
 
+    status = StringField(default=PENDING, choices=STATUSES)
+    """The current status of the buildset. May be on of the values in
+    :attr:`~toxicbuild.master.build.BuildSet.STATUSES`.
+    """
+
+    number = IntField(required=True)
+    """A sequencial number for the buildsets in the repository"""
+
     meta = {
         'indexes': [
             'repository'
@@ -415,24 +471,33 @@ class BuildSet(SerializeMixin, Document):
     @queryset_manager
     def objects(doc_cls, queryset):  # pylint: disable=no-self-argument
         """The default querymanager for BuildSet"""
-
         return queryset.order_by('created')
 
     async def notify(self, event_type, status=None):
         """Notifies an event to the build_notifications exchange.
 
         :param event_type: The event type to notify about
-        :param status: The status of the buildset. If None, the return
-          of :meth:`~toxicbuild.master.build.Buildset.get_status` will be
-          used."""
+        :param status: The status of the buildset. If None, the value of
+          :attr:`~toxicbuild.master.build.Buildset.status` will be used."""
 
+        self.log('notifying buildset {}'.format(event_type), level='debug')
+        msg = self.to_dict()
         repo = await self.repository
-        repo_id = str(repo.id)
-        msg = self.to_dict(id_as_str=True)
+        msg['repository'] = await repo.to_dict()
         msg['event_type'] = event_type
-        msg['status'] = status or self.get_status()
-        msg['repository_id'] = repo_id
+        msg['status'] = status or self.status
+        msg['repository_id'] = str(repo.id)
         await build_notifications.publish(msg)
+
+    @classmethod
+    async def _get_next_number(cls, repository):
+        buildset = cls.objects.filter(repository=repository).order_by('number')
+        buildset = await buildset.first()
+        if buildset:
+            n = buildset.number + 1
+        else:
+            n = 1
+        return n
 
     @classmethod
     async def create(cls, repository, revision):
@@ -442,20 +507,26 @@ class BuildSet(SerializeMixin, Document):
         :param revision: An instance of `toxicbuild.master.RepositoryRevision`.
         :param save: Indicates if the instance should be saved to database.
         """
-
+        number = await cls._get_next_number(repository)
         buildset = cls(repository=repository, revision=revision,
                        commit=revision.commit,
                        commit_date=revision.commit_date,
                        branch=revision.branch, author=revision.author,
-                       title=revision.title)
+                       title=revision.title, number=number)
         await buildset.save()
         ensure_future(buildset.notify('buildset-added'))
         return buildset
 
-    def to_dict(self, id_as_str=False):
-        """Returns a dict representation of the object"""
+    def to_dict(self, builds=True):
+        """Returns a dict representation of the object
 
-        objdict = super().to_dict(id_as_str=id_as_str)
+        :param builds: Should the builds be included in the dict?"""
+
+        repo_id = str(self._data.get('repository').id)
+        objdict = {'id': str(self.id), 'commit': self.commit,
+                   'branch': self.branch, 'author': self.author,
+                   'title': self.title, 'repository': {'id': repo_id},
+                   'status': self.status, 'number': self.number}
         objdict['commit_date'] = datetime2string(self.commit_date)
         objdict['created'] = datetime2string(self.created)
         objdict['started'] = datetime2string(self.started) if self.started \
@@ -470,26 +541,36 @@ class BuildSet(SerializeMixin, Document):
             objdict['total_time'] = ''
 
         objdict['builds'] = []
-        for b in self.builds:
-            bdict = b.to_dict(id_as_str=id_as_str)
-            objdict['builds'].append(bdict)
+        if builds:
+            for b in self.builds:
+                bdict = b.to_dict(output=False)
+                objdict['builds'].append(bdict)
         return objdict
 
     def to_json(self):
         """Returns a json representation of the object."""
-        objdict = self.to_dict(id_as_str=True)
+        objdict = self.to_dict()
         return json.dumps(objdict)
+
+    async def update_status(self, status=None):
+        """Updates the status of the buildset.
+
+        :param status: Status to update the buildset. If None,
+          ``self.get_status()`` will be used."""
+        status = status or self.get_status()
+        self.status = status
+        await self.save()
 
     def get_status(self):
         """Returns the status of the BuildSet"""
 
+        if not self.builds:
+            return self.NO_BUILDS
+
         build_statuses = set([b.status for b in self.builds])
         ordered_statuses = sorted(build_statuses,
                                   key=lambda i: ORDERED_STATUSES.index(i))
-        try:
-            status = ordered_statuses[0]
-        except IndexError:
-            status = 'pending'
+        status = ordered_statuses[0]
 
         return status
 
@@ -497,6 +578,66 @@ class BuildSet(SerializeMixin, Document):
         """Returns the pending builds of the buildset."""
 
         return [b for b in self.builds if b.status == Build.PENDING]
+
+    @classmethod
+    def _from_aggregate(cls, doc):
+        doc['id'] = doc['_id']
+        del doc['_id']
+        for build in doc['builds']:
+            builder_doc = build['builder']
+            builder_doc['id'] = builder_doc['_id']
+            del builder_doc['_id']
+            builder = Builder(**builder_doc)
+            build['builder'] = builder
+        buildset = cls(**doc)
+        return buildset
+
+    @classmethod
+    async def aggregate_get(cls, **kwargs):
+        """Returns information about a buildset Uses the aggregation
+        framework to $lookup on builds' builder name and on repository.
+        I does not returns steps information, only buildset and builds
+        information.
+
+        :param kwargs: Named arguments to match the buildset.
+        """
+
+        pipeline = [
+            {'$unwind': '$builds'},
+            {'$lookup': {'from': 'builder',
+                         'localField': 'builds.builder',
+                         'foreignField': '_id',
+                         'as': 'builder_doc'}},
+
+            {'$project':
+             {'build': {"uuid": "$builds.uuid",
+                        "status": "$builds.status",
+                        "builder": {'$arrayElemAt': ["$builder_doc", 0]}},
+              'doc': "$$ROOT"}},
+
+            {'$group': {'_id': '$_id', 'builds': {'$push': "$build"},
+                        'doc': {'$first': '$doc'}}},
+
+            {"$project":
+             {"builds": "$builds",
+              "status": "$doc.status",
+              'repository': '$doc.repository',
+              'commit_date': '$doc.commit_date',
+              'started': '$doc.started',
+              'finished': '$doc.finished',
+              'total_time': '$doc.total_time',
+              "branch": "$doc.branch",
+              "title": "$doc.title",
+              "body": "$doc.body",
+              "number": "$doc.number",
+              'commit': '$doc.commit',
+              'author': '$doc.author'}},
+
+        ]
+        buildset_doc = (await cls.objects(**kwargs).aggregate(
+            *pipeline).to_list(1))[0]
+        buildset = cls._from_aggregate(buildset_doc)
+        return buildset
 
     async def get_builds_for(self, builder=None, branch=None):
         """Returns the builds for a specific builder and/or branch.
@@ -563,8 +704,9 @@ class BuildManager(LoggerMixin):
         """ Adds the builds for a given revision in the build queue.
 
         :param revision: A list of
-          :class:`toxicbuild.master.RepositoryRevision`
-          instances for the build."""
+          :class:`toxicbuild.master.RepositoryRevision` instances for the
+          build.
+        """
 
         last_bs = None
         for revision in revisions:
@@ -574,15 +716,34 @@ class BuildManager(LoggerMixin):
             buildset = await BuildSet.create(repository=self.repository,
                                              revision=revision)
 
+            try:
+                conf = await self.repository.get_config_for(revision)
+            except FileNotFoundError:
+                buildset.status = type(buildset).NO_CONFIG
+                await buildset.save()
+                buildset_added.send(str(self.repository.id), buildset=buildset)
+                continue
+
             last_bs = buildset
             slaves = await self.repository.slaves
             for slave in slaves:
-                await self.add_builds_for_slave(buildset, slave)
+                await self.add_builds_for_slave(buildset, slave, conf)
 
         if last_bs and self.repository.notify_only_latest(buildset.branch):
             await self.cancel_previous_pending(buildset)
 
-    async def add_builds_for_slave(self, buildset, slave, builders=None,
+    async def _get_highest_build_number(self):
+        buildset = await BuildSet.objects(
+            repository=self.repository, builds__number__gt=0).order_by(
+                '-builds__number').first()
+        if not buildset:
+            highest = 0
+        else:
+            highest = max([b.number for b in buildset.builds]) \
+                if buildset.builds else 0
+        return highest
+
+    async def add_builds_for_slave(self, buildset, slave, conf, builders=None,
                                    builders_origin=None):
         """Adds builds for a given slave on a given buildset.
 
@@ -596,62 +757,61 @@ class BuildManager(LoggerMixin):
         revision = await buildset.revision
         if not builders:
             builders, builders_origin = await self.get_builders(slave,
-                                                                revision)
+                                                                revision,
+                                                                conf)
 
+        last_build = await self._get_highest_build_number()
         for builder in builders:
+            last_build += 1
             build = Build(repository=self.repository, branch=revision.branch,
                           named_tree=revision.commit, slave=slave,
-                          builder=builder, builders_from=builders_origin)
+                          builder=builder, builders_from=builders_origin,
+                          number=last_build)
 
             buildset.builds.append(build)
             await buildset.save()
             build_added.send(str(self.repository.id), build=build)
 
-            self.log('build added for named_tree {} on branch {}'.format(
-                revision.commit, revision.branch), level='debug')
+            self.log('build {} added for named_tree {} on branch {}'.format(
+                last_build, revision.commit, revision.branch), level='debug')
 
         self.build_queues[slave.name].append(buildset)
+        # We send the buildset_added signal here so we already have all
+        # information about builds.
+        buildset_added.send(str(self.repository.id), buildset=buildset)
         if not self.is_building[slave.name]:  # pragma: no branch
             ensure_future(self._execute_builds(slave))
 
-    async def get_builders(self, slave, revision):
+    async def get_builders(self, slave, revision, conf):
         """ Get builders for a given slave and revision.
 
         :param slave: A :class:`toxicbuild.master.slave.Slave` instance.
         :param revision: A
           :class:`toxicbuild.master.repository.RepositoryRevision`.
+        :param conf: The build configuration.
         """
 
-        async with await self.repository.toxicbuild_conf_lock.acquire_write():
-            log('checkout on {} to {}'.format(
-                self.repository.url, revision.commit), level='debug')
-            await self.repository.vcs.checkout(revision.commit)
-            origin = revision.branch
-            try:
-                if self.config_type == 'py':
-                    conf = get_toxicbuildconf(self.repository.workdir)
-                else:
-                    conf = await get_toxicbuildconf_yaml(
-                        self.repository.workdir, self.config_filename)
-
-            except Exception as e:
-                msg = 'Something wrong with your toxicbuild.conf. Original '
-                msg += 'exception was:\n {}'.format(str(e))
-                log(msg, level='warning')
-                return [], origin
-
+        origin = revision.branch
+        try:
             names = self._get_builders_names(conf, revision.branch, slave,
                                              self.config_type)
-            if not names and revision.builders_fallback:
-                origin = revision.builders_fallback
-                names = self._get_builders_names(
-                    conf, revision.builders_fallback, slave, self.config_type)
 
-            builders = []
-            for name in names:
-                builder = await Builder.get_or_create(
-                    name=name, repository=self.repository)
-                builders.append(builder)
+        except AttributeError:
+            self.log('Bad config for {} on {}'.format(self.repository.id,
+                                                      revision.commit),
+                     level='debug')
+            return [], origin
+
+        if not names and revision.builders_fallback:
+            origin = revision.builders_fallback
+            names = self._get_builders_names(
+                conf, revision.builders_fallback, slave, self.config_type)
+
+        builders = []
+        for name in names:
+            builder = await Builder.get_or_create(
+                name=name, repository=self.repository)
+            builders.append(builder)
 
         return builders, origin
 
@@ -724,6 +884,8 @@ class BuildManager(LoggerMixin):
     async def _set_started_for_buildset(self, buildset):
         if not buildset.started:
             buildset.started = localtime2utc(now())
+            buildset.status = 'running'
+            buildset_started.send(str(self.repository.id), buildset=buildset)
             await buildset.save()
             await buildset.notify('buildset-started', status='running')
 
@@ -738,6 +900,8 @@ class BuildManager(LoggerMixin):
             buildset.total_time = int((
                 buildset.finished - set_tzinfo(buildset.started, 0)).seconds)
             await buildset.save()
+            await buildset.update_status()
+            buildset_finished.send(str(self.repository.id), buildset=buildset)
             await buildset.notify('buildset-finished')
 
     async def _execute_builds(self, slave):

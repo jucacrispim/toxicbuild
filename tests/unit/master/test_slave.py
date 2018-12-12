@@ -49,6 +49,7 @@ class SlaveTest(TestCase):
         await build.Builder.drop_collection()
         await repository.RepositoryRevision.drop_collection()
         await repository.Repository.drop_collection()
+        await users.User.drop_collection()
         super().tearDown()
 
     @async_test
@@ -69,6 +70,7 @@ class SlaveTest(TestCase):
                                               owner=self.owner)
         slave_dict = slave_inst.to_dict()
         self.assertTrue(slave_dict['id'])
+        self.assertTrue(slave_dict['full_name'])
 
     @async_test
     async def test_to_dict_id_as_str(self):

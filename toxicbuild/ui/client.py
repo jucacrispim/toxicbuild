@@ -21,7 +21,8 @@ import asyncio
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.ui import settings
-from toxicbuild.ui.exceptions import UserDoesNotExist, NotEnoughPerms
+from toxicbuild.ui.exceptions import (UserDoesNotExist, NotEnoughPerms,
+                                      BadResetPasswordToken)
 
 
 class UIHoleClient(BaseToxicClient):
@@ -66,11 +67,12 @@ class UIHoleClient(BaseToxicClient):
         return response['body'][action]
 
     @asyncio.coroutine
-    def connect2stream(self):
+    def connect2stream(self, body):
         """Connects the client to the master's hole stream."""
 
         action = 'stream'
-        body = {'user_id': str(self.requester.id)}
+        user_body = {'user_id': str(self.requester.id)}
+        body.update(user_body)
 
         yield from self.request2server(action, body)
 
@@ -87,6 +89,9 @@ class UIHoleClient(BaseToxicClient):
 
         if 'code' in response and int(response['code']) == 3:
             raise NotEnoughPerms(response['body']['error'])
+
+        if 'code' in response and int(response['code']) == 4:
+            raise BadResetPasswordToken(response['body']['error'])
 
         return response
 

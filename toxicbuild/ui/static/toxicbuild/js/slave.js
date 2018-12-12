@@ -1,4 +1,4 @@
-// Copyright 2016 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2018 Juca Crispim <juca@poraodojuca.net>
 
 // This file is part of toxicbuild.
 
@@ -15,161 +15,203 @@
 // You should have received a copy of the GNU General Public License
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+var TOXIC_SLAVE_API_URL = window.TOXIC_API_URL + 'slave/';
 
-var SLAVE_ROW_TEMPLATE = `
-<tr id="obj-row-{{slave.id}}">
-  <td>
-    {{slave.name}}
-    <button type="button" class="btn btn-default btn-xs btn-main-edit btn-edit-slave"
-	    data-toggle="modal"
-	    data-target="#slaveModal"
-	    data-obj-id="{{slave.id}}"
-	    data-slave-name="{{slave.name}}"
-	    data-slave-host="{{slave.host}}"
-	    data-slave-port="{{slave.port}}"
-	    data-slave-use-ssl="{{slave.use_ssl}}"
-	    data-slave-validate-cert="{{slave.validate_cert}}">
-      <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
-    </button>
-  </td>
-  <td>{{slave.host}}</td>
-  <td>{{slave.port}}</td>
-</tr>
+class Slave extends BaseModel{
 
-`
+  constructor(attributes, options){
+    super(attributes, options);
+    this._api_url = TOXIC_SLAVE_API_URL;
+  }
+
+  static async is_name_available(name){
+    let model = new Slave();
+    let r = await is_name_available(model, name);
+    return r;
+  }
+}
 
 
-var SlaveModel = function (attrs){
+class SlaveList extends BaseCollection{
 
-  var default_attrs = {
-    id: null,
-    name: null,
-    host: null,
-    port: null,
-    token: null,
-    api_url: '/api/slave/',
-  };
+  constructor(models, options){
+    super(models, options);
+    this.model = Slave;
+    this.url = TOXIC_SLAVE_API_URL;
+  }
+}
 
-  return BaseModel(default_attrs, attrs);
-};
+class BaseSlaveView extends BaseFormView{
+
+  _get_kw(){
+    let name = this.model.escape('name');
+    let host = this.model.escape('host');
+    let full_name = this.model.escape('full_name');
+    let port = this.model.escape('port');
+    let details_link = '/slave/' + full_name;
+    let token = this.model.escape('token');
+    let use_ssl = this.model.get('use_ssl');
+    let verify_cert = this.model.get('verify_cert');
+    return {name: name, host: host, port: port, details_link: details_link,
+	    token: token, use_ssl: use_ssl, verify_cert: verify_cert,
+	    use_ssl_el_id: 'slave-use-ssl', full_name: full_name,
+	    'verify_cert_el_id': 'slave-verify-cert'};
+  }
+
+}
+
+class SlaveInfoView extends BaseSlaveView{
+  // The info about a slave shown in a slave list
+
+  constructor(options){
+    options = options || {'tagName': 'div'};
+    options.model = options.model || new Slave();
+    super(options);
+
+    this.directive = {
+      '.slave-info-name': 'name',
+      '.slave-details-link@href': 'details_link',
+      '.slave-info-host': 'host',
+      '.slave-info-port': 'port',
+    };
+
+    this.template_selector = '.template .slave-info';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+
+  }
+
+  getRendered(){
+    let kw = this._get_kw();
+    let compiled = $(this.compiled_template(kw));
+    return compiled;
+  }
+
+}
+
+class SlaveListView extends BaseListView{
+
+  constructor(){
+    let model = new SlaveList();
+    let options = {'tagName': 'ul',
+		   'model': model};
+
+    super(options);
+    this._container_selector = '#slave-list-container';
+  }
+
+  async _fetch_items(){
+    await this.model.fetch();
+  }
+
+  _get_view(model){
+    return new SlaveInfoView({model: model});
+  }
+
+}
+
+class BaseSlaveDetailsView extends BaseSlaveView{
+
+  constructor(options){
+    options = options || {'tagName': 'div'};
+    super(options);
+    this.name = options.name;
+    this.model = this.model || new Slave();
+    this.model._init_values = {};
+    this.model._changed = {};
+
+    this.directive = {
+      '.slave-details-name@value': 'name',
+      '.slave-details-host@value': 'host',
+      '.slave-details-port@value': 'port',
+      '.slave-details-token@value': 'token',
+      '.slave-details-use-ssl@checked': 'use_ssl',
+      '.slave-details-use-ssl@id': 'use_ssl_el_id',
+      '.slave-details-verify-cert@checked': 'verify_cert',
+      '.slave-details-verify-cert@id': 'verify_cert_el_id'};
+
+    this.template_selector = '#slave-details';
+    this.compiled_template = null;
+    this.container_selector = '#slave-details-container';
+    this.container = null;
+  }
+
+  _hasRequired(){
+    let has_name = $('.slave-details-name', this.container).val();
+    let has_host = $('.slave-details-host', this.container).val();
+    let has_port = $('.slave-details-port', this.container).val();
+    let has_token = $('.slave-details-token', this.container).val();
+    return (Boolean(has_name) && Boolean(has_host) && Boolean(has_port) &&
+	    Boolean(has_token));
+  }
+
+  render_details(){
+
+    this._model_init_values = this.model.changed;
+        this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+    $('.wait-toxic-spinner').hide();
+
+    let kw = this._get_kw();
+
+    let compiled = $(this.compiled_template(kw));
+    this._listen2events(compiled);
+    this.container = $(this.container_selector);
+    this.container.html(compiled);
+  }
+}
+
+class SlaveDetailsView extends BaseSlaveDetailsView{
+
+  async render_details(){
+    await this.model.fetch({name: this.name});
+    super.render_details();
+  }
+
+  _getRemoveModal(){
+    let modal = $('#removeSlaveModal');
+    return modal;
+  }
+
+}
 
 
-var SlaveView = function (model){
+class SlaveAddView extends BaseSlaveDetailsView{
 
-  var super_instance = BaseView(model);
+  render_details(){
+    super.render_details();
+    $('.delete-btn-container').hide();
+    $('#save-obj-btn-text').text('Add slave');
+  }
 
-  var instance = {
-    modal: jQuery('#slaveModal'),
+  async _addSlave(){
+    this.model.set('name', this._model_changed['name']);
+    this.model.set('host', this._model_changed['host']);
+    this.model.set('port', this._model_changed['port']);
+    this.model.set('token', this._model_changed['token']);
+    this.model.set('use_ssl', this._model_changed['use_ssl']);
+    this.model.set('validate_cert', this._model_changed['validate_cert']);
 
-    cleanModal: function(){
-      var self = this;
-      self.modal.find('.modal-title').text('Add repository');
-      self.modal.find('#slave_name').val('');
-      self.modal.find('#slave_host').val('');
-      self.modal.find('#slave_port').val('');
-      self.modal.find("#btn-delete-slave").hide();
-      self.modal.find('.req-type').val('post');
-    },
+    var r;
+    try{
+      r = await this.model.save();
+      utils.showSuccessMessage(i18n('Slave added'));
+    }catch(e){
+      console.error(e);
+      utils.showErrorMessage(i18n('Error adding slave'));
+      return;
+    }
+    $(document).trigger('obj-added-using-form', r['full_name']);
+  }
 
-    renderModal: function(){
-      var self = this;
-      utils.log(self.model);
-      if (self.model.id){
-	self.modal.find('.req-type').val('put');
-	self.modal.find('.modal-title').text(self.model.name);
-	self.modal.find('#slave_name').val(self.model.name);
-	self.modal.find('#slave_host').val(self.model.host);
-	self.modal.find('#slave_port').val(self.model.port);
-	self.modal.find('#slave_token').val(self.model.token);
-	self.modal.find('#slave_use_ssl').prop('checked', self.model.use_ssl);
-	self.modal.find('#slave_validate_cert').prop('checked',
-						     self.model.validate_cert);
-	self.modal.find('#btn-delete-slave').show();
-      }
-    },
+  _listen2events(template){
+    let self = this;
+    super._listen2events(template);
 
-    getData: function (){
-      var self = this;
-
-      var name = self.modal.find('#slave_name').val();
-      var host = self.modal.find('#slave_host').val();
-      var port = self.modal.find('#slave_port').val();
-      var token = self.modal.find('#slave_token').val();
-      var use_ssl = self.modal.find('#slave_use_ssl').prop('checked');
-      var validate_cert = self.modal.find('#slave_validate_cert').prop(
-	'checked');
-      return {name: name, port: port, host: host,
-	      token: token, 'use_ssl': use_ssl,
-	      'validate_cert': validate_cert};
-    },
-
-    insertObjRow: function(data){
-      var self = this;
-
-      var obj_row = SLAVE_ROW_TEMPLATE.replace(
-	  /{{slave.name}}/g, self.model.name);
-      obj_row = obj_row.replace(/{{slave.id}}/g, data.id);
-      obj_row = obj_row.replace(/{{slave.host}}/g, self.model.host);
-      obj_row = obj_row.replace(/{{slave.port}}/g, self.model.port);
-      obj_row = obj_row.replace(/{{slave.token}}/g, self.model.token);
-      obj_row = obj_row.replace(/{{slave.use_token}}/g, self.model.use_token);
-      obj_row = obj_row.replace(/{{slave.validate_cert}}/g,
-				self.model.validate_cert);
-      $('#tbody-slaves').append(obj_row);
-    },
-  };
-
-  var inherited = {};
-  jQuery.extend(inherited, super_instance, instance);
-  return inherited;
-};
-
-
-var _SlaveManager = function (){
-  var modal = jQuery('#slaveModal')
-  var super_instance =  BaseManager(SlaveModel, SlaveView, modal);
-  var inherited = {};
-
-  var instance = {
-    init: function(model_confs){
-      var self = inherited;
-      super_instance.init(self, model_confs);
-      super_instance.modal = self.modal;
-      super_instance.views = self.views
-    },
-
-    delete: function(){
-      var self = inherited;
-      success_msg = 'Slave removed';
-      super_instance._current_view = self._current_view;
-      super_instance._current_model = self._current_model;
-
-      success_cb = function(response){
-	SLAVES.splice(SLAVES.indexOf(self._current_model.name), 1);
-      }
-      super_instance.delete(success_msg, success_cb);
-    },
-
-    createOrUpdate: function(){
-      var self = inherited;
-      update_success_msg = 'Slave updated';
-      create_success_msg = 'Slave created';
-
-      super_instance._current_view = self._current_view;
-      super_instance._current_model = self._current_model;
-
-      success_cb = function(response){
-	SLAVES.push(self._current_model.name);
-      }
-
-      super_instance.createOrUpdate(update_success_msg, create_success_msg,
-				    success_cb);
-
-    },
-  };
-
-  jQuery.extend(inherited, super_instance, instance);
-  return inherited;
-};
-
-var SlaveManager = _SlaveManager();
+    let btn = $('#btn-save-obj');
+    btn.unbind('click');
+    btn.on('click', function(e){
+      self._addSlave();
+    });
+  }
+}

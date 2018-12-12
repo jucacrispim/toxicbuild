@@ -438,19 +438,8 @@ def create(root_dir):
     return access_token
 
 
-@command
-def create_user(configfile, email=None, password=None, superuser=False):
-    """Creates a superuser in the master.
-
-    :param --email: User's email.
-    :param --password: Password for authentication.
-    :param --superuser: Indicates if the user is a super user.
-      Defaults to False"""
-
+async def _create_regular_user(email, password, superuser):
     print('Creating user for authenticated access')
-
-    os.environ[ENVVAR] = configfile
-    create_settings_and_connect()
 
     from toxicbuild.master.users import User  # noqa f401
 
@@ -463,9 +452,45 @@ def create_user(configfile, email=None, password=None, superuser=False):
     user = User(email=email, is_superuser=superuser,
                 allowed_actions=['add_repo', 'add_slave', 'remove_user'])
     user.set_password(password)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(user.save())
+    await user.save()
+
     print('User {} created successfully'.format(user.username))
+
+    return user
+
+
+async def _create_limited_user():
+
+    from toxicbuild.master.users import User  # noqa f401
+
+    user = User(email='fake-user@fake-domain.fake',
+                allowed_actions=['add_user'])
+    await user.save()
+
+    return user
+
+
+@command
+def create_user(configfile, email=None, password=None, superuser=False,
+                _limited=False):
+    """Creates a superuser in the master.
+
+    :param --email: User's email.
+    :param --password: Password for authentication.
+    :param --superuser: Indicates if the user is a super user.
+      Defaults to False"""
+
+    os.environ[ENVVAR] = configfile
+    create_settings_and_connect()
+
+    loop = asyncio.get_event_loop()
+
+    if _limited:
+        user = loop.run_until_complete(_create_limited_user())
+    else:
+        user = loop.run_until_complete(
+            _create_regular_user(email, password, superuser))
+
     return user
 
 

@@ -22,12 +22,10 @@ import os
 import subprocess
 import sys
 from toxicbuild.core.cmd import command, main
-from toxicbuild.core.utils import changedir
 from toxicbuild.integrations import create as create_integrations
 from toxicbuild.master import create as create_master
 from toxicbuild.master import create_user
-from toxicbuild.master import create_settings_and_connect
-from toxicbuild.output import create as create_output
+from toxicbuild.output import create as create_output, create_auth_token
 from toxicbuild.slave import create as create_slave
 from toxicbuild.ui import create as create_ui
 
@@ -48,29 +46,32 @@ def create(root_dir):  # pragma no cover
     integrations_root = os.path.join(root_dir, 'integrations')
     output_root = os.path.join(root_dir, 'output')
     ui_root = os.path.join(root_dir, 'ui')
+    loop = asyncio.get_event_loop()
 
     # first we create a slave and a master
     slave_token = create_slave(slave_root)
     master_token = create_master(master_root)
+    # integrations
     create_integrations(integrations_root)
+    # output
     create_output(output_root)
+    output_token = loop.run_until_complete(create_auth_token(output_root))
+
     # a super user to access stuff
     conffile = os.path.join(master_root, 'toxicmaster.conf')
-    user = create_user(conffile, superuser=True)
+    user = create_user(conffile, _limited=True)
 
     from toxicbuild.master.slave import Slave
 
-    with changedir(master_root):
-        create_settings_and_connect()
-        loop = asyncio.get_event_loop()
-        # now we add this slave to the master
-        slave = Slave(name='LocalSlave', token=slave_token,
-                      host='localhost', port=7777, owner=user)
+    # create_settings_and_connect()
+    # now we add this slave to the master
+    slave = Slave(name='LocalSlave', token=slave_token,
+                  host='localhost', port=7777, owner=user)
 
-        loop.run_until_complete(slave.save())
+    loop.run_until_complete(slave.save())
 
     # and finally create a web ui
-    create_ui(ui_root, master_token)
+    create_ui(ui_root, master_token, output_token, str(user.id))
 
 
 @command
@@ -96,16 +97,18 @@ def stop(workdir):  # pragma no cover
 
 
 @command
-def restart(workdir):
+def restart(workdir, loglevel='info'):
     """Restarts toxicbuild
 
     The instances of master, slave and web ui in ``workdir`` will be restarted.
 
     :param workdir: Workdir for master to be killed.
+    :param --loglevel: Level for logging messages.
     """
 
-    stop(workdir)
-    start(workdir)
+    # daemonize=False because we don't use the --daemonize param for
+    # restart as it is ALWAYS daemonized anyway
+    _call_processes(workdir, loglevel, daemonize=False)
 
 
 def _run_slave(workdir, loglevel, daemonize):

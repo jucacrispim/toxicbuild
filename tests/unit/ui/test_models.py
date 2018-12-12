@@ -24,14 +24,20 @@ import json
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 import tornado
-from toxicbuild.ui import models, client
-from tests import async_test
+from toxicbuild.ui import models, client, settings
+from tests import async_test, AsyncMagicMock
 
 
 class BaseModelTest(TestCase):
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
+
+    def test_get_ref_cls(self):
+        cls = 'toxicbuild.ui.models.BuildSet'
+        model = models.BaseModel(MagicMock(), ordered_kwargs={})
+        new_cls = model._get_ref_cls(cls)
+        self.assertIs(new_cls, models.BuildSet)
 
     @patch.object(models, 'get_hole_client', MagicMock(
         spec=models.get_hole_client))
@@ -87,6 +93,7 @@ class BaseModelTest(TestCase):
         kw = models.OrderedDict()
         kw['name'] = 'bla'
         kw['other'] = 'ble'
+        kw['somedt'] = '3 10 25 06:50:49 2017 +0000'
         requester = MagicMock()
         instance = models.BaseModel(requester, kw)
 
@@ -95,6 +102,7 @@ class BaseModelTest(TestCase):
         expected = models.OrderedDict()
         expected['name'] = 'bla'
         expected['other'] = 'ble'
+        expected['somedt'] = models.format_datetime(instance.somedt)
         self.assertEqual(expected, instance_dict)
         keys = list(instance_dict.keys())
         self.assertLess(keys.index('name'), keys.index('other'))
@@ -179,12 +187,39 @@ class UserTest(TestCase):
         self.assertEqual(user.id, 'some-id')
 
     @patch.object(models.BaseModel, 'get_client', lambda requester:
+                  get_client_mock(None, 'ok'))
+    @async_test
+    async def test_change_password(self):
+        requester = MagicMock()
+        requester.email = 'a@a.com'
+        ok = await models.User.change_password(requester, 'oldpwd', 'newpwd')
+        self.assertTrue(ok)
+
+    @patch.object(models.BaseModel, 'get_client', lambda requester:
+                  get_client_mock(None, 'ok'))
+    @async_test
+    async def test_change_password_with_token(self):
+        requester = MagicMock()
+        requester.email = 'a@a.com'
+        ok = await models.User.change_password_with_token('token', 'newpwd')
+        self.assertTrue(ok)
+
+    @patch.object(models.BaseModel, 'get_client', lambda requester:
+                  get_client_mock(None, 'ok'))
+    @async_test
+    async def test_request_password_reset(self):
+        requester = MagicMock()
+        requester.email = 'a@a.com'
+        ok = await models.User.request_password_reset(
+            'a@a.com', 'https://bla.nada/reset?token={token}')
+        self.assertTrue(ok)
+
+    @patch.object(models.BaseModel, 'get_client', lambda requester:
                   get_client_mock(None, {'id': 'some-id',
                                          'email': 'some-email@bla.com'}))
     @async_test
     async def test_add(self):
-        requester = MagicMock()
-        user = await models.User.add(requester, 'some-email@bla.com',
+        user = await models.User.add('some-email@bla.com',
                                      'some-guy', 'asdf',
                                      ['add_repo'])
         self.assertEqual(user.id, 'some-id')
@@ -199,34 +234,12 @@ class UserTest(TestCase):
         r = await user.delete()
         self.assertEqual(r, 'ok')
 
-
-class PluginTest(TestCase):
-
-    @patch.object(models.Plugin, 'get_client', lambda requester:
-                  get_client_mock(None, [
-                      {'name': 'some-plugin', 'type': 'test',
-                       'somefield': {'type': 'list',
-                                     'pretty_name': 'Some Field'},
-                       'otherfield': {'type': 'string',
-                                      'pretty_name': ''}}]))
+    @patch.object(models.BaseModel, 'get_client', lambda requester:
+                  get_client_mock(None, False))
     @async_test
-    def test_list(self):
-        requester = MagicMock()
-        plugins = yield from models.Plugin.list(requester)
-        self.assertEqual(plugins[0].name, 'some-plugin')
-
-    @patch.object(models.Plugin, 'get_client', lambda requester:
-                  get_client_mock(None,
-                                  {'name': 'some-plugin', 'type': 'test',
-                                   'somefield': {'type': 'list',
-                                                 'pretty_name': 'Some Field'},
-                                   'otherfield': {'type': 'string',
-                                                  'pretty_name': ''}}))
-    @async_test
-    def test_get(self):
-        requester = MagicMock()
-        plugin = yield from models.Plugin.get(requester, 'some-plugin')
-        self.assertEqual(plugin.name, 'some-plugin')
+    async def test_exists(self):
+        exists = await models.User.exists(username='some-guy')
+        self.assertFalse(exists)
 
 
 class RepositoryTest(TestCase):
@@ -289,7 +302,7 @@ class RepositoryTest(TestCase):
             requester, 'add slave ok')
 
         kw = models.OrderedDict(name='localslave', host='localhost', port=7777,
-                                token='123')
+                                token='123', id='some-id')
         requester = MagicMock()
         slave = models.Slave(requester, kw)
         resp = yield from self.repository.add_slave(slave)
@@ -300,7 +313,8 @@ class RepositoryTest(TestCase):
     def test_remove_slave(self):
         self.repository.get_client = lambda requester: get_client_mock(
             requester, 'remove slave ok')
-        kw = dict(name='localslave', host='localhost', port=7777)
+        kw = dict(name='localslave', host='localhost', port=7777,
+                  id='some-id')
         requester = MagicMock()
         slave = models.Slave(requester, kw)
         resp = yield from self.repository.remove_slave(slave)
@@ -343,31 +357,20 @@ class RepositoryTest(TestCase):
         repo_dict = self.repository.to_dict()
         self.assertTrue(isinstance(repo_dict['slaves'][0], dict))
 
+    def test_to_dict_lastbuildset(self):
+        requester = MagicMock()
+        kw = dict(name='bla')
+        buildset = models.BuildSet(requester, ordered_kwargs={'bla': 'ble'})
+        self.repository.last_buildset = buildset
+        self.repository.slaves = [models.Slave(requester, kw)]
+        repo_dict = self.repository.to_dict()
+        self.assertTrue(isinstance(repo_dict['slaves'][0], dict))
+
     @async_test
     def test_update(self):
         self.repository.get_client = lambda requester: get_client_mock(
             requester, 'ok')
         resp = yield from self.repository.update(update_seconds=1000)
-        self.assertEqual(resp, 'ok')
-
-    @async_test
-    def test_enable_plugin(self):
-        self.repository.get_client = lambda requester: get_client_mock(
-            requester, 'ok')
-
-        resp = yield from self.repository.enable_plugin('some-plugin',
-                                                        bla='bla',
-                                                        ble=0)
-
-        self.assertEqual(resp, 'ok')
-
-    @async_test
-    def test_disable_plugin(self):
-        self.repository.get_client = lambda requester: get_client_mock(
-            requester, 'ok')
-
-        resp = yield from self.repository.disable_plugin(name='some-plugin')
-
         self.assertEqual(resp, 'ok')
 
     @async_test
@@ -377,6 +380,22 @@ class RepositoryTest(TestCase):
 
         resp = await self.repository.cancel_build('some-build-uuid')
         self.assertEqual(resp, 'build-cancelled')
+
+    @async_test
+    async def test_enable(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-enable')
+
+        resp = await self.repository.enable()
+        self.assertEqual(resp, 'repo-enable')
+
+    @async_test
+    async def test_disable(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-disable')
+
+        resp = await self.repository.disable()
+        self.assertEqual(resp, 'repo-disable')
 
 
 class SlaveTest(TestCase):
@@ -415,7 +434,8 @@ class SlaveTest(TestCase):
     @async_test
     def test_delete(self):
         requester = MagicMock()
-        kw = dict(name='slave', host='localhost', port=1234)
+        kw = dict(name='slave', host='localhost', port=1234,
+                  id='some=id')
         slave = models.Slave(requester, kw)
         slave.get_client = lambda requester: get_client_mock(
             requester, 'ok')
@@ -426,7 +446,8 @@ class SlaveTest(TestCase):
     @async_test
     def test_update(self):
         requester = MagicMock()
-        kw = dict(name='slave', host='localhost', port=1234)
+        kw = dict(name='slave', host='localhost', port=1234,
+                  id='some=id')
         slave = models.Slave(requester, kw)
         slave.get_client = lambda requester: get_client_mock(
             requester, 'ok')
@@ -437,18 +458,58 @@ class SlaveTest(TestCase):
 
 class BuildSetTest(TestCase):
 
+    @patch.object(models.BuildSet, 'get_client', AsyncMagicMock(
+        spec=models.BuildSet.get_client))
+    @async_test
+    async def test_list(self):
+        requester = MagicMock()
+        client = MagicMock()
+        client.__enter__.return_value = client
+        client.buildset_list = AsyncMagicMock()
+        client.buildset_list.return_value = [
+            {'id': 'sasdfasf',
+             'started': '3 9 25 08:53:38 2017 -0000',
+             'builds': [{'steps': [{'name': 'unit'}],
+                         'builder': {'name': 'some'}}]},
+            {'id': 'paopofe', 'builds': [{}]}]
+        models.BuildSet.get_client.return_value = client
+        buildsets = await models.BuildSet.list(requester)
+        r = await client.buildset_list()
+        self.assertEqual(len(buildsets), 2, r)
+        self.assertTrue(len(buildsets[0].builds[0].steps), 1)
+
     @patch.object(models.BuildSet, 'get_client', lambda requester:
                   get_client_mock(
-                      requester, [{'id': 'sasdfasf',
-                                   'builds': [{'steps': [{'name': 'unit'}],
-                                               'builder': {'name': 'some'}}]},
-                                  {'id': 'paopofe', 'builds': [{}]}]))
+                      requester, [
+                          {'id': 'sasdfasf',
+                           'started': '3 9 25 08:53:38 2017 -0000',
+                           'builds': [{'steps': [{'name': 'unit'}],
+                                       'builder': {'name': 'some'}}],
+                           'repository': {'id': 'some-id'}},
+                          {'id': 'paopofe', 'builds': [{}],
+                           'repository': {'id': 'some-id'}}]))
     @async_test
-    def test_list(self):
+    async def test_to_dict(self):
         requester = MagicMock()
-        builders = yield from models.BuildSet.list(requester)
-        self.assertEqual(len(builders), 2)
-        self.assertTrue(len(builders[0].builds[0].steps), 1)
+        buildsets = await models.BuildSet.list(requester)
+        buildset = buildsets[0]
+        b_dict = buildset.to_dict()
+        self.assertTrue(b_dict['id'])
+        self.assertTrue(b_dict['builds'][0]['steps'])
+        self.assertTrue(b_dict['repository'])
+
+    @patch.object(models.BuildSet, 'get_client', lambda requester:
+                  get_client_mock(
+                      requester,
+                      {'id': 'sasdfasf',
+                       'started': '3 9 25 08:53:38 2017 -0000',
+                       'builds': [{'steps': [{'name': 'unit'}],
+                                   'builder': {'name': 'some'}}]}))
+    @async_test
+    async def test_get(self):
+        requester = MagicMock()
+        buildset = await models.BuildSet.get(requester, 'some-id')
+        self.assertTrue(buildset.id)
 
 
 class BuilderTest(TestCase):
@@ -471,3 +532,112 @@ class BuilderTest(TestCase):
 
         self.assertEqual(len(builders), 2)
         self.assertEqual(builders[0].name, 'b0')
+
+
+class NotificationTest(TestCase):
+
+    def setUp(self):
+        self.notification = models.Notification
+
+    def test_get_headers(self):
+        expected = {'Authorization': 'token {}'.format(
+            settings.NOTIFICATIONS_API_TOKEN)}
+        returned = self.notification._get_headers()
+        self.assertEqual(expected, returned)
+
+    @patch.object(models.requests, 'get', AsyncMagicMock(
+        spec=models.requests.get))
+    @async_test
+    async def test_list_no_repo(self):
+        r = MagicMock()
+        models.requests.get.return_value = r
+        r.json.return_value = {'notifications': [{'name': 'bla'}]}
+
+        r = await self.notification.list()
+        self.assertEqual(r[0].name, 'bla')
+
+    @patch.object(models.requests, 'get', AsyncMagicMock(
+        spec=models.requests.get))
+    @async_test
+    async def test_list_for_repo(self):
+        r = MagicMock()
+        obj_id = 'fake-obj-id'
+        models.requests.get.return_value = r
+        r.json.return_value = {'notifications': [{'name': 'bla'}]}
+
+        r = await self.notification.list(obj_id)
+        self.assertEqual(r[0].name, 'bla')
+
+    @patch.object(models.requests, 'post', AsyncMagicMock(
+        spec=models.requests.post))
+    @async_test
+    async def test_enable(self):
+        obj_id = 'fake-obj-id'
+        notif_name = 'slack-notification'
+        config = {'webhook_url': 'https://somewebhook.url'}
+        expected_config = {'webhook_url': 'https://somewebhook.url',
+                           'repository_id': obj_id}
+        expected_url = '{}/{}'.format(self.notification.api_url,
+                                      notif_name)
+        await self.notification.enable(obj_id, notif_name, **config)
+        called_url = models.requests.post.call_args[0][0]
+        called_config = json.loads(models.requests.post.call_args[1]['data'])
+
+        self.assertEqual(expected_url, called_url)
+        self.assertEqual(expected_config, called_config)
+
+    @patch.object(models.requests, 'delete', AsyncMagicMock(
+        spec=models.requests.delete))
+    @async_test
+    async def test_disable(self):
+        obj_id = 'fake-obj-id'
+        notif_name = 'slack-notification'
+        expected_config = {'repository_id': obj_id}
+        expected_url = '{}/{}'.format(self.notification.api_url,
+                                      notif_name)
+        await self.notification.disable(obj_id, notif_name)
+        called_url = models.requests.delete.call_args[0][0]
+        called_config = json.loads(models.requests.delete.call_args[1]['data'])
+
+        self.assertEqual(expected_url, called_url)
+        self.assertEqual(expected_config, called_config)
+
+    @patch.object(models.requests, 'put', AsyncMagicMock(
+        spec=models.requests.put))
+    @async_test
+    async def test_update(self):
+        obj_id = 'fake-obj-id'
+        notif_name = 'slack-notification'
+
+        expected_url = '{}/{}'.format(self.notification.api_url,
+                                      notif_name)
+        config = {'webhook_url': 'https://somewebhook.url'}
+        expected_config = {'webhook_url': 'https://somewebhook.url',
+                           'repository_id': obj_id}
+
+        await self.notification.update(obj_id, notif_name, **config)
+        called_url = models.requests.put.call_args[0][0]
+        called_config = json.loads(models.requests.put.call_args[1]['data'])
+
+        self.assertEqual(expected_url, called_url)
+        self.assertEqual(expected_config, called_config)
+
+
+class BuildTest(TestCase):
+
+    def test_to_dict(self):
+        build = models.Build(MagicMock(),
+                             ordered_kwargs={'builder': {'id': 'some-id'},
+                                             'steps': [{'uuid': 'some'}]})
+        d = build.to_dict()
+        self.assertTrue(d['builder']['id'])
+        self.assertTrue(d['steps'][0]['uuid'])
+
+    @patch.object(models.Build, 'get_client', lambda requester:
+                  get_client_mock(requester,
+                                  {'uuid': 'some-uuid', 'output': 'bla'}))
+    @async_test
+    def test_get(self):
+        requester = MagicMock()
+        build = yield from models.Build.get(requester, 'some-uuid')
+        self.assertEqual(build.output, 'bla')

@@ -40,9 +40,6 @@ class Slave(OwnedDocument, LoggerMixin):
     the network (using :class:`toxicbuild.master.client.BuildClient`).
     The steps are actually decided by the slave.
     """
-    name = StringField(required=True, unique=True)
-    """The name of the slave"""
-
     host = StringField(required=True)
     """Slave's host."""
 
@@ -86,6 +83,7 @@ class Slave(OwnedDocument, LoggerMixin):
         """Returns a dict representation of the object."""
         my_dict = {'name': self.name, 'host': self.host,
                    'port': self.port, 'token': self.token,
+                   'full_name': self.full_name,
                    'is_alive': self.is_alive, 'id': self.id}
         if id_as_str:
             my_dict['id'] = str(self.id)
@@ -288,6 +286,8 @@ class Slave(OwnedDocument, LoggerMixin):
 
         step.output = ''.join([step.output or '', output])
         info['repository'] = {'id': str(repo.id)}
+        info['build'] = {'uuid': str(build.uuid),
+                         'repository': {'id': str(repo.id)}}
         step_output_arrived.send(str(repo.id), step_info=info)
 
         # the thing here is that while we are waiting for the step,

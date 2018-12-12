@@ -24,3 +24,11 @@ class UserDoesNotExist(Exception):
 
 class NotEnoughPerms(Exception):
     pass
+
+
+class BadSettingsType(Exception):
+    pass
+
+
+class BadResetPasswordToken(Exception):
+    pass

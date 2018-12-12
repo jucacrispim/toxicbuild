@@ -17,13 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+from http.cookies import Morsel
 import re
 import pytz
+
 from toxicbuild.core.utils import DTFORMAT, datetime2string
 from toxicbuild.ui import settings
 
 
-_dt_regex = re.compile('\w+\s\w+\s\d+\s\d+:\d+:\d+\s\d+\s[\+|-]\d+$')
+_dt_regex = re.compile('\d\s\d+\s\d+\s\d+:\d+:\d+\s\d+\s[\+|-]\d+$')
 
 
 def _get_dtformat():
@@ -35,24 +37,27 @@ def _get_dtformat():
     return dtformat
 
 
-def _get_timezone():
+def _get_timezone(tzname):
     try:
-        tz = settings.TIMEZONE
-        tz = pytz.timezone(tz)
-    except (AttributeError, pytz.UnknownTimeZoneError):
+        tz = pytz.timezone(tzname or '')
+    except pytz.UnknownTimeZoneError:
         tz = None
 
     return tz
 
 
-def format_datetime(dt):
+def format_datetime(dt, dtformat=None, tzname=None):
     """Formats a datetime object according to the
     timezone and format specified in the config file.
 
-    :param dt: A datetime object."""
+    :param dt: A datetime object.
+    :param dtformat: The format for the datetime.
+    :param tzname: A timezone name."""
 
-    dtformat = _get_dtformat()
-    tz = _get_timezone()
+    if not dtformat:
+        dtformat = _get_dtformat()
+
+    tz = _get_timezone(tzname)
 
     if tz:
         dt = dt.astimezone(tz)
@@ -109,9 +114,31 @@ async def get_builders_for_buildsets(user, buildsets):
     # 'full' builder using builder-list
     ids = [b.id for b in builders]
     builders = await Builder.list(user, id__in=ids)
-    builders_dict = {b.id: b for b in builders}
+    builders_dict = {str(b.id): b for b in builders}
     for buildset in buildsets:
         for build in buildset.builds:
             build.builder = builders_dict[build.builder.id]
 
     return sorted(builders, key=lambda b: b.name)
+
+
+def get_defaulte_locale_morsel():
+    """Returns a :class:`~http.cookies.Morsel` instance with
+    `en_US` as its value.
+    """
+
+    locale_str = 'en_US'
+    m = Morsel()
+    m.set('locale', locale_str, locale_str)
+    return m
+
+
+def get_default_timezone_morsel():
+    """Returns a :class:`~http.cookies.Morsel` instance with
+    `UTC` as its value.
+    """
+
+    tzname = 'UTC'
+    m = Morsel()
+    m.set('locale', tzname, tzname)
+    return m

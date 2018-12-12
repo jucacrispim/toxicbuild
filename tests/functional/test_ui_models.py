@@ -20,6 +20,7 @@
 import asyncio
 from toxicbuild.master.repository import Repository as RepoDBModel
 from toxicbuild.master.users import User as UserDBModel
+from toxicbuild.ui import settings
 from toxicbuild.ui.models import Slave, Repository, BuildSet, User
 from tests import async_test
 from tests.functional import BaseFunctionalTest, start_all, stop_all
@@ -74,8 +75,8 @@ class SlaveTest(BaseUITest):
             self.slave = yield from Slave.add(self.user,
                                               'test-slave-get', 'localhost',
                                               123, '123', self.user)
-            get_slave = yield from Slave.get(self.user,
-                                             slave_name='test-slave-get')
+            get_slave = yield from Slave.get(
+                self.user, slave_name_or_id='asdf/test-slave-get')
             self.assertEqual(self.slave.id, get_slave.id)
         finally:
             yield from self.slave.delete()
@@ -98,8 +99,8 @@ class SlaveTest(BaseUITest):
                                               'test-slave-update', 'localhost',
                                               123, '123', self.user)
             yield from self.slave.update(host='192.168.0.1')
-            get_slave = yield from Slave.get(self.user,
-                                             slave_name='test-slave-update')
+            get_slave = yield from Slave.get(
+                self.user, slave_name_or_id='asdf/test-slave-update')
             self.assertEqual(self.slave.id, get_slave.id)
             self.assertEqual(get_slave.host, '192.168.0.1')
         finally:
@@ -130,7 +131,7 @@ class RepositoryTest(BaseUITest):
         self.slave = yield from Slave.add(self.user,
                                           'test-slave', 'localhost', 1234,
                                           '23', self.user)
-        self.repo = yield from Repository.add(self.user, name='some-repo',
+        self.repo = yield from Repository.add(self.user, name='asdf/some-repo',
                                               url='bla@gla.com',
                                               owner=self.user,
                                               vcs_type='git',
@@ -145,7 +146,7 @@ class RepositoryTest(BaseUITest):
             owner=self.user, vcs_type='git',
             update_seconds=200)
         get_repo = yield from Repository.get(self.user,
-                                             repo_name='some-repo')
+                                             name='asdf/some-repo')
         self.assertEqual(self.repo.id, get_repo.id)
 
     @async_test
@@ -166,7 +167,7 @@ class RepositoryTest(BaseUITest):
             update_seconds=200)
         yield from self.repo.update(update_seconds=100)
         get_repo = yield from Repository.get(self.user,
-                                             repo_name=self.repo.name)
+                                             name='asdf/' + self.repo.name)
         self.assertEqual(self.repo.id, get_repo.id)
         self.assertEqual(get_repo.update_seconds, 100)
 
@@ -181,7 +182,8 @@ class RepositoryTest(BaseUITest):
                                               vcs_type='git',
                                               update_seconds=200)
         yield from self.repo.add_slave(self.slave)
-        repo = yield from Repository.get(self.user, repo_name=self.repo.name)
+        repo = yield from Repository.get(
+            self.user, name='asdf/' + self.repo.name)
         self.assertEqual(len(repo.slaves), 1)
 
     @async_test
@@ -196,7 +198,8 @@ class RepositoryTest(BaseUITest):
                                               update_seconds=200,
                                               slaves=[self.slave.name])
         yield from self.repo.remove_slave(self.slave)
-        repo = yield from Repository.get(self.user, repo_name=self.repo.name)
+        repo = yield from Repository.get(self.user,
+                                         name='asdf/' + self.repo.name)
         self.assertEqual(len(repo.slaves), 0)
 
     @async_test
@@ -208,7 +211,8 @@ class RepositoryTest(BaseUITest):
                                               vcs_type='git',
                                               update_seconds=200)
         yield from self.repo.add_branch('master', True)
-        repo = yield from Repository.get(self.user, repo_name=self.repo.name)
+        repo = yield from Repository.get(
+            self.user, name='asdf/' + self.repo.name)
         self.assertEqual(len(repo.branches), 1)
 
     @async_test
@@ -221,36 +225,9 @@ class RepositoryTest(BaseUITest):
                                               update_seconds=200)
         yield from self.repo.add_branch('master', True)
         yield from self.repo.remove_branch('master')
-        repo = yield from Repository.get(self.user, repo_name=self.repo.name)
+        repo = yield from Repository.get(
+            self.user, name='asdf/' + self.repo.name)
         self.assertEqual(len(repo.branches), 0)
-
-    @async_test
-    def test_enable_plugin(self):
-        self.repo = yield from Repository.add(self.user, name='some-repo',
-                                              url='bla@gla.com',
-                                              owner=self.user,
-                                              vcs_type='git',
-                                              update_seconds=200)
-        yield from self.repo.enable_plugin(
-            'slack-notification',
-            webhook_url='https://some.url.slack')
-        repo = yield from Repository.get(self.user, repo_name='some-repo')
-        self.assertEqual(len(repo.plugins), 1)
-
-    @async_test
-    def test_disable_plugin(self):
-        self.repo = yield from Repository.add(self.user, name='some-repo',
-                                              url='bla@gla.com',
-                                              owner=self.user,
-                                              vcs_type='git',
-                                              update_seconds=200)
-        yield from self.repo.enable_plugin(
-            'slack-notification',
-            webhook_url='https://some.url.slack')
-        kw = {'name': 'slack-notification'}
-        yield from self.repo.disable_plugin(**kw)
-        repo = yield from Repository.get(self.user, repo_name='some-repo')
-        self.assertEqual(len(repo.plugins), 0)
 
 
 class BuildsetTest(BaseUITest):
@@ -270,47 +247,44 @@ class BuildsetTest(BaseUITest):
         self.slave = yield from Slave.add(self.user,
                                           'test-slave', 'localhost', 1234,
                                           '1234', self.user)
-        self.repo = yield from Repository.add(self.user, name='some-repo',
-                                              url='bla@gla.com',
-                                              owner=self.user,
-                                              vcs_type='git',
-                                              update_seconds=200,
-                                              slaves=[self.slave.name])
-        buildsets = yield from BuildSet.list(self.user, repo_name='some-repo')
+        self.repo = yield from Repository.add(
+            self.user, name='some-repo',
+            url='bla@gla.com',
+            owner=self.user,
+            vcs_type='git',
+            update_seconds=200,
+            slaves=[self.slave.name])
+
+        buildsets = yield from BuildSet.list(
+            self.user, repo_name_or_id='asdf/' + 'some-repo')
         self.assertEqual(len(buildsets), 0)
 
 
 class UserTest(BaseFunctionalTest):
 
     @classmethod
-    def setUpClass(cls):
-        pass
+    @async_test
+    async def setUpClass(cls):
+        cls.root = UserDBModel(id=settings.ROOT_USER_ID, email='bla@bla.nada',
+                               is_superuser=True)
+        await cls.root.save()
 
     @classmethod
-    def tearDownClass(cls):
-        pass
-
     @async_test
-    async def setUp(self):
-        self.requester = UserDBModel(email='asdf@asfd.com', is_superuser=True)
-        self.requester.set_password('bla')
-        await self.requester.save()
+    async def tearDownClass(cls):
+        await cls.root.delete()
 
     @async_test
     async def tearDown(self):
-        self.user.requester = self.requester
         await self.user.delete()
-        await self.requester.delete()
 
     @async_test
     async def test_add(self):
-        self.user = await User.add(
-            self.requester, 'a@a.com', 'a', 'asdf', ['add_repo'])
+        self.user = await User.add('a@a.com', 'a', 'asdf', ['add_repo'])
         self.assertTrue(self.user.id)
 
     @async_test
     async def test_authenticate(self):
-        self.user = await User.add(
-            self.requester, 'a@a.com', 'a', 'asdf', ['add_repo'])
+        self.user = await User.add('a@a.com', 'a', 'asdf', ['add_repo'])
         auth = await User.authenticate('a@a.com', 'asdf')
         self.assertEqual(self.user.id, auth.id)

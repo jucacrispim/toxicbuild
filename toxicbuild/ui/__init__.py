@@ -5,6 +5,7 @@ import os
 import pkg_resources
 import shutil
 import sys
+from tornado import locale
 from tornado.platform.asyncio import AsyncIOMainLoop
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
@@ -13,9 +14,16 @@ from toxicbuild.core.utils import bcrypt, changedir, SettingsPatcher
 # pylint: disable=global-statement
 
 here = os.path.dirname(os.path.abspath(__file__))
-translations = os.path.join(here, 'translations')
 
-gettext.install('toxicbuild.ui', translations)
+# translations for cli
+cli_translations = os.path.join(here, 'translations')
+gettext.install('toxicbuild.ui', cli_translations)
+
+
+# translations for ui
+web_translations = os.path.join(here, 'translations', 'web')
+locale.load_translations(web_translations)
+
 
 ENVVAR = 'TOXICUI_SETTINGS'
 DEFAULT_SETTINGS = 'toxicui.conf'
@@ -162,24 +170,27 @@ def stop(workdir, pidfile=None):
 
 
 @command
-def restart(workdir, pidfile=None):
+def restart(workdir, pidfile=None, loglevel='info'):
     """Restarts the web interface
 
     The instance of toxicweb in ``workdir`` will be restarted.
     :param workdir: Workdir for master to be killed.
     :param --pidfile: Name of the file to use as pidfile.
+    :param --loglevel: Level for logging messages.
     """
 
     stop(workdir, pidfile=pidfile)
-    start(workdir, pidfile=pidfile, daemonize=True)
+    start(workdir, pidfile=pidfile, daemonize=True, loglevel=loglevel)
 
 
 @command
-def create(root_dir, access_token):
+def create(root_dir, access_token='', output_token='', root_user_id=''):
     """ Create a new toxicweb project.
 
-    :param --root_dir: Root directory for toxicweb.
+    :param root_dir: Root directory for toxicweb.
     :param --access-token: Access token to master's hole.
+    :param --output-token: Access token to the notifications api.
+    :param --root-user-id: The id for the root user of the system.
     """
     print('Creating root_dir {}'.format(root_dir))
 
@@ -199,8 +210,10 @@ def create(root_dir, access_token):
     # salt and access token
     with open(dest_file, 'r+') as fd:
         content = fd.read()
-        content = content.replace('{{HOLE_TOKEN}}', access_token)
         content = content.replace('{{COOKIE_SECRET}}', cookie_secret)
+        content = content.replace('{{HOLE_TOKEN}}', access_token)
+        content = content.replace('{{NOTIFICATIONS_API_TOKEN}}', output_token)
+        content = content.replace('{{ROOT_USER_ID}}', root_user_id)
         fd.seek(0)
         fd.write(content)
 

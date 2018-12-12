@@ -138,7 +138,7 @@ def stop(workdir, pidfile=PIDFILE, kill=False):
 
 
 @command
-def restart(workdir, pidfile=PIDFILE):
+def restart(workdir, pidfile=PIDFILE, loglevel='info'):
     """Restarts toxicslave
 
     The instance of toxicslave in ``workdir`` will be restarted.
@@ -146,10 +146,11 @@ def restart(workdir, pidfile=PIDFILE):
     :param workdir: Workdir for master to be killed.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
         ``toxicslave.pid``
+    :param --loglevel: Level for logging messages.
     """
 
     stop(workdir, pidfile=pidfile)
-    start(workdir, pidfile=pidfile, daemonize=True)
+    start(workdir, pidfile=pidfile, daemonize=True, loglevel=loglevel)
 
 
 @command
