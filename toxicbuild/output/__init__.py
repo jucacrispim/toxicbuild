@@ -109,13 +109,23 @@ def _set_conffile_env(workdir, conffile):
         'TOXICOUTPUT_SETTINGS']
 
 
-async def create_auth_token():
+async def create_auth_token(workdir=None):
+
+    if workdir:
+        _set_conffile_env(workdir, None)
+        create_settings_and_connect()
+        create_settings_and_connect_master()
+
     from pyrocumulus.auth import AccessToken, Permission
     from toxicbuild.output.notifications import Notification
 
-    token = AccessToken(name='notifications-token-'.format(uuid4().hex))
-    uncrypted_token = await token.save()
-    await Permission.create_perms_to(token, Notification, 'crud')
+    try:
+        token = AccessToken(name='notifications-token-'.format(uuid4().hex))
+        uncrypted_token = await token.save()
+        await Permission.create_perms_to(token, Notification, 'crud')
+    finally:
+        os.environ['TOXICMASTER_SETTINGS'] = ''
+
     return uncrypted_token
 
 

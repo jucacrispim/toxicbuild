@@ -183,12 +183,13 @@ def restart(workdir, pidfile=None):
 
 
 @command
-def create(root_dir, access_token='', output_token=''):
+def create(root_dir, access_token='', output_token='', root_user_id=''):
     """ Create a new toxicweb project.
 
     :param root_dir: Root directory for toxicweb.
     :param --access-token: Access token to master's hole.
     :param --output-token: Access token to the notifications api.
+    :param --root-user-id: The id for the root user of the system.
     """
     print('Creating root_dir {}'.format(root_dir))
 
@@ -211,6 +212,7 @@ def create(root_dir, access_token='', output_token=''):
         content = content.replace('{{COOKIE_SECRET}}', cookie_secret)
         content = content.replace('{{HOLE_TOKEN}}', access_token)
         content = content.replace('{{NOTIFICATIONS_API_TOKEN}}', output_token)
+        content = content.replace('{{ROOT_USER_ID}}', root_user_id)
         fd.seek(0)
         fd.write(content)
 
