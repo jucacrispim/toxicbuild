@@ -27,7 +27,6 @@ packaging==17.1
 epc==0.0.5
 flake8==3.5.0
 flake8-polyfill==1.0.1
-greenlet==0.4.5
 #ipdb==0.8
 #ipython==3.0.0
 pylint==2.1.1

@@ -9,7 +9,6 @@ blinker==1.4
 Sphinx==1.7.5
 coverage==4.5.2
 cryptography==2.3
-greenlet==0.4.5
 docutils==0.12
 sphinx-pdj-theme==0.1.2
 pytz==2018.4
