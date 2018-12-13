@@ -955,30 +955,46 @@ app = PyroApplication([register, login, dashboard])
 
 static_app = StaticApplication()
 
-repo_kwargs = {'model': Repository}
+cors_origins = getattr(settings, 'CORS_ORIGINS', '*')
+
+repo_kwargs = {'model': Repository,
+               'cors_origins': cors_origins}
 repo_api_url = URLSpec('/api/repo/(.*)', CookieAuthRepositoryRestHandler,
                        repo_kwargs)
 
 websocket = URLSpec('/api/socks/(.*)', StreamHandler)
-slave_kwargs = {'model': Slave}
+slave_kwargs = {'model': Slave,
+                'cors_origins': cors_origins}
+
 slave_api_url = URLSpec('/api/slave/(.*)', CookieAuthSlaveRestHandler,
                         slave_kwargs)
-notifications_api_url = URLSpec('/api/notification/(.*)$',
-                                CookieAuthNotificationRestHandler)
-user_add_api = URLSpec('/api/public/user/(.*)$',
-                       UserPublicRestHandler, {'model': User})
 
-user_api = URLSpec('/api/user/(.*)$', UserRestHandler, {'model': User})
+notifications_api_url = URLSpec('/api/notification/(.*)$',
+                                CookieAuthNotificationRestHandler,
+                                {'cors_origins': cors_origins})
+
+user_add_api = URLSpec('/api/public/user/(.*)$',
+                       UserPublicRestHandler, {'model': User,
+                                               'cors_origins': cors_origins})
+
+user_api = URLSpec('/api/user/(.*)$', UserRestHandler,
+                   {'model': User,
+                    'cors_origins': cors_origins})
 
 buildset_api = URLSpec('/api/buildset/(.*)$',
-                       CookieAuthBuildSetHandler, {'model': BuildSet})
+                       CookieAuthBuildSetHandler,
+                       {'model': BuildSet,
+                        'cors_origins': cors_origins})
 
 build_api = URLSpec('/api/build/(.*)$',
-                    CookieAuthBuildHandler, {'model': Build})
+                    CookieAuthBuildHandler,
+                    {'model': Build,
+                     'cors_origins': cors_origins})
 
 waterfall_api = URLSpec('/api/waterfall/(.*)$',
                         CookieAuthWaterfallHandler,
-                        {'model': BuildSet})
+                        {'model': BuildSet,
+                         'cors_origins': cors_origins})
 
 api_app = PyroApplication(
     [websocket, repo_api_url, slave_api_url, notifications_api_url,
