@@ -150,16 +150,6 @@ class ResetUserPasswordToken(Document):
         await obj.save()
         return obj
 
-    def _get_smtp_settings(self):
-        smtp_settings = {'host': settings.SMTP_HOST,
-                         'port': settings.SMTP_PORT,
-                         'mail_from': settings.SMTP_MAIL_FROM,
-                         'username': settings.SMTP_USERNAME,
-                         'password': settings.SMTP_PASSWORD,
-                         'validate_certs': settings.SMTP_VALIDATE_CERTS,
-                         'starttls': settings.SMTP_STARTTLS}
-        return smtp_settings
-
     async def send_reset_email(self, subject, msg):
         """Sends an email with information on how to reset a password.
 
