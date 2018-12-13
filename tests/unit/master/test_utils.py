@@ -18,8 +18,10 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
+from unittest.mock import patch
 from mongomotor import Document
 from toxicbuild.master import utils
+from tests import async_test, AsyncMagicMock
 
 
 class PrettyFieldTest(TestCase):
@@ -35,3 +37,13 @@ class PrettyFieldTest(TestCase):
     def test_pretty_name(self):
         self.assertEqual(self.test_class.some_attr.pretty_name,
                          'Some Attribute')
+
+
+class SendEmailTest(TestCase):
+
+    @patch.object(utils.requests, 'post', AsyncMagicMock(
+        spec=utils.requests.post))
+    @async_test
+    async def test_send_email(self):
+        await utils.send_email(['a@a.com'], 'subject', 'message')
+        self.assertTrue(utils.requests.post.called)

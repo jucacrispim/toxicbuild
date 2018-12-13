@@ -198,25 +198,15 @@ class ResetUserPasswordTokenTest(TestCase):
         obj = await users.ResetUserPasswordToken.create(user)
         self.assertTrue(obj.id)
 
-    @patch.object(users, 'settings', MagicMock())
-    @patch.object(users, 'MailSender', MagicMock())
+    @patch.object(users, 'send_email', AsyncMagicMock(spec=users.send_email))
     @async_test
     async def test_send_reset_email(self):
-        users.settings.SMTP_HOST = 'some.host'
-        users.settings.SMTP_PORT = 123
-        users.settings.SMTP_MAIL_FROM = 'a@a.nada'
-        users.settings.SMTP_USERNAME = 'eu'
-        users.settings.SMTP_PASSWORD = 'senha'
-        users.settings.SMTP_VALIDATE_CERTS = False
-        users.settings.SMTP_STARTTLS = False
 
         user = users.User(email='a@a.nada')
         await user.save()
         obj = await users.ResetUserPasswordToken.create(user)
 
-        sender = AsyncMagicMock()
-        users.MailSender.return_value = sender
-
         await obj.send_reset_email('he', 'ho {token}')
 
-        self.assertTrue(sender.send.called)
+        self.assertFalse(obj.valid)
+        self.assertTrue(users.send_email.called)

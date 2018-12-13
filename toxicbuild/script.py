@@ -50,7 +50,8 @@ def create(root_dir):  # pragma no cover
 
     # first we create a slave and a master
     slave_token = create_slave(slave_root)
-    master_token = create_master(master_root)
+    output_token = loop.run_until_complete(create_auth_token(output_root))
+    master_token = create_master(master_root, output_token)
     # integrations
     create_integrations(integrations_root)
     # output

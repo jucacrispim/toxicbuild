@@ -26,11 +26,10 @@ from mongomotor.fields import (StringField, UUIDField, ListField,
                                BooleanField, EmailField, DateTimeField)
 from mongomotor.queryset import PULL
 
-from toxicbuild.core.mail import MailSender
 from toxicbuild.core.utils import (bcrypt_string, compare_bcrypt_string,
                                    now, localtime2utc)
-from toxicbuild.master import settings
 from toxicbuild.master.exceptions import InvalidCredentials
+from toxicbuild.master.utils import send_email
 
 
 class Organization(Document):
@@ -134,6 +133,7 @@ class ResetUserPasswordToken(Document):
     email = StringField(required=True)
     token = StringField(required=True)
     expires = DateTimeField(required=True)
+    valid = BooleanField(default=True)
 
     @classmethod
     async def create(cls, user):
@@ -148,16 +148,6 @@ class ResetUserPasswordToken(Document):
         await obj.save()
         return obj
 
-    def _get_smtp_settings(self):
-        smtp_settings = {'host': settings.SMTP_HOST,
-                         'port': settings.SMTP_PORT,
-                         'mail_from': settings.SMTP_MAIL_FROM,
-                         'username': settings.SMTP_USERNAME,
-                         'password': settings.SMTP_PASSWORD,
-                         'validate_certs': settings.SMTP_VALIDATE_CERTS,
-                         'starttls': settings.SMTP_STARTTLS}
-        return smtp_settings
-
     async def send_reset_email(self, subject, msg):
         """Sends an email with information on how to reset a password.
 
@@ -168,9 +158,10 @@ class ResetUserPasswordToken(Document):
           is inserted in the reset url."""
 
         body = msg.format(token=self.token)
-        smtp_settings = self._get_smtp_settings()
-        async with MailSender([self.email], **smtp_settings) as sender:
-            await sender.send(subject, body)
+
+        await send_email([self.email], subject, body)
+        self.valid = False
+        await self.save()
 
 
 class Team(EmbeddedDocument):

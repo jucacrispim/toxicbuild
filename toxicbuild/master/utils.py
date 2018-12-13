@@ -17,7 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import json
+
 from mongomotor.fields import StringField, URLField, ListField
+
+from toxicbuild.core import requests
+
 from toxicbuild.master import settings
 
 
@@ -58,3 +63,23 @@ class PrettyURLField(PrettyFieldMixin, URLField):
 
 class PrettyListField(PrettyFieldMixin, ListField):
     pass
+
+
+async def send_email(recipients, subject, message):
+    """Sends an email using the output's web api
+
+    :param recipients: A list of email addresses.
+    :param subject: The email's subject.
+    :param message: The email's body.
+    """
+
+    url = settings.NOTIFICATIONS_API_URL + 'send-email'
+    token = settings.NOTIFICATIONS_API_TOKEN
+    data = {'recipients': recipients,
+            'subject': subject,
+            'message': message}
+
+    headers = {'Authorization': 'token {}'.format(token)}
+
+    await requests.post(url, headers=headers, data=json.dumps(data))
+    return True
