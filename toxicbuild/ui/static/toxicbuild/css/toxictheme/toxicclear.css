@@ -425,6 +425,10 @@ body{
 
 .top-page-slaves-info-container,
 .top-page-repositories-info-container{
+    /* display: none; */
+}
+
+.top-page-repositories-main-info-container{
     display: none;
 }
 
