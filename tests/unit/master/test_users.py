@@ -206,9 +206,6 @@ class ResetUserPasswordTokenTest(TestCase):
         await user.save()
         obj = await users.ResetUserPasswordToken.create(user)
 
-        sender = AsyncMagicMock()
-        users.MailSender.return_value = sender
-
         await obj.send_reset_email('he', 'ho {token}')
 
         self.assertFalse(obj.valid)
