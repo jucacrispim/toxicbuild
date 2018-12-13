@@ -79,7 +79,7 @@ async def send_email(recipients, subject, message):
             'subject': subject,
             'message': message}
 
-    headers = {'Authorization': 'token {}'.format(token)}
+    headers = {'Authorization': 'token: {}'.format(token)}
 
     await requests.post(url, headers=headers, data=json.dumps(data))
     return True

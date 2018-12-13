@@ -608,7 +608,7 @@ class Notification(BaseModel):
 
     @classmethod
     def _get_headers(cls):
-        return {'Authorization': 'token {}'.format(cls.api_token)}
+        return {'Authorization': 'token: {}'.format(cls.api_token)}
 
     @classmethod
     def _get_notif_url(cls, notif_name):

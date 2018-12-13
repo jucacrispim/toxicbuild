@@ -540,7 +540,7 @@ class NotificationTest(TestCase):
         self.notification = models.Notification
 
     def test_get_headers(self):
-        expected = {'Authorization': 'token {}'.format(
+        expected = {'Authorization': 'token: {}'.format(
             settings.NOTIFICATIONS_API_TOKEN)}
         returned = self.notification._get_headers()
         self.assertEqual(expected, returned)
