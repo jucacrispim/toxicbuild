@@ -31,6 +31,7 @@ from toxicbuild.core.utils import (bcrypt_string, compare_bcrypt_string,
                                    now, localtime2utc)
 from toxicbuild.master import settings
 from toxicbuild.master.exceptions import InvalidCredentials
+from toxicbuild.master.utils import send_email
 
 
 class Organization(Document):
@@ -134,6 +135,7 @@ class ResetUserPasswordToken(Document):
     email = StringField(required=True)
     token = StringField(required=True)
     expires = DateTimeField(required=True)
+    valid = BooleanField(default=True)
 
     @classmethod
     async def create(cls, user):
@@ -168,9 +170,10 @@ class ResetUserPasswordToken(Document):
           is inserted in the reset url."""
 
         body = msg.format(token=self.token)
-        smtp_settings = self._get_smtp_settings()
-        async with MailSender([self.email], **smtp_settings) as sender:
-            await sender.send(subject, body)
+
+        await send_email([self.email], subject, body)
+        self.valid = False
+        await self.save()
 
 
 class Team(EmbeddedDocument):

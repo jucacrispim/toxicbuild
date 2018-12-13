@@ -404,10 +404,11 @@ def restart_poller(workdir, pidfile=POLLER_PIDFILE, loglevel='info'):
 
 
 @command
-def create(root_dir):
+def create(root_dir, notifications_token):
     """ Creates a new toxicmaster environment.
 
     :param --root_dir: Root directory for toxicmaster.
+    :param --notification-token: Token for the notifications' web api.
     """
     print('Creating root_dir `{}` for toxicmaster'.format(root_dir))
 
@@ -429,6 +430,8 @@ def create(root_dir):
     with open(dest_file, 'r+') as fd:
         content = fd.read()
         content = content.replace('{{ACCESS_TOKEN}}', encrypted_token)
+        content = content.replace('{{NOTIFICATIONS_API_TOKEN}}',
+                                  notifications_token)
         fd.seek(0)
         fd.write(content)
 
