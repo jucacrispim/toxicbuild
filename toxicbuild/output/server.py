@@ -112,6 +112,7 @@ class NotificationWebHandler(LoggerMixin, BasePyroAuthHandler):
         self.body = None
 
     async def async_prepare(self):
+        await super().async_prepare()
         if self.request.body:
             self.body = json.loads(self.request.body)
 

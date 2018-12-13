@@ -165,12 +165,16 @@ class NotificationWebHandlerTest(TestCase):
     async def tearDown(self):
         await server.Notification.drop_collection()
 
+    @patch.object(server.BasePyroAuthHandler, 'async_prepare',
+                  AsyncMagicMock())
     @async_test
     async def test_async_prepare(self):
         self.handler.request.body = '{"some": "thing"}'
         await self.handler.async_prepare()
         self.assertTrue(self.handler.body['some'])
 
+    @patch.object(server.BasePyroAuthHandler, 'async_prepare',
+                  AsyncMagicMock())
     @async_test
     async def test_async_prepare_no_body(self):
         self.handler.request.body = None
