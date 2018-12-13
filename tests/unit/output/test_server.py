@@ -236,3 +236,16 @@ class NotificationWebHandlerTest(TestCase):
 
         notif = await SlackNotification.objects.get(repository_id=obj_id)
         self.assertEqual(notif.webhook_url, 'https://bla.tudo')
+
+    @patch.object(server, 'send_email', AsyncMagicMock(spec=server.send_email))
+    @async_test
+    async def test_send_email(self):
+        recipients = ['a@a.com']
+        subject = 'something'
+        message = 'not really important'
+        self.handler.body = {'recipients': recipients,
+                             'subject': subject,
+                             'message': message}
+
+        await self.handler.send_email()
+        self.assertTrue(server.send_email.called)

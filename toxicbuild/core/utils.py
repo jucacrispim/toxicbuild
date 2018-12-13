@@ -96,8 +96,7 @@ def _get_envvars(envvars):
     return newvars
 
 
-@asyncio.coroutine
-def _create_cmd_proc(cmd, cwd, **envvars):
+async def _create_cmd_proc(cmd, cwd, **envvars):
     """Creates a process that will execute a command in a shell.
 
     :param cmd: command to run.
@@ -106,7 +105,7 @@ def _create_cmd_proc(cmd, cwd, **envvars):
     """
     envvars = _get_envvars(envvars)
 
-    proc = yield from asyncio.create_subprocess_shell(
+    proc = await asyncio.create_subprocess_shell(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd,
         env=envvars, preexec_fn=os.setsid)
 

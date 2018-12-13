@@ -29,7 +29,7 @@ from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.output.exchanges import (repo_notifications,
                                          build_notifications)
-from toxicbuild.output.notifications import Notification
+from toxicbuild.output.notifications import Notification, send_email
 
 
 class OutputMessageHandler(LoggerMixin):
@@ -139,6 +139,14 @@ class NotificationWebHandler(LoggerMixin, BasePyroAuthHandler):
             _name=notification_name, repository_id=repo_id).update_one(
                 **self.body)
         return {notification_name: 'updated'}
+
+    @post('send-email')
+    async def send_email(self):
+        recipients = self.body['recipients']
+        subject = self.body['subject']
+        message = self.body['subject']
+        await send_email(recipients, subject, message)
+        return {'send-email': True}
 
     def _parse_value(self, value):
         if isinstance(value, list):

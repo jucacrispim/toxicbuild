@@ -99,6 +99,14 @@ class MailSender(MailSenderCore):
         super().__init__(recipients, **smtp_settings)
 
 
+async def send_email(recipients, subject, message):
+
+    async with MailSender(recipients) as sender:
+        await sender.send(subject, message)
+
+    return True
+
+
 class MetaNotification(PluginMeta, AsyncDocumentMetaclass):
     """Metaclass that sets name to the class definition as
     mongo fields while keeping the interface of setting your notification's
@@ -342,8 +350,7 @@ class EmailNotification(Notification):
         message += '\n\ncommit: {}\ntitle: {}'.format(buildset_info['commit'],
                                                       buildset_info['title'])
 
-        async with MailSender(self.recipients) as sender:
-            await sender.send(subject, message)
+        await send_email(self.recipients, subject, message)
 
     async def send_finished_message(self, buildset_info):
         dt = buildset_info['finished']
@@ -355,8 +362,7 @@ class EmailNotification(Notification):
         message += '\ntotal time: {}\nstatus: {}'.format(
             buildset_info['total_time'], buildset_info['status'])
 
-        async with MailSender(self.recipients) as sender:
-            await sender.send(subject, message)
+        await send_email(self.recipients, subject, message)
 
 
 class CustomWebhookNotification(Notification):
