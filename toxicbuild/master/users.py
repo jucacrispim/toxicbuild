@@ -26,10 +26,8 @@ from mongomotor.fields import (StringField, UUIDField, ListField,
                                BooleanField, EmailField, DateTimeField)
 from mongomotor.queryset import PULL
 
-from toxicbuild.core.mail import MailSender
 from toxicbuild.core.utils import (bcrypt_string, compare_bcrypt_string,
                                    now, localtime2utc)
-from toxicbuild.master import settings
 from toxicbuild.master.exceptions import InvalidCredentials
 from toxicbuild.master.utils import send_email
 
