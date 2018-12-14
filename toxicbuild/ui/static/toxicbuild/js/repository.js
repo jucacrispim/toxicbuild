@@ -673,6 +673,7 @@ class RepositoryListView extends Backbone.View{
     // displays the welcome message
     $('.wait-toxic-spinner').hide();
     if (this.model.length == 0){
+      $('.top-page-repositories-settings-info-container').fadeIn();
       $('#no-repos-info').fadeIn(300);
       return false;
     }
