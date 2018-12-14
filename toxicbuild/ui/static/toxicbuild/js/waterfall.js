@@ -314,6 +314,7 @@ class WaterfallBuildView extends BaseWaterfallView{
     steps.each(function(step){
       let view = new WaterfallStepView({step: step, build_view: self});
       rendered.append(view.getRendered());
+      self._last_step = step.get('index');
     });
     this.$el.html('');
     this.$el.append(rendered);
