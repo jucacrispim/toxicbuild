@@ -425,7 +425,7 @@ body{
 
 .top-page-slaves-info-container,
 .top-page-repositories-info-container{
-    /* display: none; */
+    display: none;
 }
 
 .top-page-repositories-main-info-container{
@@ -453,6 +453,15 @@ body{
 .repo-status-exception{
     border-left: 5px solid var(--exception);
 }
+
+.repo-status-warning{
+    border-left: 5px solid var(--pink);
+}
+
+.repo-status-cloning{
+    border-left: 5px solid var(--pink);
+}
+
 
 
 .obj-info-row,
@@ -999,6 +1008,13 @@ body{
 .step-success,
 .builder-success{
     background-color: var(--green-light);
+    color: #fff;
+}
+
+.build-warning,
+.step-warning,
+.builder-warning{
+    background-color: var(--pink);
     color: #fff;
 }
 
