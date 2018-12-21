@@ -10,7 +10,7 @@ from toxicbuild.output import (
     create_settings_and_connect as create_settings_output)
 from tests.functional import (REPO_DIR,
                               SLAVE_ROOT_DIR, MASTER_ROOT_DIR, UI_ROOT_DIR,
-                              OUTPUT_ROOT_DIR)
+                              OUTPUT_ROOT_DIR, create_output_access_token)
 
 # settings needed to the test data. This needs to be before the
 # import from ui.models
@@ -40,6 +40,7 @@ create_settings_ui()
 create_settings_and_connect()
 create_settings_output()
 
+from pyrocumulus.auth import AccessToken  # noqa f402
 from toxicbuild.master.exchanges import scheduler_action  # noqa f402
 from toxicbuild.ui import settings  # noqa f402
 from toxicbuild.master.users import User  # noqa f402
@@ -91,6 +92,10 @@ def del_slave(context):
             yield from slave.delete()
         except Exception as e:
             log('Error deleting slave ' + str(e), level='warning')
+
+
+async def del_auth_token(context):
+    await AccessToken.drop_collection()
 
 
 @asyncio.coroutine
@@ -180,6 +185,9 @@ def before_feature(context, feature):
         if fname in create_repo_features:
             await create_repo(context)
 
+            if fname == 'notifications.feature':
+                await create_output_access_token()
+
         elif fname == 'register.feature':
             await create_root_user(context)
 
@@ -198,6 +206,7 @@ def after_feature(context, feature):
     async def delete(context):
         await del_slave(context)
         await del_repo(context)
+        await del_auth_token(context)
         await User.objects(username='already-exists').delete()
         await User.objects(username='already-existsa-good-username').delete()
 

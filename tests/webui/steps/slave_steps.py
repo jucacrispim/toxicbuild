@@ -99,8 +99,13 @@ def click_use_ssl(context):
 @when('he clicks in the close page button')
 def click_close_btn(context):
     browser = context.browser
-    btn = browser.find_element_by_class_name('close-btn')
-    browser.click(btn)
+
+    def fn():
+        el = browser.find_element_by_id('btn-cancel-save')
+        return el
+
+    btn = browser.wait_element_become_present(fn)
+    btn.click()
     browser.wait_text_become_present('Manage slaves')
 
 

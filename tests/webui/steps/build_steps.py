@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from behave import given, when, then
+from selenium.common.exceptions import StaleElementReferenceException
 
 from toxicbuild.ui import settings
 
@@ -93,10 +94,15 @@ def wait_build_finish(context):
 
     def fn():
         el = browser.find_elements_by_class_name('build-total-time')[0]
-        if el.text:
-            return el
-        else:
-            return None
+        try:
+            if el.text:
+                r = el
+            else:
+                r = None
+        except StaleElementReferenceException:
+            r = None
+
+        return r
 
     el = browser.wait_element_become_present(fn)
     assert el

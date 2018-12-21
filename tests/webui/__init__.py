@@ -88,7 +88,7 @@ class SeleniumBrowser(webdriver.Chrome):
 
         passwd_input = self.find_element_by_id('inputPassword')
         passwd_input.send_keys(passwd)
-        btn = self.find_element_by_class_name('btn')
+        btn = self.find_element_by_id('btn-login')
         self.click(btn)
 
     def click_link(self, link_text):

@@ -14,11 +14,11 @@ Feature: A user enables notifications for a repository
         When he clicks in the cofigure slack notification button
         And fills the webhook URL field
         And clicks in the enable button
-        Then he sees the "Slack notification enabled" message
+        Then he sees the "Slack: notification enabled" message
 
     Scenario: The user disables a notification
 
         Given the user has enabled the slack notification
         When he clicks in the cofigure slack notification button
         And clicks in the disable button
-        Then he sees the "Slack notification disabled" message
+        Then he sees the "Slack: notification disabled" message

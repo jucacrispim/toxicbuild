@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 
+import base64
 import os
 import socket
 import sys
 import time
 import tornado
 from unittest import TestCase
+
+import bcrypt
+from pyrocumulus.auth import AccessToken
+
 from toxicbuild.core import BaseToxicClient
+from toxicbuild.core.utils import bcrypt_string
 from toxicbuild.master import create_settings_and_connect
 from toxicbuild.slave import create_settings
 from toxicbuild.output import (
@@ -465,3 +471,12 @@ class DummyMasterHoleClient(BaseToxicClient):
                 if not has_sleep:
                     break
         return response
+
+
+async def create_output_access_token():
+    from toxicbuild.ui import settings
+
+    real_token = bcrypt_string(settings.ACCESS_TOKEN_BASE, bcrypt.gensalt(8))
+    token = AccessToken(token_id=settings.ACCESS_TOKEN_ID,
+                        token=real_token)
+    await token.save()

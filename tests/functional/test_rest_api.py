@@ -30,7 +30,8 @@ from toxicbuild.output.notifications import Notification
 from toxicbuild.ui import settings
 from tests import async_test
 from tests.functional import (start_master, stop_master, start_webui,
-                              stop_webui, start_output, stop_output)
+                              stop_webui, start_output, stop_output,
+                              create_output_access_token)
 
 
 def setUpModule():
@@ -223,16 +224,8 @@ class NotificationRestApiTest(TestCase):
 
     @async_test
     async def setUp(self):
-        # Creating the token for notification api access
-        self.real_token = bcrypt_string(
-            settings.ACCESS_TOKEN_BASE, bcrypt.gensalt(8))
-        self.final_token = base64.b64encode('{}:{}'.format(
-            settings.ACCESS_TOKEN_ID,
-            settings.ACCESS_TOKEN_BASE).encode()).decode()
-        self.token = AccessToken(token_id=settings.ACCESS_TOKEN_ID,
-                                 token=self.final_token)
-        await self.token.save()
 
+        await create_output_access_token()
         # login
         self.user = UserDBModel(email='a@a.com',
                                 allowed_actions=['add_repo', 'add_slave'])

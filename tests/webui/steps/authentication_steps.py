@@ -50,8 +50,8 @@ def user_inserts_password_login(context, passwd):
 @when('clicks in the login button')
 def user_clicks_login_button(context):
     browser = context.browser
-    btn = browser.find_element_by_class_name('btn')
-    browser.click(btn)
+    btn = browser.find_element_by_id('btn-login')
+    btn.click()
 
 
 @then('he sees the red warning in the password field')
