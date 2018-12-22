@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import time
 from behave import when, then, given
 from selenium.common.exceptions import StaleElementReferenceException
 from tests.webui import take_screenshot
@@ -23,11 +22,10 @@ def click_summary_link(context):
 
     el = browser.wait_element_become_present(fn)
 
-    browser.click(el)
-    el = browser.find_element_by_class_name('fa-th')
-
     try:
-        browser.wait_element_become_visible(el)
+        browser.click(el)
+        el = browser.find_element_by_class_name('fa-th')
+
     except StaleElementReferenceException:
         el = browser.wait_element_become_present(fn)
         browser.wait_element_become_visible(el)

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import time
 from behave import given, when, then
 from selenium.common.exceptions import StaleElementReferenceException
 
@@ -14,6 +15,7 @@ def is_in_waterfall(context):
     browser = context.browser
     base_url = 'http://localhost:{}/'.format(settings.TORNADO_PORT)
     waterfall_url = '{}someguy/repo-bla/waterfall'.format(base_url)
+    time.sleep(0.5)
     browser.get(waterfall_url)
 
 
