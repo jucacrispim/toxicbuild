@@ -283,8 +283,18 @@ class BuildSetTest(TestCase):
     @async_test
     async def test_get_buildset_number(self):
         await self._create_test_data()
+        b = build.BuildSet(repository=self.repo,
+                           revision=self.rev,
+                           commit='alsdfjçasdfj',
+                           commit_date=now(),
+                           branch=self.rev.branch,
+                           author=self.rev.author,
+                           title=self.rev.title,
+                           number=2,
+                           builds=[self.build])
+        await b.save()
         n = await build.BuildSet._get_next_number(self.repo)
-        self.assertEqual(n, 2)
+        self.assertEqual(n, 3)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

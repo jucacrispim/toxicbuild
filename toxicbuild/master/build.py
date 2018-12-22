@@ -491,7 +491,8 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
 
     @classmethod
     async def _get_next_number(cls, repository):
-        buildset = cls.objects.filter(repository=repository).order_by('number')
+        buildset = cls.objects.filter(repository=repository).order_by(
+            '-number')
         buildset = await buildset.first()
         if buildset:
             n = buildset.number + 1
