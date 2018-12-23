@@ -32,6 +32,9 @@
     "Repository": "Repositório",
     "Slave": "Escravo",
     "repository": "repositório",
-    "slave": "escravo"
+    "slave": "escravo",
+    "Build canceled": "Build cancelado",
+    "Error canceling build": "Erro cancelando build",
+    "cancelled": "cancelado"
   }
 }

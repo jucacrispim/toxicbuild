@@ -233,6 +233,23 @@ describe('WaterfallBuildViewTest', function(){
     let el = $('.build-info-row', rendered);
     expect(el.hasClass('build-fail')).toBe(true);
   });
+
+  it('test-cancelBuild-error', async function(){
+    spyOn(Repository.prototype, 'cancel_build').and.throwError();
+    spyOn(utils, 'showErrorMessage');
+    this.view.build.set('repository', {'id': 'some-id'});
+    await this.view.cancelBuild();
+    expect(utils.showErrorMessage).toHaveBeenCalled();
+  });
+
+  it('test-cancelBuild-ok', async function(){
+    spyOn(Repository.prototype, 'cancel_build');
+    spyOn(utils, 'showSuccessMessage');
+    this.view.build.set('repository', {'id': 'some-id'});
+    await this.view.cancelBuild();
+    expect(utils.showSuccessMessage).toHaveBeenCalled();
+  });
+
 });
 
 describe('WaterfallBuildSetViewTest', function(){

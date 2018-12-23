@@ -34,7 +34,8 @@ class Waterfall{
     let self = this;
     $(document).off('build_started build_finished');
 
-    $(document).on('build_started build_finished', function(e, data){
+    $(document).on(
+      'build_started build_finished build_cancelled', function(e, data){
       self._updateBuild(data);
     });
     this._api_url = TOXIC_WATERFALL_API_URL;
@@ -323,10 +324,29 @@ class WaterfallBuildView extends BaseWaterfallView{
 
     $('.fa-redo', this.$el).on('click', function(){
       let builder_name = self.build.get('builder').name;
-      console.log(self.build);
       utils.rescheduleBuildSet(self.build, self.$el, builder_name);
     });
 
+    $('.fa-times', this.$el).on('click', function(){
+      self.cancelBuild();
+    });
+  }
+
+  async cancelBuild(){
+    let spinner = $('.spinner-reschedule-buildset', this.$el);
+    let repo = new Repository({id: this.build.get('repository').id});
+    let build_uuid = this.build.get('uuid');
+    spinner.show();
+    let btn = $('.fa-times', this.$el);
+    btn.hide();
+    try{
+      await repo.cancel_build(build_uuid);
+      utils.showSuccessMessage(i18n('Build canceled'));
+    }catch(e){
+      utils.showErrorMessage(i18n('Error canceling build'));
+      btn.show();
+    }
+    spinner.hide();
   }
 
   getRendered(){

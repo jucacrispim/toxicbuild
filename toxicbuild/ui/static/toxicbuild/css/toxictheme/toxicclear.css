@@ -169,6 +169,10 @@ body{
     margin-bottom: 10px;
 }
 
+.badge-cancelled{
+    background-color: #827f7f;
+    color: #fff;
+}
 .badge-exception{
     background-color: var(--exception);
     color: #fff;
@@ -1007,6 +1011,20 @@ body{
 .build-pending .fa-redo,
 .build-running .fa-redo{
     display: none;
+}
+
+.build-info-row .fa-times{
+    display: none;
+}
+
+.build-info-row.build-pending .fa-times{
+    display:block;
+}
+
+.build-cancelled,
+.step-cancelled,
+.builder-cancelled{
+    background-color: #827f7f;
 }
 
 .build-success,

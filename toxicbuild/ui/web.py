@@ -627,7 +627,8 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
                                                    'buildset_started',
                                                    'buildset_finished',
                                                    'step_started',
-                                                   'step_finished'],
+                                                   'step_finished',
+                                                   'build_cancelled'],
 
                                 'step-output': ['step_output_info']}
 
