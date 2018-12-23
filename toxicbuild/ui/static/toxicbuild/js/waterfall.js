@@ -316,9 +316,17 @@ class WaterfallBuildView extends BaseWaterfallView{
       rendered.append(view.getRendered());
       self._last_step = step.get('index');
     });
+
     this.$el.html('');
     this.$el.append(rendered);
     router.setUpLinks(this.$el);
+
+    $('.fa-redo', this.$el).on('click', function(){
+      let builder_name = self.build.get('builder').name;
+      console.log(self.build);
+      utils.rescheduleBuildSet(self.build, self.$el, builder_name);
+    });
+
   }
 
   getRendered(){
@@ -383,7 +391,7 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     let first_col = $('.waterfall-first-col', this.$el);
     first_col.html(rendered.html());
     $('.fa-redo', first_col).on('click', function(){
-      utils.rescheduleBuildSet(self.buildset, self.$el);
+      utils.rescheduleBuildSet(self.buildset, first_col);
     });
 
     router.setUpLinks(first_col);
@@ -415,6 +423,7 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     this.builders.each(function(builder){
       let build = builder_builds[builder.id];
       if (build){
+	build.set('repository', self.buildset.get('repository'));
 	let view = self._getBuildView(build);
 	self.$el.append(view.getRendered());
       }else{
@@ -422,8 +431,9 @@ class WaterfallBuildSetView extends BaseWaterfallView{
       }
     });
 
-    $('.fa-redo', this.$el).on('click', function(){
-      utils.rescheduleBuildSet(self.buildset, self.$el);
+    let first_col = $('.waterfall-first-col', this.$el);
+    $('.fa-redo', first_col).on('click', function(){
+      utils.rescheduleBuildSet(self.buildset, first_col);
     });
 
     return this;

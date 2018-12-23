@@ -15,6 +15,7 @@
     " removed": " removido",
     "Error deleting ": "Erro apagando ",
     "Buildset re-scheduled": "Buildset re-agendado",
+    "Build re-scheduled": "Build re-agendado",
     "Error re-scheduing buildset": "Erro re-agendando buildset",
     "notification updated": "notificação atualizada",
     "notification enabled": "notificação habilitada",

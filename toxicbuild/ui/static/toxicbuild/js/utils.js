@@ -125,7 +125,7 @@ var utils = {
       });
   },
 
-  async rescheduleBuildSet(buildset, el_container){
+  async rescheduleBuildSet(buildset, el_container, builder_name=null){
     let repo = new Repository({'id': buildset.get('repository').id});
     let branch = buildset.get('branch');
     let named_tree = buildset.get('commit');
@@ -135,8 +135,13 @@ var utils = {
     retry_btn.hide();
     spinner.show();
     try{
-      await repo.start_build(branch, null, named_tree);
-      utils.showSuccessMessage(i18n('Buildset re-scheduled'));
+      await repo.start_build(branch, builder_name, named_tree);
+      if (builder_name){
+	utils.showSuccessMessage(i18n('Build re-scheduled'));
+      }else{
+	utils.showSuccessMessage(i18n('Buildset re-scheduled'));
+      }
+
     }catch(e){
       utils.showErrorMessage(i18n('Error re-scheduling buildset'));
     }

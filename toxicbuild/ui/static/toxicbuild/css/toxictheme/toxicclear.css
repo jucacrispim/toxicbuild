@@ -1004,6 +1004,11 @@ body{
     color: var(--black-almost-there);
 }
 
+.build-pending .fa-redo,
+.build-running .fa-redo{
+    display: none;
+}
+
 .build-success,
 .step-success,
 .builder-success{
