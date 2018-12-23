@@ -307,9 +307,10 @@ class WaterfallBuildView extends BaseWaterfallView{
   render(){
     let self = this;
 
+    let status = this.build.escape('status');
     let rendered = super.getRendered();
     $('.build-info-row', rendered).addClass(
-      'build-' + this.build.escape('status'));
+      'build-' + status);
 
     let steps = this.build.get('steps');
     steps.each(function(step){
@@ -317,6 +318,11 @@ class WaterfallBuildView extends BaseWaterfallView{
       rendered.append(view.getRendered());
       self._last_step = step.get('index');
     });
+
+    var cancel_statuses = ['pending'];
+    if (cancel_statuses.indexOf(status) >= 0){
+      $('.fa-times', rendered).show();
+    }
 
     this.$el.html('');
     this.$el.append(rendered);

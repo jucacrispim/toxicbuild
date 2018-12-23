@@ -1015,10 +1015,8 @@ body{
 
 .build-info-row .fa-times{
     display: none;
-}
-
-.build-info-row.build-pending .fa-times{
-    display:block;
+    margin-left: 5px;
+    cursor: pointer;
 }
 
 .build-cancelled,
