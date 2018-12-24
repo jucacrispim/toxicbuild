@@ -36,7 +36,8 @@ class Waterfall{
 
     $(document).on(
       'build_started build_finished build_cancelled', function(e, data){
-      self._updateBuild(data);
+	self._updateBuild(data);
+	self._updateBuilder(data);
     });
     this._api_url = TOXIC_WATERFALL_API_URL;
 
@@ -90,6 +91,12 @@ class Waterfall{
     }else{
       step.set(data);
     }
+  }
+
+  _updateBuilder(data){
+    let builder_id = data.builder.id;
+    let builder = this.builders.get(builder_id);
+    builder.set('status', data.status);
   }
 
   async fetch(){
@@ -161,11 +168,17 @@ class WaterfallBuilderView extends BaseWaterfallView{
     }
     options.tagName = 'th';
     super(options);
+
+    let self = this;
     this.builder = options.builder;
     this.directive = {'.builder-name': 'name'};
     this.template_selector = '.template .waterfall-tr';
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
+
+    this.builder.on({change: function(){
+      self.getRendered();
+    }});
   }
 
   _get_kw(){
@@ -302,6 +315,16 @@ class WaterfallBuildView extends BaseWaterfallView{
     el.removeClass();
     el.addClass('build-info-row build-' + status);
     $('.build-info-status', el).text(status);
+    this._handleCancelButton(el, status);
+  }
+
+  _handleCancelButton(rendered, status){
+    var cancel_statuses = ['pending'];
+    if (cancel_statuses.indexOf(status) >= 0){
+      $('.fa-times', rendered).show();
+    }else{
+      $('.fa-times', rendered).hide();
+    }
   }
 
   render(){
@@ -319,10 +342,7 @@ class WaterfallBuildView extends BaseWaterfallView{
       self._last_step = step.get('index');
     });
 
-    var cancel_statuses = ['pending'];
-    if (cancel_statuses.indexOf(status) >= 0){
-      $('.fa-times', rendered).show();
-    }
+    this._handleCancelButton(rendered, status);
 
     this.$el.html('');
     this.$el.append(rendered);

@@ -95,6 +95,18 @@ describe('WaterfallTest', function(){
     this.waterfall._builds['some-build'] = build;
     expect(this.waterfall.getBuild('some-build')).toBe(build);
   });
+
+  it('test-updateBuilder', function(){
+    this.waterfall.builders.reset([new Builder({status: 'success',
+						id: 'some-id'})]);
+    let data = {builder: {id: 'some-id'}, status: 'fail'};
+
+    this.waterfall._updateBuilder(data);
+
+    let builder = this.waterfall.builders.get('some-id');
+
+    expect(builder.get('status')).toEqual('fail');
+  });
 });
 
 describe('WaterfallBuilderViewTest', function(){
