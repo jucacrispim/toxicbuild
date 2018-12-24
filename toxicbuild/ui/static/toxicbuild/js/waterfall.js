@@ -316,6 +316,7 @@ class WaterfallBuildView extends BaseWaterfallView{
     el.addClass('build-info-row build-' + status);
     $('.build-info-status', el).text(status);
     this._handleCancelButton(el, status);
+    this._handleRunningCog(el, status);
   }
 
   _handleCancelButton(rendered, status){
@@ -324,6 +325,14 @@ class WaterfallBuildView extends BaseWaterfallView{
       $('.fa-times', rendered).show();
     }else{
       $('.fa-times', rendered).hide();
+    }
+  }
+
+  _handleRunningCog(rendered, status){
+    if (status == 'running'){
+      $('.fa-cog', rendered).prop('style', 'display: inline-block');
+    }else{
+      $('.fa-cog', rendered).hide();
     }
   }
 
@@ -343,6 +352,7 @@ class WaterfallBuildView extends BaseWaterfallView{
     });
 
     this._handleCancelButton(rendered, status);
+    this._handleRunningCog(rendered, status);
 
     this.$el.html('');
     this.$el.append(rendered);

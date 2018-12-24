@@ -582,7 +582,7 @@ class BuildSetInfoView extends BaseBuildSetView{
       self.rescheduleBuildSet(compiled);
     });
 
-    if (kw.status != 'running'){
+    if (kw.original_status != 'running'){
       $('.fa-cog', compiled).hide();
     }else{
       $('.fa-redo', compiled).hide();
@@ -611,9 +611,7 @@ class BuildSetListView extends BaseListView{
     super(options);
     this._container_selector = '#obj-list-container';
     this.repo_name = repo_name;
-    let self = this;
   }
-
   _connect2ws(){
     let path = 'repo-buildsets?repo_name=' + this.repo_name;
     wsconsumer.connectTo(path);
@@ -634,7 +632,6 @@ class BuildSetListView extends BaseListView{
     this.model.on('add', function(buildset){
       self._render_obj(buildset, true);
     });
-
   }
 
   _get_view(model){
