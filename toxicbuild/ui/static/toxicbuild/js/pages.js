@@ -266,8 +266,8 @@ class BaseFloatingPage extends BasePage{
   _prepareOpenAnimation(){
     this._getContainerInner();
     this._inner.hide();
-    this._container.prop('style', 'margin:0 50% 0px 50%;min-height:0');
     this._container.hide();
+    this._container.prop('style', 'margin:0 50% 0px 50%;min-height:0');
   }
 
   _animateOpen(){
@@ -291,7 +291,7 @@ class BaseOneSideFloatingPage extends BaseFloatingPage{
 
   _animateOpen(){
     let self = this;
-
+    this._container.show();
     this._container.animate({'margin': '-10px', 'min-height': '89vh'}, 400,
 			    function(){self._inner.fadeIn(100);});
   }
