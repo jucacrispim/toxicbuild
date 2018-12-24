@@ -92,6 +92,15 @@ body{
     box-shadow: 0px 0px 0.2em 0px rgba(191, 5, 39, 0.9);
 }
 
+#top-page-loadbar{
+    position: absolute;
+    top: 50px;
+}
+
+#top-page-loadbar .bar{
+    background: #7900ff;
+}
+
 .alert{
     position: fixed;
     /* right: 15px; */

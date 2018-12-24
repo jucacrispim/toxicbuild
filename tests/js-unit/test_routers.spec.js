@@ -47,13 +47,27 @@ describe('DashboarRouterTest', function(){
     expect(this.router.navigate.calls.allArgs().length).toEqual(1);
   });
 
+  it('test-loadTemplate', async function(){
+    let self = this;
+    spyOn(utils, 'sleep');
+    utils.sleep = function(t){self.router._loading_template = false;};
+    let page = jasmine.createSpy();
+    let p = new Promise(function(){});
+    page.fetch_template = jasmine.createSpy().and.returnValue(p);
+    this.router._load_bar = jasmine.createSpy();
+    this.router._load_bar.go = jasmine.createSpy();
+
+    await this.router._loadTemplate(page);
+
+    expect(this.router._load_bar.go).toHaveBeenCalled();
+  });
 
   it('test-showPage', async function(){
     let page = jasmine.createSpy('test-page');
-    page.fetch_template = jasmine.createSpy('fetch_template');
     page.render = jasmine.createSpy('render');
+    spyOn(this.router, '_loadTemplate');
     await this.router._showPage(page);
-    expect(page.fetch_template).toHaveBeenCalled();
+    expect(this.router._loadTemplate).toHaveBeenCalled();
     expect(page.render).toHaveBeenCalled();
   });
 

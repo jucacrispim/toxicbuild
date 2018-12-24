@@ -41,6 +41,16 @@ class DashboardRouter extends Backbone.Router{
     this.template_container = jQuery('#main-area-container');
     this.main_template = '/templates/main';
     this._last_urls = new Array();
+    this._loading_template = false;
+    this._load_bar_size = 0;
+
+    var nano_options = {
+      classname: 'toxic-load-bar',
+      id: 'top-page-loadbar',
+      target: document.getElementById('top-page-loadbar')
+    };
+
+    this._load_bar = new Nanobar(nano_options);
   }
 
   _getCurrentPath(){
@@ -87,8 +97,24 @@ class DashboardRouter extends Backbone.Router{
 			'replace': replace});
   }
 
+  async _loadTemplate(page){
+    let self = this;
+    self._loading_template = true;
+    let p = page.fetch_template();
+    p.then(function(){self._loading_template = false;});
+
+    while (self._loading_template){
+      this._load_bar_size += 20;
+      this._load_bar.go(this._load_bar_size);
+      await utils.sleep(50);
+    }
+    this._load_bar.go(100);
+    this._load_bar_size = 0;
+  }
+
   async _showPage(page){
-    await page.fetch_template();
+    // await page.fetch_template();
+    await this._loadTemplate(page);
     await page.render();
     this.setUpLinks();
   }
