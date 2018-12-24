@@ -461,6 +461,11 @@ body{
     border-left: 5px solid var(--gray);
 }
 
+.slave-status-fail,
+.repo-status-fail{
+    border-left: 5px solid var(--red);
+}
+
 .repo-status-running{
     border-left: 5px solid var(--blue);
 }
