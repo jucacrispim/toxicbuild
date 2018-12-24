@@ -103,10 +103,16 @@ class DashboardRouter extends Backbone.Router{
     let p = page.fetch_template();
     p.then(function(){self._loading_template = false;});
 
+    let load_steps = [500, 1000, 2000];
+    let i = 0;
+    this._load_bar.go(10);
     while (self._loading_template){
-      this._load_bar_size += 20;
-      this._load_bar.go(this._load_bar_size);
-      await utils.sleep(50);
+      await utils.sleep(load_steps[i]);
+      i += 1;
+      this._load_bar_size += 30;
+      if (this._load_bar_size <= 90){
+	this._load_bar.go(this._load_bar_size);
+      }
     }
     this._load_bar.go(100);
     this._load_bar_size = 0;

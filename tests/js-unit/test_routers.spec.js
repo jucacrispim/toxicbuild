@@ -59,7 +59,24 @@ describe('DashboarRouterTest', function(){
 
     await this.router._loadTemplate(page);
 
-    expect(this.router._load_bar.go).toHaveBeenCalled();
+    let all = this.router._load_bar.go.calls.allArgs();
+    expect(all.length).toEqual(3);
+  });
+
+  it('test-loadTemplate-gte-90', async function(){
+    let self = this;
+    spyOn(utils, 'sleep');
+    utils.sleep = function(t){self.router._loading_template = false;};
+    let page = jasmine.createSpy();
+    let p = new Promise(function(){});
+    page.fetch_template = jasmine.createSpy().and.returnValue(p);
+    this.router._load_bar = jasmine.createSpy();
+    this.router._load_bar.go = jasmine.createSpy();
+    this.router._load_bar_size = 90;
+    await this.router._loadTemplate(page);
+
+    let all = this.router._load_bar.go.calls.allArgs();
+    expect(all.length).toEqual(2);
   });
 
   it('test-showPage', async function(){

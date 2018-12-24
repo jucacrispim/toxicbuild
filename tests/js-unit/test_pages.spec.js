@@ -177,6 +177,7 @@ describe('BaseFloatingPageTest', function(){
     this.page._inner = jasmine.createSpy('_inner');
     this.page._inner.hide = jasmine.createSpy('hide');
     this.page._container = jasmine.createSpy('_container');
+    this.page._container.hide = jasmine.createSpy();
     this.page._container.prop = jasmine.createSpy('prop');
     this.page._prepareOpenAnimation();
     expect(this.page._inner.hide).toHaveBeenCalled();
@@ -185,6 +186,7 @@ describe('BaseFloatingPageTest', function(){
 
   it('test-animateOpen', function(){
     this.page._container = jasmine.createSpy('_container');
+    this.page._container.show = jasmine.createSpy();
     this.page._container.animate = jasmine.createSpy('animate');
     this.page._animateOpen();
     expect(this.page._container.animate).toHaveBeenCalled();
