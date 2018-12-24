@@ -267,11 +267,12 @@ class BaseFloatingPage extends BasePage{
     this._getContainerInner();
     this._inner.hide();
     this._container.prop('style', 'margin:0 50% 0px 50%;min-height:0');
+    this._container.hide();
   }
 
   _animateOpen(){
     let self = this;
-
+    this._container.show();
     this._container.animate({'margin': '-10px', 'min-height': '89vh'}, 400,
 			    function(){self._inner.fadeIn(100);
 				       self.right_sidebar.fadeIn(100);});

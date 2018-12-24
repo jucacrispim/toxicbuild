@@ -1032,6 +1032,10 @@ body{
     display: none;
 }
 
+.build-info-row .fa-cog{
+    margin-left: 5px;
+}
+
 .build-info-row .fa-times{
     display: none;
     margin-left: 5px;
