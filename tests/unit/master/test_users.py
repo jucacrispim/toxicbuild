@@ -18,12 +18,12 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import mongomotor
 
 from toxicbuild.master import users
-from tests import async_test, AsyncMagicMock, create_autospec
+from tests import async_test, AsyncMagicMock
 
 
 class OrganizationTest(TestCase):

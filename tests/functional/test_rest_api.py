@@ -16,13 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import base64
 import json
 from unittest import TestCase
-import bcrypt
 import requests
 from pyrocumulus.auth import AccessToken
-from pyrocumulus.utils import bcrypt_string
 from toxicbuild.master.repository import Repository as RepoDBModel
 from toxicbuild.master.slave import Slave as SlaveDBModel
 from toxicbuild.master.users import User as UserDBModel

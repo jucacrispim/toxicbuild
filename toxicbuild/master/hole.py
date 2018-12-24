@@ -119,7 +119,8 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
             status = 3
             await self.send_response(code=status, body={'error': msg})
 
-        except ResetUserPasswordToken.DoesNotExist:
+        except (  # pylint: disable=duplicate-except
+                ResetUserPasswordToken.DoesNotExist):
             msg = 'Bad reset password token'
             self.log(msg, level='warning')
             status = 4

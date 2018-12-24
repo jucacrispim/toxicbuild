@@ -182,6 +182,12 @@ body{
     background-color: #827f7f;
     color: #fff;
 }
+
+.badge-warning{
+    background-color: var(--pink);
+    color: #fff;
+}
+
 .badge-exception{
     background-color: var(--exception);
     color: #fff;
@@ -448,6 +454,10 @@ body{
 .slave-status-ready,
 .repo-status-ready,
 .repo-status-no-config{
+    border-left: 5px solid var(--gray);
+}
+
+.repo-status-cancelled{
     border-left: 5px solid var(--gray);
 }
 
@@ -1032,6 +1042,7 @@ body{
 .step-cancelled,
 .builder-cancelled{
     background-color: #827f7f;
+    color: #fff;
 }
 
 .build-success,
