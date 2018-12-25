@@ -222,13 +222,14 @@ class BaseFloatingPage extends BasePage{
     let self = this;
 
     let close_btn = $('.details-main-container .close-btn');
+    let reject_regex = /^\/build\/.*/;
     close_btn.on('click', function(e){
-      self.close_page();
+      self.close_page(reject_regex);
     });
 
     let cancel_btn = $('.buttons-container #btn-cancel-save');
     cancel_btn.on('click', function(e){
-      self.close_page();
+      self.close_page(reject_regex);
     });
 
     // so, when we render a page, we unbind from these *-using-form events
