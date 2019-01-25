@@ -15,8 +15,8 @@ def is_in_waterfall(context):
     browser = context.browser
     base_url = 'http://localhost:{}/'.format(settings.TORNADO_PORT)
     waterfall_url = '{}someguy/repo-bla/waterfall'.format(base_url)
-    time.sleep(0.5)
     browser.get(waterfall_url)
+    time.sleep(0.5)
 
 
 @when('he clicks in the reschedule buildset button in the waterfall')
@@ -25,7 +25,8 @@ def click_reschedule(context):
 
     def fn():
         try:
-            el = browser.find_elements_by_class_name('fa-redo')[1]
+            el = browser.find_elements_by_class_name('fa-redo')[2]
+            el = el if el.is_displayed() else None
         except IndexError:
             el = None
 

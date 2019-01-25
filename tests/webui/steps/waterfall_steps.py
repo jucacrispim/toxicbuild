@@ -44,7 +44,8 @@ def step_impl(context):
 
     def fn():
         try:
-            btn = browser.find_elements_by_class_name('fa-redo')[1]
+            btn = browser.find_elements_by_class_name('fa-redo')[2]
+            btn = btn if btn.is_displayed() else None
         except IndexError:
             btn = None
 

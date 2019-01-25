@@ -18,7 +18,18 @@ def click_settings_button(context):
 @when('clicks in the Manage slaves menu')
 def click_manage_slave_menu(context):
     browser = context.browser
-    el = browser.find_element_by_id('manage-slaves-link')
+
+    def fn():
+        try:
+            el = browser.find_element_by_id('manage-slaves-link')
+        except Exception:
+            el = None
+
+        el = el if el.is_displayed() else None
+        return el
+
+    el = browser.wait_element_become_present(fn)
+
     el.click()
 
     # here I wait for the slave list page to appear looking for the
@@ -29,7 +40,16 @@ def click_manage_slave_menu(context):
 @when('clicks in the add slave button')
 def click_add_slave_button(context):
     browser = context.browser
-    el = browser.find_elements_by_class_name('fa-plus')[0]
+
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('fa-plus')[0]
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
     el.click()
 
 
@@ -47,7 +67,16 @@ def is_in_add_slave_page(self):
 @when('he fills the slave name field')
 def fill_slave_name(context):
     browser = context.browser
-    el = browser.find_elements_by_class_name('slave-details-name')[1]
+
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('slave-details-name')[1]
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
     el.send_keys('some-name')
 
 
@@ -85,7 +114,16 @@ def click_add_new_slave_button(context):
 def is_in_slave_settings_page(context):
     browser = context.browser
     browser.wait_text_become_present('General configurations')
-    el = browser.find_elements_by_class_name('btn-delete-slave')[1]
+
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('btn-delete-slave')[1]
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
     browser.wait_element_become_visible(el)
 
 
@@ -144,7 +182,15 @@ def navigate_to_slave_settings_page(context):
 def click_delete_button(context):
     browser = context.browser
 
-    el = browser.find_elements_by_class_name('btn-delete-slave')[1]
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('btn-delete-slave')[1]
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
     browser.wait_element_become_visible(el)
 
     browser.click(el)
