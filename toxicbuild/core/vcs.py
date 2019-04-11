@@ -206,7 +206,7 @@ class Git(VCS):
     @asyncio.coroutine
     def clone(self, url):
 
-        cmd = '%s clone --depth=1 %s %s --recursive' % (
+        cmd = '%s clone --depth=2 %s %s --recursive' % (
             self.vcsbin, url, self.workdir)
         # we can't go to self.workdir while we do not clone the repo
         yield from self.exec_cmd(cmd, cwd='.')

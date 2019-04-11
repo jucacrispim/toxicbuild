@@ -133,7 +133,7 @@ class GitTest(TestCase):
         called_cmd = vcs.exec_cmd.call_args[0][0]
         self.assertEqual(
             called_cmd,
-            'git clone --depth=1 %s %s --recursive' % (url, self.vcs.workdir))
+            'git clone --depth=2 %s %s --recursive' % (url, self.vcs.workdir))
 
     @async_test
     def test_set_remote(self):
