@@ -1,6 +1,7 @@
 aiohttp==3.4.4
 aiozk==0.7.0
 aioamqp==0.12.0
+astroid==2.2.5
 asyncamqp==0.1.4
 aiosmtplib==1.0.2
 bcrypt==3.1.4
@@ -12,7 +13,7 @@ cryptography==2.3
 docutils==0.12
 sphinx-pdj-theme==0.1.2
 pytz==2018.4
-pylint==2.1.1
+pylint==2.3.1
 pylint-plugin-utils==0.5
 pylint-mongoengine==0.2.3
 pyyaml==3.10
