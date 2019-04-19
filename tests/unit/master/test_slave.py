@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -479,6 +479,78 @@ class SlaveTest(TestCase):
             if str(step.uuid) == a_uuid:
                 break
         self.assertEqual(step.status, 'success')
+
+    @patch('toxicbuild.master.aws.settings')
+    def test_instance(self, *a, **kw):
+        self.slave.instance_type = 'ec2'
+        self.slave.instance_confs = {'instance_id': 'some-id',
+                                     'region': 'us-east-2'}
+
+        self.assertIsInstance(self.slave.instance, slave.EC2Instance)
+
+    @async_test
+    async def test_start_instance_not_on_demand(self):
+        self.slave.on_demand = False
+        r = await self.slave.start_instance()
+        self.assertFalse(r)
+
+    @patch.object(slave.EC2Instance, 'is_running', AsyncMagicMock(
+        return_value=True))
+    @patch('toxicbuild.master.aws.settings')
+    @async_test
+    async def test_start_instance_already_running(self, *a, **kw):
+        self.slave.on_demand = True
+        self.slave.instance_type = 'ec2'
+        self.slave.instance_confs = {'instance_id': 'some-id',
+                                     'region': 'us-east-2'}
+        r = await self.slave.start_instance()
+        self.assertFalse(r)
+        self.assertTrue(slave.EC2Instance.is_running.called)
+
+    @patch.object(slave.EC2Instance, 'is_running', AsyncMagicMock(
+        return_value=False))
+    @patch.object(slave.EC2Instance, 'start', AsyncMagicMock())
+    @patch('toxicbuild.master.aws.settings')
+    @async_test
+    async def test_start_instance_ok(self, *a, **kw):
+        self.slave.on_demand = True
+        self.slave.instance_type = 'ec2'
+        self.slave.instance_confs = {'instance_id': 'some-id',
+                                     'region': 'us-east-2'}
+        r = await self.slave.start_instance()
+        self.assertTrue(r)
+
+    @async_test
+    async def test_stop_instance_not_on_demand(self):
+        self.slave.on_demand = False
+        r = await self.slave.stop_instance()
+        self.assertFalse(r)
+
+    @patch.object(slave.EC2Instance, 'is_running', AsyncMagicMock(
+        return_value=False))
+    @patch('toxicbuild.master.aws.settings')
+    @async_test
+    async def test_stop_instance_already_stopped(self, *a, **kw):
+        self.slave.on_demand = True
+        self.slave.instance_type = 'ec2'
+        self.slave.instance_confs = {'instance_id': 'some-id',
+                                     'region': 'us-east-2'}
+        r = await self.slave.stop_instance()
+        self.assertFalse(r)
+        self.assertTrue(slave.EC2Instance.is_running.called)
+
+    @patch.object(slave.EC2Instance, 'is_running', AsyncMagicMock(
+        return_value=True))
+    @patch.object(slave.EC2Instance, 'stop', AsyncMagicMock())
+    @patch('toxicbuild.master.aws.settings')
+    @async_test
+    async def test_stop_instance_ok(self, *a, **kw):
+        self.slave.on_demand = True
+        self.slave.instance_type = 'ec2'
+        self.slave.instance_confs = {'instance_id': 'some-id',
+                                     'region': 'us-east-2'}
+        r = await self.slave.stop_instance()
+        self.assertTrue(r)
 
     async def _create_test_data(self):
         await self.slave.save()

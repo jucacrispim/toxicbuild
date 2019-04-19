@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -755,6 +755,7 @@ class BuildManagerTest(TestCase):
             [self.buildset])
         slave = mock.Mock()
         slave.name = self.slave.name
+        slave.stop_instance = AsyncMagicMock()
         await self.manager._execute_builds(slave)
         self.assertFalse(self.manager._execute_in_parallel.called)
 
@@ -772,6 +773,7 @@ class BuildManagerTest(TestCase):
             lambda *a, **kw: run_in_parallel())
         self.manager.build_queues[self.slave.name].extend(
             [self.buildset])
+
         await self.manager._execute_builds(self.slave)
         self.assertTrue(run_in_parallel.called)
 

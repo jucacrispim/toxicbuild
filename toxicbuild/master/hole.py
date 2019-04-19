@@ -531,7 +531,9 @@ class HoleHandler:
         return {'repo-disable': 'ok'}
 
     async def slave_add(self, slave_name, slave_host, slave_port, slave_token,
-                        owner_id, use_ssl=True, validate_cert=True):
+                        owner_id, use_ssl=True, validate_cert=True,
+                        on_demand=False, instance_type=None,
+                        instance_confs=None):
         """ Adds a new slave to toxicbuild.
 
         :param slave_name: A name for the slave,
@@ -540,7 +542,11 @@ class HoleHandler:
         :param slave_token: Auth token for the slave.
         :param owner_id: Slave's owner id.
         :param use_ssl: Indicates if the slave uses a ssl connection.
-        :pram validate_cert: Should the slave certificate be validated?
+        :param validate_cert: Should the slave certificate be validated?
+        :param on_demand: Does this slave have an on-demand instance?
+        :param instance_type: Type of the on-demand instance.
+        :param instance_confs: Configuration parameters for the on-demand
+          instance.
         """
 
         if not self._user_is_allowed('add_slave'):
