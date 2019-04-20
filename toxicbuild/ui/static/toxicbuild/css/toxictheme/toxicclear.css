@@ -1029,6 +1029,7 @@ body{
     color: var(--black-almost-there);
 }
 
+.build-preparing .fa-redo,
 .build-pending .fa-redo,
 .build-running .fa-redo{
     display: none;
@@ -1078,6 +1079,12 @@ body{
 .builder-running{
     background-color: #31b0d5;
     /* background-color: var(--blue); */
+    color: #fff;
+}
+
+.build-preparing,
+.builder-preparing{
+    background-color: var(--orange);
     color: #fff;
 }
 

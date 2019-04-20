@@ -48,7 +48,7 @@ from toxicbuild.master.signals import (step_started, step_finished,
                                        build_added, build_cancelled,
                                        step_output_arrived,
                                        buildset_started, buildset_finished,
-                                       buildset_added)
+                                       buildset_added, build_preparing)
 from toxicbuild.master.users import User, Organization, ResetUserPasswordToken
 
 
@@ -808,6 +808,9 @@ class UIStreamHandler(LoggerMixin):
     async def step_finished(self, sender, **kw):
         await self.send_info('step_finished', sender=sender, **kw)
 
+    async def build_preparing(self, sender, **kw):
+        await self.send_info('build_preparing', sender=sender, **kw)
+
     async def build_started(self, sender, **kw):
         await self.send_info('build_started', sender=sender, **kw)
 
@@ -908,6 +911,7 @@ class UIStreamHandler(LoggerMixin):
         buildset_started.disconnect(self.buildset_started)
         buildset_finished.disconnect(self.buildset_finished)
         buildset_added.disconnect(self.buildset_added)
+        build_preparing.disconnect(self.build_preparing)
 
     async def handle(self):
         event_types = self.body['event_types']

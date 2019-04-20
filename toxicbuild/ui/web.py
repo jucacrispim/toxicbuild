@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -590,6 +590,7 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
         self.repo_id = None
         self.events = {'repo_status_changed': self._send_raw_info,
                        'repo_added': self._send_raw_info,
+                       'build_preparing': self._send_build_info,
                        'build_started': self._send_build_info,
                        'build_finished': self._send_build_info,
                        'build_added': self._send_build_info,
@@ -607,16 +608,19 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
                                                    'buildset_added'],
                                 'builds': ['build_started', 'build_finished',
                                            'build_added', 'step_started',
-                                           'step_finished', 'build_cancelled'],
+                                           'step_finished', 'build_cancelled',
+                                           'build_preparing'],
 
                                 'build-info': ['build_started',
                                                'build_finished',
+                                               'build_preparing',
                                                'step_started',
                                                'step_finished',
                                                'step_output_arrived'],
 
                                 'buildset-info': ['build_started',
                                                   'build_finished',
+                                                  'build_preparing',
                                                   'buildset_added',
                                                   'buildset_started',
                                                   'buildset_finished'],
@@ -624,6 +628,7 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
                                 'waterfall-info': ['buildset_added',
                                                    'build_started',
                                                    'build_finished',
+                                                   'build_preparing',
                                                    'buildset_started',
                                                    'buildset_finished',
                                                    'step_started',

@@ -1345,6 +1345,15 @@ class UIStreamHandlerTest(TestCase):
         self.assertEqual(called, 'step_finished')
 
     @async_test
+    async def test_build_preparing(self):
+        send_info = MagicMock()
+        self.handler.send_info = asyncio.coroutine(
+            lambda *a, **kw: send_info(*a, **kw))
+        await self.handler.build_preparing(Mock())
+        called = send_info.call_args[0][0]
+        self.assertEqual(called, 'build_preparing')
+
+    @async_test
     async def test_build_started(self):
         send_info = MagicMock()
         self.handler.send_info = asyncio.coroutine(

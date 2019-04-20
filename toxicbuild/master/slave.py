@@ -33,7 +33,7 @@ from toxicbuild.master.document import OwnedDocument
 from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import (build_started, build_finished,
                                        step_started, step_finished,
-                                       step_output_arrived)
+                                       step_output_arrived, build_preparing)
 
 
 class Slave(OwnedDocument, LoggerMixin):
@@ -205,6 +205,11 @@ class Slave(OwnedDocument, LoggerMixin):
 
         :param build: An instance of :class:`toxicbuild.master.build.Build`
         """
+
+        build.status = build.PREPARING
+        await build.update()
+        repo = await build.repository
+        build_preparing.send(str(repo.id), build=build)
 
         await self.start_instance()
 
