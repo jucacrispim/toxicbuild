@@ -103,3 +103,7 @@ class EC2Instance:
             await self._run_method(
                 'stop_instances', InstanceIds=[self.instance_id])
             await self._wait_for_status('stopped')
+
+    async def get_ip(self):
+        d = await self.get_description()
+        return d.get('PublicIpAddress')

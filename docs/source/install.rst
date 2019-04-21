@@ -357,6 +357,21 @@ In your `toxicui.conf` set the following parameters:
    GITHUB_IMPORT_URL = 'https://github.com/apps/<app-name>/installations/new'
 
 
+Integration with Amazon ec2
+---------------------------
+
+Toxicbuild can start/stop ec2 on-demand instances, saving costs on builds
+machines.
+
+You first need to create a key pair in the amazon console. Then, in your
+`toxicmaster.conf` set the following:
+
+.. code-block:: python
+
+   AWS_ACCESS_KEY_ID = '<access-key-id>'
+   AWS_SECRET_ACCESS_KEY = '<secret-access-key>'
+
+
 Starting toxicbuild
 +++++++++++++++++++
 

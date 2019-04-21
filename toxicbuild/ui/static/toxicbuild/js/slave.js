@@ -158,8 +158,9 @@ class BaseSlaveDetailsView extends BaseSlaveView{
     let instance_id = $('.slave-details-instance-id', this.container).val();
     let region = $('.slave-details-region', this.container).val();
     let inst_confs = on_demand ? Boolean(instance_id) && Boolean(region) : true;
+    let host_ok = on_demand ? true : Boolean(has_host);
 
-    return (inst_confs && Boolean(has_name) && Boolean(has_host) &&
+    return (inst_confs && Boolean(has_name) && host_ok &&
 	    Boolean(has_port) && Boolean(has_token));
   }
 

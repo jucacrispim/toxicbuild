@@ -158,7 +158,6 @@ describe('BaseSlaveDetailsViewTest', function(){
 
   it('test-hasRequired-on-demand-ok', function(){
     $('.slave-details-name').val('asdf');
-    $('.slave-details-host').val('some.host');
     $('.slave-details-port').val(1234);
     $('.slave-details-token').val('bla');
 
