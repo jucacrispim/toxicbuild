@@ -63,8 +63,9 @@ class SlaveTest(BaseUITest):
     def test_add(self):
         try:
             self.slave = yield from Slave.add(self.user,
-                                              'test-slave-add', 'localhost',
-                                              123, '123', self.user)
+                                              'test-slave-add',
+                                              123, '123', self.user,
+                                              host='localhost')
             self.assertTrue(self.slave.id)
         finally:
             yield from self.slave.delete()
@@ -73,8 +74,9 @@ class SlaveTest(BaseUITest):
     def test_get(self):
         try:
             self.slave = yield from Slave.add(self.user,
-                                              'test-slave-get', 'localhost',
-                                              123, '123', self.user)
+                                              'test-slave-get',
+                                              123, '123', self.user,
+                                              host='localhost')
             get_slave = yield from Slave.get(
                 self.user, slave_name_or_id='asdf/test-slave-get')
             self.assertEqual(self.slave.id, get_slave.id)
@@ -85,8 +87,9 @@ class SlaveTest(BaseUITest):
     def test_list(self):
         try:
             self.slave = yield from Slave.add(self.user,
-                                              'test-slave-list', 'localhost',
-                                              123, '123', self.user)
+                                              'test-slave-list',
+                                              123, '123', self.user,
+                                              host='localhost')
             slave_list = yield from Slave.list(self.user)
             self.assertEqual(len(slave_list), 1, slave_list)
         finally:
@@ -96,8 +99,9 @@ class SlaveTest(BaseUITest):
     def test_update(self):
         try:
             self.slave = yield from Slave.add(self.user,
-                                              'test-slave-update', 'localhost',
-                                              123, '123', self.user)
+                                              'test-slave-update',
+                                              123, '123', self.user,
+                                              host='localhost')
             yield from self.slave.update(host='192.168.0.1')
             get_slave = yield from Slave.get(
                 self.user, slave_name_or_id='asdf/test-slave-update')
@@ -129,8 +133,9 @@ class RepositoryTest(BaseUITest):
     @async_test
     def test_add(self):
         self.slave = yield from Slave.add(self.user,
-                                          'test-slave', 'localhost', 1234,
-                                          '23', self.user)
+                                          'test-slave', 1234,
+                                          '23', self.user,
+                                          host='localhost')
         self.repo = yield from Repository.add(self.user, name='asdf/some-repo',
                                               url='bla@gla.com',
                                               owner=self.user,
@@ -174,8 +179,8 @@ class RepositoryTest(BaseUITest):
     @async_test
     def test_add_slave(self):
         self.slave = yield from Slave.add(self.user,
-                                          'test-slave', 'localhost', 1234,
-                                          '123', self.user)
+                                          'test-slave', 1234,
+                                          '123', self.user, host='localhost')
         self.repo = yield from Repository.add(self.user, name='some-repo',
                                               url='bla@gla.com',
                                               owner=self.user,
@@ -189,8 +194,8 @@ class RepositoryTest(BaseUITest):
     @async_test
     def test_remove_slave(self):
         self.slave = yield from Slave.add(self.user,
-                                          'test-slave', 'localhost', 1234,
-                                          '2123', self.user)
+                                          'test-slave', 1234,
+                                          '2123', self.user, host='localhost')
         self.repo = yield from Repository.add(self.user, name='some-repo',
                                               url='bla@gla.com',
                                               owner=self.user,
@@ -245,8 +250,8 @@ class BuildsetTest(BaseUITest):
     @async_test
     def test_list(self):
         self.slave = yield from Slave.add(self.user,
-                                          'test-slave', 'localhost', 1234,
-                                          '1234', self.user)
+                                          'test-slave', 1234,
+                                          '1234', self.user, host='localhost')
         self.repo = yield from Repository.add(
             self.user, name='some-repo',
             url='bla@gla.com',
