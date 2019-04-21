@@ -409,8 +409,8 @@ class SlaveTest(TestCase):
         owner = MagicMock()
         owner.id = 'some-id'
         slave = yield from models.Slave.add(requester,
-                                            'localslave', 'localhost', 8888,
-                                            '1233', owner)
+                                            'localhost', 8888,
+                                            '1233', owner, host='localslave')
         self.assertEqual(slave.host, 'localhost')
 
     @patch.object(models.Slave, 'get_client', lambda requester:

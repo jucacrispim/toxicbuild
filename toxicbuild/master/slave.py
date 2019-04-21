@@ -108,7 +108,8 @@ class Slave(OwnedDocument, LoggerMixin):
 
     def to_dict(self, id_as_str=False):
         """Returns a dict representation of the object."""
-        my_dict = {'name': self.name, 'host': self.host,
+        host = self.host if self.host != self.DYNAMIC_HOST else ''
+        my_dict = {'name': self.name, 'host': host,
                    'port': self.port, 'token': self.token,
                    'full_name': self.full_name,
                    'is_alive': self.is_alive, 'id': self.id,

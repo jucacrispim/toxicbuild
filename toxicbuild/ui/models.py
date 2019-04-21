@@ -247,9 +247,9 @@ class Slave(BaseModel):
 
     @classmethod
     @asyncio.coroutine
-    def add(cls, requester, name, host, port, token, owner,
+    def add(cls, requester, name, port, token, owner,
             use_ssl=True, validate_cert=True, on_demand=False,
-            instance_type=None, instance_confs=None):
+            host=None, instance_type=None, instance_confs=None):
         """Adds a new slave.
 
         :param name: Slave name.

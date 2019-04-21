@@ -786,6 +786,8 @@ class HoleHandler:
 
     def _get_slave_dict(self, slave):
         slave_dict = json.loads(slave.to_json())
+        slave_dict['host'] = slave.host if slave.host != slave.DYNAMIC_HOST \
+            else ''
         slave_dict['id'] = str(slave.id)
         return slave_dict
 
