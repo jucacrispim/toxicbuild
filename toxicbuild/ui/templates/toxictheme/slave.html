@@ -131,10 +131,48 @@
 		{{translate('Validate ceritificate')}}
 	      </label>
 	    </div>
-	    <!-- end use_ssl -->
+	    <!-- end verify cert -->
+
+	    <!-- on demand -->
+	    <div class="form-check abc-checkbox abc-checkbox-black">
+	      <input type="checkbox"
+		     class="form-check-input slave-details-on-demand"
+		     data-valuefor="on_demand">
+	      <label for="slave-on-demand">
+		{{translate('On demand')}}
+	      </label>
+	    </div>
+	    <!-- end on demand -->
+
 	</div>
-	<!-- end checkbox container -->
       </div>
+
+      <!-- Instance confs row -->
+      <div class="form-check-inline instance-confs-container col-sm-12 row">
+	<!-- Instance id -->
+	<div class="slave-instance-id-container col-sm-5">
+	  <label for="slave-details-instance-id">
+	    {{translate('Instance id')}}:
+	  </label>
+	  <input type="text"
+		 class="form-control slave-details-instance-id"
+		 data-valuefor="instance_id">
+	</div>
+	<!-- End instance id -->
+
+	<!-- Region name -->
+	<div class="slave-region-name-container col-sm-5">
+	  <label for="slave-details-region">
+	    {{translate('Region')}}:
+	  </label>
+	  <input type="text"
+		 class="form-control slave-details-region"
+		 data-valuefor="region">
+	</div>
+	<!-- End region name -->
+      </div>
+      <!-- End instance confs row -->
+
       <!-- delete button -->
       <div class="delete-btn-container inner-btn-container col-sm-2">
 	<button class="btn btn-sm btn-block btn-danger btn-red btn-delete-slave"
@@ -228,6 +266,14 @@
 	<p>
 	  {% raw translate('Check <b>use ssl</b> if the slave uses secure connection. If the slave uses a self signed certificate you should not <b>verify certificate</b>.') %}
 	</p>
+	<p>
+	  {% raw translate('Check <b>on demand</b> if the slave has an ec2 instance that can be started/stopped when needed.') %}
+	</p>
+
+	<p class="instance-confs-text">
+	  {% raw translate('Inform the <b>instance id</b> and the <b>region</b> of your on demand instance.') %}
+	</p>
+
       </span>
     </div>
   </div>

@@ -88,3 +88,8 @@ Password changed. Go to the <a href="/login">login page</a>,Senha alterada. Vá 
 Welcome to ToxicBuild,Bem-vindo ao ToxicBuild
 You have no enabled repositories.,Você não tem repositórios habilitados.
 <a href="/repository/add">Add</a> or <a href="#">import</a> to start or <a href="/settings/repositories">manage</a> your repositories.,<a href="/repository/add">Adicione</a> ou <a href="#">importe</a> para começar ou <a href="/settings/repositories">gerencie</a> seus repositórios.
+On demand,Sob demanda
+Check <b>on demand</b> if the slave has an ec2 instance that can be started/stopped when needed.,Marque <b>sob demanda</b> se o escravo tem uma instância ec2 que pode ser iniciada/parada quando necessário.
+Instance id,Id da instância
+Region,Região
+Inform the <b>instance id</b> and the <b>region</b> of your on demand instance.,Informe o <b>Id da instância</b> e a <b>região</b> da sua instância sob demanda.

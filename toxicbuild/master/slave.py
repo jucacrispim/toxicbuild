@@ -104,7 +104,11 @@ class Slave(OwnedDocument, LoggerMixin):
         my_dict = {'name': self.name, 'host': self.host,
                    'port': self.port, 'token': self.token,
                    'full_name': self.full_name,
-                   'is_alive': self.is_alive, 'id': self.id}
+                   'is_alive': self.is_alive, 'id': self.id,
+                   'on_demand': self.on_demand,
+                   'instance_type': self.instance_type,
+                   'instance_confs': self.instance_confs}
+
         if id_as_str:
             my_dict['id'] = str(self.id)
         return my_dict

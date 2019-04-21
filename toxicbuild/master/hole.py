@@ -556,7 +556,10 @@ class HoleHandler:
         slave = await Slave.create(name=slave_name, host=slave_host,
                                    port=slave_port, token=slave_token,
                                    owner=owner, use_ssl=use_ssl,
-                                   validate_cert=validate_cert)
+                                   validate_cert=validate_cert,
+                                   on_demand=on_demand,
+                                   instance_type=instance_type,
+                                   instance_confs=instance_confs)
 
         slave_dict = self._get_slave_dict(slave)
         return {'slave-add': slave_dict}

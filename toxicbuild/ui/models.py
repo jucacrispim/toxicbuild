@@ -248,7 +248,8 @@ class Slave(BaseModel):
     @classmethod
     @asyncio.coroutine
     def add(cls, requester, name, host, port, token, owner,
-            use_ssl=True, validate_cert=True):
+            use_ssl=True, validate_cert=True, on_demand=False,
+            instance_type=None, instance_confs=None):
         """Adds a new slave.
 
         :param name: Slave name.
@@ -258,12 +259,17 @@ class Slave(BaseModel):
         :param owner: The slave owner
         :param use_ssl: Indicates if the slave uses a ssl connection.
         :pram validate_cert: Should the slave certificate be validated?
+        :param on_demand: Does this slave have an on-demand instance?
+        :param instance_type: Type of the on-demand instance.
+        :param instance_confs: Configuration parameters for the on-demand
+          instance.
         """
 
         kw = {'slave_name': name, 'slave_host': host,
               'slave_port': port, 'slave_token': token,
               'owner_id': str(owner.id), 'use_ssl': use_ssl,
-              'validate_cert': validate_cert}
+              'validate_cert': validate_cert, 'on_demand': on_demand,
+              'instance_type': instance_type, 'instance_confs': instance_confs}
 
         with (yield from cls.get_client(requester)) as client:
             slave_dict = yield from client.slave_add(**kw)

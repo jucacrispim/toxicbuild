@@ -90,6 +90,9 @@ describe('BaseSlaveDetailsViewTest', function(){
     container.affix('input.slave-details-token');
     container.affix('checkbox.slave-details-use-ssl');
     container.affix('checkbox.slave-details-verify-cert');
+    container.affix('checkbox.slave-details-on-demand');
+    container.affix('input.slave-details-instance-id');
+    container.affix('input.slave-details-region');
   });
 
   it('test-hasRequired-no-name', function(){
@@ -141,6 +144,56 @@ describe('BaseSlaveDetailsViewTest', function(){
     let has_required = this.view._hasRequired();
     expect(has_required).toBe(true);
   });
+
+  it('test-hasRequired-on-demand-not-ok', function(){
+    spyOn($.fn, 'is').and.returnValue(true);
+    $('.slave-details-name').val('asdf');
+    $('.slave-details-host').val('some.host');
+    $('.slave-details-port').val(1234);
+    $('.slave-details-token').val('bla');
+
+    let has_required = this.view._hasRequired();
+    expect(has_required).toBe(false);
+  });
+
+  it('test-hasRequired-on-demand-ok', function(){
+    $('.slave-details-name').val('asdf');
+    $('.slave-details-host').val('some.host');
+    $('.slave-details-port').val(1234);
+    $('.slave-details-token').val('bla');
+
+    spyOn($.fn, 'is').and.returnValue(true);
+    $('.slave-details-instance-id').val('adf');
+    $('.slave-details-region').val('bla');
+    let has_required = this.view._hasRequired();
+    expect(has_required).toBe(true);
+  });
+
+  it('test-handleInstanceConfs-not-on-demand-template', function(){
+    let on_demand = false;
+    spyOn($.fn, 'hide');
+    this.view._handleInstanceConfs(on_demand, jasmine.createSpy());
+
+    expect($.fn.hide).toHaveBeenCalled();
+  });
+
+  it('test-handleInstanceConfs-not-on-demand', function(){
+    let on_demand = false;
+    spyOn($.fn, 'slideUp');
+    this.view._handleInstanceConfs(on_demand);
+
+    expect($.fn.slideUp).toHaveBeenCalled();
+  });
+
+  it('test-handleInstanceConfs-on-demand', function(){
+    let on_demand = true;
+    spyOn($.fn, 'hide');
+    spyOn($.fn, 'attr');
+    this.view._handleInstanceConfs(on_demand);
+
+    expect($.fn.hide).not.toHaveBeenCalled();
+    expect($.fn.attr).toHaveBeenCalled();
+  });
 });
 
 describe('SlaveDetailsViewTest', function(){
@@ -155,6 +208,10 @@ describe('SlaveDetailsViewTest', function(){
     container.affix('input.slave-details-token');
     container.affix('checkbox.slave-details-use-ssl');
     container.affix('checkbox.slave-details-verify-cert');
+    container.affix('input.slave-details-on-demand');
+    container.affix('input.slave-details-instance-id');
+    container.affix('input.slave-details-region');
+
   });
 
   it('test-render_details', async function(){
@@ -180,6 +237,9 @@ describe('SlaveAddViewTest', function(){
     container.affix('input.slave-details-token');
     container.affix('checkbox.slave-details-use-ssl');
     container.affix('checkbox.slave-details-verify-cert');
+    container.affix('input.slave-details-on-demand');
+    container.affix('input.slave-details-instance-id');
+    container.affix('input.slave-details-region');
   });
 
   it('test-render_details', function(){

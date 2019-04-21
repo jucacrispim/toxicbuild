@@ -1088,6 +1088,12 @@ body{
     color: #fff;
 }
 
+.instance-confs-container{
+    margin-top: 20px;
+    margin-bottom: 30px;
+    padding-left: 15px;
+}
+
 #waterfall-container .table td, .table th {
     padding: 0;
     border: 0;
