@@ -45,7 +45,7 @@ from toxicbuild.master.utils import (get_build_config_type,
 
 # The statuses used in builds  ordered by priority.
 ORDERED_STATUSES = ['running', 'cancelled', 'exception', 'fail',
-                    'warning', 'success', 'pending']
+                    'warning', 'success', 'preparing', 'pending']
 
 
 class SerializeMixin:

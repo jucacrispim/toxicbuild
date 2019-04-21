@@ -78,7 +78,7 @@ class EC2Instance:
         status = await self.get_status()
         return status == 'stopped'
 
-    async def _wait_for_status(self, status, timeout=10):
+    async def _wait_for_status(self, status, timeout=300):
         i = 0
         while i < timeout:
             curr_status = await self.get_status()
