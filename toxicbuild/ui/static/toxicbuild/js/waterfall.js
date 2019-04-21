@@ -32,10 +32,11 @@ class Waterfall{
     // unbinding the stuff from BuildSet here so we bind it to the
     // waterfall stuff.
     let self = this;
-    $(document).off('build_started build_finished');
+    $(document).off('build_preparing build_started build_finished');
 
     $(document).on(
-      'build_started build_finished build_cancelled', function(e, data){
+      'build_preparing build_started build_finished build_cancelled',
+      function(e, data){
 	self._updateBuild(data);
 	self._updateBuilder(data);
     });
@@ -314,7 +315,7 @@ class WaterfallBuildView extends BaseWaterfallView{
     let el = $($('.build-info-row', this.$el)[0]);
     el.removeClass();
     el.addClass('build-info-row build-' + status);
-    $('.build-info-status', el).text(status);
+    $('.build-info-status', el).text(i18n(status));
     this._handleCancelButton(el, status);
     this._handleRunningCog(el, status);
   }
@@ -329,7 +330,7 @@ class WaterfallBuildView extends BaseWaterfallView{
   }
 
   _handleRunningCog(rendered, status){
-    if (status == 'running'){
+    if (status == 'running' || status == 'preparing'){
       $('.fa-cog', rendered).prop('style', 'display: inline-block');
     }else{
       $('.fa-cog', rendered).hide();

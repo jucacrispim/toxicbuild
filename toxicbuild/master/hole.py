@@ -48,7 +48,7 @@ from toxicbuild.master.signals import (step_started, step_finished,
                                        build_added, build_cancelled,
                                        step_output_arrived,
                                        buildset_started, buildset_finished,
-                                       buildset_added)
+                                       buildset_added, build_preparing)
 from toxicbuild.master.users import User, Organization, ResetUserPasswordToken
 
 
@@ -531,7 +531,9 @@ class HoleHandler:
         return {'repo-disable': 'ok'}
 
     async def slave_add(self, slave_name, slave_host, slave_port, slave_token,
-                        owner_id, use_ssl=True, validate_cert=True):
+                        owner_id, use_ssl=True, validate_cert=True,
+                        on_demand=False, instance_type=None,
+                        instance_confs=None):
         """ Adds a new slave to toxicbuild.
 
         :param slave_name: A name for the slave,
@@ -540,7 +542,11 @@ class HoleHandler:
         :param slave_token: Auth token for the slave.
         :param owner_id: Slave's owner id.
         :param use_ssl: Indicates if the slave uses a ssl connection.
-        :pram validate_cert: Should the slave certificate be validated?
+        :param validate_cert: Should the slave certificate be validated?
+        :param on_demand: Does this slave have an on-demand instance?
+        :param instance_type: Type of the on-demand instance.
+        :param instance_confs: Configuration parameters for the on-demand
+          instance.
         """
 
         if not self._user_is_allowed('add_slave'):
@@ -550,7 +556,10 @@ class HoleHandler:
         slave = await Slave.create(name=slave_name, host=slave_host,
                                    port=slave_port, token=slave_token,
                                    owner=owner, use_ssl=use_ssl,
-                                   validate_cert=validate_cert)
+                                   validate_cert=validate_cert,
+                                   on_demand=on_demand,
+                                   instance_type=instance_type,
+                                   instance_confs=instance_confs)
 
         slave_dict = self._get_slave_dict(slave)
         return {'slave-add': slave_dict}
@@ -802,6 +811,9 @@ class UIStreamHandler(LoggerMixin):
     async def step_finished(self, sender, **kw):
         await self.send_info('step_finished', sender=sender, **kw)
 
+    async def build_preparing(self, sender, **kw):
+        await self.send_info('build_preparing', sender=sender, **kw)
+
     async def build_started(self, sender, **kw):
         await self.send_info('build_started', sender=sender, **kw)
 
@@ -902,6 +914,7 @@ class UIStreamHandler(LoggerMixin):
         buildset_started.disconnect(self.buildset_started)
         buildset_finished.disconnect(self.buildset_finished)
         buildset_added.disconnect(self.buildset_added)
+        build_preparing.disconnect(self.build_preparing)
 
     async def handle(self):
         event_types = self.body['event_types']

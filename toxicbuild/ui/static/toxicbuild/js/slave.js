@@ -52,10 +52,18 @@ class BaseSlaveView extends BaseFormView{
     let token = this.model.escape('token');
     let use_ssl = this.model.get('use_ssl');
     let verify_cert = this.model.get('verify_cert');
+    let on_demand = this.model.get('on_demand');
+    let instance_confs = this.model.get('instance_confs');
+    let instance_id = instance_confs ? _.escape(
+      instance_confs['instance_id']) : null;
+    let region = instance_confs ? _.escape(instance_confs['region']) : null;
+
     return {name: name, host: host, port: port, details_link: details_link,
 	    token: token, use_ssl: use_ssl, verify_cert: verify_cert,
 	    use_ssl_el_id: 'slave-use-ssl', full_name: full_name,
-	    'verify_cert_el_id': 'slave-verify-cert'};
+	    'verify_cert_el_id': 'slave-verify-cert',
+	    on_demand_el_id: 'slave-on-demand', instance_id: instance_id,
+	    region: region, on_demand: on_demand};
   }
 
 }
@@ -127,6 +135,10 @@ class BaseSlaveDetailsView extends BaseSlaveView{
       '.slave-details-token@value': 'token',
       '.slave-details-use-ssl@checked': 'use_ssl',
       '.slave-details-use-ssl@id': 'use_ssl_el_id',
+      '.slave-details-on-demand@id': 'on_demand_el_id',
+      '.slave-details-on-demand@checked': 'on_demand',
+      '.slave-details-instance-id@value': 'instance_id',
+      '.slave-details-region@value': 'region',
       '.slave-details-verify-cert@checked': 'verify_cert',
       '.slave-details-verify-cert@id': 'verify_cert_el_id'};
 
@@ -141,8 +153,41 @@ class BaseSlaveDetailsView extends BaseSlaveView{
     let has_host = $('.slave-details-host', this.container).val();
     let has_port = $('.slave-details-port', this.container).val();
     let has_token = $('.slave-details-token', this.container).val();
-    return (Boolean(has_name) && Boolean(has_host) && Boolean(has_port) &&
-	    Boolean(has_token));
+    let on_demand = $('.slave-details-on-demand', this.container).is(
+      ':checked');
+    let instance_id = $('.slave-details-instance-id', this.container).val();
+    let region = $('.slave-details-region', this.container).val();
+    let inst_confs = on_demand ? Boolean(instance_id) && Boolean(region) : true;
+
+    return (inst_confs && Boolean(has_name) && Boolean(has_host) &&
+	    Boolean(has_port) && Boolean(has_token));
+  }
+
+  _handleInstanceConfs(on_demand, template){
+    let el = template ? $('.instance-confs-container', template) :
+	$('.instance-confs-container');
+    let text_el = $('.instance-confs-text');
+
+    if (!on_demand){
+      if (template){
+	el.hide();
+	text_el.hide();
+      }else{
+	el.slideUp();
+	text_el.slideUp();
+      }
+
+    }else{
+      el.slideDown();
+      text_el.slideDown();
+      el.attr('style', 'display:flex;');
+    }
+    this._checkHasChanges();
+  }
+
+  _handleOnDemandChange(el){
+    let on_demand = el.is(':checked');
+    this._handleInstanceConfs(on_demand);
   }
 
   render_details(){
@@ -157,6 +202,13 @@ class BaseSlaveDetailsView extends BaseSlaveView{
     let compiled = $(this.compiled_template(kw));
     this._listen2events(compiled);
     this.container = $(this.container_selector);
+    let el = $('#slave-on-demand', compiled);
+    let on_demand = el.is(':checked');
+    let self = this;
+    el.change(function(){
+      self._handleOnDemandChange($(this));
+    });
+    this._handleInstanceConfs(on_demand, compiled);
     this.container.html(compiled);
   }
 }
@@ -191,6 +243,13 @@ class SlaveAddView extends BaseSlaveDetailsView{
     this.model.set('token', this._model_changed['token']);
     this.model.set('use_ssl', this._model_changed['use_ssl']);
     this.model.set('validate_cert', this._model_changed['validate_cert']);
+    let on_demand = this._model_changed['on_demand'];
+    this.model.set('on_demand', on_demand);
+    let instance_confs = {instance_id: this._model_changed['instance_id'],
+			  region: this._model_changed['region']};
+    this.model.set('instance_confs', instance_confs);
+    let instance_type = on_demand ? 'ec2' : null;
+    this.model.set('instance_type', instance_type);
 
     var r;
     try{

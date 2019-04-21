@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -222,7 +222,8 @@ class Build(EmbeddedDocument):
 
     PENDING = 'pending'
     CANCELLED = 'cancelled'
-    STATUSES = BuildStep.STATUSES + [PENDING, CANCELLED]
+    PREPARING = 'preparing'
+    STATUSES = BuildStep.STATUSES + [PENDING, CANCELLED, PREPARING]
     CONFIG_TYPES = ['py', 'yaml']
 
     uuid = UUIDField(required=True, default=lambda: uuid4())
@@ -938,6 +939,7 @@ class BuildManager(LoggerMixin):
                              level='debug')
         finally:
             self.is_building[slave.name] = False
+            await slave.stop_instance()
 
     async def _execute_in_parallel(self, slave, builds):
         """Executes builds in parallel in a slave.

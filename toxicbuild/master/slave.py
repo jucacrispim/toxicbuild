@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,17 +20,20 @@
 import asyncio
 from collections import defaultdict
 import traceback
-from mongomotor.fields import (StringField, IntField, BooleanField)
+from mongomotor.fields import (StringField, IntField, BooleanField,
+                               DictField)
 from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
 from toxicbuild.core.utils import (string2datetime, LoggerMixin, now,
                                    localtime2utc)
+
+from toxicbuild.master.aws import EC2Instance
 from toxicbuild.master.build import BuildStep, Builder
 from toxicbuild.master.client import get_build_client
 from toxicbuild.master.document import OwnedDocument
 from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import (build_started, build_finished,
                                        step_started, step_finished,
-                                       step_output_arrived)
+                                       step_output_arrived, build_preparing)
 
 
 class Slave(OwnedDocument, LoggerMixin):
@@ -40,6 +43,10 @@ class Slave(OwnedDocument, LoggerMixin):
     the network (using :class:`toxicbuild.master.client.BuildClient`).
     The steps are actually decided by the slave.
     """
+
+    INSTANCE_TYPES = ('ec2',)
+    INSTANCE_CLS = {'ec2': EC2Instance}
+
     host = StringField(required=True)
     """Slave's host."""
 
@@ -57,6 +64,19 @@ class Slave(OwnedDocument, LoggerMixin):
 
     validate_cert = BooleanField(default=True)
     """Indicates if the certificate from the build server should be validated.
+    """
+
+    on_demand = BooleanField(default=False)
+    """If the slave is on-demand it will be started when needed and
+    will be stopped when all the builds for this slave are completed.
+    """
+
+    instance_type = StringField(choices=INSTANCE_TYPES)
+    """The type of instance used. Currently only 'ec2' is supported.
+    """
+
+    instance_confs = DictField()
+    """Configuration paramenters for the on-demand instance
     """
 
     meta = {
@@ -84,7 +104,11 @@ class Slave(OwnedDocument, LoggerMixin):
         my_dict = {'name': self.name, 'host': self.host,
                    'port': self.port, 'token': self.token,
                    'full_name': self.full_name,
-                   'is_alive': self.is_alive, 'id': self.id}
+                   'is_alive': self.is_alive, 'id': self.id,
+                   'on_demand': self.on_demand,
+                   'instance_type': self.instance_type,
+                   'instance_confs': self.instance_confs}
+
         if id_as_str:
             my_dict['id'] = str(self.id)
         return my_dict
@@ -95,6 +119,47 @@ class Slave(OwnedDocument, LoggerMixin):
 
         slave = await cls.objects.get(**kwargs)
         return slave
+
+    @property
+    def instance(self):
+        """Returns an on-demand instance wrapper.
+        """
+        cls = self.INSTANCE_CLS[self.instance_type]
+        return cls(**self.instance_confs)
+
+    async def start_instance(self):
+        if not self.on_demand:
+            return False
+
+        self.log('Starting on-demand instance for {}'.format(self.id),
+                 level='debug')
+
+        is_running = await self.instance.is_running()
+        if is_running:
+            self.log('Instance for {} already running. Leaving.'.format(
+                self.id), level='debug')
+            return False
+
+        await self.instance.start()
+        self.log('Instance for {} started'.format(self.id), level='debug')
+        return True
+
+    async def stop_instance(self):
+        if not self.on_demand:
+            return False
+
+        self.log('Stopping on-demand instance for {}'.format(self.id),
+                 level='debug')
+
+        is_running = await self.instance.is_running()
+        if not is_running:
+            self.log('Instance for {} already stopped. Leaving.'.format(
+                self.id), level='debug')
+            return False
+
+        await self.instance.stop()
+        self.log('Instance for {} stopped'.format(self.id), level='debug')
+        return True
 
     async def get_client(self):
         """ Returns a :class:`~toxicbuild.master.client.BuildClient` instance
@@ -144,6 +209,13 @@ class Slave(OwnedDocument, LoggerMixin):
 
         :param build: An instance of :class:`toxicbuild.master.build.Build`
         """
+
+        build.status = build.PREPARING
+        await build.update()
+        repo = await build.repository
+        build_preparing.send(str(repo.id), build=build)
+
+        await self.start_instance()
 
         with (await self.get_client()) as client:
 

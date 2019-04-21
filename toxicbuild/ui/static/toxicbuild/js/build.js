@@ -27,7 +27,8 @@ class BuildSet extends BaseModel{
     let builds  = this.attributes ? this.attributes.builds : [];
     let self = this;
     if (!options || (options && !options.no_events)){
-      $(document).on('build_started build_finished', function(e, data){
+      $(document).on('build_preparing build_started build_finished',
+		     function(e, data){
 	self._updateBuild(data);
       });
     }
@@ -179,12 +180,9 @@ class BuildDetailsView extends BaseBuildDetailsView{
 
     this._scroll = false;
 
-    $(document).on('build_started', function(e, data){
-      self._renderStarted(data);
-    });
-
-    $(document).on('build_finished', function(e, data){
-      self._renderFinished(data);
+    $(document).on('build_preparing build_started build_finished',
+		   function(e, data){
+      self._renderStatusChange(data);
     });
 
     $(document).on('step_output_info', function(e, data){
@@ -274,14 +272,9 @@ class BuildDetailsView extends BaseBuildDetailsView{
     return true;
   }
 
-  _renderStarted(data){
-    this.model.set('status', 'running');
-    this.model.set('started', data.started);
-    this.render(false);
-  }
-
-  _renderFinished(data){
+  _renderStatusChange(data){
     this.model.set('status', data.status);
+    this.model.set('started', data.started);
     this.model.set('finished', data.finished);
     this.model.set('total_time', data.total_time);
     this.render(false);
@@ -619,7 +612,7 @@ class BuildSetListView extends BaseListView{
 
   async _fetch_items(){
     let self = this;
-    $(document).off('build_started build_finished');
+    $(document).off('build_preparing build_started build_finished');
 
     let kw = {data: {repo_name: this.repo_name,
 		     summary: true}};
