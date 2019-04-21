@@ -173,6 +173,32 @@ class SlaveTest(TestCase):
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
+    async def test_build_dynamic_host(self):
+        await self._create_test_data()
+        self.slave.start_instance = AsyncMagicMock(return_value='127.0.0.1')
+        self.slave.host = self.slave.DYNAMIC_HOST
+
+        client = MagicMock()
+
+        @asyncio.coroutine
+        def gc():
+
+            @asyncio.coroutine
+            def b(build, process_coro):
+                client.build()
+                return []
+
+            client.__enter__.return_value.build = b
+            return client
+
+        self.slave.get_client = gc
+        await self.slave.build(self.build)
+        self.assertTrue(client.build.called)
+        self.assertEqual(self.slave.host, '127.0.0.1')
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
     async def test_build_with_exception(self):
         await self._create_test_data()
         client = MagicMock()
@@ -494,8 +520,11 @@ class SlaveTest(TestCase):
         r = await self.slave.start_instance()
         self.assertFalse(r)
 
+    @patch.object(slave.EC2Instance, 'start', AsyncMagicMock())
     @patch.object(slave.EC2Instance, 'is_running', AsyncMagicMock(
         return_value=True))
+    @patch.object(slave.EC2Instance, 'get_ip', AsyncMagicMock(
+        return_value='192.168.0.1'))
     @patch('toxicbuild.master.aws.settings')
     @async_test
     async def test_start_instance_already_running(self, *a, **kw):
@@ -504,12 +533,14 @@ class SlaveTest(TestCase):
         self.slave.instance_confs = {'instance_id': 'some-id',
                                      'region': 'us-east-2'}
         r = await self.slave.start_instance()
-        self.assertFalse(r)
-        self.assertTrue(slave.EC2Instance.is_running.called)
+        self.assertEqual(r, '192.168.0.1')
+        self.assertFalse(slave.EC2Instance.start.called)
 
     @patch.object(slave.EC2Instance, 'is_running', AsyncMagicMock(
         return_value=False))
     @patch.object(slave.EC2Instance, 'start', AsyncMagicMock())
+    @patch.object(slave.EC2Instance, 'get_ip', AsyncMagicMock(
+        return_value='192.168.0.1'))
     @patch('toxicbuild.master.aws.settings')
     @async_test
     async def test_start_instance_ok(self, *a, **kw):
@@ -518,7 +549,7 @@ class SlaveTest(TestCase):
         self.slave.instance_confs = {'instance_id': 'some-id',
                                      'region': 'us-east-2'}
         r = await self.slave.start_instance()
-        self.assertTrue(r)
+        self.assertEqual(r, '192.168.0.1')
 
     @async_test
     async def test_stop_instance_not_on_demand(self):
@@ -551,6 +582,14 @@ class SlaveTest(TestCase):
                                      'region': 'us-east-2'}
         r = await self.slave.stop_instance()
         self.assertTrue(r)
+
+    @async_test
+    async def test_save_dynamic_host(self):
+        self.slave.on_demand = True
+        self.slave.host = None
+        await self.slave.save()
+
+        self.assertEqual(self.slave.host, self.slave.DYNAMIC_HOST)
 
     async def _create_test_data(self):
         await self.slave.save()

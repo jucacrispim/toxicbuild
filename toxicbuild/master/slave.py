@@ -46,6 +46,7 @@ class Slave(OwnedDocument, LoggerMixin):
 
     INSTANCE_TYPES = ('ec2',)
     INSTANCE_CLS = {'ec2': EC2Instance}
+    DYNAMIC_HOST = '<DYNAMIC-HOST>'
 
     host = StringField(required=True)
     """Slave's host."""
@@ -91,6 +92,12 @@ class Slave(OwnedDocument, LoggerMixin):
         # is on its limits. A new implementation is needed.
         self._step_finished = defaultdict(lambda: False)
 
+    async def save(self, *args, **kwargs):
+        if self.on_demand and not self.host:
+            self.host = self.DYNAMIC_HOST
+        r = await super().save(*args, **kwargs)
+        return r
+
     @classmethod
     async def create(cls, **kwargs):
         """Creates a new slave"""
@@ -131,18 +138,17 @@ class Slave(OwnedDocument, LoggerMixin):
         if not self.on_demand:
             return False
 
-        self.log('Starting on-demand instance for {}'.format(self.id),
-                 level='debug')
-
         is_running = await self.instance.is_running()
-        if is_running:
-            self.log('Instance for {} already running. Leaving.'.format(
-                self.id), level='debug')
-            return False
+        if not is_running:
+            self.log('Starting on-demand instance for {}'.format(self.id),
+                     level='debug')
 
-        await self.instance.start()
-        self.log('Instance for {} started'.format(self.id), level='debug')
-        return True
+            await self.instance.start()
+
+        ip = await self.instance.get_ip()
+        self.log('Instance for {} started with ip {}'.format(self.id, ip),
+                 level='debug')
+        return ip
 
     async def stop_instance(self):
         if not self.on_demand:
@@ -215,8 +221,9 @@ class Slave(OwnedDocument, LoggerMixin):
         repo = await build.repository
         build_preparing.send(str(repo.id), build=build)
 
-        await self.start_instance()
-
+        ip = await self.start_instance()
+        if ip and self.host == self.DYNAMIC_HOST:
+            self.host = ip
         with (await self.get_client()) as client:
 
             try:

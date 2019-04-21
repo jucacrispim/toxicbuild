@@ -127,3 +127,12 @@ class EC2InstanceTest(TestCase):
 
         self.assertEqual(self.instance._wait_for_status.call_args[0][0],
                          'stopped')
+
+    @async_test
+    async def test_get_ip(self):
+        self.instance.get_description = AsyncMagicMock(
+            return_value={'PublicIpAddress': '192.168.0.1'})
+
+        ip = await self.instance.get_ip()
+
+        self.assertEqual(ip, '192.168.0.1')
