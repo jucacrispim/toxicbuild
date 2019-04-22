@@ -51,8 +51,6 @@ WRITE_CHUNK_LEN = 4096
 READ_CHUNK_LEN = 1024
 
 logger = logging.getLogger('toxicbuild')
-handler = logging.StreamHandler()
-logger.addHandler(handler)
 
 
 class SourceSuffixesPatcher(MonkeyPatcher):
@@ -190,6 +188,12 @@ def load_module_from_file(filename):
 
 
 def set_loglevel(loglevel):
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stderr_handler = logging.StreamHandler(sys.stderr)
+
+    logger.addHandler(stdout_handler)
+    logger.addHandler(stderr_handler)
+
     loglevel = getattr(logging, loglevel.upper())
     logger.setLevel(loglevel)
     for h in logger.handlers:

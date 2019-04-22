@@ -144,8 +144,7 @@ def run(loglevel):
 def run_scheduler(loglevel):
     """Runs a scheduler server for toxicbuild master."""
 
-    loglevel = getattr(logging, loglevel.upper())
-    logging.basicConfig(level=loglevel)
+    set_loglevel(loglevel)
 
     loop = asyncio.get_event_loop()
     create_settings_and_connect()
@@ -164,8 +163,7 @@ def run_scheduler(loglevel):
 def run_poller(loglevel):
     """Runs a poller server for toxicbuild master."""
 
-    loglevel = getattr(logging, loglevel.upper())
-    logging.basicConfig(level=loglevel)
+    set_loglevel(loglevel)
 
     loop = asyncio.get_event_loop()
     create_settings_and_connect()
