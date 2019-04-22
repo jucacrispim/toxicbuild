@@ -46,7 +46,6 @@ class EC2InstanceTest(TestCase):
     @async_test
     async def test_get_description(self):
         client = AsyncMagicMock()
-        client.close = Mock()
         client.describe_instances.return_value = {
             'Reservations': [{'Instances': [{'some': 'value'}]}]}
 

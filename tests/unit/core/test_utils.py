@@ -161,10 +161,16 @@ class UtilsTest(TestCase):
         self.assertTrue(utils.get_toxicbuildconf_yaml.called)
         self.assertTrue(conf)
 
-    @patch.object(utils.logging, 'info', Mock())
+    @patch.object(utils.logger, 'setLevel', Mock())
+    def test_set_loglevel(self):
+        utils.set_loglevel('info')
+
+        self.assertTrue(utils.logger.setLevel.called)
+
+    @patch.object(utils.logger, 'info', Mock())
     def test_log(self):
         utils.log('msg')
-        self.assertTrue(utils.logging.info.called)
+        self.assertTrue(utils.logger.info.called)
 
     @patch.object(utils, 'log', Mock())
     def test_logger_mixin(self):

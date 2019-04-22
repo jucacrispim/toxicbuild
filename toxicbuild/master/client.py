@@ -19,11 +19,12 @@
 
 from asyncio import ensure_future
 from toxicbuild.core import BaseToxicClient
+from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.utils import (get_build_config_type,
                                      get_build_config_filename)
 
 
-class BuildClient(BaseToxicClient):
+class BuildClient(BaseToxicClient, LoggerMixin):
 
     """ A client to :class:`toxicbuild.slave.server.BuildServer`
     """
@@ -70,6 +71,7 @@ class BuildClient(BaseToxicClient):
         :param process_coro: A coroutine to process the intermediate
           build information sent by the build server."""
 
+        self.log('Starting build {}'.format(build.uuid), level='debug')
         repository = await build.repository
         builder_name = (await build.builder).name
         slave = await build.slave

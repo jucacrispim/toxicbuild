@@ -121,9 +121,23 @@ class SlaveTest(TestCase):
 
         self.slave.get_client = gc
 
-        await self.slave.healthcheck()
+        r = await self.slave.healthcheck()
 
-        self.assertTrue(self.slave.is_alive)
+        self.assertTrue(r)
+
+    @patch.object(slave.asyncio, 'sleep', AsyncMagicMock())
+    @patch.object(slave.Slave, 'healthcheck', AsyncMagicMock(
+        side_effect=ConnectionRefusedError))
+    @async_test
+    async def test_wait_service_start_timeout(self):
+        with self.assertRaises(TimeoutError):
+            await self.slave.wait_service_start()
+
+    @patch.object(slave.Slave, 'healthcheck', AsyncMagicMock())
+    @async_test
+    async def test_wait_service_start(self):
+        r = await self.slave.wait_service_start()
+        self.assertIs(r, True)
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -151,6 +165,24 @@ class SlaveTest(TestCase):
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
+    async def test_finish_build_start_exception(self):
+        await self._create_test_data()
+        await self.slave._finish_build_start_exception(self.build, '')
+        self.assertEqual(self.build.status, 'exception')
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_build_bad_start(self):
+        await self._create_test_data()
+        self.slave.start_instance = AsyncMagicMock(side_effect=Exception)
+        r = await self.slave.build(self.build)
+
+        self.assertIs(r, False)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
     async def test_build(self):
         await self._create_test_data()
         client = MagicMock()
@@ -169,32 +201,6 @@ class SlaveTest(TestCase):
         self.slave.get_client = gc
         await self.slave.build(self.build)
         self.assertTrue(client.build.called)
-
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
-        spec=build.BuildSet.notify))
-    @async_test
-    async def test_build_dynamic_host(self):
-        await self._create_test_data()
-        self.slave.start_instance = AsyncMagicMock(return_value='127.0.0.1')
-        self.slave.host = self.slave.DYNAMIC_HOST
-
-        client = MagicMock()
-
-        @asyncio.coroutine
-        def gc():
-
-            @asyncio.coroutine
-            def b(build, process_coro):
-                client.build()
-                return []
-
-            client.__enter__.return_value.build = b
-            return client
-
-        self.slave.get_client = gc
-        await self.slave.build(self.build)
-        self.assertTrue(client.build.called)
-        self.assertEqual(self.slave.host, '127.0.0.1')
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -525,6 +531,7 @@ class SlaveTest(TestCase):
         return_value=True))
     @patch.object(slave.EC2Instance, 'get_ip', AsyncMagicMock(
         return_value='192.168.0.1'))
+    @patch.object(slave.Slave, 'wait_service_start', AsyncMagicMock())
     @patch('toxicbuild.master.aws.settings')
     @async_test
     async def test_start_instance_already_running(self, *a, **kw):
@@ -541,15 +548,17 @@ class SlaveTest(TestCase):
     @patch.object(slave.EC2Instance, 'start', AsyncMagicMock())
     @patch.object(slave.EC2Instance, 'get_ip', AsyncMagicMock(
         return_value='192.168.0.1'))
+    @patch.object(slave.Slave, 'wait_service_start', AsyncMagicMock())
     @patch('toxicbuild.master.aws.settings')
     @async_test
     async def test_start_instance_ok(self, *a, **kw):
         self.slave.on_demand = True
+        self.slave.host = slave.Slave.DYNAMIC_HOST
         self.slave.instance_type = 'ec2'
         self.slave.instance_confs = {'instance_id': 'some-id',
                                      'region': 'us-east-2'}
-        r = await self.slave.start_instance()
-        self.assertEqual(r, '192.168.0.1')
+        await self.slave.start_instance()
+        self.assertEqual(self.slave.host, '192.168.0.1')
 
     @async_test
     async def test_stop_instance_not_on_demand(self):

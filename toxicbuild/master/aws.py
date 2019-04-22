@@ -22,11 +22,12 @@ import asyncio
 
 import aiobotocore
 
+from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
 from toxicbuild.master.coordination import Lock
 
 
-class EC2Instance:
+class EC2Instance(LoggerMixin):
     """Performs operations on the ec2 api"""
 
     def __init__(self, instance_id, region):
@@ -57,7 +58,7 @@ class EC2Instance:
         try:
             r = await m(*args, **kwargs)
         finally:
-            client.close()
+            await client.close()
         return r
 
     async def get_description(self):
@@ -79,6 +80,8 @@ class EC2Instance:
         return status == 'stopped'
 
     async def _wait_for_status(self, status, timeout=300):
+        self.log('waiting status {} for {}'.format(status, self.instance_id),
+                 level='debug')
         i = 0
         while i < timeout:
             curr_status = await self.get_status()

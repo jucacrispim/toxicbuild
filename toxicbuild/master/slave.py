@@ -147,6 +147,10 @@ class Slave(OwnedDocument, LoggerMixin):
             await self.instance.start()
 
         ip = await self.instance.get_ip()
+        if ip and self.host == self.DYNAMIC_HOST:
+            self.host = ip
+
+        await self.wait_service_start()
         self.log('Instance for {} started with ip {}'.format(self.id, ip),
                  level='debug')
         return ip
@@ -183,9 +187,27 @@ class Slave(OwnedDocument, LoggerMixin):
         with (await self.get_client()) as client:
             alive = await client.healthcheck()
 
-        self.is_alive = alive
-        await self.save()
-        return self.is_alive
+        return alive
+
+    async def wait_service_start(self, timeout=10):
+        """Waits for the toxicslave service start in the on-demand
+        instance.
+        """
+        self.log('waiting toxicslave service start for {}'.format(self.id),
+                 level='debug')
+        i = 0
+        while i < timeout:
+            try:
+                await self.healthcheck()
+                return True
+            except Exception as e:
+                self.log('Service down {}'.format(i), level='debug')
+                self.log(str(e), level='debug')
+
+            i += 1
+            await asyncio.sleep(1)
+
+        raise TimeoutError
 
     async def list_builders(self, revision):
         """ List builder available in for a given revision
@@ -211,6 +233,12 @@ class Slave(OwnedDocument, LoggerMixin):
 
         return list(builder_instnces)
 
+    async def _finish_build_start_exception(self, build, exc_out):
+        build.status = 'exception'
+        build.steps = [BuildStep(name='Exception', command='exception',
+                                 output=exc_out, status='exception')]
+        await build.update()
+
     async def build(self, build):
         """ Connects to a build server and requests a build on that server
 
@@ -222,9 +250,12 @@ class Slave(OwnedDocument, LoggerMixin):
         repo = await build.repository
         build_preparing.send(str(repo.id), build=build)
 
-        ip = await self.start_instance()
-        if ip and self.host == self.DYNAMIC_HOST:
-            self.host = ip
+        try:
+            await self.start_instance()
+        except Exception as e:
+            await self._finish_build_start_exception(build, str(e))
+            return False
+
         with (await self.get_client()) as client:
 
             try:
