@@ -32,6 +32,7 @@
 # builds.
 
 import asyncio
+import os
 from toxicbuild.core.utils import exec_cmd, LoggerMixin
 from toxicbuild.slave import settings
 from toxicbuild.slave.client import ContainerBuildClient
@@ -77,6 +78,8 @@ class DockerContainerBuilder(LoggerMixin):
 
         self.manager = manager
         self.source_dir = source_dir
+        self.slave_source_dir = os.path.dirname(self.source_dir)
+        self.source_dir_name = os.path.basename(self.source_dir)
         self.builder_name = builder_name
         self.container_slave_workdir = settings.CONTAINER_SLAVE_WORKDIR
         self.platform = platform
@@ -184,9 +187,9 @@ class DockerContainerBuilder(LoggerMixin):
 
         msg = 'Copying files to container {}'.format(self.name)
         self.log(msg, level='debug')
-        cmd = 'cd {} && {} cp . {}:{}/{}/'.format(
-            self.source_dir, self.docker_cmd, self.name,
-            self.container_slave_workdir, self.source_dir)
+        cmd = 'cd {} && {} cp {} {}:{}/{}/'.format(
+            self.slave_source_dir, self.docker_cmd, self.source_dir_name,
+            self.name, self.container_slave_workdir, self.slave_source_dir)
         self.log(cmd, level='debug')
         await exec_cmd(cmd, cwd='.')
 
