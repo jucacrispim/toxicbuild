@@ -160,9 +160,9 @@ class DockerContainerBuilderManagerTest(TestCase):
     @patch.object(docker, 'exec_cmd', AsyncMagicMock())
     @async_test
     async def test_copy2container(self):
-        expected = 'cd source/dir && docker cp . {}:{}/{}/'.format(
+        expected = 'cd source && docker cp dir {}:{}/{}/'.format(
             self.container.name, self.container.container_slave_workdir,
-            self.container.source_dir)
+            self.container.slave_source_dir)
         await self.container.copy2container()
         called = docker.exec_cmd.call_args[0][0]
         self.assertEqual(expected, called)
