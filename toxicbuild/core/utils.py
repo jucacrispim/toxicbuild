@@ -50,6 +50,10 @@ _THREAD_EXECUTOR = ThreadPoolExecutor()
 WRITE_CHUNK_LEN = 4096
 READ_CHUNK_LEN = 1024
 
+logger = logging.getLogger('toxicbuild')
+handler = logging.StreamHandler()
+logger.addHandler(handler)
+
 
 class SourceSuffixesPatcher(MonkeyPatcher):
     """We must to path ``SOURCE_SUFFIXES`` in the python ``importlib`` so
@@ -185,10 +189,18 @@ def load_module_from_file(filename):
     return module
 
 
+def set_loglevel(loglevel):
+    loglevel = getattr(logging, loglevel.upper())
+    logger.setLevel(loglevel)
+    for h in logger.handlers:
+        h.setLevel(loglevel)
+
+
 def log(msg, level='info'):
-    log = getattr(logging, level)
+    log = getattr(logger, level)
     dt = now().strftime('%Y-%m-%d %H:%M:%S')
-    msg = ' {} - {}'.format(dt, msg)
+    lvl = level.upper()
+    msg = '[{}] {} - {}'.format(lvl, dt, msg)
     log(msg)
 
 

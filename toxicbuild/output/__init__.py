@@ -31,7 +31,7 @@ from mongomotor import connect
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import (changedir, log, daemonize as daemon,
-                                   SettingsPatcher)
+                                   SettingsPatcher, set_loglevel)
 from toxicbuild.master import (
     create_settings_and_connect as create_settings_and_connect_master)
 
@@ -70,8 +70,7 @@ def output_handler_init(handler):
 
 
 def run_toxicoutput(loglevel, tornado_server):
-    loglevel = getattr(logging, loglevel.upper())
-    logging.basicConfig(level=loglevel)
+    set_loglevel(loglevel)
 
     loop = asyncio.get_event_loop()
 

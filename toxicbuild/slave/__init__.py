@@ -12,7 +12,7 @@ from uuid import uuid4
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string,
-                                   changedir)
+                                   changedir, set_loglevel)
 
 ENVVAR = 'TOXICSLAVE_SETTINGS'
 DEFAULT_SETTINGS = 'toxicslave.conf'
@@ -91,8 +91,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE,
                         'keyfile': keyfile},
                stdout=stdout, stderr=stderr, workdir=workdir, pidfile=pidfile)
     else:
-        loglevel = getattr(logging, loglevel.upper())
-        logging.basicConfig(level=loglevel)
+        set_loglevel(loglevel)
 
         with changedir(workdir):
             run_server(addr, port, use_ssl=use_ssl,

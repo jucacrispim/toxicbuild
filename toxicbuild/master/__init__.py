@@ -5,7 +5,6 @@
 
 import asyncio
 from asyncio import ensure_future
-import logging
 import os
 import pkg_resources
 import shutil
@@ -16,7 +15,7 @@ from mongomotor import connect
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.utils import (log, daemonize as daemon,
-                                   bcrypt_string, changedir)
+                                   bcrypt_string, changedir, set_loglevel)
 
 settings = None
 dbconn = None
@@ -106,8 +105,7 @@ async def poller_server_init(server):
 def run(loglevel):
     """ Runs Toxicbuild master """
 
-    loglevel = getattr(logging, loglevel.upper())
-    logging.basicConfig(level=loglevel)
+    set_loglevel(loglevel)
 
     create_settings_and_connect()
 
