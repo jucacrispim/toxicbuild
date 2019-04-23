@@ -136,7 +136,7 @@ class DockerContainerBuilderManagerTest(TestCase):
             self.container.cname)
 
         src_dir = '/home/bla/ci/src'
-        expected_chown = 'docker exec -u root -t {} chown bla:bla {}'.format(
+        exp_chown = 'docker exec -u root -t {} chown -R bla:bla {}'.format(
             self.container.cname, src_dir)
 
         await self.container.copy2container()
@@ -144,7 +144,7 @@ class DockerContainerBuilderManagerTest(TestCase):
         called_chown = docker.exec_cmd.call_args_list[1][0][0]
 
         self.assertEqual(expected, called)
-        self.assertEqual(expected_chown, called_chown)
+        self.assertEqual(exp_chown, called_chown)
 
     @patch.object(docker, 'exec_cmd', AsyncMagicMock())
     @async_test
