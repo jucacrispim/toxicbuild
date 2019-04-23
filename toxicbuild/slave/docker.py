@@ -161,7 +161,7 @@ class DockerContainerBuilder(Builder):
 
         msg = 'Changing files perms in container {}'.format(self.cname)
         self.log(msg, level='debug')
-        cmd = '{} exec -t {} chown {}:{} {}'.format(
+        cmd = '{} exec -u root -t {} chown {}:{} {}'.format(
             self.docker_cmd, self.cname, self.docker_user, self.docker_user,
             self.docker_src_dir)
         await exec_cmd(cmd, cwd='.')

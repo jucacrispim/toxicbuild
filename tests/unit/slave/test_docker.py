@@ -136,7 +136,7 @@ class DockerContainerBuilderManagerTest(TestCase):
             self.container.cname)
 
         src_dir = '/home/bla/ci/src'
-        expected_chown = 'docker exec -t {} chown bla:bla {}'.format(
+        expected_chown = 'docker exec -u root -t {} chown bla:bla {}'.format(
             self.container.cname, src_dir)
 
         await self.container.copy2container()
