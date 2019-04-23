@@ -33,7 +33,8 @@
 
 import asyncio
 import os
-from toxicbuild.core.utils import exec_cmd, get_envvars, LoggerMixin
+from toxicbuild.core.utils import (exec_cmd, interpolate_dict_values,
+                                   LoggerMixin)
 from toxicbuild.slave import settings
 from toxicbuild.slave.build import BuildStep, Builder
 
@@ -200,8 +201,19 @@ class BuildStepDocker(BuildStep, LoggerMixin):
         return cls(step.name, step.command, step.warning_on_fail,
                    step.timeout, step.stop_on_fail, container_name)
 
-    def _get_cmd_line_envvars(self, envvars):
-        envvars = get_envvars(envvars, use_local_envvars=False)
+    async def _get_docker_env(self):
+        cmd = 'env'
+        envvars = ''
+        cmd = self._get_docker_cmd(cmd, envvars)
+        output = await exec_cmd(cmd, cwd='.')
+        lines = [l for l in output.split('\n') if l]
+        env = {l.split('=')[0]: l.split('=')[1] for l in lines}
+
+        return env
+
+    async def _get_cmd_line_envvars(self, envvars):
+        env = await self._get_docker_env()
+        envvars = interpolate_dict_values({}, envvars, env)
         var = []
 
         for k, v in envvars.items():
@@ -209,14 +221,20 @@ class BuildStepDocker(BuildStep, LoggerMixin):
 
         return ' '.join(var)
 
-    async def exec_cmd(self, cmd, cwd, timeout, out_fn, **envvars):
-        cmd_envvars = self._get_cmd_line_envvars(envvars)
+    def _get_user_opts(self):
+        return '-u {}:{}'.format(self.docker_user, self.docker_user)
 
-        user_opts = '-u {}:{}'.format(self.docker_user, self.docker_user)
-
+    def _get_docker_cmd(self, cmd, envvars):
+        user_opts = self._get_user_opts()
         cmd = '{} exec {} {} -t {} sh -c "cd {} && {}"'.format(
-            self.docker_cmd, user_opts, cmd_envvars, self.container_name,
+            self.docker_cmd, user_opts, envvars, self.container_name,
             self.docker_src_dir, cmd)
+        return cmd
+
+    async def exec_cmd(self, cmd, cwd, timeout, out_fn, **envvars):
+        cmd_envvars = await self._get_cmd_line_envvars(envvars)
+
+        cmd = self._get_docker_cmd(cmd, cmd_envvars)
 
         self.log('Executing {}'.format(cmd), level='debug')
         output = await exec_cmd(cmd, cwd='.',

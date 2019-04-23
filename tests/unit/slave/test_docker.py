@@ -23,6 +23,17 @@ from toxicbuild.slave import docker
 from tests import async_test, AsyncMagicMock
 
 
+DOCKER_ENV = """
+PYTHON_PIP_VERSION=19.0.3
+HOME=/home/toxicuser
+TERM=xterm
+PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+LANG=C.UTF-8
+PYTHON_VERSION=3.7.3
+PWD=/home/toxicuser
+"""
+
+
 class DockerContainerBuilderManagerTest(TestCase):
 
     @patch.object(docker, 'settings', Mock())
@@ -183,19 +194,24 @@ class BuildStepDockerTest(TestCase):
         self.step = docker.BuildStepDocker('cmd', 'sh cmd.sh',
                                            container_name='container')
 
-    def test_get_cmd_line_envvars(self):
+    @patch.object(docker, 'exec_cmd', AsyncMagicMock(return_value=DOCKER_ENV))
+    @async_test
+    async def test_get_cmd_line_envvars(self):
         expected = '-e "VAR=bla"'
-        envvars = {'VAR': 'bla'}
+        envvars = {'VAR': 'bla', 'PATH': 'bla:PATH'}
 
-        r = self.step._get_cmd_line_envvars(envvars)
+        r = await self.step._get_cmd_line_envvars(envvars)
 
         self.assertIn(expected, r)
+        self.assertIn('PATH=', r)
 
     @patch.object(docker, 'exec_cmd', AsyncMagicMock())
+    @patch.object(docker.BuildStepDocker, '_get_docker_env',
+                  AsyncMagicMock(return_value={}))
     @async_test
     async def test_exec_cmd(self):
         src_dir = '/home/bla/ci/src'
-        envvars = self.step._get_cmd_line_envvars({})
+        envvars = await self.step._get_cmd_line_envvars({})
         user_opts = '-u bla:bla'
         exp = 'docker exec {} {} -t container sh -c "cd {} && ls"'.format(
             user_opts, envvars,  src_dir)
@@ -214,3 +230,10 @@ class BuildStepDockerTest(TestCase):
         docker_step = docker.BuildStepDocker.from_buildstep(step, 'container')
 
         self.assertEqual(docker_step.command, step.command)
+
+    @patch.object(docker, 'exec_cmd', AsyncMagicMock(return_value=DOCKER_ENV))
+    @async_test
+    async def test_get_docker_env(self):
+        env = await self.step._get_docker_env()
+
+        self.assertTrue(env['PATH'])

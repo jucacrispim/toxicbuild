@@ -82,6 +82,24 @@ class SettingsPatcher(MonkeyPatcher):
         self.patch_item(pyroconf, 'settings', settings)
 
 
+def interpolate_dict_values(to_return, valued, base):
+    """Interpolates the values of ``valued`` with values of ``base``.
+
+    :param to_return: A dictionary that will be updated with interpolated
+      values.
+    :param valued: A dict with values needing interpolation.
+    :param base: A dict with the base values to use in interpolation.
+    """
+    for var, value in valued.items():
+        if var in value:
+            current = os.environ.get(var, '')
+            value = value.replace(var, current)
+
+        to_return[var] = value
+
+    return to_return
+
+
 def get_envvars(envvars, use_local_envvars=True):
     """Returns environment variables to be used in shell. Does the
     interpolation of values using the current values from the envvar
@@ -91,13 +109,7 @@ def get_envvars(envvars, use_local_envvars=True):
         newvars = copy.copy(os.environ)
     else:
         newvars = {}
-    for var, value in envvars.items():
-        if var in value:
-            current = os.environ.get(var, '')
-            value = value.replace(var, current)
-
-        newvars[var] = value
-
+    newvars = interpolate_dict_values(newvars, envvars, os.environ)
     return newvars
 
 
