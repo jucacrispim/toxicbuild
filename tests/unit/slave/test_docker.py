@@ -149,8 +149,9 @@ class DockerContainerBuilderManagerTest(TestCase):
     @patch.object(docker, 'exec_cmd', AsyncMagicMock())
     @async_test
     async def test_rm_from_container(self):
-        expected_source = 'docker exec {} rm -rf /home/bla/ci/src'.format(
-            self.container.cname)
+        src_dir = '/home/bla/ci/src'
+        expected_source = 'docker exec -u root {} rm -rf {}'.format(
+            self.container.cname, src_dir)
 
         await self.container.rm_from_container()
         called_source = docker.exec_cmd.call_args_list[0][0][0]

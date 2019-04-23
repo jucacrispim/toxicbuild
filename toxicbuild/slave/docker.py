@@ -173,8 +173,9 @@ class DockerContainerBuilder(Builder):
         msg = 'Removing files from container {}'.format(self.cname)
         self.log(msg, level='debug')
         # removing source dir
-        cmd = '{} exec {} rm -rf {}'.format(self.docker_cmd, self.cname,
-                                            self.docker_src_dir)
+        cmd = '{} exec -u root {} rm -rf {}'.format(self.docker_cmd,
+                                                    self.cname,
+                                                    self.docker_src_dir)
         msg = 'Executing {}'.format(cmd)
         self.log(msg, level='debug')
         await exec_cmd(cmd, cwd='.')
