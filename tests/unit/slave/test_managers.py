@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -23,7 +23,7 @@ from unittest import TestCase
 from unittest.mock import patch, MagicMock, Mock
 import tornado
 from toxicbuild.core.utils import load_module_from_file
-from toxicbuild.slave import plugins, managers
+from toxicbuild.slave import managers
 from tests.unit.slave import TEST_DATA_DIR
 from tests import async_test, AsyncMagicMock
 
@@ -367,32 +367,6 @@ class BuilderManagerTest(TestCase):
         builder = await self.manager.load_builder('builder4')
         self.assertTrue(builder.envvars)
 
-    @patch.object(managers.SlavePlugin, 'create_data_dir', AsyncMagicMock())
-    @async_test
-    async def test_load_plugins(self):
-        plugins_conf = [{'name': 'python-venv',
-                         'pyversion': '/usr/bin/python3.4'}]
-        returned = await self.manager._load_plugins(plugins_conf)
-
-        self.assertEqual(type(returned[0]), plugins.PythonVenvPlugin)
-        self.assertTrue(returned[0].create_data_dir.called)
-
-    @patch.object(managers.SlavePlugin, 'create_data_dir', AsyncMagicMock())
-    @async_test
-    async def test_load_plugins_no_data_dir(self):
-        plugins_conf = [{'name': 'apt-install',
-                         'packages': ['some-package', 'other']}]
-        returned = await self.manager._load_plugins(plugins_conf)
-
-        self.assertEqual(type(returned[0]), plugins.AptInstallPlugin)
-        self.assertFalse(returned[0].create_data_dir.called)
-
-    @async_test
-    async def test_load_plugins_no_name(self):
-        plugins_conf = [{'pyversion': '/usr/bin/python3.4'}]
-        with self.assertRaises(managers.BadPluginConfig):
-            await self.manager._load_plugins(plugins_conf)
-
     @patch.object(managers, 'get_toxicbuildconf_yaml',
                   AsyncMagicMock(spec=managers.get_toxicbuildconf_yaml))
     @async_test
@@ -400,11 +374,3 @@ class BuilderManagerTest(TestCase):
         self.manager.config_type = 'yaml'
         await self.manager.load_config()
         self.assertTrue(managers.get_toxicbuildconf_yaml.called)
-
-    @async_test
-    async def test_get_builder_steps_str(self):
-        builder = Mock()
-        builder.plugins = []
-        bdict = {'name': 'bla', 'steps': ['ls', 'cmd2']}
-        steps = await self.manager._get_builder_steps(builder, bdict)
-        self.assertEqual(len(steps), 2)

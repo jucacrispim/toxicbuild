@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -21,7 +21,7 @@ import asyncio
 import os
 from unittest import mock, TestCase
 from toxicbuild.core.utils import load_module_from_file
-from toxicbuild.slave import build, managers
+from toxicbuild.slave import build, managers, plugins
 from tests.unit.slave import TEST_DATA_DIR
 from tests import async_test, AsyncMagicMock
 
@@ -46,7 +46,8 @@ class BuilderTest(TestCase):
 
         managers.get_toxicbuildconf.return_value = toxicconf
 
-        self.builder = build.Builder(manager, 'builder1', '.')
+        self.builder = build.Builder(manager, {'name': 'builder1',
+                                               'steps': []}, '.')
 
     @async_test
     def test_build_success(self):
@@ -55,6 +56,9 @@ class BuilderTest(TestCase):
         self.builder.steps = [s1, s2]
         self.builder._copy_workdir = AsyncMagicMock(
             spec=self.builder._copy_workdir)
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._get_tmp_dir = mock.Mock(return_value='.')
+
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'success')
         self.assertIn('total_time', build_info['steps'][0].keys())
@@ -66,8 +70,9 @@ class BuilderTest(TestCase):
         s3 = build.BuildStep(name='s3', command='echo "oi"')
         self.builder._copy_workdir = AsyncMagicMock(
             spec=self.builder._copy_workdir)
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._get_tmp_dir = mock.Mock(return_value='.')
         self.builder.steps = [s1, s2, s3]
-
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'fail')
 
@@ -79,6 +84,9 @@ class BuilderTest(TestCase):
         self.builder.steps = [s1, s2, s3]
         self.builder._copy_workdir = AsyncMagicMock(
             spec=self.builder._copy_workdir)
+
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._get_tmp_dir = mock.Mock(return_value='.')
 
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'fail')
@@ -133,8 +141,8 @@ class BuilderTest(TestCase):
     @async_test
     async def test_get_env_vars(self):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
-        self.builder.plugins = await self.builder.manager._load_plugins(
-            pconfig)
+        self.builder.conf['plugins'] = pconfig
+        self.builder.plugins = self.builder._load_plugins()
         expected = {'PATH': '.././python-venv/venv-usrbinpython3.4/bin:PATH'}
         returned = self.builder._get_env_vars()
 
@@ -143,8 +151,8 @@ class BuilderTest(TestCase):
     @async_test
     async def test_get_envvar_with_builder_envvars(self):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
-        self.builder.plugins = await self.builder.manager._load_plugins(
-            pconfig)
+        self.builder.conf['plugins'] = pconfig
+        self.builder.plugins = self.builder._load_plugins()
         self.builder.envvars = {'VAR1': 'someval'}
         expected = {'PATH': '.././python-venv/venv-usrbinpython3.4/bin:PATH',
                     'VAR1': 'someval'}
@@ -152,7 +160,8 @@ class BuilderTest(TestCase):
         self.assertEqual(expected, returned)
 
     def test_get_tmp_dir(self):
-        expected = '{}-{}'.format(self.builder.workdir, self.builder.name)
+        expected = '{}-{}'.format(os.path.abspath(
+            self.builder.workdir), self.builder.name)
         self.assertEqual(expected, self.builder._get_tmp_dir())
 
     @mock.patch.object(build, 'exec_cmd', AsyncMagicMock())
@@ -201,6 +210,26 @@ class BuilderTest(TestCase):
             pass
 
         self.assertFalse(self.builder._remove_tmp_dir.called)
+
+    def test_load_plugins(self):
+        plugins_conf = [{'name': 'apt-install',
+                         'packages': ['some-package', 'other']}]
+        self.builder.conf['plugins'] = plugins_conf
+        returned = self.builder._load_plugins()
+
+        self.assertEqual(type(returned[0]), plugins.AptInstallPlugin)
+
+    def test_load_plugins_no_name(self):
+        plugins_conf = [{'pyversion': '/usr/bin/python3.4'}]
+        self.builder.conf['plugins'] = plugins_conf
+        with self.assertRaises(build.BadPluginConfig):
+            self.builder._load_plugins()
+
+    def test_get_steps(self):
+        self.builder.conf['steps'] = ['ls', {'name': 'other',
+                                             'command': 'cmd2'}]
+        steps = self.builder._get_steps()
+        self.assertEqual(len(steps), 2)
 
 
 class BuildStepTest(TestCase):

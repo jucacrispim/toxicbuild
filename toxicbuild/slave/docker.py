@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2017, 2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -33,79 +33,41 @@
 
 import asyncio
 import os
-from toxicbuild.core.utils import exec_cmd, LoggerMixin
+from toxicbuild.core.utils import exec_cmd, get_envvars, LoggerMixin
 from toxicbuild.slave import settings
-from toxicbuild.slave.client import ContainerBuildClient
+from toxicbuild.slave.build import BuildStep, Builder
+
+DOCKER_CMD = 'docker'
+DOCKER_SRC_DIR = os.path.join('/', 'home', '{user}', 'ci', 'src')
 
 
-class DockerContainerBuilder(LoggerMixin):
+class DockerContainerBuilder(Builder):
     """Class to handle docker containers used to run builds inside it.
     """
 
-    # really ugly signature, right?
-    def __init__(self, manager, platform, repo_url, vcs_type, branch,
-                 named_tree, builder_name, source_dir, remove_env=True,
-                 config_type='py', config_filename='toxicbuild.conf',
-                 builders_from=None):
-        """Constructor for DockerContainer.
+    def __init__(self, *args, **kwargs):
+        self.cname = self._get_name(args[1]['name'], args[2], args[3])
 
-        :param manager: instance of :class:`toxicbuild.slave.BuildManager.`
-        :param platform: Platform where the build will be executed
-        :param repo_url: The repository URL
-        :param vcs_type: Type of vcs used in the repository.
-        :param branch: Which branch to use in the build.
-        :param named_tree: A tag, commit, branch name...
-        :param builder_name: The builder that will execute the build
-        :param source_dir: Directory with the source code in the host
-        :param remove_env: Should the container be removed when the build is
-          done?
-        :param config_type: The type of config used. 'py' or 'yaml'.
-        :param config_filename: The name of the build config file.
-        :param builders_from: If not None, builders to this branch will be used
-          instead of builders for the current branch.
-        """
+        super().__init__(*args, **kwargs)
 
-        self.build_data_body = {'repo_url': repo_url,
-                                'vcs_type': vcs_type,
-                                'branch': branch,
-                                'named_tree': named_tree,
-                                'builder_name': builder_name,
-                                'config_type': config_type,
-                                'config_filename': config_filename,
-                                'builders_from': builders_from}
-        self.build_data = {'action': 'build',
-                           'body': self.build_data_body}
-
-        self.manager = manager
-        self.source_dir = source_dir
-        self.slave_source_dir = os.path.dirname(self.source_dir)
-        self.source_dir_name = os.path.basename(self.source_dir)
-        self.builder_name = builder_name
-        self.container_slave_workdir = settings.CONTAINER_SLAVE_WORKDIR
-        self.platform = platform
+        self.docker_cmd = DOCKER_CMD
+        self.docker_user = settings.CONTAINER_USER
+        self.docker_src_dir = DOCKER_SRC_DIR.format(user=self.docker_user)
         self.image_name = settings.DOCKER_IMAGES[self.platform]
-        self.remove_env = remove_env
-        self.docker_cmd = 'docker'
-        self.client = ContainerBuildClient(self.build_data, self)
 
-    @property
-    def name(self):
+    def _get_name(self, name, workdir, platform):
         name = '{}-{}-{}'.format(
-            self.source_dir.replace('/', '-').replace('\\', '-'),
-            self.platform, self.builder_name)
+            workdir.replace('/', '-').replace('\\', '-'),
+            platform, name)
         return name
 
     async def __aenter__(self):
         await self.start_container()
         await self.copy2container()
-        await self.client.__aenter__()
         return self
 
     async def __aexit__(self, ext_typ, exc_val, exc_tb):
-        await self.client.__aexit__(ext_typ, exc_val, exc_tb)
-        if not self.remove_env:
-            # removes the source code from the container
-            await self.rm_from_container()
+        await self.rm_from_container()
 
         await self.kill_container()
         if self.remove_env:
@@ -115,14 +77,23 @@ class DockerContainerBuilder(LoggerMixin):
                            'DOCKER_NEVER_REMOVE_CONTAINER', False):
                 await self.rm_container()
 
-    async def container_exists(self):
-        """Checks if a container named as its ``self.name``
-        already exists"""
+    def _get_steps(self):
+        steps = super()._get_steps()
+        return [BuildStepDocker.from_buildstep(s, self.cname) for s in steps]
+
+    async def container_exists(self, only_running=False):
+        """Checks if a container named as its ``self.cname``
+        already exists
+
+        :param only_running: If True, will look only for running containers.
+        """
 
         msg = 'Checking if container exists'
         self.log(msg, level='debug')
-        cmd = '{} container ps -a --filter name={}'.format(self.docker_cmd,
-                                                           self.name)
+
+        opt = '' if only_running else '-a'
+        cmd = '{} container ps {} --filter name={}'.format(self.docker_cmd,
+                                                           opt, self.cname)
         cmd += '| wc -l'
         msg = 'Executing {}'.format(cmd)
         self.log(msg, level='debug')
@@ -130,11 +101,7 @@ class DockerContainerBuilder(LoggerMixin):
         return int(ret) > 1
 
     async def is_running(self):
-        try:
-            async with self.client:
-                is_running = await self.client.healthcheck()
-        except Exception:
-            is_running = False
+        is_running = await self.container_exists(only_running=True)
         return is_running
 
     async def wait_start(self):
@@ -154,83 +121,104 @@ class DockerContainerBuilder(LoggerMixin):
 
     async def start_container(self):
         exists = await self.container_exists()
-        self.log('Starting container {}'.format(self.name),
+        self.log('Starting container {}'.format(self.cname),
                  level='debug')
         if not exists:
             cmd = '{} run -t -d --name {} {}'.format(self.docker_cmd,
-                                                     self.name,
+                                                     self.cname,
                                                      self.image_name)
 
         else:
-            cmd = '{} start {}'.format(self.docker_cmd, self.name)
+            cmd = '{} start {}'.format(self.docker_cmd, self.cname)
 
         self.log(cmd, level='debug')
         await exec_cmd(cmd, cwd='.')
         await self.wait_start()
 
     async def kill_container(self):
-        msg = 'Killing container {}'.format(self.name)
+        msg = 'Killing container {}'.format(self.cname)
         self.log(msg, level='debug')
-        cmd = '{} kill {}'.format(self.docker_cmd, self.name)
+        cmd = '{} kill {}'.format(self.docker_cmd, self.cname)
         self.log(cmd, level='debug')
         await exec_cmd(cmd, cwd='.')
 
     async def rm_container(self):
-        msg = 'Removing container {}'.format(self.name)
+        msg = 'Removing container {}'.format(self.cname)
         self.log(msg, level='debug')
-        cmd = '{} rm {}'.format(self.docker_cmd, self.name)
+        cmd = '{} rm {}'.format(self.docker_cmd, self.cname)
         self.log(cmd, level='debug')
         await exec_cmd(cmd, cwd='.')
 
     async def copy2container(self):
         """Recursive copy a directory to the container's src dir."""
 
-        msg = 'Copying files to container {}'.format(self.name)
+        msg = 'Copying files to container {}'.format(self.cname)
         self.log(msg, level='debug')
-        cmd = 'cd {} && {} cp {} {}:{}/{}/'.format(
-            self.slave_source_dir, self.docker_cmd, self.source_dir_name,
-            self.name, self.container_slave_workdir, self.slave_source_dir)
+        cmd = '{} cp {} {}:{}'.format(
+            self.docker_cmd, self.workdir, self.cname, self.docker_src_dir)
         self.log(cmd, level='debug')
+        await exec_cmd(cmd, cwd='.')
+
+        msg = 'Changing files perms in container {}'.format(self.cname)
+        self.log(msg, level='debug')
+        cmd = '{} exec -t {} chown {}:{} {}'.format(
+            self.docker_cmd, self.cname, self.docker_user, self.docker_user,
+            self.docker_src_dir)
         await exec_cmd(cmd, cwd='.')
 
     async def rm_from_container(self):
         """Removes the source code of a container that will not be removed.
         """
 
-        msg = 'Removing files from container {}'.format(self.name)
+        msg = 'Removing files from container {}'.format(self.cname)
         self.log(msg, level='debug')
         # removing source dir
-        cmd = '{} exec {} rm -rf {}/{}'.format(self.docker_cmd, self.name,
-                                               self.container_slave_workdir,
-                                               self.source_dir)
+        cmd = '{} exec {} rm -rf {}'.format(self.docker_cmd, self.cname,
+                                            self.docker_src_dir)
         msg = 'Executing {}'.format(cmd)
         self.log(msg, level='debug')
         await exec_cmd(cmd, cwd='.')
 
-        # removing build dir
-        cmd = '{} exec {} rm -rf {}/{}-{}'.format(self.docker_cmd, self.name,
-                                                  self.container_slave_workdir,
-                                                  self.source_dir,
-                                                  self.builder_name)
-        msg = 'Executing {}'.format(cmd)
-        self.log(msg, level='debug')
-        await exec_cmd(cmd, cwd='.')
 
-    async def get_container_ip(self):
-        # look what a beautiful command!
-        msg = 'Getting container ip'
-        self.log(msg, level='debug')
-        ip_regex = '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}'
-        ip_regex += '(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'
-        cmd = [self.docker_cmd, 'inspect', self.name, '|', 'grep', '-i',
-               'IPAddress', '|', 'grep', '-oE', '-m', '1',
-               "'{}'".format(ip_regex)]
-        cmd = ' '.join(cmd)
-        msg = 'Executing {}'.format(cmd)
-        self.log(msg, level='debug')
-        r = await exec_cmd(cmd, cwd='.')
-        return r
+class BuildStepDocker(BuildStep, LoggerMixin):
+    """A build step that run the commands inside a docker container.
+    """
 
-    async def build(self):
-        async with self:
-            await self.client.build(self.manager.protocol.send_response)
+    def __init__(self, name, command, warning_on_fail=False, timeout=3600,
+                 stop_on_fail=False, container_name=None):
+        self.container_name = container_name
+        self.docker_user = settings.CONTAINER_USER
+        self.docker_cmd = DOCKER_CMD
+        self.docker_src_dir = DOCKER_SRC_DIR.format(user=self.docker_user)
+
+        super().__init__(name, command, warning_on_fail=warning_on_fail,
+                         timeout=timeout, stop_on_fail=stop_on_fail)
+
+    @classmethod
+    def from_buildstep(cls, step, container_name):
+        return cls(step.name, step.command, step.warning_on_fail,
+                   step.timeout, step.stop_on_fail, container_name)
+
+    def _get_cmd_line_envvars(self, envvars):
+        envvars = get_envvars(envvars, use_local_envvars=False)
+        var = []
+
+        for k, v in envvars.items():
+            var.append('-e "{}={}"'.format(k, v))
+
+        return ' '.join(var)
+
+    async def exec_cmd(self, cmd, cwd, timeout, out_fn, **envvars):
+        cmd_envvars = self._get_cmd_line_envvars(envvars)
+
+        user_opts = '-u {}:{}'.format(self.docker_user, self.docker_user)
+
+        cmd = '{} exec {} {} -t {} sh -c "cd {} && {}"'.format(
+            self.docker_cmd, user_opts, cmd_envvars, self.container_name,
+            self.docker_src_dir, cmd)
+
+        self.log('Executing {}'.format(cmd), level='debug')
+        output = await exec_cmd(cmd, cwd='.',
+                                timeout=self.timeout,
+                                out_fn=out_fn, **envvars)
+        return output

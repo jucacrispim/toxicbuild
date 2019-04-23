@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -82,12 +82,15 @@ class SettingsPatcher(MonkeyPatcher):
         self.patch_item(pyroconf, 'settings', settings)
 
 
-def _get_envvars(envvars):
+def get_envvars(envvars, use_local_envvars=True):
     """Returns environment variables to be used in shell. Does the
     interpolation of values using the current values from the envvar
     and the values passed as parameters. """
 
-    newvars = copy.copy(os.environ)
+    if use_local_envvars:
+        newvars = copy.copy(os.environ)
+    else:
+        newvars = {}
     for var, value in envvars.items():
         if var in value:
             current = os.environ.get(var, '')
@@ -105,7 +108,7 @@ async def _create_cmd_proc(cmd, cwd, **envvars):
     :param cwd: Directory to execute the command.
     :param envvars: Environment variables to be used in the command.
     """
-    envvars = _get_envvars(envvars)
+    envvars = get_envvars(envvars)
 
     proc = await asyncio.create_subprocess_shell(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd,
@@ -189,10 +192,10 @@ def load_module_from_file(filename):
 
 def set_loglevel(loglevel):
     stdout_handler = logging.StreamHandler(sys.stdout)
-    stderr_handler = logging.StreamHandler(sys.stderr)
+    # stderr_handler = logging.StreamHandler(sys.stderr)
 
     logger.addHandler(stdout_handler)
-    logger.addHandler(stderr_handler)
+    # logger.addHandler(stderr_handler)
 
     loglevel = getattr(logging, loglevel.upper())
     logger.setLevel(loglevel)

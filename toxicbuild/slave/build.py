@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,10 +20,12 @@
 import asyncio
 from copy import copy
 import functools
+import os
 from uuid import uuid4
 from toxicbuild.core.exceptions import ExecCmdError
 from toxicbuild.core.utils import (exec_cmd, LoggerMixin, datetime2string,
                                    now, string2datetime, localtime2utc)
+from toxicbuild.slave.exceptions import BadPluginConfig
 
 
 class Builder(LoggerMixin):
@@ -33,11 +35,12 @@ class Builder(LoggerMixin):
     """
 
     STEP_OUTPUT_BUFF_LEN = 258
+    _slave_plugin = None
 
-    def __init__(self, manager, name, workdir, platorm='linux-generic',
+    def __init__(self, manager, bconf, workdir, platorm='linux-generic',
                  remove_env=True, **envvars):
         """:param manager: instance of :class:`toxicbuild.slave.BuildManager`.
-        :param name: name for this builder.
+        :param bconf: A dictionary with the builder configuration.
         :param workdir: directory where the steps will be executed.
         :param: platform: When the builder execute is builds.
         :param remove_env: Indicates if the build environment should be
@@ -45,10 +48,12 @@ class Builder(LoggerMixin):
         :param envvars: Environment variables to be used on the steps.
         """
         self.manager = manager
-        self.name = name
+        self.conf = bconf
+        self.name = bconf['name']
         self.workdir = workdir
-        self.steps = []
-        self.plugins = []
+        self.plugins = self._load_plugins()
+        # steps must be defined after plugins
+        self.steps = self._get_steps()
         self.platform = platorm
         self.remove_env = remove_env
         self.envvars = envvars
@@ -63,6 +68,53 @@ class Builder(LoggerMixin):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.remove_env:
             await self._remove_tmp_dir()
+
+    @property
+    def slave_plugin(self):
+        if self._slave_plugin:
+            return self._slave_plugin
+
+        # to avoid circular imports
+        from toxicbuild.slave.plugins import SlavePlugin
+        type(self)._slave_plugin = SlavePlugin
+        return SlavePlugin
+
+    def _load_plugins(self):
+        """ Returns a list of :class:`toxicbuild.slave.plugins.Plugin`
+        subclasses based on the plugins listed on the config for a builder.
+        """
+        plugins_config = self.conf.get('plugins', [])
+        plist = []
+        for pdict in plugins_config:
+            try:
+                plugin_class = self.slave_plugin.get_plugin(pdict['name'])
+            except KeyError:
+                msg = 'Your plugin config {} does not have a name'.format(
+                    pdict)
+                raise BadPluginConfig(msg)
+            del pdict['name']
+            plugin = plugin_class(**pdict)
+            plist.append(plugin)
+
+        return plist
+
+    def _get_steps(self):
+        steps = []
+
+        for plugin in self.plugins:
+            steps += plugin.get_steps_before()
+
+        for sdict in self.conf['steps']:
+            if isinstance(sdict, str):
+                sdict = {'name': sdict,
+                         'command': sdict}
+            step = BuildStep(**sdict)
+            steps.append(step)
+
+        for plugin in self.plugins:
+            steps += plugin.get_steps_after()
+
+        return steps
 
     def _run_in_build_env(self):
         # This is basicaly useless. It is here
@@ -110,7 +162,7 @@ class Builder(LoggerMixin):
             out_fn = functools.partial(self._send_step_output_info, step_info)
 
             step_exec_output = yield from step.execute(
-                cwd=self.workdir, out_fn=out_fn,
+                cwd=self._get_tmp_dir(), out_fn=out_fn,
                 last_step_status=last_step_status,
                 last_step_output=last_step_output, **envvars)
             step_info.update(step_exec_output)
@@ -188,7 +240,7 @@ class Builder(LoggerMixin):
         return envvars
 
     def _get_tmp_dir(self):
-        return '{}-{}'.format(self.workdir, self.name)
+        return '{}-{}'.format(os.path.abspath(self.workdir), self.name)
 
     @asyncio.coroutine
     def _copy_workdir(self):
@@ -242,6 +294,12 @@ class BuildStep:
 
         return self.command == other.command
 
+    async def exec_cmd(self, cmd, cwd, timeout, out_fn, **envvars):
+        output = await exec_cmd(cmd, cwd=cwd,
+                                timeout=self.timeout,
+                                out_fn=out_fn, **envvars)
+        return output
+
     @asyncio.coroutine
     def execute(self, cwd, out_fn=None, last_step_status=None,
                 last_step_output=None, **envvars):
@@ -267,9 +325,9 @@ class BuildStep:
         step_status = {}
         try:
             cmd = yield from self.get_command()
-            output = yield from exec_cmd(cmd, cwd=cwd,
-                                         timeout=self.timeout,
-                                         out_fn=out_fn, **envvars)
+            output = yield from self.exec_cmd(cmd, cwd=cwd,
+                                              timeout=self.timeout,
+                                              out_fn=out_fn, **envvars)
             status = 'success'
         except ExecCmdError as e:
             output = e.args[0]

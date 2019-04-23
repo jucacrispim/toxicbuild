@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -26,11 +26,10 @@ from toxicbuild.core.utils import (get_toxicbuildconf, LoggerMixin,
                                    list_builders_from_config,
                                    get_toxicbuildconf_yaml)
 from toxicbuild.slave import settings
-from toxicbuild.slave.build import Builder, BuildStep
+from toxicbuild.slave.build import Builder
 from toxicbuild.slave.docker import DockerContainerBuilder
 from toxicbuild.slave.exceptions import (BuilderNotFound, BadBuilderConfig,
-                                         BusyRepository, BadPluginConfig)
-from toxicbuild.slave.plugins import SlavePlugin
+                                         BusyRepository)
 
 
 class BuildManager(LoggerMixin):
@@ -273,45 +272,16 @@ class BuildManager(LoggerMixin):
         # now we have all we need to instanciate the container builder if
         # needed.
         if settings.USE_DOCKER:
-            builder = DockerContainerBuilder(
-                self, platform, self.repo_url,
-                self.vcs_type, self.branch,
-                self.named_tree,
-                name, self.workdir,
-                remove_env=remove_env,
-                config_type=self.config_type,
-                config_filename=self.config_filename,
-                builders_from=self.builders_from)
+            builder_cls = DockerContainerBuilder
         else:
-            # this envvars are used in all steps in this builder
-            builder_envvars = bdict.get('envvars', {})
-            builder = Builder(self, bdict['name'], self.workdir, platform,
+            builder_cls = Builder
+
+        # this envvars are used in all steps in this builder
+        builder_envvars = bdict.get('envvars', {})
+        builder = builder_cls(self, bdict, self.workdir, platform,
                               remove_env=remove_env, **builder_envvars)
-            builder.steps = await self._get_builder_steps(builder, bdict)
 
         return builder
-
-    async def _get_builder_steps(self, builder, bdict):
-        plugins_conf = bdict.get('plugins')
-        steps = []
-
-        if plugins_conf:
-            builder.plugins = await self._load_plugins(plugins_conf)
-
-        for plugin in builder.plugins:
-            steps += plugin.get_steps_before()
-
-        for sdict in bdict['steps']:
-            if isinstance(sdict, str):
-                sdict = {'name': sdict,
-                         'command': sdict}
-            step = BuildStep(**sdict)
-            steps.append(step)
-
-        for plugin in builder.plugins:
-            steps += plugin.get_steps_after()
-
-        return steps
 
     # kind of wierd place for this thing
     @asyncio.coroutine
@@ -321,23 +291,3 @@ class BuildManager(LoggerMixin):
     def log(self, msg, level='info'):
         msg = '[{}]{}'.format(self.repo_url, msg)
         super().log(msg, level=level)
-
-    async def _load_plugins(self, plugins_config):
-        """ Returns a list of :class:`toxicbuild.slave.plugins.Plugin`
-        subclasses based on the plugins listed on the config for a builder.
-        """
-
-        plist = []
-        for pdict in plugins_config:
-            try:
-                plugin_class = SlavePlugin.get_plugin(pdict['name'])
-            except KeyError:
-                msg = 'Your plugin config {} does not have a name'.format(
-                    pdict)
-                raise BadPluginConfig(msg)
-            del pdict['name']
-            plugin = plugin_class(**pdict)
-            if getattr(plugin, 'uses_data_dir', False):
-                await plugin.create_data_dir()
-            plist.append(plugin)
-        return plist

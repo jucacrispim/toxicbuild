@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2016, 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2016, 2018-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -52,29 +52,14 @@ class PluginTest(TestCase):
         expected = '/some/dir/my-plugin'
         self.assertEqual(expected, self.plugin.data_dir)
 
-    @patch.object(plugins.os.path, 'exists', Mock(return_value=True))
-    @patch.object(plugins, 'run_in_thread', AsyncMagicMock())
-    @async_test
-    async def test_create_data_dir_already_exists(self):
-        await self.plugin.create_data_dir()
-        self.assertFalse(plugins.run_in_thread.called)
-
-    @patch.object(plugins.os.path, 'exists', Mock(return_value=False))
-    @patch.object(plugins, 'run_in_thread', AsyncMagicMock())
-    @async_test
-    async def test_create_data_dir(self):
-        await self.plugin.create_data_dir()
-        expected = ((plugins.os.makedirs, self.plugin.data_dir), {})
-        called = plugins.run_in_thread.call_args
-        self.assertEqual(expected, called)
-
 
 class PythonCreateVenvStepTest(TestCase):
 
     def setUp(self):
         super().setUp()
 
-        self.step = plugins.PythonCreateVenvStep(venv_dir='bla/venv',
+        self.step = plugins.PythonCreateVenvStep(data_dir='bla',
+                                                 venv_dir='bla/venv',
                                                  pyversion='python3.4')
 
     @patch.object(plugins.os.path, 'exists', Mock())
@@ -105,8 +90,8 @@ class PythonVenvPluginTest(TestCase):
         self.assertEqual(self.plugin.name, 'python-venv')
 
     def test_get_steps_before(self):
-        cmd = 'virtualenv .././python-venv/venv-usrbinpython3.4'
-        cmd += ' -p /usr/bin/python3.4'
+        cmd = 'mkdir -p .././python-venv && /usr/bin/python3.4 -m venv'
+        cmd += ' .././python-venv/venv-usrbinpython3.4'
         expected = [
             plugins.BuildStep('create venv', cmd),
             plugins.BuildStep('install dependencies using pip',

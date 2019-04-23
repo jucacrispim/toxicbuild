@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017, 2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,7 +20,7 @@
 import asyncio
 import os
 from toxicbuild.core.plugins import Plugin
-from toxicbuild.core.utils import run_in_thread, exec_cmd
+from toxicbuild.core.utils import exec_cmd
 from toxicbuild.slave import settings
 from toxicbuild.slave.build import BuildStep
 
@@ -47,10 +47,6 @@ class SlavePlugin(Plugin):
 
         return os.path.join(data_dir, self.name)
 
-    async def create_data_dir(self):
-        if not os.path.exists(self.data_dir):
-            await run_in_thread(os.makedirs, self.data_dir)
-
     def get_steps_before(self):
         """Returns a list of steps to be executed before the steps provided
         by the user."""
@@ -75,12 +71,14 @@ class PythonCreateVenvStep(BuildStep):
     """Step that checks if the venv already exists before
     executing the command."""
 
-    def __init__(self, venv_dir, pyversion):
+    def __init__(self, data_dir, venv_dir, pyversion):
+        self.data_dir = data_dir
         self.venv_dir = venv_dir
         self.pyversion = pyversion
         name = 'Create virtualenv'
-        command = 'virtualenv {} -p {}'.format(self.venv_dir,
-                                               self.pyversion)
+        command = 'mkdir -p {} && {} -m venv {}'.format(
+            self.data_dir, self.pyversion, self.venv_dir)
+
         super().__init__(name, command, stop_on_fail=True)
 
     @asyncio.coroutine
@@ -97,7 +95,6 @@ class PythonCreateVenvStep(BuildStep):
 
 class PythonVenvPlugin(SlavePlugin):
     name = 'python-venv'
-    uses_data_dir = True
 
     def __init__(self, pyversion, requirements_file='requirements.txt',
                  remove_env=False):
@@ -110,7 +107,8 @@ class PythonVenvPlugin(SlavePlugin):
                 self.pyversion.replace(os.sep, '')))
 
     def get_steps_before(self):
-        create_env = PythonCreateVenvStep(self.venv_dir, self.pyversion)
+        create_env = PythonCreateVenvStep(self.data_dir,
+                                          self.venv_dir, self.pyversion)
 
         install_deps = BuildStep('install dependencies using pip',
                                  'pip install -r {}'.format(

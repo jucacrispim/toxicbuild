@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -104,11 +104,26 @@ class UtilsTest(TestCase):
                     'MYPROGRAMVAR': 'something',
                     'HOME': os.environ.get('HOME', '')}
 
-        returned = utils._get_envvars(envvars)
+        returned = utils.get_envvars(envvars)
 
         for var, val in expected.items():
             self.assertIn(var, returned)
             self.assertEqual(returned[var], val)
+
+    def test_get_envvars_no_local(self):
+        envvars = {'PATH': 'PATH:venv/bin',
+                   'MYPROGRAMVAR': 'something'}
+
+        expected = {'PATH': '{}:venv/bin'.format(os.environ.get('PATH')),
+                    'MYPROGRAMVAR': 'something'}
+
+        returned = utils.get_envvars(envvars, use_local_envvars=False)
+
+        for var, val in expected.items():
+            self.assertIn(var, returned)
+            self.assertEqual(returned[var], val)
+
+        self.assertEqual(len(list(returned.keys())), 2)
 
     def test_load_module_from_file_with_file_not_found(self):
         with self.assertRaises(FileNotFoundError):
