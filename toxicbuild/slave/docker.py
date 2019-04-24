@@ -206,7 +206,9 @@ class BuildStepDocker(BuildStep, LoggerMixin):
         # image, I don't get /bin on path, and without it nothing works.
         # So we set it here
 
-        if env.get('PATH') and ':/bin' not in env['PATH']:
+        if env.get('PATH') and ':/bin' not in env['PATH']:  # pragma no branch
+            self.log('Hacking docker $PATH for {}'.format(self.container_name),
+                     level='debug')
             env['PATH'] += ':/bin'
 
     async def _get_docker_env(self):
