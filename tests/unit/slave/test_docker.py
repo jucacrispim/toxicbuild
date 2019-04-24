@@ -24,13 +24,13 @@ from tests import async_test, AsyncMagicMock
 
 
 DOCKER_ENV = """
-PYTHON_PIP_VERSION=19.0.3
-HOME=/home/toxicuser
-TERM=xterm
-PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin
-LANG=C.UTF-8
-PYTHON_VERSION=3.7.3
-PWD=/home/toxicuser
+PYTHON_PIP_VERSION=19.0.3\r
+HOME=/home/toxicuser\r
+TERM=xterm\r
+PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin\r
+LANG=C.UTF-8\r
+PYTHON_VERSION=3.7.3\r
+PWD=/home/toxicuser\r
 """
 
 
@@ -237,3 +237,4 @@ class BuildStepDockerTest(TestCase):
         env = await self.step._get_docker_env()
 
         self.assertTrue(env['PATH'])
+        self.assertFalse(env['PATH'].endswith('\r'))

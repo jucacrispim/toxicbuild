@@ -207,7 +207,7 @@ class BuildStepDocker(BuildStep, LoggerMixin):
         cmd = self._get_docker_cmd(cmd, envvars)
         output = await exec_cmd(cmd, cwd='.')
         lines = [l for l in output.split('\n') if l]
-        env = {l.split('=')[0]: l.split('=')[1] for l in lines}
+        env = {l.split('=')[0]: l.split('=')[1].strip('\n\r') for l in lines}
         return env
 
     async def _get_cmd_line_envvars(self, envvars):
