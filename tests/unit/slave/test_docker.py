@@ -237,4 +237,3 @@ class BuildStepDockerTest(TestCase):
         env = await self.step._get_docker_env()
 
         self.assertTrue(env['PATH'])
-        self.assertIn(':/bin', env['PATH'])
