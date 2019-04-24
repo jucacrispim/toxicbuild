@@ -213,7 +213,7 @@ class BuildStepDockerTest(TestCase):
         src_dir = '/home/bla/ci/src'
         envvars = await self.step._get_cmd_line_envvars({})
         user_opts = '-u bla:bla'
-        exp = 'docker exec {} {} -t container sh -c "cd {} && ls"'.format(
+        exp = 'docker exec {} {} -t container /bin/sh -c "cd {} && ls"'.format(
             user_opts, envvars,  src_dir)
 
         await self.step.exec_cmd('ls', src_dir, 10, lambda *a, **kw: None)

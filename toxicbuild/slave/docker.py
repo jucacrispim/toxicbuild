@@ -226,7 +226,7 @@ class BuildStepDocker(BuildStep, LoggerMixin):
 
     def _get_docker_cmd(self, cmd, envvars):
         user_opts = self._get_user_opts()
-        cmd = '{} exec {} {} -t {} sh -c "cd {} && {}"'.format(
+        cmd = '{} exec {} {} -t {} /bin/sh -c "cd {} && {}"'.format(
             self.docker_cmd, user_opts, envvars, self.container_name,
             self.docker_src_dir, cmd)
         return cmd
