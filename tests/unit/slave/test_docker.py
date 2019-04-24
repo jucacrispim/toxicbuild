@@ -27,7 +27,7 @@ DOCKER_ENV = """
 PYTHON_PIP_VERSION=19.0.3
 HOME=/home/toxicuser
 TERM=xterm
-PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin
 LANG=C.UTF-8
 PYTHON_VERSION=3.7.3
 PWD=/home/toxicuser
@@ -237,3 +237,4 @@ class BuildStepDockerTest(TestCase):
         env = await self.step._get_docker_env()
 
         self.assertTrue(env['PATH'])
+        self.assertIn(':/bin', env['PATH'])
