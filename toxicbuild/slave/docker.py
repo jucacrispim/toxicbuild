@@ -201,16 +201,6 @@ class BuildStepDocker(BuildStep, LoggerMixin):
         return cls(step.name, step.command, step.warning_on_fail,
                    step.timeout, step.stop_on_fail, container_name)
 
-    def _hack_docker_path(self, env):
-        # I have a strange behaviour in docker. Sometimes, using the same
-        # image, I don't get /bin on path, and without it nothing works.
-        # So we set it here
-
-        if env.get('PATH') and ':/bin' not in env['PATH']:  # pragma no branch
-            self.log('Hacking docker $PATH for {}'.format(self.container_name),
-                     level='debug')
-            env['PATH'] += ':/bin'
-
     async def _get_docker_env(self):
         cmd = 'env'
         envvars = ''
@@ -218,7 +208,6 @@ class BuildStepDocker(BuildStep, LoggerMixin):
         output = await exec_cmd(cmd, cwd='.')
         lines = [l for l in output.split('\n') if l]
         env = {l.split('=')[0]: l.split('=')[1] for l in lines}
-        self._hack_docker_path(env)
         return env
 
     async def _get_cmd_line_envvars(self, envvars):
