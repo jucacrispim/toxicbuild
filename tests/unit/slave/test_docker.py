@@ -98,6 +98,26 @@ class DockerContainerBuilderManagerTest(TestCase):
         r = await self.container.is_running()
         self.assertTrue(r)
 
+    @patch.object(docker, 'exec_cmd', AsyncMagicMock(side_effect=Exception))
+    @async_test
+    async def test_service_is_up_false(self):
+        r = await self.container.service_is_up()
+        self.assertIs(r, False)
+
+    @patch.object(docker, 'exec_cmd', AsyncMagicMock())
+    @async_test
+    async def test_service_is_up_true(self):
+        r = await self.container.service_is_up()
+        self.assertIs(r, True)
+
+    @patch.object(docker.asyncio, 'sleep', AsyncMagicMock())
+    @async_test
+    async def test_wait_service(self):
+        self.container.service_is_up = AsyncMagicMock(
+            side_effect=[False, True])
+        await self.container.wait_service()
+        self.assertTrue(docker.asyncio.sleep.called)
+
     @patch.object(docker.asyncio, 'sleep', AsyncMagicMock())
     @async_test
     async def test_wait_start(self):

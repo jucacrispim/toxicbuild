@@ -63,6 +63,7 @@ class DockerContainerBuilder(Builder):
         return name
 
     async def __aenter__(self):
+        await self.wait_service()
         await self.start_container()
         await self.copy2container()
         return self
@@ -105,20 +106,58 @@ class DockerContainerBuilder(Builder):
         is_running = await self.container_exists(only_running=True)
         return is_running
 
-    async def wait_start(self):
-        msg = 'Waiting slave to start'
-        self.log(msg, level='debug')
+    async def service_is_up(self):
+        """Check if the docker service is running in the host (slave)
+        machine.
+        """
+        try:
+            cmd = '{} info'.format(self.docker_cmd)
+            await exec_cmd(cmd, cwd='.')
+            r = True
+        except Exception:
+            r = False
+
+        return r
+
+    def _get_timeout(self):
         try:
             timeout = settings.DOCKER_CONTAINER_TIMEOUT
         except AttributeError:
             timeout = 30
+
+        return timeout
+
+    async def _check_with_timeout(self, coro):
+        """Checks until `await coro()` is True. Raises a TimeoutError
+        in case the condition is not met.
+
+        :param coro: A coroutine that returns a boolean.
+        """
         total = 0.0
         step = 0.1
-        is_running = await self.is_running()
-        while not is_running and total < timeout:
+        timeout = self._get_timeout()
+        is_ok = await coro()
+        while not is_ok and total < timeout:
             await asyncio.sleep(step)
             total += step
-            is_running = await self.is_running()
+            is_ok = await coro()
+
+    async def wait_service(self):
+        """The docker service may start a few seconds after
+        the build server is running. Here we wait until
+        the docker service is up.
+        """
+        self.log('Waiting docker service', level='debug')
+        await self._check_with_timeout(self.service_is_up)
+        self.log('Service is up!', level='debug')
+
+    async def wait_start(self):
+        """Waits for a container to start"""
+
+        msg = 'Waiting slave to start'
+        self.log(msg, level='debug')
+        await self._check_with_timeout(self.is_running)
+        self.log('slave started', level='debug')
 
     async def start_container(self):
         exists = await self.container_exists()
