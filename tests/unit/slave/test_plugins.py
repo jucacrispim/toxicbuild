@@ -94,9 +94,8 @@ class PythonVenvPluginTest(TestCase):
         cmd += ' .././python-venv/venv-usrbinpython3.4'
         expected = [
             plugins.BuildStep('create venv', cmd),
-            plugins.BuildStep(
-                'install dependencies using pip',
-                'pip install -r requirements.txt --progress-bar off')
+            plugins.BuildStep('install dependencies using pip',
+                              'pip install -r requirements.txt')
         ]
 
         steps_before = self.plugin.get_steps_before()

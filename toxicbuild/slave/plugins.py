@@ -111,7 +111,7 @@ class PythonVenvPlugin(SlavePlugin):
                                           self.venv_dir, self.pyversion)
 
         install_deps = BuildStep('install dependencies using pip',
-                                 'pip install -r {} --progress-bar off'.format(
+                                 'pip install -r {}'.format(
                                      self.requirements_file),
                                  stop_on_fail=True)
 
