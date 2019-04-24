@@ -92,7 +92,7 @@ def interpolate_dict_values(to_return, valued, base):
     """
     for var, value in valued.items():
         if var in value:
-            current = os.environ.get(var, '')
+            current = base.get(var, '')
             value = value.replace(var, current)
 
         to_return[var] = value
