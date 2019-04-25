@@ -154,7 +154,6 @@ PY37_BUILDER:  &PY37_BUILDER
     - master
     - 'feature-*'
     - 'bug-*'
-    - 'docker-no-slave'
 
   plugins:
     - <<: *APT_INSTALL
