@@ -46,6 +46,7 @@ class DockerContainerBuilderManagerTest(TestCase):
 
     @async_test
     async def test_aenter(self):
+        self.container.wait_service = AsyncMagicMock()
         self.container.start_container = AsyncMagicMock()
         self.container.kill_container = AsyncMagicMock()
         self.container.rm_container = AsyncMagicMock()
@@ -56,6 +57,7 @@ class DockerContainerBuilderManagerTest(TestCase):
 
     @async_test
     async def test_aexit(self):
+        self.container.wait_service = AsyncMagicMock()
         self.container.start_container = AsyncMagicMock()
         self.container.kill_container = AsyncMagicMock()
         self.container.rm_container = AsyncMagicMock()
@@ -68,6 +70,7 @@ class DockerContainerBuilderManagerTest(TestCase):
 
     @async_test
     async def test_aexit_no_remove(self):
+        self.container.wait_service = AsyncMagicMock()
         self.container.start_container = AsyncMagicMock()
         self.container.kill_container = AsyncMagicMock()
         self.container.rm_container = AsyncMagicMock()

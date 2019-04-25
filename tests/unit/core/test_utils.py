@@ -65,7 +65,7 @@ class UtilsTest(TestCase):
         stream = AsyncMagicMock()
         stream._buffer = bytearray()
         stream._maybe_resume_transport = Mock()
-        stream.extend(b'\nblerg')
+        stream._buffer.extend(b'\nblerg')
         with self.assertRaises(ValueError):
             await utils._readline(stream)
 
