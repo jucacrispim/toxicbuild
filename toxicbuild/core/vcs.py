@@ -203,6 +203,15 @@ class Git(VCS):
     date_format = '%a %b %d %H:%M:%S %Y'
     _commit_separator = '<end-toxiccommit>'
 
+    async def _set_remote_origin_config(self):
+        # when we do a shallow clone of a repo, we need to
+        # set the remote origins to * otherwise we will not
+        # be able to fetch all remote branches.
+        remote = '+refs/heads/*:refs/remotes/origin/*'
+        cmd = '{} config remote.origin.fetch {}'.format(self.vcsbin,
+                                                        remote)
+        await self.exec_cmd(cmd, cwd=self.workdir)
+
     @asyncio.coroutine
     def clone(self, url):
 
@@ -210,6 +219,7 @@ class Git(VCS):
             self.vcsbin, url, self.workdir)
         # we can't go to self.workdir while we do not clone the repo
         yield from self.exec_cmd(cmd, cwd='.')
+        yield from self._set_remote_origin_config()
 
     @asyncio.coroutine
     def set_remote(self, url, remote_name='origin'):

@@ -126,8 +126,15 @@ class GitTest(TestCase):
         self.vcs = vcs.Git('/some/workdir')
 
     @async_test
+    async def test_set_remote_origin_config(self):
+        await self.vcs._set_remote_origin_config()
+        called_cmd = vcs.exec_cmd.call_args[0][0]
+        self.assertTrue(called_cmd.startswith('git config remote.origin'))
+
+    @async_test
     def test_clone(self):
         url = 'git@somewhere.org/myproject.git'
+        self.vcs._set_remote_origin_config = AsyncMagicMock()
         yield from self.vcs.clone(url)
 
         called_cmd = vcs.exec_cmd.call_args[0][0]
