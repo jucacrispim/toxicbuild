@@ -7,4 +7,3 @@ recursive-exclude toxicbuild/master/templates *~
 recursive-exclude toxicbuild/slave/templates *~
 recursive-exclude toxicbuild/ui/templates *~
 recursive-exclude toxicbuild/ui/static *~
-recursive-exclude *.pyc*
