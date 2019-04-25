@@ -49,6 +49,7 @@ class NotificationTest(TestCase):
         class TestNotification(notifications.Notification):
 
             name = 'test-notification'
+            no_list = True
 
         self.notification_class = TestNotification
         self.obj_id = ObjectId()
@@ -169,6 +170,7 @@ class NotificationTest(TestCase):
 
             name = 'my-notification'
             events = ['bla', 'ble']
+            no_list = True
 
         obj_id = ObjectId()
         notif = MyNotification(repository_id=obj_id)
@@ -184,6 +186,7 @@ class NotificationTest(TestCase):
 
             name = 'my-notification'
             events = []
+            no_list = True
 
         notif = MyNotification(repository_id=self.obj_id)
         await notif.save()
