@@ -208,7 +208,7 @@ class NotificationWebHandlerTest(TestCase):
     async def test_list_notifications(self):
         notif = (await self.handler.list_notifications())['notifications']
         self.assertTrue(notif[0]['name'])
-        self.assertEqual(len(notif), 3)
+        self.assertEqual(len(notif), 3, [n.__class__.__name__ for n in notif])
 
     @async_test
     async def test_list_notifications_repo_id(self):
