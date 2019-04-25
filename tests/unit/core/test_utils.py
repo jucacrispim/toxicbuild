@@ -34,6 +34,53 @@ from tests import async_test, AsyncMagicMock
 class UtilsTest(TestCase):
 
     @async_test
+    async def test_try_readline_lf(self):
+        stream = AsyncMagicMock()
+        await utils._try_readline(stream)
+
+        assert stream.readuntil.call_args[0][0] == b'\n'
+
+    @async_test
+    async def test_try_readline_cr(self):
+        stream = AsyncMagicMock()
+        stream.readuntil.side_effect = [
+            utils.LimitOverrunError('msg', False), '']
+        await utils._try_readline(stream)
+
+        assert stream.readuntil.call_args[0][0] == b'\r'
+
+    @patch.object(utils, '_try_readline', AsyncMagicMock(
+        side_effect=utils.IncompleteReadError('partial', 'exp')))
+    @async_test
+    async def test_readline_incomplete(self):
+        stream = AsyncMagicMock()
+        r = await utils._readline(stream)
+
+        self.assertEqual(r, 'partial')
+
+    @patch.object(utils, '_try_readline', AsyncMagicMock(
+        side_effect=utils.LimitOverrunError('msg', 0)))
+    @async_test
+    async def test_readline_limit_overrun(self):
+        stream = AsyncMagicMock()
+        stream._buffer = bytearray()
+        stream._maybe_resume_transport = Mock()
+        stream.extend(b'\nblerg')
+        with self.assertRaises(ValueError):
+            await utils._readline(stream)
+
+    @patch.object(utils, '_try_readline', AsyncMagicMock(
+        side_effect=utils.LimitOverrunError('msg', 0)))
+    @async_test
+    async def test_readline_limit_overrun_clear(self):
+        stream = AsyncMagicMock()
+        stream._buffer = bytearray()
+        stream._maybe_resume_transport = Mock()
+        stream.extend(b'blerg')
+        with self.assertRaises(ValueError):
+            await utils._readline(stream)
+
+    @async_test
     def test_exec_cmd(self):
         out = yield from utils.exec_cmd('ls', cwd='.')
         self.assertTrue(out)

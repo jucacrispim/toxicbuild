@@ -20,6 +20,7 @@
 
 import asyncio
 from asyncio import ensure_future
+from asyncio.streams import LimitOverrunError, IncompleteReadError
 from concurrent.futures import ThreadPoolExecutor
 import copy
 from datetime import datetime, timezone, timedelta
@@ -141,6 +142,43 @@ def _kill_group(process):
         pass
 
 
+async def _try_readline(stream):
+    sep = b'\n'
+    try:
+        r = await stream.readuntil(sep)
+    except LimitOverrunError:
+        sep = b'\r'
+        r = await stream.readuntil(sep)
+
+    return r
+
+
+async def _readline(stream):
+    """Reads a line from the stream buffer. Tries to read a line
+    ending in '\n'. If no new line found, try to find '\r'.
+
+    :param stream: The StreamReader to read from.
+    """
+
+    # basically taken from asyncio.streams.StreamReader.readline
+    lf, cr = b'\n', b'\r'
+    seplen = 1
+    try:
+        line = await _try_readline(stream)
+    except IncompleteReadError as e:
+        return e.partial
+    except LimitOverrunError as e:
+        if stream._buffer.startswith(lf, e.consumed) or \
+           stream._buffer.startswith(cr, e.consumed):
+            del stream._buffer[:e.consumed + seplen]
+        else:
+            stream._buffer.clear()
+
+        stream._maybe_resume_transport()
+        raise ValueError(e.args[0])
+    return line
+
+
 @asyncio.coroutine
 def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
     """ Executes a shell command. Raises with the command output
@@ -161,7 +199,7 @@ def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
 
     line_index = 0
     while proc.returncode is None or not out:
-        outline = yield from asyncio.wait_for(proc.stdout.readline(), timeout)
+        outline = yield from asyncio.wait_for(_readline(proc.stdout), timeout)
         outline = outline.decode()
         if out_fn:
             ensure_future(out_fn(line_index, outline))
