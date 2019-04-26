@@ -91,6 +91,9 @@ class Slave(OwnedDocument, LoggerMixin):
         # In fact, all the build management/build server communitation already
         # is on its limits. A new implementation is needed.
         self._step_finished = defaultdict(lambda: False)
+        self._step_output_cache = defaultdict(list)
+        self._step_output_cache_len = defaultdict(int)
+        self._step_output_cache_limit = 2 ** 10
 
     async def save(self, *args, **kwargs):
         if self.on_demand and not self.host:
@@ -387,28 +390,41 @@ class Slave(OwnedDocument, LoggerMixin):
         step.finished = string2datetime(finished)
         await build.update()
 
-    async def _process_step_output_info(self, build, repo, info):
-        uuid = info['uuid']
-        msg = 'step_output_arrived for {}'.format(uuid)
-        self.log(msg, level='debug')
-        info['output'] = info['output'] + '\n'
-        output = info['output']
+    async def _update_build_step_info(self, build, step_info):
+        output = step_info['output']
+        uuid = step_info['uuid']
+        self._step_output_cache_len[uuid] += len(output)
+        self._step_output_cache[uuid].append(output)
+
+        if self._step_output_cache_len[uuid] < self._step_output_cache_limit:
+            return False
+
         step = await self._get_step(build, uuid, wait=True)
-
-        step.output = ''.join([step.output or '', output])
-        info['repository'] = {'id': str(repo.id)}
-        info['build'] = {'uuid': str(build.uuid),
-                         'repository': {'id': str(repo.id)}}
-        step_output_arrived.send(str(repo.id), step_info=info)
-
         # the thing here is that while we are waiting for the step,
         # the step may have finished, so we don'to anything in this case.
         if self._step_finished[uuid]:
             self.log('Step {} already finished. Leaving...'.format(uuid),
                      level='debug')
-            return
+            return False
 
+        output = [step.output or ''] + self._step_output_cache[uuid]
+        step.output = ''.join(output)
+        del self._step_output_cache[uuid]
         await build.update()
+        return True
+
+    async def _process_step_output_info(self, build, repo, info):
+        uuid = info['uuid']
+        msg = 'step_output_arrived for {}'.format(uuid)
+        self.log(msg, level='debug')
+
+        info['repository'] = {'id': str(repo.id)}
+        info['build'] = {'uuid': str(build.uuid),
+                         'repository': {'id': str(repo.id)}}
+        info['output'] = info['output'] + '\n'
+        step_output_arrived.send(str(repo.id), step_info=info)
+
+        await self._update_build_step_info(build, info)
 
     async def _get_step(self, build, step_uuid, wait=False):
         """Returns a step from ``build``. Returns None if the requested

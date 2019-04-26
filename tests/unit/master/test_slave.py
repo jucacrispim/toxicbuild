@@ -41,6 +41,7 @@ class SlaveTest(TestCase):
         await self.owner.save()
         self.slave = slave.Slave(name='slave', host='127.0.0.1', port=7777,
                                  token='asdf', owner=self.owner)
+        self.slave._step_output_cache_limit = 0
 
     @async_test
     async def tearDown(self):
@@ -422,6 +423,17 @@ class SlaveTest(TestCase):
         build = await type(self.build).get(self.build.uuid)
         self.assertEqual(build.steps[0].status, 'exception')
         self.assertEqual(build.steps[0].output, 'shit happens')
+
+    @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
+        spec=slave.build_notifications.publish))
+    @async_test
+    async def test_update_build_step_less_than_cache(self):
+        self.slave._step_output_cache_limit = 2 ** 10
+        build = Mock()
+        step_info = {'uuid': 'some-uuid', 'output': 'bla'}
+        r = await self.slave._update_build_step_info(build, step_info)
+
+        self.assertFalse(r)
 
     @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
         spec=slave.build_notifications.publish))
