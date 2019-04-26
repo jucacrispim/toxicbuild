@@ -41,7 +41,7 @@ class SlaveTest(TestCase):
         await self.owner.save()
         self.slave = slave.Slave(name='slave', host='127.0.0.1', port=7777,
                                  token='asdf', owner=self.owner)
-        self.slave._step_output_cache_limit = 0
+        self.slave._step_output_cache_limit = 10
 
     @async_test
     async def tearDown(self):
