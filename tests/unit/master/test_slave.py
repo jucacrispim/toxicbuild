@@ -41,7 +41,6 @@ class SlaveTest(TestCase):
         await self.owner.save()
         self.slave = slave.Slave(name='slave', host='127.0.0.1', port=7777,
                                  token='asdf', owner=self.owner)
-        self.slave._step_output_cache_limit = 10
 
     @async_test
     async def tearDown(self):
@@ -428,10 +427,20 @@ class SlaveTest(TestCase):
         spec=slave.build_notifications.publish))
     @async_test
     async def test_update_build_step_less_than_cache(self):
-        future = slave.time.time() + 10
-        self.slave._step_output_cache_time['some-uuid'] = future
         build = Mock()
         step_info = {'uuid': 'some-uuid', 'output': 'bla'}
+        r = await self.slave._update_build_step_info(build, step_info)
+
+        self.assertFalse(r)
+
+    @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
+        spec=slave.build_notifications.publish))
+    @async_test
+    async def test_update_build_step_already_updating(self):
+        self.slave._step_output_cache_time['some-uuid'] = 10
+        build = Mock()
+        step_info = {'uuid': 'some-uuid', 'output': 'bla'}
+        self.slave._step_output_is_updating['some-uuid'] = True
         r = await self.slave._update_build_step_info(build, step_info)
 
         self.assertFalse(r)
@@ -458,6 +467,7 @@ class SlaveTest(TestCase):
         step = await self.slave._get_step(self.build, a_uuid)
         self.assertTrue(step.output)
         self.assertTrue(slave.build_notifications.publish.called)
+        self.assertFalse(self.slave._step_output_is_updating[a_uuid])
 
     @patch.object(slave.build_notifications, 'publish', AsyncMagicMock(
         spec=slave.build_notifications.publish))
@@ -474,6 +484,7 @@ class SlaveTest(TestCase):
                 'output': '', 'started': started, 'finished': None,
                 'index': 0, 'uuid': a_uuid}
 
+        self.slave._step_output_cache_time[a_uuid] = 10
         self.slave._step_finished[a_uuid] = True
         await self.slave._process_step_info(self.build, self.repo, info)
 

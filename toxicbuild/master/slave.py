@@ -94,7 +94,8 @@ class Slave(OwnedDocument, LoggerMixin):
         self._step_finished = defaultdict(lambda: False)
         self._step_output_cache = defaultdict(list)
         self._step_output_cache_time = defaultdict(float)
-        self._step_output_cache_limit = 2  # seconds
+        self._step_output_cache_limit = 1  # seconds
+        self._step_output_is_updating = defaultdict(lambda: False)
 
     async def save(self, *args, **kwargs):
         if self.on_demand and not self.host:
@@ -392,6 +393,8 @@ class Slave(OwnedDocument, LoggerMixin):
         await build.update()
 
     async def _update_build_step_info(self, build, step_info):
+        # we need this cache here to avoid excessive memory consumption
+        # if we try to update the step output every time a line arrives.
         output = step_info['output']
         uuid = step_info['uuid']
         self._step_output_cache[uuid].append(output)
@@ -401,19 +404,23 @@ class Slave(OwnedDocument, LoggerMixin):
             self._step_output_cache_time[
                 uuid] = now + self._step_output_cache_limit
 
-        if self._step_output_cache_time[uuid] >= now:
+        is_updating = self._step_output_is_updating[uuid]
+        if self._step_output_cache_time[uuid] >= now or is_updating:
             return False
 
+        self._step_output_is_updating[uuid] = True
         step = await self._get_step(build, uuid, wait=True)
         # the thing here is that while we are waiting for the step,
         # the step may have finished, so we don'to anything in this case.
         if self._step_finished[uuid]:
             self.log('Step {} already finished. Leaving...'.format(uuid),
                      level='debug')
+            del self._step_output_cache[uuid]
             return False
 
         output = [step.output or ''] + self._step_output_cache[uuid]
         step.output = ''.join(output)
+        del self._step_output_is_updating[uuid]
         del self._step_output_cache[uuid]
         del self._step_output_cache_time[uuid]
         await build.update()
