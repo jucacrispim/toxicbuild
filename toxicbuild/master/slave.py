@@ -19,6 +19,7 @@
 
 import asyncio
 from collections import defaultdict
+import time
 import traceback
 from mongomotor.fields import (StringField, IntField, BooleanField,
                                DictField)
@@ -92,8 +93,8 @@ class Slave(OwnedDocument, LoggerMixin):
         # is on its limits. A new implementation is needed.
         self._step_finished = defaultdict(lambda: False)
         self._step_output_cache = defaultdict(list)
-        self._step_output_cache_len = defaultdict(int)
-        self._step_output_cache_limit = 2 ** 10
+        self._step_output_cache_time = defaultdict(float)
+        self._step_output_cache_limit = 2  # seconds
 
     async def save(self, *args, **kwargs):
         if self.on_demand and not self.host:
@@ -393,10 +394,14 @@ class Slave(OwnedDocument, LoggerMixin):
     async def _update_build_step_info(self, build, step_info):
         output = step_info['output']
         uuid = step_info['uuid']
-        self._step_output_cache_len[uuid] += len(output)
         self._step_output_cache[uuid].append(output)
 
-        if self._step_output_cache_len[uuid] < self._step_output_cache_limit:
+        now = time.time()
+        if not self._step_output_cache_time[uuid]:
+            self._step_output_cache_time[
+                uuid] = now + self._step_output_cache_limit
+
+        if self._step_output_cache_time[uuid] >= now:
             return False
 
         step = await self._get_step(build, uuid, wait=True)
@@ -410,6 +415,7 @@ class Slave(OwnedDocument, LoggerMixin):
         output = [step.output or ''] + self._step_output_cache[uuid]
         step.output = ''.join(output)
         del self._step_output_cache[uuid]
+        del self._step_output_cache_time[uuid]
         await build.update()
         return True
 

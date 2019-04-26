@@ -428,7 +428,8 @@ class SlaveTest(TestCase):
         spec=slave.build_notifications.publish))
     @async_test
     async def test_update_build_step_less_than_cache(self):
-        self.slave._step_output_cache_limit = 2 ** 10
+        future = slave.time.time() + 10
+        self.slave._step_output_cache_time['some-uuid'] = future
         build = Mock()
         step_info = {'uuid': 'some-uuid', 'output': 'bla'}
         r = await self.slave._update_build_step_info(build, step_info)
@@ -445,7 +446,7 @@ class SlaveTest(TestCase):
         now = datetime.datetime.now(tz=tz)
         started = now.strftime('%w %m %d %H:%M:%S %Y %z')
         a_uuid = str(uuid4())
-
+        self.slave._step_output_cache_time[a_uuid] = 10
         info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
                 'output': '', 'started': started, 'finished': None,
                 'index': 0, 'uuid': a_uuid}
