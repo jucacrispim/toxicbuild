@@ -55,6 +55,8 @@ class DockerContainerBuilder(Builder):
         self.docker_user = settings.CONTAINER_USER
         self.docker_src_dir = DOCKER_SRC_DIR.format(user=self.docker_user)
         self.image_name = settings.DOCKER_IMAGES[self.platform]
+        # are we about to start a container that has a dockerd inside it?
+        self._is_dind = self.platform == 'docker'
 
     def _get_name(self, name, workdir, platform):
         name = '{}-{}-{}'.format(
@@ -163,8 +165,11 @@ class DockerContainerBuilder(Builder):
         exists = await self.container_exists()
         self.log('Starting container {}'.format(self.cname),
                  level='debug')
+
         if not exists:
-            cmd = '{} run -t -d --name {} {}'.format(self.docker_cmd,
+            privileged = '--privileged' if self._is_dind else ''
+            cmd = '{} run -d {} --name {} {}'.format(self.docker_cmd,
+                                                     privileged,
                                                      self.cname,
                                                      self.image_name)
 
