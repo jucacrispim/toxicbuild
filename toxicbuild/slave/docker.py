@@ -265,7 +265,7 @@ class BuildStepDocker(BuildStep, LoggerMixin):
         return ' '.join(var)
 
     def _get_user_opts(self):
-        return '-u {}:{}'.format(self.docker_user, self.docker_user)
+        return '-u {}'.format(self.docker_user)
 
     def _get_docker_cmd(self, cmd, envvars):
         user_opts = self._get_user_opts()
