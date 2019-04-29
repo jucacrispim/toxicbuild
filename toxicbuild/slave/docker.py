@@ -161,15 +161,24 @@ class DockerContainerBuilder(Builder):
         await self._check_with_timeout(self.is_running)
         self.log('slave started', level='debug')
 
+    def _get_dind_opts(self):
+        privileged = '--privileged' if self._is_dind else ''
+        vol_name = '{}-volume'.format(self.cname)
+        volume = '--mount source={},destination=/var/lib/docker/'.format(
+            vol_name) if self._is_dind else ''
+
+        dind_opts = '{} {}'.format(privileged, volume)
+        return dind_opts
+
     async def start_container(self):
         exists = await self.container_exists()
         self.log('Starting container {}'.format(self.cname),
                  level='debug')
 
         if not exists:
-            privileged = '--privileged' if self._is_dind else ''
+            dind_opts = self._get_dind_opts()
             cmd = '{} run -d {} --name {} {}'.format(self.docker_cmd,
-                                                     privileged,
+                                                     dind_opts,
                                                      self.cname,
                                                      self.image_name)
 
