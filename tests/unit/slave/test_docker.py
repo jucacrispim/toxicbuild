@@ -146,7 +146,7 @@ class DockerContainerBuilderManagerTest(TestCase):
     async def test_start_container_dont_exists(self):
         self.container.wait_start = AsyncMagicMock()
         self.container.container_exists = AsyncMagicMock(return_value=False)
-        expected = 'docker run -d   --name {} my-image'.format(
+        expected = 'docker run -d -t   --name {} my-image'.format(
             self.container.cname)
         await self.container.start_container()
         called = docker.exec_cmd.call_args[0][0]
@@ -162,12 +162,12 @@ class DockerContainerBuilderManagerTest(TestCase):
         self.container._is_dind = True
         self.container.container_exists = AsyncMagicMock(return_value=False)
         mount = '--mount source=b-volume,destination=/var/lib/docker/'
-        expected = 'docker run -d --privileged {} --name {} my-image'.format(
+        exp = 'docker run -d -t --privileged {} --name {} my-image'.format(
             mount, self.container.cname)
         await self.container.start_container()
         called = docker.exec_cmd.call_args[0][0]
 
-        self.assertEqual(expected, called)
+        self.assertEqual(exp, called)
         self.assertTrue(self.container.wait_start.called)
 
     @patch.object(docker, 'exec_cmd', AsyncMagicMock())

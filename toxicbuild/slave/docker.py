@@ -177,10 +177,10 @@ class DockerContainerBuilder(Builder):
 
         if not exists:
             dind_opts = self._get_dind_opts()
-            cmd = '{} run -d {} --name {} {}'.format(self.docker_cmd,
-                                                     dind_opts,
-                                                     self.cname,
-                                                     self.image_name)
+            cmd = '{} run -d -t {} --name {} {}'.format(self.docker_cmd,
+                                                        dind_opts,
+                                                        self.cname,
+                                                        self.image_name)
 
         else:
             cmd = '{} start {}'.format(self.docker_cmd, self.cname)
