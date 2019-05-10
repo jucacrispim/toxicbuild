@@ -325,6 +325,7 @@ class BuilderManagerTest(TestCase):
         managers.settings.USE_DOCKER = False
         builder = await self.manager.load_builder('builder1')
         self.assertEqual(len(builder.steps), 2)
+        self.assertIn('COMMIT_SHA', builder.envvars)
 
     @patch.object(managers, 'settings', Mock())
     @async_test

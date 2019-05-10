@@ -278,6 +278,7 @@ class BuildManager(LoggerMixin):
 
         # this envvars are used in all steps in this builder
         builder_envvars = bdict.get('envvars', {})
+        builder_envvars['COMMIT_SHA'] = self.named_tree
         builder = builder_cls(self, bdict, self.workdir, platform,
                               remove_env=remove_env, **builder_envvars)
 
