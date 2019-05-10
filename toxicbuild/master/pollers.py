@@ -228,9 +228,14 @@ class PollerServer(BaseConsumer):
 
     async def _handler_counter(self, msg):
         self._running_tasks += 1
+        rmsg = {'with_clone': False,
+                'clone_status': 'clone-exception'}
+        repo_id = msg.body['repo_id']
         try:
-            await self.handle_update_request(msg)
+            r = await self.handle_update_request(msg)
+            rmsg.update(r)
         finally:
+            await poll_status.publish(rmsg, routing_key=repo_id)
             self._running_tasks -= 1
 
     async def handle_update_request(self, msg):
@@ -264,4 +269,4 @@ class PollerServer(BaseConsumer):
         msg = {'with_clone': with_clone,
                'clone_status': clone_status}
 
-        await poll_status.publish(msg, routing_key=str(repo.id))
+        return msg

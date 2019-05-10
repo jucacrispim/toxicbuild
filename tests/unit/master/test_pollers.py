@@ -428,7 +428,7 @@ class PollerServerTest(TestCase):
                 routing_key=repo_id) as consumer:
 
             message = Message(channel, body, envelope, properties)
-            await self.server.handle_update_request(message)
+            await self.server._handler_counter(message)
             msg = await consumer.fetch_message()
             self.assertTrue(msg)
 
@@ -453,6 +453,6 @@ class PollerServerTest(TestCase):
         async with await pollers.poll_status.consume(
                 routing_key=repo_id) as consumer:
             message = Message(channel, body, envelope, properties)
-            await self.server.handle_update_request(message)
+            await self.server._handler_counter(message)
             msg = await consumer.fetch_message()
             self.assertTrue(msg)
