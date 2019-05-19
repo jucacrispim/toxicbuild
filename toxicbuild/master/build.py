@@ -560,6 +560,7 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         :param status: Status to update the buildset. If None,
           ``self.get_status()`` will be used."""
         status = status or self.get_status()
+        self.log('Updating status to {}'.format(status), level='debug')
         self.status = status
         await self.save()
 
@@ -905,6 +906,7 @@ class BuildManager(LoggerMixin):
             await buildset.update_status()
             buildset_finished.send(str(self.repository.id), buildset=buildset)
             await buildset.notify('buildset-finished')
+            self.log('Buildset {} finished'.format(buildset.id))
 
     async def _execute_builds(self, slave):
         """ Execute the buildsets in the queue of a given slave.
