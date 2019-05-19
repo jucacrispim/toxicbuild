@@ -56,7 +56,7 @@ class DockerContainerBuilder(Builder):
         self.docker_src_dir = DOCKER_SRC_DIR.format(user=self.docker_user)
         self.image_name = settings.DOCKER_IMAGES[self.platform]
         # are we about to start a container that has a dockerd inside it?
-        self._is_dind = self.platform == 'docker'
+        self._is_dind = self.platform.startswith('docker')
 
     def _get_name(self, name, workdir, platform):
         name = '{}-{}-{}'.format(

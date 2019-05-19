@@ -44,6 +44,36 @@ class DockerContainerBuilderManagerTest(TestCase):
         self.container = docker.DockerContainerBuilder(
             manager, {'name': 'b1', 'steps': []}, 'source', 'linux-generic')
 
+    @patch.object(docker, 'settings', Mock())
+    def test_is_dind_docker(self):
+        docker.settings.CONTAINER_USER = 'bla'
+        docker.settings.DOCKER_IMAGES = {'docker': 'my-image'}
+        manager = Mock()
+        container = docker.DockerContainerBuilder(
+            manager, {'name': 'b1', 'steps': []}, 'source', 'docker')
+
+        self.assertTrue(container._is_dind)
+
+    @patch.object(docker, 'settings', Mock())
+    def test_is_dind_not_docker(self):
+        docker.settings.CONTAINER_USER = 'bla'
+        docker.settings.DOCKER_IMAGES = {'some-plat': 'my-image'}
+        manager = Mock()
+        container = docker.DockerContainerBuilder(
+            manager, {'name': 'b1', 'steps': []}, 'source', 'some-plat')
+
+        self.assertFalse(container._is_dind)
+
+    @patch.object(docker, 'settings', Mock())
+    def test_is_dind_startswith_docker(self):
+        docker.settings.CONTAINER_USER = 'bla'
+        docker.settings.DOCKER_IMAGES = {'dockerkube': 'my-image'}
+        manager = Mock()
+        container = docker.DockerContainerBuilder(
+            manager, {'name': 'b1', 'steps': []}, 'source', 'dockerkube')
+
+        self.assertTrue(container._is_dind)
+
     @async_test
     async def test_aenter(self):
         self.container.wait_service = AsyncMagicMock()
