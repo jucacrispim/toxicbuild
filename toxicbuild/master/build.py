@@ -559,6 +559,8 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
 
         :param status: Status to update the buildset. If None,
           ``self.get_status()`` will be used."""
+
+        await self.reload('builds')
         status = status or self.get_status()
         self.log('Updating status to {}'.format(status), level='debug')
         self.status = status

@@ -347,6 +347,7 @@ class BuildSetTest(TestCase):
     @async_test
     async def test_get_status_running(self):
         buildset = build.BuildSet()
+        buildset.reload = AsyncMagicMock()
         buildset.save = AsyncMagicMock(spec=buildset.save)
         statuses = ['running', 'exception', 'fail',
                     'warning', 'success', 'pending']
@@ -363,6 +364,7 @@ class BuildSetTest(TestCase):
     @async_test
     async def test_get_status_exception(self):
         buildset = build.BuildSet()
+        buildset.reload = AsyncMagicMock()
         buildset.save = AsyncMagicMock(spec=buildset.save)
         statuses = ['running', 'exception', 'fail',
                     'warning', 'success', 'pending']
@@ -382,6 +384,7 @@ class BuildSetTest(TestCase):
     async def test_get_status_fail(self):
         buildset = build.BuildSet()
         buildset.save = AsyncMagicMock(spec=buildset.save)
+        buildset.reload = AsyncMagicMock()
 
         statuses = ['running', 'exception', 'fail',
                     'warning', 'success', 'pending']
@@ -398,6 +401,7 @@ class BuildSetTest(TestCase):
     async def test_get_status_no_builds(self):
         buildset = build.BuildSet()
         buildset.save = AsyncMagicMock(spec=buildset.save)
+        buildset.reload = AsyncMagicMock()
         await buildset.update_status()
         status = buildset.status
         self.assertEqual(status, 'no builds')
@@ -764,6 +768,7 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
+    @mock.patch.object(build.BuildSet, 'reload', AsyncMagicMock())
     @async_test
     async def test_execute_build(self):
         await self._create_test_data()
@@ -920,6 +925,7 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
+    @mock.patch.object(build.BuildSet, 'reload', AsyncMagicMock())
     @async_test
     async def test_set_finished_for_buildset(self):
         await self._create_test_data()
@@ -952,6 +958,7 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build, 'now', mock.Mock())
+    @mock.patch.object(build.BuildSet, 'reload', AsyncMagicMock())
     @async_test
     async def test_set_finished_for_buildset_total_time(self):
         just_now = now()
