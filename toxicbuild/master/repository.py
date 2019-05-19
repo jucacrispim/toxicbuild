@@ -384,7 +384,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         if wait_for_lock:
             timeout = None
         else:
-            timeout = 0.1
+            timeout = 0.5
 
         try:
             lock = await self.update_code_lock.acquire_write(timeout)
@@ -410,6 +410,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                 ensure_future(update_code.publish(msg))
                 msg = await self._wait_update(consumer)
 
+        self.log('update_code_lock released', level='debug')
         self.clone_status = msg.body['clone_status']
         await self.save()
 
@@ -430,6 +431,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         msg = await consumer.fetch_message()
         self.log('poll status received', level='debug')
         await msg.acknowledge()
+        self.log('poll status msg acknowledged', level='debug')
 
         return msg
 
