@@ -403,11 +403,12 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
             # We first get a consumer for the poll status queue
             consumer = await self._get_poll_status_consumer()
-            # then we send an update message. Otherwise we could end in a dead
-            # lock here when the poller sends its message back before we have
-            # a consumer.
-            ensure_future(update_code.publish(msg))
-            msg = await self._wait_update(consumer)
+            async with consumer:
+                # then we send an update message. Otherwise we could end in a
+                # dead lock here when the poller sends its message back before
+                # we have a consumer.
+                ensure_future(update_code.publish(msg))
+                msg = await self._wait_update(consumer)
 
         self.clone_status = msg.body['clone_status']
         await self.save()
@@ -425,12 +426,10 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         return consumer
 
     async def _wait_update(self, consumer):
-        async with consumer:
-
-            # wait for the message with the poll response.
-            msg = await consumer.fetch_message()
-            self.log('poll status received', level='debug')
-            await msg.acknowledge()
+        # wait for the message with the poll response.
+        msg = await consumer.fetch_message()
+        self.log('poll status received', level='debug')
+        await msg.acknowledge()
 
         return msg
 
