@@ -401,10 +401,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                    'repo_branches': repo_branches,
                    'external': external}
 
-            # Sends a message to the queue that is consumed by the pollers
-            t = ensure_future(self._wait_update())
+            # We first get a consumer for the poll status queue
+            consumer = await self._get_poll_status_consumer()
+            # then we send an update message. Otherwise we could end in a dead
+            # lock here when the poller sends its message back before we have
+            # a consumer.
             ensure_future(update_code.publish(msg))
-            msg = await t
+            msg = await self._wait_update(consumer)
 
         self.clone_status = msg.body['clone_status']
         await self.save()
@@ -416,10 +419,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
             await self._notify_status_changed(status_msg)
 
-    async def _wait_update(self):
-        # you must call this after you call an update_code()
-        async with await poll_status.consume(
-                routing_key=str(self.id), no_ack=False) as consumer:
+    async def _get_poll_status_consumer(self):
+        consumer = await poll_status.consume(routing_key=str(self.id),
+                                             no_ack=False)
+        return consumer
+
+    async def _wait_update(self, consumer):
+        async with consumer:
 
             # wait for the message with the poll response.
             msg = await consumer.fetch_message()

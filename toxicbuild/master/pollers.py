@@ -176,6 +176,8 @@ class Poller(LoggerMixin):
         if revisions:
             await self.notify_change(*revisions)
 
+        self.log('Processing changes done!', level='debug')
+
     async def notify_change(self, *revisions):
         """ Notify about new revisions added to the repository.
 
