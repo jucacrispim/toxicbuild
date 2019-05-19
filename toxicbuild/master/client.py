@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
 from asyncio import ensure_future
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.core.utils import LoggerMixin
@@ -104,7 +105,9 @@ class BuildClient(BaseToxicClient, LoggerMixin):
                     build, repository, build_info))
                 futures.append(future)
 
-        return futures
+        if futures:
+            await asyncio.gather(*futures)
+        return build_info
 
 
 async def get_build_client(slave, addr, port, use_ssl=True,
