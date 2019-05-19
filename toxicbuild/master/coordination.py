@@ -18,9 +18,9 @@
 
 
 from aiozk import ZKClient
+from aiozk.recipes.shared_lock import SharedLock
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
-from toxicbuild.master.locks import ToxicSharedLock
 
 
 class ToxicZKClient(LoggerMixin):
@@ -51,7 +51,7 @@ class ToxicZKClient(LoggerMixin):
     async def get_lock(self, path):
         if not self._started:  # pragma no branch
             await self._start()
-        recipe = ToxicSharedLock(path)
+        recipe = SharedLock(path)
         recipe.set_client(self._client)
         await self._create_path(recipe)
         return recipe
