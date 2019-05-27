@@ -9,14 +9,25 @@ from tests.webui.steps.base_steps import (  # noqa f811
 @when('he clicks in the more button in the repo info box')
 def click_more_button_repo_info(context):
     browser = context.browser
-    el = browser.find_elements_by_class_name('fa-ellipsis-h')[-1]
+
+    def fn():
+        try:
+            el = browser.find_elements_by_class_name('fa-ellipsis-h')[-1]
+            el = el if el.is_displayed() else None
+        except Exception:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
     browser.click(el)
 
 
 @when('clicks in the settings link')
 def click_settings_link(context):
     browser = context.browser
-    el = browser.find_elements_by_class_name('dropdown-item')[-1]
+    el = browser.wait_element_become_present(
+        lambda: browser.find_elements_by_class_name('dropdown-item')[-1])
     browser.click(el)
     browser.wait_text_become_present('Notifications')
 
@@ -31,7 +42,8 @@ def click_notifications_nav_item(context):
 @then('he sees the notifications page')
 def see_notificatios_page(context):
     browser = context.browser
-    el = browser.find_element_by_class_name('notification-item')
+    el = browser.wait_element_become_present(
+        lambda: browser.find_element_by_class_name('notification-item'))
     assert el is not None
 
 
@@ -43,8 +55,8 @@ def is_in_notif_page(context):
 @when('he clicks in the cofigure slack notification button')
 def click_configure_slack_notification(context):
     browser = context.browser
-    el = browser.find_elements_by_class_name('fa-wrench')[1]
-    browser.wait_element_become_visible(el)
+    el = browser.wait_element_become_present(
+        lambda: browser.find_elements_by_class_name('fa-wrench')[1])
     el.click()
     time.sleep(0.4)
 

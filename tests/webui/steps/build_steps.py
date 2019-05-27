@@ -22,6 +22,7 @@ def is_in_waterfall(context):
 @when('he clicks in the reschedule buildset button in the waterfall')
 def click_reschedule(context):
     browser = context.browser
+    browser.refresh()
 
     def fn():
         try:

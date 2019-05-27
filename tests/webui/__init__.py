@@ -154,7 +154,11 @@ class SeleniumBrowser(webdriver.Chrome):
 
         for index in range(r):
             time.sleep(0.1)
-            el = fn()
+            try:
+                el = fn()
+            except Exception:
+                el = None
+
             if el:
                 return el
 
@@ -169,7 +173,11 @@ class SeleniumBrowser(webdriver.Chrome):
 
         for index in range(r):
             time.sleep(0.1)
-            el = fn()
+            try:
+                el = fn()
+            except Exception:
+                el = None
+
             if not el:
                 return el
 
