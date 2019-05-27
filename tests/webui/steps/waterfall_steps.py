@@ -11,7 +11,17 @@ from tests.webui.steps.base_steps import (  # noqa f811
 @take_screenshot
 def step_impl(context):
     browser = context.browser
-    btn = browser.find_elements_by_class_name('badge')[1]
+
+    def fn():
+        try:
+            btn = browser.find_elements_by_class_name('badge')[1]
+            btn = btn if btn.is_displayed() else None
+        except IndexError:
+            btn = None
+
+        return btn
+
+    btn = browser.wait_element_become_present(fn)
     browser.click(btn)
     time.sleep(0.2)
 
