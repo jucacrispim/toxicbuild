@@ -59,6 +59,7 @@ def is_in_buildset_list_page(context):
 @take_screenshot
 def click_reschedule_button(context):
     browser = context.browser
+    browser.refresh()
 
     def fn():
         try:

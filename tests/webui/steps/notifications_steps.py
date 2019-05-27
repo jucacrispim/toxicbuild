@@ -37,6 +37,7 @@ def click_settings_link(context):
         return el
 
     el = browser.wait_element_become_present(fn)
+
     browser.click(el)
     browser.wait_text_become_present('Notifications')
 

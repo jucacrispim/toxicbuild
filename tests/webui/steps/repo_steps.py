@@ -55,15 +55,17 @@ def fill_parallel_builds(context):
 @given('the user is in the repository settings page')
 def is_in_repo_settings_page(context):
     browser = context.browser
-    el = browser.find_element_by_class_name('fa-list')
-    browser.wait_element_become_visible(el)
+    el = browser.wait_element_become_present(
+        lambda: browser.find_element_by_class_name('fa-list'))
+    assert el
 
 
 @when('he clicks in the Advanced element')
 def click_advanced_config(context):
     browser = context.browser
-    el = browser.find_elements_by_class_name('repo-config-advanced-span')[1]
-    browser.wait_element_become_visible(el)
+    el = browser.wait_element_become_present(
+        lambda: browser.find_elements_by_class_name(
+            'repo-config-advanced-span')[1])
     browser.click(el)
 
 
@@ -268,10 +270,13 @@ def clicks_toxicbuild_logo(context):
 def click_repo_menu(context):
     browser = context.browser
 
-    el = browser.find_elements_by_class_name('fa-ellipsis-h')[1]
+    el = browser.wait_element_become_present(
+        lambda: browser.find_elements_by_class_name('fa-ellipsis-h')[1])
     browser.click(el)
-    el = browser.find_elements_by_class_name('dropdown-menu-right')[1]
-    browser.wait_element_become_visible(el)
+
+    el = browser.wait_element_become_present(
+        lambda: browser.find_elements_by_class_name('dropdown-menu-right')[1])
+    assert el
 
 
 @when('clicks in the repo settings link')
@@ -285,8 +290,17 @@ def click_settings_link(context):
 def see_repo_settings_page(context):
     browser = context.browser
 
-    el = browser.find_element_by_class_name('fa-list')
-    browser.wait_element_become_visible(el)
+    def fn():
+        try:
+            el = browser.find_element_by_class_name('fa-list')
+            el = el if el.is_displayed() else None
+        except IndexError:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
+    assert el
 
 
 @when('clicks in the delete repo button')

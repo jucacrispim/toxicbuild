@@ -16,7 +16,7 @@ def step_impl(context):
         try:
             btn = browser.find_elements_by_class_name('badge')[1]
             btn = btn if btn.is_displayed() else None
-        except IndexError:
+        except Exception:
             btn = None
 
         return btn
