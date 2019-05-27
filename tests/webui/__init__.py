@@ -182,6 +182,23 @@ class SeleniumBrowser(webdriver.Chrome):
             if not el:
                 return el
 
+    def refresh_until(self, fn, timeout=10):
+        """Reloads a page until ``fn`` returns True.
+
+        :param fn: A callable which returns a boolean.
+        :param timeout: Timeout for the operation."""
+
+        for index in range(timeout):
+            self.refresh()
+            time.sleep(1)
+            try:
+                r = fn()
+            except Exception:
+                r = False
+
+            if r:
+                return r
+
 
 def take_screenshot(fn):
 
