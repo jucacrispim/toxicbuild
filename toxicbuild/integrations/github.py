@@ -26,7 +26,6 @@ from toxicbuild.core import requests
 from toxicbuild.core.utils import (string2datetime, now, localtime2utc,
                                    utc2localtime)
 from toxicbuild.integrations import settings
-from toxicbuild.master.repository import Repository
 from toxicbuild.integrations.base import (BaseIntegrationApp,
                                           BaseIntegrationInstallation)
 from toxicbuild.integrations.exceptions import (BadRequestToGithubAPI,

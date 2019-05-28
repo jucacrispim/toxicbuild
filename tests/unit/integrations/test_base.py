@@ -195,7 +195,7 @@ class BaseIntegrationInstallationTest(TestCase):
     @async_test
     async def test_update_repository_same_url(self):
         repo = repository.Repository(name='myrepo', url='git@bla.com/bla.git',
-                                     fetch_url='git@bla.com/bla.git',
+                                     fetch_url='https://someurl.bla/bla.git',
                                      update_seconds=10, schedule_poller=False,
                                      vcs_type='git',
                                      owner=self.user)

@@ -262,7 +262,7 @@ class GithubInstallationTest(TestCase):
     @async_test
     async def tearDown(self):
         await base.User.drop_collection()
-        await github.Repository.drop_collection()
+        await base.Repository.drop_collection()
         await github.GithubApp.drop_collection()
         await base.Slave.drop_collection()
         await github.GithubInstallation.drop_collection()
