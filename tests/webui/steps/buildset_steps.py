@@ -86,13 +86,14 @@ def see_buildset_running(context):
     browser = context.browser
 
     browser.wait_element_become_present(
-        lambda: browser.find_elements_by_class_name('badge_primary')[0])
+        lambda: browser.find_elements_by_class_name('badge-primary')[0])
 
 
 @given('the user already rescheduled a buildset')
 @take_screenshot
 def already_rescheduled_buildset(context):
     browser = context.browser
+    browser.refresh()
     el = browser.find_elements_by_class_name('badge-primary')[0]
     browser.wait_element_become_visible(el)
 
