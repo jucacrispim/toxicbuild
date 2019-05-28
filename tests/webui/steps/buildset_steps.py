@@ -16,9 +16,9 @@ def click_summary_link(context):
     def fn():
         try:
             el = browser.find_elements_by_xpath('//a[@title="Summary"]')[1]
-        except IndexError:
+            el = el if el.is_displayed() else None
+        except Exception:
             el = None
-            time.sleep(0.1)
 
         return el
 
@@ -34,9 +34,9 @@ def see_buildset_list_page(context):
     def fn():
         try:
             el = browser.find_elements_by_class_name('buildset-info')[1]
-        except IndexError:
+            el = el if el.is_displayed() else None
+        except Exception:
             el = None
-            time.sleep(0.1)
 
         return el
 
@@ -60,7 +60,8 @@ def click_reschedule_button(context):
     def fn():
         try:
             el = browser.find_elements_by_class_name('fa-redo')[1]
-        except IndexError:
+            el = el if el.is_displayed() else None
+        except Exception:
             el = None
 
         return el
