@@ -9,6 +9,7 @@ from tests.webui.steps.base_steps import (  # noqa f811
 @when('he clicks in the more button in the repo info box')
 def click_more_button_repo_info(context):
     browser = context.browser
+    browser.refresh()
 
     def fn():
         try:
@@ -39,6 +40,8 @@ def click_settings_link(context):
     el = browser.wait_element_become_present(fn)
 
     browser.click(el)
+    time.sleep(0.1)
+    browser.refresh()
     browser.wait_text_become_present('Notifications')
 
 

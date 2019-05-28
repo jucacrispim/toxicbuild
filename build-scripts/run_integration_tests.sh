@@ -2,7 +2,7 @@
 
 if [ "$ENV" = "ci" ]
 then
-   git-crypt unlock ~/keys/toxictest-gcrypt.key
+   git-crypt unlock ~/.keys/toxictest-gcrypt.key
 fi
 
 export DISPLAY=:99

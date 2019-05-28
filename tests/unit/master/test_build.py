@@ -823,7 +823,7 @@ class BuildManagerTest(TestCase):
         self.manager.repository.parallel_builds = 1
         await self.manager._execute_in_parallel(self.slave, builds)
 
-        self.assertEqual(len(build.asyncio.wait.call_args_list), 2)
+        self.assertTrue(len(build.asyncio.wait.call_args_list) > 1)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
