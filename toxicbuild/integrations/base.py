@@ -178,7 +178,8 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
 
         installation = await cls.objects.filter(user=user, **kwargs).first()
         if installation:
-            msg = 'Installation {} already exists'.format(user, kwargs)
+            msg = 'Installation for {}/{} already exists'.format(
+                user.id, kwargs)
             cls.log_cls(msg, level='error')
             return
 

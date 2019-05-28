@@ -91,13 +91,6 @@ class GithubApp(BaseIntegrationApp):
         await app.save()
         return app
 
-    @classmethod
-    async def app_exists(cls):
-        """Informs if a github app already exists in the system."""
-
-        app = await cls.objects.first()
-        return bool(app)
-
     def validate_token(self, signature, data):
         """Validates the incomming data in the webhook, sent by github."""
 
@@ -210,27 +203,6 @@ class GithubInstallation(BaseIntegrationInstallation):
     github_id = IntField(required=True, unique=True)
     auth_token = StringField()
     expires = DateTimeField()
-
-    async def update_repository(self, github_repo_id, repo_branches=None,
-                                external=None, wait_for_lock=False):
-        """Updates a repository code.
-
-        :param github_repo_id: The id of the repository on github.
-        :param repo_branches: Param to be passed to
-          :meth:`~toxicbuild.master.repository.Repository.request_code_update`.
-        :param external: Information about an external repository.
-        :param wait_for_lock: Indicates if we should wait for the release of
-          the lock or simply return if we cannot get a lock.
-        """
-
-        repo = await self._get_repo_by_external_id(github_repo_id)
-        url = await self._get_auth_url(repo.url)
-        if repo.fetch_url != url:
-            repo.fetch_url = url
-            await repo.save()
-        await repo.request_code_update(
-            repo_branches=repo_branches, external=external,
-            wait_for_lock=wait_for_lock)
 
     @property
     def auth_token_url(self):
