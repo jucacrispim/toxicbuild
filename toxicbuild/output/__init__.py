@@ -20,7 +20,6 @@
 # pylint: disable-all
 
 import asyncio
-import logging
 import os
 import pkg_resources
 import shutil

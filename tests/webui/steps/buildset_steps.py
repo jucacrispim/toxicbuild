@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import time
 from behave import when, then, given
 from selenium.common.exceptions import StaleElementReferenceException
 from tests.webui import take_screenshot
@@ -17,6 +18,7 @@ def click_summary_link(context):
             el = browser.find_elements_by_xpath('//a[@title="Summary"]')[1]
         except IndexError:
             el = None
+            time.sleep(0.1)
 
         return el
 
@@ -41,6 +43,7 @@ def see_buildset_list_page(context):
             el = browser.find_elements_by_class_name('buildset-info')[1]
         except IndexError:
             el = None
+            time.sleep(0.1)
 
         return el
 
