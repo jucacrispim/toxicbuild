@@ -23,7 +23,7 @@ def click_summary_link(context):
         return el
 
     el = browser.wait_element_become_present(fn)
-
+    assert el
 
 
 @then('he sees the buildset list page')
