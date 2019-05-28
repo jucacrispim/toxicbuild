@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import time
 from behave import when, then, given
 from selenium.common.exceptions import StaleElementReferenceException
 from tests.webui import take_screenshot
