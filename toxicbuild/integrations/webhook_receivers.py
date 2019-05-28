@@ -82,7 +82,8 @@ class GithubWebhookReceiver(LoggerMixin, BasePyroHandler):
             githubapp_id = self.params.get('installation_id')
             if not githubapp_id:
                 raise HTTPError(400)
-            ensure_future(GithubInstallation.create(githubapp_id, user))
+            ensure_future(GithubInstallation.create(
+                user, github_id=githubapp_id))
             url = settings.TOXICUI_URL
 
         return self.redirect(url)

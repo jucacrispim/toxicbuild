@@ -17,23 +17,20 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-from asyncio import ensure_future, gather
 from datetime import timedelta
 import hashlib
 import hmac
 import jwt
-from mongomotor import Document, EmbeddedDocument
-from mongomotor.fields import (StringField, DateTimeField, IntField,
-                               ReferenceField, EmbeddedDocumentListField)
+from mongomotor.fields import StringField, DateTimeField, IntField
 from toxicbuild.core import requests
 from toxicbuild.core.utils import (string2datetime, now, localtime2utc,
-                                   LoggerMixin, utc2localtime)
+                                   utc2localtime)
 from toxicbuild.integrations import settings
-from toxicbuild.master.repository import Repository, RepositoryBranch
-from toxicbuild.master.slave import Slave
-from toxicbuild.master.users import User
+from toxicbuild.master.repository import Repository
+from toxicbuild.integrations.base import (BaseIntegrationApp,
+                                          BaseIntegrationInstallation)
 from toxicbuild.integrations.exceptions import (BadRequestToGithubAPI,
-                                                BadRepository, BadSignature)
+                                                BadSignature)
 
 __doc__ = """This module implements the integration with Github. It is
 a `GithubApp <https://developer.github.com/apps/>`_  that reacts to events
@@ -64,7 +61,7 @@ For information on how to setup the integration, see
 GITHUB_API_URL = 'https://api.github.com/'
 
 
-class GithubApp(LoggerMixin, Document):
+class GithubApp(BaseIntegrationApp):
     """A GitHub App. Only one app per ToxicBuild installation."""
 
     private_key = StringField(required=True)
@@ -84,12 +81,7 @@ class GithubApp(LoggerMixin, Document):
     be set in the github app creation page."""
 
     @classmethod
-    async def get_app(cls):
-        """Returns the app instance. If it does not exist, create it."""
-
-        if await cls.app_exists():
-            return await cls.objects.first()
-
+    async def create_app(cls):
         with open(settings.GITHUB_PRIVATE_KEY) as fd:
             pk = fd.read()
 
@@ -208,63 +200,16 @@ class GithubApp(LoggerMixin, Document):
 GithubApp.ensure_indexes()
 
 
-class GithubInstallationRepository(LoggerMixin, EmbeddedDocument):
-    """External (github) information about a repository."""
-
-    github_id = IntField(required=True)
-    """The id of the repository on github."""
-
-    repository_id = StringField(required=True)
-    """The id of the repository on ToxicBuild."""
-
-    full_name = StringField(required=True)
-    """Full name of the repository on github."""
-
-
-class GithubInstallation(LoggerMixin, Document):
+class GithubInstallation(BaseIntegrationInstallation):
     """An installation of the GitHub App. Installations have access to
     repositories and events."""
 
     app = GithubApp
 
-    user = ReferenceField(User, required=True)
-    """A reference to the :class:`~toxicbuild.master.users.User` that owns
-      the installation"""
-
     # the id of the github app installation
     github_id = IntField(required=True, unique=True)
     auth_token = StringField()
     expires = DateTimeField()
-    repositories = EmbeddedDocumentListField(GithubInstallationRepository)
-
-    @classmethod
-    async def create(cls, github_id, user):
-        """Creates a new github app installation. Imports the repositories
-        available to the installation.
-
-        :param github_id: The installation id on github
-        :param user: The user that owns the installation."""
-
-        if await cls.objects.filter(github_id=github_id).first():
-            msg = 'Installation {} already exists'.format(github_id)
-            cls.log_cls(msg, level='error')
-            return
-
-        msg = 'Creating installation for github_id {}'.format(github_id)
-        cls.log_cls(msg, level='debug')
-        installation = cls(github_id=github_id, user=user)
-        await installation.save()
-        await installation.import_repositories()
-        return installation
-
-    async def _get_repo_by_github_id(self, github_repo_id):
-        for repo in self.repositories:
-            if repo.github_id == github_repo_id:
-                repo_inst = await Repository.objects.get(id=repo.repository_id)
-                return repo_inst
-
-        raise BadRepository('Github repository {} does not exist here.'.format(
-            github_repo_id))
 
     async def update_repository(self, github_repo_id, repo_branches=None,
                                 external=None, wait_for_lock=False):
@@ -278,7 +223,7 @@ class GithubInstallation(LoggerMixin, Document):
           the lock or simply return if we cannot get a lock.
         """
 
-        repo = await self._get_repo_by_github_id(github_repo_id)
+        repo = await self._get_repo_by_external_id(github_repo_id)
         url = await self._get_auth_url(repo.url)
         if repo.fetch_url != url:
             repo.fetch_url = url
@@ -301,91 +246,6 @@ class GithubInstallation(LoggerMixin, Document):
         if n > utc2localtime(self.expires):
             return True
         return False
-
-    async def import_repositories(self):
-        """Imports all repositories available to the installation."""
-
-        msg = 'Importing repos for {}'.format(self.github_id)
-        self.log(msg, level='debug')
-        repos = []
-        for repo_info in await self.list_repos():
-            repo = await self.import_repository(repo_info, clone=False)
-            repos.append(repo)
-
-        for chunk in self._get_import_chunks(repos):
-            tasks = []
-            for repo in chunk:
-                await repo.request_code_update()
-                t = ensure_future(repo._wait_update())
-                tasks.append(t)
-
-            await gather(*tasks)
-
-        return repos
-
-    def _get_import_chunks(self, repos):
-
-        try:
-            parallel_imports = settings.PARALLEL_IMPORTS
-        except AttributeError:
-            parallel_imports = None
-
-        if not parallel_imports:
-            yield repos
-            return
-
-        for i in range(0, len(repos), parallel_imports):
-            yield repos[i:i + parallel_imports]
-
-    async def import_repository(self, repo_info, clone=True):
-        """Imports a repository from GitHub.
-
-        :param repo_info: A dictionary with the repository information."""
-
-        msg = 'Importing repo {}'.format(repo_info['clone_url'])
-        self.log(msg, level='debug')
-
-        branches = [
-            RepositoryBranch(name='master', notify_only_latest=True),
-            RepositoryBranch(name='feature-*', notify_only_latest=True),
-            RepositoryBranch(name='bug-*', notify_only_latest=True)]
-        slaves = await Slave.list_for_user(await self.user)
-        slaves = await slaves.to_list()
-        # update_seconds=0 because it will not be scheduled in fact.
-        # note the schedule_poller=False.
-        # What triggers an update code is a message from github in the
-        # webhook receiver.
-        user = await self.user
-        fetch_url = await self._get_auth_url(repo_info['clone_url'])
-        repo = await Repository.create(name=repo_info['name'],
-                                       url=repo_info['clone_url'],
-                                       owner=user,
-                                       fetch_url=fetch_url,
-                                       update_seconds=0,
-                                       vcs_type='git',
-                                       schedule_poller=False,
-                                       parallel_builds=1,
-                                       branches=branches,
-                                       slaves=slaves)
-        gh_repo = GithubInstallationRepository(
-            github_id=repo_info['id'],
-            repository_id=str(repo.id),
-            full_name=repo_info['full_name'])
-        self.repositories.append(gh_repo)
-        await self.save()
-        # await repo.enable_plugin('github-check-run', installation=self)
-
-        if clone:
-            await repo.request_code_update()
-        return repo
-
-    async def remove_repository(self, github_repo_id):
-        """Removes a repository from the system.
-
-        :param github_repo_id: The id of the repository in github."""
-
-        repo = await self._get_repo_by_github_id(github_repo_id)
-        await repo.request_removal()
 
     async def _get_header(
             self, accept='application/vnd.github.machine-man-preview+json'):
@@ -421,30 +281,6 @@ class GithubInstallation(LoggerMixin, Document):
             raise BadRequestToGithubAPI(ret.status, ret.text, url)
         ret = ret.json()
         return ret['repositories']
-
-    async def repo_request_build(self, github_repo_id, branch, named_tree):
-        """Requests a new build.
-
-        :param github_repo_id: The id of the repository in github.
-        :param branch: The name of the branch to build.
-        :param named_tree: The named tree to build."""
-
-        repo = await self._get_repo_by_github_id(github_repo_id)
-        await repo.request_build(branch, named_tree=named_tree)
-
-    async def delete(self, *args, **kwargs):
-        """Deletes the installation from the system"""
-
-        for install_repo in self.repositories:
-            try:
-                repo = await Repository.objects.get(
-                    id=install_repo.repository_id)
-            except Repository.DoesNotExist:
-                continue
-            await repo.request_removal()
-
-        r = await super().delete(*args, **kwargs)
-        return r
 
     async def get_repo(self, repo_full_name):
         """Get the repository (if available to the installation) from
