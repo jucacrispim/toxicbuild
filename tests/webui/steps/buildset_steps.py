@@ -24,13 +24,6 @@ def click_summary_link(context):
 
     el = browser.wait_element_become_present(fn)
 
-    try:
-        browser.click(el)
-        el = browser.find_element_by_class_name('fa-th')
-
-    except StaleElementReferenceException:
-        el = browser.wait_element_become_present(fn)
-        browser.wait_element_become_visible(el)
 
 
 @then('he sees the buildset list page')
