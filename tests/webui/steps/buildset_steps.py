@@ -84,7 +84,9 @@ def click_reschedule_button(context):
 @take_screenshot
 def see_buildset_running(context):
     browser = context.browser
-    browser.wait_text_become_present('badge-primary')
+
+    browser.wait_element_become_present(
+        lambda: browser.find_elements_by_class_name('badge_primary')[0])
 
 
 @given('the user already rescheduled a buildset')

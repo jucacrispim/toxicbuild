@@ -191,8 +191,8 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         return installation
 
     async def _get_repo_by_external_id(self, external_repo_id):
-        for repo in self.repositories:  # pragma no branch
-            if repo.external_id == external_repo_id:
+        for repo in self.repositories:
+            if repo.external_id == external_repo_id:  # pragma no branch
                 repo_inst = await Repository.objects.get(id=repo.repository_id)
                 return repo_inst
 
