@@ -23,9 +23,8 @@ import json
 import os
 from unittest import TestCase
 from unittest.mock import Mock, patch, MagicMock
-from toxicbuild.master import repository
 from toxicbuild.integrations import github, base
-from tests import async_test, AsyncMagicMock, create_autospec
+from tests import async_test, AsyncMagicMock
 from tests.unit.integrations import INTEGRATIONS_DATA_PATH
 
 
