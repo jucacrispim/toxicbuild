@@ -342,7 +342,8 @@ class Git(VCS):
 
                 revs = yield from self.get_revisions_for_branch(branch,
                                                                 since_date)
-                revisions[branch] = revs
+                if revs:
+                    revisions[branch] = revs
             except Exception as e:
                 msg = 'Error fetching changes. {}'.format(str(e))
                 self.log(msg)
