@@ -30,7 +30,8 @@ from pyrocumulus.web.handlers import PyroRequest, BasePyroHandler
 from pyrocumulus.web.template import render_template
 from pyrocumulus.web.urlmappers import URLSpec
 
-from toxicbuild.core.utils import LoggerMixin, string2datetime
+from toxicbuild.core.utils import (LoggerMixin, string2datetime,
+                                   create_validation_string)
 from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
 from toxicbuild.ui.exceptions import (BadSettingsType, UserDoesNotExist,
@@ -747,9 +748,20 @@ class DashboardHandler(LoggedTemplateHandler):
                                    self.request, {})
         return rendered
 
+    def _get_gitlab_import_url(self):
+        gitlab_import_url = getattr(settings, 'GITLAB_IMPORT_URL', None)
+        if gitlab_import_url:
+            secret = settings.TORNADO_OPTS['client_secret']
+            val = create_validation_string(secret)
+            gitlab_import_url = gitlab_import_url.format(state=val)
+        else:
+            gitlab_import_url = '#'
+
+        return gitlab_import_url
+
     def _get_settings_template(self, settings_type):
         github_import_url = getattr(settings, 'GITHUB_IMPORT_URL', '#')
-        gitlab_import_url = getattr(settings, 'GITLAB_IMPORT_URL', '#')
+        gitlab_import_url = self._get_gitlab_import_url()
         rendered = render_template(self.settings_template,
                                    self.request,
                                    {'github_import_url': github_import_url,
@@ -760,7 +772,7 @@ class DashboardHandler(LoggedTemplateHandler):
     def _get_settings_main_template(self, settings_type):
         if settings_type == 'repositories':
             github_import_url = getattr(settings, 'GITHUB_IMPORT_URL', '#')
-            gitlab_import_url = getattr(settings, 'GITLAB_IMPORT_URL', '#')
+            gitlab_import_url = self._get_gitlab_import_url()
 
             context = {'github_import_url': github_import_url,
                        'gitlab_import_url': gitlab_import_url}

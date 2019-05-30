@@ -904,6 +904,21 @@ class DashboardHandlerTest(TestCase):
         self.assertEqual(called_template, self.handler.main_template)
         self.assertEqual(called_context, {})
 
+    @patch.object(web, 'settings', MagicMock())
+    def test_get_gitlab_import_url(self):
+        web.settings.GITLAB_IMPORT_URL = 'some-url?state={state}'
+        web.settings.TORNADO_OPTS = {'client_secret': 'asdf'}
+        url = self.handler._get_gitlab_import_url()
+
+        self.assertFalse(url.endswith('{state}'))
+
+    @patch.object(web, 'settings', MagicMock())
+    def test_get_gitlab_import_url_no_url(self):
+        web.settings.GITLAB_IMPORT_URL = None
+        url = self.handler._get_gitlab_import_url()
+
+        self.assertEqual(url, '#')
+
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
     def test_get_settings_template(self):
