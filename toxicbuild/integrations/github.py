@@ -199,7 +199,7 @@ class GithubInstallation(BaseIntegrationInstallation):
     app = GithubApp
 
     # the id of the github app installation
-    github_id = IntField(required=True, unique=True)
+    github_id = IntField()
     auth_token = StringField()
     expires = DateTimeField()
 

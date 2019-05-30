@@ -140,8 +140,10 @@ class GitLabInstallationTest(TestCase):
         ret.status = 200
         ret.json = Mock()
         ret.json.return_value = {'access_token': 'asdf'}
+        self.installation.get_user_id = AsyncMagicMock()
         await self.installation.create_access_token()
         self.assertTrue(self.installation.access_token)
+        self.assertTrue(self.installation.get_user_id.called)
 
     @patch.object(gitlab.requests, 'post', AsyncMagicMock())
     @async_test
@@ -150,3 +152,23 @@ class GitLabInstallationTest(TestCase):
         ret.status = 400
         with self.assertRaises(gitlab.BadRequestToExternalAPI):
             await self.installation.create_access_token()
+
+    @patch.object(gitlab.GitLabInstallation, 'save', AsyncMagicMock())
+    @patch.object(gitlab.requests, 'get', AsyncMagicMock())
+    @async_test
+    async def test_get_user_id(self):
+        ret = gitlab.requests.get.return_value
+        self.installation.gitlab_user_id = None
+        ret.status = 200
+        ret.json = Mock()
+        ret.json.return_value = {'id': 666}
+        await self.installation.get_user_id()
+        self.assertTrue(self.installation.gitlab_user_id)
+
+    @patch.object(gitlab.requests, 'get', AsyncMagicMock())
+    @async_test
+    async def test_get_user_id_bad_request(self):
+        ret = gitlab.requests.get.return_value
+        ret.status = 400
+        with self.assertRaises(gitlab.BadRequestToExternalAPI):
+            await self.installation.get_user_id()

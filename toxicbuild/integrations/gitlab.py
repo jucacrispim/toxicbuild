@@ -17,7 +17,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
-from mongomotor.fields import StringField
+from mongomotor.fields import StringField, IntField
 from toxicbuild.core import requests
 from toxicbuild.integrations import settings
 from toxicbuild.integrations.base import BaseIntegrationInstallation
@@ -39,6 +39,9 @@ class GitLabInstallation(BaseIntegrationInstallation):
     access_token = StringField()
     """Access token for the gitlab api"""
 
+    gitlab_user_id = IntField()
+    """The user's id at gitlab."""
+
     REDIRECT_URI = settings.INTEGRATIONS_HTTP_URL + 'gitlab/setup'
 
     async def _get_header(self):
@@ -47,6 +50,19 @@ class GitLabInstallation(BaseIntegrationInstallation):
 
         headers = {'Authorization': 'Bearer {}'.format(self.access_token)}
         return headers
+
+    async def get_user_id(self):
+        """Gets the user id from the gitlab api.
+        """
+        header = await self._get_header()
+        url = settings.GITLAB_API_URL + 'user'
+        r = await requests.get(url, headers=header)
+        if r.status != 200:
+            raise BadRequestToExternalAPI(r.status, r.text)
+
+        r = r.json()
+        self.gitlab_user_id = r['id']
+        await self.save()
 
     async def create_access_token(self):
         """Creates an access token to the gitlab api.
@@ -65,7 +81,9 @@ class GitLabInstallation(BaseIntegrationInstallation):
 
         r = r.json()
         self.access_token = r['access_token']
-        await self.save()
+        # don't save here 'cause the doc is saved by get_user_id()
+        # await self.save()
+        await self.get_user_id()
 
     async def _get_auth_url(self, url):
         """Returns the repo url with the acces token for authentication.
@@ -85,7 +103,8 @@ class GitLabInstallation(BaseIntegrationInstallation):
         """
 
         header = await self._get_header()
-        url = settings.GITLAB_API_URL + 'projects'
+        url = settings.GITLAB_API_URL + 'users/{}/projects'.format(
+            self.gitlab_user_id)
         ret = await requests.get(url, headers=header)
         if ret.status != 200:
             raise BadRequestToExternalAPI(ret.status, ret.text, url)
