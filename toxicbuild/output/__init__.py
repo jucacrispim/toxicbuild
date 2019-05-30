@@ -198,7 +198,14 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         command.stdout = stdout
         command.port = settings.TORNADO_PORT
         command.pidfile = pidfile
-        command.run()
+
+        if daemonize:
+            daemon(call=run_toxicoutput, cargs=(loglevel, command), ckwargs={},
+                   stdout=stdout, stderr=stderr, workdir=workdir,
+                   pidfile=pidfile)
+        else:
+            with changedir(workdir):
+                run_toxicoutput(loglevel, command)
 
 
 def _process_exist(pid):
