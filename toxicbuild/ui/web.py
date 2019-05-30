@@ -749,16 +749,21 @@ class DashboardHandler(LoggedTemplateHandler):
 
     def _get_settings_template(self, settings_type):
         github_import_url = getattr(settings, 'GITHUB_IMPORT_URL', '#')
+        gitlab_import_url = getattr(settings, 'GITLAB_IMPORT_URL', '#')
         rendered = render_template(self.settings_template,
                                    self.request,
                                    {'github_import_url': github_import_url,
+                                    'gitlab_import_url': gitlab_import_url,
                                     'settings_type': settings_type})
         return rendered
 
     def _get_settings_main_template(self, settings_type):
         if settings_type == 'repositories':
             github_import_url = getattr(settings, 'GITHUB_IMPORT_URL', '#')
-            context = {'github_import_url': github_import_url}
+            gitlab_import_url = getattr(settings, 'GITLAB_IMPORT_URL', '#')
+
+            context = {'github_import_url': github_import_url,
+                       'gitlab_import_url': gitlab_import_url}
             template = self.repo_settings_template
 
         elif settings_type == 'slaves':
