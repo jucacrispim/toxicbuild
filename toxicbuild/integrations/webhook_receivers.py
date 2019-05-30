@@ -256,7 +256,8 @@ class GitlabWebhookReceiver(BaseWebhookReceiver):
                        'merge_request': self.handle_pull_request}
 
     def check_event_type(self):
-        return self.body['object_kind']
+        body = self.body or {}
+        return body.get('object_kind')
 
     def state_is_valid(self):
         """Checks if the state hash sent by gitlab is valid.

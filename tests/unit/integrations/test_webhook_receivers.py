@@ -553,6 +553,11 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
         et = self.webhook_receiver.check_event_type()
         self.assertEqual(et, 'push')
 
+    def test_check_event_type_no_body(self):
+        self.webhook_receiver.body = None
+        et = self.webhook_receiver.check_event_type()
+        self.assertEqual(et, None)
+
     def test_get_repo_external_id(self):
 
         self.assertEqual(self.webhook_receiver.get_repo_external_id(), 15)
