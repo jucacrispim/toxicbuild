@@ -39,6 +39,7 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.event_type = None
+        self.params = None
         self.body = None
         self.events = {}
 

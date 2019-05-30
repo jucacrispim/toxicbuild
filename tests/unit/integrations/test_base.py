@@ -162,6 +162,21 @@ class BaseIntegrationInstallationTest(TestCase):
             id=self.installation.id)
         self.assertTrue(install.repositories)
 
+    @patch.object(base.Repository, 'create', AsyncMagicMock(
+        side_effect=base.NotUniqueError, spec=base.Repository.create))
+    @async_test
+    async def test_import_repository_not_unique(self):
+        await base.Slave.create(name='my-slave',
+                                token='123', host='localhost',
+                                port=123, owner=self.user)
+        repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
+                     'id': 1234, 'full_name': 'ze/my-repo'}
+        self.installation._get_auth_url = AsyncMagicMock(
+            return_value='https://some-url')
+        repo = await self.installation.import_repository(repo_info,
+                                                         clone=False)
+        self.assertIs(repo, False)
+
     @async_test
     async def test_get_repo_by_exernal_id_bad_repo(self):
         with self.assertRaises(base.BadRepository):
