@@ -80,9 +80,10 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         with self.assertRaises(NotImplementedError):
             self.webhook_receiver.check_event_type()
 
-    def test_validate_webhook(self):
+    @async_test
+    async def test_validate_webhook(self):
         with self.assertRaises(NotImplementedError):
-            self.webhook_receiver.validate_webhook()
+            await self.webhook_receiver.validate_webhook()
 
     def test_hello(self):
         expected = {'code': 200, 'msg': 'Hi there!'}
@@ -563,16 +564,18 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
         self.assertEqual(self.webhook_receiver.get_repo_external_id(), 15)
 
     @patch.object(webhook_receivers, 'settings', Mock())
-    def test_validate_webhook_error(self):
+    @async_test
+    async def test_validate_webhook_error(self):
         webhook_receivers.settings.GITLAB_WEBHOOK_TOKEN = 'adsf'
         with self.assertRaises(webhook_receivers.HTTPError):
-            self.webhook_receiver.validate_webhook()
+            await self.webhook_receiver.validate_webhook()
 
     @patch.object(webhook_receivers, 'settings', Mock())
-    def test_validate_webhook_ok(self):
+    @async_test
+    async def test_validate_webhook_ok(self):
         webhook_receivers.settings.GITLAB_WEBHOOK_TOKEN = 'asdf'
         self.webhook_receiver.request.headers = {'X-Gitlab-Token': 'asdf'}
-        r = self.webhook_receiver.validate_webhook()
+        r = await self.webhook_receiver.validate_webhook()
         self.assertTrue(r)
 
     def test_get_pull_request_source(self):

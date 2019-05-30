@@ -60,7 +60,7 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
     def check_event_type(self):
         raise NotImplementedError
 
-    def validate_webhook(self):
+    async def validate_webhook(self):
         raise NotImplementedError
 
     async def get_install(self):
@@ -291,7 +291,7 @@ class GitlabWebhookReceiver(BaseWebhookReceiver):
     def get_repo_external_id(self):
         return self.body['project']['id']
 
-    def validate_webhook(self):
+    async def validate_webhook(self):
         secret = self.request.headers.get('X-Gitlab-Token')
 
         if secret != settings.GITLAB_WEBHOOK_TOKEN:
