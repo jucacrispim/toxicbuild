@@ -22,7 +22,7 @@ import base64
 import json
 from pyrocumulus.web.applications import PyroApplication
 from pyrocumulus.web.decorators import post, get
-from pyrocumulus.web.handlers import BasePyroHandler
+from pyrocumulus.web.handlers import BasePyroHandler, PyroRequest
 from pyrocumulus.web.urlmappers import URLSpec
 from tornado import gen
 from tornado.web import HTTPError
@@ -66,6 +66,7 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
         raise NotImplementedError
 
     def prepare(self):
+        self.params = PyroRequest(self.request.arguments)
         self._parse_body()
         self.event_type = self.check_event_type()
 
