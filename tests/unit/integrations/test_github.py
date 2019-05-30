@@ -124,7 +124,7 @@ class GitHubAppTest(TestCase):
         read.return_value = 'token'
         installation.id = 'someid'
         installation.github_id = 1234
-        with self.assertRaises(github.BadRequestToGithubAPI):
+        with self.assertRaises(github.BadRequestToExternalAPI):
             installation = await github.GithubApp.create_installation_token(
                 installation)
 
@@ -386,7 +386,7 @@ class GithubInstallationTest(TestCase):
 
         ret.status = 404
         ret.json = Mock(return_value=json_contents)
-        with self.assertRaises(github.BadRequestToGithubAPI):
+        with self.assertRaises(github.BadRequestToExternalAPI):
             await self.installation.list_repos()
 
     @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
@@ -413,5 +413,5 @@ class GithubInstallationTest(TestCase):
     async def test_get_repo_bad_request(self):
         ret = github.requests.get.return_value
         ret.status = 400
-        with self.assertRaises(github.BadRequestToGithubAPI):
+        with self.assertRaises(github.BadRequestToExternalAPI):
             await self.installation.get_repo(1234)

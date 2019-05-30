@@ -21,6 +21,7 @@
 import asyncio
 from asyncio import ensure_future
 from asyncio.streams import LimitOverrunError, IncompleteReadError
+import base64
 from concurrent.futures import ThreadPoolExecutor
 import copy
 from datetime import datetime, timezone, timedelta
@@ -539,6 +540,42 @@ def create_random_string(length):
     random_str = ''.join([l for i in range(length)
                           for l in random.choice(valid_chars)])
     return random_str
+
+
+def create_validation_string(secret):
+    """Creates a random string that can be used to validate
+    against it. The algorithm is as follows:
+
+    Given a secret, a random string is generated, then <secret>-<random-str>
+    are encrypted using bcrypt. Finally <encrypted-str>:<random-str>
+    are base64 encoded.
+    """
+
+    random_str = create_random_string(12)
+    enc = bcrypt_string('{}-{}'.format(secret, random_str))
+    final = base64.encodebytes(
+        '{}:{}'.format(enc, random_str).encode('utf-8')).decode()
+    return final
+
+
+def validate_string(b64_str, secret):
+    """Validates a string created with
+    :func:`~toxicbuild.core.utils.create_validattion_string`.
+
+    Given a base64 string the validation is as follows:
+
+    First decodes the base64 string in <encrypted-string>:<random-str> then
+    bcrypt-compare <secret>-<random-str> with <encrypted-string>
+    """
+
+    try:
+        real = base64.decodebytes(b64_str.encode()).decode()
+        enc, random_sr = real.split(':')
+    except Exception as e:
+        log('Error validating string: {}'.format(str(e)), level='error')
+        return False
+    else:
+        return compare_bcrypt_string('{}-{}'.format(secret, random_sr), enc)
 
 
 class changedir(object):

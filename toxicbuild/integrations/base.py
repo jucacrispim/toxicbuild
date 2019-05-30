@@ -109,7 +109,7 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         """
 
         msg = 'Importing repo {}'.format(repo_info['clone_url'])
-        self.log(msg, level='debug')
+        self.log(msg)
 
         branches = [
             RepositoryBranch(name='master', notify_only_latest=True),

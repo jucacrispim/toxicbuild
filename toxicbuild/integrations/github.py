@@ -28,7 +28,7 @@ from toxicbuild.core.utils import (string2datetime, now, localtime2utc,
 from toxicbuild.integrations import settings
 from toxicbuild.integrations.base import (BaseIntegrationApp,
                                           BaseIntegrationInstallation)
-from toxicbuild.integrations.exceptions import (BadRequestToGithubAPI,
+from toxicbuild.integrations.exceptions import (BadRequestToExternalAPI,
                                                 BadSignature)
 
 __doc__ = """This module implements the integration with Github. It is
@@ -178,7 +178,7 @@ class GithubApp(BaseIntegrationApp):
         ret = await requests.post(installation.auth_token_url, headers=header)
 
         if ret.status != 201:
-            raise BadRequestToGithubAPI(ret.status, ret.text)
+            raise BadRequestToExternalAPI(ret.status, ret.text)
 
         ret = ret.json()
         installation.auth_token = ret['token']
@@ -249,7 +249,7 @@ class GithubInstallation(BaseIntegrationInstallation):
         url = GITHUB_API_URL + 'installation/repositories'
         ret = await requests.get(url, headers=header)
         if ret.status != 200:
-            raise BadRequestToGithubAPI(ret.status, ret.text, url)
+            raise BadRequestToExternalAPI(ret.status, ret.text, url)
         ret = ret.json()
         return ret['repositories']
 
@@ -263,7 +263,7 @@ class GithubInstallation(BaseIntegrationInstallation):
         url = GITHUB_API_URL + 'repos/{}'.format(repo_full_name)
         ret = await requests.get(url, headers=header)
         if ret.status != 200:
-            raise BadRequestToGithubAPI(ret.status, ret.text, url)
+            raise BadRequestToExternalAPI(ret.status, ret.text, url)
         return ret.json()
 
 

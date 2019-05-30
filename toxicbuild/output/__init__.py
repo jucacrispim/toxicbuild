@@ -188,21 +188,17 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         command = get_command('runtornado')()
 
         command.kill = False
+        user_msg = 'Starting ToxicOutput. Listening on port {}'
+        command.user_message = user_msg
         command.daemonize = daemonize
         command.stderr = stderr
+        command.asyncio = True
         command.application = None
         command.loglevel = loglevel
         command.stdout = stdout
         command.port = settings.TORNADO_PORT
         command.pidfile = pidfile
-
-        if daemonize:
-            daemon(call=run_toxicoutput, cargs=(loglevel, command), ckwargs={},
-                   stdout=stdout, stderr=stderr, workdir=workdir,
-                   pidfile=pidfile)
-        else:
-            with changedir(workdir):
-                run_toxicoutput(loglevel, command)
+        command.run()
 
 
 def _process_exist(pid):
