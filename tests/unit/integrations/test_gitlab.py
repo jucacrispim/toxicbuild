@@ -87,7 +87,7 @@ class GitLabInstallationTest(TestCase):
     async def test_get_auth_url(self):
         self.installation.access_token = 'my-token'
         url = 'https://gitlab.com/me/somerepo.git'
-        expected = 'https://gitlab.com:my-token@gitlab.com/me/somerepo.git'
+        expected = 'https://oauth2:my-token@gitlab.com/me/somerepo.git'
         returned = await self.installation._get_auth_url(url)
         self.assertEqual(expected, returned)
 

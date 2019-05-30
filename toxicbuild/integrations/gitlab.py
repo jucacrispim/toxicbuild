@@ -94,8 +94,8 @@ class GitLabInstallation(BaseIntegrationInstallation):
             await self.create_access_token()
 
         new_url = url.replace('https://', '')
-        new_url = '{}gitlab.com:{}@{}'.format('https://',
-                                              self.access_token, new_url)
+        new_url = '{}oauth2:{}@{}'.format('https://', self.access_token,
+                                          new_url)
         return new_url
 
     async def list_repos(self):

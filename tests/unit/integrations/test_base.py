@@ -73,23 +73,28 @@ class BaseIntegrationInstallationTest(TestCase):
 
     @patch.object(base.BaseIntegrationInstallation, 'import_repositories',
                   AsyncMagicMock())
+    @patch.object(base.BaseIntegrationInstallation, 'save', AsyncMagicMock())
     @patch.object(base.LoggerMixin, 'log_cls', Mock())
     @async_test
     async def test_create(self):
 
         install = await base.BaseIntegrationInstallation.create(
             self.user)
-        self.assertTrue(install.id)
         self.assertTrue(install.import_repositories.called)
+        self.assertTrue(install.save.called)
 
-    @patch.object(base.BaseIntegrationInstallation, 'import_repositories',
-                  AsyncMagicMock())
+    @patch.object(base.BaseIntegrationInstallation, 'save', AsyncMagicMock())
+    @patch.object(base.BaseIntegrationInstallation, 'objects', Mock())
     @patch.object(base.LoggerMixin, 'log_cls', Mock())
     @async_test
     async def test_create_install_already_exists(self):
+        install = Mock()
+        install.import_repositories = AsyncMagicMock()
+        base.BaseIntegrationInstallation.objects.filter.\
+            return_value.first = AsyncMagicMock(return_value=install)
         await base.BaseIntegrationInstallation.create(self.user)
         install = await base.BaseIntegrationInstallation.create(self.user)
-        self.assertIsNone(install)
+        self.assertFalse(install.save.called)
 
     @async_test
     async def test_list_repos(self):
@@ -116,6 +121,21 @@ class BaseIntegrationInstallationTest(TestCase):
         await self.installation.import_repositories()
         self.assertEqual(
             len(self.installation.import_repository.call_args_list), 2)
+
+    @patch.object(base.BaseIntegrationInstallation, 'log', Mock())
+    @async_test
+    async def test_import_repositories_error(self):
+        self.installation.list_repos = AsyncMagicMock(return_value=[
+            {'name': 'bla'}, {'name': 'ble'}])
+        repo = Mock()
+        repo.request_code_update = AsyncMagicMock()
+        repo._wait_update = AsyncMagicMock()
+        self.installation.import_repository = AsyncMagicMock(
+            side_effect=[repo, Exception])
+        repos = await self.installation.import_repositories()
+        self.assertEqual(
+            len(self.installation.import_repository.call_args_list), 2)
+        self.assertEqual(len(repos), 1)
 
     @patch.object(base.Repository, 'schedule', Mock())
     @patch.object(base.Repository, '_notify_repo_creation',

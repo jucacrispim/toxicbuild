@@ -161,7 +161,13 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         self.log(msg, level='debug')
         repos = []
         for repo_info in await self.list_repos():
-            repo = await self.import_repository(repo_info, clone=False)
+            try:
+                repo = await self.import_repository(repo_info, clone=False)
+            except Exception as e:
+                self.log('Error importing repository {}: {}'.format(
+                    repo_info['name'], str(e)), level='error')
+                continue
+
             repos.append(repo)
 
         for chunk in self._get_import_chunks(repos):
@@ -185,16 +191,12 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         """
 
         installation = await cls.objects.filter(user=user, **kwargs).first()
-        if installation:
-            msg = 'Installation for {}/{} already exists'.format(
-                user.id, kwargs)
-            cls.log_cls(msg, level='error')
-            return
+        if not installation:
+            msg = 'Creating installation for {}'.format(kwargs)
+            cls.log_cls(msg)
+            installation = cls(user=user, **kwargs)
+            await installation.save()
 
-        msg = 'Creating installation for {}'.format(kwargs)
-        cls.log_cls(msg, level='debug')
-        installation = cls(user=user, **kwargs)
-        await installation.save()
         await installation.import_repositories()
         return installation
 
