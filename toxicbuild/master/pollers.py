@@ -158,7 +158,10 @@ class Poller(LoggerMixin):
             # or is the first time its running, I don't want to get all
             # revisions, but the last one only.
             if branch not in known_branches:
-                revs = [revs[-1]]
+                try:
+                    revs = [revs[-1]]
+                except IndexError:
+                    revs = []
 
             notify_only_latest = repo_branches.get(
                 branch, {}).get('notify_only_latest') \
