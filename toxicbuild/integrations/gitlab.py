@@ -127,14 +127,16 @@ class GitLabInstallation(BaseIntegrationInstallation):
         self.log('Creating webhook to {}'.format(repo_external_id))
 
         header = await self._get_header()
-        url = settings.INTEGRATIONS_HTTP_URL + \
+        callback_url = settings.INTEGRATIONS_HTTP_URL + \
             'gitlab/webhooks?installation_id={}'.format(str(self.id))
         body = {'id': repo_external_id,
-                'url': url,
+                'url': callback_url,
                 'push_events': True,
                 'merge_requests_events': True,
                 'token': settings.GITLAB_WEBHOOK_TOKEN}
 
+        url = settings.GITLAB_API_URL + 'projects/{}/hooks'.format(
+            repo_external_id)
         ret = await requests.post(url, data=body, headers=header)
 
         if ret.status not in [200, 201]:
