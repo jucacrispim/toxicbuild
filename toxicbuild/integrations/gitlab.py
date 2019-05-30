@@ -51,7 +51,7 @@ class GitLabInstallation(BaseIntegrationInstallation):
     async def create_access_token(self):
         """Creates an access token to the gitlab api.
         """
-        url = settings.GITLAB_API_URL + 'oauth/token'
+        url = settings.GITLAB_URL + 'oauth/token'
 
         params = {'client_id': settings.GITLAB_APP_ID,
                   'client_secret': settings.GITLAB_APP_SECRET,
