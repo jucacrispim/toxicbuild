@@ -96,7 +96,7 @@ class GitLabInstallationTest(TestCase):
         self.installation.access_token = None
         self.installation.create_access_token = AsyncMagicMock()
         url = 'https://gitlab.com/me/somerepo.git'
-        expected = 'https://gitlab.com:None@gitlab.com/me/somerepo.git'
+        expected = 'https://oauth2:None@gitlab.com/me/somerepo.git'
         returned = await self.installation._get_auth_url(url)
         self.assertTrue(self.installation.create_access_token.called)
         self.assertEqual(expected, returned)

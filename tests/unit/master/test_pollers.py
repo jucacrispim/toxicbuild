@@ -177,29 +177,6 @@ class GitPollerTest(TestCase):
 
         self.assertFalse(pollers.revisions_added.publish.called)
 
-    @mock.patch.object(pollers, 'revisions_added', AsyncMagicMock())
-    @async_test
-    async def test_process_changes_new_branch_no_revisions(self):
-        # now in the future, of course!
-        branches = [
-            repository.RepositoryBranch(name='master',
-                                        notify_only_latest=True),
-            repository.RepositoryBranch(name='dev',
-                                        notify_only_latest=False)]
-        self.repo.branches = branches
-        await self.repo.save()
-        await self._create_db_revisions()
-
-        @asyncio.coroutine
-        def gr(*a, **kw):
-            return {'some_branch': []}
-
-        self.poller.vcs.get_revisions = gr
-
-        await self.poller.process_changes()
-
-        self.assertFalse(pollers.revisions_added.publish.called)
-
     @async_test
     async def test_external_poll(self):
         await self._create_db_revisions()
