@@ -516,7 +516,7 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
     @patch('toxicbuild.core.utils.log')
     def test_state_is_valid(self, *a, **kw):
         webhook_receivers.settings.TORNADO_OPTS = {
-            'client_secret': 'some-secret'}
+            'cookie_secret': 'some-secret'}
         self.webhook_receiver.params = {'state': 'some-state'}
         r = self.webhook_receiver.state_is_valid()
         self.assertFalse(r)

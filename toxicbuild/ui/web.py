@@ -751,7 +751,7 @@ class DashboardHandler(LoggedTemplateHandler):
     def _get_gitlab_import_url(self):
         gitlab_import_url = getattr(settings, 'GITLAB_IMPORT_URL', None)
         if gitlab_import_url:
-            secret = settings.TORNADO_OPTS['client_secret']
+            secret = settings.TORNADO_OPTS['cookie_secret']
             val = create_validation_string(secret)
             gitlab_import_url = gitlab_import_url.format(state=val)
         else:

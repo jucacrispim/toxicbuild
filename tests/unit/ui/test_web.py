@@ -907,7 +907,7 @@ class DashboardHandlerTest(TestCase):
     @patch.object(web, 'settings', MagicMock())
     def test_get_gitlab_import_url(self):
         web.settings.GITLAB_IMPORT_URL = 'some-url?state={state}'
-        web.settings.TORNADO_OPTS = {'client_secret': 'asdf'}
+        web.settings.TORNADO_OPTS = {'cookie_secret': 'asdf'}
         url = self.handler._get_gitlab_import_url()
 
         self.assertFalse(url.endswith('{state}'))

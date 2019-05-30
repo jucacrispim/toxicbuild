@@ -266,7 +266,7 @@ class GitlabWebhookReceiver(BaseWebhookReceiver):
         if not state:
             raise HTTPError(400)
 
-        secret = settings.TORNADO_OPTS['client_secret']
+        secret = settings.TORNADO_OPTS['cookie_secret']
 
         return validate_string(state, secret)
 
