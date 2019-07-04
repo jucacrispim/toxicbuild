@@ -21,12 +21,16 @@ from mongoengine.errors import NotUniqueError
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (ReferenceField, StringField, IntField,
                                EmbeddedDocumentListField)
+from toxicbuild.common.api_models import Notification
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.repository import Repository, RepositoryBranch
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.users import User
 from toxicbuild.integrations import settings
 from toxicbuild.integrations.exceptions import BadRepository
+
+
+Notification.settings = settings
 
 
 class BaseIntegrationApp(LoggerMixin, Document):
@@ -72,6 +76,8 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
     repositories = EmbeddedDocumentListField(ExternalInstallationRepository)
     """The repositories imported from the user external service account."""
 
+    notif_name = None
+
     meta = {'allow_inheritance': True}
 
     async def list_repos(self):
@@ -97,6 +103,18 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         :param url: The https repo url"""
 
         raise NotImplementedError
+
+    def get_notif_config(self):
+        raise NotImplementedError
+
+    async def enable_notification(self, repo):
+        """Enables a notification to a repository.
+
+        :param repo: A repository instance."""
+
+        conf = self.get_notif_config()
+        await Notification.enable(
+            str(repo.id), self.notif_name, **conf)
 
     async def import_repository(self, repo_info, clone=True):
         """Imports a repository from an external service.
@@ -147,7 +165,7 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
             full_name=repo_info['full_name'])
         self.repositories.append(ext_repo)
         await self.save()
-        # await repo.enable_plugin('github-check-run', installation=self)
+        await self.enable_notification(repo)
 
         if clone:
             await repo.request_code_update()

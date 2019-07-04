@@ -152,6 +152,7 @@ class BaseIntegrationInstallationTest(TestCase):
                      'id': 1234, 'full_name': 'ze/my-repo'}
         self.installation._get_auth_url = AsyncMagicMock(
             return_value='https://some-url')
+        self.installation.enable_notification = AsyncMagicMock()
         repo = await self.installation.import_repository(repo_info)
         self.assertTrue(repo.id)
         self.assertTrue(repo.request_code_update.called)
@@ -174,6 +175,7 @@ class BaseIntegrationInstallationTest(TestCase):
                      'id': 1234, 'full_name': 'ze/my-repo'}
         self.installation._get_auth_url = AsyncMagicMock(
             return_value='https://some-url')
+        self.installation.enable_notification = AsyncMagicMock()
         repo = await self.installation.import_repository(repo_info,
                                                          clone=False)
         self.assertTrue(repo.id)
@@ -305,3 +307,17 @@ class BaseIntegrationInstallationTest(TestCase):
         self.installation.repositories.append(install_repo)
         await self.installation.remove_repository(1234)
         self.assertTrue(repository.Repository.request_removal.called)
+
+    def test_get_notif_config(self):
+
+        with self.assertRaises(NotImplementedError):
+            self.installation.get_notif_config()
+
+    @patch.object(base.Notification, 'enable', AsyncMagicMock())
+    @async_test
+    async def test_enable_notification(self):
+        repo = Mock()
+        self.installation.get_notif_config = Mock(return_value={})
+        await self.installation.enable_notification(repo)
+
+        self.assertTrue(base.Notification.enable.called)

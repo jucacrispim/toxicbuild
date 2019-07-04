@@ -197,6 +197,7 @@ class GithubInstallation(BaseIntegrationInstallation):
     repositories and events."""
 
     app = GithubApp
+    notif_name = 'github-check-run'
 
     # the id of the github app installation
     github_id = IntField()
@@ -240,6 +241,9 @@ class GithubInstallation(BaseIntegrationInstallation):
         new_url = '{}x-access-token:{}@{}'.format('https://',
                                                   self.auth_token, new_url)
         return new_url
+
+    def get_notif_config(self):
+        return {'installation': str(self.id)}
 
     async def list_repos(self):
         """Lists all respositories available to an installation.
