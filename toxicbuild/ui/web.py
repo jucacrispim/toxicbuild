@@ -288,7 +288,7 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
             setattr(item, key, value)
 
         await item.update(**self.body)
-        return item.to_json()
+        return item.to_json(dtformat=self._dtformat)
 
     @delete('')
     async def delete_item(self):

@@ -112,7 +112,7 @@ class BaseModel:
           :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
         """
 
-        d = self.to_dict()
+        d = self.to_dict(*args, **kwargs)
         return json.dumps(d)
 
     @classmethod
