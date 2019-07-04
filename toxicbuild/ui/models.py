@@ -19,19 +19,11 @@
 
 
 import asyncio
-from collections import OrderedDict
-import datetime
-import importlib
-import json
-from toxicbuild.common.utils import is_datetime, format_datetime
 from toxicbuild.common.api_models import BaseModel as BaseAPIModel
-from toxicbuild.core import requests
-from toxicbuild.core.utils import string2datetime
 from toxicbuild.ui import settings
 from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui.utils import (
     get_client_settings,
-    get_dtformat
 )
 
 

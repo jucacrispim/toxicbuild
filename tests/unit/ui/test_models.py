@@ -19,12 +19,11 @@
 
 
 import asyncio
-import datetime
-import json
+from collections import OrderedDict
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 import tornado
-from toxicbuild.ui import models, client, settings
+from toxicbuild.ui import models, client
 from tests import async_test, AsyncMagicMock
 
 
@@ -157,9 +156,9 @@ class RepositoryTest(TestCase):
 
     def setUp(self):
         super().setUp()
-        kw = models.OrderedDict(id='313lsjdf', vcs_type='git',
-                                update_seconds=300, slaves=[],
-                                name='my-repo')
+        kw = OrderedDict(id='313lsjdf', vcs_type='git',
+                         update_seconds=300, slaves=[],
+                         name='my-repo')
 
         self.requester = MagicMock()
         self.repository = models.Repository(self.requester, kw)
@@ -212,8 +211,8 @@ class RepositoryTest(TestCase):
         self.repository.get_client = lambda requester: get_client_mock(
             requester, 'add slave ok')
 
-        kw = models.OrderedDict(name='localslave', host='localhost', port=7777,
-                                token='123', id='some-id')
+        kw = OrderedDict(name='localslave', host='localhost', port=7777,
+                         token='123', id='some-id')
         requester = MagicMock()
         slave = models.Slave(requester, kw)
         resp = yield from self.repository.add_slave(slave)
