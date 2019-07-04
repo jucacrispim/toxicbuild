@@ -30,18 +30,21 @@ from pyrocumulus.web.handlers import PyroRequest, BasePyroHandler
 from pyrocumulus.web.template import render_template
 from pyrocumulus.web.urlmappers import URLSpec
 
+from toxicbuild.common.utils import is_datetime
 from toxicbuild.core.utils import (LoggerMixin, string2datetime,
                                    create_validation_string)
 from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
 from toxicbuild.ui.exceptions import (BadSettingsType, UserDoesNotExist,
                                       BadResetPasswordToken)
-from toxicbuild.ui.models import (Repository, Slave, User, Notification,
+from toxicbuild.common.api_models import Notification
+from toxicbuild.common.utils import format_datetime
+from toxicbuild.ui.models import (Repository, Slave, User,
                                   BuildSet, Builder, Build)
-from toxicbuild.ui.utils import (format_datetime, is_datetime,
-                                 get_defaulte_locale_morsel,
+from toxicbuild.ui.utils import (get_defaulte_locale_morsel,
                                  get_default_timezone_morsel)
 
+Notification.settings = settings
 
 COOKIE_NAME = 'toxicui'
 

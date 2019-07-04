@@ -20,7 +20,6 @@
 from unittest import TestCase
 from unittest.mock import Mock, patch
 from datetime import datetime
-from toxicbuild.core.utils import now, localtime2utc
 from toxicbuild.master.build import Build, BuildSet, Builder
 from toxicbuild.master.repository import Repository, RepositoryRevision
 from toxicbuild.master.slave import Slave
@@ -34,66 +33,12 @@ class UtilsDateTimeTest(TestCase):
     @patch.object(utils, 'settings', Mock())
     def test_get_dtformat(self):
         utils.settings.DTFORMAT = '%y %a'
-        returned = utils._get_dtformat()
+        returned = utils.get_dtformat()
         self.assertEqual(returned, utils.settings.DTFORMAT)
 
     def test_get_dtformat_no_settings(self):
-        returned = utils._get_dtformat()
+        returned = utils.get_dtformat()
         self.assertEqual(returned, utils.DTFORMAT)
-
-    @patch.object(utils, 'settings', Mock())
-    def test_get_timezone(self):
-        tz = utils._get_timezone('America/Sao_Paulo')
-        self.assertEqual(tz.zone, 'America/Sao_Paulo')
-
-    def test_get_timezone_bad_timezone(self):
-        tz = utils._get_timezone('Bogus')
-        self.assertIsNone(tz)
-
-    def test_get_timezone_no_settings(self):
-        tz = utils._get_timezone(None)
-        self.assertIsNone(tz)
-
-    @patch.object(utils, 'settings', Mock())
-    def test_format_datetime_no_dtformat(self):
-        utils.settings.DTFORMAT = utils.DTFORMAT
-        dt = localtime2utc(now())
-        formated = utils.format_datetime(dt, tzname='America/Sao_Paulo')
-        self.assertFalse(formated.endswith('0000'))
-
-    @patch.object(utils, 'settings', Mock())
-    def test_format_datetime(self):
-        utils.settings.TIMEZONE = 'UTC'
-        dt = localtime2utc(now())
-        dtformat = '%z'
-        formated = utils.format_datetime(dt, dtformat)
-        self.assertEqual(formated, '+0000')
-
-    @patch.object(utils, 'settings', Mock())
-    def test_format_datetime_with_tzname(self):
-        utils.settings.DTFORMAT = utils.DTFORMAT
-        dt = localtime2utc(now())
-        formated = utils.format_datetime(dt, tzname='America/Sao_Paulo')
-        self.assertFalse(formated.endswith('0000'))
-
-    @patch.object(utils, 'settings', Mock())
-    def test_format_datetime_bad_tz(self):
-        utils.settings.TIMEZONE = 'America/SSao_Paulo'
-        utils.settings.DTFORMAT = utils.DTFORMAT
-        dt = localtime2utc(now())
-        formated = utils.format_datetime(dt)
-        self.assertTrue(formated.endswith('0000'))
-
-    def test_is_datetime(self):
-        dtstr = '3 10 25 06:50:49 2017 +0000'
-        self.assertTrue(utils.is_datetime(dtstr))
-
-    def test_is_datetime_not_dt(self):
-        dtstr = 'some-thing'
-        self.assertFalse(utils.is_datetime(dtstr))
-
-    def test_is_datetime_not_str(self):
-        self.assertFalse(utils.is_datetime(1))
 
 
 class BuildsetUtilsTest(TestCase):

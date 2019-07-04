@@ -732,6 +732,7 @@ class StreamHandlerTest(TestCase):
         request.arguments = {}
         application = MagicMock()
         self.handler = web.StreamHandler(application, request=request)
+        self.handler._dtformat = '%Y'
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
