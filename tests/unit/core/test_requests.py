@@ -38,6 +38,7 @@ class ResponseTest(TestCase):
 class MockResponse:
 
     status = 200
+    headers = {}
 
     @asyncio.coroutine
     def text(self):

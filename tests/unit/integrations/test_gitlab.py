@@ -61,6 +61,8 @@ class GitLabInstallationTest(TestCase):
             json_contents = json.loads(contents)
 
         ret.status = 200
+        ret.headers = {'X-Next-Page': 1,
+                       'X-Total-Pages': 1}
         ret.json = Mock(return_value=json_contents)
 
         repos = await self.installation.list_repos()

@@ -105,21 +105,28 @@ class GitLabInstallation(BaseIntegrationInstallation):
         """Lists the repositories using GitLab API.
         """
 
-        header = await self.get_header()
-        url = settings.GITLAB_API_URL + 'users/{}/projects'.format(
-            self.gitlab_user_id)
-        ret = await requests.get(url, headers=header)
-        if ret.status != 200:
-            raise BadRequestToExternalAPI(ret.status, ret.text, url)
-        ret = ret.json()
-
         def get_repo_dict(r):
             return {'name': r['name'],
                     'id': r['id'],
                     'full_name': r['name_with_namespace'],
                     'clone_url': r['http_url_to_repo']}
 
-        repos = [get_repo_dict(r) for r in ret]
+        header = await self.get_header()
+        p = 1
+        repos = []
+        while True:
+            url = settings.GITLAB_API_URL + 'users/{}/projects?page='.format(
+                self.gitlab_user_id, p)
+            ret = await requests.get(url, headers=header)
+            if ret.status != 200:
+                raise BadRequestToExternalAPI(ret.status, ret.text, url)
+            repos += [get_repo_dict(r) for r in ret.json()]
+
+            n = ret.headers.get('X-Next-Page', 0)
+            t = ret.headers.get('X-Total-Pages', 0)
+            if n >= t:  # pragma no branch
+                break
+
         return repos
 
     async def create_webhook(self, repo_external_id):
