@@ -482,7 +482,7 @@ class GithubCheckRunNotification(Notification):
             full_name)
 
         self.log('sending check for {} buildset {}'.format(
-            url, buildset_info['id']), level='info')
+            url, buildset_info['id']), level='debug')
 
         payload = self._get_payload(buildset_info, run_status, conclusion)
 
@@ -492,5 +492,5 @@ class GithubCheckRunNotification(Notification):
         r = await requests.post(url, headers=header, data=data)
 
         self.log('response from check for buildset {} - status: {}'.format(
-            buildset_info['id'], r.status), level='info')
+            buildset_info['id'], r.status), level='debug')
         self.log(r.text, level='debug')
