@@ -32,8 +32,8 @@ def click_reschedule(context):
 
         return el
 
-    el = browser.wait_element_become_present(fn)
-    el.click()
+    el = browser.click_and_retry_on_stale(fn)
+    assert el
 
 
 @given('the user already rescheduled a buildset in the waterfall')
