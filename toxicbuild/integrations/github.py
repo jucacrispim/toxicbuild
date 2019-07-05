@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2018-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -28,7 +28,7 @@ from toxicbuild.core.utils import (string2datetime, now, localtime2utc,
 from toxicbuild.integrations import settings
 from toxicbuild.integrations.base import (BaseIntegrationApp,
                                           BaseIntegrationInstallation)
-from toxicbuild.integrations.exceptions import (BadRequestToGithubAPI,
+from toxicbuild.integrations.exceptions import (BadRequestToExternalAPI,
                                                 BadSignature)
 
 __doc__ = """This module implements the integration with Github. It is
@@ -178,7 +178,7 @@ class GithubApp(BaseIntegrationApp):
         ret = await requests.post(installation.auth_token_url, headers=header)
 
         if ret.status != 201:
-            raise BadRequestToGithubAPI(ret.status, ret.text)
+            raise BadRequestToExternalAPI(ret.status, ret.text)
 
         ret = ret.json()
         installation.auth_token = ret['token']
@@ -197,9 +197,10 @@ class GithubInstallation(BaseIntegrationInstallation):
     repositories and events."""
 
     app = GithubApp
+    notif_name = 'github-check-run'
 
     # the id of the github app installation
-    github_id = IntField(required=True, unique=True)
+    github_id = IntField()
     auth_token = StringField()
     expires = DateTimeField()
 
@@ -218,7 +219,7 @@ class GithubInstallation(BaseIntegrationInstallation):
             return True
         return False
 
-    async def _get_header(
+    async def get_header(
             self, accept='application/vnd.github.machine-man-preview+json'):
 
         if not self.auth_token or self.token_is_expired:
@@ -245,11 +246,11 @@ class GithubInstallation(BaseIntegrationInstallation):
         """Lists all respositories available to an installation.
         Returns a list of dictionaries with repositories' information"""
 
-        header = await self._get_header()
+        header = await self.get_header()
         url = GITHUB_API_URL + 'installation/repositories'
         ret = await requests.get(url, headers=header)
         if ret.status != 200:
-            raise BadRequestToGithubAPI(ret.status, ret.text, url)
+            raise BadRequestToExternalAPI(ret.status, ret.text, url)
         ret = ret.json()
         return ret['repositories']
 
@@ -259,11 +260,11 @@ class GithubInstallation(BaseIntegrationInstallation):
 
         :param github_repo_id: The full name of the repository on github."""
 
-        header = await self._get_header()
+        header = await self.get_header()
         url = GITHUB_API_URL + 'repos/{}'.format(repo_full_name)
         ret = await requests.get(url, headers=header)
         if ret.status != 200:
-            raise BadRequestToGithubAPI(ret.status, ret.text, url)
+            raise BadRequestToExternalAPI(ret.status, ret.text, url)
         return ret.json()
 
 

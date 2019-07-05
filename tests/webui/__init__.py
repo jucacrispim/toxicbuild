@@ -4,7 +4,10 @@
 import os
 import time
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    StaleElementReferenceException
+)
 from selenium.webdriver.common.action_chains import ActionChains
 from toxicbuild.core.utils import now, datetime2string
 
@@ -198,6 +201,19 @@ class SeleniumBrowser(webdriver.Chrome):
 
             if r:
                 return r
+
+    def click_and_retry_on_stale(self, fn, retry=True):
+        """Clicks in an element and it again in case of
+        StaleElementReferenceException error.
+        """
+
+        el = self.wait_element_become_present(fn)
+        try:
+            el.click()
+        except StaleElementReferenceException:
+            el = self.click_and_retry_on_stale(fn, retry=False)
+
+        return el
 
 
 def take_screenshot(fn):

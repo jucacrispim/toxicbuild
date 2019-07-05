@@ -319,6 +319,7 @@ ignored-classes=toxicbuild.ui.models.Repository,
 	        toxicbuild.ui.models.Slave,
 	        toxicbuild.ui.models.User,
 	        toxicbuild.ui.models.BaseModel,
+	        toxicbuild.common.api_models.BaseModel,
 
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E1101 when accessed. Python regular

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2018-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -124,7 +124,7 @@ class GitHubAppTest(TestCase):
         read.return_value = 'token'
         installation.id = 'someid'
         installation.github_id = 1234
-        with self.assertRaises(github.BadRequestToGithubAPI):
+        with self.assertRaises(github.BadRequestToExternalAPI):
             installation = await github.GithubApp.create_installation_token(
                 installation)
 
@@ -301,7 +301,7 @@ class GithubInstallationTest(TestCase):
         github.GithubApp.create_installation_token = asyncio.coroutine(cmock)
         self.installation.auth_token = None
         expected = 'token auth-token'
-        header = await self.installation._get_header()
+        header = await self.installation.get_header()
         self.assertEqual(header['Authorization'], expected)
 
     @patch.object(github.GithubApp, 'create_installation_token',
@@ -316,7 +316,7 @@ class GithubInstallationTest(TestCase):
         github.GithubApp.create_installation_token = asyncio.coroutine(cmock)
         self.installation.auth_token = 'auth-token'
         expected = 'token new-auth-token'
-        header = await self.installation._get_header()
+        header = await self.installation.get_header()
         self.assertEqual(header['Authorization'], expected)
 
     @patch.object(github.GithubApp, 'create_installation_token',
@@ -326,7 +326,7 @@ class GithubInstallationTest(TestCase):
     async def test_get_header(self):
         self.installation.auth_token = 'auth-token'
         expected = 'token auth-token'
-        header = await self.installation._get_header()
+        header = await self.installation.get_header()
         self.assertEqual(header['Authorization'], expected)
         self.assertFalse(github.GithubApp.create_installation_token.called)
 
@@ -355,7 +355,7 @@ class GithubInstallationTest(TestCase):
             self.installation.app.create_installation_token.called)
         self.assertEqual(expected, returned)
 
-    @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
+    @patch.object(github.GithubInstallation, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(github.requests, 'get', AsyncMagicMock())
     @async_test
@@ -372,7 +372,7 @@ class GithubInstallationTest(TestCase):
         repos = await self.installation.list_repos()
         self.assertEqual(len(repos), 1)
 
-    @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
+    @patch.object(github.GithubInstallation, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(github.requests, 'get', AsyncMagicMock())
     @async_test
@@ -386,10 +386,10 @@ class GithubInstallationTest(TestCase):
 
         ret.status = 404
         ret.json = Mock(return_value=json_contents)
-        with self.assertRaises(github.BadRequestToGithubAPI):
+        with self.assertRaises(github.BadRequestToExternalAPI):
             await self.installation.list_repos()
 
-    @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
+    @patch.object(github.GithubInstallation, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(github.requests, 'get', AsyncMagicMock())
     @async_test
@@ -406,12 +406,12 @@ class GithubInstallationTest(TestCase):
         repo = await self.installation.get_repo(1234)
         self.assertEqual(repo['name'], 'Hello-World')
 
-    @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
+    @patch.object(github.GithubInstallation, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(github.requests, 'get', AsyncMagicMock())
     @async_test
     async def test_get_repo_bad_request(self):
         ret = github.requests.get.return_value
         ret.status = 400
-        with self.assertRaises(github.BadRequestToGithubAPI):
+        with self.assertRaises(github.BadRequestToExternalAPI):
             await self.installation.get_repo(1234)

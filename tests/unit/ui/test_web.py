@@ -732,6 +732,7 @@ class StreamHandlerTest(TestCase):
         request.arguments = {}
         application = MagicMock()
         self.handler = web.StreamHandler(application, request=request)
+        self.handler._dtformat = '%Y'
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
@@ -904,6 +905,21 @@ class DashboardHandlerTest(TestCase):
         self.assertEqual(called_template, self.handler.main_template)
         self.assertEqual(called_context, {})
 
+    @patch.object(web, 'settings', MagicMock())
+    def test_get_gitlab_import_url(self):
+        web.settings.GITLAB_IMPORT_URL = 'some-url?state={state}'
+        web.settings.TORNADO_OPTS = {'cookie_secret': 'asdf'}
+        url = self.handler._get_gitlab_import_url()
+
+        self.assertFalse(url.endswith('{state}'))
+
+    @patch.object(web, 'settings', MagicMock())
+    def test_get_gitlab_import_url_no_url(self):
+        web.settings.GITLAB_IMPORT_URL = None
+        url = self.handler._get_gitlab_import_url()
+
+        self.assertEqual(url, '#')
+
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
     def test_get_settings_template(self):
@@ -912,7 +928,8 @@ class DashboardHandlerTest(TestCase):
         called = web.render_template.call_args
         called_template = called[0][0]
         called_context = called[0][2]
-        expected_keys = ['github_import_url', 'settings_type']
+        expected_keys = ['github_import_url', 'gitlab_import_url',
+                         'settings_type']
         self.assertEqual(called_template, self.handler.settings_template)
         self.assertEqual(expected_keys, list(called_context.keys()))
 
@@ -924,7 +941,7 @@ class DashboardHandlerTest(TestCase):
         called = web.render_template.call_args
         called_template = called[0][0]
         called_context = called[0][2]
-        expected_keys = ['github_import_url']
+        expected_keys = ['github_import_url', 'gitlab_import_url']
         self.assertEqual(called_template, self.handler.repo_settings_template)
         self.assertEqual(expected_keys, list(called_context.keys()))
 

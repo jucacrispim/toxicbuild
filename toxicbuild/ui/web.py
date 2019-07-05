@@ -30,17 +30,21 @@ from pyrocumulus.web.handlers import PyroRequest, BasePyroHandler
 from pyrocumulus.web.template import render_template
 from pyrocumulus.web.urlmappers import URLSpec
 
-from toxicbuild.core.utils import LoggerMixin, string2datetime
+from toxicbuild.common.utils import is_datetime
+from toxicbuild.core.utils import (LoggerMixin, string2datetime,
+                                   create_validation_string)
 from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
 from toxicbuild.ui.exceptions import (BadSettingsType, UserDoesNotExist,
                                       BadResetPasswordToken)
-from toxicbuild.ui.models import (Repository, Slave, User, Notification,
+from toxicbuild.common.api_models import Notification
+from toxicbuild.common.utils import format_datetime
+from toxicbuild.ui.models import (Repository, Slave, User,
                                   BuildSet, Builder, Build)
-from toxicbuild.ui.utils import (format_datetime, is_datetime,
-                                 get_defaulte_locale_morsel,
+from toxicbuild.ui.utils import (get_defaulte_locale_morsel,
                                  get_default_timezone_morsel)
 
+Notification.settings = settings
 
 COOKIE_NAME = 'toxicui'
 
@@ -284,7 +288,7 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
             setattr(item, key, value)
 
         await item.update(**self.body)
-        return item.to_json()
+        return item.to_json(dtformat=self._dtformat)
 
     @delete('')
     async def delete_item(self):
@@ -747,18 +751,34 @@ class DashboardHandler(LoggedTemplateHandler):
                                    self.request, {})
         return rendered
 
+    def _get_gitlab_import_url(self):
+        gitlab_import_url = getattr(settings, 'GITLAB_IMPORT_URL', None)
+        if gitlab_import_url:
+            secret = settings.TORNADO_OPTS['cookie_secret']
+            val = create_validation_string(secret)
+            gitlab_import_url = gitlab_import_url.format(state=val)
+        else:
+            gitlab_import_url = '#'
+
+        return gitlab_import_url
+
     def _get_settings_template(self, settings_type):
         github_import_url = getattr(settings, 'GITHUB_IMPORT_URL', '#')
+        gitlab_import_url = self._get_gitlab_import_url()
         rendered = render_template(self.settings_template,
                                    self.request,
                                    {'github_import_url': github_import_url,
+                                    'gitlab_import_url': gitlab_import_url,
                                     'settings_type': settings_type})
         return rendered
 
     def _get_settings_main_template(self, settings_type):
         if settings_type == 'repositories':
             github_import_url = getattr(settings, 'GITHUB_IMPORT_URL', '#')
-            context = {'github_import_url': github_import_url}
+            gitlab_import_url = self._get_gitlab_import_url()
+
+            context = {'github_import_url': github_import_url,
+                       'gitlab_import_url': gitlab_import_url}
             template = self.repo_settings_template
 
         elif settings_type == 'slaves':

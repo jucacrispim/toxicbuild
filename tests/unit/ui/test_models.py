@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,25 +19,15 @@
 
 
 import asyncio
-import datetime
-import json
+from collections import OrderedDict
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 import tornado
-from toxicbuild.ui import models, client, settings
+from toxicbuild.ui import models, client
 from tests import async_test, AsyncMagicMock
 
 
 class BaseModelTest(TestCase):
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
-
-    def test_get_ref_cls(self):
-        cls = 'toxicbuild.ui.models.BuildSet'
-        model = models.BaseModel(MagicMock(), ordered_kwargs={})
-        new_cls = model._get_ref_cls(cls)
-        self.assertIs(new_cls, models.BuildSet)
 
     @patch.object(models, 'get_hole_client', MagicMock(
         spec=models.get_hole_client))
@@ -73,86 +63,6 @@ class BaseModelTest(TestCase):
             self.assertTrue(client.connect.called)
         finally:
             models.BaseModel._client = None
-
-    def test_attributes_order(self):
-        ordered = models.OrderedDict()
-        ordered['z'] = 1
-        ordered['a'] = 2
-        requester = MagicMock()
-        model = models.BaseModel(requester, ordered)
-        self.assertLess(model.__ordered__.index('z'),
-                        model.__ordered__.index('a'))
-
-    def test_datetime_attributes(self):
-        requester = MagicMock()
-        model = models.BaseModel(requester,
-                                 {'somedt': '3 10 25 06:50:49 2017 +0000'})
-        self.assertIsInstance(model.somedt, datetime.datetime)
-
-    def test_to_dict(self):
-        kw = models.OrderedDict()
-        kw['name'] = 'bla'
-        kw['other'] = 'ble'
-        kw['somedt'] = '3 10 25 06:50:49 2017 +0000'
-        requester = MagicMock()
-        instance = models.BaseModel(requester, kw)
-
-        instance_dict = instance.to_dict()
-
-        expected = models.OrderedDict()
-        expected['name'] = 'bla'
-        expected['other'] = 'ble'
-        expected['somedt'] = models.format_datetime(instance.somedt)
-        self.assertEqual(expected, instance_dict)
-        keys = list(instance_dict.keys())
-        self.assertLess(keys.index('name'), keys.index('other'))
-
-    def test_to_json(self):
-        kw = models.OrderedDict()
-        kw['name'] = 'bla'
-        kw['other'] = 'ble'
-        requester = MagicMock()
-        instance = models.BaseModel(requester, kw)
-
-        instance_json = instance.to_json()
-
-        expected = json.dumps(kw)
-        self.assertEqual(expected, instance_json)
-
-    def test_equal(self):
-        class T(models.BaseModel):
-
-            def __init__(self, id=None):
-                self.id = id
-
-        a = T(id='some-id')
-        b = T(id='some-id')
-        self.assertEqual(a, b)
-
-    def test_unequal_id(self):
-        class T(models.BaseModel):
-
-            def __init__(self, id=None):
-                self.id = id
-
-        a = T(id='some-id')
-        b = T(id='Other-id')
-        self.assertNotEqual(a, b)
-
-    def test_unequal_type(self):
-        class T(models.BaseModel):
-
-            def __init__(self, id=None):
-                self.id = id
-
-        class TT(models.BaseModel):
-
-            def __init__(self, id=None):
-                self.id = id
-
-        a = T(id='some-id')
-        b = TT(id='some-id')
-        self.assertNotEqual(a, b)
 
 
 @asyncio.coroutine
@@ -246,9 +156,9 @@ class RepositoryTest(TestCase):
 
     def setUp(self):
         super().setUp()
-        kw = models.OrderedDict(id='313lsjdf', vcs_type='git',
-                                update_seconds=300, slaves=[],
-                                name='my-repo')
+        kw = OrderedDict(id='313lsjdf', vcs_type='git',
+                         update_seconds=300, slaves=[],
+                         name='my-repo')
 
         self.requester = MagicMock()
         self.repository = models.Repository(self.requester, kw)
@@ -301,8 +211,8 @@ class RepositoryTest(TestCase):
         self.repository.get_client = lambda requester: get_client_mock(
             requester, 'add slave ok')
 
-        kw = models.OrderedDict(name='localslave', host='localhost', port=7777,
-                                token='123', id='some-id')
+        kw = OrderedDict(name='localslave', host='localhost', port=7777,
+                         token='123', id='some-id')
         requester = MagicMock()
         slave = models.Slave(requester, kw)
         resp = yield from self.repository.add_slave(slave)
@@ -493,7 +403,7 @@ class BuildSetTest(TestCase):
         requester = MagicMock()
         buildsets = await models.BuildSet.list(requester)
         buildset = buildsets[0]
-        b_dict = buildset.to_dict()
+        b_dict = buildset.to_dict('%s')
         self.assertTrue(b_dict['id'])
         self.assertTrue(b_dict['builds'][0]['steps'])
         self.assertTrue(b_dict['repository'])
@@ -532,95 +442,6 @@ class BuilderTest(TestCase):
 
         self.assertEqual(len(builders), 2)
         self.assertEqual(builders[0].name, 'b0')
-
-
-class NotificationTest(TestCase):
-
-    def setUp(self):
-        self.notification = models.Notification
-
-    def test_get_headers(self):
-        expected = {'Authorization': 'token: {}'.format(
-            settings.NOTIFICATIONS_API_TOKEN)}
-        returned = self.notification._get_headers()
-        self.assertEqual(expected, returned)
-
-    @patch.object(models.requests, 'get', AsyncMagicMock(
-        spec=models.requests.get))
-    @async_test
-    async def test_list_no_repo(self):
-        r = MagicMock()
-        models.requests.get.return_value = r
-        r.json.return_value = {'notifications': [{'name': 'bla'}]}
-
-        r = await self.notification.list()
-        self.assertEqual(r[0].name, 'bla')
-
-    @patch.object(models.requests, 'get', AsyncMagicMock(
-        spec=models.requests.get))
-    @async_test
-    async def test_list_for_repo(self):
-        r = MagicMock()
-        obj_id = 'fake-obj-id'
-        models.requests.get.return_value = r
-        r.json.return_value = {'notifications': [{'name': 'bla'}]}
-
-        r = await self.notification.list(obj_id)
-        self.assertEqual(r[0].name, 'bla')
-
-    @patch.object(models.requests, 'post', AsyncMagicMock(
-        spec=models.requests.post))
-    @async_test
-    async def test_enable(self):
-        obj_id = 'fake-obj-id'
-        notif_name = 'slack-notification'
-        config = {'webhook_url': 'https://somewebhook.url'}
-        expected_config = {'webhook_url': 'https://somewebhook.url',
-                           'repository_id': obj_id}
-        expected_url = '{}/{}'.format(self.notification.api_url,
-                                      notif_name)
-        await self.notification.enable(obj_id, notif_name, **config)
-        called_url = models.requests.post.call_args[0][0]
-        called_config = json.loads(models.requests.post.call_args[1]['data'])
-
-        self.assertEqual(expected_url, called_url)
-        self.assertEqual(expected_config, called_config)
-
-    @patch.object(models.requests, 'delete', AsyncMagicMock(
-        spec=models.requests.delete))
-    @async_test
-    async def test_disable(self):
-        obj_id = 'fake-obj-id'
-        notif_name = 'slack-notification'
-        expected_config = {'repository_id': obj_id}
-        expected_url = '{}/{}'.format(self.notification.api_url,
-                                      notif_name)
-        await self.notification.disable(obj_id, notif_name)
-        called_url = models.requests.delete.call_args[0][0]
-        called_config = json.loads(models.requests.delete.call_args[1]['data'])
-
-        self.assertEqual(expected_url, called_url)
-        self.assertEqual(expected_config, called_config)
-
-    @patch.object(models.requests, 'put', AsyncMagicMock(
-        spec=models.requests.put))
-    @async_test
-    async def test_update(self):
-        obj_id = 'fake-obj-id'
-        notif_name = 'slack-notification'
-
-        expected_url = '{}/{}'.format(self.notification.api_url,
-                                      notif_name)
-        config = {'webhook_url': 'https://somewebhook.url'}
-        expected_config = {'webhook_url': 'https://somewebhook.url',
-                           'repository_id': obj_id}
-
-        await self.notification.update(obj_id, notif_name, **config)
-        called_url = models.requests.put.call_args[0][0]
-        called_config = json.loads(models.requests.put.call_args[1]['data'])
-
-        self.assertEqual(expected_url, called_url)
-        self.assertEqual(expected_config, called_config)
 
 
 class BuildTest(TestCase):

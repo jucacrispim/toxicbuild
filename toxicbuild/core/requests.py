@@ -37,13 +37,14 @@ import aiohttp
 class Response:
     """Encapsulates a response from a http request"""
 
-    def __init__(self, status, text):
+    def __init__(self, status, text, headers=None):
         """Constructor for Response.
 
         :param status: The response status.
         :param text: The response text."""
         self.status = status
         self.text = text
+        self.headers = headers or {}
 
     def json(self):
         """Loads the json in the response text."""
@@ -69,11 +70,12 @@ def _request(method, url, **kwargs):
         resp = yield from client.request(method, url, **kwargs)
         status = resp.status
         text = yield from resp.text()
+        headers = resp.headers
         yield from resp.release()
     finally:
         yield from client.close()
 
-    return Response(status, text)
+    return Response(status, text, headers)
 
 
 @asyncio.coroutine

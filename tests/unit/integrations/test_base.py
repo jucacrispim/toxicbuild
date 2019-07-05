@@ -73,23 +73,28 @@ class BaseIntegrationInstallationTest(TestCase):
 
     @patch.object(base.BaseIntegrationInstallation, 'import_repositories',
                   AsyncMagicMock())
+    @patch.object(base.BaseIntegrationInstallation, 'save', AsyncMagicMock())
     @patch.object(base.LoggerMixin, 'log_cls', Mock())
     @async_test
     async def test_create(self):
 
         install = await base.BaseIntegrationInstallation.create(
             self.user)
-        self.assertTrue(install.id)
         self.assertTrue(install.import_repositories.called)
+        self.assertTrue(install.save.called)
 
-    @patch.object(base.BaseIntegrationInstallation, 'import_repositories',
-                  AsyncMagicMock())
+    @patch.object(base.BaseIntegrationInstallation, 'save', AsyncMagicMock())
+    @patch.object(base.BaseIntegrationInstallation, 'objects', Mock())
     @patch.object(base.LoggerMixin, 'log_cls', Mock())
     @async_test
     async def test_create_install_already_exists(self):
+        install = Mock()
+        install.import_repositories = AsyncMagicMock()
+        base.BaseIntegrationInstallation.objects.filter.\
+            return_value.first = AsyncMagicMock(return_value=install)
         await base.BaseIntegrationInstallation.create(self.user)
         install = await base.BaseIntegrationInstallation.create(self.user)
-        self.assertIsNone(install)
+        self.assertFalse(install.save.called)
 
     @async_test
     async def test_list_repos(self):
@@ -112,10 +117,29 @@ class BaseIntegrationInstallationTest(TestCase):
     async def test_import_repositories(self):
         self.installation.list_repos = AsyncMagicMock(return_value=[
             Mock(), Mock()])
-        self.installation.import_repository = AsyncMagicMock()
+
+        repo = Mock()
+        repo.request_code_update = AsyncMagicMock()
+        repo._wait_update = AsyncMagicMock()
+        self.installation.import_repository = AsyncMagicMock(return_value=repo)
         await self.installation.import_repositories()
         self.assertEqual(
             len(self.installation.import_repository.call_args_list), 2)
+
+    @patch.object(base.BaseIntegrationInstallation, 'log', Mock())
+    @async_test
+    async def test_import_repositories_error(self):
+        self.installation.list_repos = AsyncMagicMock(return_value=[
+            {'name': 'bla'}, {'name': 'ble'}])
+        repo = Mock()
+        repo.request_code_update = AsyncMagicMock()
+        repo._wait_update = AsyncMagicMock()
+        self.installation.import_repository = AsyncMagicMock(
+            side_effect=[repo, Exception, False, Exception])
+        repos = await self.installation.import_repositories()
+        self.assertEqual(
+            len(self.installation.import_repository.call_args_list), 2)
+        self.assertEqual(len(repos), 1)
 
     @patch.object(base.Repository, 'schedule', Mock())
     @patch.object(base.Repository, '_notify_repo_creation',
@@ -132,6 +156,8 @@ class BaseIntegrationInstallationTest(TestCase):
                      'id': 1234, 'full_name': 'ze/my-repo'}
         self.installation._get_auth_url = AsyncMagicMock(
             return_value='https://some-url')
+
+        self.installation.enable_notification = AsyncMagicMock()
         repo = await self.installation.import_repository(repo_info)
         self.assertTrue(repo.id)
         self.assertTrue(repo.request_code_update.called)
@@ -154,6 +180,8 @@ class BaseIntegrationInstallationTest(TestCase):
                      'id': 1234, 'full_name': 'ze/my-repo'}
         self.installation._get_auth_url = AsyncMagicMock(
             return_value='https://some-url')
+        self.installation.enable_notification = AsyncMagicMock()
+
         repo = await self.installation.import_repository(repo_info,
                                                          clone=False)
         self.assertTrue(repo.id)
@@ -161,6 +189,21 @@ class BaseIntegrationInstallationTest(TestCase):
         install = await type(self.installation).objects.get(
             id=self.installation.id)
         self.assertTrue(install.repositories)
+
+    @patch.object(base.Repository, 'create', AsyncMagicMock(
+        side_effect=base.NotUniqueError, spec=base.Repository.create))
+    @async_test
+    async def test_import_repository_not_unique(self):
+        await base.Slave.create(name='my-slave',
+                                token='123', host='localhost',
+                                port=123, owner=self.user)
+        repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
+                     'id': 1234, 'full_name': 'ze/my-repo'}
+        self.installation._get_auth_url = AsyncMagicMock(
+            return_value='https://some-url')
+        repo = await self.installation.import_repository(repo_info,
+                                                         clone=False)
+        self.assertIs(repo, False)
 
     @async_test
     async def test_get_repo_by_exernal_id_bad_repo(self):
@@ -270,3 +313,17 @@ class BaseIntegrationInstallationTest(TestCase):
         self.installation.repositories.append(install_repo)
         await self.installation.remove_repository(1234)
         self.assertTrue(repository.Repository.request_removal.called)
+
+    def test_get_notif_config(self):
+        c = self.installation.get_notif_config()
+
+        self.assertEqual(c['installation'], str(self.installation.id))
+
+    @patch.object(base.Notification, 'enable', AsyncMagicMock())
+    @async_test
+    async def test_enable_notification(self):
+        repo = Mock()
+        self.installation.get_notif_config = Mock(return_value={})
+        await self.installation.enable_notification(repo)
+
+        self.assertTrue(base.Notification.enable.called)

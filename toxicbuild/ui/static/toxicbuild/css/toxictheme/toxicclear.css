@@ -593,7 +593,8 @@ body{
 }
 
 .top-page-repositories-info-container .fa-plus,
-.top-page-repositories-info-container .fa-github{
+.top-page-repositories-info-container .fa-github,
+.top-page-repositories-info-container .fa-gitlab{
     margin-left: 10px;
 }
 
@@ -602,7 +603,8 @@ body{
     color: var(--green);
 }
 
-.top-page-repositories-info-container .fa-github{
+.top-page-repositories-info-container .fa-github,
+.top-page-repositories-info-container .fa-gitlab{
     color: var(--black-almost-there);
 }
 

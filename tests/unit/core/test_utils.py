@@ -423,6 +423,24 @@ class UtilsTest(TestCase):
         random_str = utils.create_random_string(length)
         self.assertEqual(len(random_str), length)
 
+    def test_validation_string(self):
+        secret = '1234'
+        b64str = utils.create_validation_string(secret)
+
+        self.assertTrue(utils.validate_string(b64str, secret))
+
+    def test_validation_string_bad(self):
+        secret = '1234'
+        bad_secret = '123'
+        b64str = utils.create_validation_string(secret)
+
+        self.assertFalse(utils.validate_string(b64str, bad_secret))
+
+    @patch.object(utils, 'log', Mock())
+    def test_validation_string_exception(self):
+        secret = '1234'
+        self.assertFalse(utils.validate_string('bad-str', secret))
+
     @patch.object(utils.os, 'chdir', Mock())
     def test_changedir(self):
         with utils.changedir('bla'):

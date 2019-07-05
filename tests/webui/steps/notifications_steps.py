@@ -77,8 +77,8 @@ def click_configure_slack_notification(context):
 
         return el
 
+    browser.refresh()
     el = browser.wait_element_become_present(fn)
-
     el.click()
     time.sleep(0.4)
 
@@ -132,6 +132,7 @@ def has_enabled_the_slack_notification(context):
 
         return el
 
+    browser.refresh()
     el = browser.wait_element_become_present(fn)
     browser.wait_element_become_visible(el)
 

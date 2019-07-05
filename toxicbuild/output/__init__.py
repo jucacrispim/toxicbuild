@@ -20,7 +20,6 @@
 # pylint: disable-all
 
 import asyncio
-import logging
 import os
 import pkg_resources
 import shutil
@@ -189,8 +188,11 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         command = get_command('runtornado')()
 
         command.kill = False
+        user_msg = 'Starting ToxicOutput. Listening on port {}'
+        command.user_message = user_msg
         command.daemonize = daemonize
         command.stderr = stderr
+        command.asyncio = True
         command.application = None
         command.loglevel = loglevel
         command.stdout = stdout
@@ -237,6 +239,9 @@ def stop(workdir, pidfile=PIDFILE, kill=False):
             workdir, 'toxicoutput.conf')
 
         os.environ['TOXICMASTER_SETTINGS'] = os.environ[
+            'TOXICOUTPUT_SETTINGS']
+
+        os.environ['TOXICINTEGRATIONS_SETTINGS'] = os.environ[
             'TOXICOUTPUT_SETTINGS']
 
         create_settings_and_connect_master()

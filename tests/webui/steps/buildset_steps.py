@@ -15,20 +15,15 @@ def click_summary_link(context):
     def fn():
         try:
             el = browser.find_elements_by_xpath('//a[@title="Summary"]')[1]
-        except IndexError:
+            el = el if el.is_displayed() else None
+        except Exception:
             el = None
 
         return el
 
-    el = browser.wait_element_become_present(fn)
-
-    try:
-        browser.click(el)
-        el = browser.find_element_by_class_name('fa-th')
-
-    except StaleElementReferenceException:
-        el = browser.wait_element_become_present(fn)
-        browser.wait_element_become_visible(el)
+    browser.refresh()
+    el = browser.click_and_retry_on_stale(fn)
+    assert el
 
 
 @then('he sees the buildset list page')
@@ -39,7 +34,8 @@ def see_buildset_list_page(context):
     def fn():
         try:
             el = browser.find_elements_by_class_name('buildset-info')[1]
-        except IndexError:
+            el = el if el.is_displayed() else None
+        except Exception:
             el = None
 
         return el
@@ -64,7 +60,8 @@ def click_reschedule_button(context):
     def fn():
         try:
             el = browser.find_elements_by_class_name('fa-redo')[1]
-        except IndexError:
+            el = el if el.is_displayed() else None
+        except Exception:
             el = None
 
         return el

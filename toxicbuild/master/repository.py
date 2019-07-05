@@ -112,6 +112,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     enabled = BooleanField(default=True)
     """Indicates if this repository is enabled to run builds."""
 
+    external_id = StringField()
+    """The repository id in an external service. Is a string because is not
+    guaranteed a external id is a int."""
+
+    external_full_name = StringField()
+    """The full name of the repository in an external service"""
+
     meta = {
         'ordering': ['name'],
     }
@@ -165,6 +172,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         my_dict = {'id': str(self.id), 'name': self.name, 'url': self.url,
                    'full_name': self.full_name,
+                   'external_full_name': self.external_full_name,
                    'update_seconds': self.update_seconds,
                    'vcs_type': self.vcs_type,
                    'branches': [b.to_dict() for b in self.branches],
@@ -401,14 +409,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                    'repo_branches': repo_branches,
                    'external': external}
 
-            # We first get a consumer for the poll status queue
-            consumer = await self._get_poll_status_consumer()
-            async with consumer:
-                # then we send an update message. Otherwise we could end in a
-                # dead lock here when the poller sends its message back before
-                # we have a consumer.
-                ensure_future(update_code.publish(msg))
-                msg = await self._wait_update(consumer)
+            ensure_future(update_code.publish(msg))
+            msg = await self._wait_update()
 
         self.log('update_code_lock released', level='debug')
         self.clone_status = msg.body['clone_status']
@@ -426,12 +428,14 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                                              no_ack=False)
         return consumer
 
-    async def _wait_update(self, consumer):
-        # wait for the message with the poll response.
-        msg = await consumer.fetch_message()
-        self.log('poll status received', level='debug')
-        await msg.acknowledge()
-        self.log('poll status msg acknowledged', level='debug')
+    async def _wait_update(self):
+        consumer = await self._get_poll_status_consumer()
+        async with consumer:
+            # wait for the message with the poll response.
+            msg = await consumer.fetch_message()
+            self.log('poll status received', level='debug')
+            await msg.acknowledge()
+            self.log('poll status msg acknowledged', level='debug')
 
         return msg
 

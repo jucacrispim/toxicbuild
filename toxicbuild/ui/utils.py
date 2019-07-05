@@ -18,61 +18,18 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from http.cookies import Morsel
-import re
-import pytz
 
-from toxicbuild.core.utils import DTFORMAT, datetime2string
+from toxicbuild.core.utils import DTFORMAT
 from toxicbuild.ui import settings
 
 
-_dt_regex = re.compile('\d\s\d+\s\d+\s\d+:\d+:\d+\s\d+\s[\+|-]\d+$')
-
-
-def _get_dtformat():
+def get_dtformat():
     try:
         dtformat = settings.DTFORMAT
     except AttributeError:
         dtformat = DTFORMAT
 
     return dtformat
-
-
-def _get_timezone(tzname):
-    try:
-        tz = pytz.timezone(tzname or '')
-    except pytz.UnknownTimeZoneError:
-        tz = None
-
-    return tz
-
-
-def format_datetime(dt, dtformat=None, tzname=None):
-    """Formats a datetime object according to the
-    timezone and format specified in the config file.
-
-    :param dt: A datetime object.
-    :param dtformat: The format for the datetime.
-    :param tzname: A timezone name."""
-
-    if not dtformat:
-        dtformat = _get_dtformat()
-
-    tz = _get_timezone(tzname)
-
-    if tz:
-        dt = dt.astimezone(tz)
-
-    return datetime2string(dt, dtformat=dtformat)
-
-
-def is_datetime(dtstr):
-    """Checks if a string is a formated datetime.
-    The format expected for the datetime string is:
-    '%a %b %d %H:%M:%S %Y %z'"""
-
-    if not isinstance(dtstr, str):
-        return False
-    return bool(re.match(_dt_regex, dtstr))
 
 
 def get_client_settings():

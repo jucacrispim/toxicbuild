@@ -17,15 +17,20 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future, gather
+from mongoengine.errors import NotUniqueError
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (ReferenceField, StringField, IntField,
                                EmbeddedDocumentListField)
+from toxicbuild.common.api_models import Notification
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.repository import Repository, RepositoryBranch
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.users import User
 from toxicbuild.integrations import settings
 from toxicbuild.integrations.exceptions import BadRepository
+
+
+Notification.settings = settings
 
 
 class BaseIntegrationApp(LoggerMixin, Document):
@@ -71,6 +76,8 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
     repositories = EmbeddedDocumentListField(ExternalInstallationRepository)
     """The repositories imported from the user external service account."""
 
+    notif_name = None
+
     meta = {'allow_inheritance': True}
 
     async def list_repos(self):
@@ -97,6 +104,18 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
 
         raise NotImplementedError
 
+    def get_notif_config(self):
+        return {'installation': str(self.id)}
+
+    async def enable_notification(self, repo):
+        """Enables a notification to a repository.
+
+        :param repo: A repository instance."""
+
+        conf = self.get_notif_config()
+        await Notification.enable(
+            str(repo.id), self.notif_name, **conf)
+
     async def import_repository(self, repo_info, clone=True):
         """Imports a repository from an external service.
 
@@ -109,7 +128,7 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         """
 
         msg = 'Importing repo {}'.format(repo_info['clone_url'])
-        self.log(msg, level='debug')
+        self.log(msg)
 
         branches = [
             RepositoryBranch(name='master', notify_only_latest=True),
@@ -123,23 +142,28 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         # webhook receiver.
         user = await self.user
         fetch_url = await self._get_auth_url(repo_info['clone_url'])
-        repo = await Repository.create(name=repo_info['name'],
-                                       url=repo_info['clone_url'],
-                                       owner=user,
-                                       fetch_url=fetch_url,
-                                       update_seconds=0,
-                                       vcs_type='git',
-                                       schedule_poller=False,
-                                       parallel_builds=1,
-                                       branches=branches,
-                                       slaves=slaves)
-        gh_repo = ExternalInstallationRepository(
-            external_id=repo_info['id'],
+        external_id = repo_info['id']
+        external_full_name = repo_info['full_name']
+        try:
+            repo = await Repository.create(
+                name=repo_info['name'], url=repo_info['clone_url'],
+                owner=user, fetch_url=fetch_url, update_seconds=0,
+                vcs_type='git', schedule_poller=False, parallel_builds=1,
+                branches=branches, slaves=slaves, external_id=str(external_id),
+                external_full_name=external_full_name)
+        except NotUniqueError:
+            msg = 'Repository {}/{} already exists. Leaving.'.format(
+                user.name, repo_info['name'])
+            self.log(msg, level='error')
+            return False
+
+        ext_repo = ExternalInstallationRepository(
+            external_id=external_id,
             repository_id=str(repo.id),
-            full_name=repo_info['full_name'])
-        self.repositories.append(gh_repo)
+            full_name=external_full_name)
+        self.repositories.append(ext_repo)
         await self.save()
-        # await repo.enable_plugin('github-check-run', installation=self)
+        await self.enable_notification(repo)
 
         if clone:
             await repo.request_code_update()
@@ -153,8 +177,15 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         self.log(msg, level='debug')
         repos = []
         for repo_info in await self.list_repos():
-            repo = await self.import_repository(repo_info, clone=False)
-            repos.append(repo)
+            try:
+                repo = await self.import_repository(repo_info, clone=False)
+            except Exception as e:
+                self.log('Error importing repository {}: {}'.format(
+                    repo_info['name'], str(e)), level='error')
+                continue
+
+            if repo:  # pragma no branch
+                repos.append(repo)
 
         for chunk in self._get_import_chunks(repos):
             tasks = []
@@ -177,16 +208,12 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         """
 
         installation = await cls.objects.filter(user=user, **kwargs).first()
-        if installation:
-            msg = 'Installation for {}/{} already exists'.format(
-                user.id, kwargs)
-            cls.log_cls(msg, level='error')
-            return
+        if not installation:
+            msg = 'Creating installation for {}'.format(kwargs)
+            cls.log_cls(msg)
+            installation = cls(user=user, **kwargs)
+            await installation.save()
 
-        msg = 'Creating installation for {}'.format(kwargs)
-        cls.log_cls(msg, level='debug')
-        installation = cls(user=user, **kwargs)
-        await installation.save()
         await installation.import_repositories()
         return installation
 

@@ -112,8 +112,10 @@ def click_add_branch_button(context):
 @then('he sees the new branch config in the list')
 def see_new_branch(context):
     browser = context.browser
-    el = browser.find_elements_by_class_name('repo-branches-li')[2]
-    browser.wait_element_become_visible(el)
+
+    el = browser.wait_element_become_present(
+        lambda: browser.find_elements_by_class_name('repo-branches-li')[2])
+    assert el
 
 
 @given('the user already added a branch config')

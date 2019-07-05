@@ -26,7 +26,7 @@ class AppExists(Exception):
     pass
 
 
-class BadRequestToGithubAPI(Exception):
+class BadRequestToExternalAPI(Exception):
     pass
 
 
