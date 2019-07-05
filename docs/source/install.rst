@@ -357,6 +357,37 @@ In your `toxicui.conf` set the following parameters:
    GITHUB_IMPORT_URL = 'https://github.com/apps/<app-name>/installations/new'
 
 
+.. _gitlab-integration-config:
+
+Integration with Gitlab
+-----------------------
+
+First create an application at gitlab. Go to
+`https://gitlab.com/profile/applications` and fill the name field with
+`ToxicBuild` and the field redirect URI with
+`<your-integrations-server>:9999/gitlab/setup`. In the scopes section
+check `api` and save the application. Copy and save the `Application ID`
+and `Secret` shown.
+
+
+Toxicbuild Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+In your `toxicintegrations.conf` set the following parameters:
+
+.. code-block:: python
+
+   GITLAB_URL = 'https://gitlab.com/'
+   GITLAB_API_URL = '{}api/v4/'.format(GITLAB_URL)
+   GITLAB_APP_ID = <your-gitlab-app-id>
+   GITLAB_APP_SECRET = <your-gitlab-app-secret>
+   GITLAB_WEBHOOK_TOKEN = 'a-secret-token'
+
+In your `toxicui.conf` set the following:
+
+GITLAB_IMPORT_URL = 'https://gitlab.com/oauth/authorize?client_id=<app_id>&redirect_uri=<redirect-url-same-as-in-gitlab-app>&response_type=code&state={state}'
+
+
 Integration with Amazon ec2
 ---------------------------
 
