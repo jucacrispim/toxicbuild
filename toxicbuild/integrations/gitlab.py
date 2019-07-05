@@ -115,6 +115,7 @@ class GitLabInstallation(BaseIntegrationInstallation):
         p = 1
         repos = []
         while True:
+            self.log('Fetching page {}'.format(p), level='debug')
             url = settings.GITLAB_API_URL + 'users/{}/projects?page={}'.format(
                 self.gitlab_user_id, p)
             ret = await requests.get(url, headers=header)
