@@ -125,7 +125,7 @@ class GitLabInstallationTest(TestCase):
             await self.installation.create_webhook(1234)
 
     @patch.object(gitlab.BaseIntegrationInstallation, 'import_repository',
-                  AsyncMagicMock())
+                  AsyncMagicMock(return_value=Mock()))
     @async_test
     async def test_import_repository(self):
         self.installation.create_webhook = AsyncMagicMock()

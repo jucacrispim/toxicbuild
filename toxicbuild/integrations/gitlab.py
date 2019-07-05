@@ -115,7 +115,7 @@ class GitLabInstallation(BaseIntegrationInstallation):
         p = 1
         repos = []
         while True:
-            url = settings.GITLAB_API_URL + 'users/{}/projects?page='.format(
+            url = settings.GITLAB_API_URL + 'users/{}/projects?page={}'.format(
                 self.gitlab_user_id, p)
             ret = await requests.get(url, headers=header)
             if ret.status != 200:
