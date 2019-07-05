@@ -184,7 +184,8 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
                     repo_info['name'], str(e)), level='error')
                 continue
 
-            repos.append(repo)
+            if repo:  # pragma no branch
+                repos.append(repo)
 
         for chunk in self._get_import_chunks(repos):
             tasks = []

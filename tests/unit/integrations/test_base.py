@@ -117,7 +117,10 @@ class BaseIntegrationInstallationTest(TestCase):
     async def test_import_repositories(self):
         self.installation.list_repos = AsyncMagicMock(return_value=[
             Mock(), Mock()])
-        self.installation.import_repository = AsyncMagicMock()
+        repo = Mock()
+        repo.request_code_update = AsyncMagicMock()
+        repo._wait_update = AsyncMagicMock()
+        self.installation.import_repository = AsyncMagicMock(return_value=repo)
         await self.installation.import_repositories()
         self.assertEqual(
             len(self.installation.import_repository.call_args_list), 2)
@@ -131,7 +134,7 @@ class BaseIntegrationInstallationTest(TestCase):
         repo.request_code_update = AsyncMagicMock()
         repo._wait_update = AsyncMagicMock()
         self.installation.import_repository = AsyncMagicMock(
-            side_effect=[repo, Exception])
+            side_effect=[repo, Exception, False, Exception])
         repos = await self.installation.import_repositories()
         self.assertEqual(
             len(self.installation.import_repository.call_args_list), 2)
