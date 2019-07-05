@@ -105,7 +105,7 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         raise NotImplementedError
 
     def get_notif_config(self):
-        raise NotImplementedError
+        return {'installation': str(self.id)}
 
     async def enable_notification(self, repo):
         """Enables a notification to a repository.

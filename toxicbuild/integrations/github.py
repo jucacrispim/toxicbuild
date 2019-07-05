@@ -242,9 +242,6 @@ class GithubInstallation(BaseIntegrationInstallation):
                                                   self.auth_token, new_url)
         return new_url
 
-    def get_notif_config(self):
-        return {'installation': str(self.id)}
-
     async def list_repos(self):
         """Lists all respositories available to an installation.
         Returns a list of dictionaries with repositories' information"""

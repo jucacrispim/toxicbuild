@@ -312,9 +312,9 @@ class BaseIntegrationInstallationTest(TestCase):
         self.assertTrue(repository.Repository.request_removal.called)
 
     def test_get_notif_config(self):
+        c = self.installation.get_notif_config()
 
-        with self.assertRaises(NotImplementedError):
-            self.installation.get_notif_config()
+        self.assertEqual(c['installation'], str(self.installation.id))
 
     @patch.object(base.Notification, 'enable', AsyncMagicMock())
     @async_test
