@@ -108,7 +108,7 @@ class GitLabInstallation(BaseIntegrationInstallation):
         def get_repo_dict(r):
             return {'name': r['name'],
                     'id': r['id'],
-                    'full_name': r['name_with_namespace'],
+                    'full_name': r['path_with_namespace'],
                     'clone_url': r['http_url_to_repo']}
 
         header = await self.get_header()

@@ -66,6 +66,7 @@ class GitLabInstallationTest(TestCase):
         ret.json = Mock(return_value=json_contents)
 
         repos = await self.installation.list_repos()
+        self.assertTrue(' ' not in repos[0]['full_name'])
         self.assertEqual(len(repos), 20)
 
     @patch.object(gitlab.GitLabInstallation, 'get_header', AsyncMagicMock(
