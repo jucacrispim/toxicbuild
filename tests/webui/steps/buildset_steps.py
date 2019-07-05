@@ -22,8 +22,7 @@ def click_summary_link(context):
         return el
 
     browser.refresh()
-    el = browser.wait_element_become_present(fn)
-    el.click()
+    el = browser.click_and_retry_on_stale(fn)
     assert el
 
 
