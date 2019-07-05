@@ -155,5 +155,6 @@ class GitLabInstallation(BaseIntegrationInstallation):
 
     async def import_repository(self, repo_info, clone=True):
         r = await super().import_repository(repo_info, clone=clone)
-        await self.create_webhook(repo_info['id'])
+        if r:
+            await self.create_webhook(repo_info['id'])
         return r

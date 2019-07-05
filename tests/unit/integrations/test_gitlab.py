@@ -133,6 +133,15 @@ class GitLabInstallationTest(TestCase):
 
         self.assertTrue(self.installation.create_webhook.called)
 
+    @patch.object(gitlab.BaseIntegrationInstallation, 'import_repository',
+                  AsyncMagicMock(return_value=False))
+    @async_test
+    async def test_import_repository_dont_create_webhook(self):
+        self.installation.create_webhook = AsyncMagicMock()
+        await self.installation.import_repository({'id': 'bla'})
+
+        self.assertFalse(self.installation.create_webhook.called)
+
     @patch.object(gitlab.GitLabInstallation, 'save', AsyncMagicMock())
     @patch.object(gitlab.requests, 'post', AsyncMagicMock())
     @async_test
