@@ -112,6 +112,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     enabled = BooleanField(default=True)
     """Indicates if this repository is enabled to run builds."""
 
+    external_id = StringField()
+    """The repository id in an external service. Is a string because is not
+    guaranteed a external id is a int."""
+
+    external_full_name = StringField()
+    """The full name of the repository in an external service"""
+
     meta = {
         'ordering': ['name'],
     }
@@ -165,6 +172,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         my_dict = {'id': str(self.id), 'name': self.name, 'url': self.url,
                    'full_name': self.full_name,
+                   'external_full_name': self.external_full_name,
                    'update_seconds': self.update_seconds,
                    'vcs_type': self.vcs_type,
                    'branches': [b.to_dict() for b in self.branches],

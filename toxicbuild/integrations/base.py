@@ -142,17 +142,15 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         # webhook receiver.
         user = await self.user
         fetch_url = await self._get_auth_url(repo_info['clone_url'])
+        external_id = repo_info['id']
+        external_full_name = repo_info['full_name']
         try:
-            repo = await Repository.create(name=repo_info['name'],
-                                           url=repo_info['clone_url'],
-                                           owner=user,
-                                           fetch_url=fetch_url,
-                                           update_seconds=0,
-                                           vcs_type='git',
-                                           schedule_poller=False,
-                                           parallel_builds=1,
-                                           branches=branches,
-                                           slaves=slaves)
+            repo = await Repository.create(
+                name=repo_info['name'], url=repo_info['clone_url'],
+                owner=user, fetch_url=fetch_url, update_seconds=0,
+                vcs_type='git', schedule_poller=False, parallel_builds=1,
+                branches=branches, slaves=slaves, external_id=str(external_id),
+                external_full_name=external_full_name)
         except NotUniqueError:
             msg = 'Repository {}/{} already exists. Leaving.'.format(
                 user.name, repo_info['name'])
@@ -160,9 +158,9 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
             return False
 
         ext_repo = ExternalInstallationRepository(
-            external_id=repo_info['id'],
+            external_id=external_id,
             repository_id=str(repo.id),
-            full_name=repo_info['full_name'])
+            full_name=external_full_name)
         self.repositories.append(ext_repo)
         await self.save()
         await self.enable_notification(repo)

@@ -394,7 +394,8 @@ class GithubCheckRunNotificationTest(TestCase):
     @async_test
     async def test_send_message(self):
         self.check_run.sender = {'id': 'some-id',
-                                 'full_name': 'bla/ble'}
+                                 'full_name': 'bla/ble',
+                                 'external_full_name': 'ble/ble'}
         started = localtime2utc(now())
         finished = localtime2utc(now())
         buildset_info = {'branch': 'master', 'commit': '123adf',

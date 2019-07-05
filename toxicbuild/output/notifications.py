@@ -478,7 +478,7 @@ class GithubCheckRunNotification(Notification):
     async def _send_message(self, buildset_info, run_status, conclusion):
         self.log('sending check for {} buildset {}'.format(
             self.sender['id'], buildset_info['id']), level='info')
-        full_name = self.sender['full_name']
+        full_name = self.sender['external_full_name']
         install = await self.installation
         url = settings.GITHUB_API_URL + 'repos/{}/check-runs'.format(
             full_name)
