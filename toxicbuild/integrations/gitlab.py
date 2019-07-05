@@ -120,6 +120,7 @@ class GitLabInstallation(BaseIntegrationInstallation):
             ret = await requests.get(url, headers=header)
             if ret.status != 200:
                 raise BadRequestToExternalAPI(ret.status, ret.text, url)
+            p += 1
             repos += [get_repo_dict(r) for r in ret.json()]
 
             n = ret.headers.get('X-Next-Page', 0)
