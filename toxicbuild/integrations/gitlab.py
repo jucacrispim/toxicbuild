@@ -126,7 +126,7 @@ class GitLabInstallation(BaseIntegrationInstallation):
 
             n = ret.headers.get('X-Next-Page', 0)
             t = ret.headers.get('X-Total-Pages', 0)
-            if n >= t:  # pragma no branch
+            if not n or n >= t:  # pragma no branch
                 break
 
         return repos
