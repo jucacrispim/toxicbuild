@@ -241,6 +241,9 @@ def stop(workdir, pidfile=PIDFILE, kill=False):
         os.environ['TOXICMASTER_SETTINGS'] = os.environ[
             'TOXICOUTPUT_SETTINGS']
 
+        os.environ['TOXICINTEGRATIONS_SETTINGS'] = os.environ[
+            'TOXICOUTPUT_SETTINGS']
+
         create_settings_and_connect_master()
         create_settings_and_connect()
 

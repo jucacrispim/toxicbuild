@@ -61,6 +61,7 @@ from asyncio import ensure_future
 import copy
 from collections import OrderedDict, defaultdict
 import json
+import urllib
 from mongomotor import Document
 from mongomotor.fields import (StringField, ListField, ReferenceField,
                                ObjectIdField)
@@ -71,6 +72,7 @@ from toxicbuild.core.plugins import Plugin, PluginMeta
 from toxicbuild.core.utils import (LoggerMixin, datetime2string,
                                    string2datetime)
 from toxicbuild.integrations.github import GithubInstallation
+from toxicbuild.integrations.gitlab import GitLabInstallation
 from toxicbuild.master.utils import (PrettyListField, PrettyStringField,
                                      PrettyURLField)
 from toxicbuild.output import settings
@@ -418,10 +420,6 @@ class GithubCheckRunNotification(Notification):
     its own auth token and it is needed send the checks.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.sender = None
-
     async def run(self, buildset_info):
         """Executed when a notification about a build arrives. Reacts
         to buildsets that started or finished.
@@ -486,10 +484,72 @@ class GithubCheckRunNotification(Notification):
 
         payload = self._get_payload(buildset_info, run_status, conclusion)
 
-        header = await install._get_header(
+        header = await install.get_header(
             accept='application/vnd.github.antiope-preview+json')
         data = json.dumps(payload)
         r = await requests.post(url, headers=header, data=data)
+
+        self.log('response from check for buildset {} - status: {}'.format(
+            buildset_info['id'], r.status), level='debug')
+        self.log(r.text, level='debug')
+
+
+class GitlabCommitStatusNotification(Notification):
+    """A plugin that sets a commit status reacting to a buildset that
+    was added, started or finished."""
+
+    name = 'gitlab-commit-status'
+    """The name of the plugin"""
+
+    events = ['buildset-added', 'buildset-started', 'buildset-finished']
+    """Events that trigger the plugin."""
+
+    no_list = True
+
+    installation = ReferenceField(GitLabInstallation)
+    """The :class:`~toxicbuild.integrations.gitlab.GitLabInstallation`
+    that owns the notification. It is needed because each installation has
+    its own auth token and it is needed send the checks.
+    """
+
+    async def run(self, buildset_info):
+        """Executed when a notification about a build arrives. Reacts
+        to buildsets that started or finished.
+
+        :param buildset_info: A dictionary with information about a buildset.
+        """
+
+        self.log('Sending notification to gitlab for buildset {}'.format(
+            buildset_info['id']), level='info')
+        self.log('Info is: {}'.format(buildset_info), level='debug')
+        self.sender = buildset_info['repository']
+        await self._send_message(buildset_info)
+
+    async def _send_message(self, buildset_info):
+
+        status_tb = {'pending': 'pending',
+                     'preparing': 'running',
+                     'running': 'running',
+                     'success': 'success',
+                     'fail': 'failed',
+                     'canceled': 'canceled',
+                     'exception': 'failed',
+                     'warning': 'failed'}
+
+        full_name = urllib.parse.quote(self.sender['external_full_name'],
+                                       safe='')
+        sha = buildset_info['commit']
+        url = settings.GITLAB_API_URL + 'projects/{}/statuses/{}'.format(
+            full_name, sha)
+        state = status_tb[buildset_info['status']]
+
+        params = {'sha': sha,
+                  'ref': buildset_info['branch'],
+                  'state': state}
+        install = await self.installation
+        header = await install.get_header()
+
+        r = await requests.post(url, headers=header, params=params)
 
         self.log('response from check for buildset {} - status: {}'.format(
             buildset_info['id'], r.status), level='debug')

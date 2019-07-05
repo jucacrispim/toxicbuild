@@ -17,11 +17,11 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
+from toxicbuild.integrations.exceptions import BadRequestToExternalAPI
+from toxicbuild.integrations.base import BaseIntegrationInstallation
 from mongomotor.fields import StringField, IntField
 from toxicbuild.core import requests
 from toxicbuild.integrations import settings
-from toxicbuild.integrations.base import BaseIntegrationInstallation
-from toxicbuild.integrations.exceptions import BadRequestToExternalAPI
 
 __doc__ = """This module implements integration with gitlab. Imports
 Repositories from GitLab and reacts to messages sent by gitlab to
@@ -42,9 +42,12 @@ class GitLabInstallation(BaseIntegrationInstallation):
     gitlab_user_id = IntField()
     """The user's id at gitlab."""
 
-    REDIRECT_URI = settings.INTEGRATIONS_HTTP_URL + 'gitlab/setup'
+    REDIRECT_URI = getattr(
+        settings, 'INTEGRATIONS_HTTP_URL', '') + 'gitlab/setup'
 
-    async def _get_header(self):
+    notif_name = 'gitlab-commit-status'
+
+    async def get_header(self):
         if not self.access_token:
             await self.create_access_token()
 
@@ -54,7 +57,7 @@ class GitLabInstallation(BaseIntegrationInstallation):
     async def get_user_id(self):
         """Gets the user id from the gitlab api.
         """
-        header = await self._get_header()
+        header = await self.get_header()
         url = settings.GITLAB_API_URL + 'user'
         r = await requests.get(url, headers=header)
         if r.status != 200:
@@ -102,7 +105,7 @@ class GitLabInstallation(BaseIntegrationInstallation):
         """Lists the repositories using GitLab API.
         """
 
-        header = await self._get_header()
+        header = await self.get_header()
         url = settings.GITLAB_API_URL + 'users/{}/projects'.format(
             self.gitlab_user_id)
         ret = await requests.get(url, headers=header)
@@ -126,7 +129,7 @@ class GitLabInstallation(BaseIntegrationInstallation):
         """
         self.log('Creating webhook to {}'.format(repo_external_id))
 
-        header = await self._get_header()
+        header = await self.get_header()
         callback_url = settings.INTEGRATIONS_HTTP_URL + \
             'gitlab/webhooks?installation_id={}'.format(str(self.id))
         body = {'id': repo_external_id,

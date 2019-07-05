@@ -219,7 +219,7 @@ class GithubInstallation(BaseIntegrationInstallation):
             return True
         return False
 
-    async def _get_header(
+    async def get_header(
             self, accept='application/vnd.github.machine-man-preview+json'):
 
         if not self.auth_token or self.token_is_expired:
@@ -249,7 +249,7 @@ class GithubInstallation(BaseIntegrationInstallation):
         """Lists all respositories available to an installation.
         Returns a list of dictionaries with repositories' information"""
 
-        header = await self._get_header()
+        header = await self.get_header()
         url = GITHUB_API_URL + 'installation/repositories'
         ret = await requests.get(url, headers=header)
         if ret.status != 200:
@@ -263,7 +263,7 @@ class GithubInstallation(BaseIntegrationInstallation):
 
         :param github_repo_id: The full name of the repository on github."""
 
-        header = await self._get_header()
+        header = await self.get_header()
         url = GITHUB_API_URL + 'repos/{}'.format(repo_full_name)
         ret = await requests.get(url, headers=header)
         if ret.status != 200:

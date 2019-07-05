@@ -34,7 +34,7 @@ class GitLabInstallationTest(TestCase):
     @async_test
     async def test_get_header(self):
         expected = {'Authorization': 'Bearer asdf'}
-        r = await self.installation._get_header()
+        r = await self.installation.get_header()
 
         self.assertEqual(r, expected)
 
@@ -43,12 +43,12 @@ class GitLabInstallationTest(TestCase):
         expected = {'Authorization': 'Bearer None'}
         self.installation.create_access_token = AsyncMagicMock()
         self.installation.access_token = None
-        r = await self.installation._get_header()
+        r = await self.installation.get_header()
 
         self.assertTrue(self.installation.create_access_token.called)
         self.assertEqual(r, expected)
 
-    @patch.object(gitlab.GitLabInstallation, '_get_header', AsyncMagicMock(
+    @patch.object(gitlab.GitLabInstallation, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(gitlab.requests, 'get', AsyncMagicMock())
     @async_test
@@ -66,7 +66,7 @@ class GitLabInstallationTest(TestCase):
         repos = await self.installation.list_repos()
         self.assertEqual(len(repos), 20)
 
-    @patch.object(gitlab.GitLabInstallation, '_get_header', AsyncMagicMock(
+    @patch.object(gitlab.GitLabInstallation, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(gitlab.requests, 'get', AsyncMagicMock())
     @async_test
@@ -101,7 +101,7 @@ class GitLabInstallationTest(TestCase):
         self.assertTrue(self.installation.create_access_token.called)
         self.assertEqual(expected, returned)
 
-    @patch.object(gitlab.GitLabInstallation, '_get_header', AsyncMagicMock(
+    @patch.object(gitlab.GitLabInstallation, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(gitlab.requests, 'post', AsyncMagicMock())
     @async_test
@@ -112,7 +112,7 @@ class GitLabInstallationTest(TestCase):
         ret = await self.installation.create_webhook(1234)
         self.assertTrue(ret)
 
-    @patch.object(gitlab.GitLabInstallation, '_get_header', AsyncMagicMock(
+    @patch.object(gitlab.GitLabInstallation, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(gitlab.requests, 'post', AsyncMagicMock())
     @async_test

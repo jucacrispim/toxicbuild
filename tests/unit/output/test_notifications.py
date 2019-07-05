@@ -19,7 +19,7 @@
 from bson.objectid import ObjectId
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
-from toxicbuild.integrations import github
+from toxicbuild.integrations import github, gitlab
 from toxicbuild.core.utils import (datetime2string, now, localtime2utc)
 from toxicbuild.master.users import User
 from toxicbuild.output import notifications
@@ -389,8 +389,8 @@ class GithubCheckRunNotificationTest(TestCase):
 
     @patch.object(github.requests, 'post', AsyncMagicMock(
         spec=github.requests.post))
-    @patch.object(github.GithubInstallation, '_get_header', AsyncMagicMock(
-        spec=github.GithubInstallation._get_header))
+    @patch.object(github.GithubInstallation, 'get_header', AsyncMagicMock(
+        spec=github.GithubInstallation.get_header))
     @async_test
     async def test_send_message(self):
         self.check_run.sender = {'id': 'some-id',
@@ -413,3 +413,54 @@ class GithubCheckRunNotificationTest(TestCase):
         await self.check_run._send_message(buildset_info, run_status,
                                            conclusion)
         self.assertTrue(github.requests.post.called)
+
+
+class GitlabCommitStatusNotificationTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.user = User(email='a@a.com')
+        await self.user.save()
+        self.installation = gitlab.GitLabInstallation(
+            gitlab_user_id=1234, user=self.user)
+        await self.installation.save()
+
+        await self.installation.save()
+        self.notif = notifications.GitlabCommitStatusNotification(
+            installation=self.installation)
+
+    @async_test
+    async def tearDown(self):
+        await User.drop_collection()
+        await gitlab.GitLabInstallation.drop_collection()
+
+    @async_test
+    async def test_run(self):
+        info = {'status': 'fail', 'id': 'some-id',
+                'repository': {'id': 'some-repo-id'}}
+        self.notif._send_message = AsyncMagicMock(
+            spec=self.notif._send_message)
+
+        await self.notif.run(info)
+        self.assertTrue(self.notif._send_message.called)
+
+    @patch.object(gitlab.requests, 'post', AsyncMagicMock(
+        spec=gitlab.requests.post))
+    @patch.object(gitlab.GitLabInstallation, 'get_header', AsyncMagicMock(
+        spec=gitlab.GitLabInstallation.get_header))
+    @async_test
+    async def test_send_message(self):
+        self.notif.sender = {'id': 'some-id',
+                             'full_name': 'bla/ble',
+                             'external_full_name': 'ble/ble'}
+        buildset_info = {'branch': 'master', 'commit': '123adf',
+                         'status': 'exception',
+                         'id': 'some-id'}
+
+        ret = MagicMock()
+        ret.text = ''
+        ret.status = 201
+        github.requests.post.return_value = ret
+
+        await self.notif._send_message(buildset_info)
+        self.assertTrue(gitlab.requests.post.called)
