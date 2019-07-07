@@ -65,7 +65,7 @@ import urllib
 from mongomotor import Document
 from mongomotor.fields import (StringField, ListField, ReferenceField,
                                ObjectIdField)
-from mongomotor.metaprogramming import AsyncDocumentMetaclass
+from mongomotor.metaprogramming import AsyncTopLevelDocumentMetaclass
 from toxicbuild.core import requests
 from toxicbuild.core.mail import MailSender as MailSenderCore
 from toxicbuild.core.plugins import Plugin, PluginMeta
@@ -109,7 +109,7 @@ async def send_email(recipients, subject, message):
     return True
 
 
-class MetaNotification(PluginMeta, AsyncDocumentMetaclass):
+class MetaNotification(PluginMeta, AsyncTopLevelDocumentMetaclass):
     """Metaclass that sets name to the class definition as
     mongo fields while keeping the interface of setting your notification's
     name as string in definition time."""

@@ -597,14 +597,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await revision.save()
         return revision
 
-    async def add_builds_for_slave(self, buildset, slave, conf, builders=None,
-                                   builders_origin=None):
+    async def add_builds_for_buildset(self, buildset, conf, builders=None,
+                                      builders_origin=None):
         """Adds a buildset to the build queue of a given slave
         for this repository.
 
         :param buildset: An instance of
           :class:`toxicbuild.master.build.BuildSet`.
-        :param slave: An instance of :class:`toxicbuild.master.build.Slave`.
         :param conf: The build configuration for the buidset.
         :param builders: The builders to use in the buids. If no builds,
           all builders for the revision will be used.
@@ -613,16 +612,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
           branch.
         """
         builders = builders or []
-        await self.build_manager.add_builds_for_slave(
-            buildset, slave, conf, builders=builders,
+        await self.build_manager.add_builds_for_buildset(
+            buildset, conf, builders=builders,
             builders_origin=builders_origin)
 
     async def start_build(self, branch, builder_name=None, named_tree=None,
-                          slaves=None, builders_origin=None):
+                          builders_origin=None):
         """ Starts a (some) build(s) in the repository. """
-
-        if not slaves:
-            slaves = await self.slaves
 
         if not named_tree:
             rev = await self.get_latest_revision_for_branch(branch)
@@ -642,20 +638,14 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             return
 
         if not builder_name:
-            builders, builders_origin = await self._get_builders(slaves, rev,
-                                                                 conf)
+            builders, builders_origin = await self._get_builders(rev, conf)
         else:
             builders_origin = None
-            blist = [(await Builder.get(name=builder_name,
-                                        repository=self))]
-            builders = {}
-            for slave in slaves:
-                builders.update({slave: blist})
-
-        for slave in slaves:
-            await self.add_builds_for_slave(buildset, slave, conf,
-                                            builders=builders[slave],
-                                            builders_origin=builders_origin)
+            builders = [(await Builder.get(name=builder_name,
+                                           repository=self))]
+        await self.add_builds_for_buildset(buildset, conf,
+                                           builders=builders,
+                                           builders_origin=builders_origin)
 
     async def request_build(self, branch, builder_name=None, named_tree=None,
                             slaves=None):
@@ -722,12 +712,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         return conf
 
-    async def _get_builders(self, slaves, revision, conf):
-        builders = {}
-        origin = None
-        for slave in slaves:
-            builders[slave], origin = await self.build_manager.get_builders(
-                slave, revision, conf)
+    async def _get_builders(self, revision, conf):
+        builders, origin = await self.build_manager.get_builders(
+            revision, conf)
 
         return builders, origin
 

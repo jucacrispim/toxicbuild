@@ -407,8 +407,7 @@ class Repository(BaseModel):
         return resp
 
     @asyncio.coroutine
-    def start_build(self, branch, builder_name=None, named_tree=None,
-                    slaves=None):
+    def start_build(self, branch, builder_name=None, named_tree=None):
         """Starts a (some) build(s) for a repository.
 
         :param branch: The name of the branch.
@@ -416,14 +415,13 @@ class Repository(BaseModel):
           the build
         :param named_tree: The named_tree that will be builded. If no
           named_tree the last one will be used.
-        :param slaves: A list with names of slaves that will execute
-          the builds. If no slave is supplied all will be used."""
+        """
 
         with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_start_build(
                 repo_name_or_id=self.id, branch=branch,
                 builder_name=builder_name,
-                named_tree=named_tree, slaves=slaves or [])
+                named_tree=named_tree)
         return resp
 
     def to_dict(self, *args, **kwargs):

@@ -22,7 +22,7 @@ from collections import defaultdict
 import time
 import traceback
 from mongomotor.fields import (StringField, IntField, BooleanField,
-                               DictField)
+                               DictField, ListField)
 from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
 from toxicbuild.core.utils import (string2datetime, LoggerMixin, now,
                                    localtime2utc)
@@ -78,7 +78,22 @@ class Slave(OwnedDocument, LoggerMixin):
     """
 
     instance_confs = DictField()
-    """Configuration paramenters for the on-demand instance
+    """Configuration paramenters for the on-demand instance.
+    """
+
+    parallel_builds = IntField(default=0)
+    """Max number of builds in parallel that this slave exeutes.
+    If no parallel_builds there's no limit.
+    """
+
+    queue_count = IntField(default=0)
+    """How many builds are waiting to run in this repository."""
+
+    running_count = IntField(default=0)
+    """How many builds are running in this slave."""
+
+    running_repos = ListField(StringField())
+    """The ids of the repositories that have builds running in this slave.
     """
 
     meta = {
@@ -140,7 +155,45 @@ class Slave(OwnedDocument, LoggerMixin):
         cls = self.INSTANCE_CLS[self.instance_type]
         return cls(**self.instance_confs)
 
+    async def increment_queue(self):
+        """Increments the queue's count in this slave."""
+
+        self.queue_count += 1
+        await self.save()
+
+    async def decrement_queue(self):
+        """Decrements the queue's count in this slave."""
+
+        self.queue_count -= 1
+        await self.save()
+
+    async def add_running_repo(self, repo_id):
+        """Increments the number of running builds in this slave and
+        adds the repository id to the running repos list. Also decrements
+        the queue count.
+
+        :param repo_id: An id of a repository.
+        """
+
+        self.running_repos.append(str(repo_id))
+        self.running_count += 1
+        self.queue_count -= 1
+        await self.save()
+
+    async def rm_running_repo(self, repo_id):
+        """Decrements the number of running builds in this slave and
+        removes the repository id from the running repos list
+
+        :param repo_id: An id of a repository.
+        """
+
+        self.running_repos.remove(str(repo_id))
+        self.running_count -= 1
+        await self.save()
+
     async def start_instance(self):
+        """Starts an on-demand instance if needed."""
+
         if not self.on_demand:
             return False
 
@@ -161,7 +214,12 @@ class Slave(OwnedDocument, LoggerMixin):
         return ip
 
     async def stop_instance(self):
+        """Stops an on-demand instance"""
+
         if not self.on_demand:
+            return False
+
+        if self.queue_count or self.running_count:
             return False
 
         self.log('Stopping on-demand instance for {}'.format(self.id),
@@ -249,7 +307,8 @@ class Slave(OwnedDocument, LoggerMixin):
 
         :param build: An instance of :class:`toxicbuild.master.build.Build`
         """
-
+        repo = await build.repository
+        await self.add_running_repo(repo.id)
         build.status = build.PREPARING
         await build.update()
         repo = await build.repository
@@ -280,6 +339,8 @@ class Slave(OwnedDocument, LoggerMixin):
 
                 await build.update()
                 build_info = build.to_dict()
+            finally:
+                await self.rm_running_repo(repo.id)
 
         return build_info
 

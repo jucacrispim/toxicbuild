@@ -233,7 +233,7 @@ class Build(EmbeddedDocument):
     """A referece to the :class:`~toxicbuild.master.repository.Repository` that
     owns the build"""
 
-    slave = ReferenceField('Slave', required=True)
+    slave = ReferenceField('toxicbuild.master.slave.Slave')
     """A reference to the :class:`~toxicbuild.master.slave.Slave` that will
     execute the build."""
 
@@ -403,6 +403,15 @@ class Build(EmbeddedDocument):
         repo = await self.repository
         await self.update()
         build_cancelled.send(str(repo.id), build=self)
+
+    async def set_slave(self, slave):
+        """Sets the slave for this build and increments the slave queue.
+
+        :param slave: An :class:`~toxicbuild.master.slave.Slave` instance.
+        """
+        self.slave = slave
+        await self.update()
+        await slave.increment_queue()
 
 
 class BuildSet(SerializeMixin, LoggerMixin, Document):
@@ -676,12 +685,11 @@ class BuildManager(LoggerMixin):
     # refactor, so we can implement builds that trigger other builds
     # in other slaves in a (almost) simple way.
 
-    # each repository has its own key the default dict
-    # each slave has its own queue
-    _build_queues = defaultdict(lambda: defaultdict(deque))
-    # to keep track of which slave is already working
+    # each repository has its own queue
+    _build_queues = defaultdict(deque)
+    # to keep track of which repository is already working
     # on consume its queue
-    _is_building = defaultdict(lambda: defaultdict(lambda: False))
+    _is_building = defaultdict(lambda: False)
 
     def __init__(self, repository):
         """:param repository: An instance of
@@ -696,13 +704,17 @@ class BuildManager(LoggerMixin):
     def build_queues(self):
         """Returns the build queues for a repository."""
 
-        return self._build_queues[self.repository.name]
+        return self._build_queues[self.repository.id]
 
     @property
     def is_building(self):
         """Indicates if has some active build for a repository."""
 
-        return self._is_building[self.repository.name]
+        return self._is_building[self.repository.id]
+
+    @is_building.setter
+    def is_building(self, building):
+        self._is_building[self.repository.id] = building
 
     async def add_builds(self, revisions):
         """ Adds the builds for a given revision in the build queue.
@@ -729,9 +741,7 @@ class BuildManager(LoggerMixin):
                 continue
 
             last_bs = buildset
-            slaves = await self.repository.slaves
-            for slave in slaves:
-                await self.add_builds_for_slave(buildset, slave, conf)
+            await self.add_builds_for_buildset(buildset, conf)
 
         if last_bs and self.repository.notify_only_latest(buildset.branch):
             await self.cancel_previous_pending(buildset)
@@ -747,12 +757,11 @@ class BuildManager(LoggerMixin):
                 if buildset.builds else 0
         return highest
 
-    async def add_builds_for_slave(self, buildset, slave, conf, builders=None,
-                                   builders_origin=None):
-        """Adds builds for a given slave on a given buildset.
+    async def add_builds_for_buildset(self, buildset, conf, builders=None,
+                                      builders_origin=None):
+        """Adds builds for for a given buildset.
 
         :param buildset: An instance of :class:`toxicbuild.master.BuildSet`.
-        :param slaves: An instance of :class:`toxicbuild.master.Slave`.
         :param builders: A list of :class:`toxicbuild.master.Builder`. If
           not builders all builders for this slave and revision will be used.
         """
@@ -760,15 +769,14 @@ class BuildManager(LoggerMixin):
         builders = builders or []
         revision = await buildset.revision
         if not builders:
-            builders, builders_origin = await self.get_builders(slave,
-                                                                revision,
+            builders, builders_origin = await self.get_builders(revision,
                                                                 conf)
 
         last_build = await self._get_highest_build_number()
         for builder in builders:
             last_build += 1
             build = Build(repository=self.repository, branch=revision.branch,
-                          named_tree=revision.commit, slave=slave,
+                          named_tree=revision.commit,
                           builder=builder, builders_from=builders_origin,
                           number=last_build)
 
@@ -779,17 +787,16 @@ class BuildManager(LoggerMixin):
             self.log('build {} added for named_tree {} on branch {}'.format(
                 last_build, revision.commit, revision.branch), level='debug')
 
-        self.build_queues[slave.name].append(buildset)
+        self.build_queues.append(buildset)
         # We send the buildset_added signal here so we already have all
         # information about builds.
         buildset_added.send(str(self.repository.id), buildset=buildset)
-        if not self.is_building[slave.name]:  # pragma: no branch
-            ensure_future(self._execute_builds(slave))
+        if not self.is_building:  # pragma: no branch
+            ensure_future(self._execute_builds())
 
-    async def get_builders(self, slave, revision, conf):
+    async def get_builders(self, revision, conf):
         """ Get builders for a given slave and revision.
 
-        :param slave: A :class:`toxicbuild.master.slave.Slave` instance.
         :param revision: A
           :class:`toxicbuild.master.repository.RepositoryRevision`.
         :param conf: The build configuration.
@@ -797,7 +804,7 @@ class BuildManager(LoggerMixin):
 
         origin = revision.branch
         try:
-            names = self._get_builders_names(conf, revision.branch, slave,
+            names = self._get_builders_names(conf, revision.branch,
                                              self.config_type)
 
         except AttributeError:
@@ -809,7 +816,7 @@ class BuildManager(LoggerMixin):
         if not names and revision.builders_fallback:
             origin = revision.builders_fallback
             names = self._get_builders_names(
-                conf, revision.builders_fallback, slave, self.config_type)
+                conf, revision.builders_fallback, self.config_type)
 
         builders = []
         for name in names:
@@ -819,9 +826,9 @@ class BuildManager(LoggerMixin):
 
         return builders, origin
 
-    def _get_builders_names(self, conf, branch, slave, config_type):
+    def _get_builders_names(self, conf, branch, config_type):
         builders = list_builders_from_config(
-            conf, branch, slave, config_type=self.config_type)
+            conf, branch, config_type=self.config_type)
         names = [b['name'] for b in builders]
         return names
 
@@ -867,23 +874,17 @@ class BuildManager(LoggerMixin):
                                      repository=self.repository)
         buildsets = await buildsets.to_list()
         for buildset in buildsets:
-            slaves = set()
-            for b in buildset.builds:
-                slave = await b.slave
-                slaves.add(slave)
+            # we schedule pending builds only if the repo is idle.
 
-            for slave in slaves:
-                # we schedule pending builds only if the slave is idle.
-                if not self.build_queues[slave.name] and not \
-                   self.is_building[slave.name]:
+            if not self.build_queues and not self.is_building:
 
-                    self.log('scheduling penging builds for {}'.format(
-                        slave.name), level='debug')
-                    self.log('schedule pending buildset {}'.format(str(
-                        buildset.id)), level='debug')
+                self.log('scheduling penging builds for {}'.format(
+                    self.repository.id), level='debug')
+                self.log('schedule pending buildset {}'.format(str(
+                    buildset.id)), level='debug')
 
-                    self.build_queues[slave.name].append(buildset)
-                    ensure_future(self._execute_builds(slave))
+                self.build_queues.append(buildset)
+                ensure_future(self._execute_builds())
 
     async def _set_started_for_buildset(self, buildset):
         if not buildset.started:
@@ -909,54 +910,75 @@ class BuildManager(LoggerMixin):
             await buildset.notify('buildset-finished')
             self.log('Buildset {} finished'.format(buildset.id))
 
-    async def _execute_builds(self, slave):
-        """ Execute the buildsets in the queue of a given slave.
+    async def _get_slave(self, build):
+        slaves = await self.repository.slaves
+        slave_ids = [s.id for s in slaves]
+        qs = type(slaves[0]).objects.filter(
+            id__in=slave_ids).order_by('queue_count')
+        slave = await qs.first()
 
-        :param slave: A :class:`toxicbuild.master.slave.Slave` instance."""
+        assert slave, "No slave found!"
 
-        self.is_building[slave.name] = True
-        self.log('executing builds for {}'.format(slave.name), level='debug')
+        await build.set_slave(slave)
+        return slave
+
+    async def _execute_builds(self):
+        """ Execute the buildsets in the queue of a repository
+        """
+
+        self.is_building = True
+        repo = self.repository
+        self.log('executing builds for {}'.format(repo.id),
+                 level='debug')
+
+        slaves = await self.repository.slaves
+        if not slaves:
+            return False
         try:
             # here we take the buildsets that are in queue and send
             # each one of them to a slave execute the builds
             while True:
                 try:
-                    buildset = self.build_queues[slave.name].popleft()
+                    buildset = self.build_queues.popleft()
                 except IndexError:
                     break
 
-                builds = []
+                slaves_builds = []
                 for build in buildset.builds:
                     # we need to reload it here so we can get the
                     # updated status of the build (ie cancelled)
                     build = await type(build).get(build.uuid)
-                    build_slave = await build.slave
-                    if slave == build_slave and build.status == type(
-                            build).PENDING:
-                        builds.append(build)
-                if builds:
+                    slave = await self._get_slave(build)
+                    build.slave = slave
+                    if build.status == type(build).PENDING:
+                        slaves_builds.append((slave, build))
+
+                if slaves_builds:
                     await self._set_started_for_buildset(buildset)
-                    await self._execute_in_parallel(slave, builds)
+                    await self._execute_in_parallel(slaves_builds)
                     await self._set_finished_for_buildset(buildset)
-                    self.log('builds for {} finished'.format(slave.name),
+                    self.log('builds for {} finished'.format(repo.id),
                              level='debug')
         finally:
-            self.is_building[slave.name] = False
-            await slave.stop_instance()
+            self.is_building = False
+            for slave in slaves:
+                await slave.stop_instance()
 
-    async def _execute_in_parallel(self, slave, builds):
+        return True
+
+    async def _execute_in_parallel(self, slaves_builds):
         """Executes builds in parallel in a slave.
 
-        :param slave: A :class:`~toxicbuild.master.slave.Slave` instance.
-        :param builds: A list of
-          :class:`~toxicbuild.master.build.Build` instances."""
+        :param slaves_builds: A list in the format [(slave, build), ...]
+        """
 
         fs = []
-        for chunk in self._get_builds_chunks(builds):
-            chunk = [b for b in await self._reload_builds(chunk)
-                     if b.status == type(b).PENDING]
+        for chunk in self._get_builds_chunks(slaves_builds):
+            chunk = [
+                c for c in await self._reload_builds(chunk)
+                if c[1].status == c[1].PENDING]
             chunk_fs = []
-            for build in chunk:
+            for slave, build in chunk:
                 type(self.repository).add_running_build()
                 f = ensure_future(slave.build(build))
                 f.add_done_callback(
@@ -978,11 +1000,15 @@ class BuildManager(LoggerMixin):
         for i in range(0, len(builds), self.repository.parallel_builds):
             yield builds[i:i + self.repository.parallel_builds]
 
-    async def _reload_builds(self, builds):
+    async def _reload_builds(self, chunk):
         """Reloads a chunk of builds
 
-        :param builds: A list of builds."""
+        :param chunk: A list of (slave, build)."""
 
-        buildset = await builds[0].get_buildset()
-        uuids = [b.uuid for b in builds]
-        return [b for b in buildset.builds if b.uuid in uuids]
+        build_cls = type(chunk[0][1])
+        new_chunk = []
+        for slave, b in chunk:
+            build = await build_cls.get(b.uuid)
+            new_chunk.append((slave, build))
+
+        return new_chunk

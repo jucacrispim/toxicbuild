@@ -90,7 +90,6 @@ class RepositoryMessageConsumer(LoggerMixin):
 
     REPOSITORY_CLASS = Repository
     REPOSITORY_REVISION_CLASS = RepositoryRevision
-    SLAVE_CLASS = Slave
 
     revision_consumer = None
     build_consumer = None
@@ -160,15 +159,9 @@ class RepositoryMessageConsumer(LoggerMixin):
             branch = body['branch']
             builder_name = body.get('builder_name')
             named_tree = body.get('named_tree')
-            slaves_ids = body.get('slaves_ids')
-            if slaves_ids:
-                slaves = await self.SLAVE_CLASS.objects.filter(
-                    id__in=body['slaves_ids']).to_list()
-            else:
-                slaves = []
 
             await repo.start_build(branch, builder_name=builder_name,
-                                   named_tree=named_tree, slaves=slaves)
+                                   named_tree=named_tree)
         except Exception as e:
             log_msg = 'Error starting builds for {}. '.format(repo.id)
             log_msg += 'Exception was {}'.format(str(e))

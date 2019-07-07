@@ -21,6 +21,7 @@ import asyncio
 from unittest.mock import patch, Mock
 from toxicbuild.master import settings
 from toxicbuild.master.repository import Repository
+from toxicbuild.master.slave import Slave
 from toxicbuild.master.users import User
 from toxicbuild.master.exchanges import scheduler_action
 from tests import async_test
@@ -138,6 +139,7 @@ class ToxicMasterTest(BaseFunctionalTest):
         await scheduler_action.queue_delete()
         await scheduler_action.connection.disconnect()
         super().tearDownClass()
+        await Slave.drop_collection()
 
     @async_test
     async def tearDown(self):

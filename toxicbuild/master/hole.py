@@ -484,20 +484,12 @@ class HoleHandler:
 
     async def repo_start_build(self, repo_name_or_id, branch,
                                builder_name=None, named_tree=None,
-                               slaves=None, builders_origin=None):
+                               builders_origin=None):
         """ Starts a(some) build(s) in a given repository. """
-        slaves = slaves or []
         kw = self._get_kw_for_name_or_id(repo_name_or_id)
         repo = await Repository.get_for_user(self.protocol.user, **kw)
 
-        slave_instances = []
-        for sname in slaves:
-            slave = await Slave.get(name=sname)
-            slave_instances.append(slave)
-
-        slaves = slave_instances
-
-        await repo.start_build(branch, builder_name, named_tree, slaves=slaves,
+        await repo.start_build(branch, builder_name, named_tree,
                                builders_origin=builders_origin)
         return {'repo-start-build': 'builds added'}
 
@@ -785,7 +777,7 @@ class HoleHandler:
         return repo_dict
 
     def _get_slave_dict(self, slave):
-        slave_dict = json.loads(slave.to_json())
+        slave_dict = slave.to_dict()
         slave_dict['host'] = slave.host if slave.host != slave.DYNAMIC_HOST \
             else ''
         slave_dict['id'] = str(slave.id)
@@ -933,7 +925,7 @@ class UIStreamHandler(LoggerMixin):
         slave = await build.slave
 
         build_dict = build.to_dict()
-        slave = slave.to_dict(id_as_str=True)
+        slave = slave.to_dict(id_as_str=True) if slave else {}
         repo = await repo.to_dict()
         buildset = await build.get_buildset()
 

@@ -233,6 +233,18 @@ class BuildTest(TestCase):
         with self.assertRaises(build.ImpossibleCancellation):
             await build_inst.cancel()
 
+    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
+        spec=build.build_notifications.publish))
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_set_slave(self):
+        await self._create_test_data()
+        build = self.buildset.builds[0]
+        await build.set_slave(self.slave)
+
+        self.assertTrue(self.slave.queue_count)
+
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asfd')
         await self.owner.save()
@@ -528,10 +540,8 @@ class BuildManagerTest(TestCase):
         await repository.RepositoryRevision.drop_collection()
         await repository.Repository.drop_collection()
         await repository.Slave.drop_collection()
-        build.BuildManager._build_queues = defaultdict(
-            lambda: defaultdict(deque))
-        build.BuildManager._is_building = defaultdict(
-            lambda: defaultdict(lambda: False))
+        build.BuildManager._build_queues = defaultdict(deque)
+        build.BuildManager._is_building = defaultdict(lambda: False)
         super().tearDown()
 
     def test_class_attributes(self):
@@ -572,7 +582,7 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(build.buildset_added, 'send', mock.Mock(
         spec=build.buildset_added.send))
     @async_test
-    async def test_add_builds_for_slave(self):
+    async def test_add_builds_for_buildset(self):
         await self._create_test_data()
         b = build.Builder()
         b.repository = self.repo
@@ -581,11 +591,10 @@ class BuildManagerTest(TestCase):
         self.manager.repository = self.repo
         self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
         conf = {'builders': []}
-        await self.manager.add_builds_for_slave(self.buildset, self.slave,
-                                                conf,
-                                                [b, self.builder])
-        self.assertEqual(len(self.manager.build_queues[self.slave.name]), 1)
-        buildset = self.manager.build_queues[self.slave.name][0]
+        await self.manager.add_builds_for_buildset(self.buildset, conf,
+                                                   [b, self.builder])
+        self.assertEqual(len(self.manager.build_queues), 1)
+        buildset = self.manager.build_queues[0]
         # It already has two builds from _create_test_data and more two
         # from .add_builds_for_slave
         self.assertEqual(len(buildset.builds), 4)
@@ -610,7 +619,7 @@ class BuildManagerTest(TestCase):
 
         await self.manager.add_builds([self.revision])
 
-        self.assertEqual(len(self.manager.build_queues[self.slave.name]), 1)
+        self.assertEqual(len(self.manager.build_queues), 1)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -631,7 +640,7 @@ class BuildManagerTest(TestCase):
         self.revision.body = 'some commit \n# ci: skip'
         await self.manager.add_builds([self.revision])
 
-        self.assertEqual(len(self.manager.build_queues[self.slave.name]), 0)
+        self.assertEqual(len(self.manager.build_queues), 0)
 
     @async_test
     async def test_add_builds_no_last_bs(self):
@@ -680,8 +689,7 @@ class BuildManagerTest(TestCase):
         self.manager.repository.vcs.checkout = asyncio.coroutine(
             lambda *a, **kw: checkout())
         conf = mock.Mock()
-        builders, origin = await self.manager.get_builders(self.slave,
-                                                           self.revision,
+        builders, origin = await self.manager.get_builders(self.revision,
                                                            conf)
 
         for b in builders:
@@ -710,8 +718,7 @@ class BuildManagerTest(TestCase):
         conf = mock.Mock()
         self.manager.repository.vcs.checkout = asyncio.coroutine(
             lambda *a, **kw: checkout())
-        builders, origin = await self.manager.get_builders(self.slave,
-                                                           self.revision,
+        builders, origin = await self.manager.get_builders(self.revision,
                                                            conf)
 
         for b in builders:
@@ -738,8 +745,7 @@ class BuildManagerTest(TestCase):
         conf = mock.Mock()
         self.manager.repository.vcs.checkout = asyncio.coroutine(
             lambda *a, **kw: checkout())
-        builders, origin = await self.manager.get_builders(self.slave,
-                                                           self.revision,
+        builders, origin = await self.manager.get_builders(self.revision,
                                                            conf)
 
         self.assertFalse(builders)
@@ -751,16 +757,36 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @async_test
+    async def test_execute_build_no_slaves(self):
+        await self._create_test_data()
+        self.manager.repository = self.repo
+        self.repo.slaves = []
+        await self.repo.save()
+
+        r = await self.manager._execute_builds()
+
+        self.assertFalse(r)
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
+    @async_test
     async def test_execute_build_without_build(self):
         await self._create_test_data()
-
+        self.manager.repository = self.repo
         self.manager._execute_in_parallel = mock.MagicMock()
-        self.manager.build_queues[self.slave.name].extend(
+        self.buildset.builds[0].status = 'cancelled'
+        await self.buildset.save()
+        self.manager.build_queues.extend(
             [self.buildset])
         slave = mock.Mock()
         slave.name = self.slave.name
         slave.stop_instance = AsyncMagicMock()
-        await self.manager._execute_builds(slave)
+        self.manager.repository = self.repo
+
+        await self.manager._execute_builds()
         self.assertFalse(self.manager._execute_in_parallel.called)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
@@ -776,11 +802,12 @@ class BuildManagerTest(TestCase):
         run_in_parallel = mock.MagicMock()
         self.manager._execute_in_parallel = asyncio.coroutine(
             lambda *a, **kw: run_in_parallel())
-        self.manager.build_queues[self.slave.name].extend(
-            [self.buildset])
+        self.manager.repository = self.repo
+        self.manager.build_queues.extend([self.buildset])
 
-        await self.manager._execute_builds(self.slave)
+        r = await self.manager._execute_builds()
         self.assertTrue(run_in_parallel.called)
+        self.assertTrue(r)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -791,13 +818,18 @@ class BuildManagerTest(TestCase):
     @async_test
     async def test_execute_in_parallel_no_limit(self):
         await self._create_test_data()
-
-        builds = [self.build, self.consumed_build, build.Build()]
+        b = build.Build(repository=self.repo, builder=self.builder,
+                        number=0, named_tree='v0.1', branch='master')
+        self.buildset.builds.append(b)
+        await self.buildset.save()
+        slaves_builds = [(self.slave, self.build),
+                         (self.slave, self.consumed_build),
+                         (self.slave, b)]
 
         self.slave.build = asyncio.coroutine(lambda x: None)
         self.manager.repository = self.repo
         self.manager.repository.parallel_builds = 0
-        await self.manager._execute_in_parallel(self.slave, builds)
+        await self.manager._execute_in_parallel(slaves_builds)
 
         self.assertEqual(len(build.asyncio.wait.call_args_list), 1)
 
@@ -816,12 +848,14 @@ class BuildManagerTest(TestCase):
                                 builder=self.builder, number=0)
         self.buildset.builds.append(new_build)
         await self.buildset.save()
-        builds = [self.build, self.consumed_build, new_build]
+        slaves_builds = [(self.slave, self.build),
+                         (self.slave, self.consumed_build),
+                         (self.slave, new_build)]
 
         self.slave.build = asyncio.coroutine(lambda x: None)
         self.manager.repository = self.repo
         self.manager.repository.parallel_builds = 1
-        await self.manager._execute_in_parallel(self.slave, builds)
+        await self.manager._execute_in_parallel(slaves_builds)
 
         self.assertTrue(len(build.asyncio.wait.call_args_list) > 1)
 
@@ -839,7 +873,9 @@ class BuildManagerTest(TestCase):
                                 builder=self.builder, number=0)
         self.buildset.builds.append(cancelled)
         await self.buildset.save()
-        builds = [self.build, self.consumed_build, cancelled]
+        slaves_builds = [(self.slave, self.build),
+                         (self.slave, self.consumed_build),
+                         (self.slave, cancelled)]
 
         async def build_func(build_instance):
             cancelled.status = type(build_instance).CANCELLED
@@ -856,7 +892,7 @@ class BuildManagerTest(TestCase):
         self.slave.build = build_func
         self.manager.repository = self.repo
         self.manager.repository.parallel_builds = 1
-        await self.manager._execute_in_parallel(self.slave, builds)
+        await self.manager._execute_in_parallel(slaves_builds)
 
         self.assertEqual(len(wait_mock.call_args_list), 1)
 
@@ -982,7 +1018,7 @@ class BuildManagerTest(TestCase):
         _eb_mock = mock.Mock()
 
         @asyncio.coroutine
-        def _eb(slave):
+        def _eb():
             _eb_mock()
 
         self.repo.build_manager._execute_builds = _eb
@@ -990,7 +1026,7 @@ class BuildManagerTest(TestCase):
         await self.other_repo.build_manager.start_pending()
         self.assertEqual(_eb_mock.call_count, 1)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.MagicMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
@@ -1003,17 +1039,17 @@ class BuildManagerTest(TestCase):
         _eb_mock = mock.Mock()
 
         @asyncio.coroutine
-        def _eb(slave):
+        def _eb():
             _eb_mock()
 
         self.repo.build_manager._execute_builds = _eb
-        self.repo.build_manager._build_queues[self.repo.name][
-            self.slave.name] = mock.Mock()
+        self.repo.build_manager._build_queues = defaultdict(deque)
+        self.repo.build_manager.build_queues.append(mock.Mock())
         build.ensure_future = mock.Mock()
         await self.repo.build_manager.start_pending()
         self.assertFalse(build.ensure_future.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.MagicMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
@@ -1026,12 +1062,11 @@ class BuildManagerTest(TestCase):
         _eb_mock = mock.Mock()
 
         @asyncio.coroutine
-        def _eb(slave):
+        def _eb():
             _eb_mock()
 
         self.repo.build_manager._execute_builds = _eb
-        self.repo.build_manager._is_building[self.repo.name][
-            self.slave.name] = True
+        self.repo.build_manager._is_building[self.repo.id] = True
         build.ensure_future = mock.Mock()
         await self.repo.build_manager.start_pending()
         self.assertFalse(build.ensure_future.called)
@@ -1082,6 +1117,17 @@ class BuildManagerTest(TestCase):
         old_bs = await build.BuildSet.objects.get(id=self.buildset.id)
         self.assertEqual(old_bs.builds[0].status, 'cancelled')
         self.assertEqual(old_bs.get_status(), 'running')
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @mock.patch.object(build.Build, 'notify', AsyncMagicMock(
+        spec=build.Build.notify))
+    @async_test
+    async def test_get_slave(self):
+        await self._create_test_data()
+        s = await self.repo.build_manager._get_slave(self.build)
+
+        self.assertTrue(s.id)
 
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asdf')

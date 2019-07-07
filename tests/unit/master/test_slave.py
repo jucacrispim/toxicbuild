@@ -603,6 +603,20 @@ class SlaveTest(TestCase):
         self.assertFalse(r)
         self.assertTrue(slave.EC2Instance.is_running.called)
 
+    @async_test
+    async def test_stop_instance_with_queue(self):
+        self.slave.on_demand = True
+        self.slave.queue_count = 1
+        r = await self.slave.stop_instance()
+        self.assertFalse(r)
+
+    @async_test
+    async def test_stop_instance_with_running(self):
+        self.slave.on_demand = True
+        self.slave.running_count = 1
+        r = await self.slave.stop_instance()
+        self.assertFalse(r)
+
     @patch.object(slave.EC2Instance, 'is_running', AsyncMagicMock(
         return_value=True))
     @patch.object(slave.EC2Instance, 'stop', AsyncMagicMock())
@@ -623,6 +637,30 @@ class SlaveTest(TestCase):
         await self.slave.save()
 
         self.assertEqual(self.slave.host, self.slave.DYNAMIC_HOST)
+
+    @async_test
+    async def test_add_running_repo(self):
+        await self.slave.add_running_repo('some-repo')
+        self.assertTrue(self.slave.running_repos)
+        self.assertTrue(self.slave.running_count)
+
+    @async_test
+    async def test_rm_running_repo(self):
+        await self.slave.add_running_repo('some-repo')
+        await self.slave.rm_running_repo('some-repo')
+        self.assertFalse(self.slave.running_repos)
+        self.assertFalse(self.slave.running_count)
+
+    @async_test
+    async def test_increment_queue(self):
+        await self.slave.increment_queue()
+        self.assertTrue(self.slave.queue_count)
+
+    @async_test
+    async def test_decrement_queue(self):
+        await self.slave.increment_queue()
+        await self.slave.decrement_queue()
+        self.assertFalse(self.slave.queue_count)
 
     async def _create_test_data(self):
         await self.slave.save()
