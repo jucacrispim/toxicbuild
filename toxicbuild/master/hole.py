@@ -26,7 +26,6 @@ import asyncio
 from asyncio import ensure_future
 from datetime import timedelta
 import inspect
-import json
 import signal
 import ssl
 import sys
