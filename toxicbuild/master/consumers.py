@@ -22,7 +22,6 @@ from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.exchanges import repo_notifications, revisions_added
 from toxicbuild.master.repository import Repository, RepositoryRevision
-from toxicbuild.master.slave import Slave
 
 
 __doc__ = """This module implements consumers for messages published
