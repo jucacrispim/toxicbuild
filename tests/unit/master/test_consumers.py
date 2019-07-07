@@ -160,39 +160,8 @@ class RepositoryMessageConsumerTest(TestCase):
         self.assertFalse(to_list.called)
 
     @patch.object(consumers.Repository, 'get', AsyncMagicMock())
-    @patch.object(consumers.Slave, 'objects', Mock())
     @async_test
     async def test_add_requested_build(self):
-        repo = create_autospec(spec=consumers.Repository,
-                               mock_cls=AsyncMagicMock)
-        consumers.Repository.get.return_value = repo
-        msg = AsyncMagicMock()
-        msg.body = {'repository_id': 'asdf',
-                    'branch': 'master',
-                    'slaves_ids': ['some-slave-id']}
-        to_list = AsyncMagicMock()
-        consumers.Slave.objects.filter.return_value.to_list = to_list
-        message_consumer = consumers.RepositoryMessageConsumer()
-        await message_consumer._add_requested_build(msg)
-        self.assertTrue(repo.start_build.called)
-
-    @patch.object(consumers.Repository, 'get', AsyncMagicMock(
-        return_value=None))
-    @patch.object(consumers.Slave, 'objects', Mock())
-    @async_test
-    async def test_add_requested_build_no_repo(self):
-        msg = AsyncMagicMock()
-        msg.body = {'repository_id': 'asdf',
-                    'branch': 'master',
-                    'slave_ids': ['some-slave-id']}
-        message_consumer = consumers.RepositoryMessageConsumer()
-        await message_consumer._add_requested_build(msg)
-        self.assertFalse(consumers.Slave.objects.filter.called)
-
-    @patch.object(consumers.Repository, 'get', AsyncMagicMock())
-    @patch.object(consumers.Slave, 'objects', Mock())
-    @async_test
-    async def test_add_requested_build_no_slaves(self):
         repo = create_autospec(spec=consumers.Repository,
                                mock_cls=AsyncMagicMock)
         consumers.Repository.get.return_value = repo
@@ -202,6 +171,16 @@ class RepositoryMessageConsumerTest(TestCase):
         message_consumer = consumers.RepositoryMessageConsumer()
         await message_consumer._add_requested_build(msg)
         self.assertTrue(repo.start_build.called)
+
+    @patch.object(consumers.Repository, 'get', AsyncMagicMock(
+        return_value=None))
+    @async_test
+    async def test_add_requested_build_no_repo(self):
+        msg = AsyncMagicMock()
+        msg.body = {'repository_id': 'asdf',
+                    'branch': 'master'}
+        message_consumer = consumers.RepositoryMessageConsumer()
+        await message_consumer._add_requested_build(msg)
 
     @patch.object(consumers.Repository, 'get', AsyncMagicMock())
     @patch.object(consumers.LoggerMixin, 'log', Mock())
