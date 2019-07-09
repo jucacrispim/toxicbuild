@@ -621,6 +621,14 @@ class MatchKeysDict(dict):
                 return super().__getitem__(k)
         return super().__getitem__(key)
 
+    def get(self, key, default=None):
+        try:
+            r = self[key]
+        except KeyError:
+            r = default
+
+        return r
+
 
 @asyncio.coroutine
 def run_in_thread(fn, *args, **kwargs):

@@ -634,3 +634,15 @@ class MatchKeyDictTest(TestCase):
         d['a*'] = 1
         with self.assertRaises(KeyError):
             d['key']
+
+    def test_get(self):
+        d = utils.MatchKeysDict()
+        d['a*'] = 1
+
+        self.assertTrue(d.get('adsf'))
+
+    def test_get_not_present(self):
+        d = utils.MatchKeysDict()
+        d['a*'] = 1
+
+        self.assertIsNone(d.get('k'))

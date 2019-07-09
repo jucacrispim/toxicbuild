@@ -245,6 +245,131 @@ class BuildTest(TestCase):
 
         self.assertTrue(self.slave.queue_count)
 
+    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
+        spec=build.build_notifications.publish))
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_is_ready2run_no_trigger(self):
+        await self._create_test_data()
+        build = self.buildset.builds[0]
+        r = await build.is_ready2run()
+
+        self.assertTrue(r)
+
+    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
+        spec=build.build_notifications.publish))
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_is_ready2run_not_pending(self):
+        await self._create_test_data()
+        build = self.buildset.builds[0]
+        build.status = 'cancelled'
+        await build.update()
+        r = await build.is_ready2run()
+
+        self.assertFalse(r)
+
+    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
+        spec=build.build_notifications.publish))
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_is_ready2run_false(self):
+        await self._create_test_data()
+        b = self.buildset.builds[0]
+        b.triggered_by = [
+            build.BuildTrigger(
+                **{'builder_name': 'br0',
+                   'statuses': ['success']}),
+        ]
+        await b.update()
+
+        br0 = build.Builder(repository=self.repo, name='br0')
+        await br0.save()
+        br1 = build.Builder(repository=self.repo, name='br1')
+        await br1.save()
+
+        b0 = build.Build(branch='master', builder=br0,
+                         repository=self.repo, named_tree='v0.1', number=1)
+        self.buildset.builds.append(b0)
+
+        b1 = build.Build(branch='master', builder=br1,
+                         repository=self.repo, named_tree='v0.1', number=2)
+        self.buildset.builds.append(b1)
+
+        await self.buildset.save()
+        r = await b.is_ready2run()
+
+        self.assertFalse(r)
+
+    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
+        spec=build.build_notifications.publish))
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_is_ready2run_none(self):
+        await self._create_test_data()
+        b = self.buildset.builds[0]
+        b.triggered_by = [
+            build.BuildTrigger(
+                **{'builder_name': 'br0',
+                   'statuses': ['success']}),
+        ]
+        await b.update()
+
+        br0 = build.Builder(repository=self.repo, name='br0')
+        await br0.save()
+        br1 = build.Builder(repository=self.repo, name='br1')
+        await br1.save()
+
+        b0 = build.Build(branch='master', builder=br0, status='fail',
+                         repository=self.repo, named_tree='v0.1', number=1)
+        self.buildset.builds.append(b0)
+
+        b1 = build.Build(branch='master', builder=br1,
+                         repository=self.repo, named_tree='v0.1', number=2)
+        self.buildset.builds.append(b1)
+
+        await self.buildset.save()
+        r = await b.is_ready2run()
+
+        self.assertIsNone(r)
+
+    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
+        spec=build.build_notifications.publish))
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_is_ready2run_true(self):
+        await self._create_test_data()
+        b = self.buildset.builds[0]
+        b.triggered_by = [
+            build.BuildTrigger(
+                **{'builder_name': 'br0',
+                   'statuses': ['success']}),
+        ]
+        await b.update()
+
+        br0 = build.Builder(repository=self.repo, name='br0')
+        await br0.save()
+        br1 = build.Builder(repository=self.repo, name='br1')
+        await br1.save()
+
+        b0 = build.Build(branch='master', builder=br0, status='success',
+                         repository=self.repo, named_tree='v0.1', number=1)
+        self.buildset.builds.append(b0)
+
+        b1 = build.Build(branch='master', builder=br1,
+                         repository=self.repo, named_tree='v0.1', number=2)
+        self.buildset.builds.append(b1)
+
+        await self.buildset.save()
+        r = await b.is_ready2run()
+
+        self.assertTrue(r)
+
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asfd')
         await self.owner.save()
@@ -518,6 +643,129 @@ class BuildSetTest(TestCase):
 
 
 @mock.patch.object(repository.Repository, 'schedule', mock.Mock())
+class BuildExecuterTest(TestCase):
+
+    def setUp(self):
+        slv = slave.Slave()
+        repo = repository.Repository()
+        builds = [build.Build(slave=slv), build.Build(slave=slv)]
+        self.executer = build.BuildExecuter(repo, builds)
+
+    @mock.patch.object(repository.Repository, 'add_running_build', mock.Mock())
+    @mock.patch.object(slave.Slave, 'build', AsyncMagicMock())
+    @mock.patch.object(repository.Repository, 'remove_running_build',
+                       mock.Mock())
+    @async_test
+    async def test_run_build(self):
+        build = self.executer.builds[0]
+        self.executer._execute_builds = AsyncMagicMock()
+        await self.executer._run_build(build)
+
+        self.assertTrue(
+            type(self.executer.repository).add_running_build.called)
+        self.assertTrue(
+            type(self.executer.repository).remove_running_build.called)
+        self.assertEqual(len(self.executer._queue), 1)
+        self.assertTrue(self.executer._execute_builds.called)
+
+    @mock.patch.object(build.Build, 'is_ready2run', AsyncMagicMock(
+        return_value=False))
+    @mock.patch.object(build.BuildExecuter, '_run_build',
+                       AsyncMagicMock(spec=build.BuildExecuter._run_build))
+    @mock.patch.object(build.Build, 'cancel',
+                       AsyncMagicMock(spec=build.Build.cancel))
+    @mock.patch.object(build.BuildExecuter, '_handle_queue_changes',
+                       AsyncMagicMock(
+                           spec=build.BuildExecuter._handle_queue_changes))
+    @async_test
+    async def test_execute_builds_not_ready(self):
+        await self.executer._execute_builds()
+
+        self.assertFalse(self.executer._run_build.called)
+        self.assertEqual(len(self.executer._queue), 2)
+
+    @mock.patch.object(build.Build, 'is_ready2run', AsyncMagicMock(
+        return_value=True))
+    @mock.patch.object(build.BuildExecuter, '_run_build',
+                       AsyncMagicMock(spec=build.BuildExecuter._run_build))
+    @mock.patch.object(build.Build, 'cancel',
+                       AsyncMagicMock(spec=build.Build.cancel))
+    @mock.patch.object(build.BuildExecuter, '_handle_queue_changes',
+                       AsyncMagicMock(
+                           spec=build.BuildExecuter._handle_queue_changes))
+    @async_test
+    async def test_execute_builds_repo_paralell_builds_limit(self):
+        self.executer.repository.parallel_builds = 1
+        self.executer._running = 1
+        await self.executer._execute_builds()
+
+        self.assertFalse(self.executer._run_build.called)
+        self.assertEqual(len(self.executer._queue), 2)
+
+    @mock.patch.object(build.Build, 'is_ready2run', AsyncMagicMock(
+        return_value=None))
+    @mock.patch.object(build.BuildExecuter, '_run_build',
+                       AsyncMagicMock(spec=build.BuildExecuter._run_build))
+    @mock.patch.object(build.Build, 'cancel',
+                       AsyncMagicMock(spec=build.Build.cancel))
+    @mock.patch.object(build.BuildExecuter, '_handle_queue_changes',
+                       AsyncMagicMock(
+                           spec=build.BuildExecuter._handle_queue_changes))
+    @async_test
+    async def test_execute_builds_cancel_build(self):
+        await self.executer._execute_builds()
+
+        self.assertFalse(self.executer._run_build.called)
+        self.assertEqual(len(self.executer._queue), 0)
+
+    @mock.patch.object(build.Build, 'is_ready2run', AsyncMagicMock(
+        return_value=True))
+    @mock.patch.object(build.BuildExecuter, '_run_build',
+                       AsyncMagicMock(spec=build.BuildExecuter._run_build))
+    @mock.patch.object(build.Build, 'cancel',
+                       AsyncMagicMock(spec=build.Build.cancel))
+    @mock.patch.object(build.BuildExecuter, '_handle_queue_changes',
+                       AsyncMagicMock(
+                           spec=build.BuildExecuter._handle_queue_changes))
+    @async_test
+    async def test_execute_builds_run(self):
+        await self.executer._execute_builds()
+
+        self.assertTrue(self.executer._run_build.called)
+
+    @mock.patch.object(build.asyncio, 'sleep', AsyncMagicMock())
+    @mock.patch.object(
+        build.BuildExecuter, '_execute_builds',
+        AsyncMagicMock(spec=build.BuildExecuter._execute_builds))
+    @async_test
+    async def test_execute(self):
+
+        async def sleep(t):
+            self.executer._queue.pop(0)
+
+        build.asyncio.sleep = sleep
+
+        r = await self.executer.execute()
+
+        self.assertTrue(build.BuildExecuter._execute_builds.called)
+        self.assertTrue(r)
+        self.assertFalse(self.executer._queue)
+
+    @mock.patch.object(build.Build, 'get_buildset',
+                       AsyncMagicMock(spec=build.Build.get_buildset))
+    @async_test
+    async def test_handle_queue_changes(self):
+        buildset = mock.Mock()
+        buildset.builds = self.executer.builds
+        build.Build.get_buildset.return_value = buildset
+        self.executer.builds[0].status = 'fail'
+
+        await self.executer._handle_queue_changes()
+
+        self.assertEqual(len(self.executer._queue), 1)
+
+
+@mock.patch.object(repository.Repository, 'schedule', mock.Mock())
 @mock.patch.object(repository.Repository, '_notify_repo_creation',
                    AsyncMagicMock())
 class BuildManagerTest(TestCase):
@@ -615,7 +863,7 @@ class BuildManagerTest(TestCase):
 
         self.manager.get_builders = AsyncMagicMock(
             spec=self.manager.get_builders,
-            return_value=[self.builder, self.revision.branch])
+            return_value=([self.builder], self.revision.branch))
 
         await self.manager.add_builds([self.revision])
 
@@ -795,132 +1043,18 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build.BuildSet, 'reload', AsyncMagicMock())
+    @mock.patch.object(build.BuildExecuter, 'execute',
+                       AsyncMagicMock(spec=build.BuildExecuter.execute))
     @async_test
     async def test_execute_build(self):
         await self._create_test_data()
 
-        run_in_parallel = mock.MagicMock()
-        self.manager._execute_in_parallel = asyncio.coroutine(
-            lambda *a, **kw: run_in_parallel())
         self.manager.repository = self.repo
         self.manager.build_queues.extend([self.buildset])
 
         r = await self.manager._execute_builds()
-        self.assertTrue(run_in_parallel.called)
+        self.assertTrue(build.BuildExecuter.execute.called)
         self.assertTrue(r)
-
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
-        spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
-    @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(build.asyncio, 'wait', AsyncMagicMock())
-    @async_test
-    async def test_execute_in_parallel_no_limit(self):
-        await self._create_test_data()
-        b = build.Build(repository=self.repo, builder=self.builder,
-                        number=0, named_tree='v0.1', branch='master')
-        self.buildset.builds.append(b)
-        await self.buildset.save()
-        slaves_builds = [(self.slave, self.build),
-                         (self.slave, self.consumed_build),
-                         (self.slave, b)]
-
-        self.slave.build = asyncio.coroutine(lambda x: None)
-        self.manager.repository = self.repo
-        self.manager.repository.parallel_builds = 0
-        await self.manager._execute_in_parallel(slaves_builds)
-
-        self.assertEqual(len(build.asyncio.wait.call_args_list), 1)
-
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
-        spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
-    @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(build.asyncio, 'wait', AsyncMagicMock())
-    @async_test
-    async def test_execute_in_parallel_limit(self):
-        await self._create_test_data()
-
-        new_build = build.Build(repository=self.repo, slave=self.slave,
-                                branch='master', named_tree='v0.1',
-                                builder=self.builder, number=0)
-        self.buildset.builds.append(new_build)
-        await self.buildset.save()
-        slaves_builds = [(self.slave, self.build),
-                         (self.slave, self.consumed_build),
-                         (self.slave, new_build)]
-
-        self.slave.build = asyncio.coroutine(lambda x: None)
-        self.manager.repository = self.repo
-        self.manager.repository.parallel_builds = 1
-        await self.manager._execute_in_parallel(slaves_builds)
-
-        self.assertTrue(len(build.asyncio.wait.call_args_list) > 1)
-
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
-        spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
-    @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(build.asyncio, 'wait', AsyncMagicMock())
-    @async_test
-    async def test_execute_in_parallel_cancelled_build_same_buildset(self):
-        await self._create_test_data()
-        cancelled = build.Build(repository=self.repo, slave=self.slave,
-                                branch='to-cancel', named_tree='v0.1',
-                                builder=self.builder, number=0)
-        self.buildset.builds.append(cancelled)
-        await self.buildset.save()
-        slaves_builds = [(self.slave, self.build),
-                         (self.slave, self.consumed_build),
-                         (self.slave, cancelled)]
-
-        async def build_func(build_instance):
-            cancelled.status = type(build_instance).CANCELLED
-            await cancelled.update()
-
-        wait_mock = AsyncMagicMock()
-
-        async def wait_func(fs):
-            await wait_mock()
-            for f in fs:
-                await f
-
-        build.asyncio.wait = wait_func
-        self.slave.build = build_func
-        self.manager.repository = self.repo
-        self.manager.repository.parallel_builds = 1
-        await self.manager._execute_in_parallel(slaves_builds)
-
-        self.assertEqual(len(wait_mock.call_args_list), 1)
-
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
-        spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
-    @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
-    @async_test
-    async def test_get_builds_chunks_with_limitless_parallels(self):
-        await self._create_test_data()
-        self.manager.repository.parallel_builds = 0
-        chunks = list(self.manager._get_builds_chunks([mock.Mock(),
-                                                       mock.Mock()]))
-        self.assertEqual(len(chunks), 1)
-
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
-        spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
-    @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
-    @async_test
-    async def test_get_builds_chunks_with_limit(self):
-        await self._create_test_data()
-        self.manager.repository.parallel_builds = 1
-        chunks = list(self.manager._get_builds_chunks([mock.Mock(),
-                                                       mock.Mock()]))
-        self.assertEqual(len(chunks), 2)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -1123,10 +1257,10 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(build.Build, 'notify', AsyncMagicMock(
         spec=build.Build.notify))
     @async_test
-    async def test_get_slave(self):
+    async def test_set_slave(self):
         await self._create_test_data()
-        s = await self.repo.build_manager._get_slave(self.build)
-
+        await self.repo.build_manager._set_slave(self.build)
+        s = await self.build.slave
         self.assertTrue(s.id)
 
     async def _create_test_data(self):
