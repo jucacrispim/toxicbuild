@@ -222,6 +222,8 @@ class Slave(OwnedDocument, LoggerMixin):
             return False
 
         if self.queue_count or self.running_count:
+            self.log('Instance still building, not stopping it.',
+                     level='debug')
             return False
 
         self.log('Stopping on-demand instance for {}'.format(self.id),
