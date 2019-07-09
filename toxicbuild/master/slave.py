@@ -159,13 +159,13 @@ class Slave(OwnedDocument, LoggerMixin):
         """Increments the queue's count in this slave."""
 
         self.queue_count += 1
-        await self.save()
+        await self.update(inc__queue_count=1)
 
     async def decrement_queue(self):
         """Decrements the queue's count in this slave."""
 
         self.queue_count -= 1
-        await self.save()
+        await self.update(dec__queue_count=1)
 
     async def add_running_repo(self, repo_id):
         """Increments the number of running builds in this slave and
@@ -178,7 +178,8 @@ class Slave(OwnedDocument, LoggerMixin):
         self.running_repos.append(str(repo_id))
         self.running_count += 1
         self.queue_count -= 1
-        await self.save()
+        await self.update(dec__queue_count=1, inc__running_count=1,
+                          set__running_repos=self.running_repos)
 
     async def rm_running_repo(self, repo_id):
         """Decrements the number of running builds in this slave and
@@ -189,7 +190,8 @@ class Slave(OwnedDocument, LoggerMixin):
 
         self.running_repos.remove(str(repo_id))
         self.running_count -= 1
-        await self.save()
+        await self.update(
+            dec__running_count=1, set__running_repos=self.running_repos)
 
     async def start_instance(self):
         """Starts an on-demand instance if needed."""

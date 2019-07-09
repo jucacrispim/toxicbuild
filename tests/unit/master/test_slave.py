@@ -640,24 +640,34 @@ class SlaveTest(TestCase):
 
     @async_test
     async def test_add_running_repo(self):
+        await self.slave.save()
+        self.slave.host = 'a-host-that-shouldnt-be'
         await self.slave.add_running_repo('some-repo')
+        await self.slave.reload()
         self.assertTrue(self.slave.running_repos)
         self.assertTrue(self.slave.running_count)
+        self.assertFalse(self.slave.host == 'a-host-that-shouldnt-be')
 
     @async_test
     async def test_rm_running_repo(self):
+        await self.slave.save()
+        self.slave.host = 'a-host-that-shouldnt-be'
         await self.slave.add_running_repo('some-repo')
         await self.slave.rm_running_repo('some-repo')
+        await self.slave.reload()
         self.assertFalse(self.slave.running_repos)
         self.assertFalse(self.slave.running_count)
+        self.assertFalse(self.slave.host == 'a-host-that-shouldnt-be')
 
     @async_test
     async def test_increment_queue(self):
+        await self.slave.save()
         await self.slave.increment_queue()
         self.assertTrue(self.slave.queue_count)
 
     @async_test
     async def test_decrement_queue(self):
+        await self.slave.save()
         await self.slave.increment_queue()
         await self.slave.decrement_queue()
         self.assertFalse(self.slave.queue_count)
