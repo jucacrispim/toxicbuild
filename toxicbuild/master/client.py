@@ -91,6 +91,7 @@ class BuildClient(BaseToxicClient, LoggerMixin):
 
         await self.write(data)
         futures = []
+        build_info = None
         while True:
             r = await self.get_response()
 
