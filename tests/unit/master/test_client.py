@@ -67,6 +67,19 @@ class BuildClientTest(TestCase):
         self.assertTrue(isalive)
 
     @async_test
+    async def test_healthcheck_bad_request(self):
+        write = mock.MagicMock()
+        self.client.write = asyncio.coroutine(lambda *a, **kw: write(*a, **kw))
+
+        @asyncio.coroutine
+        def gr(*a, **kw):
+            return ''
+
+        self.client.get_response = gr
+        with self.assertRaises(client.ToxicClientException):
+            await self.client.healthcheck()
+
+    @async_test
     async def test_list_builders(self):
         write = mock.MagicMock()
         self.client.write = asyncio.coroutine(lambda *a, **kw: write(*a, **kw))

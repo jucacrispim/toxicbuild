@@ -267,6 +267,8 @@ class Slave(OwnedDocument, LoggerMixin):
             try:
                 await self.healthcheck()
                 return True
+            except ToxicClientException:
+                raise
             except Exception as e:
                 self.log('Service down {}'.format(i), level='debug')
                 self.log(str(e), level='debug')

@@ -139,6 +139,13 @@ class SlaveTest(TestCase):
         r = await self.slave.wait_service_start()
         self.assertIs(r, True)
 
+    @patch.object(slave.Slave, 'healthcheck',
+                  AsyncMagicMock(side_effect=slave.ToxicClientException))
+    @async_test
+    async def test_wait_service_client_exception(self):
+        with self.assertRaises(slave.ToxicClientException):
+            await self.slave.wait_service_start()
+
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test

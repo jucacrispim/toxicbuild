@@ -20,6 +20,7 @@
 import asyncio
 from asyncio import ensure_future
 from toxicbuild.core import BaseToxicClient
+from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.utils import (get_build_config_type,
                                      get_build_config_filename)
@@ -43,10 +44,17 @@ class BuildClient(BaseToxicClient, LoggerMixin):
         try:
             await self.write(data)
             response = await self.get_response()
-            del response
-            return True
+            r = True
         except Exception:
-            return False
+            response = None
+            r = False
+
+        # When we try to connect to a secure slave using a non-secure
+        # connection we get an empty response
+        if response == '':
+            raise ToxicClientException(
+                'Bad connection. Check the slave ssl settings.')
+        return r
 
     async def list_builders(self, repo_url, vcs_type, branch, named_tree):
         """ Asks the server for the builders available for ``repo_url``,
@@ -73,6 +81,7 @@ class BuildClient(BaseToxicClient, LoggerMixin):
           build information sent by the build server."""
 
         self.log('Starting build {}'.format(build.uuid), level='debug')
+
         repository = await build.repository
         builder_name = (await build.builder).name
         slave = await build.slave
@@ -91,6 +100,7 @@ class BuildClient(BaseToxicClient, LoggerMixin):
 
         await self.write(data)
         futures = []
+        build_info = None
         while True:
             r = await self.get_response()
 
