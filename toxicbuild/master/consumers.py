@@ -18,9 +18,14 @@
 
 import asyncio
 import signal
+from aioamqp.exceptions import AmqpClosedConnection
 from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core.utils import LoggerMixin
-from toxicbuild.master.exchanges import repo_notifications, revisions_added
+from toxicbuild.master.exchanges import (
+    repo_notifications,
+    revisions_added,
+    connect_exchanges
+)
 from toxicbuild.master.repository import Repository, RepositoryRevision
 
 
@@ -60,6 +65,11 @@ class BaseConsumer(LoggerMixin):
                 try:
                     msg = await consumer.fetch_message(cancel_on_timeout=False)
                 except ConsumerTimeout:
+                    continue
+                except AmqpClosedConnection:
+                    self.log('AmqpClosedConnection. Trying again...',
+                             level='error')
+                    await connect_exchanges()
                     continue
 
                 self.log('Consuming message')

@@ -74,6 +74,23 @@ class BaseConsumerTest(TestCase):
         await server.run()
         self.assertFalse(self.handle.called)
 
+    @patch.object(consumers.LoggerMixin, 'log', Mock())
+    @patch.object(consumers, 'connect_exchanges',
+                  AsyncMagicMock(spec=consumers.connect_exchanges))
+    @async_test
+    async def test_run_connection_closed(self):
+        server = self.srv_class(self.exchange, lambda: None)
+
+        async def fm(cancel_on_timeout=True):
+            server.stop()
+            raise consumers.AmqpClosedConnection
+
+        consumer = self.exchange.consume.return_value
+        consumer.fetch_message = fm
+        await server.run()
+        self.assertFalse(self.handle.called)
+        self.assertTrue(consumers.connect_exchanges.called)
+
     @patch.object(consumers.asyncio, 'sleep', AsyncMagicMock())
     @async_test
     async def test_shutdown(self):
