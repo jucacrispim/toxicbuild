@@ -632,6 +632,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         try:
             conf = await self.get_config_for(rev)
         except FileNotFoundError:
+            self.log('No config found', level='debug')
             buildset.status = type(buildset).NO_CONFIG
             await buildset.save()
             buildset_added.send(str(self.id), buildset=buildset)

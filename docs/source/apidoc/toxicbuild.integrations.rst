@@ -4,6 +4,14 @@ toxicbuild.integrations package
 Submodules
 ----------
 
+toxicbuild.integrations.base module
+-----------------------------------
+
+.. automodule:: toxicbuild.integrations.base
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 toxicbuild.integrations.exceptions module
 -----------------------------------------
 
@@ -16,6 +24,14 @@ toxicbuild.integrations.github module
 -------------------------------------
 
 .. automodule:: toxicbuild.integrations.github
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+toxicbuild.integrations.gitlab module
+-------------------------------------
+
+.. automodule:: toxicbuild.integrations.gitlab
     :members:
     :undoc-members:
     :show-inheritance:

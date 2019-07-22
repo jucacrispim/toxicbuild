@@ -54,10 +54,14 @@ def _check_conffile(workdir, conffile):
 
 
 @command
-def create(root_dir):
+def create(root_dir, output_token, cookie_secret):
     """Creates a new toxicbuild integrations environment.
 
-    :param --root_dir: Root directory for toxicbuild integrations."""
+    :param --root_dir: Root directory for toxicbuild integrations.
+    :param --output-token: The auth token on the output web api
+    :param --cookie-secret: The secret used for secure cookies. This MUST
+      be the same secret used in toxicui.
+    """
 
     print('Creating root_dir `{}` for toxicintegrations'.format(root_dir))
 
@@ -69,37 +73,13 @@ def create(root_dir):
     template_file = os.path.join(template_dir, template_fname)
     dest_file = os.path.join(root_dir, 'toxicintegrations.conf')
     shutil.copyfile(template_file, dest_file)
-
-
-# @command
-# def create_github_app(workdir):
-#     """Creates a new :class:`~toxicbuild.integrations.github.GithubApp`.
-
-#     To create a new app you must have a GITHUB_APP_ID in your settings file.
-
-#     :param workdir: Work directory for server."""
-
-#     if not os.path.exists(workdir):
-#         print('Workdir `{}` does not exist'.format(workdir))
-#         sys.exit(1)
-
-#     workdir = os.path.abspath(workdir)
-#     with changedir(workdir):
-#         sys.path.append(workdir)
-
-#         os.environ['TOXICINTEGRATION_SETTINGS'] = os.path.join(
-#             workdir, 'toxicintegrations.conf')
-#         os.environ['PYROCUMULUS_SETTINGS_MODULE'] = 'toxicintegrations'
-
-#     from toxicbuild.integrations import (
-#         create_settings, create_settings_and_connect)
-#     loop = asyncio.get_event_loop()
-#     create_settings()
-#     loop.run_until_complete(create_settings_and_connect())
-
-#     from toxicbuild.integrations.github import GithubApp
-
-#     loop.run_until_complete(GithubApp)
+    with open(dest_file, 'r+') as fd:
+        content = fd.read()
+        content = content.replace(
+            '{{NOTIFICATIONS_API_TOKEN}}', output_token)
+        content = content.replace('{{COOKIE_SECRET}}', cookie_secret)
+        fd.seek(0)
+        fd.write(content)
 
 
 @command

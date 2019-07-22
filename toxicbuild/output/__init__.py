@@ -295,7 +295,7 @@ def create_token(workdir, conffile=None):
 
     loop = asyncio.get_event_loop()
     uncrypted_token = loop.run_until_complete(create_auth_token())
-    print('Token created. {}'.format(uncrypted_token))
+    print('Created access token: {}'.format(uncrypted_token))
 
 
 if __name__ == '__main__':

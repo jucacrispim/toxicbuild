@@ -12,6 +12,14 @@ toxicbuild.slave.build module
     :undoc-members:
     :show-inheritance:
 
+toxicbuild.slave.docker module
+------------------------------
+
+.. automodule:: toxicbuild.slave.docker
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 toxicbuild.slave.exceptions module
 ----------------------------------
 

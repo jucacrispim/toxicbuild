@@ -1,0 +1,8 @@
+FROM toxicbase
+
+ARG notification_token
+ARG cookie_secret
+
+RUN toxicintegrations create /home/toxicuser/ci/integrations $notification_token $cookie_secret
+
+CMD ["toxicintegrations", "start", "/home/toxicuser/ci/integrations"]

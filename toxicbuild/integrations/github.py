@@ -57,8 +57,6 @@ Usage:
 For information on how to setup the integration, see
 :ref:`github-integration-config`"""
 
-GITHUB_API_URL = 'https://api.github.com/'
-
 
 class GithubApp(BaseIntegrationApp):
     """A GitHub App. Only one app per ToxicBuild installation."""
@@ -132,7 +130,7 @@ class GithubApp(BaseIntegrationApp):
     def get_api_url(self):
         """Returns the url for the github app api."""
 
-        return GITHUB_API_URL + 'app'
+        return settings.GITHUB_API_URL + 'app'
 
     async def _create_jwt(self):
         exp_time = 10 * 59
@@ -208,7 +206,7 @@ class GithubInstallation(BaseIntegrationInstallation):
     def auth_token_url(self):
         """URL used to retrieve an access token for this installation."""
 
-        url = GITHUB_API_URL
+        url = settings.GITHUB_API_URL
         return url + 'installations/{}/access_tokens'.format(self.github_id)
 
     @property
@@ -247,7 +245,7 @@ class GithubInstallation(BaseIntegrationInstallation):
         Returns a list of dictionaries with repositories' information"""
 
         header = await self.get_header()
-        url = GITHUB_API_URL + 'installation/repositories'
+        url = settings.GITHUB_API_URL + 'installation/repositories'
         ret = await requests.get(url, headers=header)
         if ret.status != 200:
             raise BadRequestToExternalAPI(ret.status, ret.text, url)
@@ -261,7 +259,7 @@ class GithubInstallation(BaseIntegrationInstallation):
         :param github_repo_id: The full name of the repository on github."""
 
         header = await self.get_header()
-        url = GITHUB_API_URL + 'repos/{}'.format(repo_full_name)
+        url = settings.GITHUB_API_URL + 'repos/{}'.format(repo_full_name)
         ret = await requests.get(url, headers=header)
         if ret.status != 200:
             raise BadRequestToExternalAPI(ret.status, ret.text, url)

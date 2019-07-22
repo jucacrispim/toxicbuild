@@ -19,6 +19,7 @@
 
 import asyncio
 import os
+from secrets import token_urlsafe
 import subprocess
 import sys
 from toxicbuild.core.cmd import command, main
@@ -48,19 +49,20 @@ def create(root_dir):  # pragma no cover
     ui_root = os.path.join(root_dir, 'ui')
     loop = asyncio.get_event_loop()
 
-    # first we create a slave and a master
+    # slave
     slave_token = create_slave(slave_root)
-    output_token = loop.run_until_complete(create_auth_token(output_root))
-    master_token = create_master(master_root, output_token)
-    # integrations
-    create_integrations(integrations_root)
     # output
     create_output(output_root)
     output_token = loop.run_until_complete(create_auth_token(output_root))
+    # master
+    master_token = create_master(master_root, output_token)
+    cookie_secret = token_urlsafe()
+    # integrations
+    create_integrations(integrations_root, output_token, cookie_secret)
 
     # a super user to access stuff
     conffile = os.path.join(master_root, 'toxicmaster.conf')
-    user = create_user(conffile, _limited=True)
+    user = create_user(conffile, superuser=True)
 
     from toxicbuild.master.slave import Slave
 
@@ -72,7 +74,7 @@ def create(root_dir):  # pragma no cover
     loop.run_until_complete(slave.save())
 
     # and finally create a web ui
-    create_ui(ui_root, master_token, output_token, str(user.id))
+    create_ui(ui_root, master_token, output_token, str(user.id), cookie_secret)
 
 
 @command

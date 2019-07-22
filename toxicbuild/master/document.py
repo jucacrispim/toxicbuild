@@ -29,7 +29,7 @@ class OwnedDocument(Document):
     to use it.
 
     Example:
-    ````````
+    ´´´´´´´´
 
     class MyOwnedDocument(OwnedDocument):
 

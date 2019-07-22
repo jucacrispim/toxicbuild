@@ -2,13 +2,12 @@
 
 # pylint: disable-all
 
-import logging
 import os
 import pkg_resources
+from secrets import token_urlsafe
 import shutil
 import sys
 from time import sleep
-from uuid import uuid4
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string,
@@ -172,7 +171,7 @@ def create(root_dir):
     shutil.copyfile(template_file, dest_file)
 
     # here we create a bcrypt salt and a access token for authentication.
-    access_token = str(uuid4())
+    access_token = token_urlsafe()
     encrypted_token = bcrypt_string(access_token)
 
     # and finally update the config file content with the new generated

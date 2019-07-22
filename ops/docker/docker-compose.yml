@@ -1,0 +1,125 @@
+version: '2'
+services:
+
+  web:
+    image: toxicweb:latest
+    ports:
+      - "8888:8888"
+
+    environment:
+      HOLE_HOST: master
+
+    depends_on:
+      - master
+
+  slave:
+    image: toxicslave:latest
+
+  output:
+    image: toxicoutput:latest
+
+    depends_on:
+      - rabbitmq
+      - mongo
+
+    environment:
+       DBHOST: mongo
+       AMQPHOST: rabbitmq
+
+  scheduler:
+    image: toxicscheduler:latest
+
+    environment:
+       AMQPHOST: rabbitmq
+       DBHOST: mongo
+       ZK_SERVERS: "zookeeper:2181"
+
+    depends_on:
+      - rabbitmq
+      - mongo
+      - zookeeper
+
+  poller:
+    image: toxicpoller:latest
+
+    environment:
+       DBHOST: mongo
+       AMQPHOST: rabbitmq
+       ZK_SERVERS: "zookeeper:2181"
+
+    depends_on:
+      - rabbitmq
+      - mongo
+      - zookeeper
+
+  integrations:
+    image: toxicintegrations:latest
+    ports:
+      - "9999:9999"
+
+    environment:
+       DBHOST: mongo
+       AMQPHOST: rabbitmq
+       ZK_SERVERS: "zookeeper:2181"
+       NOTIFICATIONS_API_URL: "http://output:9432/"
+
+  master:
+    image: toxicmaster:latest
+
+    depends_on:
+      - rabbitmq
+      - mongo
+      - zookeeper
+      - output
+      - poller
+      - scheduler
+      - integrations
+      - slave
+
+    environment:
+       DBHOST: mongo
+       AMQPHOST: rabbitmq
+       ZK_SERVERS: "zookeeper:2181"
+       NOTIFICATIONS_API_URL: "http://output:9432/"
+
+  create_output_token:
+    image: toxicoutput:latest
+    command: toxicoutput create_token /home/toxicuser/ci/output
+
+    depends_on:
+      - mongo
+
+    environment:
+       DBHOST: mongo
+
+  create_user:
+    image: toxicmaster:latest
+    command: toxicmaster create_user /home/toxicuser/ci/master/toxicmaster.conf --email $TOXICMASTER_USER_EMAIL --password $TOXICMASTER_USER_PASSWORD --superuser
+
+    depends_on:
+      - mongo
+
+    environment:
+       DBHOST: mongo
+
+  add_slave:
+    image: toxicmaster:latest
+    command: toxicmaster add_slave /home/toxicuser/ci/master/toxicmaster.conf localslave slave 7777 $SLAVE_ACCESS_TOKEN $SLAVE_OWNER_ID
+
+    depends_on:
+      - mongo
+
+    environment:
+       DBHOST: mongo
+
+  mongo:
+    image: mongo:4.0
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3.7-alpine
+    restart: always
+
+  zookeeper:
+    image: zookeeper:3.5
+    restart: always

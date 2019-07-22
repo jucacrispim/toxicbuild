@@ -12,6 +12,14 @@ toxicbuild.output.exchanges module
     :undoc-members:
     :show-inheritance:
 
+toxicbuild.output.notifications module
+--------------------------------------
+
+.. automodule:: toxicbuild.output.notifications
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 toxicbuild.output.server module
 -------------------------------
 

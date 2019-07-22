@@ -7,10 +7,10 @@ import asyncio
 from asyncio import ensure_future
 import os
 import pkg_resources
+from secrets import token_urlsafe
 import shutil
 import sys
 from time import sleep
-from uuid import uuid4
 from mongomotor import connect
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
@@ -418,7 +418,7 @@ def create(root_dir, notifications_token):
     shutil.copyfile(template_file, dest_file)
 
     # here we create a bcrypt salt and a access token for authentication.
-    access_token = str(uuid4())
+    access_token = token_urlsafe()
     encrypted_token = bcrypt_string(access_token)
 
     # and finally update the config file content with the new generated
@@ -453,7 +453,8 @@ async def _create_regular_user(email, password, superuser):
     user.set_password(password)
     await user.save()
 
-    print('User {} created successfully'.format(user.username))
+    print('User {} created successfully with id: {}'.format(
+        user.username, user.id))
 
     return user
 
@@ -491,6 +492,35 @@ def create_user(configfile, email=None, password=None, superuser=False,
             _create_regular_user(email, password, superuser))
 
     return user
+
+
+@command
+def add_slave(configfile, name, host, port, token, owner, use_ssl=False,
+              validate_cert=False):
+    """Adds a new slave to the master installation.
+
+    :param name: The slave name
+    :param host: The slave host.
+    :param port: The slave port.
+    :param token: The access token to the slave
+    :param owner: The id of the slave owner.
+    :param use_ssl: Does the slave use secure connection?
+    :param validate_cert: Should the slave ssl certificate be validated?
+    """
+
+    os.environ[ENVVAR] = configfile
+    create_settings_and_connect()
+
+    from toxicbuild.master.slave import Slave
+    from toxicbuild.master.users import User
+
+    loop = asyncio.get_event_loop()
+    owner = loop.run_until_complete(User.objects.get(id=owner))
+    slave = Slave(name=name, host=host, owner=owner, token=token,
+                  use_ssl=use_ssl, validate_cert=validate_cert,
+                  port=port)
+
+    loop.run_until_complete(slave.save())
 
 
 def _ask_thing(thing, opts=None):

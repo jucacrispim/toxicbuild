@@ -184,13 +184,15 @@ def restart(workdir, pidfile=None, loglevel='info'):
 
 
 @command
-def create(root_dir, access_token='', output_token='', root_user_id=''):
+def create(root_dir, access_token='', output_token='', root_user_id='',
+           cookie_secret=''):
     """ Create a new toxicweb project.
 
     :param root_dir: Root directory for toxicweb.
     :param --access-token: Access token to master's hole.
     :param --output-token: Access token to the notifications api.
     :param --root-user-id: The id for the root user of the system.
+    :param --cookie-secret: Secret for secure cookies.
     """
     print('Creating root_dir {}'.format(root_dir))
 
@@ -203,8 +205,7 @@ def create(root_dir, access_token='', output_token='', root_user_id=''):
     dest_file = os.path.join(root_dir, 'toxicui.conf')
     shutil.copyfile(template_file, dest_file)
 
-    # cookie secret to tornado secure cookies
-    cookie_secret = bcrypt.gensalt(8).decode()
+    cookie_secret = cookie_secret or bcrypt.gensalt(8).decode()
 
     # and finally update the config file content with the new generated
     # salt and access token
