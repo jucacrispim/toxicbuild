@@ -1,19 +1,61 @@
 # -*- coding: utf-8 -*-
+import json
+import os
 
-# a simple conffile for toxicbuild master.
-# This is a python file!
-# Change it to your needs.
+host = os.environ.get('DBHOST', 'localhost')
+port = int(os.environ.get('DBPORT', 27017))
+dbname = os.environ.get('DBNAME', 'toxicbuild')
+dbuser = os.environ.get('DBUSER')
+dbpass = os.environ.get('DBPASSWORD')
 
-DATABASE = {'host': 'localhost',
-            'port': 27017,
-            'db': 'toxicmaster'}
+
+DATABASE = {'host': host,
+            'port': port,
+            'db': dbname}
+
+if dbuser:
+    DATABASE['username'] = dbuser
+
+if dbpass:
+    DATABASE['password'] = dbpass
+
+
+amqp_host = os.environ.get('AMQPHOST', 'localhost')
+amqp_port = int(os.environ.get('AMQPPORT', 5672))
+amqp_login = os.environ.get('AMQPLOGIN')
+amqp_virtualhost = os.environ.get('AMQPVIRTUALHOST')
+amqp_password = os.environ.get('AMQPASSWORD')
+
+RABBITMQ_CONNECTION = {'host': amqp_host, 'port': amqp_port}
+
+if amqp_login:
+    RABBITMQ_CONNECTION['login'] = amqp_login
+
+if amqp_virtualhost:
+    RABBITMQ_CONNECTION['virtualhost'] = amqp_virtualhost
+
+if amqp_password:
+    RABBITMQ_CONNECTION['password'] = amqp_password
+
+
+ZK_SERVERS = os.environ.get('ZK_SERVERS', 'localhost:2181').split(',')
+ZK_KWARGS = json.loads(os.environ.get('ZK_KWARGS', '{}'))
+
+SOURCE_CODE_DIR = os.environ.get('SOURCE_CODE_DIR', './src')
 
 ENABLE_HOLE = True
 # From which addesses we should accept connections.
 # If 0.0.0.0, accepts connections from everyone.
-HOLE_ADDR = '127.0.0.1'
+HOLE_ADDR = '0.0.0.0'
 # Port to the hole server listen
-HOLE_PORT = 6666
+HOLE_PORT = int(os.environ.get('HOLE_PORT', 6666))
 # Auth settings.
-BCRYPT_SALT = '{{BCRYPT_SALT}}'
 ACCESS_TOKEN = '{{ACCESS_TOKEN}}'
+
+NOTIFICATIONS_API_URL = os.environ.get('NOTIFICATIONS_API_URL',
+                                       'http://localhost:9432/')
+NOTIFICATIONS_API_TOKEN = '{{NOTIFICATIONS_API_TOKEN}}'
+
+USE_SSL = os.environ.get('MASTER_USE_SSL', '0') == '1'
+CERTFILE = os.environ.get('MASTER_CERTFILE')
+KEYFILE = os.environ.get('MASTER_KEYFILE')

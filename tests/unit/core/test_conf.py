@@ -52,7 +52,7 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(self.settings.BLA, 'val')
 
         # this does not exist
-        with self.assertRaises(conf.ConfigError):
+        with self.assertRaises(AttributeError):
             self.settings.BLE
 
         # and now trying to set

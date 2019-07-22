@@ -1,0 +1,114 @@
+<div class="template">
+
+  <table>
+
+    <thead>
+      <tr class="waterfall-tr">
+	<th scope="col" class="builder-name-col builder-col">
+	  <div class="builder-name box-shadow-black"></div>
+	</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr class="col-sm-12">
+	<div class="">
+	  <th scope="col" class="waterfall-first-col waterfall-buildset-info-container">
+	    <a class="buildset-details-link">
+	      <strong><span class="commit-title" data-toggle="tooltip"
+			    title="{{translate('commit title')}}"></span></strong>
+	    </a><br/>
+	    <span class="buildset-branch" data-toggle="tooltip"
+		  title="branch"></span>
+	    <span class="fas fa-redo"></span>
+	    <span class="spinner icon-spinner-2 spinner-reschedule-buildset"
+		  style="display:none"></span>
+
+	    <br/>
+	    <span class="far fa-clock" data-toggle="tooltip"
+		  title="{{translate('duration')}}">
+	    </span>
+	    <span class="buildset-total-time" data-toggle="tooltip"
+		  title="{{translate('duration')}}"></span>
+	  </th>
+	</div>
+
+	<div>
+	  <td scope="row">
+	    <ul class="build-info-list waterfall-build-info-container box-white box-shadow">
+	      <!-- the build row info-->
+	      <li class="build-info-row">
+		Build #<b><span class="build-info-number"></span></b> -
+		<span class="build-info-status"></span>
+		<span class="spinner icon-spinner-2 spinner-reschedule-buildset"
+		      style="display:none"></span>
+		<span class="fas fa-redo"></span>
+		<span class="fas fa-times"></span>
+		<span class="fas fa-cog fa-spin"></span>
+
+		<a href="" class="build-details-link">
+		  <span class="fas fa-info" data-toggle="tooltip"
+			title="build details">
+		  </span>
+		</a>
+
+	      </li>
+	    </ul>
+	  </td>
+
+	  <!-- the step row info-->
+	  <li class="build-info-row waterfall-step-info">
+	    <span class="step-name"></span> - <span class="step-status"></span>
+	  </li>
+	</div>
+      </tr>
+
+    </tbody>
+
+  </table>
+
+</div>
+
+
+<div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
+  <span class="spinner icon-spinner-2"></span>
+  <span class="icon-toxicmask"></span>
+</div>
+
+<table id="waterfall-container">
+  <thead>
+    <tr id="waterfall-header">
+      <th scope="col" class="waterfall-first-col">
+	<span class="repo-full-name">{{ repo_name.split('/')[1] }}</span>
+	<a href="{{ '/' + repo_name + '/settings' }}" class="no-decoration">
+	  <span class="fas fa-wrench"></span>
+	</a>
+	<br/>
+	<a href="{{ '/' + repo_name + '/' }}" title="Summary"
+	   class="summary-link no-decoration">
+	  <span class="fas fa-list"></span>
+	</a>
+
+	<a href="{{ '/' + repo_name + '/waterfall' }}"
+	   title="Warterfall" class="waterfall-link no-decoration  link-enabled">
+	  <span class="fas fa-th"></span>
+	</a>
+      </th>
+    </tr>
+  </thead>
+
+  <tbody id="waterfall-body">
+  </tbody>
+</table>
+
+<input type="hidden" value="{{repo_name}}" id="repo_name">
+
+<script>
+  async function init(){
+    let repo_name = $('#repo_name').val();
+    let page = new WaterfallPage({router: router, repo_name: repo_name});
+    await page.render();
+    router.setUpLinks();
+  }
+  window.onload = function(){init()};
+</script>

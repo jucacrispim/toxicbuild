@@ -1,0 +1,74 @@
+<!-- main settings container -->
+<div class="settings-main-container">
+
+  <!-- navigation -->
+  <div class="nav-container">
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+	<a class="nav-link {% if settings_type == 'repositories' %} active box-shadow {% end %}" href="/settings/repositories" data-noroute=true
+	   id="manage-repositories-link">
+	  {{ translate('Manage repositories') }}
+	</a>
+      </li>
+      <li class="nav-item">
+	<a class="nav-link {% if settings_type == 'slaves' %} active box-shadow {% end %}" href="/settings/slaves" data-noroute=true id="manage-slaves-link">
+	  {{ translate('Manage slaves') }}
+	</a>
+      </li>
+
+      <li class="nav-item">
+	<a class="nav-link {% if settings_type == 'ui' %} active box-shadow {% end %}" href="/settings/ui" data-noroute=true id="manage-ui-link">
+	  {{ translate('UI settings') }}
+	</a>
+      </li>
+
+      <li class="nav-item">
+	<a class="nav-link {% if settings_type == 'user' %} active box-shadow {% end %}" href="/settings/user" data-noroute=true id="manage-user-link">
+	  {{ translate('User settings') }}
+	</a>
+      </li>
+
+    </ul>
+  </div>
+  <!-- end navigation -->
+
+  <!-- loading spinner -->
+  <div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
+    <span class="spinner icon-spinner-2"></span>
+    <span class="icon-toxicmask"></span>
+  </div>
+  <!-- end loading spinner -->
+
+  <div id="settings-sides">
+    {% if settings_type == 'repositories' %}
+      {% include "repo_settings.html" %}
+    {% end %}
+
+    {% if settings_type == 'slaves' %}
+      {% include "slave_settings.html" %}
+    {% end %}
+
+    {% if settings_type == 'ui' %}
+      {% include "ui_settings.html" %}
+    {% end %}
+
+    {% if settings_type == 'user' %}
+      {% include "user_settings.html" %}
+    {% end %}
+
+  </div>
+
+</div>
+<!-- end main settings container -->
+
+
+<script>
+  async function init(){
+    let options = {settings_type: "{{settings_type}}",
+		   router: router};
+    let page = new SettingsPage(options);
+    await page.render();
+  }
+
+  window.onload = function(){init()};
+</script>

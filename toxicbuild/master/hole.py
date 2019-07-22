@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -24,31 +24,78 @@
 
 import asyncio
 from asyncio import ensure_future
+from datetime import timedelta
 import inspect
-import json
+import signal
+import ssl
+import sys
 import traceback
+from bson.objectid import ObjectId
 from toxicbuild.core import BaseToxicProtocol
-from toxicbuild.core.utils import LoggerMixin
+from toxicbuild.core.utils import (LoggerMixin, datetime2string,
+                                   format_timedelta, now, localtime2utc)
 from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder
-from toxicbuild.master.repository import Repository, RepositoryRevision
+from toxicbuild.master.consumers import RepositoryMessageConsumer
+from toxicbuild.master.repository import Repository
+from toxicbuild.master.exceptions import (UIFunctionNotFound,
+                                          OwnerDoesNotExist, NotEnoughPerms)
+from toxicbuild.master.exchanges import ui_notifications
 from toxicbuild.master.slave import Slave
-from toxicbuild.master.exceptions import UIFunctionNotFound
-from toxicbuild.master.plugins import MasterPlugin
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,
-                                       repo_status_changed, build_added,
-                                       step_output_arrived)
+                                       build_added, build_cancelled,
+                                       step_output_arrived,
+                                       buildset_started, buildset_finished,
+                                       buildset_added, build_preparing)
+from toxicbuild.master.users import User, Organization, ResetUserPasswordToken
 
 
 class UIHole(BaseToxicProtocol, LoggerMixin):
 
-    salt = settings.BCRYPT_SALT
     encrypted_token = settings.ACCESS_TOKEN
+    _shutting_down = False
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = None
+
+    @classmethod
+    def set_shutting_down(cls):
+        cls._shutting_down = True
+
+    async def _get_user(self):
+        user_id = self.data.get('user_id', '')
+        if not user_id:
+            raise User.DoesNotExist
+        u = await User.objects.get(id=user_id)
+        return u
 
     async def client_connected(self):
 
+        if type(self)._shutting_down:
+            self.log('Hole is shutting down. Rejecting connection',
+                     level='warning')
+            self.close_connection()
+            return None
+
         data = self.data.get('body') or {}
+
+        if self.action != 'user-authenticate':
+            # when we are authenticating we don't need (and we can't have)
+            # a requester user, so we only try to get it when we are not
+            # authenticating.
+            try:
+                self.user = await self._get_user()
+            except User.DoesNotExist:
+                msg = 'User {} does not exist'.format(
+                    self.data.get('user_id', ''))
+                self.log(msg, level='warning')
+                status = 2
+                await self.send_response(code=status, body={'error': msg})
+                self.close_connection()
+                return status
+
         if self.action == 'stream':
             handler = UIStreamHandler(self)
         else:
@@ -57,6 +104,27 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
         try:
             await handler.handle()
             status = 0
+
+        except User.DoesNotExist:
+            msg = "Invalid user"
+            status = 2
+            await self.send_response(code=status, body={'error': msg})
+            self.close_connection()
+
+        except NotEnoughPerms:
+            msg = 'User {} does not have enough permissions.'.format(
+                str(self.user.id))
+            self.log(msg, level='warning')
+            status = 3
+            await self.send_response(code=status, body={'error': msg})
+
+        except (  # pylint: disable=duplicate-except
+                ResetUserPasswordToken.DoesNotExist):
+            msg = 'Bad reset password token'
+            self.log(msg, level='warning')
+            status = 4
+            await self.send_response(code=status, body={'error': msg})
+
         except Exception:
             msg = traceback.format_exc()
             status = 1
@@ -80,19 +148,25 @@ class HoleHandler:
     * `repo-remove-slave`
     * `repo-add-branch`
     * `repo-remove-branch`
-    * `repo-enable-plugin`
-    * `repo-disable-plugin`
     * `repo-start-build`
+    * `repo-cancel-build`
+    * `repo-enable`
+    * `repo-disable`
     * `slave-add`
     * `slave-get`
     * `slave-list`
     * `slave-remove`
     * `slave-update`
-    * `plugins-list`
-    * `plugin-get`
     * `buildset-list`
+    * `buildset-get`
+    * `build-get`
     * `builder-show`
     * `list-funcs`
+    * `user-add`
+    * `user-remove`
+    * `user-authenticate`
+    * `user-get`
+    * `user-exists`
     """
 
     def __init__(self, data, action, protocol):
@@ -103,10 +177,11 @@ class HoleHandler:
     async def handle(self):
 
         attrname = self.action.replace('-', '_')
-        if attrname not in self._get_action_methods():
+        try:
+            func = getattr(self, attrname)
+        except AttributeError:
             raise UIFunctionNotFound(self.action)
 
-        func = getattr(self, attrname)
         r = func(**self.data)
         if asyncio.coroutines.iscoroutine(r):
             r = await r
@@ -131,17 +206,124 @@ class HoleHandler:
 
         return siginfo
 
-    async def repo_add(self, repo_name, repo_url, update_seconds, vcs_type,
-                       slaves=None, parallel_builds=None):
+    def _user_is_allowed(self, what):
+        if self.protocol.user.is_superuser or \
+           what in self.protocol.user.allowed_actions:
+            return True
+        return False
+
+    async def user_add(self, email, password, allowed_actions, username=None):
+        """Adds a new user.
+
+        :param email: User email.
+        :param password: User password
+        :param allowed_actions: What the user can do.
+        :param username: Username for the user."""
+
+        if not self._user_is_allowed('add_user'):
+            raise NotEnoughPerms
+
+        user = User(email=email, allowed_actions=allowed_actions,
+                    username=username)
+        user.set_password(password)
+        await user.save()
+        return {'user-add': {'id': str(user.id), 'username': user.username,
+                             'email': user.email}}
+
+    async def user_remove(self, **kwargs):
+        """Removes a user from the system."""
+
+        user = await User.objects.get(**kwargs)
+        is_himself = user == self.protocol.user
+        if not is_himself and not self._user_is_allowed('remove_user'):
+            raise NotEnoughPerms
+
+        await user.delete()
+        return {'user-remove': 'ok'}
+
+    async def user_authenticate(self, username_or_email, password):
+        """Authenticates an user. Returns user.to_dict() if
+        authenticated. Raises ``InvalidCredentials`` if a user with
+        this credentials does not exist.
+
+        :param username_or_email: Username or email to use to authenticate.
+        :param password: Not encrypted password."""
+
+        user = await User.authenticate(username_or_email, password)
+        return {'user-authenticate': user.to_dict()}
+
+    async def user_change_password(self, username_or_email, old_password,
+                                   new_password):
+        """Changes a user password. First authenticates the user, if
+        authentication is ok then changes the password.
+
+        :param username_or_email: Username or email to use to authenticate.
+        :param old_password: User's old password. Used to authenticate.
+        :param new_password: The new password.
+        """
+        user = await User.authenticate(username_or_email, old_password)
+        user.set_password(new_password)
+        await user.save()
+        return {'user-change-password': 'ok'}
+
+    async def user_send_reset_password_email(self, email, subject, message):
+        """Sends an email to a user with a link to reset his/her password.
+
+        :param email: The user email.
+        :param subject: The email subject.
+        :param message: The email message.
+        """
+
+        user = await User.objects.get(email=email)
+        obj = await ResetUserPasswordToken.create(user)
+        await obj.send_reset_email(subject, message)
+        return {'user-send-reset-password-email': 'ok'}
+
+    async def user_change_password_with_token(self, token, password):
+
+        n = localtime2utc(now())
+
+        obj = await ResetUserPasswordToken.objects.get(token=token,
+                                                       expires__gte=n)
+        user = await obj.user
+        user.set_password(password)
+        await user.save()
+        return {'user-change-password-with-token': 'ok'}
+
+    async def user_get(self, **kw):
+        """Returns information about a specific user.
+
+        :params kw: Named arguments to match the user.
+        """
+
+        user = await User.objects.get(**kw)
+        return {'user-get': user.to_dict()}
+
+    async def user_exists(self, **kw):
+        """Checks if a user with given information exists.
+
+        :params kw: Named arguments to check if the user exists.
+        """
+
+        count = await User.objects.filter(**kw).count()
+        return {'user-exists': bool(count)}
+
+    async def repo_add(self, repo_name, repo_url, owner_id,
+                       update_seconds, vcs_type, slaves=None,
+                       parallel_builds=None):
         """ Adds a new repository and first_run() it.
 
         :param repo_name: Repository name
         :param repo_url: Repository vcs url
+        :param owner_id: Id of the repository's owner.
         :param update_seconds: Time to poll for changes
         :param vcs_type: Type of vcs being used.
         :param slaves: A list of slave names.
         :params parallel_builds: How many parallel builds this repository
           executes. If None, there is no limit."""
+
+        if not self._user_is_allowed('add_repo'):
+            raise NotEnoughPerms
 
         repo_name = repo_name.strip()
         repo_url = repo_url.strip()
@@ -155,58 +337,85 @@ class HoleHandler:
         if parallel_builds:
             kw['parallel_builds'] = parallel_builds
 
+        owner = await self._get_owner(owner_id)
+
         repo = await Repository.create(
-            repo_name, repo_url, update_seconds, vcs_type,
-            slaves, **kw)
+            name=repo_name, url=repo_url, owner=owner,
+            update_seconds=update_seconds, vcs_type=vcs_type,
+            slaves=slaves, **kw)
         repo_dict = await self._get_repo_dict(repo)
         return {'repo-add': repo_dict}
 
-    async def repo_get(self, repo_name=None, repo_url=None):
+    async def _get_owner(self, owner_id):
+        owner_types = [User, Organization]
+        for owner_type in owner_types:
+            try:
+                owner = await owner_type.objects.get(id=owner_id)
+                return owner
+            except owner_type.DoesNotExist:
+                pass
+
+        msg = 'The owner {} does not exist'.format(owner_id)
+        raise OwnerDoesNotExist(msg)
+
+    def _get_kw_for_name_or_id(self, repo_name_or_id):
+        if ObjectId.is_valid(repo_name_or_id):
+            kw = {'id': repo_name_or_id}
+        else:
+            kw = {'full_name': repo_name_or_id}
+
+        return kw
+
+    async def repo_get(self, repo_name_or_id=None, repo_url=None):
         """Shows information about one specific repository. One of
         ``repo_name`` or ``repo_url`` is required.
 
-        :param repo_name: Repository name,
+        :param repo_name_or_id: Repository name or ObjectId,
         :param repo_url: Repository vcs url."""
 
-        if not (repo_name or repo_url):
+        if not (repo_name_or_id or repo_url):
             raise TypeError("repo_name or repo_url required")
 
         kw = {}
-        if repo_name:
-            kw['name'] = repo_name
+        if repo_name_or_id:
+            kw = self._get_kw_for_name_or_id(repo_name_or_id)
 
         if repo_url:
             kw['url'] = repo_url
 
-        repo = await Repository.get(**kw)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
         repo_dict = await self._get_repo_dict(repo)
         return {'repo-get': repo_dict}
 
-    async def repo_remove(self, repo_name):
+    async def repo_remove(self, repo_name_or_id):
         """ Removes a repository from toxicubild.
 
-        :param repo_name: Repository name."""
+        :param repo_name_or_id: Repository name or id."""
 
-        repo = await Repository.get(name=repo_name)
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.remove()
         return {'repo-remove': 'ok'}
 
-    async def repo_list(self):
-        """ Lists all repositories. """
+    async def repo_list(self, **kwargs):
+        """ Lists all repositories.
 
-        repos = await Repository.objects.all().to_list()
+        :kwargs: Named arguments to filter repositories."""
+
+        repos = await Repository.list_for_user(self.protocol.user,
+                                               **kwargs)
         repo_list = []
-        for repo in repos:
+        async for repo in repos:
 
             repo_dict = await self._get_repo_dict(repo)
             repo_list.append(repo_dict)
 
         return {'repo-list': repo_list}
 
-    async def repo_update(self, repo_name, **kwargs):
+    async def repo_update(self, repo_name_or_id, **kwargs):
         """ Updates repository information.
 
-        :param repo_name: Repository name
+        :param repo_name_or_id: Repository name or id
         :param kwargs: kwargs to update the repository"""
 
         if kwargs.get('slaves'):
@@ -214,138 +423,151 @@ class HoleHandler:
             slaves_instances = await qs.to_list()
             kwargs['slaves'] = slaves_instances
 
-        repo = await Repository.get(name=repo_name)
-        [setattr(repo, k, v) for k, v in kwargs.items()]
+        query_kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **query_kw)
+
+        for k, v in kwargs.items():
+            setattr(repo, k, v)
 
         await repo.save()
         return {'repo-update': 'ok'}
 
-    async def repo_add_slave(self, repo_name, slave_name):
+    async def repo_add_slave(self, repo_name_or_id, slave_name_or_id):
         """ Adds a slave to a repository.
 
-        :param repo_name: Repository name.
-        :param slave_name: Slave name."""
+        :param repo_name_or_id: Repository name or id.
+        :param slave_name_or_id: Slave name or id."""
 
-        repo = await Repository.get(name=repo_name)
-        slave = await Slave.get(name=slave_name)
+        repo_kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **repo_kw)
+        slave_kw = self._get_kw_for_name_or_id(slave_name_or_id)
+        slave = await Slave.get_for_user(self.protocol.user, **slave_kw)
         await repo.add_slave(slave)
         return {'repo-add-slave': 'ok'}
 
-    async def repo_remove_slave(self, repo_name, slave_name):
-        """ Removes a slave from toxicbuild. """
+    async def repo_remove_slave(self, repo_name_or_id, slave_name_or_id):
+        """ Removes a slave from a repository.
 
-        repo = await Repository.get(name=repo_name)
+        :param repo_name_or_id: Repository name or id.
+        :param slave_name_or_id: Slave name or id."""
 
-        slave = await Slave.get(name=slave_name)
+        repo_kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **repo_kw)
+        slave_kw = self._get_kw_for_name_or_id(slave_name_or_id)
+        slave = await Slave.get_for_user(self.protocol.user, **slave_kw)
         await repo.remove_slave(slave)
         return {'repo-remove-slave': 'ok'}
 
-    async def repo_add_branch(self, repo_name, branch_name,
+    async def repo_add_branch(self, repo_name_or_id, branch_name,
                               notify_only_latest=False):
         """Adds a branch to the list of branches of the repository.
 
-        :param repo_name: Reporitory name
-        :param branch_name: Branch's name
+        :param repo_name_or_id: Reporitory name or id.
+        :param branch_name: Branch's name.
         :notify_only_latest: If True only the latest commit in the
           branch will trigger a build."""
-        repo = await Repository.get(name=repo_name)
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.add_or_update_branch(branch_name, notify_only_latest)
         return {'repo-add-branch': 'ok'}
 
-    async def repo_remove_branch(self, repo_name, branch_name):
+    async def repo_remove_branch(self, repo_name_or_id, branch_name):
         """Removes a branch from the list of branches of a repository.
-        :param repo_name: Repository name
+        :param repo_name_or_id: Repository name or id.
         :param branch_name: Branch's name."""
 
-        repo = await Repository.get(name=repo_name)
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.remove_branch(branch_name)
         return {'repo-remove-branch': 'ok'}
 
-    async def repo_enable_plugin(self, repo_name, plugin_name, **kwargs):
-        """Enables a plugin to a repository.
-
-        :param repo_name: Repository name.
-        :param plugin_name: Plugin name
-        :param kwargs: kwargs passed to the plugin."""
-
-        repo = await Repository.get(name=repo_name)
-        await repo.enable_plugin(plugin_name, **kwargs)
-        return {'repo-enable-plugin': 'ok'}
-
-    async def repo_disable_plugin(self, repo_name, **kwargs):
-        """Disables a plugin from a repository.
-
-        :param repo_name: Repository name.
-        :param kwargs: kwargs passed to the plugin"""
-
-        repo = await Repository.get(name=repo_name)
-        await repo.disable_plugin(**kwargs)
-        return {'repo-disable-plugin': 'ok'}
-
-    async def repo_start_build(self, repo_name, branch, builder_name=None,
-                               named_tree=None, slaves=[]):
+    async def repo_start_build(self, repo_name_or_id, branch,
+                               builder_name=None, named_tree=None,
+                               builders_origin=None):
         """ Starts a(some) build(s) in a given repository. """
-        # Mutable stuff on method declaration. Sin!!! Take that, PyLint!
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
 
-        repo = await Repository.get(name=repo_name)
+        await repo.start_build(branch, builder_name, named_tree,
+                               builders_origin=builders_origin)
+        return {'repo-start-build': 'builds added'}
 
-        slave_instances = []
-        for sname in slaves:
-            slave = await Slave.get(name=sname)
-            slave_instances.append(slave)
+    async def repo_cancel_build(self, repo_name_or_id, build_uuid):
+        """Cancels  a build if possible.
 
-        slaves = slave_instances
+        :param repo_name_or_id: The name or the id of the repository.
+        :param buid_uuid: The uuid of the build to be cancelled."""
 
-        if not slaves:
-            slaves = await repo.slaves
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.cancel_build(build_uuid)
+        return {'repo-cancel-build': 'ok'}
 
-        if not named_tree:
-            rev = await repo.get_latest_revision_for_branch(branch)
-            named_tree = rev.commit
-        else:
-            rev = await RepositoryRevision.get(repository=repo,
-                                               branch=branch,
-                                               commit=named_tree)
+    async def repo_enable(self, repo_name_or_id):
+        """Enables a repository.
 
-        if not builder_name:
-            builders = await self._get_builders(slaves, rev)
-        else:
-            blist = [(await Builder.get(name=builder_name,
-                                        repository=repo))]
-            builders = {}
-            for slave in slaves:
-                builders.update({slave: blist})
+        :param repo_name_or_id: The name or the id of the repository."""
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.enable()
+        return {'repo-enable': 'ok'}
 
-        builds_count = 0
+    async def repo_disable(self, repo_name_or_id):
+        """Disables a repository.
 
-        buildset = await BuildSet.create(repository=repo, revision=rev,
-                                         save=False)
-        for slave in slaves:
-            await repo.add_builds_for_slave(buildset, slave,
-                                            builders[slave])
+        :param repo_name_or_id: The name or the id of the repository."""
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.disable()
+        return {'repo-disable': 'ok'}
 
-        return {'repo-start-build': '{} builds added'.format(builds_count)}
+    async def slave_add(self, slave_name, slave_host, slave_port, slave_token,
+                        owner_id, use_ssl=True, validate_cert=True,
+                        on_demand=False, instance_type=None,
+                        instance_confs=None):
+        """ Adds a new slave to toxicbuild.
 
-    async def slave_add(self, slave_name, slave_host, slave_port, slave_token):
-        """ Adds a new slave to toxicbuild. """
+        :param slave_name: A name for the slave,
+        :param slave_host: Host where the slave is.
+        :param slave_port: Port to connect to the slave
+        :param slave_token: Auth token for the slave.
+        :param owner_id: Slave's owner id.
+        :param use_ssl: Indicates if the slave uses a ssl connection.
+        :param validate_cert: Should the slave certificate be validated?
+        :param on_demand: Does this slave have an on-demand instance?
+        :param instance_type: Type of the on-demand instance.
+        :param instance_confs: Configuration parameters for the on-demand
+          instance.
+        """
 
+        if not self._user_is_allowed('add_slave'):
+            raise NotEnoughPerms
+
+        owner = await self._get_owner(owner_id)
         slave = await Slave.create(name=slave_name, host=slave_host,
-                                   port=slave_port, token=slave_token)
+                                   port=slave_port, token=slave_token,
+                                   owner=owner, use_ssl=use_ssl,
+                                   validate_cert=validate_cert,
+                                   on_demand=on_demand,
+                                   instance_type=instance_type,
+                                   instance_confs=instance_confs)
 
         slave_dict = self._get_slave_dict(slave)
         return {'slave-add': slave_dict}
 
-    async def slave_get(self, slave_name):
-        """Returns information about on specific slave"""
+    async def slave_get(self, slave_name_or_id):
+        """Returns information about one specific slave"""
 
-        slave = await Slave.get(name=slave_name)
+        kw = self._get_kw_for_name_or_id(slave_name_or_id)
+        slave = await Slave.get_for_user(self.protocol.user, **kw)
         slave_dict = self._get_slave_dict(slave)
         return {'slave-get': slave_dict}
 
-    async def slave_remove(self, slave_name):
+    async def slave_remove(self, slave_name_or_id):
         """ Removes a slave from toxicbuild. """
 
-        slave = await Slave.get(name=slave_name)
+        kw = self._get_kw_for_name_or_id(slave_name_or_id)
+        slave = await Slave.get_for_user(self.protocol.user, **kw)
 
         await slave.delete()
 
@@ -354,36 +576,43 @@ class HoleHandler:
     async def slave_list(self):
         """ Lists all slaves. """
 
-        slaves = await Slave.objects.all().to_list()
+        slaves = await Slave.list_for_user(self.protocol.user)
         slave_list = []
 
-        for slave in slaves:
+        async for slave in slaves:
             slave_dict = self._get_slave_dict(slave)
             slave_list.append(slave_dict)
 
         return {'slave-list': slave_list}
 
-    async def slave_update(self, slave_name, **kwargs):
+    async def slave_update(self, slave_name_or_id, **kwargs):
         """Updates infomation of a slave."""
 
-        slave = await Slave.get(name=slave_name)
-        [setattr(slave, k, v) for k, v in kwargs.items()]
+        kw = self._get_kw_for_name_or_id(slave_name_or_id)
+        slave = await Slave.get_for_user(self.protocol.user, **kw)
+
+        for k, v in kwargs.items():
+            setattr(slave, k, v)
 
         await slave.save()
         return {'slave-update': 'ok'}
 
-    async def buildset_list(self, repo_name=None, skip=0, offset=None):
-        """ Lists all buildsets.
+    async def buildset_list(self, repo_name_or_id=None, skip=0, offset=None,
+                            summary=False):
+        """Lists all buildsets. If ``repo_name_or_id``, only builders from
+        this repository will be listed.
 
-        If ``repo_name``, only builders from this repository will be listed.
-        :param repo_name: Repository's name.
+        :param repo_name_or_id: Repository's name or id.
         :param skip: skip for buildset list.
         :param offset: offset for buildset list.
+        :param summary: If true, no builds information will be included.
         """
 
         buildsets = BuildSet.objects
-        if repo_name:
-            repository = await Repository.get(name=repo_name)
+        if repo_name_or_id:
+            kw = self._get_kw_for_name_or_id(repo_name_or_id)
+            repository = await Repository.get_for_user(
+                self.protocol.user, **kw)
             buildsets = buildsets.filter(repository=repository)
 
         buildsets = buildsets.order_by('-created')
@@ -392,13 +621,52 @@ class HoleHandler:
         stop = count if not offset else skip + offset
 
         buildsets = buildsets[skip:stop]
-        buildsets = await buildsets.to_list()
         buildset_list = []
+        buildsets = await buildsets.to_list()
         for b in buildsets:
-            bdict = b.to_dict(id_as_str=True)
+            bdict = b.to_dict(builds=not summary)
             buildset_list.append(bdict)
 
         return {'buildset-list': buildset_list}
+
+    async def buildset_get(self, buildset_id):
+        """Returns information about a specific buildset.
+
+        :param buildset_id: The id of the buildset.
+        """
+        buildset = await BuildSet.aggregate_get(id=buildset_id)
+        repo = await buildset.repository
+        has_perms = await repo.check_perms(self.protocol.user)
+        if not has_perms:
+            raise NotEnoughPerms
+
+        bdict = buildset.to_dict()
+        bdict['repository'] = await repo.to_dict()
+        return {'buildset-get': bdict}
+
+    def _get_build(self, buildset, build_uuid):
+        for build in buildset.builds:  # pragma no branch
+            if str(build_uuid) == str(build.uuid):  # pragma no branch
+                return build
+
+    async def build_get(self, build_uuid):
+        buildset = await BuildSet.objects.filter(
+            builds__uuid=build_uuid).first()
+        build = self._get_build(buildset, build_uuid)
+        builder = await build.builder
+        repo = await build.repository
+        has_perms = await repo.check_perms(self.protocol.user)
+        if not has_perms:
+            raise NotEnoughPerms
+
+        bdict = build.to_dict(output=True, steps_output=False)
+        bdict['repository'] = await repo.to_dict()
+        bdict['builder'] = await builder.to_dict()
+        bdict['commit'] = buildset.commit
+        bdict['commit_title'] = buildset.title
+        bdict['commit_branch'] = buildset.branch
+        bdict['commit_author'] = buildset.author
+        return {'build-get': bdict}
 
     async def builder_list(self, **kwargs):
         """List builders.
@@ -410,35 +678,23 @@ class HoleHandler:
         blist = []
 
         for b in builders:
-            blist.append((await b.to_dict(id_as_str=True)))
+            blist.append((await b.to_dict()))
 
         return {'builder-list': blist}
 
-    def plugins_list(self):
-        """Lists all plugins available to the master."""
-
-        plugins = MasterPlugin.list_plugins()
-        plugins_schemas = [p.get_schema(to_serialize=True) for p in plugins]
-        return {'plugins-list': plugins_schemas}
-
-    def plugin_get(self, **kwargs):
-        """Returns a specific plugin."""
-
-        name = kwargs.get('name')
-        plugin = MasterPlugin.get_plugin(name=name)
-        return {'plugin-get': plugin.get_schema(to_serialize=True)}
-
-    async def builder_show(self, repo_name, builder_name, skip=0, offset=None):
+    async def builder_show(self, repo_name_or_id, builder_name, skip=0,
+                           offset=None):
         """ Returns information about one specific builder.
 
-        :param repo_name: The builder's repository name.
+        :param repo_name_or_id: The builder's repository name.
         :param builder_name: The bulider's name.
         :param skip: How many elements we should skip in the result.
         :param offset: How many results we should return.
         """
 
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
         kwargs = {'name': builder_name}
-        repo = await Repository.get(name=repo_name)
         kwargs.update({'repository': repo})
 
         builder = await Builder.get(**kwargs)
@@ -481,33 +737,49 @@ class HoleHandler:
         funcs = {n: getattr(self, n) for n in func_names}
         return funcs
 
+    async def _get_last_buildset_info(self, repo):
+        last_buildset = await repo.get_last_buildset()
+        if last_buildset:
+            status = last_buildset.status
+
+            started = datetime2string(last_buildset.started) \
+                if last_buildset.started else ''
+
+            totaltime = format_timedelta(
+                timedelta(seconds=last_buildset.total_time)) \
+                if last_buildset.finished else ''
+
+            commit_date = datetime2string(last_buildset.commit_date)
+
+            last_buildset_dict = {
+                'status': status,
+                'total_time': totaltime,
+                'started': started,
+                'commit': last_buildset.commit,
+                'commit_date': commit_date,
+                'title': last_buildset.title}
+        else:
+            last_buildset_dict = {}
+
+        return last_buildset_dict
+
     async def _get_repo_dict(self, repo):
         """Returns a dictionary for a given repository"""
 
-        repo_dict = json.loads(repo.to_json())
-        repo_dict['id'] = str(repo.id)
-        repo_dict['status'] = await repo.get_status()
-        slaves = await repo.slaves
-        repo_dict['slaves'] = [self._get_slave_dict(s) for s in slaves]
-        repo_dict['parallel_builds'] = repo.parallel_builds or ''
-        for p in repo_dict['plugins']:
-            p['name'] = p['_name']
+        repo_dict = await repo.to_dict()
+        last_buildset_dict = await self._get_last_buildset_info(repo)
+        repo_dict['last_buildset'] = last_buildset_dict
 
+        repo_dict['status'] = await repo.get_status()
+        repo_dict['parallel_builds'] = repo.parallel_builds or ''
         return repo_dict
 
     def _get_slave_dict(self, slave):
-        slave_dict = json.loads(slave.to_json())
+        slave_dict = slave.to_dict()
+        slave_dict['host'] = slave.host if slave.host != slave.DYNAMIC_HOST \
+            else ''
         slave_dict['id'] = str(slave.id)
         return slave_dict
-
-    async def _get_builders(self, slaves, revision):
-        repo = await revision.repository
-        builders = {}
-        for slave in slaves:
-            builders[slave] = await repo.build_manager.get_builders(
-                slave, revision)
-
-        return builders
 
 
 class UIStreamHandler(LoggerMixin):
@@ -518,62 +790,146 @@ class UIStreamHandler(LoggerMixin):
 
     def __init__(self, protocol):
         self.protocol = protocol
+        self.body = self.protocol.data.get('body') or {}
 
         def connection_lost_cb(exc):  # pragma no cover
             self._disconnectfromsignals()
 
         self.protocol.connection_lost_cb = connection_lost_cb
 
-    async def step_started(self, reciever, **kw):
-        await self.send_info('step_started', **kw)
+    async def step_started(self, sender, **kw):
+        await self.send_info('step_started', sender=sender, **kw)
 
-    async def step_finished(self, reciever, **kw):
-        await self.send_info('step_finished', **kw)
+    async def step_finished(self, sender, **kw):
+        await self.send_info('step_finished', sender=sender, **kw)
 
-    async def build_started(self, reciever, **kw):
-        await self.send_info('build_started', **kw)
+    async def build_preparing(self, sender, **kw):
+        await self.send_info('build_preparing', sender=sender, **kw)
 
-    async def build_finished(self, reciever, **kw):
-        await self.send_info('build_finished', **kw)
+    async def build_started(self, sender, **kw):
+        await self.send_info('build_started', sender=sender, **kw)
 
-    async def build_added(self, reciever, **kw):
-        await self.send_info('build_added', **kw)
+    async def build_finished(self, sender, **kw):
+        await self.send_info('build_finished', sender=sender, **kw)
 
-    def _connect2signals(self):
-        step_started.connect(self.step_started)
-        step_finished.connect(self.step_finished)
-        build_started.connect(self.build_started)
-        build_finished.connect(self.build_finished)
-        repo_status_changed.connect(self.send_repo_status_info)
-        build_added.connect(self.build_added)
-        step_output_arrived.connect(self.send_step_output_info)
+    async def build_added(self, sender, **kw):
+        await self.send_info('build_added', sender=sender, **kw)
+
+    async def build_cancelled(self, sender, **kw):
+        self.log('Got build-cancelled signal', level='debug')
+        await self.send_info('build_cancelled', sender=sender, **kw)
+
+    async def buildset_started(self, sender, **kw):
+        self.log('Sending info to buildset_started', level='debug')
+        await self.send_buildset_info('buildset_started', kw['buildset'])
+
+    async def buildset_finished(self, sender, **kw):
+        self.log('Sending info to buildset_finished', level='debug')
+        await self.send_buildset_info('buildset_finished', kw['buildset'])
+
+    async def buildset_added(self, sender, **kw):
+        self.log('Sending info to buildset_added', level='debug')
+        await self.send_buildset_info('buildset_added', kw['buildset'])
+
+    async def _connect2signals(self, event_types):
+
+        is_repo_added = 'repo_added' in event_types
+        is_repo_status_changed = 'repo_status_changed' in event_types
+        if is_repo_added or is_repo_status_changed:
+            ensure_future((self._handle_ui_notifications()))
+            to_delete = ['repo_added', 'repo_status_changed']
+            for name in to_delete:
+                try:
+                    event_types.remove(name)
+                except ValueError:
+                    pass
+
+        repos = await Repository.list_for_user(self.protocol.user)
+        async for repo in repos:
+            self._connect_repo(repo, event_types)
+
+    def _connect_repo(self, repo, event_types):
+        hole = sys.modules[__name__]
+
+        for event in event_types:
+            self.log('connecting to {}'.format(event), level='debug')
+            signal = getattr(hole, event)
+            meth = getattr(self, event)
+            signal.connect(meth, sender=str(repo.id))
+
+    async def _handle_ui_notifications(self):
+        async with await ui_notifications.consume(routing_key=str(
+                self.protocol.user.id)) as consumer:
+            while True:
+                msg = await consumer.fetch_message()
+                self.log('Got msg type {}'.format(msg.body['msg_type']))
+                if msg.body['msg_type'] == 'stop_consumption':
+                    await msg.acknowledge()
+                    self.log('stop consumption', level='debug')
+                    break
+                ensure_future(self._handle_ui_message(msg))
+                await msg.acknowledge()
+
+    async def _handle_ui_message(self, msg):
+        msg_type = msg.body['msg_type']
+        if msg_type == 'repo_added':
+            await self.check_repo_added(msg)
+        elif msg_type == 'repo_status_changed':
+            await self.send_repo_status_info(msg)
+        else:
+            msg = 'Unknown message type {}'.format(msg_type)
+            self.log(msg, level='warning')
+
+    async def check_repo_added(self, msg):
+        try:
+            repo = await Repository.get_for_user(self.protocol.user,
+                                                 id=msg.body['id'])
+        except NotEnoughPerms:
+            return
+
+        ensure_future(self.send_repo_added_info(msg))
+        self._connect_repo(repo, ['buildset_started', 'buildset_finished'])
 
     def _disconnectfromsignals(self):
+        self.log('Disconnecting from signals', level='debug')
 
-        step_output_arrived.disconnect(self.send_step_output_info)
+        ensure_future(ui_notifications.publish(
+            {'msg_type': 'stop_consumption'}, routing_key=str(
+                self.protocol.user.id)))
+        step_output_arrived.disconnect(self.step_output_arrived)
         step_started.disconnect(self.step_started)
         step_finished.disconnect(self.step_finished)
         build_started.disconnect(self.build_started)
         build_finished.disconnect(self.build_finished)
-        repo_status_changed.disconnect(self.send_repo_status_info)
         build_added.disconnect(self.build_added)
+        build_cancelled.disconnect(self.build_cancelled)
+        buildset_started.disconnect(self.buildset_started)
+        buildset_finished.disconnect(self.buildset_finished)
+        buildset_added.disconnect(self.buildset_added)
+        build_preparing.disconnect(self.build_preparing)
 
     async def handle(self):
-        self._connect2signals()
+        event_types = self.body['event_types']
+        await self._connect2signals(event_types)
         await self.protocol.send_response(code=0, body={'stream': 'ok'})
 
-    async def send_info(self, info_type, build=None, step=None):
-        repo = await build.repository
+    async def send_buildset_info(self, event_type, buildset):
+        buildset_dict = buildset.to_dict(builds=True)
+        buildset_dict['event_type'] = event_type
+        ensure_future(self.send_response(code=0, body=buildset_dict))
+
+    async def send_info(self, info_type, sender, build=None, step=None):
+        repo = await Repository.objects.get(id=sender)
         slave = await build.slave
 
-        build_dict = build.to_dict(id_as_str=True)
-        slave = slave.to_dict(id_as_str=True)
-        repo = await repo.to_dict(id_as_str=True)
+        build_dict = build.to_dict()
+        slave = slave.to_dict(id_as_str=True) if slave else {}
+        repo = await repo.to_dict()
         buildset = await build.get_buildset()
 
         build_dict['slave'] = slave
         build_dict['repository'] = repo
-        build_dict['buildset'] = buildset.to_dict(id_as_str=True)
+        build_dict['buildset'] = buildset.to_dict()
 
         if step:
             step = step.to_dict()
@@ -589,21 +945,35 @@ class UIStreamHandler(LoggerMixin):
 
         return f
 
-    async def send_repo_status_info(self, repo, old_status, new_status):
-        """Called by the signal ``repo_status_changed``
+    async def send_repo_status_info(self, message):
+        """Sends a message about a repository's new status
 
-        :param repo: The repository that had its status changed.
-        :param old_status: The old status of the repository
-        :param new_status: The new status of the repostiory."""
+        :param message: A message from the repo_status_changed exchange."""
 
-        rdict = await repo.to_dict(id_as_str=True)
-        rdict['status'] = new_status
-        rdict['old_status'] = old_status
+        repo = await Repository.objects.get(id=message.body['repository_id'])
+        rdict = await repo.to_dict()
+        rdict['status'] = message.body['new_status']
+        rdict['old_status'] = message.body['old_status']
         rdict['event_type'] = 'repo_status_changed'
+        self.log('sending response for send_repo_status_info',
+                 level='debug')
+
         f = ensure_future(self.send_response(code=0, body=rdict))
         return f
 
-    def send_step_output_info(self, repo, step_info):
+    async def send_repo_added_info(self, message):
+        """Sends a message about a repository's creation.
+
+        :param message: A message from the repo_added exchange."""
+
+        rdict = message.body
+        rdict['event_type'] = 'repo_added'
+        self.log('sending response for send_repo_added_info',
+                 level='debug')
+        f = ensure_future(self.send_response(code=0, body=rdict))
+        return f
+
+    def step_output_arrived(self, repo, step_info):
         """Called by the signal ``step_output_arrived``.
 
         :param repo: The repository that is building something.
@@ -616,25 +986,60 @@ class UIStreamHandler(LoggerMixin):
     async def send_response(self, code, body):
         try:
             await self.protocol.send_response(code=code, body=body)
-        except ConnectionResetError:
+        except (ConnectionResetError, AttributeError):
+            self.log('Error sending response', level='warning')
             self.protocol._transport.close()
             self._disconnectfromsignals()
 
 
-class HoleServer:
+class HoleServer(LoggerMixin):
+    """A server that uses the :class:`~toxicbuild.master.hole.UIHole`
+    protocol."""
 
-    def __init__(self, addr='127.0.0.1', port=6666):
+    def __init__(self, addr='127.0.0.1', port=6666, loop=None, use_ssl=False,
+                 **ssl_kw):
+        """:param addr: Address from which the server is allowed to receive
+        requests. If ``0.0.0.0``, receives requests from all addresses.
+        :param port: The port for the master to listen.
+        :param loop: A main loop. If none, ``asyncio.get_event_loop()``
+          will be used.
+        :param use_ssl: Indicates is the connection uses ssl or not.
+        :param ssl_kw: Named arguments passed to
+          ``ssl.SSLContext.load_cert_chain()``
+        """
         self.protocol = UIHole
-        self.loop = asyncio.get_event_loop()
+        self.loop = loop or asyncio.get_event_loop()
         self.addr = addr
         self.port = port
+        self.use_ssl = use_ssl
+        self.ssl_kw = ssl_kw
+        signal.signal(signal.SIGTERM, self.sync_shutdown)
 
     def serve(self):
+        if self.use_ssl:
+            ssl_context = ssl.create_default_context(
+                ssl.Purpose.CLIENT_AUTH)
+            ssl_context.load_cert_chain(**self.ssl_kw)
+            kw = {'ssl': ssl_context}
+        else:
+            kw = {}
 
         coro = self.loop.create_server(
-            self.get_protocol_instance, self.addr,  self.port)
+            self.get_protocol_instance, self.addr, self.port, **kw)
 
         ensure_future(coro)
+
+    async def shutdown(self):
+        self.log('Shutting down')
+        self.protocol.set_shutting_down()
+        RepositoryMessageConsumer.stop()
+        while Repository.get_running_builds() > 0:
+            self.log('Waiting for {} build to finish'.format(
+                Repository.get_running_builds()))
+            await asyncio.sleep(0.5)
+
+    def sync_shutdown(self, signum=None, frame=None):
+        self.loop.run_until_complete(self.shutdown())
 
     def get_protocol_instance(self):
         return self.protocol(self.loop)

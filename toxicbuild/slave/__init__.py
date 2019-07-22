@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 
-import logging
+# pylint: disable-all
+
 import os
 import pkg_resources
+from secrets import token_urlsafe
 import shutil
 import sys
-from uuid import uuid4
+from time import sleep
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
-from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string, bcrypt,
-                                   changedir)
-from toxicbuild.slave.managers import BuildManager
-
+from toxicbuild.core.utils import (daemonize as daemon, bcrypt_string,
+                                   changedir, set_loglevel)
 
 ENVVAR = 'TOXICSLAVE_SETTINGS'
 DEFAULT_SETTINGS = 'toxicslave.conf'
@@ -64,24 +64,51 @@ def start(workdir, daemonize=False, stdout=LOGFILE,
     create_settings()
     # These toxicbuild.slave imports must be here so I can
     # change the settings file before settings are instanciated.
-    from toxicbuild.slave import server, settings
+    from toxicbuild.slave.server import run_server
+    global settings
 
     addr = settings.ADDR
     port = settings.PORT
+    try:
+        use_ssl = settings.USE_SSL
+    except AttributeError:
+        use_ssl = False
+
+    try:
+        certfile = settings.CERTFILE
+    except AttributeError:
+        certfile = None
+
+    try:
+        keyfile = settings.KEYFILE
+    except AttributeError:
+        keyfile = None
 
     if daemonize:
-        daemon(call=server.run_server, cargs=(addr, port), ckwargs={},
+        daemon(call=run_server, cargs=(addr, port),
+               ckwargs={'use_ssl': use_ssl, 'certfile': certfile,
+                        'keyfile': keyfile},
                stdout=stdout, stderr=stderr, workdir=workdir, pidfile=pidfile)
     else:
-        loglevel = getattr(logging, loglevel.upper())
-        logging.basicConfig(level=loglevel)
+        set_loglevel(loglevel)
 
         with changedir(workdir):
-            server.run_server(addr, port)
+            run_server(addr, port, use_ssl=use_ssl,
+                       certfile=certfile, keyfile=keyfile)
+
+
+def _process_exist(pid):
+    try:
+        os.kill(pid, 0)
+        r = True
+    except OSError:
+        r = False
+
+    return r
 
 
 @command
-def stop(workdir, pidfile=PIDFILE):
+def stop(workdir, pidfile=PIDFILE, kill=False):
     """ Stops toxicslave.
 
     The instance of toxicslave in ``workdir`` will be stopped.
@@ -89,6 +116,7 @@ def stop(workdir, pidfile=PIDFILE):
     :param workdir: Workdir for master to be killed.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
       ``toxicslave.pid``
+    :param kill: If true, send signum 9, otherwise, 15.
     """
 
     print('Stopping toxicslave')
@@ -96,12 +124,19 @@ def stop(workdir, pidfile=PIDFILE):
         with open(pidfile) as fd:
             pid = int(fd.read())
 
-        os.kill(pid, 9)
+        sig = 9 if kill else 15
+
+        os.kill(pid, sig)
+        if sig != 9:
+            print('Waiting for the process shutdown')
+            while _process_exist(pid):
+                sleep(0.5)
+
         os.remove(pidfile)
 
 
 @command
-def restart(workdir, pidfile=PIDFILE):
+def restart(workdir, pidfile=PIDFILE, loglevel='info'):
     """Restarts toxicslave
 
     The instance of toxicslave in ``workdir`` will be restarted.
@@ -109,10 +144,11 @@ def restart(workdir, pidfile=PIDFILE):
     :param workdir: Workdir for master to be killed.
     :param --pidfile: Name of the file to use as pidfile.  Defaults to
         ``toxicslave.pid``
+    :param --loglevel: Level for logging messages.
     """
 
     stop(workdir, pidfile=pidfile)
-    start(workdir, pidfile=pidfile, daemonize=True)
+    start(workdir, pidfile=pidfile, daemonize=True, loglevel=loglevel)
 
 
 @command
@@ -135,15 +171,13 @@ def create(root_dir):
     shutil.copyfile(template_file, dest_file)
 
     # here we create a bcrypt salt and a access token for authentication.
-    salt = bcrypt.gensalt(8)
-    access_token = str(uuid4())
-    encrypted_token = bcrypt_string(access_token, salt)
+    access_token = token_urlsafe()
+    encrypted_token = bcrypt_string(access_token)
 
     # and finally update the config file content with the new generated
     # salt and access token
     with open(dest_file, 'r+') as fd:
         content = fd.read()
-        content = content.replace('{{BCRYPT_SALT}}', salt.decode())
         content = content.replace('{{ACCESS_TOKEN}}', encrypted_token)
         fd.seek(0)
         fd.write(content)
@@ -151,10 +185,6 @@ def create(root_dir):
     print('Toxicslave environment created with access token: {}'.format(
         access_token))
     return access_token
-
-
-make_pyflakes_happy = [BuildManager]
-del make_pyflakes_happy
 
 
 if __name__ == '__main__':

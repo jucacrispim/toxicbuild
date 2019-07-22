@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,9 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import time
 import asyncio
 from asyncio import ensure_future
+import time
+from toxicbuild.core.utils import LoggerMixin
+from toxicbuild.master.consumers import BaseConsumer
+from toxicbuild.master.exceptions import UnknownSchedulerAction
+from toxicbuild.master.exchanges import scheduler_action
+from toxicbuild.master.repository import Repository
 
 
 __doc__ = """
@@ -40,7 +45,7 @@ class PeriodicTask:
         self.interval = interval
 
 
-class TaskScheduler:
+class TaskScheduler(LoggerMixin):
 
     """ A simple scheduler for periodic tasks.
     """
@@ -93,6 +98,8 @@ class TaskScheduler:
                          if t + task.interval <= now]
         for task in tasks2consume:
             self.consumption_table[task] = now
+            msg = 'Consuming task: {}'.format(repr(task.call_or_coro))
+            self.log(msg, level='debug')
             ret = task.call_or_coro()
             if asyncio.coroutines.iscoroutine(ret):
                 ensure_future(ret)
@@ -111,3 +118,70 @@ class TaskScheduler:
 
     def stop(self):
         self._stop = True
+
+
+class SchedulerServer(BaseConsumer):
+    """Simple server to add or remove something from the scheduler."""
+
+    def __init__(self, loop=None):
+        exchange = scheduler_action
+        msg_callback = self.handle_request
+        super().__init__(exchange, msg_callback)
+        self.scheduler = TaskScheduler()
+        self._sched_hashes = {}
+        self._updates_scheduled = set()
+
+    async def run(self):
+        ensure_future(self.scheduler.start())
+        self._stop = False
+        await super().run()
+        self.scheduler.stop()
+
+    async def handle_request(self, msg):
+        req_type = msg.body['type']
+        self.log('Received {} message'.format(req_type), level='debug')
+        self._running_tasks += 1
+        try:
+            if req_type == 'add-update-code':
+                await self.handle_add_update_code(msg)
+            elif req_type == 'rm-update-code':
+                await self.handle_rm_update_code(msg)
+            else:
+                raise UnknownSchedulerAction(req_type)
+        finally:
+            self._running_tasks -= 1
+
+    async def handle_add_update_code(self, msg):
+        repo_id = msg.body['repository_id']
+
+        if repo_id in self._updates_scheduled:
+            self.log('Update for repo {} already scheduled'.format(repo_id),
+                     level='warning')
+            return False
+        try:
+            repo = await Repository.get(id=repo_id)
+        except Repository.DoesNotExist:
+            self.log('Repository {} DoesNotExist'.format(repo_id),
+                     level='error')
+            return False
+        sched_hash = self.scheduler.add(repo.update_code,
+                                        repo.update_seconds)
+        self._sched_hashes[str(repo.id)] = sched_hash
+        self._updates_scheduled.add(repo_id)
+        self.log('add-update-code ok for {}'.format(repo_id))
+        return True
+
+    async def handle_rm_update_code(self, msg):
+        repo_id = msg.body['repository_id']
+        try:
+            sched_hash = self._sched_hashes[repo_id]
+            self.scheduler.remove_by_hash(sched_hash)
+            del self._sched_hashes[repo_id]
+            self._updates_scheduled.remove(repo_id)
+            r = True
+        except KeyError:
+            self.log('Update for repo {} not scheduled, can\'t rm.'.format(
+                repo_id), level='warning')
+            r = False
+
+        return r

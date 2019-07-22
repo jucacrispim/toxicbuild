@@ -1,0 +1,41 @@
+<!-- left side -->
+<div class="settings-left-side col-sm-9">
+  <div class="top-page-slaves-info-container top-page-header-info-container">
+  </div>
+  <!-- main area left side -->
+  <div id="ui-settings-container">
+    <div id="locale-selection-container">
+      <div class="form-group col-sm-4">
+	<label for="locale-selection">{{translate('Language')}}</label>
+	<select class="form-control" id="locale-selection">
+	  <option value="en_US">English</option>
+	  <option value="pt_BR">Português</option>
+	</select>
+      </div>
+    </div>
+    <div class="form-check abc-checkbox abc-checkbox-black">
+      <input class="form-check-input" id="use-dark-theme"
+	     type="checkbox">
+      <label class="form-check-label" for="use-dark-theme">
+	{{translate('Use dark theme')}}
+      </label>
+    </div>
+
+
+  </div>
+  <!-- end main area left side -->
+</div>
+
+<!-- righ  side -->
+<div class="settings-right-side col-sm-3">
+  <div>
+    <span>
+      <h5>{{translate('UI settings')}}</h5>
+      <p>
+	{{translate('Here you can configure language| date format and theme used.').replace('|', ',')}}
+      </p>
+
+    </span>
+  </div>
+</div>
+<!-- end right side -->

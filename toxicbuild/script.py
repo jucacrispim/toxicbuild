@@ -19,13 +19,14 @@
 
 import asyncio
 import os
+from secrets import token_urlsafe
 import subprocess
 import sys
 from toxicbuild.core.cmd import command, main
-from toxicbuild.core.utils import changedir
+from toxicbuild.integrations import create as create_integrations
 from toxicbuild.master import create as create_master
-from toxicbuild.master import create_settings_and_connect
-from toxicbuild.master.slave import Slave
+from toxicbuild.master import create_user
+from toxicbuild.output import create as create_output, create_auth_token
 from toxicbuild.slave import create as create_slave
 from toxicbuild.ui import create as create_ui
 
@@ -43,23 +44,37 @@ def create(root_dir):  # pragma no cover
 
     slave_root = os.path.join(root_dir, 'slave')
     master_root = os.path.join(root_dir, 'master')
+    integrations_root = os.path.join(root_dir, 'integrations')
+    output_root = os.path.join(root_dir, 'output')
     ui_root = os.path.join(root_dir, 'ui')
+    loop = asyncio.get_event_loop()
 
-    # first we create a slave and a master
+    # slave
     slave_token = create_slave(slave_root)
-    master_token = create_master(master_root)
+    # output
+    create_output(output_root)
+    output_token = loop.run_until_complete(create_auth_token(output_root))
+    # master
+    master_token = create_master(master_root, output_token)
+    cookie_secret = token_urlsafe()
+    # integrations
+    create_integrations(integrations_root, output_token, cookie_secret)
 
-    with changedir(master_root):
-        create_settings_and_connect()
-        loop = asyncio.get_event_loop()
-        # now we add this slave to the master
-        slave = Slave(name='LocalSlave', token=slave_token,
-                      host='localhost', port=7777)
+    # a super user to access stuff
+    conffile = os.path.join(master_root, 'toxicmaster.conf')
+    user = create_user(conffile, superuser=True)
 
-        loop.run_until_complete(slave.save())
+    from toxicbuild.master.slave import Slave
+
+    # create_settings_and_connect()
+    # now we add this slave to the master
+    slave = Slave(name='LocalSlave', token=slave_token,
+                  host='localhost', port=7777, owner=user)
+
+    loop.run_until_complete(slave.save())
 
     # and finally create a web ui
-    create_ui(ui_root, master_token)
+    create_ui(ui_root, master_token, output_token, str(user.id), cookie_secret)
 
 
 @command
@@ -85,31 +100,24 @@ def stop(workdir):  # pragma no cover
 
 
 @command
-def restart(workdir):
+def restart(workdir, loglevel='info'):
     """Restarts toxicbuild
 
     The instances of master, slave and web ui in ``workdir`` will be restarted.
 
     :param workdir: Workdir for master to be killed.
+    :param --loglevel: Level for logging messages.
     """
 
-    stop(workdir)
-    start(workdir)
+    # daemonize=False because we don't use the --daemonize param for
+    # restart as it is ALWAYS daemonized anyway
+    _call_processes(workdir, loglevel, daemonize=False)
 
 
-def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
-
-    # just pretend you didnt' see this function
-
+def _run_slave(workdir, loglevel, daemonize):
     slave_root = os.path.join(workdir, 'slave')
-    master_root = os.path.join(workdir, 'master')
-    ui_root = os.path.join(workdir, 'ui')
-
     cmd = sys.argv[0].replace('-script', '')
     slave_cmd = cmd.replace('build', 'slave')
-    master_cmd = cmd.replace('build', 'master')
-    web_cmd = cmd.replace('build', 'web')
-
     slave_cmd_line = sys.argv[:]
     slave_cmd_line[0] = slave_cmd
     slave_cmd_line[2] = slave_root
@@ -120,6 +128,14 @@ def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
         slave_cmd_line.append('--loglevel')
         slave_cmd_line.append(loglevel)
 
+    subprocess.call(slave_cmd_line)
+
+
+def _run_master(workdir, loglevel, daemonize):
+    master_root = os.path.join(workdir, 'master')
+    cmd = sys.argv[0].replace('-script', '')
+    master_cmd = cmd.replace('build', 'master')
+
     master_cmd_line = sys.argv[:]
     master_cmd_line[0] = master_cmd
     master_cmd_line[2] = master_root
@@ -128,6 +144,49 @@ def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
     if loglevel:
         master_cmd_line.append('--loglevel')
         master_cmd_line.append(loglevel)
+
+    subprocess.call(master_cmd_line)
+
+
+def _run_poller(workdir, loglevel, daemonize):
+    master_root = os.path.join(workdir, 'master')
+    cmd = sys.argv[0].replace('-script', '')
+    master_cmd = cmd.replace('build', 'master')
+    poller_cmd_line = sys.argv[:]
+    poller_cmd_line[0] = master_cmd
+    poller_cmd_line[1] = '{}_poller'.format(poller_cmd_line[1])
+    poller_cmd_line[2] = master_root
+    if daemonize:
+        poller_cmd_line.append('--daemonize')
+    if loglevel:
+        poller_cmd_line.append('--loglevel')
+        poller_cmd_line.append(loglevel)
+
+    subprocess.call(poller_cmd_line)
+
+
+def _run_scheduler(workdir, loglevel, daemonize):
+    master_root = os.path.join(workdir, 'master')
+    cmd = sys.argv[0].replace('-script', '')
+    master_cmd = cmd.replace('build', 'master')
+
+    scheduler_cmd_line = sys.argv[:]
+    scheduler_cmd_line[0] = master_cmd
+    scheduler_cmd_line[1] = '{}_scheduler'.format(scheduler_cmd_line[1])
+    scheduler_cmd_line[2] = master_root
+    if daemonize:
+        scheduler_cmd_line.append('--daemonize')
+    if loglevel:
+        scheduler_cmd_line.append('--loglevel')
+        scheduler_cmd_line.append(loglevel)
+
+    subprocess.call(scheduler_cmd_line)
+
+
+def _run_webui(workdir, loglevel, daemonize):
+    ui_root = os.path.join(workdir, 'ui')
+    cmd = sys.argv[0].replace('-script', '')
+    web_cmd = cmd.replace('build', 'web')
 
     web_cmd_line = sys.argv[:]
     web_cmd_line[0] = web_cmd
@@ -138,9 +197,56 @@ def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
         web_cmd_line.append('--loglevel')
         web_cmd_line.append(loglevel)
 
-    subprocess.call(slave_cmd_line)
-    subprocess.call(master_cmd_line)
     subprocess.call(web_cmd_line)
+
+
+def _run_output(workdir, loglevel, daemonize):
+    output_root = os.path.join(workdir, 'output')
+    cmd = sys.argv[0].replace('-script', '')
+    output_cmd = cmd.replace('build', 'output')
+
+    output_cmd_line = sys.argv[:]
+    output_cmd_line[0] = output_cmd
+    output_cmd_line[2] = output_root
+
+    if daemonize:
+        output_cmd_line.append('--daemonize')
+
+    if loglevel:
+        output_cmd_line.append('--loglevel')
+        output_cmd_line.append(loglevel)
+
+    subprocess.call(output_cmd_line)
+
+
+def _run_integrations(workdir, loglevel, daemonize):
+    integrations_root = os.path.join(workdir, 'integrations')
+    cmd = sys.argv[0].replace('-script', '')
+    integrations_cmd = cmd.replace('build', 'integrations')
+
+    integrations_cmd_line = sys.argv[:]
+    integrations_cmd_line[0] = integrations_cmd
+    integrations_cmd_line[2] = integrations_root
+
+    if daemonize:
+        integrations_cmd_line.append('--daemonize')
+
+    if loglevel:
+        integrations_cmd_line.append('--loglevel')
+        integrations_cmd_line.append(loglevel)
+
+    subprocess.call(integrations_cmd_line)
+
+
+def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
+
+    _run_slave(workdir, loglevel, daemonize)
+    _run_master(workdir, loglevel, daemonize)
+    _run_poller(workdir, loglevel, daemonize)
+    _run_scheduler(workdir, loglevel, daemonize)
+    _run_output(workdir, loglevel, daemonize)
+    _run_integrations(workdir, loglevel, daemonize)
+    _run_webui(workdir, loglevel, daemonize)
 
 
 if __name__ == '__main__':  # pragma no cover

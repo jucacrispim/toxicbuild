@@ -27,6 +27,8 @@ from tests.functional import REPO_DIR, BaseFunctionalTest
 class DummyBuildClient(BaseToxicClient):
 
     def __init__(self, *args, **kwargs):
+        kwargs['use_ssl'] = True
+        kwargs['validate_cert'] = False
         super().__init__(*args, **kwargs)
         self.repo_url = REPO_DIR
 
@@ -147,10 +149,8 @@ class SlaveTest(BaseFunctionalTest):
     def test_build_with_plugin(self):
         with (yield from get_dummy_client()) as client:
             step_info, build_status = yield from client.build('builder-2')
-        self.assertEqual(len(step_info), 6)
-        self.assertEqual(build_status['body']['total_steps'], 3)
-        self.assertEqual(build_status['body']['status'], 'success')
-        self.assertIn('Python 3', build_status['body']['steps'][-1]['output'])
+
+        self.assertEqual(step_info[0]['body']['name'], 'Create virtualenv')
 
     @async_test
     def test_buid_with_timeout_step(self):

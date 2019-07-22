@@ -30,10 +30,15 @@ class ResponseTest(TestCase):
         resp = requests.Response(200, 'some text')
         self.assertEqual(resp.text, 'some text')
 
+    def test_json(self):
+        resp = requests.Response(200, requests.json.dumps({'some': 'json'}))
+        self.assertTrue(resp.json())
+
 
 class MockResponse:
 
     status = 200
+    headers = {}
 
     @asyncio.coroutine
     def text(self):

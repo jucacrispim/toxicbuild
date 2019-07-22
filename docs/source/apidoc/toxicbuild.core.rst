@@ -36,6 +36,30 @@ toxicbuild.core.exceptions module
     :undoc-members:
     :show-inheritance:
 
+toxicbuild.core.exchange module
+-------------------------------
+
+.. automodule:: toxicbuild.core.exchange
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+toxicbuild.core.exchanges module
+--------------------------------
+
+.. automodule:: toxicbuild.core.exchanges
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+toxicbuild.core.mail module
+---------------------------
+
+.. automodule:: toxicbuild.core.mail
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 toxicbuild.core.plugins module
 ------------------------------
 

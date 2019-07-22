@@ -1,0 +1,70 @@
+# -*- coding: utf-8 -*-
+
+import os
+
+host = os.environ.get('DBHOST', 'localhost')
+port = int(os.environ.get('DBPORT', 27017))
+dbname = os.environ.get('DBNAME', 'toxicbuild')
+dbuser = os.environ.get('DBUSER')
+dbpass = os.environ.get('DBPASSWORD')
+
+
+DATABASE = {'host': host,
+            'port': port,
+            'db': dbname}
+
+if dbuser:
+    DATABASE['username'] = dbuser
+
+if dbpass:
+    DATABASE['password'] = dbpass
+
+
+amqp_host = os.environ.get('AMQPHOST', 'localhost')
+amqp_port = int(os.environ.get('AMQPPORT', 5672))
+amqp_login = os.environ.get('AMQPLOGIN')
+amqp_virtualhost = os.environ.get('AMQPVIRTUALHOST')
+amqp_password = os.environ.get('AMQPPASSWORD')
+
+RABBITMQ_CONNECTION = {'host': amqp_host, 'port': amqp_port}
+
+if amqp_login:
+    RABBITMQ_CONNECTION['login'] = amqp_login
+
+if amqp_virtualhost:
+    RABBITMQ_CONNECTION['virtualhost'] = amqp_virtualhost
+
+if amqp_password:
+    RABBITMQ_CONNECTION['password'] = amqp_password
+
+
+NOTIFICATIONS_API_URL = os.environ.get('NOTIFICATIONS_API_URL',
+                                       'http://localhost:9432/')
+NOTIFICATIONS_API_TOKEN = '{{NOTIFICATIONS_API_TOKEN}}'
+
+
+TORNADO_PORT = int(os.environ.get('INTEGRATIONS_WEB_PORT', 9999))
+APPLICATIONS = ['toxicbuild.integrations.webhook_receivers.app']
+
+# This cookie secret must be the same used in toxicui.
+TORNADO_OPTS = {'cookie_secret': '{{COOKIE_SECRET}}'}
+
+GITHUB_API_URL = os.environ.get('GITHUB_API_URL', 'https://api.github.com/')
+GITHUB_PRIVATE_KEY = os.environ.get('GITHUB_PRIVATE_KEY')
+GITHUB_APP_ID = os.environ.get('GITHUB_APP_ID')
+GITHUB_WEBHOOK_TOKEN = os.environ.get('GITHUB_WEBHOOK_TOKEN')
+
+INTEGRATIONS_HTTP_URL = os.environ.get(
+    'INTEGRATIONS_HTTP_URL', 'http://localhost:9999/')
+
+GITLAB_URL = os.environ.get('GITLAB_URL', 'https://gitlab.com/')
+GITLAB_API_URL = '{}api/v4/'.format(GITLAB_URL)
+GITLAB_APP_ID = os.environ.get('GITLAB_APP_ID')
+GITLAB_APP_SECRET = os.environ.get('GITLAB_APP_SECRET')
+GITLAB_WEBHOOK_TOKEN = os.environ.get('GITLAB_WEBHOOK_TOKEN')
+
+TOXICUI_COOKIE = 'toxicui'
+TOXICUI_URL = os.environ.get('TOXICUI_URL', 'http://localhost:8888/')
+TOXICUI_LOGIN_URL = '{}login/'.format(TOXICUI_URL)
+
+PARALLEL_IMPORTS = int(os.environ.get('PARALLEL_IMPORTS', 1))

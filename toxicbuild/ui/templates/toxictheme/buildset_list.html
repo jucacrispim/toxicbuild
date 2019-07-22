@@ -1,0 +1,138 @@
+<!-- template -->
+<div class="template">
+  <ul id="buildset-list-ul">
+
+    <!-- The item template -->
+    <li class="buildset-info box-white box-shadow">
+      <!-- header -->
+      <div class="obj-info-header">
+	<span class="fas fa-ellipsis-h dropdown-toggle"
+	      id="dropdown-menu-ellipsis"
+		data-toggle="dropdown"></span>
+
+	<div class="dropdown-menu dropdown-menu-right box-shadow-gray"
+	     aria-labelledby="dropdown-menu-ellipsis">
+	  <a class="dropdown-item buildset-details-link" href="">
+	    Settings
+	  </a>
+	</div>
+
+      </div>
+
+      <!-- first row -->
+      <div class="obj-info-row obj-info-first-row buildset-info-first-row">
+	<!-- buildset title -->
+	<div class="obj-info-container buildset-title-container obj-main-info">
+	  <a href="" data-toggle="tooltip" class="buildset-details-link">
+	    <span class="buildset-title"></span>
+	  </a>
+	</div>
+	<!-- end buildset title -->
+	<!-- buildset status -->
+	<div class="bj-info-container buildset-info-status-container">
+	  <a href="#">
+	    <span class="buildset-status badge" data-toggle="tooltip"
+		  title="Waterfall">
+	    </span>
+	  </a>
+	  <span class="fas fa-cog fa-spin"></span>
+	  <span class="fas fa-redo"></span>
+	  <span class="spinner icon-spinner-2 spinner-reschedule-buildset"
+		style="display:none"></span>
+
+	</div>
+	<!-- end buildset status -->
+      </div>
+      <!-- end first row -->
+
+      <!-- second row -->
+      <div class="obj-info-row repository-info-commit-row obj-info-small-font">
+	<!-- commit -->
+	<span class="buildset-commit" data-toggle="tooltip"
+	      title="commit">
+	</span>
+
+	<b><span class="buildset-branch" title="branch"></span></b>
+	<!-- end commit -->
+      </div>
+      <!-- end second row -->
+
+      <!-- third row -->
+      <div class="obj-info-row obj-info-last-row obj-info-small-font">
+
+	<!-- last buildset info -->
+	<!-- only displayed if there is some build for the repository -->
+	<div class="buildset-info-last-buildset">
+
+	  <!-- buildset first row -->
+	  <div class="obj-info-row buildset-info-commit-row">
+
+	    <!-- <\!-- commit title -\-> -->
+	    <!-- <span class="buildset-title" data-toggle="tooltip" -->
+	    <!-- 	  title="commit title"> -->
+	    <!-- </span> -->
+	  </div>
+	  <!-- end buildset first row -->
+
+	  <!-- buildset second row -->
+	  <div class="obj-info-row"
+	       data-toggle="tooltip" title="{{translate('commit date')}}">
+	    <span class="far fa-calendar-alt"></span>
+	    <span class="buildset-commit-date"></span>
+	  </div>
+	  <!-- end buildset second row -->
+
+	  <div class="obj-info-row buildset-total-time-row">
+	    <span class="far fa-calendar-check" data-toggle="tooltip"
+		  title="{{translate('started at')}}"></span>
+	    <span class="buildset-started" data-toggle="tooltip"
+		  title="{{translate('started at')}}"></span>
+	    <span class="far fa-clock" data-toggle="tooltip"
+		  title="{{translate('duration')}}"></span>
+	    <span class="buildset-total-time" data-toggle="tooltip"
+		  title="{{translate('duration')}}"></span>
+	  </div>
+	</div>
+      </div>
+    </li>
+
+  </ul>
+</div>
+<!-- end template -->
+
+<input type="hidden" id="repo_name" value="{{repo_full_name}}">
+
+<div class="top-page-header-info-container buildset-list-top-page-header-info">
+
+  <span class="repo-full-name">{{ repo_full_name.split('/')[1] }}</span>
+  <a href="{{ '/' + repo_full_name + '/settings' }}" class="no-decoration">
+    <span class="fas fa-wrench"></span>
+  </a>
+  <a href="{{ '/' + repo_full_name + '/' }}" title="{{translate('Summary')}}"
+     class="summary-link link-enabled no-decoration">
+    <span class="fas fa-list"></span>
+  </a>
+
+  <a href="{{ '/' + repo_full_name + '/waterfall' }}"
+     title="Warterfall" class="waterfall-link no-decoration">
+    <span class="fas fa-th"></span>
+  </a>
+
+</div>
+<div id="obj-list-container">
+  <div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
+    <span class="spinner icon-spinner-2"></span>
+    <span class="icon-toxicmask"></span>
+  </div>
+</div>
+
+<script>
+  async function init(){
+    let repo_name = $('#repo_name').val()
+    let obj_list = new BuildSetListView(repo_name);
+    await obj_list.render_all();
+    router.setUpLinks();
+  };
+
+  window.onload = function(){init()};
+</script>

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -23,9 +23,9 @@ from unittest import TestCase
 from unittest.mock import patch, MagicMock, Mock
 import tornado
 from toxicbuild.core.utils import load_module_from_file
-from toxicbuild.slave import plugins, managers
+from toxicbuild.slave import managers
 from tests.unit.slave import TEST_DATA_DIR
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 TOXICCONF = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
 TOXICCONF = load_module_from_file(TOXICCONF)
@@ -39,7 +39,8 @@ BADTOXICCONF = load_module_from_file(BADTOXICCONF)
 class BuilderManagerTest(TestCase):
 
     @patch.object(managers, 'get_vcs', MagicMock())
-    def setUp(self):
+    @async_test
+    async def setUp(self):
         super().setUp()
         protocol = MagicMock()
 
@@ -212,10 +213,30 @@ class BuilderManagerTest(TestCase):
     def test_update_and_checkout_with_clone(self):
         self.manager.vcs.workdir_exists.return_value = False
         self.manager.vcs.checkout = MagicMock()
+        self.manager.vcs.try_set_remote = AsyncMagicMock()
         yield from self.manager.update_and_checkout()
 
         self.assertTrue(self.manager.vcs.clone.called)
         self.assertTrue(self.manager.vcs.checkout.called)
+        self.assertTrue(self.manager.vcs.try_set_remote.called)
+
+    @async_test
+    def test_update_and_checkout_external(self):
+        self.manager.vcs.workdir_exists.return_value = True
+        self.manager.vcs.checkout = MagicMock()
+        self.manager.vcs.try_set_remote = AsyncMagicMock()
+        self.manager.vcs.import_external_branch = AsyncMagicMock(
+            spec=self.manager.vcs.import_external_branch)
+
+        external = {'url': 'http://bla.com/bla.git',
+                    'name': 'remote', 'branch': 'master',
+                    'into': 'into'}
+        yield from self.manager.update_and_checkout(external=external)
+
+        self.assertFalse(self.manager.vcs.clone.called)
+        self.assertTrue(self.manager.vcs.checkout.called)
+        self.assertFalse(self.manager.vcs.try_set_remote.called)
+        self.assertTrue(self.manager.vcs.import_external_branch.called)
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
     @patch.object(managers.BuildManager, 'wait_all', MagicMock())
@@ -252,9 +273,11 @@ class BuilderManagerTest(TestCase):
     def test_update_and_checkout_new_named_tree(self):
         self.manager.vcs.checkout = MagicMock(side_effect=[
             managers.ExecCmdError, MagicMock(), MagicMock()])
+        self.manager.vcs.get_remote_branches = AsyncMagicMock()
         yield from self.manager.update_and_checkout()
 
         self.assertEqual(len(self.manager.vcs.checkout.call_args_list), 3)
+        self.assertTrue(self.manager.vcs.get_remote_branches.called)
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
     @patch.object(managers.BuildManager, 'wait_all', MagicMock())
@@ -265,18 +288,22 @@ class BuilderManagerTest(TestCase):
 
         self.assertEqual(len(self.manager.vcs.checkout.call_args_list), 1)
 
-    def test_list_builders(self):
-        expected = ['builder1', 'builder2', 'builder3', 'builder4']
+    @async_test
+    async def test_list_builders(self):
+        await self.manager.load_config()
+        expected = ['builder1', 'builder2', 'builder3', 'builder4', 'builder5']
         returned = self.manager.list_builders()
 
         self.assertEqual(returned, expected)
 
     def test_list_builders_with_bad_builder_config(self):
-        self.manager._configmodule = BADTOXICCONF
+        self.manager._config = BADTOXICCONF
         with self.assertRaises(managers.BadBuilderConfig):
             self.manager.list_builders()
 
-    def test_branch_match(self):
+    @async_test
+    async def test_branch_match(self):
+        await self.manager.load_config()
         builder = {'name': 'builder', 'branch': 'master'}
         self.branch = 'master'
         self.assertTrue(self.manager._branch_match(builder))
@@ -291,26 +318,60 @@ class BuilderManagerTest(TestCase):
         self.branch = 'master'
         self.assertFalse(self.manager._branch_match(builder))
 
-    def test_load_builder(self):
-        builder = self.manager.load_builder('builder1')
+    @patch.object(managers, 'settings', Mock())
+    @async_test
+    async def test_load_builder(self):
+        await self.manager.load_config()
+        managers.settings.USE_DOCKER = False
+        builder = await self.manager.load_builder('builder1')
         self.assertEqual(len(builder.steps), 2)
+        self.assertIn('COMMIT_SHA', builder.envvars)
 
-    def test_load_builder_with_plugin(self):
-        builder = self.manager.load_builder('builder3')
+    @patch.object(managers, 'settings', Mock())
+    @async_test
+    async def test_load_builder_from_other_branch(self):
+        self.manager.builders_from = 'other-branch'
+        await self.manager.load_config()
+        managers.settings.USE_DOCKER = False
+        builder = await self.manager.load_builder('builder5')
+        self.assertEqual(len(builder.steps), 1)
+
+    @patch.object(managers, 'settings', Mock())
+    @patch.object(managers, 'DockerContainerBuilder', Mock())
+    @async_test
+    async def test_load_builder_docker(self):
+        await self.manager.load_config()
+        managers.settings.USE_DOCKER = True
+        await self.manager.load_builder('builder1')
+        self.assertTrue(managers.DockerContainerBuilder.called)
+
+    @patch.object(managers, 'settings', Mock())
+    @async_test
+    async def test_load_builder_with_plugin(self):
+        managers.settings.USE_DOCKER = False
+        await self.manager.load_config()
+        builder = await self.manager.load_builder('builder3')
         self.assertEqual(len(builder.steps), 3)
 
-    def test_load_builder_with_not_found(self):
+    @async_test
+    async def test_load_builder_with_not_found(self):
         with self.assertRaises(managers.BuilderNotFound):
-            builder = self.manager.load_builder('builder300')
+            await self.manager.load_config()
+            builder = await self.manager.load_builder('builder300')
             del builder
 
-    def test_load_builder_with_envvars(self):
-        builder = self.manager.load_builder('builder4')
+    @patch.object(managers, 'settings', Mock())
+    @async_test
+    async def test_load_builder_with_envvars(self):
+        managers.settings.USE_DOCKER = False
+        await self.manager.load_config()
+        builder = await self.manager.load_builder('builder4')
         self.assertTrue(builder.envvars)
 
-    def test_load_plugins(self):
-        plugins_conf = [{'name': 'python-venv',
-                         'pyversion': '/usr/bin/python3.4'}]
-        returned = self.manager._load_plugins(plugins_conf)
-
-        self.assertEqual(type(returned[0]), plugins.PythonVenvPlugin)
+    @patch.object(managers, 'get_toxicbuildconf_yaml',
+                  AsyncMagicMock(spec=managers.get_toxicbuildconf_yaml))
+    @async_test
+    async def test_load_config_yaml(self):
+        self.manager.config_type = 'yaml'
+        await self.manager.load_config()
+        self.assertTrue(managers.get_toxicbuildconf_yaml.called)

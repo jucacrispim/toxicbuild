@@ -1,6 +1,33 @@
 Changelog
 =========
 
+* 0.6.0
+
+  - Builds now can be optionally trigger by other builds.
+  - New build queue. Now are not sent to all slaves.
+  - Amazon ec2 integration
+  - Improved builds on docker containers
+  - Gitlab integration
+  - New web user interface
+
+* 0.5.0
+
+  - Added support for builds inside docker containers.
+  - Added multi-user support
+  - Master process divided in master, scheduler, poller and output
+  - SSL support
+  - New yaml config format
+  - Github integration
+  - Added ci: skip instruction
+
+* 0.4.2
+
+  - Corrected builds without limit.
+
+* 0.4.1
+
+  - Corrected changing of repository status in the main page
+
 * 0.4.0
 
   - Added build details modal.

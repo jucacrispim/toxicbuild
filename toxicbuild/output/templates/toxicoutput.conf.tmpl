@@ -1,0 +1,53 @@
+import os
+
+host = os.environ.get('DBHOST', 'localhost')
+port = int(os.environ.get('DBPORT', 27017))
+dbname = os.environ.get('DBNAME', 'toxicbuild')
+dbuser = os.environ.get('DBUSER')
+dbpass = os.environ.get('DBPASSWORD')
+
+DATABASE = {'host': host,
+            'port': port,
+            'db': dbname}
+
+if dbuser:
+    DATABASE['username'] = dbuser
+
+if dbpass:
+    DATABASE['password'] = dbpass
+
+amqp_host = os.environ.get('AMQPHOST', 'localhost')
+amqp_port = int(os.environ.get('AMQPPORT', 5672))
+amqp_login = os.environ.get('AMQPLOGIN')
+amqp_virtualhost = os.environ.get('AMQPVIRTUALHOST')
+amqp_password = os.environ.get('AMQPASSWORD')
+
+RABBITMQ_CONNECTION = {'host': amqp_host, 'port': amqp_port}
+
+if amqp_login:
+    RABBITMQ_CONNECTION['login'] = amqp_login
+
+if amqp_virtualhost:
+    RABBITMQ_CONNECTION['virtualhost'] = amqp_virtualhost
+
+if amqp_password:
+    RABBITMQ_CONNECTION['password'] = amqp_password
+
+
+SMTP_MAIL_FROM = os.environ.get('SMTP_MAIL_FROM', '')
+SMTP_HOST = os.environ.get('SMTP_HOST', '')
+SMTP_PORT = int(os.environ.get('SMPT_PORT', 587))
+SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+SMTP_STARTTLS = os.environ.get('SMTP_START_TLS') == '1'
+SMTP_VALIDATE_CERTS = os.environ.get('SMTP_VALIDATE_CERTS') == '1'
+
+
+GITHUB_API_URL = os.environ.get('GITHUB_API_URL', 'https://api.github.com/')
+
+TORNADO_PORT = int(os.environ.get('OUTPUT_WEB_PORT', 9432))
+
+APPLICATIONS = ['toxicbuild.output.server.app']
+
+GITLAB_URL = os.environ.get('GITLAB_URL', 'https://gitlab.com/')
+GITLAB_API_URL = '{}api/v4/'.format(GITLAB_URL)

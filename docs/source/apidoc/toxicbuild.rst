@@ -6,8 +6,11 @@ Subpackages
 
 .. toctree::
 
+    toxicbuild.common
     toxicbuild.core
+    toxicbuild.integrations
     toxicbuild.master
+    toxicbuild.output
     toxicbuild.slave
     toxicbuild.ui
 

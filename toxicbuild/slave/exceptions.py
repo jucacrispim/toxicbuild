@@ -15,3 +15,11 @@ class BadBuilderConfig(Exception):
 
 class BusyRepository(Exception):
     pass
+
+
+class NotConnected(Exception):
+    pass
+
+
+class BadPluginConfig(Exception):
+    pass

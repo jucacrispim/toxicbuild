@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -23,16 +23,62 @@ import datetime
 from concurrent import futures
 import os
 import subprocess
-import sys
 import time
 from unittest import TestCase
 from unittest.mock import patch, Mock, MagicMock
 from toxicbuild.core import utils
 from tests.unit.core import TEST_DATA_DIR
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class UtilsTest(TestCase):
+
+    @async_test
+    async def test_try_readline_lf(self):
+        stream = AsyncMagicMock()
+        await utils._try_readline(stream)
+
+        assert stream.readuntil.call_args[0][0] == b'\n'
+
+    @async_test
+    async def test_try_readline_cr(self):
+        stream = AsyncMagicMock()
+        stream.readuntil.side_effect = [
+            utils.LimitOverrunError('msg', False), '']
+        await utils._try_readline(stream)
+
+        assert stream.readuntil.call_args[0][0] == b'\r'
+
+    @patch.object(utils, '_try_readline', AsyncMagicMock(
+        side_effect=utils.IncompleteReadError('partial', 'exp')))
+    @async_test
+    async def test_readline_incomplete(self):
+        stream = AsyncMagicMock()
+        r = await utils._readline(stream)
+
+        self.assertEqual(r, 'partial')
+
+    @patch.object(utils, '_try_readline', AsyncMagicMock(
+        side_effect=utils.LimitOverrunError('msg', 0)))
+    @async_test
+    async def test_readline_limit_overrun(self):
+        stream = AsyncMagicMock()
+        stream._buffer = bytearray()
+        stream._maybe_resume_transport = Mock()
+        stream._buffer.extend(b'\nblerg')
+        with self.assertRaises(ValueError):
+            await utils._readline(stream)
+
+    @patch.object(utils, '_try_readline', AsyncMagicMock(
+        side_effect=utils.LimitOverrunError('msg', 0)))
+    @async_test
+    async def test_readline_limit_overrun_clear(self):
+        stream = AsyncMagicMock()
+        stream._buffer = bytearray()
+        stream._maybe_resume_transport = Mock()
+        stream.extend(b'blerg')
+        with self.assertRaises(ValueError):
+            await utils._readline(stream)
 
     @async_test
     def test_exec_cmd(self):
@@ -103,13 +149,28 @@ class UtilsTest(TestCase):
 
         expected = {'PATH': '{}:venv/bin'.format(os.environ.get('PATH')),
                     'MYPROGRAMVAR': 'something',
-                    'LANG': os.environ.get('LANG', '')}
+                    'HOME': os.environ.get('HOME', '')}
 
-        returned = utils._get_envvars(envvars)
+        returned = utils.get_envvars(envvars)
 
         for var, val in expected.items():
             self.assertIn(var, returned)
             self.assertEqual(returned[var], val)
+
+    def test_get_envvars_no_local(self):
+        envvars = {'PATH': 'PATH:venv/bin',
+                   'MYPROGRAMVAR': 'something'}
+
+        expected = {'PATH': '{}:venv/bin'.format(os.environ.get('PATH')),
+                    'MYPROGRAMVAR': 'something'}
+
+        returned = utils.get_envvars(envvars, use_local_envvars=False)
+
+        for var, val in expected.items():
+            self.assertIn(var, returned)
+            self.assertEqual(returned[var], val)
+
+        self.assertEqual(len(list(returned.keys())), 2)
 
     def test_load_module_from_file_with_file_not_found(self):
         with self.assertRaises(FileNotFoundError):
@@ -127,10 +188,51 @@ class UtilsTest(TestCase):
 
         self.assertEqual(mod.BLA, 'val')
 
-    @patch.object(utils.logging, 'info', Mock())
+    @async_test
+    async def test_get_toxicbuildconf_yaml_not_found(self):
+        with self.assertRaises(FileNotFoundError):
+            await utils.get_toxicbuildconf_yaml('/i/dont/exist')
+
+    @async_test
+    async def test_get_toxicbuildconf_yaml_with_some_error(self):
+        with self.assertRaises(utils.ConfigError):
+            await utils.get_toxicbuildconf_yaml(
+                TEST_DATA_DIR, 'toxicbuild_error.yml')
+
+    @async_test
+    async def test_get_toxicbuildconf_yaml(self):
+        config = await utils.get_toxicbuildconf_yaml(TEST_DATA_DIR)
+        self.assertTrue(config['builders'][0])
+
+    @patch.object(utils, 'get_toxicbuildconf',
+                  Mock(spec=utils.get_toxicbuildconf))
+    @async_test
+    async def test_get_config_py(self):
+        conf = await utils.get_config('/some/workdir', 'py',
+                                      'toxicbuild.conf')
+        self.assertTrue(utils.get_toxicbuildconf.called)
+        self.assertTrue(conf)
+
+    @patch.object(utils, 'get_toxicbuildconf_yaml',
+                  AsyncMagicMock(spec=utils.get_toxicbuildconf_yaml,
+                                 return_value=True))
+    @async_test
+    async def test_get_config_yaml(self):
+        conf = await utils.get_config('/some/workdir', 'yaml',
+                                      'toxicbuild.yml')
+        self.assertTrue(utils.get_toxicbuildconf_yaml.called)
+        self.assertTrue(conf)
+
+    @patch.object(utils.logger, 'setLevel', Mock())
+    def test_set_loglevel(self):
+        utils.set_loglevel('info')
+
+        self.assertTrue(utils.logger.setLevel.called)
+
+    @patch.object(utils.logger, 'info', Mock())
     def test_log(self):
         utils.log('msg')
-        self.assertTrue(utils.logging.info.called)
+        self.assertTrue(utils.logger.info.called)
 
     @patch.object(utils, 'log', Mock())
     def test_logger_mixin(self):
@@ -168,7 +270,7 @@ class UtilsTest(TestCase):
 
     def test_datetime2string(self):
         dt = utils.now()
-        expected = datetime.datetime.strftime(dt, '%a %b %d %H:%M:%S %Y %z')
+        expected = datetime.datetime.strftime(dt, '%w %m %d %H:%M:%S %Y %z')
         returned = utils.datetime2string(dt)
         self.assertEqual(returned, expected)
 
@@ -176,7 +278,7 @@ class UtilsTest(TestCase):
         dt = datetime.datetime.now()
         dttz = dt.replace(tzinfo=datetime.timezone(
             datetime.timedelta(seconds=0)))
-        expected = datetime.datetime.strftime(dttz, '%a %b %d %H:%M:%S %Y %z')
+        expected = datetime.datetime.strftime(dttz, '%w %m %d %H:%M:%S %Y %z')
         returned = utils.datetime2string(datetime.datetime.now())
         hour = int(returned.split(' ')[3].split(':')[0])
 
@@ -193,7 +295,7 @@ class UtilsTest(TestCase):
 
     def test_string2datetime(self):
         dt = utils.now()
-        dtstr = dt.strftime('%a %b %d %H:%M:%S %Y %z')
+        dtstr = dt.strftime('%w %m %d %H:%M:%S %Y %z')
 
         returned = utils.string2datetime(dtstr)
         tz = returned.utcoffset().total_seconds()
@@ -227,6 +329,11 @@ class UtilsTest(TestCase):
         self.assertEqual(n.utcoffset().total_seconds(),
                          time.localtime().tm_gmtoff)
 
+    def test_set_tz_info(self):
+        n = datetime.datetime.now()
+        ntz = utils.set_tzinfo(n, -10800)
+        self.assertEqual(ntz.utcoffset().total_seconds(), -10800)
+
     @patch.object(utils, 'load_module_from_file', Mock())
     def test_get_toxicbuildconf(self):
         utils.get_toxicbuildconf('/some/dir/')
@@ -239,11 +346,55 @@ class UtilsTest(TestCase):
         slave = Mock()
         slave.name = 'myslave'
         confmodule.BUILDERS = [{'name': 'b0'},
-                               {'name': 'b1', 'branch': 'other'},
+                               {'name': 'b1', 'branches': ['otheir']},
                                {'name': 'b2',
-                                'slave': 'myslave', 'branch': 'master'}]
+                                'slaves': ['myslave'],
+                                'branches': ['mast*', 'release']},
+                               {'name': 'b3', 'slaves': ['otherslave']}]
         builders = utils.list_builders_from_config(confmodule, 'master', slave)
         self.assertEqual(len(builders), 2)
+        self.assertNotIn({'name': 'b1', 'branch': 'other'}, builders)
+
+    def test_list_builders_from_config_yaml(self):
+        slave = Mock()
+        slave.name = 'myslave'
+        config = {'builders':
+                  [{'name': 'b0'},
+                   {'name': 'b1', 'branches': ['otheir']},
+                   {'name': 'b2',
+                    'slaves': ['myslave'],
+                    'branches': ['mast*', 'release']},
+                   {'name': 'b3', 'slaves': ['otherslave']}]}
+        builders = utils.list_builders_from_config(config, 'master', slave,
+                                                   config_type='yaml')
+        self.assertEqual(len(builders), 2)
+        self.assertNotIn({'name': 'b1', 'branch': 'other'}, builders)
+
+    def test_list_builders_from_config_no_branch(self):
+        confmodule = Mock()
+        slave = Mock()
+        slave.name = 'myslave'
+        confmodule.BUILDERS = [{'name': 'b0'},
+                               {'name': 'b1', 'branches': ['other'],
+                                'slaves': ['other']},
+                               {'name': 'b2',
+                                'slaves': ['myslave'], 'branches': ['master']}]
+        builders = utils.list_builders_from_config(confmodule, slave=slave)
+        self.assertEqual(len(builders), 2)
+        self.assertNotIn({'name': 'b1', 'branch': 'other',
+                          'slave': 'other'}, builders)
+
+    def test_list_builders_from_config_no_branch_no_slave(self):
+        confmodule = Mock()
+        slave = Mock()
+        slave.name = 'myslave'
+        confmodule.BUILDERS = [{'name': 'b0'},
+                               {'name': 'b1', 'branches': ['other'],
+                                'slaves': ['other']},
+                               {'name': 'b2',
+                                'slaves': ['myslave'], 'branches': ['master']}]
+        builders = utils.list_builders_from_config(confmodule)
+        self.assertEqual(len(builders), 3)
 
     def test_bcript_with_str_salt(self):
         salt = utils.bcrypt.gensalt(7).decode()
@@ -256,6 +407,39 @@ class UtilsTest(TestCase):
         passwd = 'somepasswd'
         encrypted = utils.bcrypt_string(passwd, salt)
         self.assertIsInstance(encrypted, str)
+
+    def test_bcript_no_salt(self):
+        passwd = 'somepasswd'
+        encrypted = utils.bcrypt_string(passwd)
+        self.assertIsInstance(encrypted, str)
+
+    def test_compare_bcrypt_string(self):
+        passwd = 'somepasswd'
+        encrypted = utils.bcrypt_string(passwd)
+        self.assertTrue(utils.compare_bcrypt_string(passwd, encrypted))
+
+    def test_create_random_string(self):
+        length = 10
+        random_str = utils.create_random_string(length)
+        self.assertEqual(len(random_str), length)
+
+    def test_validation_string(self):
+        secret = '1234'
+        b64str = utils.create_validation_string(secret)
+
+        self.assertTrue(utils.validate_string(b64str, secret))
+
+    def test_validation_string_bad(self):
+        secret = '1234'
+        bad_secret = '123'
+        b64str = utils.create_validation_string(secret)
+
+        self.assertFalse(utils.validate_string(b64str, bad_secret))
+
+    @patch.object(utils, 'log', Mock())
+    def test_validation_string_exception(self):
+        secret = '1234'
+        self.assertFalse(utils.validate_string('bad-str', secret))
 
     @patch.object(utils.os, 'chdir', Mock())
     def test_changedir(self):
@@ -275,6 +459,39 @@ class UtilsTest(TestCase):
         filters = ['something', '*thing']
         smatch = 'somestuff'
         self.assertFalse(utils.match_string(smatch, filters))
+
+    @patch.object(utils, '_THREAD_EXECUTOR', MagicMock())
+    @async_test
+    def test_run_in_thread(self):
+        fn = Mock()
+        yield from utils.run_in_thread(fn, 1, a=2)
+        called = utils._THREAD_EXECUTOR.submit.call_args
+        expected = ((fn, 1), {'a': 2})
+        self.assertEqual(called, expected)
+
+    def test_patch_source_suffixes(self):
+        patcher = utils.SourceSuffixesPatcher()
+        with patcher:
+            patcher.patch_source_suffixes()
+            self.assertEqual(
+                utils.importlib._bootstrap_external.SOURCE_SUFFIXES,
+                ['.py', '.conf'])
+
+    def test_patch_pyrosettings(self):
+        patcher = utils.SettingsPatcher()
+        settings = Mock()
+        with patcher:
+            patcher.patch_pyro_settings(settings)
+            import pyrocumulus
+            self.assertEqual(pyrocumulus.conf.settings, settings)
+
+        self.assertNotEqual(pyrocumulus.conf.settings, settings)
+
+    @async_test
+    async def test_read_file(self):
+        filename = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
+        c = await utils.read_file(filename)
+        self.assertTrue(c)
 
 
 class StreamUtilsTest(TestCase):
@@ -417,3 +634,15 @@ class MatchKeyDictTest(TestCase):
         d['a*'] = 1
         with self.assertRaises(KeyError):
             d['key']
+
+    def test_get(self):
+        d = utils.MatchKeysDict()
+        d['a*'] = 1
+
+        self.assertTrue(d.get('adsf'))
+
+    def test_get_not_present(self):
+        d = utils.MatchKeysDict()
+        d['a*'] = 1
+
+        self.assertIsNone(d.get('k'))

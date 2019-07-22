@@ -1,0 +1,77 @@
+.dark-theme .toxic-main-area,
+body.dark-theme{
+    background-color: #4c4a49;
+    color: #D0D0D0;
+}
+
+.dark-theme .dropdown-menu{
+    background-color: #4c4a49;
+}
+
+.dark-theme .dropdown-item{
+    color: #D0D0D0;
+}
+
+.dark-theme .dropdown-item:hover{
+    color: #D0D0D0;
+    background-color: #5e5b5b;
+}
+
+/* .dark-theme .box-shadow{ */
+/*     box-shadow: 0em 0rem 0.5rem 0.1rem #d0d2d4; */
+/* } */
+
+.dark-theme .box-white{
+    background-color: #5e5b5b;
+    /* border-color: #b3acac; */
+}
+
+.dark-theme .obj-main-info,
+.dark-theme .slave-info-name,
+.dark-theme .repository-info-name {
+    color: #D0D0D0;
+}
+
+
+.dark-theme #waterfall-container ul {
+    background-color: #4c4a49;
+    border-color: #4c4a49;
+}
+
+.dark-theme .obj-main-info a,
+.dark-theme .obj-main-info a:hover,
+.dark-theme #slave-list-container .slave-info-name-container a:hover,
+.dark-theme #repo-list-container .repository-info-name-container a:hover {
+    color: #D0D0D0;
+}
+
+.dark-theme .top-page-repositories-info-container .fa-github,
+.dark-theme .top-page-repositories-info-container .fa-gitlab {
+    color: #D0D0D0;
+}
+
+.dark-theme #waterfall-container a.buildset-details-link,
+.dark-theme #waterfall-container a.buildset-details-link:hover {
+    color: #D0D0D0;
+}
+.dark-theme #waterfall-container .link-enabled,
+.dark-theme .buildset-list-top-page-header-info .link-enabled {
+    color: var(--black-almost-there);
+    background-color: #f9f9f9;
+}
+
+.dark-theme .buildset-list-top-page-header-info a {
+    color: #D0D0D0;
+}
+
+.dark-theme #waterfall-header a {
+    color: #D0D0D0;
+}
+
+.dark-theme .modal-content {
+    background-color:  #4c4a49;
+}
+
+.dark-theme .repo-locations-link-container a {
+    color: #D0D0D0;
+ }

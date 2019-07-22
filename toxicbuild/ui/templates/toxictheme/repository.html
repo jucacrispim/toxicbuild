@@ -1,0 +1,406 @@
+<!-- add branch modal -->
+<div class="modal fade" id="addBranchModal" tabindex="-1" role="dialog"
+     aria-labelledby="addBranchModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="exampleModalLabel">
+	  {% raw translate('Add branch') %}
+	</h6>
+        <button type="button" class="close" data-dismiss="modal"
+		aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="text" class="form-control" id="repo-branch-name"
+	       placeholder="{% raw translate('Branch name. You may use wildcards here.') %}">
+
+	<div class="form-check abc-checkbox abc-checkbox-black">
+	  <input class="form-check-input" id="notify-only-latest"
+		 type="checkbox" checked>
+	  <label class="form-check-label" for="notify-only-latest">
+	    {{translate('Only most recent changes')}}
+	  </label>
+	</div>
+
+      </div>
+
+      <div class="modal-footer">
+
+	  <div class="add-branch-btn-container inner-btn-container col-sm-4">
+	    <button class="btn btn-sm btn-block btn-dark" type="submit"
+		    id="btn-add-branch" disabled>
+	      <span class="spinner icon-spinner-2" id="add-branch-btn-spinner"
+		    style="display:none">
+	      </span>
+	      <span id="add-branch-btn-text">
+		{% raw translate('Add branch') %}
+	      </span>
+	    </button>
+	  </div>
+
+	  <div class="cancel-btn-container inner-btn-container">
+	    <button class="btn btn-sm btn-light btn-block" type="submit"
+		    id="btn-cancel-save-repo">
+	      <span class="spinner icon-spinner-2" id="save-repo-btn-spinner"
+		    style="display:none">
+	      </span>
+	      <span id="cancel-save-repo-btn-text">{{translate('Cancel')}}</span>
+	    </button>
+	  </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<!-- end add branch modal -->
+
+<!-- confirm delete repo modal -->
+<div class="modal fade" id="removeRepoModal" tabindex="-1" role="dialog"
+     aria-labelledby="removeRepoModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="exampleModalLabel">
+	  {{translate('Delete repository')}}
+	</h6>
+        <button type="button" class="close" data-dismiss="modal"
+		aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+
+	<span>
+	  {{translate('Are you sure you want to delete this repository? This action can\'t be undone.')}}
+	</span>
+
+      </div>
+
+      <div class="modal-footer">
+
+	  <div class="add-branch-btn-container inner-btn-container col-sm-4">
+	    <button class="btn btn-sm btn-block btn-danger btn-red" type="submit"
+		    id="btn-remove-obj">
+	      <span class="spinner icon-spinner-2" id="remove-repo-btn-spinner"
+		    style="display:none">
+	      </span>
+	      <span id="remove-repo-btn-text">{{translate('Delete')}}</span>
+	    </button>
+	  </div>
+
+	  <div class="cancel-btn-container inner-btn-container">
+	    <button class="btn btn-sm btn-light btn-block" type="submit"
+		    id="btn-cancel-remove-repo">
+	      <span id="cancel-remove-repo-btn-text">{{translate('Cancel')}}</span>
+	    </button>
+	  </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<!-- end confirm delete repo modal -->
+
+<!-- template -->
+<div class="template">
+
+  <div id="repo-details">
+    <div class="form-group repo-name-group ">
+
+      <div class="col-sm-12 repo-details-row form-check-inline">
+	<!-- first row -->
+	<!-- name container -->
+	<div class="col-sm-6">
+	  <label for="repo-details-name">{{translate('Name')}}</label>
+	  <input type="text"
+		 class="form-control repo-details-name obj-details-name"
+		 data-valuefor="name" required>
+	</div>
+
+	<!-- name available -->
+	<div class="repo-details-name-available repo-details-label"
+	     id="obj-name-available">
+
+	  <div class="wait-name-available-spinner">
+	    <span class="spinner icon-spinner-2"></span>
+	  </div>
+
+	  <span class="check-error-indicator"></span>
+	  <span id="available-text"></span>
+	</div>
+	<!-- end name available -->
+
+	<!-- end name container -->
+      </div>
+      <!-- end first row -->
+
+      <!-- second row -->
+      <div class="col-sm-12 repo-details-row form-check-inline">
+	<!-- url container -->
+	<div class="col-sm-8">
+	  <label for="repo-details-url">URL</label>
+	  <input  type="text" class="form-control repo-details-url"
+		  data-valuefor="url" required>
+	</div>
+	<!-- end url container -->
+
+	<!-- enabled -->
+	<div class="repo-info-container repository-info-enabled-container">
+	  <div class=" wait-change-enabled-spinner col-sm-3">
+	    <span class="spinner icon-spinner-2"></span>
+	  </div>
+
+	  <input type="checkbox" class="enabled-checkbox repo-enabled-checkbox"
+		 data-on="{{translate('enabled')}}"
+		 data-off="{{translate('disabled')}}"
+		 data-onstyle="success" data-offstyle="secondary"
+		 data-style="checkbox-rounded checkbox-sm"
+		 data-width="1pz" data-height="1pz">
+
+	  <!-- the 1pz stuff is a hack to avoid bootstrap-togge
+	       setting the width and height of the element to 0 with
+	       inline css -->
+	</div>
+	<!-- end enabled enabled -->
+	<!-- end second row -->
+      </div>
+
+      <!-- advanced config -->
+      <div class="repo-config-advanced-container col-sm-12">
+	<span id="advanced-angle-span"
+	      class="fas fa-angle-right cursor-pointer">
+	</span>
+	<span class="repo-config-advanced-span cursor-pointer">
+	  <b>{{translate('Advanced')}}</b>
+	</span>
+
+	<div id="repo-details-advanced-container">
+
+	  <!-- branches -->
+	  <div class="row-container">
+	    <div class="">
+	      <span>{% raw translate('Branches') %}</span>
+	    </div>
+	    <div id="branches-list-container"
+		 class="col-sm-6 repo-details-input box-shadow-gray-inset advanced-large-item">
+	      <ul class="repo-branches-ul" id="repo-branches-container">
+		<li class="box-shadow box-white no-item-placeholder"
+		    id="no-branch-placeholder">
+		  {% raw translate('No branch configuration.')%}
+		</li>
+
+		<li class="repo-branches-li box-shadow-light box-white">
+		  <span class="branch-name"></span>
+		  <span class="spinner icon-spinner-2 remove-branch-btn-spinner"
+			style="display:none"></span>
+		  <span class="fas fa-times remove-item-btn remove-branch-btn"
+			title="remove branch" data-branch="">
+		  </span>
+		</li>
+
+	      </ul>
+	    </div>
+	    <div class="col-sm-1 repo-details-input advanced-large-item">
+	      <span class="fas fa-plus add-branch-btn"
+		    title="add branch" data-toggle="modal"
+		    data-target="#addBranchModal"></span>
+	    </div>
+
+
+	    <!-- builds in palallel -->
+	    <div class="row-container parallel-builds-container col-sm-5">
+	      <label>{% raw translate('Builds in parallel')%}</label>
+	      <input class="repo-parallel-builds form-control" type="text"
+		     data-valuefor="parallel_builds">
+	    </div>
+	    <!-- end builds in palallel -->
+	  </div>
+	  <!-- end branches -->
+
+	  <!-- slaves -->
+	  <div class="row-container">
+	    <div>
+	      <span>{{translate('Slaves')}}</span>
+	    </div>
+	    <div id="slaves-list-container"
+		 class="col-sm-6 repo-details-input box-shadow-gray-inset advanced-large-item">
+	      <ul class="repo-slaves-ul">
+		<li class="repo-slaves-li box-shadow-light box-white">
+		  <span class="slave-name"></span>
+
+		  <div class=" wait-change-enabled-spinner col-sm-3">
+		    <span class="spinner icon-spinner-2"></span>
+		  </div>
+
+		  <input type="checkbox"
+			 class="enabled-checkbox slave-enabled-checkbox"
+			 data-on="{{translate('enabled')}}"
+			 data-off="{{translate('disabled')}}"
+			 data-onstyle="success" data-offstyle="secondary"
+			 data-style="checkbox-rounded checkbox-sm"
+			 data-width="1pz" data-height="1pz">
+
+		  <!-- the 1pz stuff is a hack to avoid bootstrap-togge
+		       setting the width and height of the element to 0 with
+		       inline css -->
+
+		</li>
+	      </ul>
+	    </div>
+	  </div>
+	  <!-- end slaves -->
+
+	  <!-- delete repo-->
+	  <div class="row-container">
+
+	    <div class="delete-btn-container inner-btn-container col-sm-2">
+	      <button class="btn btn-sm btn-block btn-danger btn-red btn-delete-repo"
+		      type="submit"
+		      data-toggle="modal"
+		    data-target="#removeRepoModal">
+		<span class="spinner icon-spinner-2" id="delete-repo-btn-spinner"
+		      style="display:none">
+		</span>
+		<span id="delete-repo-btn-text">{{translate('Delete')}}</span>
+	      </button>
+	    </div>
+	  </div>
+	  <!-- end delete repo -->
+
+	</div>
+
+      </div>
+      <!-- end advanced config -->
+
+    </div>
+  </div>
+
+</div>
+<!-- end template -->
+
+  <!-- loading spinner -->
+  <div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
+    <span class="spinner icon-spinner-2"></span>
+    <span class="icon-toxicmask"></span>
+  </div>
+  <!-- end loading spinner -->
+
+<!-- main settings container -->
+<div class="repo-details-main-container details-main-container box-shadow-gray">
+  <div class="close-btn">&times;</div>
+
+  <!-- navigation pills -->
+  <div class="nav-container">
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+	<a class="nav-link active box-shadow"
+	   href="{{ '/' + repo_full_name + '/settings' }}">
+	  {{translate('General configurations')}}
+	</a>
+      </li>
+      <li class="nav-item">
+	<a class="nav-link"
+	   href="{{ '/' + repo_full_name + '/notifications' }}">
+	  {{translate('Notifications')}}
+	</a>
+      </li>
+    </ul>
+
+    <div class="repo-locations-link-container">
+      <a href="{{ '/' + repo_full_name + '/' }}" title="Summary"
+	 class="repo-summary-link no-decoration">
+	<span class="fas fa-list"></span>
+      </a>
+      <a href="{{ '/' + repo_full_name + '/waterfall' }}" title="warterfall">
+	<span class="fas fa-th" class="no-decoration"></span>
+      </a>
+    </div>
+  </div>
+  <!-- end navigation pills -->
+
+  <!-- add repo message -->
+  <div class="add-repo-message-container row-container col-sm-10">
+    <h5><span class="add-repo-message-span">{{translate('Add repository')}}</span></h5>
+  </div>
+  <!-- end add repo message -->
+
+  <!-- left side -->
+  <div class="settings-left-side col-sm-9">
+
+    <div id="repo-details-container"></div>
+
+      <!-- buttons container -->
+      <div class="obj-details-buttons-container buttons-container">
+	<div class="save-btn-container inner-btn-container">
+	  <button class="btn btn-sm btn-block btn-dark" type="submit"
+		  id="btn-save-obj" disabled>
+	    <span class="spinner icon-spinner-2" id="save-obj-btn-spinner"
+		  style="display:none">
+	    </span>
+	    <span id="save-obj-btn-text">{{translate('Save changes')}}</span>
+	  </button>
+	</div>
+
+	<div class="cancel-btn-container inner-btn-container">
+	  <button class="btn btn-sm btn-light btn-block" type="submit"
+		  id="btn-cancel-save">
+	    <span id="cancel-save-repo-btn-text">{{translate('Cancel')}}</span>
+	  </button>
+	</div>
+
+      </div>
+      <!-- end buttons container -->
+
+  </div>
+  <!-- end left side -->
+
+  <!-- righ  side -->
+  <div class="settings-right-side col-sm-3">
+    <div>
+      <span>
+	<h5>{{translate('Basic configuration')}}</h5>
+	<p id="basic-config-p">
+	  {% raw translate('Give a <b>name</b> to your repository and provide a clone <b>url</b>.') %}
+	</p>
+	<div class="advanced-help-container">
+	  <h5>{{translate('Advanced configuration')}}</h5>
+	  <p id="branches-config-p">
+	    {% raw translate('Define which <b>branches</b> trigger builds. If no branch configuration| changes in all <b>branches</b> will trigger builds.').replace('|', ',') %}
+	  </p>
+
+	  <p id="parallel-builds-config-p">
+	    {% raw translate('Determine how many <b>builds</b> can be executed <b>in parallel</b> in the repository. If no value there is no limit.') %}
+	  </p>
+
+	  <p id="slaves-config-p">
+	    {% raw translate('<b>Slaves</b> are the ones who execute the builds. You need at least one <b>slave</b> or no builds will be created.') %}
+	  </p>
+       </div>
+     </span>
+   </div>
+ </div>
+<!-- end right side -->
+
+</div>
+
+
+<input type="hidden" value="{{repo_full_name}}" id="repo-full-name">
+
+<script>
+  async function init(){
+    let full_name = jQuery('#repo-full-name').val();
+    let page;
+    if (full_name){
+      page = new RepositoryDetailsPage(router, full_name);
+    }else{
+      page = new RepositoryAddPage(router);
+    }
+
+    await page.render();
+    router.setUpLinks();
+  }
+
+  window.onload = function(){init()};
+</script>

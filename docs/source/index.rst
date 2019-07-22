@@ -10,29 +10,30 @@ ToxicBuild |toxicbuild-logo|
 .. |toxicbuild-logo| image:: ./_static/Logo.svg
     :alt: Simple and flexible continuous itegration tool.
 
-ToxicBuild is an easy-to-install, simple-to-use distributed continuous
-integration tool that enables you to have full control of your
-build/test/release process.
+ToxicBuild is an simple, easy-to-install, distributed continuous integration
+tool that enables you to have full control of your build/test/release process.
 
 
 User Guide
 ==========
 
-If you are interested in using toxicbuild in your ci process read:
+To use ToxicBuild in your CI/CD process read:
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
    install
-   repo_config
+   configuration
+   slave_ui
+   repo_ui
+   notifications
    build_config
-   waterfall
 
 
 Hacking
 =======
 
-If you are interested in mess around with toxicbuild, read:
+If you are interested in messing around with toxicbuild, read:
 
 .. toctree::
    :maxdepth: 1

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% autoescape None %}
+
+{% block main_area %}
+<div id="main-area-container">
+  {{content}}
+</div>
+{% end %}
+
+{% block js_bottom %}
+<script>
+  var TOXIC_API_URL = "{{api_url}}";
+  var STATIC_URL = "{{static_url}}"
+</script>
+
+<script src="{{static_url}}jquery/jquery.min.js"></script>
+<script src="{{static_url}}jquery/jquery.validate.min.js"></script>
+<script src="{{static_url}}jquery/jquery.color-2.1.2.min.js"></script>
+<script src="{{static_url}}bootstrap/js/popper.min.js"></script>
+<script src="{{static_url}}bootstrap/js/bootstrap.min.js"></script>
+<script src="{{static_url}}bootstrap/js/bootstrap-toggle.min.js"></script>
+<script src="{{static_url}}common/js/js.cookie.js"></script>
+<script src="{{static_url}}common/js/pure.js"></script>
+<script src="{{static_url}}common/js/nanobar.min.js"></script>
+<script src="{{static_url}}common/js/i18n.min.js"></script>
+<script src="{{static_url}}backbone/underscore-min.js"></script>
+<script src="{{static_url}}backbone/backbone-min.js"></script>
+<script src="{{static_url}}toxicbuild/js/utils.js"></script>
+<script src="{{static_url}}toxicbuild/js/base.js"></script>
+<script src="{{static_url}}toxicbuild/js/build.js"></script>
+<script src="{{static_url}}toxicbuild/js/waterfall.js"></script>
+<script src="{{static_url}}toxicbuild/js/repository.js"></script>
+<script src="{{static_url}}toxicbuild/js/slave.js"></script>
+<script src="{{static_url}}toxicbuild/js/pages.js"></script>
+<script src="{{static_url}}toxicbuild/js/routers.js"></script>
+<script src="{{static_url}}toxicbuild/js/wsock.js"></script>
+<script src="{{static_url}}toxicbuild/js/ui_settings.js"></script>
+<script src="{{static_url}}toxicbuild/js/notification.js"></script>
+<script src="{{static_url}}toxicbuild/js/user.js"></script>
+
+<script>
+  utils.setTheme();
+  utils.loadTranslations(STATIC_URL);
+  utils.setTZCookie();
+
+  var router;
+  var wsconsumer;
+  jQuery(function(){
+    wsconsumer = new StreamConsumer();
+    router = new DashboardRouter();
+    router.setUpLinks();
+    Backbone.history.start({'pushState': true, 'silent': true});
+  });
+</script>
+
+{% end %}

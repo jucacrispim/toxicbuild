@@ -1,5 +1,5 @@
-ToxicBuild API
-==============
+toxicbuild
+==========
 
 .. toctree::
    :maxdepth: 4

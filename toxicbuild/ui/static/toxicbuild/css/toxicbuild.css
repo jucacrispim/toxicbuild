@@ -52,6 +52,22 @@ tr:nth-child(even) {
     float:left;
 }
 
+#add-import-repository-container div{
+    float: left;
+}
+
+#import-github-container{
+    margin-top: 8px;
+}
+
+#github-import-container{
+    background-image: url("/static/toxicbuild/img/GitHub-Mark-Light-32px.png");
+    background-size: 20px 20px;
+    width: 20px;
+    height: 20px;
+    margin-left: 5px;
+}
+
 .modal-content{
     background-color: #4c4a49;
 }
@@ -102,6 +118,37 @@ tr:nth-child(even) {
     color: #da4242;
     margin-left: 80%;
     cursor: pointer;
+}
+
+.checks-container{
+    min-height: 30px;
+}
+
+#slave_validate_cert_container label,
+#slave_validate_cert_container input,
+#slave_use_ssl_container label,
+#slave_use_ssl_container input {
+    float: left;
+}
+
+#slave_validate_cert_container label,
+#slave_use_ssl_container label{
+    margin-right: 10px;
+}
+
+#slave_use_ssl_container{
+    float: left;
+    margin-right: 20px;
+}
+
+#slave_validate_cert_container{
+    float: left;
+}
+
+#slave_validate_cert,
+#slave_use_ssl{
+    width: 15px;
+    margin-top: -5px;
 }
 
 .form-group-slave-host-port .left-container{
@@ -354,6 +401,11 @@ tr:nth-child(even) .toxic-spinner-main{
 .builder-success,
 .step-success{
     background-color: #3caf3c;
+}
+
+.builder-cancelled,
+.step-cancelled{
+    background-color: #7f7f7f;
 }
 
 .btn-pending,

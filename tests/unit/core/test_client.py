@@ -20,7 +20,7 @@
 import asyncio
 from unittest import mock, TestCase
 from toxicbuild.core import client
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class BuildClientTest(TestCase):
@@ -36,6 +36,22 @@ class BuildClientTest(TestCase):
             with self.client as client_inst:
                 make_pyflakes_happy = client_inst
                 del make_pyflakes_happy
+
+    @async_test
+    async def test_aenter(self):
+        self.client.connect = AsyncMagicMock()
+        self.client.disconnect = mock.Mock()
+        async with self.client:
+            self.assertTrue(self.client.connect.called)
+
+    @async_test
+    async def test_aexit(self):
+        self.client.connect = AsyncMagicMock()
+        self.client.disconnect = mock.Mock()
+        async with self.client:
+            pass
+
+        self.assertTrue(self.client.disconnect.called)
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @async_test
@@ -63,6 +79,43 @@ class BuildClientTest(TestCase):
 
         yield from self.client.connect()
         self.assertTrue(self.client._connected)
+
+    @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
+    @async_test
+    def test_connect_ssl(self):
+
+        self.has_ssl = False
+
+        @asyncio.coroutine
+        def oc(*a, **kw):
+            self.has_ssl = 'ssl' in kw
+            return mock.MagicMock(), mock.MagicMock()
+
+        client.asyncio.open_connection = oc
+
+        self.client.use_ssl = True
+        yield from self.client.connect()
+        self.assertTrue(self.client._connected)
+        self.assertTrue(self.has_ssl)
+
+    @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
+    @async_test
+    def test_connect_ssl_no_validate(self):
+
+        self.ssl_context = None
+
+        @asyncio.coroutine
+        def oc(*a, **kw):
+            self.ssl_context = kw.get('ssl')
+            return mock.MagicMock(), mock.MagicMock()
+
+        client.asyncio.open_connection = oc
+
+        self.client.use_ssl = True
+        self.client.validate_cert = False
+        yield from self.client.connect()
+        self.assertTrue(self.client._connected)
+        self.assertEqual(self.ssl_context.verify_mode, client.ssl.CERT_NONE)
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @async_test

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2016, 2018-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -21,7 +21,7 @@ import asyncio
 from unittest import TestCase
 from unittest.mock import MagicMock, Mock, patch
 from toxicbuild.slave import plugins, build
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class MyPlugin(plugins.SlavePlugin):
@@ -42,13 +42,24 @@ class PluginTest(TestCase):
     def test_get_env_vars(self):
         self.assertEqual({}, self.plugin.get_env_vars())
 
+    def test_data_dir_without_settings(self):
+        expected = '.././my-plugin'
+        self.assertEqual(expected, self.plugin.data_dir)
+
+    @patch.object(plugins, 'settings', Mock())
+    def test_data_dir_with_settings(self):
+        plugins.settings.PLUGINS_DATA_DIR = '/some/dir/'
+        expected = '/some/dir/my-plugin'
+        self.assertEqual(expected, self.plugin.data_dir)
+
 
 class PythonCreateVenvStepTest(TestCase):
 
     def setUp(self):
         super().setUp()
 
-        self.step = plugins.PythonCreateVenvStep(venv_dir='bla/venv',
+        self.step = plugins.PythonCreateVenvStep(data_dir='bla',
+                                                 venv_dir='bla/venv',
                                                  pyversion='python3.4')
 
     @patch.object(plugins.os.path, 'exists', Mock())
@@ -79,10 +90,10 @@ class PythonVenvPluginTest(TestCase):
         self.assertEqual(self.plugin.name, 'python-venv')
 
     def test_get_steps_before(self):
+        cmd = 'mkdir -p .././python-venv && /usr/bin/python3.4 -m venv'
+        cmd += ' .././python-venv/venv-usrbinpython3.4'
         expected = [
-            plugins.BuildStep(
-                'create venv',
-                'virtualenv venv-usrbinpython3.4 -p /usr/bin/python3.4'),
+            plugins.BuildStep('create venv', cmd),
             plugins.BuildStep('install dependencies using pip',
                               'pip install -r requirements.txt')
         ]
@@ -99,27 +110,27 @@ class PythonVenvPluginTest(TestCase):
 
     def test_get_steps_after_removing(self):
         expected = [plugins.BuildStep(
-            'remove venv', 'rm -rf venv-usrbinpython3.4')]
+            'remove venv', 'rm -rf .././python-venv/venv-usrbinpython3.4')]
         self.plugin.remove_env = True
         steps_after = self.plugin.get_steps_after()
 
         self.assertEqual(expected, steps_after)
 
     def test_get_env_vars(self):
-        expected = {'PATH': 'venv-usrbinpython3.4/bin:PATH'}
+        expected = {'PATH': '.././python-venv/venv-usrbinpython3.4/bin:PATH'}
         env_vars = self.plugin.get_env_vars()
 
         self.assertEqual(expected, env_vars)
 
 
-class AptitudeInstallPluginTest(TestCase):
+class AptInstallPluginTest(TestCase):
 
     def setUp(self):
         packages = ['libawesome', 'libawesome-dev']
-        self.plugin = plugins.AptitudeInstallPlugin(packages=packages)
+        self.plugin = plugins.AptInstallPlugin(packages=packages)
 
     def test_name(self):
-        self.assertEqual(self.plugin.name, 'aptitude-install')
+        self.assertEqual(self.plugin.name, 'apt-install')
 
     def test_env_vars(self):
         self.assertEqual(self.plugin.get_env_vars()['DEBIAN_FRONTEND'],
@@ -127,10 +138,40 @@ class AptitudeInstallPluginTest(TestCase):
 
     def test_get_steps_before(self):
         expected = [
-            plugins.AptitudeInstallStep(self.plugin.packages)
+            plugins.AptUpdateStep(),
+            plugins.AptInstallStep(self.plugin.packages)
         ]
 
         steps_before = self.plugin.get_steps_before()
 
         self.assertEqual(expected, steps_before)
         self.assertTrue(expected[0].command.startswith('sudo'))
+
+
+class AptInstallStepTest(TestCase):
+
+    def setUp(self):
+        self.step = plugins.AptInstallStep(['somepkg', 'otherpkg'])
+
+    @patch.object(plugins, 'exec_cmd', AsyncMagicMock(return_value='2'))
+    @async_test
+    async def test_is_everything_installed(self):
+        expected = 'sudo dpkg -l | egrep \'somepkg|otherpkg\' | wc -l'
+        await self.step._is_everything_installed()
+        called = plugins.exec_cmd.call_args[0][0]
+        self.assertEqual(called, expected)
+
+    @patch.object(build, 'exec_cmd', AsyncMagicMock())
+    @async_test
+    async def test_execute_everything_installed(self):
+        self.step._is_everything_installed = AsyncMagicMock(return_value=True)
+        await self.step.execute('.')
+        self.assertEqual(self.step.command,
+                         'sudo dpkg-reconfigure somepkg otherpkg')
+
+    @patch.object(build, 'exec_cmd', AsyncMagicMock())
+    @async_test
+    async def test_execute(self):
+        self.step._is_everything_installed = AsyncMagicMock(return_value=False)
+        await self.step.execute('.')
+        self.assertEqual(self.step.command, self.step.install_cmd)

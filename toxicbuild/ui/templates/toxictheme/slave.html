@@ -1,0 +1,301 @@
+<!-- confirm delete repo modal -->
+<div class="modal fade" id="removeSlaveModal" tabindex="-1" role="dialog"
+     aria-labelledby="removeSlaveModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="exampleModalLabel">
+	  {{translate('Delete slave')}}
+	</h6>
+        <button type="button" class="close" data-dismiss="modal"
+		aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+
+	<span>
+	  {{translate('Are you sure you want to delete this slave? This action can\'t be undone.')}}
+	</span>
+
+      </div>
+
+      <div class="modal-footer">
+
+	  <div class="add-branch-btn-container inner-btn-container col-sm-4">
+	    <button class="btn btn-sm btn-block btn-danger btn-red" type="submit"
+		    id="btn-remove-obj">
+	      <span class="spinner icon-spinner-2" id="remove-slave-btn-spinner"
+		    style="display:none">
+	      </span>
+	      <span id="remove-slave-btn-text">{{translate('Delete')}}</span>
+	    </button>
+	  </div>
+
+	  <div class="cancel-btn-container inner-btn-container">
+	    <button class="btn btn-sm btn-light btn-block" type="submit"
+		    id="btn-cancel-remove-slave" data-dismiss="modal">
+	      <span id="cancel-remove-slave-btn-text">{{translate('Cancel')}}</span>
+	    </button>
+	  </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<!-- end confirm delete slave modal -->
+
+<!-- template -->
+<div class="template">
+
+  <div id="slave-details">
+    <div class="form-group slave-name-group">
+
+      <!-- first row -->
+      <div class="col-sm-12 slave-details-row row-container form-check form-check-inline">
+	<!-- name container -->
+	<div class="slave-name-container col-sm-6">
+	  <label for="slave-details-name">{{translate('Name')}}:</label>
+	  <input type="text"
+		 class="form-control slave-details-name obj-details-name"
+		 data-valuefor="name" required>
+	</div>
+	<!-- end name container -->
+
+	<!-- name available -->
+	<div class="repo-details-name-available repo-details-label col-sm-3"
+	     id="obj-name-available">
+
+	  <div class="wait-name-available-spinner">
+	    <span class="spinner icon-spinner-2"></span>
+	  </div>
+
+	  <span class="check-error-indicator"></span>
+	  <span id="available-text"></span>
+	</div>
+	<!-- end name available -->
+
+      </div>
+      <!-- end first row -->
+
+      <!-- second row -->
+      <div class="col-sm-12 slave-details-row row-container form-check form-check-inline">
+	<!-- host -->
+	<div class="slave-host-container col-sm-10">
+	  <label for="slave-details-host">{{translate('Host')}}:</label>
+	  <input  type="text" class="form-control slave-details-host"
+		  data-valuefor="host" required>
+	</div>
+	<!-- end host -->
+	<!-- port -->
+	<div class="slave-port-container col-sm-2">
+	  <label for="slave-details-port">{{translate('Port')}}:</label>
+	  <input  type="text" class="form-control slave-details-port"
+		  data-valuefor="port" required>
+	</div>
+	<!-- end port -->
+
+      </div>
+      <!-- end second row -->
+
+      <div class="col-sm-12 slave-details-row row-container form-check form-check-inline">
+
+	<!-- token container-->
+	<div class="slave-token-container col-sm-6">
+	  <!-- token -->
+	  <label for="slave-details-token">{{translate('Token')}}:</label>
+	  <input  type="text" class="form-control slave-details-token"
+		data-valuefor="token" required>
+	  <!-- end token -->
+
+	</div>
+	<!-- end token container -->
+
+	<!-- checkbox container -->
+	<div class="slave-checkbox-row form-check-inline">
+	    <!-- use_ssl -->
+	    <div class="form-check abc-checkbox abc-checkbox-black">
+	      <input class="form-check-input slave-details-use-ssl"
+		     type="checkbox" checked data-valuefor="use_ssl">
+	      <label for="slave-use-ssl">
+		{{translate('Use SSL')}}
+	      </label>
+	    </div>
+	    <!-- end use_ssl -->
+	    <!-- verify cert -->
+	    <div class="form-check abc-checkbox abc-checkbox-black">
+	      <input type="checkbox"
+		     class="form-check-input slave-details-verify-cert"
+		     data-valuefor="validate_cert">
+	      <label for="slave-verify-cert">
+		{{translate('Validate ceritificate')}}
+	      </label>
+	    </div>
+	    <!-- end verify cert -->
+
+	    <!-- on demand -->
+	    <div class="form-check abc-checkbox abc-checkbox-black">
+	      <input type="checkbox"
+		     class="form-check-input slave-details-on-demand"
+		     data-valuefor="on_demand">
+	      <label for="slave-on-demand">
+		{{translate('On demand')}}
+	      </label>
+	    </div>
+	    <!-- end on demand -->
+
+	</div>
+      </div>
+
+      <!-- Instance confs row -->
+      <div class="form-check-inline instance-confs-container col-sm-12 row">
+	<!-- Instance id -->
+	<div class="slave-instance-id-container col-sm-5">
+	  <label for="slave-details-instance-id">
+	    {{translate('Instance id')}}:
+	  </label>
+	  <input type="text"
+		 class="form-control slave-details-instance-id"
+		 data-valuefor="instance_id">
+	</div>
+	<!-- End instance id -->
+
+	<!-- Region name -->
+	<div class="slave-region-name-container col-sm-5">
+	  <label for="slave-details-region">
+	    {{translate('Region')}}:
+	  </label>
+	  <input type="text"
+		 class="form-control slave-details-region"
+		 data-valuefor="region">
+	</div>
+	<!-- End region name -->
+      </div>
+      <!-- End instance confs row -->
+
+      <!-- delete button -->
+      <div class="delete-btn-container inner-btn-container col-sm-2">
+	<button class="btn btn-sm btn-block btn-danger btn-red btn-delete-slave"
+		type="submit"
+		data-toggle="modal"
+		data-target="#removeSlaveModal">
+	  <span class="spinner icon-spinner-2" id="delete-slave-btn-spinner"
+		style="display:none">
+	  </span>
+	  <span id="delete-slave-btn-text">{{translate('Delete')}}</span>
+	</button>
+      </div>
+      <!-- end delete button -->
+    </div>
+  </div>
+
+</div>
+<!-- end template -->
+
+
+<!-- main settings container -->
+<div class="slave-details-main-container details-main-container box-shadow-gray">
+  <div class="close-btn" id="btn-close-page">&times;</div>
+
+  <!-- loading spinner -->
+  <div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
+    <span class="spinner icon-spinner-2"></span>
+    <span class="icon-toxicmask"></span>
+  </div>
+  <!-- end loading spinner -->
+
+  <!-- navigation pills -->
+  <div class="nav-container">
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+	<a class="nav-link active box-shadow" href="#">
+	  {{translate('General configurations')}}
+	</a>
+      </li>
+  </div>
+
+  <!-- end navigation pills -->
+  <!-- add slave message -->
+  <div class="add-slave-message-container row-container col-sm-10">
+    <h5><span class="add-slave-message-span">{{translate('Add slave')}}</span></h5>
+  </div>
+  <!-- end add slave message -->
+
+
+  <!-- left side -->
+  <div class="settings-left-side col-sm-9">
+
+    <div id="slave-details-container"></div>
+
+      <!-- buttons container -->
+      <div class="obj-details-buttons-container buttons-container">
+	<div class="save-btn-container inner-btn-container">
+	  <button class="btn btn-sm btn-block btn-dark" type="submit"
+		  id="btn-save-obj" disabled>
+	    <span class="spinner icon-spinner-2" id="save-obj-btn-spinner"
+		  style="display:none">
+	    </span>
+	    <span id="save-obj-btn-text">{{translate('Save changes')}}</span>
+	  </button>
+	</div>
+
+	<div class="cancel-btn-container inner-btn-container">
+	  <button class="btn btn-sm btn-light btn-block" type="submit"
+		  id="btn-cancel-save">
+	    <span id="cancel-save-slave-btn-text">{{translate('Cancel')}}</span>
+	  </button>
+	</div>
+
+      </div>
+      <!-- end buttons container -->
+
+  </div>
+  <!-- end left side -->
+
+  <!-- righ  side -->
+  <div class="settings-right-side col-sm-3">
+    <div>
+      <span>
+	<h5>{{translate('Slave configuration')}}</h5>
+	<p>
+	  {% raw translate('Give a <b>name</b> to your slave and inform its <b>host</b> and <b>port</b>.') %}
+	</p>
+	<p>
+	  {% raw translate('Provide a <b>token</b> for authentication. The token was generated in the intallation of toxicslave.') %}
+	</p>
+	<p>
+	  {% raw translate('Check <b>use ssl</b> if the slave uses secure connection. If the slave uses a self signed certificate you should not <b>verify certificate</b>.') %}
+	</p>
+	<p>
+	  {% raw translate('Check <b>on demand</b> if the slave has an ec2 instance that can be started/stopped when needed.') %}
+	</p>
+
+	<p class="instance-confs-text">
+	  {% raw translate('Inform the <b>instance id</b> and the <b>region</b> of your on demand instance.') %}
+	</p>
+
+      </span>
+    </div>
+  </div>
+<!-- end right side -->
+
+</div>
+
+
+<input type="hidden" value="{{slave_full_name}}" id="slave-full-name">
+
+<script>
+  async function init(){
+    let slave_name = jQuery('#slave-full-name').val();
+    let page;
+    if (slave_name){
+      page = new SlaveDetailsPage(router, slave_name);
+    }else{
+      page = new SlaveAddPage(router);
+    }
+
+    await page.render();
+  }
+
+  window.onload = function(){init()};
+</script>

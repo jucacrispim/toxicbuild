@@ -1,0 +1,5 @@
+FROM toxicbase
+
+RUN toxicslave create /home/toxicuser/ci/slave
+
+CMD ["toxicslave", "start", "/home/toxicuser/ci/slave"]

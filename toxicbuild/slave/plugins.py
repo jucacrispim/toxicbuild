@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017, 2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,6 +20,8 @@
 import asyncio
 import os
 from toxicbuild.core.plugins import Plugin
+from toxicbuild.core.utils import exec_cmd
+from toxicbuild.slave import settings
 from toxicbuild.slave.build import BuildStep
 
 
@@ -33,6 +35,17 @@ class SlavePlugin(Plugin):
 
     # Your plugin must have an unique name
     name = 'BaseSlavePlugin'
+
+    @property
+    def data_dir(self):
+        """The directory where the plugin store its data."""
+
+        try:
+            data_dir = settings.PLUGINS_DATA_DIR
+        except AttributeError:
+            data_dir = os.path.join('..', '.')
+
+        return os.path.join(data_dir, self.name)
 
     def get_steps_before(self):
         """Returns a list of steps to be executed before the steps provided
@@ -58,12 +71,14 @@ class PythonCreateVenvStep(BuildStep):
     """Step that checks if the venv already exists before
     executing the command."""
 
-    def __init__(self, venv_dir, pyversion):
+    def __init__(self, data_dir, venv_dir, pyversion):
+        self.data_dir = data_dir
         self.venv_dir = venv_dir
         self.pyversion = pyversion
         name = 'Create virtualenv'
-        command = 'virtualenv {} -p {}'.format(self.venv_dir,
-                                               self.pyversion)
+        command = 'mkdir -p {} && {} -m venv {}'.format(
+            self.data_dir, self.pyversion, self.venv_dir)
+
         super().__init__(name, command, stop_on_fail=True)
 
     @asyncio.coroutine
@@ -83,13 +98,17 @@ class PythonVenvPlugin(SlavePlugin):
 
     def __init__(self, pyversion, requirements_file='requirements.txt',
                  remove_env=False):
+        super().__init__()
         self.pyversion = pyversion
         self.requirements_file = requirements_file
         self.remove_env = remove_env
-        self.venv_dir = 'venv-{}'.format(self.pyversion.replace(os.sep, ''))
+        self.venv_dir = os.path.join(
+            self.data_dir, 'venv-{}'.format(
+                self.pyversion.replace(os.sep, '')))
 
     def get_steps_before(self):
-        create_env = PythonCreateVenvStep(self.venv_dir, self.pyversion)
+        create_env = PythonCreateVenvStep(self.data_dir,
+                                          self.venv_dir, self.pyversion)
 
         install_deps = BuildStep('install dependencies using pip',
                                  'pip install -r {}'.format(
@@ -109,30 +128,64 @@ class PythonVenvPlugin(SlavePlugin):
         return {'PATH': '{}/bin:PATH'.format(self.venv_dir)}
 
 
-class AptitudeInstallStep(BuildStep):
+class AptUpdateStep(BuildStep):
 
-    def __init__(self, packages, timeout=600):
-        packages = ' '.join(packages)
-        cmd = ' '.join(['sudo aptitude install -y', packages])
-        name = 'Installing packages with aptitude'
+    def __init__(self, timeout=600):
+        cmd = 'sudo apt-get update'
+        name = 'Updating apt packages list'
         super().__init__(name, cmd, stop_on_fail=True, timeout=timeout)
 
 
-class AptitudeInstallPlugin(SlavePlugin):
+class AptInstallStep(BuildStep):
 
-    """Installs packages using aptitude."""
+    def __init__(self, packages, timeout=600):
+        self.packages = packages
+        packages_str = ' '.join(packages)
+        self.install_cmd = ' '.join(['sudo apt-get install -y', packages_str])
+        self.reconf_cmd = ' '.join(['sudo dpkg-reconfigure', packages_str])
+        self._cmd = None
+        name = 'Installing packages with apt-get'
+        super().__init__(name, self.install_cmd, stop_on_fail=True,
+                         timeout=timeout)
 
-    name = 'aptitude-install'
+    async def _is_everything_installed(self):
+        """Checks if all the packages are installed"""
+
+        cmd = 'sudo dpkg -l | egrep \'{}\' | wc -l'.format('|'.join(
+            self.packages))
+        installed = int(await exec_cmd(cmd, cwd='.'))
+        return installed == len(self.packages)
+
+    async def get_command(self):
+        if self._cmd:  # pragma no cover
+            return self._cmd
+
+        if not await self._is_everything_installed():
+            self._cmd = self.install_cmd
+        else:
+            self._cmd = self.reconf_cmd
+
+        self.command = self._cmd
+        return self._cmd
+
+
+class AptInstallPlugin(SlavePlugin):
+
+    """Installs packages using apt."""
+
+    name = 'apt-install'
 
     def __init__(self, packages, timeout=600):
         """Initializes the plugin.
         :param packages: A list of packages names to be installed."""
 
+        super().__init__()
         self.packages = packages
 
     def get_steps_before(self):
-        step = AptitudeInstallStep(self.packages)
-        return [step]
+        update = AptUpdateStep()
+        install = AptInstallStep(self.packages)
+        return [update, install]
 
     def get_env_vars(self):
         return {'DEBIAN_FRONTEND': 'noninteractive'}

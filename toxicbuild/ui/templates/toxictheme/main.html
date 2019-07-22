@@ -1,0 +1,141 @@
+<div id="no-repos-info" class="box-white">
+  <div class="col-sm-3 mx-auto">
+    <span id="welcome-message">
+      {{translate('Welcome to ToxicBuild')}}
+    </span>
+  </div>
+  <div class="icon-toxicmask col-sm-2 mx-auto"></div>
+  <div class="col-sm-3 mx-auto">
+    <span id="bollocks-message">Better software. Ship faster.</span>
+  </div>
+  <span id="no-repos-message">
+    {{translate('You have no enabled repositories.')}}
+  </span>
+  <br/>
+  <span>
+    {% raw translate('<a href="/repository/add">Add</a> or <a href="#">import</a> to start or <a href="/settings/repositories">manage</a> your repositories.') %}
+  </span>
+</div>
+
+<div class="template">
+  <ul id="repo-list-ul">
+
+    <!-- The item template -->
+    <li class="repository-info box-white box-shadow">
+      <!-- header -->
+      <div class="repository-info-header">
+	<span class="fas fa-ellipsis-h dropdown-toggle"
+	      id="dropdown-menu-ellipsis"
+		data-toggle="dropdown"></span>
+
+	<div class="dropdown-menu dropdown-menu-right box-shadow-gray"
+	     aria-labelledby="dropdown-menu-ellipsis">
+	  <a class="dropdown-item repo-details-link" href="">
+	    {{translate('Settings')}}
+	  </a>
+	</div>
+
+      </div>
+
+      <!-- first row -->
+      <div class="repository-info-row repository-info-first-row">
+	<!-- repo name -->
+	<div class="repo-info-container repository-info-name-container">
+	  <a href="#" data-toggle="tooltip" title="{{translate('Summary')}}">
+	    <span class="repository-info-name"></span>
+	  </a>
+	</div>
+	<!-- end repo name -->
+	<!-- repo status -->
+	<div class="reo-info-container repository-info-status-container">
+	  <a href="#">
+	    <span class="repository-info-status badge" data-toggle="tooltip"
+		  title="Waterfall">
+	    </span>
+	  </a>
+	  <span class="fas fa-cog fa-spin"></span>
+	</div>
+	<!-- end repo status -->
+      </div>
+      <!-- end first row -->
+
+      <!-- second row -->
+      <div class="repository-info-row repository-info-last-row">
+
+	<!-- no builds info -->
+	<!-- hidden if there is some build for the repository -->
+	<div class="no-builds-info">
+	  Seems you haven't configured any builds.
+	  <a href="">Add a toxicbuild.yml</a> file to your repository.
+	</div>
+	<!-- end no builds info -->
+
+	<!-- last buildset info -->
+	<!-- only displayed if there is some build for the repository -->
+	<div class="repository-info-last-buildset">
+
+	  <!-- buildset first row -->
+	  <div class="repository-info-row repository-info-commit-row">
+	    <!-- commit -->
+	    <span class="buildset-commit" data-toggle="tooltip"
+		  title="commit">
+	    </span>
+	    <!-- commit title -->
+	    <span class="buildset-title" data-toggle="tooltip"
+		  title="{{translate('commit title')}}">
+	    </span>
+	  </div>
+	  <!-- end buildset first row -->
+
+	  <!-- <\!-- buildset second row -\-> -->
+	  <!-- <div class="repository-info-row" -->
+	  <!--      data-toggle="tooltip" title="commit date"> -->
+	  <!--   <span class="far fa-calendar-alt"></span> -->
+	  <!--   <span class="buildset-commit-date"></span> -->
+	  <!-- </div> -->
+	  <!-- <\!-- end buildset second row -\-> -->
+
+	  <!-- <div class="repository-info-row"> -->
+	  <!--   <span class="far fa-calendar-check" data-toggle="tooltip" -->
+	  <!-- 	  title="started at"></span> -->
+	  <!--   <span class="buildset-started" data-toggle="tooltip" -->
+	  <!-- 	  title="started at"></span> -->
+	  <!--   <span class="far fa-clock" data-toggle="tooltip" -->
+	  <!-- 	  title="duration"></span> -->
+	  <!--   <span class="buildset-total-time" data-toggle="tooltip" -->
+	  <!-- 	  title="duration"></span> -->
+	  <!-- </div> -->
+	</div>
+      </div>
+    </li>
+
+  </ul>
+</div>
+
+<div class="top-page-repositories-info-container top-page-repositories-main-info-container">
+  {{ translate('Your Repositories') }}
+  <a href="/settings/repositories" data-toggle="tooltip"
+     title="{{translate('Manage your repositories')}}">
+    <span class="fas fa-wrench"></span>
+  </a>
+</div>
+<div id="repo-list-container">
+  <div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
+    <span class="spinner icon-spinner-2"></span>
+    <span class="icon-toxicmask"></span>
+  </div>
+</div>
+
+<script>
+  function init(){
+    showRepos();
+  };
+
+  async function showRepos(){
+    var repo_list = new RepositoryListView('short');
+    await repo_list.render_enabled();
+    router.setUpLinks();
+  };
+
+  window.onload = function(){init()};
+</script>

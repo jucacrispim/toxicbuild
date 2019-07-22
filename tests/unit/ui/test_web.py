@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,450 +18,713 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import unittest
+from unittest import TestCase
 from unittest.mock import MagicMock, patch
 import tornado
-from tornado import gen
-from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.ui import web, models, utils
+from tests import AsyncMagicMock, async_test, create_autospec
 
 
-@patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
-class BaseModelHandlerTest(AsyncTestCase):
+class ToxicRequestTest(TestCase):
+
+    def setUp(self):
+        base_req = {'a': [b'a'],
+                    'b': [b'a', b'b']}
+        self.req = web.ToxicRequest(base_req)
+
+    def test_getitem_one(self):
+        expected = 'a'
+        returned = self.req['a']
+        self.assertEqual(expected, returned)
+
+    def test_getitem_list(self):
+        expected = ['a', 'b']
+        returned = self.req['b']
+        self.assertEqual(expected, returned)
+
+    def test_get(self):
+        expected = ['a', 'b']
+        returned = self.req.get('b')
+        self.assertEqual(expected, returned)
+
+    def test_get_default(self):
+        expected = 'default'
+        returned = self.req.get('c', 'default')
+        self.assertEqual(expected, returned)
+
+    def test_items(self):
+        expected = [('a', 'a'), ('b', ['a', 'b'])]
+        returned = list(self.req.items())
+        self.assertEqual(expected, returned)
+
+
+class CookieAuthHandlerMixinTest(TestCase):
 
     def setUp(self):
         super().setUp()
-        request = MagicMock()
-        application = MagicMock()
 
-        class TestRepo(web.Repository):
+        class TestHandler(web.CookieAuthHandlerMixin, web.BasePyroHandler):
             pass
 
-        self.mock_model = TestRepo
-        self.mock_model.get = MagicMock(spec=web.Repository.get)
-        self.mock_model.add = MagicMock(spec=web.Repository.add)
+        request = MagicMock()
+        request.cookies = {}
+        application = MagicMock()
+        application.settings = {'cookie_secret': 'bladjfçajf'}
 
-        self.handler = web.BaseModelHandler(application, request=request,
-                                            **{'model': self.mock_model})
+        self.handler = TestHandler(application, request=request)
 
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
+    @async_test
+    async def test_prepare_without_cookie(self):
+        with self.assertRaises(web.HTTPError):
+            await self.handler.async_prepare()
 
-    @gen_test
-    def test_get_item(self):
+    @async_test
+    async def test_prepare_with_cookie(self):
+        content = web.base64.encodebytes(web.json.dumps(
+            {'id': 'asdf',
+             'email': 'a@a.com',
+             'username': 'zé'}).encode('utf-8'))
 
-        yield from self.handler.get_item(id='123fsdf')
-
-        self.assertTrue(self.mock_model.get.called)
-
-    @gen_test
-    def test_get(self):
-
-        gi_mock = MagicMock()
-
-        @asyncio.coroutine
-        def gi(**kw):
-            return gi_mock(**kw)
-
-        self.handler.get_item = gi
-
-        self.handler.request.arguments = {'url': [b'bla@bla.com']}
-        self.handler.prepare()
-
-        yield self.handler.get()
-
-        called_args = gi_mock.call_args[1]
-
-        self.assertEqual(called_args, {'url': ['bla@bla.com']})
-
-    @gen_test
-    def test_add(self):
-        kwargs = {'url': 'bla@bla.com',
-                  'name': 'test'}
-
-        add_mock = MagicMock()
-
-        @asyncio.coroutine
-        def add(**kw):
-            return add_mock()
-
-        self.handler.model.add = add
-        yield from self.handler.add(**kwargs)
-
-        self.assertTrue(add_mock.called)
-
-    @patch.object(web.BaseModelHandler, 'write', MagicMock())
-    @gen_test
-    def test_post(self):
-        kwargs = {'url': [b'bla@bla.com'], 'name': [b'test']}
-        expected = {k: [p.decode() for p in v] for k, v in kwargs.items()}
-        self.handler.request.arguments = kwargs
-
-        add_mock = MagicMock()
-
-        @asyncio.coroutine
-        def add(**kw):
-            return add_mock(**kw)
-
-        self.handler.model.add = add
-        self.handler.prepare()
-        yield self.handler.post()
-
-        called_args = add_mock.call_args[1]
-
-        self.assertEqual(called_args, expected)
-
-    @gen_test
-    def test_delete(self):
-        item = MagicMock()
-
-        @asyncio.coroutine
-        def get_item(**kw):
-            return item
-
-        self.handler.get_item = get_item
-        kwargs = {'name': [b'some-repo']}
-        self.handler.request.arguments = kwargs
-        self.handler.prepare()
-        yield self.handler.delete()
-
-        self.assertTrue(item.delete.called)
+        self.handler.set_secure_cookie(web.COOKIE_NAME, content)
+        self.handler.request.cookies[
+            web.COOKIE_NAME] = self.handler._new_cookie[web.COOKIE_NAME]
+        r = await self.handler.async_prepare()
+        self.assertTrue(r)
 
 
-@patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
-class RepositoryHandlerTest(AsyncTestCase):
+class TemplateHandlerTest(TestCase):
 
-    def setUp(self):
+    @async_test
+    async def setUp(self):
         super().setUp()
         request = MagicMock()
-        request.arguments = {'name': [b'myrepo'], 'url': [b'git@bla.com'],
-                             'vcs_type': [b'git'], 'update_seconds': [b'10'],
-                             'slaves': [b'someslave']}
+        request.cookies = {}
+        request.body = '{}'
         application = MagicMock()
-        self.handler = web.RepositoryHandler(application, request=request,
-                                             model=web.Repository)
+        self.handler = web.LoginHandler(application, request=request)
+        await self.handler.async_prepare()
 
-    def test_prepare(self):
-        request = MagicMock()
-        request.arguments = {'name': [b'myrepo'], 'url': [b'git@bla.com'],
-                             'vcs_type': [b'git'], 'update_seconds': [b'10'],
-                             'slaves': [b'someslave']}
-        expected = {'name': 'myrepo', 'url': 'git@bla.com', 'vcs_type': 'git',
-                    'update_seconds': '10', 'slaves': ['someslave'],
-                    'parallel_builds': None}
-        application = MagicMock()
-        handler = web.RepositoryHandler(application, request=request,
-                                        model=web.Repository)
-
-        handler.prepare()
-
-        self.assertEqual(handler.params, expected)
-
-    def test_prepare_start_build(self):
-        request = MagicMock()
-        request.arguments = {'name': [b'myrepo'], 'branch': [b'master'],
-                             'builder_name': [b'bla'],
-                             'slaves': [b'slave1', b'slave2'], }
-        expected = {'name': 'myrepo', 'branch': 'master',
-                    'builder_name': 'bla', 'slaves': ['slave1', 'slave2'],
-                    'named_tree': None}
-        application = MagicMock()
-        handler = web.RepositoryHandler(application, request=request,
-                                        model=web.Repository)
-        handler.request.uri = 'localhost:8000/start-build'
-        handler.prepare()
-        self.assertEqual(handler.params, expected)
-
-    @patch.object(web.Plugin, 'get', MagicMock())
-    @gen_test
-    def test_prepare_for_plugin(self):
-        request = MagicMock()
-        request.arguments = {'name': [b'myrepo'],
-                             'plugin_name': [b'some-plugin'],
-                             'a_attr': [b'value'],
-                             'other_attr': [b'value1, value2']}
-        application = MagicMock()
-        handler = web.RepositoryHandler(application, request=request,
-                                        model=web.Repository)
-        handler.request.uri = 'localhost:8000/enable-plugin'
-
-        @asyncio.coroutine
-        def get_mock(*a, **kw):
-            return web.Plugin({'name': 'some-plugin',
-                               'a_attr': {'type': 'string',
-                                          'pretty_name': "A attribute"},
-                               'other_attr': {'type': 'list',
-                                              'pretty_name': 'Other'}})
-
-        expected = {'name': 'myrepo',
-                    'plugin_name': 'some-plugin',
-                    'a_attr': 'value',
-                    'other_attr': ['value1', 'value2']}
-        web.Plugin.get = get_mock
-        yield handler.prepare()
-        self.assertEqual(handler.params, expected)
-
-    @patch.object(web.BaseModelHandler, 'delete',
-                  gen.coroutine(lambda x: None))
-    @gen_test
-    def test_delete(self, *args):
-        self.handler.prepare()
-        yield self.handler.delete()
-        self.assertIn('repo_name', self.handler.params)
-
-    @gen_test
-    def test_put(self):
-        kwargs = {'update_seconds': [b'bla@bla.com'],
-                  'name': [b'test']}
-
-        get_item_mock = MagicMock(return_value='ok')
-        get_item_mock.update = asyncio.coroutine(
-            lambda *a, **kw: get_item_mock())
-
-        @asyncio.coroutine
-        def gi(**kw):
-            return get_item_mock
-
-        self.handler.get_item = gi
-        self.handler.request.arguments = kwargs
-        self.handler.prepare()
-        yield self.handler.put()
-        self.assertTrue(get_item_mock.called)
-
-    @gen_test
-    def test_enable_plugin(self):
-        kwargs = {'name': [b'some-repo'],
-                  'plugin_name': [b'my-plugin'],
-                  'a-param': [b'a-param']}
-
-        self.handler.request.arguments = kwargs
-        self.handler.request.uri = 'http://bla.com/enable-plugin'
-        get_item_mock = MagicMock()
-
-        @asyncio.coroutine
-        def gi(**kw):
-            return get_item_mock
-
-        self.handler.get_item = gi
-        self.handler.prepare()
-        yield from self.handler.enable_plugin()
-        self.assertTrue(get_item_mock.enable_plugin.called)
-
-    @gen_test
-    def test_disable_plugin(self):
-        kwargs = {'name': [b'some-repo'],
-                  'plugin_name': [b'my-plugin']}
-
-        self.handler.request.arguments = kwargs
-        self.handler.request.uri = 'http://bla.com/disable-plugin'
-        get_item_mock = MagicMock()
-
-        @asyncio.coroutine
-        def gi(**kw):
-            return get_item_mock
-
-        self.handler.get_item = gi
-        self.handler.prepare()
-        yield from self.handler.disable_plugin()
-        self.assertTrue(get_item_mock.disable_plugin.called)
-
-    @gen_test
-    def test_add_branch(self):
-        kwargs = {'branch_name': [b'master'],
-                  'notify_only_latest': [b'1'],
-                  'name': [b'test']}
-
-        self.handler.request.uri = 'http://bla.com/add-branch'
-        get_item_mock = MagicMock(return_value='ok')
-        get_item_mock.add_branch = asyncio.coroutine(
-            lambda *a, **kw: get_item_mock())
-
-        @asyncio.coroutine
-        def gi(**kw):
-            return get_item_mock
-
-        self.handler.get_item = gi
-        self.handler.request.arguments = kwargs
-
-        self.handler.prepare()
-        yield from self.handler.add_branch()
-        self.assertTrue(get_item_mock.called)
-
-    @gen_test
-    def test_remove_branch(self):
-        kwargs = {'branch_name': [b'master'],
-                  'name': [b'test']}
-
-        get_item_mock = MagicMock(return_value='ok')
-        get_item_mock.remove_branch = asyncio.coroutine(
-            lambda *a, **kw: get_item_mock())
-
-        @asyncio.coroutine
-        def gi(**kw):
-            return get_item_mock
-
-        self.handler.get_item = gi
-        self.handler.request.uri = 'http://bla.com/remove-branch'
-        self.handler.request.arguments = kwargs
-        self.handler.prepare()
-        yield from self.handler.remove_branch()
-        self.assertTrue(get_item_mock.called)
-
-    @gen_test
-    def test_start_build(self):
-        sb_mock = MagicMock()
-
-        @asyncio.coroutine
-        def sb(branch, builder_name=None, named_tree=None, slaves=[]):
-            sb_mock()
-
-        item = MagicMock()
-        item.start_build = sb
-
-        @asyncio.coroutine
-        def gi(**kwargs):
-            return item
-
-        self.handler.get_item = gi
-
-        self.handler.request.arguments = {'name': [b'myrepo'],
-                                          'branch': [b'master']}
-        self.handler.request.uri = 'http://bla.com/start-build'
-        self.handler.prepare()
-        yield from self.handler.start_build()
-        self.assertTrue(sb_mock.called)
-
-    @patch.object(web.BaseModelHandler, 'post', MagicMock())
-    @gen_test
-    def test_post_without_start_build(self):
-        post_mock = MagicMock()
-        web.BaseModelHandler.post = gen.coroutine(lambda *args: post_mock())
-        yield self.handler.post()
-
-        self.assertTrue(post_mock.called)
-
-    @gen_test
-    def test_post_with_add_branch(self):
-        post_mock = MagicMock()
-        self.handler.add_branch = asyncio.coroutine(lambda *args: post_mock())
-        self.handler.request.uri = 'http://localhost:1235/add-branch'
-        self.handler.prepare()
-        yield self.handler.post('add-branch')
-
-        self.assertTrue(post_mock.called)
-
-    @gen_test
-    def test_post_with_remove_branch(self):
-        post_mock = MagicMock()
-        self.handler.remove_branch = asyncio.coroutine(
-            lambda *args: post_mock())
-        self.handler.request.uri = 'http://localhost:1235/add-branch'
-        self.handler.prepare()
-        yield self.handler.post('remove-branch')
-
-        self.assertTrue(post_mock.called)
-
-    @gen_test
-    def test_post_with_enable_plugin(self):
-        post_mock = MagicMock()
-        self.handler.enable_plugin = asyncio.coroutine(
-            lambda *args: post_mock())
-        self.handler.request.uri = 'http://localhost:1235/enable-plugin'
-        self.handler.prepare()
-        yield self.handler.post('enable-plugin')
-
-        self.assertTrue(post_mock.called)
-
-    @gen_test
-    def test_post_with_disable_plugin(self):
-        post_mock = MagicMock()
-        self.handler.disable_plugin = asyncio.coroutine(
-            lambda *args: post_mock())
-        self.handler.request.uri = 'http://localhost:1235/disable-plugin'
-        self.handler.prepare()
-        yield self.handler.post('disable-plugin')
-
-        self.assertTrue(post_mock.called)
-
-    @patch.object(web.BaseModelHandler, 'post', MagicMock())
-    @gen_test
-    def test_post_start_build(self):
-        post_mock = MagicMock()
-        web.BaseModelHandler.post = asyncio.coroutine(
-            lambda *args: post_mock())
-        self.handler.request.arguments = {'name': [b'myrepo'],
-                                          'branch': [b'master']}
-        self.handler.request.uri = 'http://localhost:1235/start-build'
+    @patch.object(web, 'render_template', MagicMock(
+        spec=web.render_template, return_value='<html>mytemplate</html>'))
+    def test_render_template(self):
         self.handler.write = MagicMock()
-
-        item = MagicMock()
-
-        @asyncio.coroutine
-        def gi(**kwargs):
-            return item
-
-        self.handler.get_item = gi
-
-        self.handler.prepare()
-        yield self.handler.post('start-build')
-
-        self.assertFalse(post_mock.called)
-        self.assertTrue(item.start_build.called)
-
-    @patch.object(web.Plugin, 'list', MagicMock())
-    @gen_test
-    def test_list_plugins(self):
-        yield from self.handler.list_plugins()
-        self.assertTrue(web.Plugin.list.called)
+        self.handler.render_template('some/template.html', {'my': 'context'})
+        self.assertTrue(self.handler.write.called)
 
 
-@patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
-class SlaveHandlerTest(AsyncTestCase):
+class LoggedTemplateHandlerTest(TestCase):
 
     def setUp(self):
         super().setUp()
         request = MagicMock()
-        request.arguments = {'name': [b'myrepo'], 'host': [b'bla.com'],
-                             'port': [b'1234']}
+        request.cookies = {}
+        request.body = '{}'
         application = MagicMock()
-        self.handler = web.SlaveHandler(application, request=request,
-                                        model=web.Repository)
+        application.settings = {'cookie_secret': 'bladjfçajf'}
+        self.handler = web.LoggedTemplateHandler(application, request=request)
 
-    def test_prepare(self):
-        expected = {'name': 'myrepo', 'host': 'bla.com', 'port': '1234',
-                    'token': None}
+    @patch.object(web.CookieAuthHandlerMixin, 'async_prepare',
+                  AsyncMagicMock(spec=web.CookieAuthHandlerMixin.async_prepare,
+                                 side_effect=web.HTTPError))
+    @async_test
+    async def test_async_preprare_not_logged(self):
+        self.handler.redirect = MagicMock()
+        await self.handler.async_prepare()
+        self.assertTrue(self.handler.redirect.called)
 
-        self.handler.prepare()
-
-        self.assertEqual(expected, self.handler.params)
-
-    @patch.object(web.BaseModelHandler, 'delete',
-                  gen.coroutine(lambda x: None))
-    @gen_test
-    def test_delete(self, *args):
-        self.handler.prepare()
-        yield self.handler.delete()
-        self.assertIn('slave_name', self.handler.params)
-
-    @gen_test
-    def test_put(self):
-        kwargs = {'host': [b'localhost'],
-                  'name': [b'name']}
-
-        get_item_mock = MagicMock()
-
-        @asyncio.coroutine
-        def gi(**kw):
-            return get_item_mock
-
-        self.handler.get_item = gi
-        self.handler.request.arguments = kwargs
-        self.handler.prepare()
-        yield self.handler.put()
-        self.assertTrue(get_item_mock.update.called)
+    @patch.object(web.CookieAuthHandlerMixin, 'async_prepare',
+                  AsyncMagicMock(
+                      spec=web.CookieAuthHandlerMixin.async_prepare))
+    @async_test
+    async def test_async_preprare(self):
+        self.handler.redirect = MagicMock()
+        await self.handler.async_prepare()
+        self.assertFalse(self.handler.redirect.called)
 
 
-class StreamHandlerTest(AsyncTestCase):
+class RegisterHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        super().setUp()
+        request = MagicMock()
+        request.cookies = {}
+        request.body = '{}'
+        application = MagicMock()
+        application.settings = {'cookie_secret': 'bladjfçajf'}
+        self.handler = web.RegisterHandler(application, request=request)
+        await self.handler.async_prepare()
+
+    def test_show_register_page(self):
+        self.handler.render_template = MagicMock()
+        self.handler.set_xsrf_cookie = MagicMock()
+        self.handler.show_register_page()
+        self.assertTrue(self.handler.set_xsrf_cookie.called)
+        self.assertTrue(self.handler.render_template.called)
+
+
+class LoginHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        super().setUp()
+        request = MagicMock()
+        request.cookies = {}
+        request.body = '{}'
+        application = MagicMock()
+        application.settings = {'cookie_secret': 'bladjfçajf'}
+        self.handler = web.LoginHandler(application, request=request)
+        await self.handler.async_prepare()
+
+    @async_test
+    async def test_do_login_missing_param(self):
+        self.handler.body = {'username_or_email': 'a@a.com'}
+        with self.assertRaises(web.HTTPError):
+            await self.handler.do_login()
+
+    @patch.object(web.User, 'authenticate', AsyncMagicMock(
+        side_effect=Exception))
+    @async_test
+    async def test_do_login_bad_auth(self):
+        self.handler.body = {'username_or_email': 'a@a.com',
+                             'password': 'somepassword'}
+        with self.assertRaises(web.HTTPError):
+            await self.handler.do_login()
+
+    @patch.object(web.User, 'authenticate', AsyncMagicMock(
+        spec=web.User.authenticate))
+    @async_test
+    async def test_do_login(self):
+        user = MagicMock()
+        user.id = 'some-id'
+        user.email = 'a@a.com'
+        user.username = 'a'
+        web.User.authenticate.return_value = user
+        self.handler.body = {'username_or_email': 'a@a.com',
+                             'password': 'somepassword'}
+        self.handler.set_secure_cookie = MagicMock()
+        await self.handler.do_login()
+        self.assertTrue(self.handler.set_secure_cookie.called)
+
+    @async_test
+    async def test_do_logout(self):
+        self.handler.clear_cookie = MagicMock()
+        self.handler.redirect = MagicMock()
+        self.handler.request.body = None
+        await self.handler.async_prepare()
+        self.handler.do_logout()
+        self.assertTrue(self.handler.clear_cookie.called)
+
+    def test_show_login_page(self):
+        self.handler.render_template = MagicMock()
+        self.handler.show_login_page()
+        template = self.handler.render_template.call_args[0][0]
+        self.assertEqual(template, self.handler.login_template)
+
+    def test_show_reset_password_page(self):
+        self.handler.render_template = MagicMock()
+        self.handler.show_reset_password_page()
+        template = self.handler.render_template.call_args[0][0]
+        self.assertEqual(template, self.handler.reset_password_template)
+
+
+@patch.object(models.Repository, 'get_client', AsyncMagicMock(
+    spec=models.Repository.get_client, return_value=MagicMock()))
+class ModelRestHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = models.Repository
+        application, request = MagicMock(), MagicMock()
+        application.ui_methods = {}
+        self.handler = web.ModelRestHandler(application, request,
+                                            model=self.model)
+        body = {'name': 'something', 'url': 'https://someurl.com',
+                'vcs_type': 'git'}
+        self.handler.request.body = web.json.dumps(body)
+        self.handler.request.arguments = {}
+        await self.handler.async_prepare()
+        self.handler.user = AsyncMagicMock()
+        self.handler.user.id = 'asdf'
+
+    @async_test
+    async def test_add(self):
+        client = models.Repository.get_client.return_value
+        client.__enter__.return_value.repo_add = AsyncMagicMock()
+        client.__enter__.return_value.repo_add.return_value = {
+            'id': '123', 'name': 'something'}
+        self.model.get_client = AsyncMagicMock(return_value=client)
+        json_resp = await self.handler.add()
+        self.assertEqual(web.json.loads(json_resp)['id'], '123')
+
+    @async_test
+    async def test_get_or_list_get(self):
+        args = {'id': [b'123']}
+        self.handler.request.arguments = args
+        await self.handler.async_prepare()
+        client = models.Repository.get_client.return_value
+        client.__enter__.return_value.repo_get = AsyncMagicMock()
+        client.__enter__.return_value.repo_get.return_value = {
+            'id': '123', 'name': 'something'}
+        self.model.get_client = AsyncMagicMock(return_value=client)
+        json_resp = await self.handler.get_or_list()
+        self.assertEqual(web.json.loads(json_resp)['id'], '123')
+
+    @async_test
+    async def test_get_or_list_list(self):
+        client = models.Repository.get_client.return_value
+        client.__enter__.return_value.repo_list = AsyncMagicMock()
+        client.__enter__.return_value.repo_list.return_value = [
+            {'id': '123', 'name': 'something'},
+            {'id': '234', 'name': 'othername'}]
+        self.model.get_client = AsyncMagicMock(return_value=client)
+        json_resp = await self.handler.get_or_list()
+        self.assertEqual(web.json.loads(json_resp)['items'][1]['id'], '234')
+
+    @async_test
+    async def test_update(self):
+        client = models.Repository.get_client.return_value
+        client.__enter__.return_value.repo_get = AsyncMagicMock()
+        client.__enter__.return_value.repo_get.return_value = {
+            'id': '123', 'name': 'something'}
+        self.model.get_client = AsyncMagicMock(return_value=client)
+        self.handler.body = {'parallel_builds': 2}
+        json_resp = await self.handler.update()
+        self.assertIn('id', web.json.loads(json_resp).keys())
+
+    @async_test
+    async def test_delete(self):
+        client = models.Repository.get_client.return_value
+        client.__enter__.return_value.repo_get = AsyncMagicMock()
+        client.__enter__.return_value.repo_get.return_value = {
+            'id': '123', 'name': 'something'}
+        self.model.get_client = AsyncMagicMock(return_value=client)
+        resp = await self.handler.delete_item()
+        self.assertEqual(resp, {'delete': 'ok'})
+
+
+class UserPublicRestHandler(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = web.User
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        application.settings = {'cookie_secret': 'sdf'}
+        self.handler = web.UserPublicRestHandler(application, request,
+                                                 model=self.model)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    @patch.object(web.User, 'exists', AsyncMagicMock(return_value=True,
+                                                     spec=web.User.exists))
+    @async_test
+    async def test_check_exists(self):
+        r = await self.handler.check_exists()
+        self.assertTrue(r)
+
+    @patch.object(web.User, 'add', AsyncMagicMock(spec=web.User.add,
+                                                  return_value=MagicMock()))
+    @async_test
+    async def test_add(self):
+        self.handler.body = {'email': 'a@a.com', 'username': 'mra',
+                             'password': 'asdf'}
+        new_user = web.User.add.return_value
+        new_user.username = 'bla'
+        new_user.email = 'bla@a.com'
+        new_user.id = 'some-id'
+        await self.handler.add()
+        user = web.User.add.return_value
+        self.assertTrue(user.to_dict.called)
+        self.assertTrue(web.User.add.called)
+
+    @patch.object(web.User, 'request_password_reset', AsyncMagicMock())
+    @async_test
+    async def test_request_password_reset(self):
+        email = 'a@a.com'
+        url = 'http://bla.nada/reset?token={token}'
+        self.handler.body = {
+            'email': email,
+            'reset_password_url': url}
+        await self.handler.request_password_reset()
+
+        self.assertTrue(self.model.request_password_reset.called_with(
+            email, url))
+
+    @patch.object(web.User, 'request_password_reset', AsyncMagicMock(
+        side_effect=web.UserDoesNotExist))
+    @async_test
+    async def test_request_password_reset_bad_user(self):
+        email = 'a@a.com'
+        url = 'http://bla.nada/reset?token={token}'
+        self.handler.body = {
+            'email': email,
+            'reset_password_url': url}
+
+        with self.assertRaises(web.HTTPError):
+            await self.handler.request_password_reset()
+
+    @patch.object(web.User, 'change_password_with_token', AsyncMagicMock())
+    @async_test
+    async def test_change_password_with_token(self):
+        token = 'asdf'
+        password = '123'
+        self.handler.body = {'token': token,
+                             'password': password}
+        await self.handler.change_password_with_token()
+
+        self.assertTrue(self.model.change_password_with_token.called_with(
+            token, password))
+
+    @patch.object(web.User, 'change_password_with_token', AsyncMagicMock(
+        side_effect=web.BadResetPasswordToken))
+    @async_test
+    async def test_change_password_with_token_bad_token(self):
+        token = 'asdf'
+        password = '123'
+        self.handler.body = {'token': token,
+                             'password': password}
+
+        with self.assertRaises(web.HTTPError):
+            await self.handler.change_password_with_token()
+
+
+class UserRestHandlerTest(TestCase):
+
+    def setUp(self):
+        application, request = MagicMock(), MagicMock()
+        application.ui_methods = {}
+        self.handler = web.UserRestHandler(application, request,
+                                           model=web.User)
+
+    @patch.object(web.User, 'change_password', AsyncMagicMock(
+        return_value=None))
+    @async_test
+    async def test_change_user_password(self):
+        self.handler.body = {'username_or_email': 'a@a.com',
+                             'old_password': 'old-password',
+                             'new_password': 'new-password'}
+
+        await self.handler.change_password()
+        self.assertTrue(self.handler.model.change_password.called)
+
+
+class ReadOnlyRestHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.ReadOnlyRestHandler(application,
+                                               request)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    def test_invalid(self):
+        with self.assertRaises(web.HTTPError):
+            self.handler.invalid()
+
+
+class BuildSetRestHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = web.BuildSet
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.CookieAuthBuildSetHandler(application,
+                                                     request,
+                                                     model=self.model)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    @patch.object(web.BuildSet, 'list', AsyncMagicMock(spec=web.BuildSet.list))
+    @async_test
+    async def test_list_or_get_list(self):
+        self.handler.query = {'repo_name': 'somename'}
+        self.handler.model.list.return_value = [web.BuildSet(
+            MagicMock(), ordered_kwargs={'id': 'someid'})]
+        items = await self.handler.list_or_get()
+        self.assertEqual(len(items['items']), 1)
+
+    @patch.object(web.BuildSet, 'get', AsyncMagicMock(spec=web.BuildSet.get))
+    @async_test
+    async def test_list_or_get_get(self):
+        self.handler.query = {'buildset_id': 'some-id'}
+        self.handler.model.get.return_value = web.BuildSet(
+            MagicMock(), ordered_kwargs={'id': 'some-id'})
+        buildset = await self.handler.list_or_get()
+        self.assertTrue(buildset['id'])
+
+    @async_test
+    async def test_list_or_get_bad_request(self):
+        with self.assertRaises(web.HTTPError):
+            await self.handler.list_or_get()
+
+
+class BuildHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = web.Build
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.CookieAuthBuildHandler(application,
+                                                  request,
+                                                  model=self.model)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    @async_test
+    async def test_get_build_no_uuid(self):
+        with self.assertRaises(web.HTTPError):
+            await self.handler.get_build()
+
+    @patch.object(web.Build, 'get', AsyncMagicMock(spec=web.Build.get))
+    @async_test
+    async def test_get_build(self):
+        self.handler.query = {'build_uuid': 'some-uuid'}
+        web.Build.get.return_value = web.Build(MagicMock(), {'builder': {}})
+        await self.handler.get_build()
+        self.assertTrue(web.Build.get.called)
+
+
+class WaterfallRestHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = web.BuildSet
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.CookieAuthWaterfallHandler(application,
+                                                      request,
+                                                      model=self.model)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    @patch.object(web.BuildSet, 'list', AsyncMagicMock(spec=web.BuildSet.list))
+    @patch.object(web.WaterfallRestHandler, '_get_builders', AsyncMagicMock(
+        spec=web.WaterfallRestHandler._get_builders))
+    @async_test
+    async def test_get_waterfall(self):
+        web.BuildSet.list.return_value = [web.BuildSet(MagicMock(), {})]
+        web.WaterfallRestHandler._get_builders.return_value = [
+            web.Builder(MagicMock(), {})]
+        self.handler.query = {'repo_name': 'some/repo'}
+        r = await self.handler.get_waterfall()
+        self.assertTrue(r)
+
+    @async_test
+    async def test_get_waterfall_no_repo_name(self):
+        with self.assertRaises(web.HTTPError):
+            await self.handler.get_waterfall()
+
+    @patch.object(web.Builder, 'list', AsyncMagicMock(spec=web.Builder.list))
+    @async_test
+    async def test_get_builders(self):
+        buildsets = [web.BuildSet(
+            MagicMock(), ordered_kwargs={'id': 'someid',
+                                         'builds': [
+                                             {'builder': {'id': 'some-id'}}]})]
+
+        await self.handler._get_builders(buildsets)
+
+        called = web.Builder.list.call_args[1]
+        expected = {'id__in': ['some-id']}
+        self.assertEqual(called, expected)
+
+
+class RepositoryRestHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = web.Repository
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.CookieAuthRepositoryRestHandler(application,
+                                                           request,
+                                                           model=self.model)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get,
+        return_value=create_autospec(spec=web.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @patch.object(web.Slave, 'get', AsyncMagicMock(
+        spec=web.Slave.get,
+        return_value=create_autospec(spec=web.Slave,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_add_slave(self):
+        self.handler.query = {'name': 'somerepo'}
+        self.handler.body = {'name': 'bla'}
+        r = await self.handler.add_slave()
+        self.assertEqual(r['repo-add-slave'], 'slave added')
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get,
+        return_value=create_autospec(spec=web.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @patch.object(web.Slave, 'get', AsyncMagicMock(
+        spec=web.Slave.get,
+        return_value=create_autospec(spec=web.Slave,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_remove_slave(self):
+        self.handler.query = {'name': 'somerepo'}
+        self.handler.body = {'name': 'bla'}
+        r = await self.handler.remove_slave()
+        self.assertEqual(r['repo-remove-slave'], 'slave removed')
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get,
+        return_value=create_autospec(spec=web.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_add_branch(self):
+        self.handler.body = {'add_branches': [{'branch_name': 'master',
+                                               'notify_only_latest': True}]}
+        r = await self.handler.add_branch()
+        self.assertEqual(r['repo-add-branch'], '1 branches added')
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get,
+        return_value=create_autospec(spec=web.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_remove_branch(self):
+        self.handler.body = {'remove_branches': [{'branch_name': 'master'}]}
+        r = await self.handler.remove_branch()
+        self.assertEqual(r['repo-remove-branch'], '1 branches removed')
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get,
+        return_value=create_autospec(spec=web.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_start_build(self):
+        self.handler.body = {'branch': 'master'}
+        r = await self.handler.start_build()
+        self.assertTrue(r)
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get,
+        return_value=create_autospec(spec=web.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_cancel_build(self):
+        self.handler.body = {'build_uuid': 'some-uuid'}
+        r = await self.handler.cancel_build()
+        self.assertTrue(r)
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get,
+        return_value=create_autospec(spec=web.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_enable(self):
+        self.handler.query = {'id': 'some-id'}
+        r = await self.handler.enable()
+        self.assertTrue(r)
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get,
+        return_value=create_autospec(spec=web.Repository,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_disable(self):
+        self.handler.query = {'id': 'some-id'}
+        r = await self.handler.disable()
+        self.assertTrue(r)
+
+
+class SlaveRestHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = web.Slave
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.CookieAuthSlaveRestHandler(application,
+                                                      request,
+                                                      model=self.model)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    def test_query_has_pk(self):
+        self.handler.query = {'name': 'bla'}
+        has_pk = self.handler._query_has_pk()
+        self.assertTrue(has_pk)
+
+
+class NotificationRestHandlerTest(TestCase):
+
+    def setUp(self):
+        super().setUp()
+        request = MagicMock()
+        request.arguments = {}
+        application = MagicMock()
+        self.handler = web.NotificationRestHandler(application,
+                                                   request=request)
+
+    @patch.object(web.Notification, 'enable', AsyncMagicMock(
+        spec=web.Notification.enable))
+    @async_test
+    async def test_enable(self):
+        notif_name = b'some-notif'
+        repo_id = b'some-repo-id'
+        self.handler.body = {'some': 'field'}
+        await self.handler.enable(notif_name, repo_id)
+        self.assertTrue(web.Notification.enable.called)
+
+    @patch.object(web.Notification, 'disable', AsyncMagicMock(
+        spec=web.Notification.disable))
+    @async_test
+    async def test_disable(self):
+        notif_name = b'some-notif'
+        repo_id = b'some-repo-id'
+        self.handler.body = {'some': 'field'}
+        await self.handler.disable(notif_name, repo_id)
+        self.assertTrue(web.Notification.disable.called)
+
+    @patch.object(web.Notification, 'update', AsyncMagicMock(
+        spec=web.Notification.update))
+    @async_test
+    async def test_update(self):
+        notif_name = b'some-notif'
+        repo_id = b'some-repo-id'
+        self.handler.body = {'some': 'field'}
+        self.handler.body = {'some': 'field'}
+        await self.handler.update(notif_name, repo_id)
+        self.assertTrue(web.Notification.update.called)
+
+    @patch.object(web.Notification, 'list', AsyncMagicMock(
+        spec=web.Notification.list, return_value=[]))
+    @async_test
+    async def test_list_no_repo_id(self):
+        self.handler.query = {}
+        await self.handler.list()
+        self.assertTrue(web.Notification.list.called)
+
+    @patch.object(web.Notification, 'list', AsyncMagicMock(
+        spec=web.Notification.list, return_value=[]))
+    @async_test
+    async def test_list(self):
+        self.handler.query = {'repo_id': 'some-id'}
+        await self.handler.list()
+        self.assertTrue(web.Notification.list.called)
+
+
+@patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
+class StreamHandlerTest(TestCase):
 
     def setUp(self):
         super().setUp()
@@ -469,45 +732,51 @@ class StreamHandlerTest(AsyncTestCase):
         request.arguments = {}
         application = MagicMock()
         self.handler = web.StreamHandler(application, request=request)
+        self.handler._dtformat = '%Y'
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
-    def test_get_repo_id(self):
-        self.handler.request.arguments = {'repo_id': [b'asdf']}
-        repo_id = self.handler._get_repo_id()
+    def test_prepare(self):
+        self.handler._get_user = MagicMock()
+
+        self.handler.prepare()
+        self.handler._get_user.called
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get, return_value=web.Repository(MagicMock(),
+                                                             {'id': 'asdf'})))
+    @async_test
+    async def test_get_repo_id_repo_name(self):
+        self.handler.request.arguments = {'repo_name': [b'my/repo']}
+        repo_id = await self.handler._get_repo_id()
         self.assertEqual(repo_id, 'asdf')
 
-    def test_get_repo_id_with_repository_id(self):
-        self.handler.request.arguments = {'repository_id': [b'asdf']}
-        repo_id = self.handler._get_repo_id()
-        self.assertEqual(repo_id, 'asdf')
+    @async_test
+    async def test_get_repo_id(self):
+        self.handler.request.arguments = {'repo_id': [b'some-id']}
+        repo_id = await self.handler._get_repo_id()
+        self.assertEqual(repo_id, 'some-id')
 
-    def test_get_repo_id_type_error(self):
-        repo_id = self.handler._get_repo_id()
+    @async_test
+    async def test_get_repo_id_type_error(self):
+        repo_id = await self.handler._get_repo_id()
         self.assertIsNone(repo_id)
 
     @patch.object(web, 'StreamConnector', MagicMock())
-    @gen_test
-    def test_open(self):
-        self.handler.request.arguments = {'repo_id': [b'asdf']}
-        plug = MagicMock()
-        web.StreamConnector.plug = asyncio.coroutine(lambda *a, **kw: plug())
-        f = self.handler.open('repo-status')
-        yield from f
-        self.assertTrue(plug.called)
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        return_value=MagicMock()))
+    @async_test
+    async def test_open(self):
+        self.handler.request.arguments = {'repo_name': [b'asdf']}
+        web.StreamConnector.plug = AsyncMagicMock()
+        await self.handler.open('repo-status')
+        self.assertTrue(web.StreamConnector.plug.called)
         self.assertTrue(self.handler.repo_id)
         self.assertEqual(self.handler.action, 'repo-status')
 
-    @gen_test
-    def test_bad_message_type_logger(self):
-        self.handler.log = MagicMock()
-        self.handler._bad_message_type_logger(
-            {'event_type': 'unknown'})
-        self.assertTrue(self.handler.log.called)
-
-    @gen_test
-    def test_receiver(self):
+    @async_test
+    async def test_receiver(self):
         sender = MagicMock()
         message = {'event_type': 'build_started'}
         sbi = MagicMock()
@@ -517,26 +786,12 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler.events['build_started'] = self.handler._send_build_info
         self.handler.action = 'builds'
         self.handler.receiver(sender, **message)
-        yield from asyncio.sleep(0.001)
+        await asyncio.sleep(0.001)
         self.assertTrue(sbi.called)
 
-    @gen_test
-    def test_receiver_wrong_action(self):
-        sender = MagicMock()
-        message = {'event_type': 'build_started'}
-        sbi = MagicMock()
-
-        self.handler._send_build_info = sbi
-
-        self.handler.events['build_started'] = self.handler._send_build_info
-        self.handler.action = 'build-step'
-        self.handler.receiver(sender, **message)
-        yield from asyncio.sleep(0.001)
-        self.assertFalse(sbi.called)
-
     @patch.object(web.traceback, 'format_exc', MagicMock())
-    @gen_test
-    def test_receiver_exception(self):
+    @async_test
+    async def test_receiver_exception(self):
         sender = MagicMock()
         message = {'event_type': 'build_started'}
         sbi = MagicMock(side_effect=Exception)
@@ -547,7 +802,7 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler.action = 'builds'
         self.handler.log = MagicMock()
         self.handler.receiver(sender, **message)
-        yield from asyncio.sleep(0.001)
+        await asyncio.sleep(0.001)
         self.assertTrue(sbi.called)
         self.assertTrue(web.traceback.format_exc.called)
         self.assertTrue(self.handler.log.called)
@@ -556,8 +811,8 @@ class StreamHandlerTest(AsyncTestCase):
     def test_format_info_dt(self):
         utils.settings.TIMEZONE = 'America/Sao_Paulo'
         utils.settings.DTFORMAT = '%d/%m/%Y %H:%M:%S'
-        info = {'started': 'Wed Oct 25 08:53:38 2017 -0000',
-                'finished': 'Wed Oct 25 08:53:44 2017 -0000'}
+        info = {'started': '3 9 25 08:53:38 2017 -0000',
+                'finished': '3 9 25 08:53:44 2017 -0000'}
         self.handler._format_info_dt(info)
         self.assertFalse(info['started'].endswith('0000'))
 
@@ -565,12 +820,14 @@ class StreamHandlerTest(AsyncTestCase):
     def test_format_info_dt_buildset(self):
         utils.settings.TIMEZONE = 'America/Sao_Paulo'
         utils.settings.DTFORMAT = '%d/%m/%Y %H:%M:%S'
-        info = {'buildset': {'started': 'Wed Oct 25 08:53:38 2017 -0000',
-                             'finished': 'Wed Oct 25 08:53:44 2017 -0000',
-                             'created': 'Wed Oct 25 08:53:44 2017 -0000'}}
+        info = {'buildset': {'started': '3 9 25 08:53:38 2017 -0000',
+                             'finished': '3 9 25 08:53:44 2017 -0000',
+                             'created': '3 9 25 08:53:44 2017 -0000',
+                             'commit_date': '3 9 25 08:53:44 2017 -0000'}}
         self.handler._format_info_dt(info)
         self.assertFalse(info['buildset']['created'].endswith('0000'))
         self.assertFalse(info['buildset']['started'].endswith('0000'))
+        self.assertFalse(info['buildset']['commit_date'].endswith('0000'))
 
     def test_write2sock(self):
         body = {'some': 'response'}
@@ -593,9 +850,9 @@ class StreamHandlerTest(AsyncTestCase):
 
     def test_send_step_output_info(self):
         self.handler.request.arguments = {
-            'uuid': ['sfdaf1'.encode('utf-8')]}
+            'uuid': ['some-uuid'.encode('utf-8')]}
 
-        info = {'uuid': 'sfdaf1'}
+        info = {'uuid': 'sfdaf1', 'build': {'uuid': 'some-uuid'}}
         self.handler.write2sock = MagicMock()
         self.handler._send_step_output_info(info)
         self.assertTrue(self.handler.write2sock.called)
@@ -604,12 +861,11 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler.request.arguments = {
             'uuid': ['sfdafs1'.encode('utf-8')]}
 
-        info = {'uuid': 'sfdaf1'}
+        info = {'uuid': 'sfdaf1', 'build': {'uuid': 'some-uuid'}}
         self.handler.write2sock = MagicMock()
         self.handler._send_step_output_info(info)
         self.assertFalse(self.handler.write2sock.called)
 
-    @gen_test
     def test_send_build_info(self):
         self.handler.request.arguments = {
             'repository_id': ['1'.encode('utf-8')]}
@@ -620,271 +876,440 @@ class StreamHandlerTest(AsyncTestCase):
         self.handler._send_build_info(info)
         self.assertTrue(self.handler.write2sock.called)
 
-    @gen_test
-    def test_send_repo_status_info(self):
+    def test_send_raw_info(self):
         info = {'event_type': 'repo_status_changed',
                 'status': 'other'}
 
         self.handler.write2sock = MagicMock()
-        self.handler._send_repo_status_info(info)
+        self.handler._send_raw_info(info)
         self.assertTrue(self.handler.write2sock.called)
 
 
-class MainHandlerTest(AsyncTestCase):
+class DashboardHandlerTest(TestCase):
 
     def setUp(self):
         super().setUp()
         request = MagicMock()
-        application = MagicMock()
-        self.handler = web.MainHandler(application, request=request)
-
-    @patch.object(web, 'Repository', MagicMock())
-    @patch.object(web, 'Slave', MagicMock())
-    @patch.object(web, 'Plugin', MagicMock())
-    @gen_test
-    def test_get(self):
-        self.handler.render_template = MagicMock()
-
-        expected_context = {'repos': None, 'slaves': None, 'plugins': None,
-                            'get_btn_class': self.handler._get_btn_class}
-
-        yield self.handler.get()
-        context = self.handler.render_template.call_args[0][1]
-
-        self.assertEqual(expected_context, context)
-
-    def test_get_btn_class(self):
-        status = 'fail'
-        returned = self.handler._get_btn_class(status)
-
-        self.assertEqual(returned, 'danger')
-
-
-@patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
-class WaterfallHandlerTest(AsyncTestCase):
-
-    def setUp(self):
-        super().setUp()
-        request = MagicMock()
-        application = MagicMock()
-        self.handler = web.WaterfallHandler(application, request=request)
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
-
-    @patch.object(web, 'BuildSet', MagicMock())
-    @patch.object(web, 'Builder', MagicMock())
-    @patch.object(web, 'Repository', MagicMock())
-    @gen_test
-    def test_get(self):
-        web.Builder.list = asyncio.coroutine(lambda *a, **kw: [])
-
-        self.handler.render_template = MagicMock()
-        self.handler.prepare()
-
-        expected_context = {'buildsets': None, 'builders': [],
-                            'ordered_builds': None,
-                            'repository': 'repo',
-                            'fmtdt': lambda: None,
-                            'get_ending': self.handler._get_ending}.keys()
-        yield self.handler.get('some-repo')
-        context = self.handler.render_template.call_args[0][1]
-        self.assertEqual(expected_context, context.keys())
-
-    @patch.object(web, 'Builder', MagicMock())
-    @gen_test
-    def test_get_builders_for_buildset(self):
-        self._create_test_data()
-
-        list_mock = MagicMock(return_value=self.builders)
-        web.Builder.list = asyncio.coroutine(lambda *a, **kw: list_mock(**kw))
-
-        expected = sorted(self.builders, key=lambda b: b.name)
-
-        returned = yield from self.handler._get_builders_for_buildsets(
-            self.buildsets)
-        self.assertEqual(expected, returned)
-        called_args = list_mock.call_args[1]
-
-        expected = {'id__in': [b.id for b in self.builders]}
-        self.assertEqual(expected, called_args)
-
-    @patch.object(web, 'BuildSet', MagicMock())
-    @patch.object(web, 'Builder', MagicMock())
-    @patch.object(web, 'Repository', MagicMock())
-    @gen_test
-    def test_ordered_builds(self):
-        bd0 = models.Builder(dict(name='z', id=0))
-        bd1 = models.Builder(dict(name='a', id=1))
-        builds = [models.Build(dict(name='z', builder=bd0)),
-                  models.Build(dict(name='a', builder=bd1))]
-
-        list_mock = MagicMock(return_value=[bd0, bd1])
-        web.Builder.list = asyncio.coroutine(lambda *a, **kw: list_mock(**kw))
-
-        self.handler._get_builders_for_buildsets = asyncio.coroutine(
-            lambda b: [bd0, bd1])
-        self.handler.render_template = MagicMock()
-        ordered = yield self.handler.get('some-repo')
-        order_func = self.handler.render_template.call_args[0][1][
-            'ordered_builds']
-        ordered = order_func(builds)
-        self.assertTrue(ordered[0].builder.name < ordered[1].builder.name)
-
-    def test_get_ending(self):
-        builders = [models.Builder(dict(id=1)),
-                    models.Builder(dict(id=2))]
-        build = models.Build(dict(builder=builders[1]))
-        expected = '</td><td class="builder-column builder-column-id-1'
-        expected += 'builder-column-index-1">'
-        returned = ''
-
-        for end in self.handler._get_ending(build, 0, builders):
-            returned += end
-
-        self.assertEqual(expected, returned)
-
-    def _create_test_data(self):
-        builders = []
-        for i in range(3):
-            kw = dict(id=i, name='bla{}'.format(i))
-            builders.append(models.Builder(kw))
-
-        buildsets = []
-
-        for i in range(5):
-            builds = [models.Build(dict(id=j, builder=builders[j]))
-                      for j in range(3)]
-            kw = dict(id=i, builds=builds)
-            buildsets.append(models.BuildSet(kw))
-
-        self.builders = builders
-        self.buildsets = buildsets
-
-
-class ApplicationTest(unittest.TestCase):
-
-    def test_urls(self):
-        expected = ['/api/repo/(.*)$',
-                    '/api/slave/(.*)$']
-
-        for url in web.api_app.urls:
-            pat = url.regex.pattern
-            self.assertIn(pat, expected)
-
-        self.assertEqual(len(web.api_app.urls), 2)
-
-
-class LoginHandlerTest(unittest.TestCase):
-
-    def setUp(self):
-        super().setUp()
-        request = MagicMock()
-        request.cookies = {}
         application = MagicMock()
         application.settings = {'cookie_secret': 'bladjfçajf'}
+        self.handler = web.DashboardHandler(application, request=request)
 
-        class TestRepo(web.Repository):
-            pass
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_main_template(self):
+        self.handler._get_main_template()
 
-        self.mock_model = TestRepo
-        self.mock_model.get = MagicMock(spec=web.Repository.get)
-        self.mock_model.add = MagicMock(spec=web.Repository.add)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        self.assertEqual(called_template, self.handler.main_template)
+        self.assertEqual(called_context, {})
 
-        self.handler = web.LoginHandler(application, request=request)
+    @patch.object(web, 'settings', MagicMock())
+    def test_get_gitlab_import_url(self):
+        web.settings.GITLAB_IMPORT_URL = 'some-url?state={state}'
+        web.settings.TORNADO_OPTS = {'cookie_secret': 'asdf'}
+        url = self.handler._get_gitlab_import_url()
 
-    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
-        spec=web.TemplateHandler.redirect))
-    def test_get_with_cookie(self):
-        self.handler.set_secure_cookie(web.COOKIE_NAME, 'bla')
-        self.handler.request.cookies[
-            web.COOKIE_NAME] = self.handler._new_cookie[web.COOKIE_NAME]
-        self.handler.get('login')
-        self.assertTrue(self.handler.redirect.called)
-        url = self.handler.redirect.call_args[0][0]
-        self.assertEqual(url, '/')
+        self.assertFalse(url.endswith('{state}'))
 
-    @patch.object(web.TemplateHandler, 'render_template', MagicMock(
-        spec=web.TemplateHandler.render_template))
-    def test_get_without_cookie(self):
-        self.handler.prepare()
-        self.handler.get('login')
-        self.assertTrue(self.handler.render_template.called)
-        template = self.handler.render_template.call_args[0][0]
-        self.assertEqual(template, 'login.html')
+    @patch.object(web, 'settings', MagicMock())
+    def test_get_gitlab_import_url_no_url(self):
+        web.settings.GITLAB_IMPORT_URL = None
+        url = self.handler._get_gitlab_import_url()
 
-    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
-        spec=web.TemplateHandler.redirect))
-    @patch.object(web.TemplateHandler, 'clear_cookie', MagicMock(
-        spec=web.TemplateHandler.clear_cookie))
-    def test_get_logout(self):
-        self.handler.get('logout')
-        self.assertTrue(self.handler.clear_cookie.called)
-        self.assertTrue(self.handler.redirect.called)
-        url = self.handler.redirect.call_args[0][0]
-        self.assertEqual(url, '/')
+        self.assertEqual(url, '#')
 
-    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
-        spec=web.TemplateHandler.redirect))
-    def test_post_with_bad_username(self):
-        self.handler.prepare()
-        self.handler.params['username'] = ['mané']
-        self.handler.post('login')
-        url = self.handler.redirect.call_args[0][0]
-        self.assertEqual(url, '/login?error=1')
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_settings_template(self):
+        self.handler._get_settings_template('repositories')
 
-    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
-        spec=web.TemplateHandler.redirect))
-    def test_post_with_bad_password(self):
-        self.handler.prepare()
-        self.handler.params['username'] = ['someguy']
-        self.handler.params['password'] = ['wrong']
-        self.handler.post('login')
-        url = self.handler.redirect.call_args[0][0]
-        self.assertEqual(url, '/login?error=1')
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = ['github_import_url', 'gitlab_import_url',
+                         'settings_type']
+        self.assertEqual(called_template, self.handler.settings_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
 
-    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
-        spec=web.TemplateHandler.redirect))
-    @patch.object(web.TemplateHandler, 'set_secure_cookie', MagicMock(
-        spec=web.TemplateHandler.set_secure_cookie))
-    def test_post_ok(self):
-        self.handler.prepare()
-        self.handler.params['username'] = ['someguy']
-        self.handler.params['password'] = ['123']
-        self.handler.post('login')
-        self.assertTrue(self.handler.set_secure_cookie.called)
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_settings_main_template_repo(self):
+        settings_type = 'repositories'
+        self.handler._get_settings_main_template(settings_type)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = ['github_import_url', 'gitlab_import_url']
+        self.assertEqual(called_template, self.handler.repo_settings_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
 
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_settings_main_template_slave(self):
+        settings_type = 'slaves'
+        self.handler._get_settings_main_template(settings_type)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = []
+        self.assertEqual(called_template, self.handler.slave_settings_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
 
-class LoggedTemplateHandler(unittest.TestCase):
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_settings_main_template_ui(self):
+        settings_type = 'ui'
+        self.handler._get_settings_main_template(settings_type)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = []
+        self.assertEqual(called_template, self.handler.ui_settings_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
 
-    def setUp(self):
-        super().setUp()
-        request = MagicMock()
-        request.cookies = {}
-        application = MagicMock()
-        application.settings = {'cookie_secret': 'bladjfçajf'}
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_settings_main_template_user(self):
+        settings_type = 'user'
+        self.handler._get_settings_main_template(settings_type)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = []
+        self.assertEqual(called_template, self.handler.user_settings_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
 
-        class TestRepo(web.Repository):
-            pass
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_settings_main_template_bad_settings(self):
+        settings_type = 'bad'
+        with self.assertRaises(web.BadSettingsType):
+            self.handler._get_settings_main_template(settings_type)
 
-        self.mock_model = TestRepo
-        self.mock_model.get = MagicMock(spec=web.Repository.get)
-        self.mock_model.add = MagicMock(spec=web.Repository.add)
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_buildset_list_template(self):
+        full_name = 'some/one'
+        self.handler._get_buildset_list_template(full_name)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = ['repo_full_name']
+        self.assertEqual(called_template, self.handler.buildset_list_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
 
-        self.handler = web.LoggedTemplateHandler(application, request=request)
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_waterfall_template(self):
+        full_name = 'some/one'
+        self.handler._get_waterfall_template(full_name)
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        expected_keys = ['repo_name']
+        self.assertEqual(called_template, self.handler.waterfall_template)
+        self.assertEqual(expected_keys, list(called_context.keys()))
 
-    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
-        spec=web.TemplateHandler.redirect))
-    def test_prepare_without_cookie(self):
-        self.handler.prepare()
-        url = self.handler.redirect.call_args[0][0]
-        self.assertEqual(url, '/login')
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_repository_template(self):
+        self.handler._get_repository_template()
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        self.assertEqual(called_template, self.handler.repository_template)
+        self.assertEqual(called_context, {'repo_full_name': ''})
 
-    @patch.object(web.TemplateHandler, 'redirect', MagicMock(
-        spec=web.TemplateHandler.redirect))
-    def test_prepare_with_cookie(self):
-        self.handler.set_secure_cookie(web.COOKIE_NAME, 'bla')
-        self.handler.request.cookies[
-            web.COOKIE_NAME] = self.handler._new_cookie[web.COOKIE_NAME]
-        self.handler.prepare()
-        self.assertFalse(self.handler.redirect.called)
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_build_template(self):
+        self.handler._get_build_template('some-uuid')
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        self.assertEqual(called_template, self.handler.build_template)
+        self.assertEqual(called_context, {'build_uuid': 'some-uuid'})
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_buildset_template(self):
+        self.handler._get_buildset_template('some-buildset-id', 'some-repo-id')
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        self.assertEqual(called_template, self.handler.buildset_template)
+        self.assertEqual(called_context, {'buildset_id': 'some-buildset-id',
+                                          'repo_id': 'some-repo-id'})
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_notifications_template(self):
+        self.handler._get_notifications_template('my/repo', 'repo-id')
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        self.assertEqual(called_template, self.handler.notifications_template)
+        self.assertEqual(called_context, {'repo_full_name': 'my/repo',
+                                          'repo_id': 'repo-id'})
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
+    def test_get_slave_template(self):
+        self.handler._get_slave_template()
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        self.assertEqual(called_template, self.handler.slave_template)
+        self.assertEqual(called_context, {'slave_full_name': ''})
+
+    def test_show_main(self):
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+        self.handler._get_main_template = MagicMock(
+            spec=self.handler._get_main_template)
+
+        self.handler.show_main()
+
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_main_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertIn('content', called_context)
+
+    def test_show_main_template(self):
+        self.handler._get_main_template = MagicMock(
+            spec=self.handler._get_main_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_main_template()
+
+        self.assertTrue(self.handler._get_main_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    def test_show_settings(self):
+        self.handler._get_settings_template = MagicMock(
+            spec=self.handler._get_settings_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_settings(b'repositories')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_settings_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    def test_show_settings_template(self):
+        self.handler._get_settings_template = MagicMock(
+            spec=self.handler._get_settings_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_settings_template(b'slaves')
+        self.assertTrue(self.handler._get_settings_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    def test_show_settings_main_template(self):
+        self.handler._get_settings_main_template = MagicMock(
+            spec=self.handler._get_settings_main_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_settings_main_template(b'slaves')
+        self.assertTrue(self.handler._get_settings_main_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    def test_show_repository_details(self):
+        self.handler._get_repository_template = MagicMock(
+            spec=self.handler._get_repository_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_repository_details(b'some/repo')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_repository_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get, return_value=MagicMock()))
+    @async_test
+    async def test_show_repository_notifications(self):
+        self.handler._get_notifications_template = MagicMock(
+            spec=self.handler._get_notifications_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        await self.handler.show_repository_notifications(b'some/repo')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_notifications_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    def test_show_buildset_list(self):
+        self.handler._get_buildset_list_template = MagicMock(
+            spec=self.handler._get_buildset_list_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_repo_buildset_list(b'some/repo')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_buildset_list_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    @patch.object(web.BuildSet, 'get', AsyncMagicMock(spec=web.BuildSet.get))
+    @async_test
+    async def test_show_buildset_details(self):
+        self.handler._get_buildset_template = MagicMock(
+            spec=type(self.handler)._get_buildset_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        await self.handler.show_buildset_details(b'some-buildset-id')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_buildset_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    def test_show_build_details(self):
+        self.handler._get_build_template = MagicMock(
+            spec=self.handler._get_build_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_build_details(b'some-uuid')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_build_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    def test_show_waterfall(self):
+        self.handler._get_waterfall_template = MagicMock(
+            spec=self.handler._get_waterfall_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_repo_waterfall(b'some/repo')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_waterfall_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    def test_show_slave_details(self):
+        self.handler._get_slave_template = MagicMock(
+            spec=self.handler._get_slave_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_slave_details(b'someslave')
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_slave_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    def test_show_repo_add(self):
+        self.handler._get_repository_template = MagicMock(
+            spec=self.handler._get_repository_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_repo_add()
+
+        expected_keys = ['content']
+        called_template = self.handler.render_template.call_args[0][0]
+        called_context = self.handler.render_template.call_args[0][1]
+        self.assertTrue(self.handler._get_repository_template.called)
+        self.assertEqual(called_template, self.handler.skeleton_template)
+        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
+
+    def test_show_repository_details_template(self):
+        self.handler._get_repository_template = MagicMock(
+            spec=self.handler._get_repository_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_repository_details_template(b'full/name')
+        self.assertTrue(self.handler._get_repository_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    @patch.object(web.Repository, 'get', AsyncMagicMock(
+        spec=web.Repository.get, return_value=MagicMock()))
+    @async_test
+    async def test_show_repository_notifications_template(self):
+        self.handler._get_notifications_template = MagicMock(
+            spec=self.handler._get_notifications_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        await self.handler.show_repository_notifications_template(b'full/name')
+        self.assertTrue(self.handler._get_notifications_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    def test_show_slave_details_template(self):
+        self.handler._get_slave_template = MagicMock(
+            spec=self.handler._get_slave_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_slave_details_template()
+        self.assertTrue(self.handler._get_slave_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    def test_show_repo_buildset_list_template(self):
+        self.handler._get_buildset_list_template = MagicMock(
+            spec=self.handler._get_buildset_list_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_repo_buildset_list_template(b'some/repo')
+        self.assertTrue(self.handler._get_buildset_list_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    @patch.object(web.BuildSet, 'get', AsyncMagicMock(spec=web.BuildSet.get))
+    @async_test
+    async def test_show_buildset_template(self):
+        self.handler._get_buildset_template = MagicMock(
+            spec=self.handler._get_build_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        await self.handler.show_buildset_template(b'some-buildset-id')
+        self.assertTrue(self.handler._get_buildset_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    def test_show_build_template(self):
+        self.handler._get_build_template = MagicMock(
+            spec=self.handler._get_build_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_build_template(b'some-uuid')
+        self.assertTrue(self.handler._get_build_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    def test_show_repo_waterfall_template(self):
+        self.handler._get_waterfall_template = MagicMock(
+            spec=self.handler._get_waterfall_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_repo_waterfall_template(b'some/repo')
+        self.assertTrue(self.handler._get_waterfall_template.called)
+        self.assertTrue(self.handler.write.called)

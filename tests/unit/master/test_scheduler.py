@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016, 2018 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,11 +18,13 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
-import asyncio
 from unittest import TestCase
+from unittest.mock import Mock, patch
 from toxicbuild.master import scheduler
-from toxicbuild.master.scheduler import TaskScheduler
-from tests import async_test
+from toxicbuild.master.scheduler import (TaskScheduler, SchedulerServer,
+                                         UnknownSchedulerAction, Repository,
+                                         asyncio, BaseConsumer)
+from tests import async_test, AsyncMagicMock
 
 
 class SchedulerTest(TestCase):
@@ -31,7 +33,7 @@ class SchedulerTest(TestCase):
         scheduler.stop()
         super(SchedulerTest, self).setUp()
         self.scheduler = TaskScheduler()
-        self.future = asyncio.async(self.scheduler.start())
+        self.future = asyncio.ensure_future(self.scheduler.start())
 
     def tearDown(self):
         self.scheduler.stop()
@@ -103,3 +105,97 @@ class SchedulerTest(TestCase):
     @asyncio.coroutine
     def _coromethod2scheduler(self):
         return True
+
+
+class SchedulerServerTest(TestCase):
+
+    def setUp(self):
+        self.server = SchedulerServer()
+
+    @async_test
+    async def test_handle_request_add_update_code(self):
+        msg = Mock()
+        msg.acknowledge = AsyncMagicMock()
+        msg.body = {}
+        msg.body['type'] = 'add-update-code'
+        self.server.handle_add_update_code = AsyncMagicMock()
+        await self.server.handle_request(msg)
+        self.assertTrue(self.server.handle_add_update_code.called)
+
+    @async_test
+    async def test_handle_request_rm_update_code(self):
+        msg = Mock()
+        msg.acknowledge = AsyncMagicMock()
+        msg.body = {}
+        msg.body['type'] = 'rm-update-code'
+        self.server.handle_rm_update_code = AsyncMagicMock()
+        await self.server.handle_request(msg)
+        self.assertTrue(self.server.handle_rm_update_code.called)
+
+    @async_test
+    async def test_handle_request_unknown(self):
+        msg = Mock()
+        msg.acknowledge = AsyncMagicMock()
+        msg.body = {}
+        msg.body['type'] = 'unknown'
+        with self.assertRaises(UnknownSchedulerAction):
+            await self.server.handle_request(msg)
+
+    @async_test
+    async def test_handle_add_update_request_already_scheduled(self):
+        msg = Mock()
+        msg.body = {'repository_id': 'some-id'}
+        self.server._updates_scheduled.add('some-id')
+        r = await self.server.handle_add_update_code(msg)
+        self.assertFalse(r)
+
+    @patch.object(Repository, 'objects', AsyncMagicMock())
+    @async_test
+    async def test_handle_add_update_request_does_not_exist(self, *a, **kw):
+        Repository.objects.get.side_effect = Repository.DoesNotExist
+        Repository.objects.get.return_value.id = 'id'
+        msg = Mock()
+        msg.body = {'repository_id': 'some-id'}
+        r = await self.server.handle_add_update_code(msg)
+        self.assertFalse(r)
+
+    @patch.object(Repository, 'objects', AsyncMagicMock())
+    @async_test
+    async def test_handle_add_update_request(self, *a, **kw):
+        Repository.objects.get.return_value.update_code = lambda: None
+        Repository.objects.get.return_value.id = 'id'
+        msg = Mock()
+        msg.body = {'repository_id': 'some-id'}
+        r = await self.server.handle_add_update_code(msg)
+        self.assertTrue(r)
+
+    @async_test
+    async def test_handle_rm_update_code_not_scheduled(self):
+        msg = Mock()
+        msg.body = {'repository_id': 'some-id'}
+        r = await self.server.handle_rm_update_code(msg)
+        self.assertFalse(r)
+
+    @async_test
+    async def test_handle_rm_update_code(self):
+        msg = Mock()
+        msg.body = {'repository_id': 'some-id'}
+        self.server._sched_hashes['some-id'] = 'some-hash'
+        self.server.scheduler.remove_by_hash = Mock()
+        self.server._updates_scheduled.add('some-id')
+        r = await self.server.handle_rm_update_code(msg)
+        self.assertTrue(r)
+        self.assertTrue(self.server.scheduler.remove_by_hash.called)
+
+    @patch.object(BaseConsumer, 'run', AsyncMagicMock())
+    @async_test
+    async def test_run(self):
+        self.server.scheduler.start = AsyncMagicMock()
+        server = self.server
+
+        async def run(self, routing_key=None):
+            server.stop()
+
+        BaseConsumer.run = run
+        await self.server.run()
+        self.assertTrue(self.server.scheduler.start.called)

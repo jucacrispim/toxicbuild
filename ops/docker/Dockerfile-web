@@ -1,0 +1,10 @@
+FROM toxicbase
+
+ARG master_token
+ARG notification_token
+ARG root_user_id
+ARG cookie_secret
+
+RUN toxicweb create /home/toxicuser/ci/web --access-token $master_token --output-token $notification_token --root-user-id $root_user_id --cookie-secret $cookie_secret
+
+CMD ["toxicweb", "start", "/home/toxicuser/ci/web"]

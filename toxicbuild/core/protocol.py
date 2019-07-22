@@ -18,10 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-try:
-    from asyncio import ensure_future
-except ImportError:  # pragma: no cover
-    from asyncio import async as ensure_future
+from asyncio import ensure_future
 from collections import OrderedDict
 import json
 import time
@@ -34,8 +31,6 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
     """ Base protocol for toxicbulid servers
     """
 
-    # Salt used to encrypt incomming token.
-    salt = None
     # This is the token used to authenticate incomming requests.
     encrypted_token = None
 
@@ -52,6 +47,10 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         self._check_data_future = None
         self._client_connected_future = None
         self.connection_lost_cb = connection_lost_cb
+        self.data = None
+        self.peername = None
+        self._transport = None
+        self._writer_lock = asyncio.Lock(loop=loop)
 
         reader = asyncio.StreamReader(loop=loop)
         super().__init__(reader, loop=loop)
@@ -77,9 +76,15 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         self._check_data_future.add_done_callback(self._check_data_cb)
 
     def connection_lost(self, exc):
+        """Called once, when the connection is lost.
+
+        :param exc: The exception, if some."""
         self.close_connection()
         super().connection_lost(exc)
+        self.log('Connection lost', level='debug')
+
         if self.connection_lost_cb:
+            self.log('Executing connection_lost_cb', level='debug')
             self.connection_lost_cb(exc)
 
     @asyncio.coroutine
@@ -91,6 +96,8 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         self.data = yield from self.get_json_data()
 
         if not self.data:
+            self.log('Bada data', level='warning')
+            self.log(self.raw_data, level='debug')
             msg = 'Something wrong with your data {!r}'.format(self.raw_data)
             yield from self.send_response(code=1, body={'error': msg})
             return self.close_connection()
@@ -98,12 +105,13 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         token = self.data.get('token')
         if not token:
             msg = 'No auth token'
+            self.log(msg, level='warning')
             yield from self.send_response(code=2, body={'error': msg})
             return self.close_connection()
 
-        incomming_token = utils.bcrypt_string(token, self.salt)
-        if incomming_token != self.encrypted_token:
+        if not utils.compare_bcrypt_string(token, self.encrypted_token):
             msg = 'Bad auth token'
+            self.log(msg, level='warning')
             yield from self.send_response(code=3, body={'error': msg})
             return self.close_connection()
 
@@ -111,6 +119,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
 
         if not self.action:
             msg = 'No action found!'
+            self.log(msg, level='warning')
             yield from self.send_response(code=1, body=msg)
             return self.close_connection()
 
@@ -135,15 +144,23 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
     def send_response(self, code, body):
         """ Send a response to client formated by the (unknown) toxicbuild
         remote build specs.
+
         :param code: code for this message. code == 0 is success and
           code > 0 is error.
+
         :param body: response body. It has to be a serializable object.
         """
         response = OrderedDict()
         response['code'] = code
         response['body'] = body
         data = json.dumps(response)
-        yield from utils.write_stream(self._stream_writer, data)
+
+        # drain() cannot be called concurrently by multiple coroutines:
+        # http://bugs.python.org/issue29930. Remove this lock when no
+        # version of Python where this bugs exists is supported anymore.
+        # patch by @RemiCardona for websockets on github.
+        with (yield from self._writer_lock):
+            yield from utils.write_stream(self._stream_writer, data)
 
     @asyncio.coroutine
     def get_raw_data(self):
@@ -170,6 +187,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         # The thing here is: run client_connected only if everything ok
         # on check_data
         if not self._connected:  # pragma no cover
+            self.log('Not connected', level='warning')
             return
 
         # wrapping it to log it.
@@ -186,6 +204,4 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
             end = (time.time() * 1e3)
             self.log('{}: {} {}'.format(self.action, status, (end - init)))
 
-        self._client_connected_future = logged_cb()
-        self._client_connected_future = ensure_future(
-            self._client_connected_future)
+        self._client_connected_future = ensure_future(logged_cb())

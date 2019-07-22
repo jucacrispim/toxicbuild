@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -21,9 +21,9 @@ import asyncio
 import os
 from unittest import mock, TestCase
 from toxicbuild.core.utils import load_module_from_file
-from toxicbuild.slave import build, managers
+from toxicbuild.slave import build, managers, plugins
 from tests.unit.slave import TEST_DATA_DIR
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class BuilderTest(TestCase):
@@ -46,13 +46,18 @@ class BuilderTest(TestCase):
 
         managers.get_toxicbuildconf.return_value = toxicconf
 
-        self.builder = build.Builder(manager, 'builder1', '.')
+        self.builder = build.Builder(manager, {'name': 'builder1',
+                                               'steps': []}, '.')
 
     @async_test
     def test_build_success(self):
         s1 = build.BuildStep(name='s1', command='ls')
         s2 = build.BuildStep(name='s2', command='echo "uhu!"')
         self.builder.steps = [s1, s2]
+        self.builder._copy_workdir = AsyncMagicMock(
+            spec=self.builder._copy_workdir)
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._get_tmp_dir = mock.Mock(return_value='.')
 
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'success')
@@ -63,8 +68,11 @@ class BuilderTest(TestCase):
         s1 = build.BuildStep(name='s1', command='ls')
         s2 = build.BuildStep(name='s2', command='exit 1')
         s3 = build.BuildStep(name='s3', command='echo "oi"')
+        self.builder._copy_workdir = AsyncMagicMock(
+            spec=self.builder._copy_workdir)
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._get_tmp_dir = mock.Mock(return_value='.')
         self.builder.steps = [s1, s2, s3]
-
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'fail')
 
@@ -74,10 +82,31 @@ class BuilderTest(TestCase):
         s2 = build.BuildStep(name='s2', command='exit 1', stop_on_fail=True)
         s3 = build.BuildStep(name='s3', command='echo "oi"')
         self.builder.steps = [s1, s2, s3]
+        self.builder._copy_workdir = AsyncMagicMock(
+            spec=self.builder._copy_workdir)
+
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._get_tmp_dir = mock.Mock(return_value='.')
 
         build_info = yield from self.builder.build()
         self.assertEqual(build_info['status'], 'fail')
         self.assertEqual(len(build_info['steps']), 2)
+
+    @async_test
+    def test_send_step_output_info_step_index(self):
+        step_info = {'uuid': 'some-uuid'}
+
+        send_mock = mock.Mock()
+
+        @asyncio.coroutine
+        def send_info(msg):
+            send_mock(msg)
+
+        self.builder.manager.send_info = send_info
+        self.builder._current_step_output_index = 1
+        yield from self.builder._send_step_output_info(step_info,
+                                                       0, 'some line' * 1024)
+        self.assertTrue(send_mock.called)
 
     @async_test
     def test_send_step_output_info(self):
@@ -91,25 +120,116 @@ class BuilderTest(TestCase):
 
         self.builder.manager.send_info = send_info
         yield from self.builder._send_step_output_info(step_info,
-                                                       0, 'some line')
+                                                       0, 'some line' * 1024)
         self.assertTrue(send_mock.called)
 
-    def test_get_env_vars(self):
+    @async_test
+    def test_send_step_output_info_short(self):
+        step_info = {'uuid': 'some-uuid'}
+
+        send_mock = mock.Mock()
+
+        @asyncio.coroutine
+        def send_info(msg):
+            send_mock(msg)
+
+        self.builder.manager.send_info = send_info
+        yield from self.builder._send_step_output_info(step_info,
+                                                       0, 'some line')
+        self.assertFalse(send_mock.called)
+
+    @async_test
+    async def test_get_env_vars(self):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
-        self.builder.plugins = self.builder.manager._load_plugins(pconfig)
-        expected = {'PATH': 'venv-usrbinpython3.4/bin:PATH'}
+        self.builder.conf['plugins'] = pconfig
+        self.builder.plugins = self.builder._load_plugins()
+        expected = {'PATH': '.././python-venv/venv-usrbinpython3.4/bin:PATH'}
         returned = self.builder._get_env_vars()
 
         self.assertEqual(expected, returned)
 
-    def test_get_envvar_with_builder_envvars(self):
+    @async_test
+    async def test_get_envvar_with_builder_envvars(self):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
-        self.builder.plugins = self.builder.manager._load_plugins(pconfig)
+        self.builder.conf['plugins'] = pconfig
+        self.builder.plugins = self.builder._load_plugins()
         self.builder.envvars = {'VAR1': 'someval'}
-        expected = {'PATH': 'venv-usrbinpython3.4/bin:PATH',
+        expected = {'PATH': '.././python-venv/venv-usrbinpython3.4/bin:PATH',
                     'VAR1': 'someval'}
         returned = self.builder._get_env_vars()
         self.assertEqual(expected, returned)
+
+    def test_get_tmp_dir(self):
+        expected = '{}-{}'.format(os.path.abspath(
+            self.builder.workdir), self.builder.name)
+        self.assertEqual(expected, self.builder._get_tmp_dir())
+
+    @mock.patch.object(build, 'exec_cmd', AsyncMagicMock())
+    @async_test
+    def test_copy_workdir(self):
+        yield from self.builder._copy_workdir()
+        self.assertEqual(len(build.exec_cmd.call_args_list), 2)
+        expected0 = 'mkdir -p {}'.format(self.builder._get_tmp_dir())
+        expected1 = 'cp -R {}/* {}'.format(self.builder.workdir,
+                                           self.builder._get_tmp_dir())
+        called0 = build.exec_cmd.call_args_list[0][0][0]
+        called1 = build.exec_cmd.call_args_list[1][0][0]
+        self.assertEqual(expected0, called0)
+        self.assertEqual(expected1, called1)
+
+    @mock.patch.object(build, 'exec_cmd', AsyncMagicMock())
+    @async_test
+    def test_remove_dir(self):
+        expected = 'rm -rf {}'.format(self.builder._get_tmp_dir())
+        yield from self.builder._remove_tmp_dir()
+        called = build.exec_cmd.call_args[0][0]
+        self.assertEqual(expected, called)
+
+    @async_test
+    async def test_test_aenter(self):
+        self.builder._copy_workdir = AsyncMagicMock()
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        async with self.builder._run_in_build_env():
+            self.assertTrue(self.builder._copy_workdir.called)
+
+    @async_test
+    async def test_aexit(self):
+        self.builder._copy_workdir = AsyncMagicMock()
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        async with self.builder._run_in_build_env():
+            pass
+
+        self.assertTrue(self.builder._remove_tmp_dir.called)
+
+    @async_test
+    async def test_aexit_no_remove(self):
+        self.builder.remove_env = False
+        self.builder._copy_workdir = AsyncMagicMock()
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        async with self.builder._run_in_build_env():
+            pass
+
+        self.assertFalse(self.builder._remove_tmp_dir.called)
+
+    def test_load_plugins(self):
+        plugins_conf = [{'name': 'apt-install',
+                         'packages': ['some-package', 'other']}]
+        self.builder.conf['plugins'] = plugins_conf
+        returned = self.builder._load_plugins()
+
+        self.assertEqual(type(returned[0]), plugins.AptInstallPlugin)
+
+    def test_load_plugins_no_name(self):
+        plugins_conf = [{'pyversion': '/usr/bin/python3.4'}]
+        self.builder.conf['plugins'] = plugins_conf
+        with self.assertRaises(build.BadPluginConfig):
+            self.builder._load_plugins()
+
+    def test_get_steps(self):
+        self.builder.conf['steps'] = ['ls', {'name': 'other',
+                                             'command': 'cmd2'}]
+        steps = self.builder._get_steps()
+        self.assertEqual(len(steps), 2)
 
 
 class BuildStepTest(TestCase):
@@ -141,7 +261,7 @@ class BuildStepTest(TestCase):
 
     @async_test
     def test_step_timeout(self):
-        step = build.BuildStep(name='test', command='sleep 1', timeout=1)
+        step = build.BuildStep(name='test', command='sleep 1', timeout=0.5)
         status = yield from step.execute(cwd='.')
         self.assertEqual(status['status'], 'exception')
         yield from asyncio.sleep(1)

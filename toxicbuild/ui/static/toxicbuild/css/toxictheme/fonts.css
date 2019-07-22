@@ -1,0 +1,100 @@
+@font-face {
+  font-family: 'icomoon';
+  src:  url('../../fonts/icomoon.eot?mevv3m');
+  src:  url('../../fonts/icomoon.eot?mevv3m#iefix') format('embedded-opentype'),
+	url('../../fonts/icomoon.ttf?mevv3m') format('truetype'),
+	url('../../fonts/icomoon.woff?mevv3m') format('woff'),
+	url('../../fonts/icomoon.svg?mevv3m#icomoon') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+    font-family: 'spinners-icon';
+    src: url('../../fonts/spinners.eot?-9haulc');
+    src: url('../../fonts/spinners.eot?#iefix-9haulc')
+	 format('embedded-opentype'),
+	 url('../../fonts/spinners.woff?-9haulc') format('woff'),
+	 url('../../fonts/spinners.ttf?-9haulc') format('truetype'),
+	 url('../../fonts/spinners.svg?-9haulc#icomoon') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+
+[class^="icon-"], [class*=" icon-"] {
+  /* use !important to prevent issues with browser extensions that
+     change fonts
+ */
+  font-family: 'icomoon' !important;
+  speak: none;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  /* Better Font Rendering =========== */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-toxicmask:before {
+  content: "\e900";
+}
+
+
+[class^="icon-spinner"], [class*=" icon-spinner"] {
+	font-family: 'spinners-icon' !important;
+	speak: none;
+	font-style: normal;
+	font-weight: normal;
+	font-variant: normal;
+	text-transform: none;
+	line-height: 1;
+
+	/* Better Font Rendering =========== */
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+.icon-spinner:before {
+	content: "\e000";
+}
+.icon-spinner-2:before {
+	content: "\e001";
+}
+.icon-spinner-3:before {
+	content: "\e002";
+}
+.icon-spinner-4:before {
+	content: "\e003";
+}
+.icon-spinner-5:before {
+	content: "\e004";
+}
+.icon-spinner-6:before {
+	content: "\e005";
+}
+.icon-spinner-7:before {
+	content: "\e006";
+}
+
+@keyframes anim-rotate {
+	0% {
+		transform: rotate(0);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+.spinner {
+	display: inline-block;
+	animation: anim-rotate 2s infinite linear;
+}
+.spinner--steps {
+	animation: anim-rotate 1s infinite steps(8);
+}
+.spinner--steps2 {
+	animation: anim-rotate 1s infinite steps(12);
+}

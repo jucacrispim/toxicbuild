@@ -28,10 +28,13 @@ from collections import deque
 import os
 import random
 import re
+import traceback
 import urwid
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.ui import inutils
 from toxicbuild.ui.client import get_hole_client
+from toxicbuild.ui.models import User, BuildSet, BaseModel
+from toxicbuild.ui.utils import get_builders_for_buildsets
 
 
 class ToxicShellError(Exception):
@@ -89,7 +92,8 @@ def validate_input(command_params, user_args, user_kwargs):
     sig = ', '.join([args, kwargs]) if (args or kwargs) else ' '
     sig = sig.strip().strip(',')
 
-    f = eval('lambda {}: None'.format(sig))
+    # take that, pylint!
+    f = eval('lambda {}: None'.format(sig))  # pylint: disable=eval-used
 
     try:
         f(*user_args, **user_kwargs)
@@ -101,10 +105,14 @@ def get_kwargs(command_params, args):
     """ Return kwargs for ``args`` based on ``command_params``.
     ``command_params`` are the known parameters for a command, those
     sent by list-funcs."""
-
+    # pylint: disable=undefined-variable
     kwargs = {}
     for i, arg in enumerate(args):
-        kwargs.update({command_params[i]['name']: arg})
+        try:
+            kwargs.update({command_params[i]['name']: arg})
+        except IndexError:
+            msg = _('Bad args for command')
+            raise ToxicShellError(msg)
 
     return kwargs
 
@@ -189,24 +197,48 @@ class HistoryEdit(HistoryEditMixin, urwid.Edit):
 
 class ToxicCliActions:
 
-    def __init__(self, *args, host='localhost', port=6666, token=None,
+    def __init__(self, username_or_email, password, *args,
+                 host='localhost', port=6666, token=None,
+                 use_ssl=True, validate_cert=True, loop=None,
                  **kwargs):
         super().__init__(*args, **kwargs)
+        self.username_or_email = username_or_email
+        self.password = password
         self.host = host
         self.port = port
         self.token = token
-        self._loop = asyncio.get_event_loop()
+        self.user = None
+        self.use_ssl = use_ssl
+        self.validate_cert = validate_cert
+        self._loop = loop or asyncio.get_event_loop()
         self.actions = self.get_actions()
+
+    async def authenticate(self):
+        kw = {'username_or_email': self.username_or_email,
+              'password': self.password}
+
+        client = await self.get_client()
+        try:
+            user_dict = await client.user_authenticate(**kw)
+            self.user = User(None, user_dict)
+        finally:
+            client.disconnect()
 
     @asyncio.coroutine
     def get_client(self):
         """ Returns a client connected to a toxicbuild master"""
 
-        client = yield from get_hole_client(self.host, self.port, self.token)
+        client = yield from get_hole_client(self.user, self.host, self.port,
+                                            hole_token=self.token,
+                                            use_ssl=self.use_ssl,
+                                            validate_cert=self.validate_cert)
         return client
 
     def get_actions(self):
         """ Asks the server for which actions are available. """
+
+        if not self.user:
+            self._loop.run_until_complete(self.authenticate())
 
         with self._loop.run_until_complete(self.get_client()) as client:
             actions = self._loop.run_until_complete(client.list_funcs())
@@ -214,13 +246,15 @@ class ToxicCliActions:
 
     def get_action_from_command_line(self, cmdline):
         """ Returns `cmdname` and `cmdkwargs`. """
+        # pylint: disable=undefined-variable
 
         cmd, cmdargs, cmdkwargs = parse_cmdline(cmdline)
 
         try:
             sig = self.actions[cmd]
         except KeyError:
-            msg = _('Command "{}" does not exist').format(cmd)  # noqa f821
+            msg = _(  # noqa E821
+                'Command "{}" does not exist').format(cmd)
             raise ToxicShellError(msg)
 
         known_params = sig['parameters']
@@ -229,10 +263,12 @@ class ToxicCliActions:
         return cmd, cmdkwargs
 
     def get_action_help(self, action_name):
+        # pylint: disable=undefined-variable
         try:
             action_sig = self.actions[action_name]
         except KeyError:
-            msg = _('Command "{}" does not exist').format(action_name)  # noqa f821
+            msg = _(  # noqa E821
+                'Command "{}" does not exist').format(action_name)
             raise ToxicShellError(msg)
 
         action_help = {}
@@ -251,28 +287,151 @@ class ToxicCliActions:
 
         with (yield from self.get_client()) as client:
             response = yield from client.request2server(action, cmdkwargs)
-
         return action, response
+
+
+class Waterfall:
+    """A class to show the buildset waterfall."""
+
+    def __init__(self, client, repo_name, cli):
+        """param client: A client connected to the master
+        :param repo_name: The name of the repository
+        :param cli: An instance of toxiccli."""
+
+        self.client = client
+        self.repo_name = repo_name
+        self.cli = cli
+
+    async def show_waterfall(self):
+
+        BaseModel._client = self.client
+        try:
+            buildsets = await BuildSet.list(self.client.user,
+                                            repo_name_or_id=self.repo_name)
+            builders = await get_builders_for_buildsets(
+                self.client.user, buildsets)
+            return self._format_waterfall(builders, buildsets)
+        finally:
+            BaseModel._client = None
+
+    def peek_callback(self, response):
+        if isinstance(response, str):
+            return False
+        event = response['body'].get('event_type')
+        self.cli.messages.set_text('got event {}'.format(event))
+        if event in ['build_added', 'buid_started',
+                     'build_finished']:
+            self.cli.stop_peek()
+            asyncio.ensure_future(self.show_waterfall())
+            return True
+        return False
+
+    def _get_ordered_builds(self, builds, builders):
+        if not builds:
+            return []
+        ordered_builds = []
+        i = 0
+        for b in builders:
+            try:
+                build = builds[i]
+            except IndexError:
+                ordered_builds.append('')
+            else:
+                if b.name != build.builder.name:
+                    ordered_builds.append('')
+                else:
+                    ordered_builds.append(build)
+                    i += 1
+
+        return ordered_builds
+
+    def _format_waterfall(self, builders, buildsets):
+        output = [['buildsets'] + [b.name for b in builders]]
+        output += [[''] + ['' for b in builders]]
+        max_builds = max([len(b.builds) for b in buildsets])
+        for buildset in buildsets:
+            row = [buildset.commit[:8]]
+
+            builds = self._get_ordered_builds(buildset.builds, builders)
+            for i in range(max_builds):
+                try:
+                    build = builds[i]
+                    if build:
+                        row += ['Build {}'.format(build.status)]
+                    else:
+                        row += ['']
+                except IndexError:  # pragma no cover
+                    row += ['']
+            output += [row]
+
+        self._write_screen(output)
+
+    def _write_screen(self, output):
+        asyncio.ensure_future(self.cli.peek(format_fn=self.peek_callback))
+        output = self.cli._format_output_columns(
+            output, post_item_formatter=self.post_item_formatter,
+            post_row_formatter=self.post_row_formatter)
+        self.cli.main_screen.set_text(output)
+
+    def post_item_formatter(self, item):
+        # giving color to build status
+        try:
+            msg0, msg1 = item.split('Build')[0], item.split('Build')[1]
+        except IndexError:
+            return item
+        status = msg1.strip()
+        statuses = {'running': 'status-running',
+                    'exception': 'status-exception',
+                    'cancelled': 'status-cancelled',
+                    'fail': 'status-fail',
+                    'pending': 'status-pending',
+                    'success': 'status-success',
+                    'warning': 'status-warning'}
+        color = statuses.get(status) or 'none'
+        msg0 += 'Build'
+        textstyle = ('none', msg0), (color, msg1)
+        return textstyle
+
+    def post_row_formatter(self, row):
+        new_row = []
+        itemstr = ''
+        for item in row:
+            if isinstance(item, str):
+                itemstr += item
+            else:
+                if itemstr:  # pragma no branch
+                    new_row.append(itemstr)
+                    itemstr = ''
+                new_row.append(item[0])
+                new_row.append(item[1])
+
+        return new_row or [''.join(row)]
 
 
 class ToxicCli(ToxicCliActions, urwid.Filler):
 
     # urwid, great library!
 
-    def __init__(self, host='localhost', port=6666, token=None):
+    def __init__(self, username_or_email, password, host='localhost',
+                 port=6666, token=None, use_ssl=True, validate_cert=True):
 
         self.prompt = 'toxicbuild> '
         self.input = HistoryEdit(self.prompt)
         self.messages = urwid.Text('')
         self.main_screen = urwid.Text('')
         self.div = urwid.Divider()
+        self.loop = asyncio.get_event_loop()
         self.pile = urwid.Pile([self.main_screen, self.div, self.messages,
                                 self.div, self.input])
-        super().__init__(self.pile, valign='bottom', host=host, port=port,
-                         token=token)
+        super().__init__(username_or_email, password, self.pile,
+                         valign='bottom',
+                         host=host, port=port,
+                         token=token,
+                         use_ssl=use_ssl, validate_cert=validate_cert)
 
         self._stop_peek = False
         self._peek_output = []
+        self._exiting = False
 
     def __getattr__(self, attrname):
         if attrname.startswith('_format'):
@@ -289,13 +448,24 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
                    ('bold_red', 'dark red,bold', ''),
                    ('error', 'dark red', ''),
                    ('action-name', 'dark blue,bold', ''),
+                   ('status-running', 'light cyan,bold', ''),
+                   ('status-fail', 'light red,bold', ''),
+                   ('status-exception', '', '', '', 'h89,bold', ''),
+                   ('status-cancelled', '', '', '', 'h102,bold', ''),
+                   ('status-success', '', '', '', 'h22,bold', ''),
+                   ('status-warning', '', '', '', 'h202,bold', ''),
+                   ('status-pending', '', '', '', 'h190,bold', ''),
                    ('param', 'white,bold', '')]
 
         self.show_welcome_screen()
-        evl = urwid.AsyncioEventLoop(loop=asyncio.get_event_loop())
-        urwid.MainLoop(self, palette, event_loop=evl).run()
+        evl = urwid.AsyncioEventLoop(loop=self.loop)
+        loop = urwid.MainLoop(self, event_loop=evl)
+        loop.screen.set_terminal_properties(colors=256)
+        loop.screen.register_palette(palette)
+        loop.run()
 
     def quit(self):
+        self._exiting = True
         self.input.save_history()
         raise urwid.ExitMainLoop()
 
@@ -309,7 +479,9 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         self.messages.set_text('')
         if not input_text:
             return
-        asyncio.async(self.execute_and_show(input_text))
+        f = asyncio.ensure_future(self.execute_and_show(input_text))
+        # for tests
+        return f
 
     @asyncio.coroutine
     def execute_and_show(self, cmdline):
@@ -326,14 +498,18 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
             # return just for tests
             return self.quit()
         elif cmdline == 'peek':
-            return (yield from self.peek())
+            asyncio.ensure_future(self.peek())
+            return
 
         elif cmdline == 'stop-peek':
             self.stop_peek()
-            self.main_screen.set_text('stopped!')
+            self.messages.set_text('stopped!')
             return
         elif cmdline == 'welcome-screen':
             self.show_welcome_screen()
+            return
+        elif cmdline.startswith('waterfall'):
+            asyncio.ensure_future(self.show_waterfall(cmdline))
             return
         else:
             try:
@@ -349,20 +525,32 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         self.main_screen.set_text(response)
 
     @asyncio.coroutine
-    def peek(self):
+    def peek(self, format_fn=None):
         """Peeks throught the master's hole."""
 
         with (yield from self.get_client()) as client:
 
             response = yield from client.request2server('stream', {})
-            self.main_screen.set_text(self._format_result(response))
+            if not format_fn:
+                self.main_screen.set_text(self._format_result(response))
+            else:
+                format_fn(response)
+
             while True:
-                response = yield from client.get_response()
-                if self._stop_peek:
-                    client.diconnect()
-                    break
-                self.main_screen.set_text(
-                    self._format_peek(response))  # pragma no cover
+                try:
+                    response = yield from client.get_response()
+                    if self._stop_peek:
+                        client.diconnect()
+                        break
+
+                    if not format_fn:
+                        self.main_screen.set_text(  # pragma no cover
+                            self._format_peek(response))
+                    else:
+                        format_fn(response)
+                except Exception:  # pragma no cover
+                    tb = traceback.format_exc()
+                    self.messages.set_text(('error', str(tb)))
 
         self._stop_peek = False
 
@@ -397,6 +585,18 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
 
         self.main_screen.set_text(text)
 
+    async def show_waterfall(self, cmdline):
+        _, args, _ = parse_cmdline(cmdline)
+        try:
+            repo_name = args[0]
+        except IndexError:
+            self.messages.set_text(('error', 'repo_name required'))
+            return False
+        client = await self.get_client()
+        waterfall = Waterfall(client, repo_name, self)
+        asyncio.ensure_future(waterfall.show_waterfall())
+        return True
+
     def get_action_help_screen(self, action, full=True):
         """ Returns a list already formated to be displayed by
         ``self.main_screen`` as the help for a command.
@@ -407,8 +607,8 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
                 '%s' % action_help['short_doc']]
 
         if full:
-            params = _('Parameters')  # noqa f821
-            required = _('Required')  # noqa f821
+            params = _('Parameters')  # pylint: disable=undefined-variable
+            required = _('Required')  # pylint: disable=undefined-variable
 
             text += [action_help['doc'], '\n']
 
@@ -425,16 +625,16 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         return text
 
     def get_help_screen(self, command_name=None):
-
+        # pylint: disable=undefined-variable
         text = [('action-name', 'help'), ' - ']
 
-        text.append(_('Displays this help text.'))  # noqa f821
+        text.append(_('Displays this help text.'))  # noqa F821
 
-        params = _('Parameters')  # noqa f821
+        params = _('Parameters')  # noqa F821
         text += ['\n%s: ' % params, ('param', 'command-name\n\n')]
         text += [('action-name', 'quit'), ' - ']
 
-        text.append(_('Finishes the program'))  # noqa f821
+        text.append(_('Finishes the program'))  # noqa F821
         text.append('\n')
 
         ordered_actions = sorted(self.actions.keys())
@@ -445,12 +645,14 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
         return text
 
     def _get_welcome_text(self):
+        # pylint: disable=undefined-variable
         # Translators: Do not translate what is inside {}
-        return _('Welcome to {toxicbuild}')  # noqa f821
+        return _('Welcome to {toxicbuild}')
 
     def _get_help_text(self):
+        # pylint: disable=undefined-variable
         # Translators: Do not translate what is inside {}
-        return _('Type {h} for help and {q} for quit')  # noqa f821
+        return _('Type {h} for help and {q} for quit')
 
     def _format_help_text(self, text):
         # all this mess to put colors on h and q... pfff
@@ -478,39 +680,51 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
     def _format_help(self, result):
         return result
 
-    def _format_row(self, sizes, row):
+    def _format_row(self, sizes, row, post_item_formatter=lambda x: x):
         formated_row = []
         for i, item in enumerate(row):
             item = str(item)
             size = sizes[i]
             itemstr = item + ' ' * (size - len(item)) + ' ' * 4
-            formated_row.append(itemstr)
+            formated_row.append(post_item_formatter(itemstr))
 
-        return ''.join(formated_row)
+        return formated_row
 
-    def _format_output_columns(self, output):
+    def _format_output_columns(self, output,
+                               post_item_formatter=lambda x: x,
+                               post_row_formatter=lambda x: x):
         sizes = self._get_column_sizes(output)
         formated_output = []
+
         for row in output:
-            row = self._format_row(sizes, row)
-            formated_output.append(row)
+            try:
+                row = self._format_row(sizes, row, post_item_formatter)
+                new_row = post_row_formatter(row)
+                for item in new_row:
+                    formated_output.append(item)
+            except IndexError:
+                formated_output.append('')
 
             formated_output.append('\n')
 
-        return ''.join(formated_output)
+        return formated_output
 
     def _format_repo_list(self, repos):
-        output = [(_('name'), _('vcs'))]  # noqa f821
+        # pylint: disable=undefined-variable
+        output = [(_('name'), _('vcs'))]  # noqa F821
         output += [(r['name'], r['vcs_type']) for r in repos]
         return self._format_output_columns(output)
 
     def _format_slave_list(self, slaves):
-        output = [(_('name'), _('host'), _('port'))]  # noqa f821
+        # pylint: disable=undefined-variable
+        output = [(_('name'), _('host'), _('port'))]  # noqa F821
         output += [(s['name'], s['host'], s['port']) for s in slaves]
         return self._format_output_columns(output)
 
     def _format_builder_list(self, builders):
-        output = [(_('name'), _('status'))]  # noqa f821
+        # pylint: disable=undefined-variable
+
+        output = [(_('name'), _('status'))]  # noqa F821
         output += [(b['name'], b['status'])
                    for b in builders]
         return self._format_output_columns(output)
@@ -545,12 +759,14 @@ class ToxicCli(ToxicCliActions, urwid.Filler):
     def _format_peek_step(self, response):
         if response.get('finished'):
             # Translators: Do not translate what is inside {}
-            msg = _('step {step} finished with status {status}')  # noqa f821
+            msg = _(  # pylint: disable=undefined-variable
+                'step {step} finished with status {status}')
             msg = msg.format(step=response['command'],
                              status=response['status'])
         else:
             # Translators: Do not translate what is inside {}
-            msg = _('step {step} is running')  # noqa f821
+            msg = _(  # pylint: disable=undefined-variable
+                'step {step} is running')
             msg = msg.format(step=response['command'])
 
         return msg

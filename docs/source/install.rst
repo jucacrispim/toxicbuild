@@ -1,23 +1,69 @@
-Install & setup
-===============
+Installation
+============
 
-Before using toxicbuild in our ci process we need to install it and create a
-new environment.
+You have a few options to have a ToxicBuild instance running.
+
+Using Docker
+++++++++++++
+
+The easiest way to have a ToxicBuild local installation is to use Docker.
+So, with docker installed on your system, first clone the code:
+
+.. code-block:: sh
+
+   $ git clone https://github.com/jucacrispim/toxicbuild.git
+   $ cd toxicbuild
+
+And then run the ``./build-scripts/toxicinstall.sh create-local`` command
+
+.. code-block:: sh
+
+   $ ./build-scripts/toxicinstall.sh create-local
+   - Pulling required images
+   ...
+
+   - Creating toxicbase image. Be patient.
+   ...
+
+   - Creating toxicslave
+   - Creating toxicoutput
+   - Creating toxicmaster
+     email: a@a.com
+     password: 123
+   - Creating toxicscheduler
+   - Creating toxicpoller
+   - Creating toxicintegrations
+   - Creating toxicweb
+
+Now you can start with ``./build-scripts/toxicinstall.sh start-local``
+
+.. code-block:: sh
+
+   $ ./build-scripts/toxicinstall.sh start-local
+
+And access http://localhost:8888/ using your browser.
 
 
-Install
-+++++++
+Using pip
++++++++++
 
-ToxicBuild is written in Python, and runs in Python3.5 and later. It uses
-mongodb to store data and git as vcs. You must have these installed.
+ToxicBuild is written in Python, and runs in Python3.6 and later. It uses
+mongodb to store data, rabbitmq for queues, zookeeper for coordination
+and git as vcs. You must have these installed. In a debian system, use the
+following command:
 
-.. note::
+.. code-block:: sh
 
-   These are the external programs used by ToxicBuild, but to install the
-   code dependencies you may need a C compiler and the header files for your
-   Python interpreter and for libffi. In a Debian system install the packages
-   ``build-essential``, ``libffi-dev`` and ``pythonX.Y-dev``, where X.Y is the
-   version of your interpreter.
+   sudo apt-get install mongodb rabbitmq zookeeperd
+
+
+If you want to be able to build c extensions for speed, install the
+Python header files, a C compiler ``libffi`` and ``libyaml``.
+
+.. code-block:: sh
+
+   sudo apt-get install build-essential libffi-dev python3.7-dev libyaml-dev
+
 
 After the installation of the external dependencies you can install toxicbuild
 using pip:
@@ -27,104 +73,76 @@ using pip:
    $ pip install toxicbuild
 
 
-And that's it. ToxicBuild is installed.
+Now that toxicbuild is installed we need to create a new environment
 
 
 Setup
-+++++
+-----
 
-First we need to create a new environment for our continuous integration.
-This is done using the command ``toxicbuild create``.
-
-.. code-block:: sh
-
-    $ toxicbuild create ~/ci
-    Creating root_dir ~/ci/slave for toxicslave
-    Toxicslave environment created with access token: ...
-    Creating root_dir ~/ci/master for toxicmaster
-    Toxicmaster environment created with access token: ...
-    Creating root_dir ~/ci/ui
-    Username for web access:
-    Password for web access:
-    Toxicui environment created for web
-
-
-There are some config values you may want to change. They are:
-
-Toxicmaster config values
--------------------------
-
-The configuration file for toxicmaster is located at
-`~/ci/master/toxicmaster.conf`.
-
-Database
-^^^^^^^^
-
-You can change the database connection parameters changing the
-`DATABASE` parameter:
-
-.. code-block:: python
-
-   DATABASE = {'host': 'localhost',
-	       'port': 27017,
-               'db': 'toxicmaster'}
-
-For authentication, add the `username` and `password` keys:
-
-.. code-block:: python
-
-   DATABASE = {'host': 'localhost',
-	       'port': 27017,
-               'db': 'toxicmaster',
-	       'username': 'db-user',
-	       'password': 'db-password'}
-
-Email
-^^^^^
-
-If you want to be able to send emails containing information about builds,
-we need to configure the smpt options.
-
-
-.. code-block:: python
-
-   SMTP_MAIL_FROM = 'test@toxictest.com'
-   SMTP_HOST = 'localhost'
-   SMTP_PORT = 587
-   SMTP_USERNAME = 'test@toxictest.com'
-   SMTP_PASSWORD = 'some-strong-password'
-   # Should we validade the certificate? If your certificate is self signed
-   # this should be False
-   SMTP_VALIDATE_CERTS = True
-   SMTP_STARTTLS = False
-
-
-Toxicweb config values
-----------------------
-The configuration file for toxicmaster is located at
-`~/ci/ui/toxicui.conf`.
-
-By default, all dates and times are displayed using the UTC timezone in the
-following format: ``'%a %b %d %H:%M:%S %Y %z'``. You can change it using the
-``TIMEZONE`` and ``DTFORMAT`` variables.
-
-A list with the format codes can be found `here <http://strftime.org/>`_
-and a list of timezones can be found
-`here <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`_.
-
-
-Starting toxicbuild
-+++++++++++++++++++
-
-After the environment is created, use the command ``toxicbuld start`` to
-start everything needed.
+Create a new environment using the command ``toxicbuild create``.
 
 .. code-block:: sh
 
-    $ toxicbuild start ~/ci
-    Starting toxicslave
-    Starting toxicmaster
-    Starting tornado server on port 8888
+   $ toxicbuild create ~/ci
+   Creating root_dir `ci/slave` for toxicslave
+   Toxicslave environment created with access token: mI4AHDl0LjzTrD1RieX64xp1xWrXhoiGgdedFJ5IRvg
+   Creating root_dir `ci/output` for toxicoutput
+   Creating root_dir `ci/master` for toxicmaster
+   email: a@a.com
+   password: 123
+   Toxicmaster environment created with access token: wq7dUahnE_EkveLIH1R9KsDg2qT0rHSfljQqh1g3iB8
+   Creating root_dir `ci/integrations` for toxicintegrations
+   Creating root_dir ci/ui
+   Toxicui environment created for web
 
-And now access http://localhost:8888 in your browser. Use the username and
-password supplied in the create process to access the web interface.
+
+
+And now you can start toxicbuild with the command ``toxicbuild start``:
+
+.. code-block:: sh
+
+   $ toxicbuild start ~/ci
+   Starting toxicslave
+   Starting toxicmaster
+   Starting toxicpoller
+   Starting toxicscheduler
+   Starting output web api on port 9432
+   Starting integrations on port 9999
+
+
+.. _toxicslave-install:
+
+Installing only toxicslave
+++++++++++++++++++++++++++
+
+One toxicbuild installation can handle multiple slaves so now lets install
+only toxicslave and use supervisor to start toxicslave on startup.
+
+For the slave we don't need mongo, rabbitmq or zookeeper, so we simply install
+toxicbuild
+
+.. code-block:: sh
+
+   $ pip install toxicbuild
+
+Now we create a toxicslave environment
+
+.. code-block:: sh
+
+   $ toxicslave create ~/ci/slave
+   Creating root_dir `ci/slave` for toxicslave
+   Toxicslave environment created with access token: xXE2enJ-O1YcSx8vurLyTawGds_bkJ79i6-LShVEPjA
+
+Save this access token as it can't be recovered later.
+
+This is an example of a minimal supervisor config:
+
+.. code-block:: cfg
+
+   [program:toxicslave]
+   command=/home/ec2-user/venv/bin/toxicslave start /home/ec2-user/ci/slave
+   directory=/home/ec2-user/ci/slave
+   numprocs=1
+   autorestart=true
+   user=ec2-user
+   environment=HOME="/home/ec2-user/"

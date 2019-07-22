@@ -4,7 +4,15 @@ Hacking ToxicBuild
 This is a brief introduction to the internals of ToxicBuild for those
 who want to hack it in some way. ToxicBuild is written in python so you
 must have some python dev tools, like virtualenv-wrapper and C compiler and
-some header files to install it.
+some header files to install it. Other than that, you need a database and
+a queue manager - the same you need for the usage. And, finally you need
+xvfb and selenium chrome driver for the web tests. In a Debian system the
+following command should do the trick:
+
+.. code-block:: sh
+
+   $ sudo apt-get install python3.6-dev build-essential mongodb \
+		rabbitmq-server libyaml-dev xvfb chromedriver
 
 
 Installing from sources
@@ -14,18 +22,18 @@ Before we fetch the code, lets create a virtualenv to install our code inside.
 
 .. code-block:: sh
 
-    $ mkvirtualenv toxicbuild -p python3.5
+    $ mkvirtualenv toxicbuild -p python3.6
     $ mkdir ~/hacks
     $ cd ~/hacks
 
-Now you may clone the code from github:
+You may now clone the code from github:
 
 .. code-block:: sh
 
     $ git clone https://github.com/jucacrispim/toxicbuild.git
     $ cd toxicbuild
 
-And now install the dependencies:
+And now install python the dependencies:
 
 .. code-block:: sh
 
@@ -35,8 +43,7 @@ Finally, run the tests:
 
 .. code-block:: sh
 
-    $ python setup.py test
-    $ behave tests/functional/webui/
+    $ sh ./build-scripts/run_all_tests.sh
 
 
 You should see no errors in the tests.
@@ -60,6 +67,8 @@ everything that is needed:
     $ ln -s ~/hacks/toxicbuild/toxicbuild toxicbuild
     $ ln -s ~/hacks/toxicbuild/script/toxicmaster ~/hacks/cienv/toxicmaster
     $ ln -s ~/hacks/toxicbuild/script/toxicslave ~/hacks/cienv/toxicslave
+    $ ln -s ~/hacks/toxicbuild/script/toxicintegrations ~/hacks/cienv/toxicintegrations
+    $ ln -s ~/hacks/toxicbuild/script/toxicoutput ~/hacks/cienv/toxicoutput
     $ ln -s ~/hacks/toxicbuild/script/toxicweb ~/hacks/cienv/toxicweb
 
 When everything is ready we can start the componets needed to have a
@@ -67,33 +76,56 @@ functional toxicbuild environment:
 
 .. code-block:: sh
 
-    $ ~/hacks/toxicbuild/toxicslave start ~/hacks/cienv/slave --daemonize --loglevel=debug
-    $ ~/hacks/toxicbuild/toxicmaster start ~/hacks/cienv/master --daemonize --loglevel=debug
-    $ ~/hacks/toxicbuild/toxicweb start ~/hacks/cienv/ui --daemonize --loglevel=debug
+    $ ~/hacks/toxicbuild start ~/hacks/cienv/ --loglevel=debug
+
+
+The following log files may be interesting:
+
+* ``~/hacks/cienv/master/toxicmaster.log``: Log file for toxicmaster instance.
+* ``~/hacks/cienv/master/toxicpoller.log``: Log file for toxicpoller instance.
+* ``~/hacks/cienv/master/toxicscheduler.log``: Log file for toxicscheduler
+  instance.
+* ``~/hacks/cienv/slave/toxicslave.log``: Log file for toxicslave instance.
+* ``~/hacks/cienv/output/toxicoutput.log``: Log file for toxicoutput instance.
+* ``~/hacks/cienv/integrations/toxicintegrations.log``: Log file for
+  toxicintegrations instance.
 
 
 How that works
 --------------
 
-ToxicBuild consists in three parts: master, slave and ui. Each componet
-talks to the others they need using the
-:doc:`ToxicBuild Poor's Protocol <tpp>`.
+ToxicBuild consists in a few moving parts that interact with each other using
+the :doc:`ToxicBuild Poor's Protocol <tpp>` (for 'direct' messages from one
+part to another) or sending messages using a broker (for async events that may
+occour). The differente components of ToxicBuild are:
 
-In the users' guide we saw how to start the whole thing at once using the
-``toxicbuild`` command. We may start each one of the components individually
-using the ``toxicmaster``, ``toxicslave`` and ``toxicweb`` command. Use them
-with the ``-h`` option for more information.
+* Master: Responsible for controlling all the stuff. Manages build queues,
+  controlling access to resources and receiving requests from the user
+  interface.
+
+* Poller: Responsible for polling changes from the repository and notify
+  the master in case of new revisions.
+
+* Scheduler: Responsible for periodicaly asking for the poller to check for
+  new changes. Used only by repositories imported manualy.
+
+* Slave: Responsible for executing the builds.
+
+* Integrations: Responsible for interacting with 3rd party services.
+
+* Output: Responsible for sending notifications about events.
 
 
 Master
 ------
 
-The master is resposible for polling data (:mod:`toxicbuild.master.pollers`)
-from the repositories (:mod:`toxicbuild.master.repository`), notifying the
-slaves about new builds and send information about builds to the ui(s). Clients
-communicate to the master, asking for things, like to add a new repo, start a
-build or listen to events that occour in the master throught the
-:mod:`toxicbuild.master.hole` (using the tpp, of course.)
+The responsible for controlling everything. When it detects new revisions
+notified by the poller, new builds and bildsets are created for them.
+
+When the master is notified by poller - throught the revisions_added exchange -
+that new revisions arrived it creates new buildsets and builds for the
+revisions. Then, the :class:`~toxicbuild.master.build.BuildManager` is
+responsible for requesting a build to the slave.
 
 It also has some plugins (:mod:`toxicbuild.master.plugins`) that are, at the
 moment, used to send information about builds to different places, like e-mail
@@ -102,6 +134,13 @@ notification or integration with 3rd party systems like slack.
 
 Writting master plugins
 +++++++++++++++++++++++
+
+.. warning::
+
+   This module is out of place here. In the version 0.4 the output module
+   didn't exist, so the notification plugins were master plugins. It changed
+   in 0.5, but the code still lives in the master. That is going to change
+   in version 0.6.
 
 To write master plugins is quite simple. In the
 :mod:`toxicbuild.master.plugins` module, you must subclass
@@ -125,7 +164,7 @@ coroutines.
 		                       required=True)
 
 
-       async def run(self):
+       async def run(self, sender):
            """Do your stuff here. Connect to signals and do something
            in reaction to them."""
 
@@ -157,19 +196,20 @@ implement ``send_started_message`` and ``send_finished_message`` methods.
            finished."""
 
 
-Master signals
-++++++++++++++
+..
+   Master signals
+   ++++++++++++++
 
-The following signals are sent in master:
+   The following signals are sent in master:
 
-* revision_added - Sent when changes are detected in the source code.
-* build_added - Sent when a new build is added to the database.
-* build_started - Sent when a build starts.
-* build_finished - Sent when a build finishes.
-* step_started - Sent when a build step starts
-* step_finished - Sent when a build step finishes.
-* step_output_arrived - Sent when we have some output from a step.
-* repo_status_changed - Sent when the status of a repository changes.
+   * revision_added - Sent when changes are detected in the source code.
+   * build_added - Sent when a new build is added to the database.
+   * build_started - Sent when a build starts.
+   * build_finished - Sent when a build finishes.
+   * step_started - Sent when a build step starts
+   * step_finished - Sent when a build step finishes.
+   * step_output_arrived - Sent when we have some output from a step.
+   * repo_status_changed - Sent when the status of a repository changes.
 
 Slave
 -----
@@ -220,3 +260,13 @@ The package :mod:`toxicbuild.ui` implements ways for end users to interact
 with ToxicBuild. It uses the module :mod:`toxicbuild.ui.models` to
 communicate with the master and the module :mod:`toxicbuild.ui.web`
 implemnts a simple web interface.
+
+
+..
+   Exchanges
+   ---------
+
+   Exchanges are a the way ToxicBuild parts talk to each other when asychronous
+   events occour, using RabbiMQ. The following may be interresting:
+
+   - repo_notifications: Exchange used

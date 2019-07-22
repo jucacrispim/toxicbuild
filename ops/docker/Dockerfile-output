@@ -1,0 +1,5 @@
+FROM toxicbase
+
+RUN toxicoutput create /home/toxicuser/ci/output
+
+CMD ["toxicoutput", "start", "/home/toxicuser/ci/output"]

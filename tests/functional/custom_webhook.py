@@ -19,6 +19,7 @@
 
 # Server for custom webhook. Used in functional tests
 
+import asyncio
 import os
 import sys
 from mando import command, main
@@ -100,6 +101,9 @@ def stop(workdir, pidfile=None):
         command.pidfile = pidfile
         command.kill = True
         command.run()
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(WebHookMessage.drop_collection())
 
 
 if __name__ == '__main__':

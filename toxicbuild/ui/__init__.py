@@ -5,17 +5,25 @@ import os
 import pkg_resources
 import shutil
 import sys
+from tornado import locale
 from tornado.platform.asyncio import AsyncIOMainLoop
-from pyrocumulus.commands.base import get_command
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
-from toxicbuild.core.utils import bcrypt, bcrypt_string, changedir
+from toxicbuild.core.utils import bcrypt, changedir, SettingsPatcher
 
+# pylint: disable=global-statement
 
 here = os.path.dirname(os.path.abspath(__file__))
-translations = os.path.join(here, 'translations')
 
-gettext.install('toxicbuild.ui', translations)
+# translations for cli
+cli_translations = os.path.join(here, 'translations')
+gettext.install('toxicbuild.ui', cli_translations)
+
+
+# translations for ui
+web_translations = os.path.join(here, 'translations', 'web')
+locale.load_translations(web_translations)
+
 
 ENVVAR = 'TOXICUI_SETTINGS'
 DEFAULT_SETTINGS = 'toxicui.conf'
@@ -97,7 +105,13 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
 
         create_settings()
 
+        SettingsPatcher().patch_pyro_settings(settings)
+
+        from pyrocumulus.commands.base import get_command
+
         sys.argv = ['pyromanager.py', '']
+
+        print('Starting web ui on port {}'.format(settings.TORNADO_PORT))
 
         if not pyrocommand:
             pyrocommand = command = get_command('runtornado')()
@@ -108,6 +122,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         command.daemonize = daemonize
         command.stderr = stderr
         command.application = None
+        command.loglevel = loglevel
         command.stdout = stdout
         command.port = settings.TORNADO_PORT
         command.pidfile = pidfile
@@ -138,6 +153,10 @@ def stop(workdir, pidfile=None):
 
         create_settings()
 
+        SettingsPatcher().patch_pyro_settings(settings)
+
+        from pyrocumulus.commands.base import get_command
+
         sys.argv = ['pyromanager.py', '']
 
         if not pyrocommand:
@@ -151,26 +170,29 @@ def stop(workdir, pidfile=None):
 
 
 @command
-def restart(workdir, pidfile=None):
-    """Restarts toxicslave
+def restart(workdir, pidfile=None, loglevel='info'):
+    """Restarts the web interface
 
     The instance of toxicweb in ``workdir`` will be restarted.
     :param workdir: Workdir for master to be killed.
     :param --pidfile: Name of the file to use as pidfile.
+    :param --loglevel: Level for logging messages.
     """
 
     stop(workdir, pidfile=pidfile)
-    start(workdir, pidfile=pidfile, daemonize=True)
+    start(workdir, pidfile=pidfile, daemonize=True, loglevel=loglevel)
 
 
 @command
-def create(root_dir, access_token, username=None, password=None):
+def create(root_dir, access_token='', output_token='', root_user_id='',
+           cookie_secret=''):
     """ Create a new toxicweb project.
 
-    :param --root_dir: Root directory for toxicweb.
+    :param root_dir: Root directory for toxicweb.
     :param --access-token: Access token to master's hole.
-    :param --username: Username for web access
-    :param --password: Password for web access
+    :param --output-token: Access token to the notifications api.
+    :param --root-user-id: The id for the root user of the system.
+    :param --cookie-secret: Secret for secure cookies.
     """
     print('Creating root_dir {}'.format(root_dir))
 
@@ -183,27 +205,16 @@ def create(root_dir, access_token, username=None, password=None):
     dest_file = os.path.join(root_dir, 'toxicui.conf')
     shutil.copyfile(template_file, dest_file)
 
-    if not username:
-        username = _ask_thing('Username for web access: ')
-
-    if not password:
-        password = _ask_thing('Password for web access: ')
-
-    # here we create a bcrypt salt and a access token for authentication.
-    salt = bcrypt.gensalt(8)
-    # cookie secret to tornado secure cookies
-    cookie_secret = bcrypt.gensalt(8).decode()
-    encrypted_password = bcrypt_string(password, salt)
+    cookie_secret = cookie_secret or bcrypt.gensalt(8).decode()
 
     # and finally update the config file content with the new generated
     # salt and access token
     with open(dest_file, 'r+') as fd:
         content = fd.read()
-        content = content.replace('{{HOLE_TOKEN}}', access_token)
-        content = content.replace('{{BCRYPT_SALT}}', salt.decode())
-        content = content.replace('{{USERNAME}}', username)
-        content = content.replace('{{PASSWORD}}', encrypted_password)
         content = content.replace('{{COOKIE_SECRET}}', cookie_secret)
+        content = content.replace('{{HOLE_TOKEN}}', access_token)
+        content = content.replace('{{NOTIFICATIONS_API_TOKEN}}', output_token)
+        content = content.replace('{{ROOT_USER_ID}}', root_user_id)
         fd.seek(0)
         fd.write(content)
 

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block logout_link %}{% end %}
+
+{% block main_area %}
+
+
+<div class="modal fade" tabindex="-1" role="dialog" id="forgotPasswordModal">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{translate('Reset password')}}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="text" class="form-control" id="change-password-email"
+	       placeholder="{{translate('Insert your email')}}">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-dark btn-sm"
+		id="btn-request-password-reset">
+	  {{translate('Reset password')}}
+	</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="container login-container">
+  <div class="login-header-msg text-center mx-auto">
+    <p>{{translate('Sign in')}}</p>
+  </div>
+
+  <div id="login-input-container"
+       class="box-white col-sm-3 mx-auto box-shadow">
+    <form class="form-signin" id="form-signin" method="post" action="">
+
+      <div id="login-error-msg-container" class="error">
+	<span class="fas fa-exclamation-triangle"></span>
+	<span>{{translate('Invalid credentials')}}</span>
+      </div>
+      <input type="text" id="inputUsername" name="username_or_email"
+	     class="form-control login-form-control"
+	     placeholder="email or username"
+	     required>
+
+      <input type="password" id="inputPassword" name="password"
+	     class="form-control login-form-control" placeholder="password"
+	     required>
+    </form>
+    <button class="btn btn-md btn-primary btn-block btn-dark" type="submit"
+	    id="btn-login">
+      <span class="spinner icon-spinner-2" id="login-btn-spinner"
+	    style="display:none">
+      </span>
+      <span id="login-btn-text">{{translate('Sign in')}}</span>
+    </button>
+    <div class="forgot-password-container">
+      <a href="#forgotPasswordModal" data-toggle="modal" data-target="#forgotPasswordModal">{{translate('Forgot password?')}}</a>
+    </div>
+
+  </div>
+
+  <div id="new-to-toxicbuild-container"
+       class="col-sm-3 box-white mx-auto box-shadow">
+    {{translate('New to ToxicBuild?')}} <a href="/register">
+      {{translate('Sign up!')}}
+    </a>
+  </div>
+</div>
+{% end %}
+
+
+{% block js_bottom %}
+<script src="{{static_url}}jquery/jquery.min.js"></script>
+<script src="{{static_url}}jquery/jquery.validate.min.js"></script>
+<script src="{{static_url}}jquery/jquery.color-2.1.2.min.js"></script>
+<script src="{{static_url}}bootstrap/js/bootstrap.min.js"></script>
+<script src="{{static_url}}common/js/js.cookie.js"></script>
+<script src="{{static_url}}toxicbuild/js/utils.js"></script>
+<script src="{{static_url}}common/js/i18n.min.js"></script>
+<script src="{{static_url}}toxicbuild/js/login.js"></script>
+{% end %}

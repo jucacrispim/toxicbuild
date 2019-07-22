@@ -1,0 +1,107 @@
+<!-- template container -->
+<div class="template">
+  <ul id="repo-list-ul">
+    <!-- The item template -->
+    <li class="repository-info box-white box-shadow">
+	<!-- header -->
+	<div class="repository-info-header dropdown">
+	  <span class="fas fa-ellipsis-h dropdown-toggle"
+		id="dropdown-menu-ellipsis"
+		data-toggle="dropdown"></span>
+
+	  <div class="dropdown-menu dropdown-menu-right box-shadow-gray"
+	       aria-labelledby="dropdown-menu-ellipsis">
+	    <a class="dropdown-item repo-details-link" href="">
+	      {{translate('Settings')}}
+	    </a>
+	  </div>
+	</div>
+	<!-- end header -->
+
+	<!-- first row-->
+	<div class="repository-info-row repository-info-first-row">
+	  <!-- repo name -->
+	  <div class="repo-info-container repository-info-name-container">
+	    <a href="#"><span class="repository-info-name"></span></a>
+	  </div>
+	  <!-- end repo name -->
+	  <!-- repo enabled -->
+	  <div class="repo-info-container repository-info-enabled-container">
+	    <div class=" wait-change-enabled-spinner">
+	      <span class="spinner icon-spinner-2"></span>
+	    </div>
+
+	    <input type="checkbox"
+		   class="enabled-checkbox repo-enabled-checkbox"
+		   data-on="{{ translate('enabled') }}"
+		   data-off="{{ translate('disabled') }}"
+		   data-onstyle="success" data-offstyle="secondary"
+		   data-style="checkbox-rounded checkbox-sm"
+		   data-width="1pz" data-height="1pz">
+
+	    <!-- the 1pz stuff is a hack to avoid bootstrap-togge
+		 setting the width and height of the element to 0 with
+		 inline css -->
+
+	  </div>
+	  <!-- end repo enabled -->
+	</div>
+	<!-- end first row -->
+    </li>
+    <!-- end item template -->
+  </ul>
+</div>
+<!-- end template container -->
+
+
+<!-- left side -->
+<div class="settings-left-side col-sm-9">
+  <div class="top-page-repositories-info-container top-page-repositories-settings-info-container">
+    <!-- add and import icons -->
+    <a href="/repository/add" class="no-decoration">
+      <span class="fas fa-plus" data-toogle="tooltip" title="Add"></span>
+    </a>
+    <a href="{{github_import_url}}" data-noroute=true>
+      <span class="fab fa-github" data-toogle="tooltip"
+	    title="Import from Github"></span>
+    </a>
+
+    <a href="{{gitlab_import_url}}" data-noroute=true>
+      <span class="fab fa-gitlab" data-toogle="tooltip"
+	    title="Import from Gitlab"></span>
+    </a>
+
+    <!-- end add and import icons -->
+  </div>
+  <!-- main area left side -->
+  <div id="repo-list-container">
+  </div>
+  <!-- end main area left side -->
+</div>
+
+<!-- righ  side -->
+<div class="settings-right-side col-sm-3">
+  <div>
+    <span>
+      <h5>{{ translate('Repositories') }}</h5>
+      <p>
+	{{ translate('Repositories are where your code is located.') }}
+	{% raw translate('You may <a href="/repository/add">add</a> or <a href="#">import</a> them.') %}
+
+      </p>
+      <b>{{translate('See also')}}:</b>
+	<ul><li><a href="#">{{translate('Repository configuration')}}</a></li></ul>
+      <p>
+      </p>
+      <p>
+	{{translate('Once a repository is enabled all configured checks and tests will be executed when a change is detected.')}}
+      </p>
+      <b>{{translate('See also')}}:</b>
+      <ul><li><a href="#">{% raw translate('Build configuration') %}</a></li></ul>
+      <p>
+      </p>
+
+    </span>
+  </div>
+</div>
+<!-- end right side -->

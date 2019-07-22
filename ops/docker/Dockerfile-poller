@@ -1,0 +1,3 @@
+FROM toxicmaster
+
+CMD ["toxicmaster", "start_poller", "/home/toxicuser/ci/master"]

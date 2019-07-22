@@ -24,7 +24,7 @@ import unittest
 from unittest.mock import MagicMock, Mock, patch
 import tornado
 from toxicbuild.ui import cli
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 # urwid changes the locale and this makes a test on vcs fail
@@ -103,8 +103,14 @@ class CliCommandTest(unittest.TestCase):
         args = [1]
 
         kwargs = cli.get_kwargs(command_args, args)
-
         self.assertEqual(kwargs['a'], 1)
+
+    def test_get_kwargs_bad_args(self):
+        command_args = []
+        args = [1]
+
+        with self.assertRaises(cli.ToxicShellError):
+            kwargs = cli.get_kwargs(command_args, args)
 
 
 class HistoryEditTest(unittest.TestCase):
@@ -338,45 +344,44 @@ class ToxicCliActionsTest(unittest.TestCase):
     def setUp(self):
         super().setUp()
 
+        username_or_email = 'toxicuser'
+        password = 'asdf'
         cli.ToxicCliActions.get_actions.return_value = ACTIONS
-        self.cli_actions = cli.ToxicCliActions()
+        self.cli_actions = cli.ToxicCliActions(username_or_email,
+                                               password)
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
 
-    @patch.object(cli, 'get_hole_client', MagicMock())
+    @patch.object(cli, 'get_hole_client', AsyncMagicMock(
+        spec=cli.get_hole_client))
     @async_test
     def test_get_client(self):
-        client = MagicMock()
-
-        @asyncio.coroutine
-        def ghc(host, port, token):
-            client.__enter__.return_value = client
-            return client
-
-        cli.get_hole_client = ghc
-
+        cli.get_hole_client.return_value.__bool__ = lambda *a, **kw: True
         returned = yield from self.cli_actions.get_client()
+        self.assertTrue(returned)
 
-        self.assertTrue(returned, client)
-
-    @patch.object(cli, 'get_hole_client', MagicMock())
+    @patch.object(cli, 'get_hole_client', AsyncMagicMock(
+        spec=cli.get_hole_client))
     def test_get_actions(self):
-        client = MagicMock()
+        cli.get_hole_client.return_value = MagicMock()
+        client = cli.get_hole_client.return_value
+        client.user_authenticate = AsyncMagicMock(return_value={'id': 'id'})
+        client = cli.get_hole_client.return_value.__enter__.return_value
+        client.list_funcs = AsyncMagicMock()
+        actions = self.cli_actions.get_actions()
 
-        @asyncio.coroutine
-        def lf():
-            return ACTIONS
+        self.assertEqual(actions, ACTIONS)
 
-        client.list_funcs = lf
-
-        @asyncio.coroutine
-        def ghc(host, port, token):
-            client.__enter__.return_value = client
-            return client
-
-        cli.get_hole_client = ghc
-
+    @patch.object(cli, 'get_hole_client', AsyncMagicMock(
+        spec=cli.get_hole_client))
+    def test_get_actions_no_authenticate(self):
+        self.cli_actions.user = Mock()
+        cli.get_hole_client.return_value = MagicMock()
+        client = cli.get_hole_client.return_value
+        client.user_authenticate = AsyncMagicMock(return_value={'id': 'id'})
+        client = cli.get_hole_client.return_value.__enter__.return_value
+        client.list_funcs = AsyncMagicMock()
         actions = self.cli_actions.get_actions()
 
         self.assertEqual(actions, ACTIONS)
@@ -422,7 +427,8 @@ class ToxicCliActionsTest(unittest.TestCase):
         client.request2server = r2s
 
         @asyncio.coroutine
-        def ghc(host, port, token):
+        def ghc(requester, host, port, hole_token,
+                use_ssl, validate_cert):
             client.__enter__.return_value = client
             return client
 
@@ -438,17 +444,19 @@ class ToxicCliTest(unittest.TestCase):
 
     @classmethod
     @patch.object(cli.ToxicCliActions, 'get_client', MagicMock())
-    def setUpClass(cls):
+    def setUp(cls):
         @asyncio.coroutine
         def gc(*args, **kwargs):
             client = MagicMock()
+            client.user_authenticate = AsyncMagicMock(return_value={
+                'id': 'some-id'})
             client.list_funcs = asyncio.coroutine(lambda *args, **kwargs: None)
             client.__enter__.return_value = client
             return client
 
         cli.ToxicCliActions.get_client = gc
 
-        cls.cli = cli.ToxicCli()
+        cls.cli = cli.ToxicCli('toxicuser', 'asdf')
         cls.cli.actions = ACTIONS
         cls.loop = asyncio.get_event_loop()
 
@@ -470,9 +478,13 @@ class ToxicCliTest(unittest.TestCase):
     @patch.object(cli.urwid, 'MainLoop', Mock())
     @patch.object(cli.ToxicCli, 'show_welcome_screen', Mock())
     def test_run(self):
-        self.cli.run()
+        def stop():
+            self.cli._exiting = True
 
-        self.assertTrue(self.cli.show_welcome_screen.called)
+        self.cli.show_welcome_screen = stop
+
+        self.cli._exiting = False
+        self.cli.run()
         self.assertTrue(cli.urwid.AsyncioEventLoop.called)
         self.assertTrue(cli.urwid.MainLoop.called)
 
@@ -481,6 +493,7 @@ class ToxicCliTest(unittest.TestCase):
         with self.assertRaises(cli.urwid.ExitMainLoop):
             self.cli.quit()
 
+    @async_test
     def test_keypress_with_enter(self):
         self.cli.input.set_edit_text('repo-list')
 
@@ -492,19 +505,12 @@ class ToxicCliTest(unittest.TestCase):
 
         self.cli.execute_and_show = exec_and_show
 
-        self.cli.keypress((10, 10), 'enter')
-
-        loop = asyncio.get_event_loop()
-        try:
-            loop.run_until_complete(
-                asyncio.gather(*asyncio.Task.all_tasks()))
-
-        except concurrent.futures._base.CancelledError:
-            pass
+        f = self.cli.keypress((10, 10), 'enter')
+        yield from f
 
         self.assertEqual(self.cmdline, 'repo-list')
 
-    def test_keypree_with_enter_and_no_data(self):
+    def test_keypress_with_enter_and_no_data(self):
         self.cli.input.set_edit_text('')
 
         self.cmdline = None
@@ -515,15 +521,9 @@ class ToxicCliTest(unittest.TestCase):
 
         self.cli.execute_and_show = exec_and_show
 
-        self.cli.keypress((10, 10), 'enter')
+        f = self.cli.keypress((10, 10), 'enter')
 
-        loop = asyncio.get_event_loop()
-        try:
-            loop.run_until_complete(
-                asyncio.gather(*asyncio.Task.all_tasks()))
-        except concurrent.futures._base.CancelledError:
-            pass
-
+        self.assertIsNone(f)
         self.assertEqual(self.cmdline, None)
 
     def test_key_press(self):
@@ -537,15 +537,16 @@ class ToxicCliTest(unittest.TestCase):
 
         self.cli.execute_and_show = exec_and_show
 
-        self.cli.keypress((10, 10), ' ')
-
-        try:
-            self.loop.run_until_complete(
-                asyncio.gather(*asyncio.Task.all_tasks()))
-        except concurrent.futures._base.CancelledError:
-            pass
-
+        f = self.cli.keypress((10, 10), ' ')
+        self.assertIsNone(f)
         self.assertEqual(self.cmdline, None)
+
+
+    def test_execute_and_show_with_show_waterfall(self):
+        self.cli.show_waterfall = AsyncMagicMock()
+        self.loop.run_until_complete(self.cli.execute_and_show('waterfall b'))
+
+        self.assertTrue(self.cli.show_waterfall.called)
 
     def test_execute_and_show_with_exception(self):
         @asyncio.coroutine
@@ -605,7 +606,7 @@ class ToxicCliTest(unittest.TestCase):
         self.loop.run_until_complete(self.cli.execute_and_show(cmdline))
         self.assertTrue(self.cli.quit.called)
 
-    @patch.object(cli.ToxicCli, 'peek', MagicMock(spec=cli.ToxicCli.peek))
+    @patch.object(cli.ToxicCli, 'peek', AsyncMagicMock(spec=cli.ToxicCli.peek))
     def test_execute_with_peek(self):
         cmdline = 'peek'
 
@@ -642,6 +643,45 @@ class ToxicCliTest(unittest.TestCase):
         stream_called = client_mock.request2server.call_args[0][0] == 'stream'
         self.assertTrue(stream_called)
         self.assertTrue(client_mock.get_response.called)
+
+    def test_peek_format_fn(self):
+        client_mock = MagicMock()
+        client_mock.__enter__.return_value = client_mock
+
+        @asyncio.coroutine
+        def gc():
+            return client_mock
+
+        fn_mock = Mock()
+
+        self.COUNT = 0
+        def fn(r):
+            if self.COUNT > 0:
+                self.cli._stop_peek = True
+            self.COUNT += 1
+            fn_mock()
+
+        self.cli.get_client = gc
+        self.loop.run_until_complete(self.cli.peek(fn))
+
+        stream_called = client_mock.request2server.call_args[0][0] == 'stream'
+        self.assertTrue(stream_called)
+        self.assertTrue(client_mock.get_response.called)
+        self.assertTrue(fn_mock.called)
+
+    @async_test
+    async def test_show_watefall_no_repo(self):
+        self.cli.messages = Mock()
+        r = await  self.cli.show_waterfall('waterfall')
+        self.assertFalse(r)
+
+    @patch.object(cli.Waterfall, 'show_waterfall', AsyncMagicMock())
+    @async_test
+    async def test_show_watefall(self):
+        self.cli.messages = Mock()
+        self.cli.get_client = AsyncMagicMock()
+        r = await  self.cli.show_waterfall('waterfall a')
+        self.assertTrue(r)
 
     def test_get_welcome_text(self):
         expected = _('Welcome to {toxicbuild}')  # noqa
@@ -730,7 +770,7 @@ class ToxicCliTest(unittest.TestCase):
 
         formated = self.cli._format_row(sizes, row)
 
-        self.assertEqual(formated, expected)
+        self.assertEqual(''.join(formated), expected)
 
     def test_format_output_columns(self):
         output = (('name', 'url', 'vcs'),
@@ -742,7 +782,15 @@ class ToxicCliTest(unittest.TestCase):
 
         formated = self.cli._format_output_columns(output)
 
-        self.assertEqual(formated.strip(), expected.strip())
+        self.assertEqual(''.join(formated).strip(), expected.strip())
+
+
+    def test_format_output_columns_index_error(self):
+
+        self.cli._format_row = Mock(side_effect=IndexError)
+        formated = self.cli._format_output_columns(['some', 'output'])
+
+        self.assertEqual(''.join(formated).strip(), '')
 
     @patch.object(cli.ToxicCli, '_format_output_columns', Mock())
     def test_format_repo_list(self):
@@ -820,3 +868,158 @@ class ToxicCliTest(unittest.TestCase):
         msg = self.cli._format_peek_step(response)
 
         self.assertEqual(msg, expected)
+
+
+class WaterfallTest(unittest.TestCase):
+
+    def setUp(self):
+        client = AsyncMagicMock()
+        cli_mock = Mock()
+        cli_mock.peek  = AsyncMagicMock()
+        self.waterfall = cli.Waterfall(client, 'some-repo-name', cli_mock)
+
+    def test_get_ordered_builds(self):
+        builder0 = Mock()
+        builder0.name = 'builder0'
+
+        builder1 = Mock()
+        builder1.name = 'builder1'
+
+        builder2 = Mock()
+        builder2.name = 'builder2'
+
+        build0 = Mock()
+        build0.builder = builder1
+
+        build1 = Mock()
+        build1.builder = builder2
+
+        builds = [build0, build1]
+        builders = [builder0, builder1, builder2]
+
+        expected = ['', build0, build1]
+        returned = self.waterfall._get_ordered_builds(builds, builders)
+        self.assertEqual(returned, expected)
+
+    def test_get_ordered_builds_index_error(self):
+        builder0 = Mock()
+        builder0.name = 'builder0'
+
+        builder1 = Mock()
+        builder1.name = 'builder1'
+
+        builder2 = Mock()
+        builder2.name = 'builder2'
+
+        build0 = Mock()
+        build0.builder = builder1
+
+        builds = [build0]
+        builders = [builder0, builder1, builder2]
+
+        expected = ['', build0, '']
+        returned = self.waterfall._get_ordered_builds(builds, builders)
+        self.assertEqual(returned, expected)
+
+    def test_get_ordered_builds_no_builds(self):
+        returned = self.waterfall._get_ordered_builds([], [Mock()])
+        self.assertFalse(returned)
+
+    def test_format_waterfall(self):
+        builder0 = Mock()
+        builder0.name = 'builder0'
+
+        builder1 = Mock()
+        builder1.name = 'builder1'
+
+        builder2 = Mock()
+        builder2.name = 'builder2'
+
+        build0 = Mock()
+        build0.status = 'success'
+        build0.builder = builder1
+
+        build1 = Mock()
+        build1.status = 'fail'
+        build1.builder = builder2
+
+        builds = [build0, build1]
+        builders = [builder0, builder1, builder2]
+
+        buildset0 = Mock()
+        buildset0.commit = 'adsfzxcvqwer1234'
+        buildset0.builds = [build0]
+
+        build2 = Mock()
+        build2.status = 'fail'
+        build2.builder = builder0
+
+        buildset1 = Mock()
+        buildset1.commit = 'adsfzxcvqwer1234'
+        buildset1.builds = [build2] + builds
+        buildsets = [buildset0, buildset1]
+        expected = [
+            ['buildsets', 'builder0', 'builder1', 'builder2'],
+            ['', '', '', ''],
+            ['adsfzxcv', '', 'Build success', ''],
+            ['adsfzxcv', 'Build fail', 'Build success', 'Build fail']
+        ]
+        self.waterfall._write_screen = Mock()
+        self.waterfall._format_waterfall(builders, buildsets)
+        returned = self.waterfall._write_screen.call_args[0][0]
+        self.assertEqual(returned, expected)
+
+    def test_post_item_formatter(self):
+        item = 'Build cancelled   '
+        expected = ('none', 'Build'), ('status-cancelled', ' cancelled   ')
+        returned = self.waterfall.post_item_formatter(item)
+        self.assertEqual(expected, returned)
+
+
+    def test_post_item_formatter_index_error(self):
+        item = 'some-builder other-builder'
+        expected = item
+        returned = self.waterfall.post_item_formatter(item)
+        self.assertEqual(expected, returned)
+
+    def test_post_row_formatter(self):
+        row = ['a-string ', 'and-other', (('a-colored', 'string'),
+                                          ('and-other-colored', 'string'))]
+        expected = ['a-string and-other', ('a-colored', 'string'),
+                    ('and-other-colored', 'string')]
+        returned = self.waterfall.post_row_formatter(row)
+        self.assertEqual(returned, expected)
+
+    @patch.object(cli.BuildSet, 'list', AsyncMagicMock(
+        spec=cli.BuildSet.list))
+    @patch.object(cli, 'get_builders_for_buildsets', AsyncMagicMock(
+        spe=cli.get_builders_for_buildsets))
+    @async_test
+    async def test_show_waterfall(self):
+        self.waterfall._format_waterfall = Mock(
+            spec=self.waterfall._format_waterfall)
+
+        self.waterfall.client = Mock()
+        await self.waterfall.show_waterfall()
+        self.assertTrue(self.waterfall._format_waterfall.called)
+
+    def test_peek_callback_str(self):
+        r = self.waterfall.peek_callback('bla')
+        self.assertFalse(r)
+
+    @async_test
+    def test_peek_callback_build_finished(self):
+        response = {'body': {'event_type': 'build_finished'}}
+        self.waterfall.show_waterfall = AsyncMagicMock()
+        r = self.waterfall.peek_callback(response)
+        self.assertTrue(r)
+
+    def test_peek_callback_step_output(self):
+        response = {'body': {'event_type': 'step_output'}}
+        r = self.waterfall.peek_callback(response)
+        self.assertFalse(r)
+
+    @async_test
+    def test_write_screen(self):
+        self.waterfall._write_screen([['output', 'bla']])
+        self.assertTrue(self.waterfall.cli.main_screen.set_text.called)

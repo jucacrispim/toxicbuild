@@ -1,0 +1,104 @@
+<div class="template">
+  <div id="buildset-details">
+    <div class="buildset-details-header">
+      <span class="repo-name"></span> - <span class="buildset-label">Buildset </span>
+      <b>#<span class="buildset-number"></span></b>
+      <span class="buildset-status badge" data-toggle="tooltip">
+      </span>
+      <span class="fas fa-cog fa-spin"></span>
+    </div>
+
+    <div class="buildset-builds-container col-sm-4">
+      <ul class="builds-ul">
+      </ul>
+    </div>
+    <div class="buildset-info-container col-sm-4">
+      <span>{{translate('Author')}}: </span><b><span class="commit-author"></span></b><br/>
+      <span>{{translate('Title')}}: </span><b><span class="commit-title"></span></b><br/>
+      <span>{% raw translate('Branch') %}: </span><b><span class="commit-branch"></b></span><br/>
+      <span>{% raw translate('Commit') %}: </span><b><span class="buildset-commit"></b></span><br/>
+      <span>{{translate('Body')}}: </span><b><span class="buildset-commit-body"></b></span>
+    </div>
+    <div class="col-sm-4 buildset-info-container">
+      <span class="far fa-calendar-alt" data-toggle="tooltip"
+	    title="{{translate('commit date')}}"></span>
+      <span class="buildset-commit-date" data-toggle="tooltip"
+	    title="{{translate('commit date')}}"></span><br/>
+      <span class="far fa-calendar-check" data-toggle="tooltip"
+	    title="{{translate('started at')}}"></span>
+      <span class="buildset-started" data-toggle="tooltip"
+	    title="{{translate('started at')}}"></span><br/>
+      <span class="far fa-clock" data-toggle="tooltip"
+	    title="{{translate('duration')}}"></span>
+      <span class="buildset-total-time" data-toggle="tooltip"
+	    title="{{translate('duration')}}"></span>
+    </div>
+
+  </div>
+
+  <!-- builds info -->
+  <div class="builder-build-container">
+    <span class="builder-name"></span>-<span class="build-status"></span>
+    <a href="" class="build-details-link">
+      <span class="fas fa-info" data-toggle="tooltip"
+	    title="build details">
+      </span>
+    </a>
+  </div>
+
+</div>
+
+<!-- main build detaile container -->
+<div id="buildset-container" class="details-main-container box-shadow-gray">
+  <div class="close-btn">&times;</div>
+
+  <!-- loading spinner -->
+  <div class="wait-toxic-spinner wait-toxic-spinner-lg col-sm-2 mx-auto">
+    <span class="spinner icon-spinner-2"></span>
+    <span class="icon-toxicmask"></span>
+  </div>
+  <!-- end loading spinner -->
+
+  <!-- navigation pills -->
+  <div class="nav-container">
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+	<a class="nav-link active box-shadow" href="#">
+	  General configurations
+	</a>
+      </li>
+  </div>
+
+  <!-- end navigation pills -->
+
+  <div id="buildset-details-container"></div>
+
+    <!-- buttons container -->
+    <div class="obj-details-buttons-container buttons-container col-sm-12">
+
+      <div class="cancel-btn-container inner-btn-container">
+	<button class="btn btn-sm btn-dark btn-block" type="submit"
+		id="btn-cancel-save">
+	  <span id="cancel-save-slave-btn-text">{{translate('Close')}}</span>
+	</button>
+      </div>
+
+    </div>
+    <!-- end buttons container -->
+
+</div>
+
+
+<input type="hidden" value="{{buildset_id}}" id="buildset-id">
+<input type="hidden" value="{{repo_id}}" id="repo-id">
+
+<script>
+  async function init(){
+    let buildset_id = jQuery('#buildset-id').val();
+    let page;
+    page = new BuildSetDetailsPage({router: router, buildset_id: buildset_id});
+    await page.render();
+  }
+
+  window.onload = function(){init()};
+</script>

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -22,11 +22,14 @@ from collections import defaultdict
 import os
 from toxicbuild.core import get_vcs
 from toxicbuild.core.utils import (get_toxicbuildconf, LoggerMixin,
-                                   ExecCmdError, match_string)
-from toxicbuild.slave.build import Builder, BuildStep
+                                   ExecCmdError, match_string,
+                                   list_builders_from_config,
+                                   get_toxicbuildconf_yaml)
+from toxicbuild.slave import settings
+from toxicbuild.slave.build import Builder
+from toxicbuild.slave.docker import DockerContainerBuilder
 from toxicbuild.slave.exceptions import (BuilderNotFound, BadBuilderConfig,
                                          BusyRepository)
-from toxicbuild.slave.plugins import SlavePlugin
 
 
 class BuildManager(LoggerMixin):
@@ -42,13 +45,30 @@ class BuildManager(LoggerMixin):
     # key is repo_url and value is named_tree
     building_repos = defaultdict(lambda: None)  # pragma no branch WTF??
 
-    def __init__(self, protocol, repo_url, vcs_type, branch, named_tree):
+    def __init__(self, protocol, repo_url, vcs_type, branch, named_tree,
+                 config_type='py', config_filename='toxicbuild.conf',
+                 builders_from=None):
+        """
+        :param manager: instance of :class:`toxicbuild.slave.BuildManager.`
+        :param repo_url: The repository URL
+        :param vcs_type: Type of vcs used in the repository.
+        :param branch: Which branch to use in the build.
+        :param named_tree: A tag, commit, branch name...
+        :param config_type: The type of config used. 'py' or 'yaml'.
+        :param config_filename: The name of the build config file.
+        :param builders_from: If not None, builders to this branch will be used
+          instead of builders for the current branch.
+        """
         self.protocol = protocol
         self.repo_url = repo_url
+        self.vcs_type = vcs_type
         self.vcs = get_vcs(vcs_type)(self.workdir)
         self.branch = branch
         self.named_tree = named_tree
-        self._configmodule = None
+        self.config_type = config_type
+        self.config_filename = config_filename
+        self.builders_from = builders_from
+        self._config = None
 
     def __enter__(self):
         if self.current_build and self.current_build != self.named_tree:
@@ -63,10 +83,8 @@ class BuildManager(LoggerMixin):
         self.current_build = None
 
     @property
-    def configmodule(self):
-        if not self._configmodule:  # pragma: no branch
-            self._configmodule = get_toxicbuildconf(self.workdir)
-        return self._configmodule
+    def config(self):
+        return self._config
 
     @property
     def workdir(self):
@@ -115,6 +133,13 @@ class BuildManager(LoggerMixin):
         """Informs if this repository is cloning or updating"""
         return self.is_cloning or self.is_updating
 
+    async def load_config(self):
+        if self.config_type == 'py':
+            self._config = get_toxicbuildconf(self.workdir)
+        else:
+            self._config = await get_toxicbuildconf_yaml(self.workdir,
+                                                         self.config_filename)
+
     @asyncio.coroutine
     def wait_clone(self):
         """Wait until the repository clone is complete."""
@@ -137,15 +162,19 @@ class BuildManager(LoggerMixin):
             yield from asyncio.sleep(1)
 
     @asyncio.coroutine
-    def update_and_checkout(self, work_after_wait=True):
+    def update_and_checkout(self, work_after_wait=True, external=None):
         """ Updates ``self.branch`` and checkout to ``self.named_tree``.
+
         :param work_after_wait: Indicates if we should update and checkout
           after waiting for other instance finishes its job.
+        :param external: Info about a remote repository if the build should
+          be executed with changes from a remote repo.
         """
 
         if self.is_working:
             yield from self.wait_all()
             if not work_after_wait:
+                yield from self.load_config()
                 return
 
         try:
@@ -153,6 +182,22 @@ class BuildManager(LoggerMixin):
             if not self.vcs.workdir_exists():
                 self.log('cloning {}'.format(self.repo_url))
                 yield from self.vcs.clone(self.repo_url)
+
+            if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
+                self.log('updating submodule', level='debug')
+                yield from self.vcs.update_submodule()
+
+            if external:
+                url = external['url']
+                name = external['name']
+                branch = external['branch']
+                into = external['into']
+                yield from self.vcs.import_external_branch(url, name, branch,
+                                                           into)
+            else:
+                # we need to try_set_remote so if the url has changed, we
+                # change it before trying fetch/checkout stuff
+                yield from self.vcs.try_set_remote(self.repo_url)
 
             # first we try to checkout to the named_tree because if if
             # already exists here we don't need to update the code.
@@ -164,6 +209,7 @@ class BuildManager(LoggerMixin):
                 # this is executed when the named_tree does not  exist
                 # so we upate the code and then checkout again.
                 self.log('named_tree does not exist. updating...')
+                yield from self.vcs.get_remote_branches()
                 self.log('checking out to branch {}'.format(self.branch),
                          level='debug')
                 yield from self.vcs.checkout(self.branch)
@@ -175,69 +221,68 @@ class BuildManager(LoggerMixin):
         finally:
             self.is_updating = False
 
+        yield from self.load_config()
+
     def _branch_match(self, builder):
         return builder.get('branch') is None or match_string(
             self.branch, [builder.get('branch', '')])
 
-        # the whole purpose of toxicbuild is this!
-        # see the git history and look for the first versions.
-        # First thing I changed on buildbot was to add the possibility
-        # to load builers from a config file.
+    # the whole purpose of toxicbuild is this!
+    # see the git history and look for the first versions.
+    # First thing I changed on buildbot was to add the possibility
+    # to load builers from a config file.
     def list_builders(self):
         """ Returns a list with all builders names for this branch
-        based on toxicbuild.conf file
+        based on build config file
         """
+        builders = list_builders_from_config(self.config,
+                                             config_type=self.config_type)
 
         try:
-            builders = [b['name'] for b in self.configmodule.BUILDERS
-                        if (b.get('branch') == self.branch or b.get(
-                            'branch')is None)]
+            builders = [b['name'] for b in builders]
         except KeyError as e:
             key = str(e)
-            msg = 'Your builder config does not have a required key'.format(
+            msg = 'Your builder config does not have a required key {}'.format(
                 key)
             raise BadBuilderConfig(msg)
 
         return builders
 
-    def load_builder(self, name):
-        """ Load a builder from toxicbuild.conf
+    async def load_builder(self, name):
+        """ Loads a builder from toxicbuild.(conf|yml). If a container
+        is to be used for the build, returns a container builder
+        instance. Otherwise, return a Builder instance.
+
         :param name: builder name
         """
+        builders_branch = self.builders_from or self.branch
 
         try:
-            bdict = [b for b in self.configmodule.BUILDERS if (b.get(
-                'branch') is None and b['name'] == name) or (b.get(
-                    'branch') == self.branch and b['name'] == name)][0]
+            builders = list_builders_from_config(self.config,
+                                                 branch=builders_branch,
+                                                 config_type=self.config_type)
+            bdict = [b for b in builders if b['name'] == name][0]
         except IndexError:
             msg = 'builder {} does not exist for {} branch {}'.format(
                 name, self.repo_url, self.branch)
             raise BuilderNotFound(msg)
 
+        platform = bdict.get('platform', 'linux-generic')
+        remove_env = bdict.get('remove_env', True)
+        # now we have all we need to instanciate the container builder if
+        # needed.
+        if settings.USE_DOCKER:
+            builder_cls = DockerContainerBuilder
+        else:
+            builder_cls = Builder
+
         # this envvars are used in all steps in this builder
         builder_envvars = bdict.get('envvars', {})
-        builder = Builder(self, bdict['name'], self.workdir, **builder_envvars)
-        builder.steps = self._get_builder_steps(builder, bdict)
+        builder_envvars['COMMIT_SHA'] = self.named_tree
+        builder = builder_cls(self, bdict, self.workdir, platform,
+                              remove_env=remove_env, **builder_envvars)
+
         return builder
-
-    def _get_builder_steps(self, builder, bdict):
-        plugins_conf = bdict.get('plugins')
-        steps = []
-
-        if plugins_conf:
-            builder.plugins = self._load_plugins(plugins_conf)
-
-        for plugin in builder.plugins:
-            steps += plugin.get_steps_before()
-
-        for sdict in bdict['steps']:
-            step = BuildStep(**sdict)
-            steps.append(step)
-
-        for plugin in builder.plugins:
-            steps += plugin.get_steps_after()
-
-        return steps
 
     # kind of wierd place for this thing
     @asyncio.coroutine
@@ -247,16 +292,3 @@ class BuildManager(LoggerMixin):
     def log(self, msg, level='info'):
         msg = '[{}]{}'.format(self.repo_url, msg)
         super().log(msg, level=level)
-
-    def _load_plugins(self, plugins_config):
-        """ Returns a list of :class:`toxicbuild.slave.plugins.Plugin`
-        subclasses based on the plugins listed on the config for a builder.
-        """
-
-        plist = []
-        for pdict in plugins_config:
-            plugin_class = SlavePlugin.get_plugin(pdict['name'])
-            del pdict['name']
-            plugin = plugin_class(**pdict)
-            plist.append(plugin)
-        return plist

@@ -24,10 +24,24 @@ function StreamConsumer(){
     init: function(){
       var self = this;
       self.ws = new WebSocket(self.url);
-      self.ws.onmessage = self.change_repo_status;
+      self.ws.onmessage = function(event){
+	self.handle_ws_info(event);
+      };
     },
 
-    change_repo_status: function(event){
+    handle_ws_info: function(event){
+      var self = this;
+      var data = jQuery.parseJSON(event.data);
+      e_type = data['event_type']
+      utils.log(e_type);
+      if (e_type == 'repo_status_changed'){
+	self.change_repo_status(data);
+      }else if (e_type == 'repo_added'){
+	RepositoryManager._insertRepoRow(data);
+      };
+    },
+
+    change_repo_status: function(data){
       var self = this;
       var statuses = {'success': 'success', 'fail': 'danger',
                       'running': 'info', 'exception': 'exception',
@@ -36,15 +50,12 @@ function StreamConsumer(){
                       'warning': 'warning',
                       'cloning': 'pending'}
 
-      var data = jQuery.parseJSON(event.data);
-      utils.log(data);
       var status = data.status;
       var new_class = 'btn-' + statuses[status];
       var btn = jQuery('#btn-status-' + data.name);
       var old_status = data.old_status;
       var old_class = 'btn-' + statuses[old_status];
 
-      utils.log(btn);
       // animate class transition
       var transition_time = 200; // ms
       btn.animate({

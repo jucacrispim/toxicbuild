@@ -19,13 +19,13 @@
 
 
 import os
-from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import load_module_from_file
 
 
 class Settings:
     """ Simple interface to a settings file.
     """
+
     def __init__(self, envvar, default_filename):
         """:param envvar: Environment variable to look for settings file name
         :param default_filename: filename to use in case environment variable
@@ -58,12 +58,13 @@ class Settings:
         return module
 
     def __getattr__(self, attrname):
+
         try:
             attr = getattr(self._settings_module, attrname)
         except AttributeError:
             msg = 'Your settings {} file does not have an attribute {}.'.\
                   format(self._filename, attrname)
-            raise ConfigError(msg)
+            raise AttributeError(msg)
 
         return attr
 
