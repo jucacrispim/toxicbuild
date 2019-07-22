@@ -197,8 +197,8 @@ RELEASE_BUILDER:  &RELEASE_BUILDER
     - release
 
   plugins:
-    <<: *APT_INSTALL
-    <<: *PY36_VENV
+    - <<: *APT_INSTALL
+    - <<: *PY37_VENV
 
   envvars:
     <<: *TESTS_ENVVARS
