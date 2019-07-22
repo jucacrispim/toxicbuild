@@ -52,7 +52,7 @@ You can follow the development of toxicbuild through the issue tracker in
 Licence
 =======
 
-ToxicBuild is free software released under the GPLv3 or later.
+ToxicBuild is free software released under the AGPLv3 or later.
 
 
 Changelog
