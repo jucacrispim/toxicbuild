@@ -204,10 +204,10 @@ RELEASE_BUILDER:  &RELEASE_BUILDER
     <<: *TESTS_ENVVARS
 
   steps:
-    *RELEASE_STEPS
+    - <<: *RELEASE_STEPS
 
   platform:
-    python3.6
+    python3.7
 
 
 builders:
