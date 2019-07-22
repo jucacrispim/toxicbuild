@@ -1,6 +1,15 @@
 Changelog
 =========
 
+* 0.6.0
+
+  - Builds now can be optionally trigger by other builds.
+  - New build queue. Now are not sent to all slaves.
+  - Amazon ec2 integration
+  - Improved builds on docker containers
+  - Gitlab integration
+  - New web user interface
+
 * 0.5.0
 
   - Added support for builds inside docker containers.
