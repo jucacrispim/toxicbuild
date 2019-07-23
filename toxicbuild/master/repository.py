@@ -28,7 +28,7 @@ from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, IntField, ReferenceField,
                                DateTimeField, ListField, BooleanField,
                                EmbeddedDocumentField)
-from toxicbuild.core import utils
+from toxicbuild.core import utils, build_config
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.master import settings
 from toxicbuild.master.build import (BuildSet, Builder, BuildManager)
@@ -708,8 +708,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             self.log('checkout on {} to {}'.format(
                 self.url, revision.commit), level='debug')
             await self.vcs.checkout(revision.commit)
-            conf = await utils.get_config(self.workdir, self.config_type,
-                                          self.config_filename)
+            conf = await build_config.get_config(self.workdir,
+                                                 self.config_type,
+                                                 self.config_filename)
 
         return conf
 

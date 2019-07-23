@@ -21,10 +21,11 @@ import asyncio
 from collections import defaultdict
 import os
 from toxicbuild.core import get_vcs
-from toxicbuild.core.utils import (get_toxicbuildconf, LoggerMixin,
-                                   ExecCmdError, match_string,
-                                   list_builders_from_config,
-                                   get_toxicbuildconf_yaml)
+from toxicbuild.core.build_config import (list_builders_from_config,
+                                          get_toxicbuildconf,
+                                          get_toxicbuildconf_yaml)
+from toxicbuild.core.utils import (LoggerMixin,
+                                   ExecCmdError, match_string)
 from toxicbuild.slave import settings
 from toxicbuild.slave.build import Builder
 from toxicbuild.slave.docker import DockerContainerBuilder

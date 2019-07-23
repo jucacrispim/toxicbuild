@@ -30,8 +30,8 @@ from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
                                ReferenceField, DateTimeField, UUIDField,
                                IntField, EmbeddedDocumentListField)
-from toxicbuild.core.utils import (now, list_builders_from_config,
-                                   datetime2string, MatchKeysDict,
+from toxicbuild.core.build_config import list_builders_from_config
+from toxicbuild.core.utils import (now, datetime2string, MatchKeysDict,
                                    format_timedelta, LoggerMixin,
                                    localtime2utc, set_tzinfo)
 from toxicbuild.master.document import ExternalRevisionIinfo

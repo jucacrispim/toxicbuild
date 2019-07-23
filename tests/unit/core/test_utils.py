@@ -76,7 +76,7 @@ class UtilsTest(TestCase):
         stream = AsyncMagicMock()
         stream._buffer = bytearray()
         stream._maybe_resume_transport = Mock()
-        stream.extend(b'blerg')
+        await stream.extend(b'blerg')
         with self.assertRaises(ValueError):
             await utils._readline(stream)
 
@@ -188,41 +188,6 @@ class UtilsTest(TestCase):
 
         self.assertEqual(mod.BLA, 'val')
 
-    @async_test
-    async def test_get_toxicbuildconf_yaml_not_found(self):
-        with self.assertRaises(FileNotFoundError):
-            await utils.get_toxicbuildconf_yaml('/i/dont/exist')
-
-    @async_test
-    async def test_get_toxicbuildconf_yaml_with_some_error(self):
-        with self.assertRaises(utils.ConfigError):
-            await utils.get_toxicbuildconf_yaml(
-                TEST_DATA_DIR, 'toxicbuild_error.yml')
-
-    @async_test
-    async def test_get_toxicbuildconf_yaml(self):
-        config = await utils.get_toxicbuildconf_yaml(TEST_DATA_DIR)
-        self.assertTrue(config['builders'][0])
-
-    @patch.object(utils, 'get_toxicbuildconf',
-                  Mock(spec=utils.get_toxicbuildconf))
-    @async_test
-    async def test_get_config_py(self):
-        conf = await utils.get_config('/some/workdir', 'py',
-                                      'toxicbuild.conf')
-        self.assertTrue(utils.get_toxicbuildconf.called)
-        self.assertTrue(conf)
-
-    @patch.object(utils, 'get_toxicbuildconf_yaml',
-                  AsyncMagicMock(spec=utils.get_toxicbuildconf_yaml,
-                                 return_value=True))
-    @async_test
-    async def test_get_config_yaml(self):
-        conf = await utils.get_config('/some/workdir', 'yaml',
-                                      'toxicbuild.yml')
-        self.assertTrue(utils.get_toxicbuildconf_yaml.called)
-        self.assertTrue(conf)
-
     @patch.object(utils.logger, 'setLevel', Mock())
     def test_set_loglevel(self):
         utils.set_loglevel('info')
@@ -333,68 +298,6 @@ class UtilsTest(TestCase):
         n = datetime.datetime.now()
         ntz = utils.set_tzinfo(n, -10800)
         self.assertEqual(ntz.utcoffset().total_seconds(), -10800)
-
-    @patch.object(utils, 'load_module_from_file', Mock())
-    def test_get_toxicbuildconf(self):
-        utils.get_toxicbuildconf('/some/dir/')
-        called_conffile = utils.load_module_from_file.call_args[0][0]
-        self.assertTrue(utils.load_module_from_file.called)
-        self.assertEqual(called_conffile, '/some/dir/toxicbuild.conf')
-
-    def test_list_builders_from_config(self):
-        confmodule = Mock()
-        slave = Mock()
-        slave.name = 'myslave'
-        confmodule.BUILDERS = [{'name': 'b0'},
-                               {'name': 'b1', 'branches': ['otheir']},
-                               {'name': 'b2',
-                                'slaves': ['myslave'],
-                                'branches': ['mast*', 'release']},
-                               {'name': 'b3', 'slaves': ['otherslave']}]
-        builders = utils.list_builders_from_config(confmodule, 'master', slave)
-        self.assertEqual(len(builders), 2)
-        self.assertNotIn({'name': 'b1', 'branch': 'other'}, builders)
-
-    def test_list_builders_from_config_yaml(self):
-        slave = Mock()
-        slave.name = 'myslave'
-        config = {'builders':
-                  [{'name': 'b0'},
-                   {'name': 'b1', 'branches': ['otheir']},
-                   {'name': 'b2',
-                    'slaves': ['myslave'],
-                    'branches': ['mast*', 'release']},
-                   {'name': 'b3', 'slaves': ['otherslave']}]}
-        builders = utils.list_builders_from_config(config, 'master', slave,
-                                                   config_type='yaml')
-        self.assertEqual(len(builders), 2)
-        self.assertNotIn({'name': 'b1', 'branch': 'other'}, builders)
-
-    def test_list_builders_from_config_no_branch(self):
-        confmodule = Mock()
-        slave = Mock()
-        slave.name = 'myslave'
-        confmodule.BUILDERS = [{'name': 'b0'},
-                               {'name': 'b1', 'branches': ['other'],
-                                'slaves': ['other']},
-                               {'name': 'b2',
-                                'slaves': ['myslave'], 'branches': ['master']}]
-        builders = utils.list_builders_from_config(confmodule, slave=slave)
-        self.assertEqual(len(builders), 2)
-        self.assertNotIn({'name': 'b1', 'branch': 'other',
-                          'slave': 'other'}, builders)
-
-    def test_list_builders_from_config_no_branch_no_slave(self):
-        confmodule = Mock()
-        slave = Mock()
-        slave.name = 'myslave'
-        confmodule.BUILDERS = [{'name': 'b0'},
-                               {'name': 'b1', 'branches': ['other'],
-                                'slaves': ['other']},
-                               {'name': 'b2',
-                                'slaves': ['myslave'], 'branches': ['master']}]
-        builders = utils.list_builders_from_config(confmodule)
-        self.assertEqual(len(builders), 3)
 
     def test_bcript_with_str_salt(self):
         salt = utils.bcrypt.gensalt(7).decode()

@@ -708,8 +708,9 @@ class RepositoryTest(TestCase):
         self.assertFalse(self.repo.enabled)
 
     @patch('toxicbuild.core.vcs.Git.checkout', AsyncMagicMock())
-    @patch.object(repository.utils, 'get_config', AsyncMagicMock(
-        spec=repository.utils.get_config, return_value={'some': 'conf'}))
+    @patch.object(repository.build_config, 'get_config', AsyncMagicMock(
+        spec=repository.build_config.get_config,
+        return_value={'some': 'conf'}))
     @async_test
     async def test_get_config_for(self):
         self.repo.log = MagicMock(spec=self.repo.log)
