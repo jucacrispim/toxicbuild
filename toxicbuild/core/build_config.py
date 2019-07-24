@@ -215,9 +215,9 @@ class LanguageConfig:
         builders = []
         lang_vers = self._get_lang_versions()
         platforms = self._get_platforms(lang_vers)
-        steps = self.conf.get('steps')
-        envvars = self.conf.get('envvars')
-        branches = self.conf.get('branches')
+        steps = self.conf.get('steps', [])
+        envvars = self.conf.get('envvars', {})
+        branches = self.conf.get('branches', [])
         for lang_ver, os_name, plat in platforms:
             builder = {'name': plat,
                        'platform': plat,

@@ -215,3 +215,4 @@ class LanguageConfigTest(TestCase):
         builders = conf.builders
 
         self.assertEqual(len(builders), 4)
+        self.assertTrue(builders[0]['envvars'] is not None)
