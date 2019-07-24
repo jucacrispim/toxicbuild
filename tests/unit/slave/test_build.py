@@ -20,7 +20,7 @@
 import asyncio
 import os
 from unittest import mock, TestCase
-from toxicbuild.core.utils import load_module_from_file
+import yaml
 from toxicbuild.slave import build, managers, plugins
 from tests.unit.slave import TEST_DATA_DIR
 from tests import async_test, AsyncMagicMock
@@ -28,7 +28,7 @@ from tests import async_test, AsyncMagicMock
 
 class BuilderTest(TestCase):
 
-    @mock.patch.object(managers, 'get_toxicbuildconf', mock.MagicMock())
+    @mock.patch.object(managers, 'get_toxicbuildconf_yaml', mock.MagicMock())
     def setUp(self):
         super().setUp()
         protocol = mock.MagicMock()
@@ -41,10 +41,13 @@ class BuilderTest(TestCase):
 
         manager = managers.BuildManager(protocol, 'git@repo.git', 'git',
                                         'master', 'v0.1')
-        toxicconf = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
-        toxicconf = load_module_from_file(toxicconf)
+        toxicconf = os.path.join(TEST_DATA_DIR, 'toxicbuild.yml')
+        with open(toxicconf) as fd:
+            conf = fd.read()
 
-        managers.get_toxicbuildconf.return_value = toxicconf
+        toxicconf = yaml.load(conf)
+
+        managers.get_toxicbuildconf_yaml.return_value = toxicconf
 
         self.builder = build.Builder(manager, {'name': 'builder1',
                                                'steps': []}, '.')
