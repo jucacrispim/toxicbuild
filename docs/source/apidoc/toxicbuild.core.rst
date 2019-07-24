@@ -4,6 +4,14 @@ toxicbuild.core package
 Submodules
 ----------
 
+toxicbuild.core.build\_config module
+------------------------------------
+
+.. automodule:: toxicbuild.core.build_config
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 toxicbuild.core.client module
 -----------------------------
 

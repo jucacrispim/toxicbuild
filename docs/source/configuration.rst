@@ -230,8 +230,8 @@ Change the following environment variables to configure toxicslave:
 * ``SLAVE_KEYFILE`` - Path for a key file.
 
 
-Running builds in docker containers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Running builds inside docker containers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is possible to run builds inside docker containers so each time we
 run a build it is executed in a new environment. So, lets say you have
@@ -252,7 +252,7 @@ Then you must to set the following environment variables:
 
 * ``SLAVE_USE_DOCKER`` - Set its value to `1`
 * ``SLAVE_DOCKER_IMAGES`` - This value is a json mapping platform names to
-  docker image names e.g: `"{'linux-generic': 'my-deb-slim'}"`
+  docker image names e.g: `"{'debian-generic': 'my-deb-slim'}"`
 * ``SLAVE_CONTAINER_USER`` - The name of the user you created in your image.
 
 
