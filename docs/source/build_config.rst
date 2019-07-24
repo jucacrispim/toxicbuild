@@ -6,6 +6,11 @@ When a change in the source code is detected a group of `builds`, called
 by a configuration file called ``toxicbuild.yml`` in the root directory of
 your project.
 
+.. note::
+
+   If you want that a specific buildset does't create any builds,
+   in the build of your commit message put ``ci: skip``
+
 .. _build-simple-config:
 
 Simple configuration
