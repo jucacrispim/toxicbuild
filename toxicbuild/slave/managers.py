@@ -22,7 +22,6 @@ from collections import defaultdict
 import os
 from toxicbuild.core import get_vcs
 from toxicbuild.core.build_config import (list_builders_from_config,
-                                          get_toxicbuildconf,
                                           get_toxicbuildconf_yaml)
 from toxicbuild.core.utils import (LoggerMixin,
                                    ExecCmdError, match_string)
