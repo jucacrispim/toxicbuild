@@ -142,9 +142,9 @@ class BuildServerProtocol(BaseToxicProtocol):
         except KeyError as e:
             raise BadData('Bad data! Missing {}'.format(str(e)))
 
-        config_type = self.data['body'].get('config_type') or 'py'
+        config_type = self.data['body'].get('config_type') or 'yml'
         config_filename = self.data['body'].get(
-            'config_filename') or 'toxicbuild.conf'
+            'config_filename') or 'toxicbuild.yml'
         builders_from = self.data['body'].get('builders_from')
 
         manager = BuildManager(self, repo_url, vcs_type, branch, named_tree,
