@@ -68,21 +68,6 @@ class BuildConfigTest(TestCase):
         self.assertEqual(called_conffile, '/some/dir/toxicbuild.conf')
 
     def test_list_builders_from_config(self):
-        confmodule = Mock()
-        slave = Mock()
-        slave.name = 'myslave'
-        confmodule.BUILDERS = [{'name': 'b0'},
-                               {'name': 'b1', 'branches': ['otheir']},
-                               {'name': 'b2',
-                                'slaves': ['myslave'],
-                                'branches': ['mast*', 'release']},
-                               {'name': 'b3', 'slaves': ['otherslave']}]
-        builders = build_config.list_builders_from_config(
-            confmodule, 'master', slave)
-        self.assertEqual(len(builders), 2)
-        self.assertNotIn({'name': 'b1', 'branch': 'other'}, builders)
-
-    def test_list_builders_from_config_yaml(self):
         slave = Mock()
         slave.name = 'myslave'
         config = {'builders':
@@ -98,29 +83,135 @@ class BuildConfigTest(TestCase):
         self.assertEqual(len(builders), 2)
         self.assertNotIn({'name': 'b1', 'branch': 'other'}, builders)
 
+    def test_list_builders_from_config_language(self):
+        config = {'language': 'python',
+                  'versions': ['3.6', '3.7']}
+
+        builders = build_config.list_builders_from_config(config, 'master')
+        self.assertEqual(len(builders), 2)
+
     def test_list_builders_from_config_no_branch(self):
-        confmodule = Mock()
         slave = Mock()
         slave.name = 'myslave'
-        confmodule.BUILDERS = [{'name': 'b0'},
-                               {'name': 'b1', 'branches': ['other'],
-                                'slaves': ['other']},
-                               {'name': 'b2',
-                                'slaves': ['myslave'], 'branches': ['master']}]
+        config = {'builders':
+                  [{'name': 'b0'},
+                   {'name': 'b1', 'branches': ['other'],
+                    'slaves': ['other']},
+                   {'name': 'b2',
+                    'slaves': ['myslave'], 'branches': ['master']}]}
         builders = build_config.list_builders_from_config(
-            confmodule, slave=slave)
+            config, slave=slave)
         self.assertEqual(len(builders), 2)
         self.assertNotIn({'name': 'b1', 'branch': 'other',
                           'slave': 'other'}, builders)
 
     def test_list_builders_from_config_no_branch_no_slave(self):
-        confmodule = Mock()
         slave = Mock()
         slave.name = 'myslave'
-        confmodule.BUILDERS = [{'name': 'b0'},
-                               {'name': 'b1', 'branches': ['other'],
-                                'slaves': ['other']},
-                               {'name': 'b2',
-                                'slaves': ['myslave'], 'branches': ['master']}]
-        builders = build_config.list_builders_from_config(confmodule)
+        config = {'builders':
+                  [{'name': 'b0'},
+                   {'name': 'b1', 'branches': ['other'],
+                    'slaves': ['other']},
+                   {'name': 'b2',
+                    'slaves': ['myslave'], 'branches': ['master']}]}
+        builders = build_config.list_builders_from_config(config)
         self.assertEqual(len(builders), 3)
+
+
+class APTPluginConfigTest(TestCase):
+
+    def test_get_config(self):
+        conf = {'system_packages': ['package']}
+        expected = {'name': 'apt-install',
+                    'packages': ['package']}
+        plugin = build_config.APTPluginConfig(conf)
+        self.assertEqual(expected, plugin.get_config())
+
+
+class PythonPluginTest(TestCase):
+
+    def test_get_config(self):
+        conf = {'requirements_file': 'req.txt'}
+        lang_ver = 'python3.5'
+        expected = {'name': 'python-venv',
+                    'pyversion': lang_ver,
+                    'requirements_file': 'req.txt'}
+        plugin = build_config.PythonPluginConfig(lang_ver, conf)
+        self.assertEqual(expected, plugin.get_config())
+
+
+class LanguageConfigTest(TestCase):
+
+    def setUp(self):
+        self.conf = {'language': 'some-lang',
+                     'os': [],
+                     'versions': []}
+
+    def test_get_lang_versions_no_version(self):
+        conf = build_config.LanguageConfig(self.conf)
+        expected = ['some-lang']
+        r = conf._get_lang_versions()
+
+        self.assertEqual(expected, r)
+
+    def test_get_lang_versions(self):
+        self.conf['versions'] = ['1.1', '1.2']
+        conf = build_config.LanguageConfig(self.conf)
+        expected = ['some-lang1.1', 'some-lang1.2']
+        r = conf._get_lang_versions()
+
+        self.assertEqual(expected, r)
+
+    def test_get_platforms(self):
+        self.conf['os'] = ['redhat', 'debian']
+        conf = build_config.LanguageConfig(self.conf)
+        expected = [('some-lang', 'redhat', 'some-lang-redhat'),
+                    ('some-lang', 'debian', 'some-lang')]
+        lang_vers = conf._get_lang_versions()
+        r = conf._get_platforms(lang_vers)
+
+        self.assertEqual(expected, r)
+
+    def test_get_plugins_bad_os(self):
+        os_name = 'a-bad-one'
+        self.conf['system_packages'] = ['a-package']
+        conf = build_config.LanguageConfig(self.conf)
+        with self.assertRaises(build_config.ConfigError):
+            conf._get_plugins(os_name, 'some-lang1.1')
+
+    def test_get_plugins_ok_os(self):
+        os_name = 'debian'
+        self.conf['system_packages'] = ['a-package']
+        conf = build_config.LanguageConfig(self.conf)
+        r = conf._get_plugins(os_name, 'some-lang1.1')
+
+        self.assertEqual(len(r), 1)
+
+    def test_plugins_language(self):
+        self.conf['language'] = 'python'
+        os_name = 'debian'
+        lang_ver = 'python3.7'
+        conf = build_config.LanguageConfig(self.conf)
+        r = conf._get_plugins(os_name, lang_ver)
+
+        expected = [{'name': 'python-venv',
+                     'pyversion': 'python3.7',
+                     'requirements_file': 'requirements.txt'}]
+
+        self.assertEqual(r, expected)
+
+    def test_builders_already_exist(self):
+        conf = build_config.LanguageConfig(self.conf)
+        builders = [Mock()]
+        conf._builders = builders
+
+        self.assertEqual(builders, conf.builders)
+
+    def test_builders(self):
+        self.conf['versions'] = ['1.1', '1.2']
+        self.conf['os'] = ['debian', 'redhat']
+        conf = build_config.LanguageConfig(self.conf)
+
+        builders = conf.builders
+
+        self.assertEqual(len(builders), 4)

@@ -86,7 +86,7 @@ def _match_slave(slave, builder):
 
 
 def list_builders_from_config(config, branch=None, slave=None,
-                              config_type='py'):
+                              config_type='yml'):
     """Lists builders from a build config
 
     :param config: The build configuration.
@@ -94,13 +94,138 @@ def list_builders_from_config(config, branch=None, slave=None,
     :param slave: The slave for which builders are being listed."""
 
     builders = []
-    if config_type == 'py':
-        conf_builders = config.BUILDERS
-    else:
-        conf_builders = config['builders']
+    conf_builders = config.get('builders', [])
+
+    if config.get('language'):
+        conf_builders += LanguageConfig(config).builders
+
     for builder in conf_builders:
 
         if _match_branch(branch, builder) and _match_slave(slave, builder):
             builders.append(builder)
 
     return builders
+
+
+class BasePluginConfig:
+    """Plugin configs are meant to be used along with the LanguageConfig.
+    Based in the toxicbuild.yml config we can create the build plugins
+    configuration for a builder.
+
+    .. note::
+
+       The build plugins currently live in the slave but that is a very silly
+       idea. In a future relase that's gonna change.
+
+    """
+
+    def __init__(self, conf):
+        self.conf = conf
+
+
+class APTPluginConfig(BasePluginConfig):
+
+    def get_config(self):
+        packages = self.conf.get('system_packages')
+        return {'name': 'apt-install',
+                'packages': packages}
+
+
+class LanguagePluginConfig(BasePluginConfig):
+
+    def __init__(self, lang_ver, conf):
+        super().__init__(conf)
+        self.lang_ver = lang_ver
+
+
+class PythonPluginConfig(LanguagePluginConfig):
+
+    def get_config(self):
+        req = self.conf.get('requirements_file', 'requirements.txt')
+        pyversion = self.lang_ver
+        return {'name': 'python-venv',
+                'pyversion': pyversion,
+                'requirements_file': req}
+
+
+class LanguageConfig:
+    """An abstraction to create builders based in a language config
+    in a toxicbuild.yml config file.
+    """
+
+    DEFAULT_OS = 'debian'
+
+    SYSTEM_PACKAGES_PLUGINS = {'debian': APTPluginConfig,
+                               'ubuntu': APTPluginConfig}
+
+    LANGUAGE_PLUGINS = {'python': PythonPluginConfig}
+
+    def __init__(self, conf):
+        """Constructor for LanguageConfig.
+
+        :param conf: The build config from the config file
+        """
+
+        self.conf = conf
+        self.language = conf['language']
+        self.oses = self.conf.get('os', [self.DEFAULT_OS])
+        self.branches = self.conf.get('branches', [])
+        self.versions = self.conf.get('versions', [])
+        self._builders = None
+
+    def _get_lang_versions(self):
+        if not self.versions:
+            lang_vers = [self.language]
+        else:
+            lang_vers = ['{}{}'.format(self.language, v)
+                         for v in self.versions]
+        return lang_vers
+
+    def _get_platforms(self, lang_vers):
+        plats = []
+        for opsys in self.oses:
+            for l in lang_vers:
+                if opsys == self.DEFAULT_OS:
+                    plats.append((l, opsys, l))
+                else:
+                    plats.append((l, opsys, '{}-{}'.format(l, opsys)))
+        return plats
+
+    def _get_plugins(self, os_name, lang_ver):
+        plugins = []
+        if 'system_packages' in self.conf:
+            if os_name not in self.SYSTEM_PACKAGES_PLUGINS:
+                raise ConfigError('OS {} is not supported yet!'.format(
+                    os_name))
+
+            plugins.append(
+                self.SYSTEM_PACKAGES_PLUGINS[os_name](self.conf))
+
+        if self.language in self.LANGUAGE_PLUGINS:
+            plugins.append(self.LANGUAGE_PLUGINS[self.language](
+                lang_ver, self.conf))
+
+        return [p.get_config() for p in plugins]
+
+    @property
+    def builders(self):
+        if self._builders is not None:
+            return self._builders
+
+        builders = []
+        lang_vers = self._get_lang_versions()
+        platforms = self._get_platforms(lang_vers)
+        steps = self.conf.get('steps')
+        envvars = self.conf.get('envvars')
+        branches = self.conf.get('branches')
+        for lang_ver, os_name, plat in platforms:
+            builder = {'name': plat,
+                       'platform': plat,
+                       'steps': steps,
+                       'envvars': envvars,
+                       'plugins': self._get_plugins(os_name, lang_ver),
+                       'branches': branches}
+            builders.append(builder)
+
+        self._builders = builders
+        return self._builders

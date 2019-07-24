@@ -22,20 +22,26 @@ import os
 from unittest import TestCase
 from unittest.mock import patch, MagicMock, Mock
 import tornado
-from toxicbuild.core.utils import load_module_from_file
+import yaml
 from toxicbuild.slave import managers
 from tests.unit.slave import TEST_DATA_DIR
 from tests import async_test, AsyncMagicMock
 
-TOXICCONF = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
-TOXICCONF = load_module_from_file(TOXICCONF)
+TOXICCONF_FILE = os.path.join(TEST_DATA_DIR, 'toxicbuild.yml')
+with open(TOXICCONF_FILE) as fd:
+    conf = fd.read()
 
-BADTOXICCONF = os.path.join(TEST_DATA_DIR, 'badtoxicbuild.conf')
-BADTOXICCONF = load_module_from_file(BADTOXICCONF)
+TOXICCONF = yaml.load(conf)
+
+BADTOXICCONF_FILE = os.path.join(TEST_DATA_DIR, 'badtoxicbuild.yml')
+with open(BADTOXICCONF_FILE) as fd:
+    conf = fd.read()
+
+BADTOXICCONF = yaml.load(conf)
 
 
-@patch.object(managers, 'get_toxicbuildconf',
-              Mock(return_value=TOXICCONF))
+@patch.object(managers, 'get_toxicbuildconf_yaml',
+              AsyncMagicMock(return_value=TOXICCONF))
 class BuilderManagerTest(TestCase):
 
     @patch.object(managers, 'get_vcs', MagicMock())

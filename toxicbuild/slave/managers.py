@@ -47,7 +47,7 @@ class BuildManager(LoggerMixin):
     building_repos = defaultdict(lambda: None)  # pragma no branch WTF??
 
     def __init__(self, protocol, repo_url, vcs_type, branch, named_tree,
-                 config_type='py', config_filename='toxicbuild.conf',
+                 config_type='yml', config_filename='toxicbuild.yml',
                  builders_from=None):
         """
         :param manager: instance of :class:`toxicbuild.slave.BuildManager.`
@@ -135,11 +135,8 @@ class BuildManager(LoggerMixin):
         return self.is_cloning or self.is_updating
 
     async def load_config(self):
-        if self.config_type == 'py':
-            self._config = get_toxicbuildconf(self.workdir)
-        else:
-            self._config = await get_toxicbuildconf_yaml(self.workdir,
-                                                         self.config_filename)
+        self._config = await get_toxicbuildconf_yaml(self.workdir,
+                                                     self.config_filename)
 
     @asyncio.coroutine
     def wait_clone(self):

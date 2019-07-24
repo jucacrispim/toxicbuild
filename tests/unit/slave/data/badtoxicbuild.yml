@@ -1,0 +1,33 @@
+builders:
+  - name: 'builder1'
+    branches:
+      - master
+
+    steps:
+      - name: s1
+        command: 'echo "1"'
+
+      - name: s2
+        command: ls
+
+
+  - name: 'builder2'
+    branches:
+      - 'master'
+    steps:
+      - name: s1
+        command: exit 1
+
+  - name: 'builder3'
+    branches:
+      - master
+
+    plugins:
+      - name: python-venv
+        pyversion: /usr/bin/python3.4
+
+    steps:
+      - name: s1
+        command: exit 0
+
+  - bad : builder4
