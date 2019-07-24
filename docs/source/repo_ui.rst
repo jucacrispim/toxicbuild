@@ -1,16 +1,16 @@
 Importing Repositories
 ======================
 
-You need to import the repositoires into ToxicBuild to be able to
-have continuous integration. Repositories can be imported from github,
+You need to import the repositories into ToxicBuild to be able to
+have continuous integration. Repositories can be imported from GitHub,
 from gitlab or can be added manually.
 
-Importing repositories from Github
+Importing repositories from GitHub
 ++++++++++++++++++++++++++++++++++
 
 First configure the :ref:`github-integration-config` then go to
 `http://localhost:8888/settings/repositories` and click in the
-github link:
+GitHub link:
 
 |import-from-github-link-img|
 
@@ -19,7 +19,7 @@ github link:
     :alt: Adding new github repository
 
 
-You will be redirected to Github and can choose wich repositories you want
+You will be redirected to Github and can choose which repositories you want
 imported into ToxicBuild.
 
 |github-app-install|
@@ -27,7 +27,7 @@ imported into ToxicBuild.
 .. |github-app-install| image:: ./_static/github-app-install.jpg
 
 
-After you select your repositoires and install, you will be redirect to
+After you select your repositories and install, you will be redirect to
 the ToxicBuild web ui again and that's it. Your repositories will be imported.
 
 
@@ -59,8 +59,8 @@ enable/disable repositories at `http://localhost:8888/settings/repositories`
 Adding repositories manually
 ++++++++++++++++++++++++++++
 
-If you do not use github, gitlab or do not want import your repositoires
-automaticaly, you can add them by hand. Go to
+If you do not use github, gitlab or do not want import your repositories
+automatically, you can add them by hand. Go to
 `http://localhost:8888/repository/add`:
 
 |import-manually|
@@ -68,7 +68,7 @@ automaticaly, you can add them by hand. Go to
 .. |import-manually| image:: ./_static/import-manually.jpg
 
 * ``Name`` - An unique name for the repository
-* ``URL`` - The clone url of the repository
+* ``URL`` - The clone URL of the repository
 
 
 Repository advanced configuration

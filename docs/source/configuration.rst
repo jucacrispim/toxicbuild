@@ -192,7 +192,7 @@ Set the following variable to configure the secure cookies.
 
 Other config values
 ~~~~~~~~~~~~~~~~~~~
-* ``TOXICUI_URL`` - A url pointing to your toxicui installation
+* ``TOXICUI_URL`` - A URL pointing to your toxicui installation
 * ``INTEGRATIONS_WEB_PORT``
 * ``PARALLEL_IMPORTS`` - how many repos will be imported at the same time by
   the same user
@@ -207,15 +207,15 @@ toxicweb  environment.
 
 * ``HOLE_HOST`` - The server where the master is
 * ``HOLE_PORT`` - The port which master is listening.
-* ``WEB_UI_PORT`` - The port for the webserver. Defaults to `8888`
+* ``WEB_UI_PORT`` - The port for the web server. Defaults to `8888`
 * ``NOTIFICATIONS_API_URL``
 * ``MASTER_USES_SSL`` - Indicates if the connection to toxicmaster is secure.
   Defaults to `0`. Possible values are `0` and `1`.
-* ``VALIDATE_CERT_MASTER``. Indicates if we should validate the master ssl
+* ``VALIDATE_CERT_MASTER``. Indicates if we should validate the master SSL
   certificate. Possible values are `0` and `1`.
-* ``GITHUB_IMPORT_URL`` - The url to import your github repositories. See
+* ``GITHUB_IMPORT_URL`` - The URL to import your GitHub repositories. See
   :ref:`github-integration-config`
-* ``GITLAB_IMPORT_URL`` - The url to import your gitlab repositories. See
+* ``GITLAB_IMPORT_URL`` - The URL to import your GitLab repositories. See
   :ref:`gitlab-integration-config`
 
 
@@ -256,7 +256,7 @@ Then you must to set the following environment variables:
 * ``SLAVE_CONTAINER_USER`` - The name of the user you created in your image.
 
 
-And thats it. Your builds will run inside docker containers.
+And that's it. Your builds will run inside docker containers.
 
 .. _github-integration-config:
 
@@ -305,7 +305,7 @@ In your toxicintegrations environment set the following variables
 * ``GITHUB_WEBHOOK_TOKEN`` - The same webhook secret set in the github app
   creation.
 
-In your toxicui environmen set the following variables:
+In your toxicui environment set the following variables:
 
 * ``GITHUB_IMPORT_URL`` - https://github.com/apps/<app-name>/installations/new
 
@@ -329,7 +329,7 @@ Create a Gitlab app on Gitlab
 Go to ``https://gitlab.com/profile/applications`` and fill the name field with
 `ToxicBuild` and the field ``redirect URI`` with
 `<your-integrations-server>:9999/gitlab/setup`. In the scopes section
-check ``api`` and save the application. Copy and save the ``Application ID``
+check ``API`` and save the application. Copy and save the ``Application ID``
 and ``Secret`` shown.
 
 
@@ -365,7 +365,7 @@ Your first need to :ref:`install toxicslave <toxicslave-install>` in a ec2
 instance. Don't forget to setup supervisor.
 
 Then you need to create a key pair in the amazon console and in your
-toxicmaster envionment set the following variables:
+toxicmaster environment set the following variables:
 
 * ``AWS_ACCESS_KEY_ID``
 * ``AWS_SECRET_ACCESS_KEY``

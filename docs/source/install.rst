@@ -48,8 +48,8 @@ Using pip
 +++++++++
 
 ToxicBuild is written in Python, and runs in Python3.6 and later. It uses
-mongodb to store data, rabbitmq for queues, zookeeper for coordination
-and git as vcs. You must have these installed. In a debian system, use the
+MongoDB to store data, rabbitmq for queues, zookeeper for coordination
+and git as vcs. You must have these installed. In a Debian system, use the
 following command:
 
 .. code-block:: sh

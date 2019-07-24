@@ -10,7 +10,7 @@ ToxicBuild |toxicbuild-logo|
 .. |toxicbuild-logo| image:: ./_static/Logo.svg
     :alt: Simple and flexible continuous itegration tool.
 
-ToxicBuild is an simple, easy-to-install, distributed continuous integration
+ToxicBuild is a simple, easy-to-install, distributed continuous integration
 tool that enables you to have full control of your build/test/release process.
 
 

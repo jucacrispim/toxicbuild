@@ -67,7 +67,7 @@ Advanced configuration
 ++++++++++++++++++++++
 
 `Builds` are simply a sequence of shell commands, called `steps`,
-that are executed sequencially. These builds are carried by `builders`.
+that are executed sequentially. These builds are carried by `builders`.
 The build configuration is based on these steps and builders.
 
 So, let's say you have build process consisting in two steps: ``make`` and
@@ -225,7 +225,7 @@ Python virtualenv plugin
 A very common way of installing python packages is installing it
 inside a `vitualenv` using ``pip``.
 This plugin enables you test your python programs inside a `virutalenv` and
-install de python dependencies usig ``pip``.
+install the python dependencies using ``pip``.
 
 The basic configuration of this plugin is as follows:
 
@@ -259,7 +259,7 @@ Python virtualenv parameters
 
 The following params may be used with this plugin:
 
-* ``requirements_file``: File that contais a list of dependencies to install
+* ``requirements_file``: File that contains a list of dependencies to install
   with pip. The default is `requirements.txt`.
 * ``remove_env``: Indicates if the virtualenv will be removed after are
   executed. Default is False.
@@ -273,7 +273,7 @@ System plugins
 APT install plugin
 ~~~~~~~~~~~~~~~~~~
 
-This plugins installs a list of packages in a debian system using the apt-get
+This plugins installs a list of packages in a Debian system using the apt-get
 command.
 
 .. code-block:: yaml
@@ -292,4 +292,4 @@ command.
 .. note::
 
    This is a plugin that uses the APT package system, thus can only be used in
-   debian (or debian-based) systems.
+   Debian (or Debian-based) systems.

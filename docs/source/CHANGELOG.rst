@@ -3,6 +3,7 @@ Changelog
 
 * 0.6.0
 
+  - Add simple build config
   - Builds now can be optionally trigger by other builds.
   - New build queue. Now are not sent to all slaves.
   - Amazon ec2 integration

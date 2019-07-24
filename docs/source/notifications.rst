@@ -28,7 +28,7 @@ Sends notifications using email.
 
 .. note::
 
-   To use this notification method you must configure the smtp parameters
+   To use this notification method you must configure the SMTP parameters
    in toxicoutput. See :ref:`toxicoutput-config`
 
 This method have the following parameters:
@@ -55,7 +55,7 @@ This method have the following parameters:
     :alt: Slack notification
 
 
-* ``Webhook URL``: The url for the slack webhook.
+* ``Webhook URL``: The URL for the slack webhook.
 * ``Channel name``: The name of the slack channel.
 
 
@@ -71,6 +71,6 @@ This method have the following parameters:
 .. |custom-webhook-notification-img| image:: ./_static/custom-webhook-notification.jpg
     :alt: Custom webhook notification
 
-* ``Webhook URL``: The url for the webhook. This method sends a post request
-  the the webhook url. The body of the request is a json with 3 keys:
+* ``Webhook URL``: The URL for the webhook. This method sends a post request
+  the the webhook URL. The body of the request is a json with 3 keys:
   ``repository``, ``build`` and ``buildset``.
