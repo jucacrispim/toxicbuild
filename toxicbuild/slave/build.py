@@ -80,7 +80,7 @@ class Builder(LoggerMixin):
         return SlavePlugin
 
     def _load_plugins(self):
-        """ Returns a list of :class:`toxicbuild.slave.plugins.Plugin`
+        """Returns a list of :class:`toxicbuild.slave.plugins.Plugin`
         subclasses based on the plugins listed on the config for a builder.
         """
         plugins_config = self.conf.get('plugins', [])
@@ -247,7 +247,7 @@ class Builder(LoggerMixin):
         """Copy a workdir to a temp dir to run the tests"""
 
         tmp_dir = self._get_tmp_dir()
-        self.log('Coping workdir to {}'.format(tmp_dir), level='debug')
+        self.log('Copying workdir to {}'.format(tmp_dir), level='debug')
 
         mkdir_cmd = 'mkdir -p {}'.format(tmp_dir)
         yield from exec_cmd(mkdir_cmd, cwd='.')
