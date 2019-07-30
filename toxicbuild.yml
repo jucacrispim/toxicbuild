@@ -110,39 +110,11 @@ APT_INSTALL_SELENIUM:  &APT_INSTALL_SELENIUM
     - git-crypt
 
 
-PY36_VENV:  &PY36_VENV
-  name: python-venv
-  pyversion: python3.6
-  requirements_file: requirements.txt
-
 PY37_VENV:  &PY37_VENV
   name: python-venv
   pyversion: python3.7
   requirements_file: requirements.txt
 
-
-
-
-# builders
-
-PY36_BUILDER:  &PY36_BUILDER
-  name: python3.6
-
-  branches:
-    - master
-
-  plugins:
-    - <<: *APT_INSTALL
-    - <<: *PY36_VENV
-
-  envvars:
-    <<: *TESTS_ENVVARS
-
-  steps:
-    *MAIN_STEPS
-
-  platform:
-    python3.6
 
 
 PY37_BUILDER:  &PY37_BUILDER
@@ -211,7 +183,6 @@ RELEASE_BUILDER:  &RELEASE_BUILDER
 
 
 builders:
-  - <<: *PY36_BUILDER
   - <<: *PY37_BUILDER
   - <<: *SELENIUM_BUILDER
   - <<: *RELEASE_BUILDER
