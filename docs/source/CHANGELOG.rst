@@ -1,6 +1,11 @@
 Changelog
 =========
 
+* 0.6.1
+
+  - Now builds stop when a steps finishes with exception
+
+
 * 0.6.0
 
   - Add simple build config
