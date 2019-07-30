@@ -148,7 +148,7 @@ SELENIUM_BUILDER:  &SELENIUM_BUILDER
 
   plugins:
     - <<: *APT_INSTALL_SELENIUM
-    - <<: *PY36_VENV
+    - <<: *PY37_VENV
 
   envvars:
     <<: *TESTS_ENVVARS
@@ -160,7 +160,7 @@ SELENIUM_BUILDER:  &SELENIUM_BUILDER
     - <<: *INTEGRATION_TESTS
 
   platform:
-    python3.6
+    python3.7
 
 
 RELEASE_BUILDER:  &RELEASE_BUILDER
