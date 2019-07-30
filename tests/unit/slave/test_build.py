@@ -95,6 +95,24 @@ class BuilderTest(TestCase):
         self.assertEqual(build_info['status'], 'fail')
         self.assertEqual(len(build_info['steps']), 2)
 
+    @mock.patch.object(build, 'exec_cmd', AsyncMagicMock(
+        side_effect=asyncio.TimeoutError))
+    @async_test
+    def test_build_fail_stop_on_fail_exception(self):
+        s1 = build.BuildStep(name='s1', command='ls')
+        s2 = build.BuildStep(name='s2', command='exit 1', stop_on_fail=True)
+        s3 = build.BuildStep(name='s3', command='echo "oi"')
+        self.builder.steps = [s1, s2, s3]
+        self.builder._copy_workdir = AsyncMagicMock(
+            spec=self.builder._copy_workdir)
+
+        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._get_tmp_dir = mock.Mock(return_value='.')
+
+        build_info = yield from self.builder.build()
+        self.assertEqual(build_info['status'], 'exception')
+        self.assertEqual(len(build_info['steps']), 2)
+
     @async_test
     def test_send_step_output_info_step_index(self):
         step_info = {'uuid': 'some-uuid'}

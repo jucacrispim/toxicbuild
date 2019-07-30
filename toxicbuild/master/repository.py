@@ -131,7 +131,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         super(Repository, self).__init__(*args, **kwargs)
         self.scheduler = scheduler
-        self._poller_instance = None
         self.build_manager = BuildManager(self)
         self.config_type = get_build_config_type()
         self.config_filename = get_build_config_filename()

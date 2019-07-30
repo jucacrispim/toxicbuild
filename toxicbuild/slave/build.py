@@ -191,7 +191,7 @@ class Builder(LoggerMixin):
 
             build_info['steps'].append(step_info)
 
-            if status == 'fail' and step.stop_on_fail:
+            if status in ['fail', 'exception'] and step.stop_on_fail:
                 break
 
         build_info['status'] = build_status
