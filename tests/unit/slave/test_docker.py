@@ -224,10 +224,10 @@ class DockerContainerBuilderManagerTest(TestCase):
     @patch.object(docker, 'exec_cmd', AsyncMagicMock())
     @async_test
     async def test_copy2container(self):
-        expected = 'docker cp source {}:/home/bla/ci/src'.format(
+        expected = 'docker cp source {}:/home/bla/src'.format(
             self.container.cname)
 
-        src_dir = '/home/bla/ci/src'
+        src_dir = '/home/bla/src'
         exp_chown = 'docker exec -u root -t {} chown -R bla:bla {}'.format(
             self.container.cname, src_dir)
 
@@ -241,7 +241,7 @@ class DockerContainerBuilderManagerTest(TestCase):
     @patch.object(docker, 'exec_cmd', AsyncMagicMock())
     @async_test
     async def test_rm_from_container(self):
-        src_dir = '/home/bla/ci/src'
+        src_dir = '/home/bla/src'
         expected_source = 'docker exec -u root {} rm -rf {}'.format(
             self.container.cname, src_dir)
 
@@ -291,10 +291,10 @@ class BuildStepDockerTest(TestCase):
                   AsyncMagicMock(return_value={}))
     @async_test
     async def test_exec_cmd(self):
-        src_dir = '/home/bla/ci/src'
+        src_dir = '/home/bla/src'
         envvars = await self.step._get_cmd_line_envvars({})
         user_opts = '-u bla'
-        exp = 'docker exec {} {} -t container /bin/sh -c "cd {} && ls"'.format(
+        exp = 'docker exec {} {} container /bin/bash -c "cd {} && ls"'.format(
             user_opts, envvars, src_dir)
 
         await self.step.exec_cmd('ls', src_dir, 10, lambda *a, **kw: None)

@@ -39,7 +39,7 @@ from toxicbuild.slave import settings
 from toxicbuild.slave.build import BuildStep, Builder
 
 DOCKER_CMD = 'docker'
-DOCKER_SRC_DIR = os.path.join('/', 'home', '{user}', 'ci', 'src')
+DOCKER_SRC_DIR = os.path.join('/', 'home', '{user}', 'src')
 
 
 class DockerContainerBuilder(Builder):
@@ -278,7 +278,7 @@ class BuildStepDocker(BuildStep, LoggerMixin):
 
     def _get_docker_cmd(self, cmd, envvars):
         user_opts = self._get_user_opts()
-        cmd = '{} exec {} {} -t {} /bin/sh -c "cd {} && {}"'.format(
+        cmd = '{} exec {} {} {} /bin/bash -c "cd {} && {}"'.format(
             self.docker_cmd, user_opts, envvars, self.container_name,
             self.docker_src_dir, cmd)
         return cmd
