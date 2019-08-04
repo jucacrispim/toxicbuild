@@ -1,0 +1,24 @@
+FROM python:3.6-slim-buster
+
+RUN apt-get update && apt-get install -y sudo
+
+# See https://github.com/debuerreotype/debuerreotype/issues/10
+RUN mkdir -p /usr/share/man/man1
+RUN mkdir -p /usr/share/man/man2
+RUN mkdir -p /usr/share/man/man3
+RUN mkdir -p /usr/share/man/man4
+RUN mkdir -p /usr/share/man/man5
+RUN mkdir -p /usr/share/man/man6
+RUN mkdir -p /usr/share/man/man7
+RUN mkdir -p /usr/share/man/man8
+
+RUN echo "exit 0" > /usr/sbin/policy-rc.d
+
+COPY sudoers /etc/sudoers
+RUN useradd -ms /bin/bash toxicuser
+RUN addgroup toxicuser sudo
+USER toxicuser
+WORKDIR /home/toxicuser
+
+ENV PATH="$PATH:/bin:/sbin"
+ENV TERM="xterm-mono"

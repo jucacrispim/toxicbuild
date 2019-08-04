@@ -12,7 +12,14 @@ KEYFILE = os.environ.get('SLAVE_KEYFILE')
 
 # Docker stuff
 USE_DOCKER = os.environ.get('SLAVE_USE_DOCKER', '0') == '1'
+default_images = {
+    'linux-generic': 'jucacrispim/toxiccontainers:debian-generic',
+    'python3.5': 'jucacrispim/toxiccontainers:debian-python3.5',
+    'python3.6': 'jucacrispim/toxiccontainers:debian-python3.6',
+    'python3.7': 'jucacrispim/toxiccontainers:debian-python3.7',
+}
 DOCKER_IMAGES = json.loads(os.environ.get('SLAVE_DOCKER_IMAGES', '{}'))
+DOCKER_IMAGES = DOCKER_IMAGES or default_images
 CONTAINER_USER = os.environ.get('SLAVE_CONTAINER_USER')
 
 # Auth settings.

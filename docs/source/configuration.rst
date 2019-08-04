@@ -253,7 +253,21 @@ Then you must to set the following environment variables:
 * ``SLAVE_USE_DOCKER`` - Set its value to `1`
 * ``SLAVE_DOCKER_IMAGES`` - This value is a json mapping platform names to
   docker image names e.g: `"{'debian-generic': 'my-deb-slim'}"`
+
+The default configuration for the docker images is:
+
+.. code-block:: json
+
+   default_images = {
+       "linux-generic": "jucacrispim/toxiccontainers:debian-generic",
+       "python3.5": "jucacrispim/toxiccontainers:debian-python3.5",
+       "python3.6": "jucacrispim/toxiccontainers:debian-python3.6",
+       "python3.7": "jucacrispim/toxiccontainers:debian-python3.7"
+   }
+
+
 * ``SLAVE_CONTAINER_USER`` - The name of the user you created in your image.
+
 
 
 And that's it. Your builds will run inside docker containers.
