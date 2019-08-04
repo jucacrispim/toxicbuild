@@ -232,7 +232,7 @@ class DockerContainerBuilder(Builder):
                                                     self.docker_src_dir)
         msg = 'Executing {}'.format(cmd)
         self.log(msg, level='debug')
-        await exec_cmd(cmd, cwd='.')
+        await exec_cmd(cmd, cwd='.', timeout=30)
 
 
 class BuildStepDocker(BuildStep, LoggerMixin):
