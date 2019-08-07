@@ -230,6 +230,14 @@ clean(){
     rm -rf $TEST_DIST_DIR
 }
 
+create_empty_envs(){
+    echo '' > $DOCKER_DIR/web.env
+    echo '' > $DOCKER_DIR/output.env
+    echo '' > $DOCKER_DIR/master.env
+    echo '' > $DOCKER_DIR/slave.env
+    echo '' > $DOCKER_DIR/integrations.env
+}
+
 drop_db(){
     docker exec -it docker_mongo_1 mongo localhost/toxicbuild --eval "db.dropDatabase()"
     docker kill docker_mongo_1
@@ -279,6 +287,7 @@ case "$1" in
 
     create-test-env)
 	drop_db
+	create_empty_envs
 	create_dist
 	create_test_env
 	clean
@@ -286,6 +295,7 @@ case "$1" in
 
     create-test-selenium-env)
 	drop_db
+	create_empty_envs
 	create_dist
 	create_test_selenium_env
 	clean
