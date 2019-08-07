@@ -1,6 +1,6 @@
 FROM python:3.7.4-slim-buster
 
-RUN apt-get update && apt-get install -y chromium-driver xvfb git-crypt sudo
+RUN apt-get update && apt-get install -y chromium-driver xvfb git-crypt sudo git
 
 COPY conf/sudoers /etc/sudoers
 RUN useradd -ms /bin/bash toxicuser

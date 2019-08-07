@@ -1,5 +1,7 @@
 FROM python:3.7.4-slim-buster
 
+RUN sudo apt-get update && sudo apt-get install git
+
 USER toxicuser
 WORKDIR /home/toxicuser
 
