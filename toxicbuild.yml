@@ -35,7 +35,10 @@ builders:
 
       - name: Functional tests
         command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from functional-tests functional-tests
-        timeout: 20
+        timeout: 45
+
+      - name: Clean images
+        command: ./build-scripts/clean_images.sh
 
 
   # Selenium builder
