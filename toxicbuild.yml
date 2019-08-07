@@ -3,63 +3,63 @@
 builders:
 
   # Python builder
-  name: python
-  platform: docker
+  - name: python
+    platform: docker
 
-  branches:
-    - master
-    - 'feature-*'
-    - 'bug-*'
+    branches:
+      - master
+      - 'feature-*'
+      - 'bug-*'
 
-  steps:
+    steps:
 
-    - name: Create test environment
-      command: ./build-scripts/toxicinstall.sh create-test-env
-      stop_on_fail: true
+      - name: Create test environment
+        command: ./build-scripts/toxicinstall.sh create-test-env
+        stop_on_fail: true
 
-    - name: Linter checks
-      command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from pylint pylint
-      stop_on_fail: true
+      - name: Linter checks
+        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from pylint pylint
+        stop_on_fail: true
 
-    - name: Code style checks
-      command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from pep8 pep8
-      warning_on_fail: true
+      - name: Code style checks
+        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from pep8 pep8
+        warning_on_fail: true
 
-    - name: Code complexity checks
-      command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from xenon xenon
-      warning_on_fail: true
+      - name: Code complexity checks
+        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from xenon xenon
+        warning_on_fail: true
 
-    - name: Unit tests
-      command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from unit-tests unit-tests
-      timeout: 20
+      - name: Unit tests
+        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from unit-tests unit-tests
+        timeout: 20
 
-    - name: Functional tests
-      command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from functional-tests functional-tests
-      timeout: 20
+      - name: Functional tests
+        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from functional-tests functional-tests
+        timeout: 20
 
 
   # Selenium builder
-  name: selenium
-  platform: docker
+  - name: selenium
+    platform: docker
 
-  branches:
-    - master
-    - 'feature-*'
-    - 'bug-*'
+    branches:
+      - master
+      - 'feature-*'
+      - 'bug-*'
 
-  steps:
+    steps:
 
-    - name: Create test environment
-      command: ./build-scripts/toxicinstall.sh create-test-selenium-env
-      stop_on_fail: true
+      - name: Create test environment
+        command: ./build-scripts/toxicinstall.sh create-test-selenium-env
+        stop_on_fail: true
 
-    - name: JS unit tests
-      command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from js-unit-tests js-unit-tests
+      - name: JS unit tests
+        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from js-unit-tests js-unit-tests
 
-    - name: Selenium tests
-      command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from selenium-tests selenium-tests
-      stop_on_fail: true
+      - name: Selenium tests
+        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from selenium-tests selenium-tests
+        stop_on_fail: true
 
-    - name: Selenium integration tests
-      command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from selenium-integration-tests selenium-integration-tests
-      stop_on_fail: true
+      - name: Selenium integration tests
+        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from selenium-integration-tests selenium-integration-tests
+        stop_on_fail: true
