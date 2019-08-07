@@ -18,23 +18,23 @@ builders:
         stop_on_fail: true
 
       - name: Linter checks
-        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from pylint pylint
+        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from pylint pylint
         stop_on_fail: true
 
       - name: Code style checks
-        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from pep8 pep8
+        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from pep8 pep8
         warning_on_fail: true
 
       - name: Code complexity checks
-        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from xenon xenon
+        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from xenon xenon
         warning_on_fail: true
 
       - name: Unit tests
-        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from unit-tests unit-tests
+        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from unit-tests unit-tests
         timeout: 20
 
       - name: Functional tests
-        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from functional-tests functional-tests
+        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from functional-tests functional-tests
         timeout: 45
 
       - name: Clean images
