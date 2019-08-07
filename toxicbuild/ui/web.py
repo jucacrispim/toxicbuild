@@ -221,7 +221,7 @@ class LoginHandler(BaseNotLoggedTemplate):
 
         try:
             self.user = await User.authenticate(username_or_email, password)
-        except Exception as e:
+        except Exception:
             raise HTTPError(403)
 
         self._set_cookie_content()
