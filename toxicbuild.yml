@@ -47,6 +47,11 @@ builders:
       - 'feature-*'
       - 'bug-*'
 
+    triggered_by:
+      - builder_name: python
+        statuses:
+          - success
+
     steps:
 
       - name: Create test environment
