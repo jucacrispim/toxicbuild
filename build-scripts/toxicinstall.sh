@@ -3,6 +3,7 @@
 DOCKER_DIR="ops/docker"
 BASE_DIST_DIR="$DOCKER_DIR/dist"
 DIST_DIR="$BASE_DIST_DIR/toxicbuild"
+TEST_DIST_DIR="$DOCKER_DIR/test-dist"
 
 
 
@@ -19,13 +20,27 @@ is_in_array () {
 create_dist(){
     # Copy the source files to a dist/ dir in the docker env
     mkdir -p $DIST_DIR
+    mkdir -p $TEST_DIST_DIR
+
+    find . -iname '*.pyc' | xargs rm &> /dev/null
+
     cp setup.py $DIST_DIR
     cp requirements.txt $DIST_DIR
     cp MANIFEST.in $DIST_DIR
     cp README $DIST_DIR
     cp -r toxicbuild $DIST_DIR
     cp -r scripts $DIST_DIR
-    cp -r build-scripts $DIST_DIR
+
+    # files may be here from tests
+    find . -iname '*.log' | xargs rm &> /dev/null
+    rm -rf "tests/functional/data/master/src/"
+    rm -rf "tests/functional/data/slave/src/"
+
+    cp pylintrc $TEST_DIST_DIR
+    cp toxicslave.conf $TEST_DIST_DIR
+    cp settings.py $TEST_DIST_DIR
+    cp -r build-scripts $TEST_DIST_DIR
+    cp -r tests $TEST_DIST_DIR
 }
 
 
@@ -55,8 +70,15 @@ create_base_img(){
     docker build -f $DOCKER_DIR/Dockerfile-base -t toxicbase $DOCKER_DIR
 }
 
+create_test_img(){
+    docker build -f $DOCKER_DIR/Dockerfile-test -t toxictest $DOCKER_DIR
+}
+
+create_test_selenium_img(){
+        docker build -f $DOCKER_DIR/Dockerfile-selenium -t toxictest-selenium $DOCKER_DIR
+}
+
 create_slave_img(){
-    # Creates the base Docker image
     docker build -f $DOCKER_DIR/Dockerfile-slave -t toxicslave $DOCKER_DIR
 }
 
@@ -96,6 +118,16 @@ create_imgs(){
     create_poller_img
     create_integrations_img
     create_web_img
+}
+
+
+create_test_env(){
+    create_test_img
+}
+
+
+create_test_selenium_env(){
+    create_test_selenium_img
 }
 
 
@@ -173,6 +205,7 @@ create_local_install(){
 	echo '- Creating docker images'
 	create_dist
 	create_imgs
+	clean
     fi
 
     echo '- Creating environment. Be patient...'
@@ -194,6 +227,13 @@ create_local_install(){
 
 clean(){
     rm -rf $BASE_DIST_DIR
+    rm -rf $TEST_DIST_DIR
+}
+
+drop_db(){
+    docker exec -it docker_mongo_1 mongo localhost/toxicbuild --eval "db.dropDatabase()"
+    docker kill docker_mongo_1
+    docker rm docker_mongo_1
 }
 
 clean_images(){
@@ -207,8 +247,10 @@ clean_images(){
     docker rmi toxicpoller
     docker rmi toxicintegrations
     docker rmi toxicweb
+    docker rmi toxictest
+    docker rmi toxictest-selenium
     docker rmi toxicbase
-    docker exec -it docker_mongo_1 mongo localhost/toxicbuild --eval "db.dropDatabase()"
+    drop_db
 }
 
 
@@ -221,6 +263,7 @@ case "$1" in
 	;;
 
     clean-local)
+	clean
 	clean_images
 	;;
 
@@ -228,8 +271,35 @@ case "$1" in
 	start_local
 	;;
 
+    create-images)
+	create_dist
+	create_imgs
+	clean
+	;;
+
+    create-test-env)
+	drop_db
+	create_dist
+	create_test_env
+	clean
+	;;
+
+    create-test-selenium-env)
+	drop_db
+	create_dist
+	create_test_selenium_env
+	clean
+	;;
+
     *)
-	echo "Usage: toxicinstall.sh {create-local|clean-local|start-local}";
+	echo "Usage: toxicinstall.sh OP";
+	echo "OPs are:"
+	echo " - create-local"
+	echo " - clean-local"
+	echo " - start-local"
+	echo " - create-images"
+	echo " - create-test-env"
+	echo " - create-test-selenium-env"
 	exit 1;
 
 esac

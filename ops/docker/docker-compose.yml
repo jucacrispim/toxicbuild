@@ -130,12 +130,78 @@ services:
     environment:
        DBHOST: mongo
 
-  static-check:
-    image: toxicbase
+  pylint:
+    image: toxictest
     command: bash ./build-scripts/run_linter.sh
+
+  pep8:
+    image: toxictest
+    command: bash ./build-scripts/check_style.sh
+
+  xenon:
+    image: toxictest
+    command: xenon -e "toxicbuild/master/locks.py" toxicbuild -b B
+
+  unit-tests:
+    image: toxictest
+    command: ./build-scripts/check_coverage.sh toxicbuild 100
+
+    environment:
+       DBHOST: mongo
+       AMQPHOST: rabbitmq
+       ZK_SERVERS: "zookeeper:2181"
 
     depends_on:
       - mongo
+      - zookeeper
+      - rabbitmq
+
+  functional-tests:
+    image: toxictest
+    command: python setup.py test --test-suite=tests.functional
+
+    environment:
+       DBHOST: mongo
+       AMQPHOST: rabbitmq
+       ZK_SERVERS: "zookeeper:2181"
+
+    depends_on:
+      - mongo
+      - zookeeper
+      - rabbitmq
+
+  js-unit-tests:
+    image: toxictest-selenium
+    command: ./build-scripts/run_jasmine_tests.sh
+
+  selenium-tests:
+    image: toxictest-selenium
+    command: ./build-scripts/run_selenium_tests.sh
+
+    environment:
+       DBHOST: mongo
+       AMQPHOST: rabbitmq
+       ZK_SERVERS: "zookeeper:2181"
+
+    depends_on:
+      - mongo
+      - zookeeper
+      - rabbitmq
+
+  selenium-integration-tests:
+    image: toxictest-selenium
+    command: ./build-scripts/run_integration_tests.sh
+
+    environment:
+       DBHOST: mongo
+       AMQPHOST: rabbitmq
+       ZK_SERVERS: "zookeeper:2181"
+
+    depends_on:
+      - mongo
+      - zookeeper
+      - rabbitmq
+
 
   mongo:
     image: mongo:4.0

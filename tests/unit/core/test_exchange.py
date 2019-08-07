@@ -18,6 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import os
 from unittest import TestCase
 from unittest.mock import patch, Mock
 from aioamqp.exceptions import ChannelClosed
@@ -72,8 +73,9 @@ class ExchangeTest(TestCase):
     @classmethod
     @async_test
     async def setUpClass(cls):
+        host = os.environ.get('AMQPHOST', 'localhost')
         cls.conn = exchange.AmqpConnection(
-            **{'host': 'localhost', 'port': 5672})
+            **{'host': host, 'port': 5672})
         cls.exchange = None
         await cls.conn.connect()
 

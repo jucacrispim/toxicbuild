@@ -1,7 +1,13 @@
 FROM python:3.7.4-slim-buster
 
+RUN apt-get update && apt-get install -y procps sudo
+
+COPY conf/sudoers /etc/sudoers
+RUN useradd -ms /bin/bash toxicuser
+RUN addgroup toxicuser sudo
 USER toxicuser
 WORKDIR /home/toxicuser
+
 
 # create a virtualenv
 RUN python3.7 -m venv /home/toxicuser/.toxic-venv
@@ -20,5 +26,8 @@ COPY dist/ /tmp/src/
 RUN cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/
 RUN chown -R toxicuser:toxicuser /home/toxicuser/.toxic-venv/src/
 
-# And install the stuff.
-RUN python setup.py install
+RUN sudo rm -rf /tmp/src/
+
+COPY test-dist/ /tmp/src/
+RUN cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/toxicbuild
+RUN chown -R toxicuser:toxicuser /home/toxicuser/.toxic-venv/src/

@@ -187,9 +187,6 @@ class GithubApp(BaseIntegrationApp):
         return installation
 
 
-GithubApp.ensure_indexes()
-
-
 class GithubInstallation(BaseIntegrationInstallation):
     """An installation of the GitHub App. Installations have access to
     repositories and events."""
@@ -264,6 +261,3 @@ class GithubInstallation(BaseIntegrationInstallation):
         if ret.status != 200:
             raise BadRequestToExternalAPI(ret.status, ret.text, url)
         return ret.json()
-
-
-GithubInstallation.ensure_indexes()

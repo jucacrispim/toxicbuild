@@ -6,6 +6,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from toxicbuild.ui import settings
 
+from tests.webui import take_screenshot
 from tests.webui.steps.base_steps import (  # noqa f811
     given_logged_in_webui, then_sees_message)
 
@@ -37,6 +38,7 @@ def click_reschedule(context):
 
 
 @given('the user already rescheduled a buildset in the waterfall')
+@take_screenshot
 def buildset_already_rescheduled(context):
     browser = context.browser
 

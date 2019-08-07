@@ -53,6 +53,13 @@ def _check_conffile(workdir, conffile):
     return absconffile.startswith(absworkdir)
 
 
+def ensure_indexes():
+    from .github import GithubApp, GithubInstallation
+
+    GithubApp.ensure_indexes()
+    GithubInstallation.ensure_indexes()
+
+
 @command
 def create(root_dir, output_token='', cookie_secret=''):
     """Creates a new toxicbuild integrations environment.
@@ -142,6 +149,8 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
 
         loop = asyncio.get_event_loop()
         loop.run_until_complete(connect_exchanges())
+
+        ensure_indexes()
 
         print('Starting integrations on port {}'.format(settings.TORNADO_PORT))
 
