@@ -1,7 +1,5 @@
 FROM toxicbase
 
-ARG notification_token
-
-RUN toxicmaster create /home/toxicuser/ci/master $notification_token
+RUN toxicmaster create /home/toxicuser/ci/master --no-token
 
 CMD ["toxicmaster", "start", "/home/toxicuser/ci/master", "--loglevel=debug"]

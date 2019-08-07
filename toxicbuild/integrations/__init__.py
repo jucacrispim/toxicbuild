@@ -54,7 +54,7 @@ def _check_conffile(workdir, conffile):
 
 
 @command
-def create(root_dir, output_token, cookie_secret):
+def create(root_dir, output_token='', cookie_secret=''):
     """Creates a new toxicbuild integrations environment.
 
     :param --root_dir: Root directory for toxicbuild integrations.
@@ -73,12 +73,14 @@ def create(root_dir, output_token, cookie_secret):
     template_file = os.path.join(template_dir, template_fname)
     dest_file = os.path.join(root_dir, 'toxicintegrations.conf')
     shutil.copyfile(template_file, dest_file)
-    with open(dest_file, 'r+') as fd:
+    with open(dest_file, 'r') as fd:
         content = fd.read()
-        content = content.replace(
-            '{{NOTIFICATIONS_API_TOKEN}}', output_token)
-        content = content.replace('{{COOKIE_SECRET}}', cookie_secret)
-        fd.seek(0)
+
+    content = content.replace(
+        '{{NOTIFICATIONS_API_TOKEN}}', output_token)
+    content = content.replace('{{COOKIE_SECRET}}', cookie_secret)
+
+    with open(dest_file, 'w') as fd:
         fd.write(content)
 
 

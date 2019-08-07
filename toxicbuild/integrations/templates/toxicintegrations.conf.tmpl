@@ -40,14 +40,19 @@ if amqp_password:
 
 NOTIFICATIONS_API_URL = os.environ.get('NOTIFICATIONS_API_URL',
                                        'http://localhost:9432/')
-NOTIFICATIONS_API_TOKEN = '{{NOTIFICATIONS_API_TOKEN}}'
+
+NOTIFICATIONS_API_TOKEN = os.environ.get(
+    'NOTIFICATION_API_TOKEN', '{{NOTIFICATIONS_API_TOKEN}}'
+)
 
 
 TORNADO_PORT = int(os.environ.get('INTEGRATIONS_WEB_PORT', 9999))
 APPLICATIONS = ['toxicbuild.integrations.webhook_receivers.app']
 
 # This cookie secret must be the same used in toxicui.
-TORNADO_OPTS = {'cookie_secret': '{{COOKIE_SECRET}}'}
+TORNADO_OPTS = {
+    'cookie_secret': os.environ.get('COOKIE_SECRET', '{{COOKIE_SECRET}}')
+}
 
 GITHUB_API_URL = os.environ.get('GITHUB_API_URL', 'https://api.github.com/')
 GITHUB_PRIVATE_KEY = os.environ.get('GITHUB_PRIVATE_KEY')

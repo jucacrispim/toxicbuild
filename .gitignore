@@ -28,3 +28,8 @@ tests/functional/data/slave/src/
 /toxicbuild/ui/static/toxicbuild/js/.tern-port
 /tests/js-unit/.tern-port
 artifacts/
+/ops/docker/integrations.env
+/ops/docker/master.env
+/ops/docker/output.env
+/ops/docker/slave.env
+/ops/docker/web.env

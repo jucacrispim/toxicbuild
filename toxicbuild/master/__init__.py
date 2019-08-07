@@ -400,13 +400,36 @@ def restart_poller(workdir, pidfile=POLLER_PIDFILE, loglevel='info'):
 
 
 @command
-def create(root_dir, notifications_token):
+def create_token(conffile, show_encrypted=False):
+    """Creates the access token to the master.
+
+    :param conffile: The path for the toxicmaster.conf
+    :param --show-encrypted: Show the encrypted token?
+    """
+    access_token = token_urlsafe()
+    encrypted_token = bcrypt_string(access_token)
+
+    with open(conffile, 'r+') as fd:
+        content = fd.read()
+        content = content.replace('{{ACCESS_TOKEN}}', encrypted_token)
+        fd.seek(0)
+        fd.write(content)
+
+    if show_encrypted:
+        print('Created encrypted token:{}'.format(encrypted_token))
+    print('Created access token:{}'.format(access_token))
+    return access_token
+
+
+@command
+def create(root_dir, notifications_token='', no_token=False):
     """ Creates a new toxicmaster environment.
 
     :param --root_dir: Root directory for toxicmaster.
-    :param --notification-token: Token for the notifications' web api.
+    :param --notifications-token: The auth token for the output web api.
+    :param --no-token: Should we create a access token?
     """
-    print('Creating root_dir `{}` for toxicmaster'.format(root_dir))
+    print('Creating environment on `{}` for toxicmaster'.format(root_dir))
 
     os.makedirs(root_dir)
 
@@ -416,24 +439,20 @@ def create(root_dir, notifications_token):
     template_file = os.path.join(template_dir, template_fname)
     dest_file = os.path.join(root_dir, 'toxicmaster.conf')
     shutil.copyfile(template_file, dest_file)
+    if no_token:
+        access_token = None
+    else:
+        access_token = create_token(dest_file)
 
-    # here we create a bcrypt salt and a access token for authentication.
-    access_token = token_urlsafe()
-    encrypted_token = bcrypt_string(access_token)
-
-    # and finally update the config file content with the new generated
-    # salt and access token
-    with open(dest_file, 'r+') as fd:
+    with open(dest_file, 'r') as fd:
         content = fd.read()
-        content = content.replace('{{ACCESS_TOKEN}}', encrypted_token)
-        content = content.replace('{{NOTIFICATIONS_API_TOKEN}}',
-                                  notifications_token)
-        fd.seek(0)
+
+    content = content.replace('{{NOTIFICATIONS_API_TOKEN}}',
+                              notifications_token)
+    with open(dest_file, 'w') as fd:
         fd.write(content)
 
-    print('Toxicmaster environment created with access token: {}'.format(
-        access_token))
-
+    print('Done!')
     return access_token
 
 

@@ -206,16 +206,15 @@ def create(root_dir, access_token='', output_token='', root_user_id='',
     shutil.copyfile(template_file, dest_file)
 
     cookie_secret = cookie_secret or bcrypt.gensalt(8).decode()
-
-    # and finally update the config file content with the new generated
-    # salt and access token
-    with open(dest_file, 'r+') as fd:
+    with open(dest_file, 'r') as fd:
         content = fd.read()
-        content = content.replace('{{COOKIE_SECRET}}', cookie_secret)
-        content = content.replace('{{HOLE_TOKEN}}', access_token)
-        content = content.replace('{{NOTIFICATIONS_API_TOKEN}}', output_token)
-        content = content.replace('{{ROOT_USER_ID}}', root_user_id)
-        fd.seek(0)
+
+    content = content.replace('{{COOKIE_SECRET}}', cookie_secret)
+    content = content.replace('{{HOLE_TOKEN}}', access_token)
+    content = content.replace('{{NOTIFICATIONS_API_TOKEN}}', output_token)
+    content = content.replace('{{ROOT_USER_ID}}', root_user_id)
+
+    with open(dest_file, 'w') as fd:
         fd.write(content)
 
     print('Toxicui environment created for web ')

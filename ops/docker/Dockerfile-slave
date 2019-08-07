@@ -1,5 +1,5 @@
 FROM toxicbase
 
-RUN toxicslave create /home/toxicuser/ci/slave
+RUN toxicslave create /home/toxicuser/ci/slave --no-token
 
 CMD ["toxicslave", "start", "/home/toxicuser/ci/slave"]

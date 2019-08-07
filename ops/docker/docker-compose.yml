@@ -3,6 +3,7 @@ services:
 
   web:
     image: toxicweb:latest
+    env_file: web.env
     ports:
       - "8888:8888"
 
@@ -14,9 +15,11 @@ services:
 
   slave:
     image: toxicslave:latest
+    env_file: ./slave.env
 
   output:
     image: toxicoutput:latest
+    env_file: ./output.env
 
     depends_on:
       - rabbitmq
@@ -28,6 +31,7 @@ services:
 
   scheduler:
     image: toxicscheduler:latest
+    env_file: ./master.env
 
     environment:
        AMQPHOST: rabbitmq
@@ -41,6 +45,7 @@ services:
 
   poller:
     image: toxicpoller:latest
+    env_file: ./master.env
 
     environment:
        DBHOST: mongo
@@ -54,6 +59,7 @@ services:
 
   integrations:
     image: toxicintegrations:latest
+    env_file: ./integrations.env
     ports:
       - "9999:9999"
 
@@ -65,6 +71,7 @@ services:
 
   master:
     image: toxicmaster:latest
+    env_file: ./master.env
 
     depends_on:
       - rabbitmq
@@ -82,6 +89,10 @@ services:
        ZK_SERVERS: "zookeeper:2181"
        NOTIFICATIONS_API_URL: "http://output:9432/"
 
+  create_slave_token:
+    image: toxicslave:latest
+    command: toxicslave create_token /home/toxicuser/ci/slave/toxicslave.conf --show-encrypted
+
   create_output_token:
     image: toxicoutput:latest
     command: toxicoutput create_token /home/toxicuser/ci/output
@@ -91,6 +102,13 @@ services:
 
     environment:
        DBHOST: mongo
+
+  create_master_token:
+    image: toxicmaster:latest
+    command: toxicmaster create_token /home/toxicuser/ci/master/toxicmaster.conf --show-encrypted
+
+    depends_on:
+      - mongo
 
   create_user:
     image: toxicmaster:latest
@@ -111,6 +129,13 @@ services:
 
     environment:
        DBHOST: mongo
+
+  static-check:
+    image: toxicbase
+    command: bash ./build-scripts/run_linter.sh
+
+    depends_on:
+      - mongo
 
   mongo:
     image: mongo:4.0

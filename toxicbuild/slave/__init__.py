@@ -152,12 +152,36 @@ def restart(workdir, pidfile=PIDFILE, loglevel='info'):
 
 
 @command
-def create(root_dir):
+def create_token(conffile, show_encrypted=False):
+    """Creates the access token to the slave.
+
+    :param conffile: The path for the toxicslave.conf
+    :param --show-encrypted: Show the encrypted token?
+    """
+    access_token = token_urlsafe()
+    encrypted_token = bcrypt_string(access_token)
+
+    with open(conffile, 'r') as fd:
+        content = fd.read()
+
+    content = content.replace('{{ACCESS_TOKEN}}', encrypted_token)
+    with open(conffile, 'w') as fd:
+        fd.write(content)
+
+    if show_encrypted:
+        print('Created encrypted token:{}'.format(encrypted_token))
+    print('Created access token:{}'.format(access_token))
+    return access_token
+
+
+@command
+def create(root_dir, no_token=False):
     """ Create a new toxicslave environment.
 
     :param --root_dir: Root directory for toxicslave.
+    :param --no-token: Should we create a access token?
     """
-    print('Creating root_dir `{}` for toxicslave'.format(root_dir))
+    print('Creating environment on `{}` for toxicslave'.format(root_dir))
 
     # First we create the directory
     os.makedirs(root_dir)
@@ -169,21 +193,11 @@ def create(root_dir):
     template_file = os.path.join(template_dir, template_fname)
     dest_file = os.path.join(root_dir, 'toxicslave.conf')
     shutil.copyfile(template_file, dest_file)
-
-    # here we create a bcrypt salt and a access token for authentication.
-    access_token = token_urlsafe()
-    encrypted_token = bcrypt_string(access_token)
-
-    # and finally update the config file content with the new generated
-    # salt and access token
-    with open(dest_file, 'r+') as fd:
-        content = fd.read()
-        content = content.replace('{{ACCESS_TOKEN}}', encrypted_token)
-        fd.seek(0)
-        fd.write(content)
-
-    print('Toxicslave environment created with access token: {}'.format(
-        access_token))
+    if no_token:
+        access_token = None
+    else:
+        access_token = create_token(dest_file)
+    print('Done!')
     return access_token
 
 

@@ -11,7 +11,9 @@ HOLE_TOKEN = os.environ.get('HOLE_TOKEN', '{{HOLE_TOKEN}}')
 
 # pyrocumulus/tornado settings
 TORNADO_PORT = int(os.environ.get('UI_WEB_PORT', 8888))
-TORNADO_OPTS = {'cookie_secret': '{{COOKIE_SECRET}}'}
+TORNADO_OPTS = {
+    'cookie_secret': os.environ.get('COOKIE_SECRET', '{{COOKIE_SECRET}}')
+}
 STATIC_URL = '/static/'
 STATIC_DIRS = [pkg_resources.resource_filename('toxicbuild.ui', 'static')]
 TEMPLATE_DIRS = [pkg_resources.resource_filename('toxicbuild.ui', 'templates')]
@@ -33,10 +35,13 @@ CONTEXT_PROCESSORS = [
 
 API_URL = os.environ.get('WEB_API_URL', '/api/')
 
-NOTIFICATIONS_API_TOKEN = '{{NOTIFICATIONS_API_TOKEN}}'
+NOTIFICATIONS_API_TOKEN = os.environ.get(
+    'NOTIFICATIONS_API_TOKEN', '{{NOTIFICATIONS_API_TOKEN}}')
 NOTIFICATIONS_API_URL = os.environ.get('NOTIFICATIONS_API_URL',
                                        'http://localhost:9432/')
 
 # This is a user that ideally is a limited user only allowed to create new
 # users. This is used for the registration feature on the web ui.
-ROOT_USER_ID = '{{ROOT_USER_ID}}'
+ROOT_USER_ID = os.environ.get('WEB_ROOT_USER_ID', '{{ROOT_USER_ID}}')
+
+# end of configfile

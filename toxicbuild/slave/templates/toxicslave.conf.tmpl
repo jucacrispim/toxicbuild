@@ -23,4 +23,4 @@ DOCKER_IMAGES = DOCKER_IMAGES or default_images
 CONTAINER_USER = os.environ.get('SLAVE_CONTAINER_USER')
 
 # Auth settings.
-ACCESS_TOKEN = '{{ACCESS_TOKEN}}'
+ACCESS_TOKEN = os.environ.get('SLAVE_ENCRYPTED_TOKEN', '{{ACCESS_TOKEN}}')

@@ -20,12 +20,13 @@
 import asyncio
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.core.exceptions import ToxicClientException
+from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.ui import settings
 from toxicbuild.ui.exceptions import (UserDoesNotExist, NotEnoughPerms,
                                       BadResetPasswordToken)
 
 
-class UIHoleClient(BaseToxicClient):
+class UIHoleClient(BaseToxicClient, LoggerMixin):
     """Client for the master's hole. """
 
     def __init__(self, requester, *args, hole_token=None, **kwargs):
@@ -58,6 +59,8 @@ class UIHoleClient(BaseToxicClient):
 
         data = {'action': action, 'body': body,
                 'token': self.hole_token}
+
+        self.log('requesting action: ' + str(data), level='debug')
 
         if action not in ['user-authenticate']:
             data['user_id'] = str(self.requester.id)
