@@ -29,5 +29,5 @@ RUN sudo chown -R toxicuser:toxicuser /home/toxicuser/.toxic-venv/src/
 RUN sudo rm -rf /tmp/src/
 
 COPY test-dist/ /tmp/src/
-RUN sudo cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/
+RUN sudo cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/toxicbuild
 RUN sudo chown -R toxicuser:toxicuser /home/toxicuser/.toxic-venv/src/
