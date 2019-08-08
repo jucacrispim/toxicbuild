@@ -62,12 +62,14 @@ builders:
         stop_on_fail: true
 
       - name: JS unit tests
-        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from js-unit-tests js-unit-tests
+        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from js-unit-tests js-unit-tests
 
       - name: Selenium tests
-        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from selenium-tests selenium-tests
+        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from selenium-tests selenium-tests
         stop_on_fail: true
+        timeout: 45
 
       - name: Selenium integration tests
-        command: docker-compose -f ops/docker/docker-compose.yml up --exit-code-from selenium-integration-tests selenium-integration-tests
+        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from selenium-integration-tests selenium-integration-tests
         stop_on_fail: true
+        timeout: 45
