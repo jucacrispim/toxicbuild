@@ -228,6 +228,17 @@ class BuildTest(TestCase):
 
     @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
         spec=build.build_notifications.publish))
+    @async_test
+    async def test_cancel_no_slave(self):
+        await self._create_test_data()
+        build_inst = self.buildset.builds[0]
+        build_inst.slave = None
+        await build_inst.update()
+        await build_inst.cancel()
+        self.assertEqual(build_inst.status, 'cancelled')
+
+    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
+        spec=build.build_notifications.publish))
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
