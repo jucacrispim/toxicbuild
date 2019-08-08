@@ -303,8 +303,7 @@ class BuildDetailsView extends BaseBuildDetailsView{
   }
 
   _scrollToBottom(){
-    let height = $("#build-details pre")[0].scrollHeight;
-    $("html, body").animate({scrollTop: height});
+    window.scrollTo(0,document.body.scrollHeight);
   }
 
   _listen2events(template){
