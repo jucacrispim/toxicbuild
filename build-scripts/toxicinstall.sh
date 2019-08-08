@@ -122,7 +122,10 @@ create_imgs(){
 
 
 create_test_env(){
+    echo "Creating test environment"
+
     create_test_img
+    docker-compose -f $DOCKER_DIR/docker-compose.yml up --no-color --exit-code-from setup-env setup-env
 }
 
 

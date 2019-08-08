@@ -130,6 +130,14 @@ services:
     environment:
        DBHOST: mongo
 
+  setup-env:
+    image: toxictest
+
+    depends_on:
+      - mongo
+      - zookeeper
+      - rabbitmq
+
   pylint:
     image: toxictest
     command: bash ./build-scripts/run_linter.sh
