@@ -65,11 +65,9 @@ builders:
 
       - name: Selenium tests
         command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from selenium-tests selenium-tests
-        stop_on_fail: true
 
       - name: Selenium integration tests
         command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from selenium-integration-tests selenium-integration-tests
-        stop_on_fail: true
 
       - name: Clean old images
         command: ./build-scripts/clean_images.sh
