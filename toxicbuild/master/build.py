@@ -426,6 +426,8 @@ class Build(EmbeddedDocument):
 
         self.status = 'cancelled'
         repo = await self.repository
+        slave = await self.slave
+        await slave.decrement_queue()
         await self.update()
         build_cancelled.send(str(repo.id), build=self)
 

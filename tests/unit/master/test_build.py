@@ -218,8 +218,13 @@ class BuildTest(TestCase):
     async def test_cancel(self):
         await self._create_test_data()
         build_inst = self.buildset.builds[0]
+        slave = await build_inst.slave
+        slave.queue_count += 1
+        await slave.save()
         await build_inst.cancel()
         self.assertEqual(build_inst.status, 'cancelled')
+        await slave.reload()
+        self.assertEqual(slave.queue_count, 0)
 
     @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
         spec=build.build_notifications.publish))
