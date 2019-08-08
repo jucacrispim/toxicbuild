@@ -23,11 +23,11 @@ RUN rm /home/toxicuser/.toxic-venv/src/toxicbuild/requirements.txt
 
 # After the deps are installed we copy the source files
 COPY dist/ /tmp/src/
-RUN cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/
-RUN chown -R toxicuser:toxicuser /home/toxicuser/.toxic-venv/src/
+RUN sudo cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/
+RUN sudo chown -R toxicuser:toxicuser /home/toxicuser/.toxic-venv/src/
 
 RUN sudo rm -rf /tmp/src/
 
 COPY test-dist/ /tmp/src/
-RUN cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/toxicbuild
-RUN chown -R toxicuser:toxicuser /home/toxicuser/.toxic-venv/src/
+RUN sudo cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/
+RUN sudo chown -R toxicuser:toxicuser /home/toxicuser/.toxic-venv/src/

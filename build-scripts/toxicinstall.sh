@@ -41,6 +41,7 @@ create_dist(){
     cp settings.py $TEST_DIST_DIR
     cp -r build-scripts $TEST_DIST_DIR
     cp -r tests $TEST_DIST_DIR
+    cp -r .git $DIST_DIR
 }
 
 
