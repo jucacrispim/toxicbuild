@@ -198,10 +198,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         cloned into
         """
         base_dir = settings.SOURCE_CODE_DIR
-        workdir = re.sub(re.compile('http(s|)://'), '', self.url)
-        workdir = workdir.replace('/', '-').replace('@', '-').replace(':', '')
-        workdir = workdir.strip()
-        return os.path.join(base_dir, workdir, str(self.id))
+        return os.path.join(base_dir, str(self.id))
 
     async def get_last_buildset(self):
         bad_statuses = [BuildSet.PENDING, BuildSet.NO_BUILDS,

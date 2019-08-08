@@ -39,8 +39,8 @@ class BuilderTest(TestCase):
 
         protocol.send_response = s
 
-        manager = managers.BuildManager(protocol, 'git@repo.git', 'git',
-                                        'master', 'v0.1')
+        manager = managers.BuildManager(protocol, 'repo-id', 'git@repo.git',
+                                        'git', 'master', 'v0.1')
         toxicconf = os.path.join(TEST_DATA_DIR, 'toxicbuild.yml')
         with open(toxicconf) as fd:
             conf = fd.read()

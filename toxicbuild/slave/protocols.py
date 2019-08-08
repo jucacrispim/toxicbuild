@@ -135,6 +135,7 @@ class BuildServerProtocol(BaseToxicProtocol):
         """ Returns the builder manager for this request
         """
         try:
+            repo_id = self.data['body']['repo_id']
             repo_url = self.data['body']['repo_url']
             branch = self.data['body']['branch']
             vcs_type = self.data['body']['vcs_type']
@@ -147,8 +148,8 @@ class BuildServerProtocol(BaseToxicProtocol):
             'config_filename') or 'toxicbuild.yml'
         builders_from = self.data['body'].get('builders_from')
 
-        manager = BuildManager(self, repo_url, vcs_type, branch, named_tree,
-                               config_type=config_type,
+        manager = BuildManager(self, repo_id, repo_url, vcs_type, branch,
+                               named_tree, config_type=config_type,
                                config_filename=config_filename,
                                builders_from=builders_from)
 

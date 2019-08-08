@@ -45,11 +45,12 @@ class BuildManager(LoggerMixin):
     # key is repo_url and value is named_tree
     building_repos = defaultdict(lambda: None)  # pragma no branch WTF??
 
-    def __init__(self, protocol, repo_url, vcs_type, branch, named_tree,
-                 config_type='yml', config_filename='toxicbuild.yml',
-                 builders_from=None):
+    def __init__(self, protocol, repo_id, repo_url, vcs_type, branch,
+                 named_tree, config_type='yml',
+                 config_filename='toxicbuild.yml', builders_from=None):
         """
         :param manager: instance of :class:`toxicbuild.slave.BuildManager.`
+        :param repo_id: The repository ID.
         :param repo_url: The repository URL
         :param vcs_type: Type of vcs used in the repository.
         :param branch: Which branch to use in the build.
@@ -60,6 +61,7 @@ class BuildManager(LoggerMixin):
           instead of builders for the current branch.
         """
         self.protocol = protocol
+        self.repo_id = repo_id
         self.repo_url = repo_url
         self.vcs_type = vcs_type
         self.vcs = get_vcs(vcs_type)(self.workdir)
@@ -91,9 +93,7 @@ class BuildManager(LoggerMixin):
         """ The directory where the source code of this repository is
         cloned into
         """
-        workdir = self.repo_url.replace('/', '-').replace('@', '').replace(
-            ':', '')
-        return os.path.join('src', workdir)
+        return os.path.join('src', self.repo_id)
 
     @property
     def current_build(self):

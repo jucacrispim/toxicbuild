@@ -48,6 +48,7 @@ class ProtocolTest(TestCase):
         # the return of get_json_data()
         self.message = {'action': 'list_builders',
                         'body': {
+                            'repo_id': 'some-id',
                             'repo_url': 'git@bla.com',
                             'branch': 'master',
                             'named_tree': 'v0.1',
@@ -84,9 +85,10 @@ class ProtocolTest(TestCase):
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
+    @async_test
     def test_get_buildmanager(self):
         self.protocol.data = yield from self.protocol.get_json_data()
-        builder = self.protocol.get_buildmanager()
+        builder = yield from self.protocol.get_buildmanager()
         self.assertTrue(builder)
 
     @async_test
@@ -234,6 +236,7 @@ class ProtocolTest(TestCase):
         self.message = {'action': 'build',
                         'token': '123',
                         'body': {
+                            'repo_id': 'repo_id',
                             'repo_url': 'git@bla.com',
                             'branch': 'master',
                             'named_tree': 'v0.1',

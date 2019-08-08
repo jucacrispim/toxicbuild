@@ -98,8 +98,7 @@ class RepositoryTest(TestCase):
         self.assertTrue(self.repo.vcs)
 
     def test_workdir(self):
-        expected = 'src/git-somewhere.com-project.git/{}'.format(str(
-            self.repo.id))
+        expected = 'src/{}'.format(str(self.repo.id))
         self.assertEqual(self.repo.workdir, expected)
 
     @patch.object(repository, 'repo_added', AsyncMagicMock())

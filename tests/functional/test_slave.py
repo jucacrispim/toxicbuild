@@ -53,6 +53,7 @@ class DummyBuildClient(BaseToxicClient):
     def build(self, builder_name):
         data = {'action': 'build',
                 'body': {'repo_url': self.repo_url,
+                         'repo_id': 'repo_id',
                          'branch': 'master',
                          'vcs_type': 'git',
                          'named_tree': 'master',
@@ -76,6 +77,7 @@ class DummyBuildClient(BaseToxicClient):
     def build_output_info(self, builder_name):
         data = {'action': 'build',
                 'body': {'repo_url': self.repo_url,
+                         'repo_id': 'repo_id',
                          'branch': 'master',
                          'vcs_type': 'git',
                          'named_tree': 'master',
@@ -97,6 +99,7 @@ class DummyBuildClient(BaseToxicClient):
     def list_builders(self):
         data = {'action': 'list_builders',
                 'body': {'repo_url': self.repo_url,
+                         'repo_id': 'repo_id',
                          'branch': 'master',
                          'vcs_type': 'git',
                          'named_tree': 'master', }}

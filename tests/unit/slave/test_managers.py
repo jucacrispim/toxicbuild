@@ -56,7 +56,8 @@ class BuilderManagerTest(TestCase):
 
         protocol.send_response = s
 
-        self.manager = managers.BuildManager(protocol, 'git@repo.git', 'git',
+        self.manager = managers.BuildManager(protocol, 'repo-id',
+                                             'git@repo.git', 'git',
                                              'master', 'v0.1')
 
     def tearDown(self):
@@ -67,8 +68,8 @@ class BuilderManagerTest(TestCase):
         return tornado.ioloop.IOLoop.instance()
 
     def test_is_cloning_without_clone(self):
-        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
-                                        'master', 'v0.1')
+        manager = managers.BuildManager(MagicMock(), 'repo-id', 'git@repo.git',
+                                        'git', 'master', 'v0.1')
 
         manager.is_cloning = False
 
@@ -76,7 +77,8 @@ class BuilderManagerTest(TestCase):
 
     def test_is_cloning(self):
         try:
-            manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
+            manager = managers.BuildManager(MagicMock(), 'repo-id',
+                                            'git@repo.git', 'git',
                                             'master', 'v0.1')
 
             manager.is_cloning = True
@@ -87,40 +89,40 @@ class BuilderManagerTest(TestCase):
             managers.BuildManager.cloning_repos = set()
 
     def test_is_updating_without_update(self):
-        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
-                                        'master', 'v0.1')
+        manager = managers.BuildManager(MagicMock(), 'repo-id', 'git@repo.git',
+                                        'git', 'master', 'v0.1')
 
         manager.is_updating = False
 
         self.assertFalse(self.manager.is_updating)
 
     def test_is_updating(self):
-        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
-                                        'master', 'v0.1')
+        manager = managers.BuildManager(MagicMock(), 'repo-id', 'git@repo.git',
+                                        'git', 'master', 'v0.1')
 
         manager.is_updating = True
 
         self.assertTrue(self.manager.is_updating)
 
     def test_is_working_with_clone(self):
-        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
-                                        'master', 'v0.1')
+        manager = managers.BuildManager(MagicMock(), 'repo-id', 'git@repo.git',
+                                        'git', 'master', 'v0.1')
 
         manager.is_cloning = True
 
         self.assertTrue(self.manager.is_working)
 
     def test_is_working_with_update(self):
-        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
-                                        'master', 'v0.1')
+        manager = managers.BuildManager(MagicMock(), 'repo-id', 'git@repo.git',
+                                        'git', 'master', 'v0.1')
 
         manager.is_updating = True
 
         self.assertTrue(self.manager.is_working)
 
     def test_is_working_not_working(self):
-        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
-                                        'master', 'v0.1')
+        manager = managers.BuildManager(MagicMock(), 'repo-id', 'git@repo.git',
+                                        'git', 'master', 'v0.1')
 
         manager.is_updating = False
         manager.is_cloning = False
@@ -128,8 +130,8 @@ class BuilderManagerTest(TestCase):
         self.assertFalse(self.manager.is_working)
 
     def test_current_build(self):
-        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
-                                        'master', 'v0.1')
+        manager = managers.BuildManager(MagicMock(), 'repo-id', 'git@repo.git',
+                                        'git', 'master', 'v0.1')
         try:
             manager.current_build = 'v0.1'
             self.assertEqual(
@@ -139,28 +141,28 @@ class BuilderManagerTest(TestCase):
             manager.current_build = None
 
     def test_current_build_without_build(self):
-        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
-                                        'master', 'v0.1')
+        manager = managers.BuildManager(MagicMock(), 'repo-id', 'git@repo.git',
+                                        'git', 'master', 'v0.1')
         self.assertIsNone(manager.current_build)
 
     def test_enter_with_other_current_build(self):
-        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
-                                        'master', 'v0.1')
+        manager = managers.BuildManager(MagicMock(), 'repo-id', 'git@repo.git',
+                                        'git', 'master', 'v0.1')
         manager.current_build = 'v0.1.1'
         with self.assertRaises(managers.BusyRepository):
             with manager as m:
                 del m
 
     def test_enter_with_same_current_build(self):
-        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
-                                        'master', 'v0.1')
+        manager = managers.BuildManager(MagicMock(), 'repo-id', 'git@repo.git',
+                                        'git', 'master', 'v0.1')
         manager.current_build = 'v0.1'
         with manager as m:
             self.assertEqual(m.current_build, 'v0.1')
 
     def test_enter_without_current_build(self):
-        manager = managers.BuildManager(MagicMock(), 'git@repo.git', 'git',
-                                        'master', 'v0.1')
+        manager = managers.BuildManager(MagicMock(), 'repo-id', 'git@repo.git',
+                                        'git', 'master', 'v0.1')
         with manager as m:
             self.assertEqual(m.current_build, 'v0.1')
 
@@ -176,7 +178,8 @@ class BuilderManagerTest(TestCase):
                 self.call_count += 1
                 return [True, False][self.call_count]
 
-        manager = TBM(MagicMock(), 'git@repo.git', 'git', 'master', 'v0.1')
+        manager = TBM(MagicMock(), 'repo-id', 'git@repo.git', 'git', 'master',
+                      'v0.1')
         yield from manager.wait_clone()
 
         self.assertTrue(manager.clone_called)
@@ -193,7 +196,8 @@ class BuilderManagerTest(TestCase):
                 self.call_count += 1
                 return [True, False][self.call_count]
 
-        manager = TBM(MagicMock(), 'git@repo.git', 'git', 'master', 'v0.1')
+        manager = TBM(MagicMock(), 'repo-id', 'git@repo.git', 'git', 'master',
+                      'v0.1')
         yield from manager.wait_update()
 
         self.assertTrue(manager.update_called)
@@ -210,7 +214,8 @@ class BuilderManagerTest(TestCase):
                 self.call_count += 1
                 return [True, False][self.call_count]
 
-        manager = TBM(MagicMock(), 'git@repo.git', 'git', 'master', 'v0.1')
+        manager = TBM(MagicMock(), 'repo-id', 'git@repo.git', 'git', 'master',
+                      'v0.1')
         yield from manager.wait_all()
 
         self.assertTrue(manager.working_called)

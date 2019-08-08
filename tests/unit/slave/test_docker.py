@@ -166,9 +166,9 @@ class DockerContainerBuilderManagerTest(TestCase):
 
     def test_get_dind_opts(self):
         self.container._is_dind = True
-        self.container.cname = 'b'
+        self.container.manager.repo_id = 'i'
         opts = self.container._get_dind_opts()
-        e = '--privileged --mount source=b-volume,destination=/var/lib/docker/'
+        e = '--privileged --mount source=i-volume,destination=/var/lib/docker/'
         self.assertEqual(opts, e)
 
     @patch.object(docker, 'exec_cmd', AsyncMagicMock())
@@ -190,8 +190,9 @@ class DockerContainerBuilderManagerTest(TestCase):
         self.container.wait_start = AsyncMagicMock()
         self.container.cname = 'b'
         self.container._is_dind = True
+        self.container.manager.repo_id = 'repo_id'
         self.container.container_exists = AsyncMagicMock(return_value=False)
-        mount = '--mount source=b-volume,destination=/var/lib/docker/'
+        mount = '--mount source=repo_id-volume,destination=/var/lib/docker/'
         exp = 'docker run -d -t --privileged {} --name {} my-image'.format(
             mount, self.container.cname)
         await self.container.start_container()

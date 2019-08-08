@@ -88,6 +88,7 @@ class BuildClient(BaseToxicClient, LoggerMixin):
         data = {'action': 'build',
                 'token': slave.token,
                 'body': {'repo_url': repository.get_url(),
+                         'repo_id': str(repository.id),
                          'vcs_type': repository.vcs_type,
                          'branch': build.branch,
                          'named_tree': build.named_tree,

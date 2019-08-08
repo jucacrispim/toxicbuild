@@ -163,7 +163,7 @@ class DockerContainerBuilder(Builder):
 
     def _get_dind_opts(self):
         privileged = '--privileged' if self._is_dind else ''
-        vol_name = '{}-volume'.format(self.cname)
+        vol_name = '{}-volume'.format(self.manager.repo_id)
         volume = '--mount source={},destination=/var/lib/docker/'.format(
             vol_name) if self._is_dind else ''
 
