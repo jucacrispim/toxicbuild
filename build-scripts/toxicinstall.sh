@@ -130,7 +130,10 @@ create_test_env(){
 
 
 create_test_selenium_env(){
+    echo "Creating selenium test environment"
+
     create_test_selenium_img
+    docker-compose -f $DOCKER_DIR/docker-compose.yml up --no-color --exit-code-from setup-env setup-env
 }
 
 
