@@ -169,7 +169,7 @@ class RepositoryMessageConsumer(LoggerMixin):
             builder_name = body.get('builder_name')
             named_tree = body.get('named_tree')
 
-            await repo.start_build(branch, builder_name=builder_name,
+            await repo.start_build(branch, builder_name_or_id=builder_name,
                                    named_tree=named_tree)
         except Exception as e:
             log_msg = 'Error starting builds for {}. '.format(repo.id)
