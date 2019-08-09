@@ -482,13 +482,14 @@ class HoleHandler:
         return {'repo-remove-branch': 'ok'}
 
     async def repo_start_build(self, repo_name_or_id, branch,
-                               builder_name=None, named_tree=None,
+                               builder_name_or_id=None, named_tree=None,
                                builders_origin=None):
         """ Starts a(some) build(s) in a given repository. """
+
         kw = self._get_kw_for_name_or_id(repo_name_or_id)
         repo = await Repository.get_for_user(self.protocol.user, **kw)
 
-        await repo.start_build(branch, builder_name, named_tree,
+        await repo.start_build(branch, builder_name_or_id, named_tree,
                                builders_origin=builders_origin)
         return {'repo-start-build': 'builds added'}
 

@@ -445,7 +445,7 @@ class DummyMasterHoleClient(BaseToxicClient):
         body = {'repo_name_or_id': 'toxic/test-repo',
                 'branch': 'master'}
         if builder:
-            body['builder_name'] = builder
+            body['builder_name_or_id'] = builder
         resp = await self.request2server(action, body)
 
         return resp

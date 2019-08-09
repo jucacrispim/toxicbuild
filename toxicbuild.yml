@@ -18,22 +18,22 @@ builders:
         stop_on_fail: true
 
       - name: Linter checks
-        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from pylint pylint
+        command: docker-compose -f ops/docker/docker-compose.yml run pylint
 
       - name: Code style checks
-        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from pep8 pep8
+        command: docker-compose -f ops/docker/docker-compose.yml run pep8
         warning_on_fail: true
 
       - name: Code complexity checks
-        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from xenon xenon
+        command: docker-compose -f ops/docker/docker-compose.yml run xenon
         warning_on_fail: true
 
       - name: Unit tests
-        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from unit-tests unit-tests
+        command: docker-compose -f ops/docker/docker-compose.yml run unit-tests
         timeout: 20
 
       - name: Functional tests
-        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from functional-tests functional-tests
+        command: docker-compose -f ops/docker/docker-compose.yml run functional-tests
         timeout: 45
 
       - name: Clean old images
@@ -61,13 +61,13 @@ builders:
         stop_on_fail: true
 
       - name: JS unit tests
-        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from js-unit-tests js-unit-tests
+        command: docker-compose -f ops/docker/docker-compose.yml run js-unit-tests
 
       - name: Selenium tests
-        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from selenium-tests selenium-tests
+        command: docker-compose -f ops/docker/docker-compose.yml run selenium-tests
 
       - name: Selenium integration tests
-        command: docker-compose -f ops/docker/docker-compose.yml up --no-color --exit-code-from selenium-integration-tests selenium-integration-tests
+        command: docker-compose -f ops/docker/docker-compose.yml run selenium-integration-tests
         timeout: 45
 
 

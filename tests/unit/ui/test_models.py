@@ -255,7 +255,7 @@ class RepositoryTest(TestCase):
             requester, 'start build ok')
 
         resp = yield from self.repository.start_build('master',
-                                                      builder_name='b0',
+                                                      builder_name_or_id='b0',
                                                       named_tree='v0.1')
 
         self.assertEqual(resp, 'start build ok')

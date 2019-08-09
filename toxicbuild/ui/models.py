@@ -407,11 +407,11 @@ class Repository(BaseModel):
         return resp
 
     @asyncio.coroutine
-    def start_build(self, branch, builder_name=None, named_tree=None):
+    def start_build(self, branch, builder_name_or_id=None, named_tree=None):
         """Starts a (some) build(s) for a repository.
 
         :param branch: The name of the branch.
-        :param builder_name: The name of the builder that will execute
+        :param builder_name_or_id: The name of the builder that will execute
           the build
         :param named_tree: The named_tree that will be builded. If no
           named_tree the last one will be used.
@@ -420,7 +420,7 @@ class Repository(BaseModel):
         with (yield from self.get_client(self.requester)) as client:
             resp = yield from client.repo_start_build(
                 repo_name_or_id=self.id, branch=branch,
-                builder_name=builder_name,
+                builder_name_or_id=builder_name_or_id,
                 named_tree=named_tree)
         return resp
 

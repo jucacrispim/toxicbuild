@@ -23,6 +23,7 @@ import re
 import shutil
 from threading import Thread
 from aiozk import exc
+from bson.objectid import ObjectId
 from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, IntField, ReferenceField,
@@ -612,8 +613,17 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             buildset, conf, builders=builders,
             builders_origin=builders_origin)
 
-    async def start_build(self, branch, builder_name=None, named_tree=None,
-                          builders_origin=None):
+    def _get_builder_kw(self, name_or_id):
+        kw = {'repository': self}
+        if ObjectId.is_valid(name_or_id):
+            kw['id'] = name_or_id
+        else:
+            kw['name'] = name_or_id
+
+        return kw
+
+    async def start_build(self, branch, builder_name_or_id=None,
+                          named_tree=None, builders_origin=None):
         """ Starts a (some) build(s) in the repository. """
 
         if not named_tree:
@@ -634,12 +644,12 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             buildset_added.send(str(self.id), buildset=buildset)
             return
 
-        if not builder_name:
+        if not builder_name_or_id:
             builders, builders_origin = await self._get_builders(rev, conf)
         else:
             builders_origin = None
-            builders = [(await Builder.get(name=builder_name,
-                                           repository=self))]
+            kw = self._get_builder_kw(builder_name_or_id)
+            builders = [(await Builder.get(**kw))]
         await self.add_builds_for_buildset(buildset, conf,
                                            builders=builders,
                                            builders_origin=builders_origin)

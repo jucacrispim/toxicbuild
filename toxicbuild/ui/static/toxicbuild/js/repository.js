@@ -78,10 +78,10 @@ class Repository extends BaseModel{
     return this._post2api(url, body);
   }
 
-  async start_build(branch, builder_name=null, named_tree=null,
+  async start_build(branch, builder_name_or_id=null, named_tree=null,
 		    builders_origin=null){
     let url = this._api_url + 'start-build?id=' + this.id;
-    let body = {'branch': branch, 'builder_name': builder_name,
+    let body = {'branch': branch, 'builder_name_or_id': builder_name_or_id,
 		'named_tree': named_tree};
     return this._post2api(url, body);
   }

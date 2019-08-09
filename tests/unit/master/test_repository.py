@@ -596,6 +596,23 @@ class RepositoryTest(TestCase):
                                                          conf)
         self.assertEqual(builders, [self.builder])
 
+    def test_get_builder_kw_name(self):
+        name_or_id = 'a-name'
+        expected = {'name': 'a-name', 'repository': self.repo}
+        r = self.repo._get_builder_kw(name_or_id)
+
+        self.assertEqual(r, expected)
+
+    def test_get_builder_kw_id(self):
+        name_or_id = repository.ObjectId()
+        expected = {
+            'id': name_or_id,
+            'repository': self.repo
+        }
+        r = self.repo._get_builder_kw(name_or_id)
+
+        self.assertEqual(r, expected)
+
     @async_test
     async def test_start_build(self):
         await self._create_db_revisions()
@@ -632,7 +649,7 @@ class RepositoryTest(TestCase):
         self.repo._get_builders = create_autospec(
             spec=self.repo._get_builders, mock_cls=AsyncMagicMock)
 
-        await self.repo.start_build('master', builder_name='builder0',
+        await self.repo.start_build('master', builder_name_or_id='builder0',
                                     named_tree='asdf')
 
         self.assertTrue(self.repo.add_builds_for_buildset.called)
@@ -648,7 +665,7 @@ class RepositoryTest(TestCase):
         self.repo.add_builds_for_buildset = create_autospec(
             spec=self.repo.add_builds_for_buildset, mock_cls=AsyncMagicMock)
 
-        await self.repo.start_build('master', builder_name='builder0',
+        await self.repo.start_build('master', builder_name_or_id='builder0',
                                     named_tree='asdf')
 
         self.assertFalse(self.repo.add_builds_for_buildset.called)

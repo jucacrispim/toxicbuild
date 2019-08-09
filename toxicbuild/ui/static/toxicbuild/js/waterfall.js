@@ -360,8 +360,8 @@ class WaterfallBuildView extends BaseWaterfallView{
     router.setUpLinks(this.$el);
 
     $('.fa-redo', this.$el).on('click', function(){
-      let builder_name = self.build.get('builder').name;
-      utils.rescheduleBuildSet(self.build, self.$el, builder_name);
+      let builder_id = self.build.get('builder').id;
+      utils.rescheduleBuildSet(self.build, self.$el, builder_id);
     });
 
     $('.fa-times', this.$el).on('click', function(){

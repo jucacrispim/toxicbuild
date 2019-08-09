@@ -681,7 +681,7 @@ class HoleHandlerTest(TestCase):
         self.repo.slaves = [self.slave]
         await self.repo.save()
         await handler.repo_start_build(self.repo.id, 'master',
-                                       builder_name='b00')
+                                       builder_name_or_id='b00')
 
         self.assertEqual(len(add_builds_for.call_args_list), 1)
 
