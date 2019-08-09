@@ -72,11 +72,11 @@ class UISettingsView extends Backbone.View{
   }
 
   _getUsedLocale(){
-    return Cookies.get('ui_locale') || 'en_US';
+    return utils.getLocale() || 'en_US';
   }
 
   setLocaleCookie(locale){
-    Cookies.set('ui_locale', locale);
+    utils.setLocale(locale);
   }
 
 }

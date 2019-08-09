@@ -165,8 +165,16 @@ var utils = {
 
   },
 
+  getLocale(){
+    return Cookies.get('ui_locale');
+  },
+
+  setLocale(locale){
+    Cookies.set('ui_locale', locale);
+  },
+
   async loadTranslations(static_url){
-    let locale = Cookies.get('ui_locale');
+    let locale = utils.getLocale();
     if (!locale){
       return false;
     }
@@ -207,8 +215,8 @@ var utils = {
 
 class TimeCounter{
 
-  constructor(){
-    this.secs = 0;
+  constructor(secs=0){
+    this.secs = secs;
     this._stop = false;
   }
 

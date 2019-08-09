@@ -441,6 +441,12 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     return new WaterfallBuildView({build: build});
   }
 
+  _timecounter_cb(secs){
+    let f = utils.formatSeconds(secs);
+    let el = $('.buildset-total-time', this.$el);
+    el.text(f);
+  }
+
   reRenderInfo(){
     let self = this;
 
@@ -456,10 +462,8 @@ class WaterfallBuildSetView extends BaseWaterfallView{
     if (!this.buildset.get('finished')){
       let self = this;
 
-      let cb = function(secs){
-	let f = utils.formatSeconds(secs);
-	let el = $('.buildset-total-time', self.$el);
-	el.text(f);
+      let cb = function(){
+	self._timecounter_cb(arguments[0]);
       };
 
       this.counter.start(cb);
@@ -467,6 +471,57 @@ class WaterfallBuildSetView extends BaseWaterfallView{
       this.counter.stop();
     }
 
+  }
+
+  _get_ymd(dstr){
+    // returns year, month, day based in the string dstr
+    let locale = utils.getLocale() || 'en_US';
+    let day, month, year;
+    let r = dstr.split('/');
+    if (locale == 'pt_BR'){
+      day = r[0];
+      month = r[1] - 1;
+      year = r[2];
+    }else{
+      month = r[0] - 1;
+      day = r[1];
+      year = r[2];
+    }
+
+    return [parseInt(year), parseInt(month), parseInt(day)];
+  }
+
+  _getSecsDiff(dt_str){
+    // Returns the difference in seconds between dt_str and the current time;
+    let r = dt_str.split(' ');
+    let date = r[0];
+    let time = r[1];
+    r = this._get_ymd(date);
+    let year = r[0];
+    let month = r[1];
+    let day = r[2];
+    r = time.split(':');
+    let hour = r[0];
+    let minute = r[1];
+    let seconds = r[2];
+
+    let dt = new Date(year, month, day, hour, minute, seconds);
+    let current = new Date();
+    var diff = (current - dt) / 1000;
+
+    return parseInt(Math.abs(diff));
+  }
+
+  _createStartedCounter(dt){
+    let self = this;
+    let secs = this._getSecsDiff(dt);
+    this.counter.secs = secs;
+
+    let cb = function(){
+      self._timecounter_cb(arguments[0]);
+    };
+
+    this.counter.start(cb);
   }
 
   getRendered(){
@@ -487,6 +542,12 @@ class WaterfallBuildSetView extends BaseWaterfallView{
 	self.$el.append(document.createElement('td'));
       }
     });
+    let started = this.buildset.get('started');
+    let finished = this.buildset.get('finished');
+
+    if (started && !finished){
+      this._createStartedCounter(started);
+    }
 
     let first_col = $('.waterfall-first-col', this.$el);
     $('.fa-redo', first_col).on('click', function(){

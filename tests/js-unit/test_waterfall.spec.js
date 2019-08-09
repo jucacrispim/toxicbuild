@@ -340,6 +340,41 @@ describe('WaterfallBuildSetViewTest', function(){
     expect(builder_builds['some-id'].get('val')).toEqual(1);
   });
 
+  it('test-get_ymd-pt_BR', function(){
+    spyOn(utils, 'getLocale').and.returnValue('pt_BR');
+    let dt = '20/10/2018';
+    let r = this.view._get_ymd(dt);
+
+    expect(r).toEqual([2018, 9, 20]);
+  });
+
+  it('test-get_ymd', function(){
+    spyOn(utils, 'getLocale').and.returnValue('');
+    let dt = '10/20/2018';
+    let r = this.view._get_ymd(dt);
+
+    expect(r).toEqual([2018, 9, 20]);
+  });
+
+  it('test-getSecsDiff', async function(){
+    let dtstr = new Date().toLocaleString();
+    spyOn(utils, 'getLocale').and.returnValue('pt_BR');
+    await utils.sleep(1000);
+    let r = this.view._getSecsDiff(dtstr);
+    expect(r).toBeGreaterThan(0);
+  });
+
+  it('test-createStartedCounter', function(){
+    let dt = 'some-fake-dt';
+    spyOn(this.view, '_getSecsDiff').and.returnValue(10);
+    spyOn(this.view.counter, 'start');
+
+    this.view._createStartedCounter(dt);
+
+    expect(this.view.counter.secs).toEqual(10);
+    expect(this.view.counter.start).toHaveBeenCalled();
+  });
+
 });
 
 
