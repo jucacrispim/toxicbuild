@@ -272,7 +272,7 @@ class UserTest(BaseFunctionalTest):
     async def setUpClass(cls):
         cls.root = UserDBModel(id=settings.ROOT_USER_ID, email='bla@bla.nada',
                                is_superuser=True)
-        await cls.root.save()
+        await cls.root.save(force_insert=True)
 
     @classmethod
     @async_test

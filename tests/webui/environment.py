@@ -148,7 +148,7 @@ def del_repo(context):
 async def create_root_user(context):
     user = User(id=settings.ROOT_USER_ID, username='already-exists',
                 email='nobody@nowhere.nada', allowed_actions=['add_user'])
-    await user.save()
+    await user.save(force_insert=True)
 
 
 def before_all(context):

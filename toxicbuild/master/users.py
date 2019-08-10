@@ -32,6 +32,13 @@ from toxicbuild.master.exceptions import InvalidCredentials
 from toxicbuild.master.utils import send_email
 
 
+class Team(EmbeddedDocument):
+    uuid = UUIDField()
+
+    name = StringField(required=True)
+    members = ListField(ReferenceField('User'))
+
+
 class Organization(Document):
     uuid = UUIDField()
 
@@ -162,10 +169,3 @@ class ResetUserPasswordToken(Document):
         await send_email([self.email], subject, body)
         self.valid = False
         await self.save()
-
-
-class Team(EmbeddedDocument):
-    uuid = UUIDField()
-
-    name = StringField(required=True)
-    members = ListField(ReferenceField(User))

@@ -169,15 +169,14 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     async def to_dict(self):
         """Returns a dict representation of the object."""
-
+        slaves = await self.slaves
         my_dict = {'id': str(self.id), 'name': self.name, 'url': self.url,
                    'full_name': self.full_name,
                    'external_full_name': self.external_full_name,
                    'update_seconds': self.update_seconds,
                    'vcs_type': self.vcs_type,
                    'branches': [b.to_dict() for b in self.branches],
-                   'slaves': [s.to_dict(True)
-                              for s in (await self.slaves)],
+                   'slaves': [s.to_dict(True) for s in slaves],
                    'enabled': self.enabled,
                    'parallel_builds': self.parallel_builds,
                    'clone_status': self.clone_status}
