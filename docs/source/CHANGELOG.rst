@@ -1,10 +1,13 @@
 Changelog
 =========
 
+* 0.6.2
+
+  - Web ui fixes.
+
 * 0.6.1
 
   - Now builds stop when a steps finishes with exception
-
 
 * 0.6.0
 
