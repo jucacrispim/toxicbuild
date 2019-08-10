@@ -1,6 +1,8 @@
 FROM python:3.7.4-slim-buster
 
-RUN sudo apt-get update && sudo apt-get install git
+RUN apt-get update && apt-get install -y git libyaml-dev
+
+RUN useradd -ms /bin/bash toxicuser
 
 USER toxicuser
 WORKDIR /home/toxicuser
@@ -18,9 +20,12 @@ RUN pip install -r requirements.txt
 RUN rm /home/toxicuser/.toxic-venv/src/toxicbuild/requirements.txt
 
 # After the deps are installed we copy the source files
+USER root
 COPY dist/ /tmp/src/
-RUN sudo cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/
-RUN sudo chown -R toxicuser:toxicuser /home/toxicuser/.toxic-venv/src/
+RUN cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/
+RUN chown -R toxicuser:toxicuser /home/toxicuser/.toxic-venv/src/
+
+USER toxicuser
 
 # And install the stuff.
 RUN python setup.py install

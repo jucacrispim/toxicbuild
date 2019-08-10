@@ -81,32 +81,39 @@ create_test_selenium_img(){
 
 create_slave_img(){
     docker build -f $DOCKER_DIR/Dockerfile-slave -t toxicslave $DOCKER_DIR
+    docker tag toxicslave jucacrispim/toxicbuild:slave
 }
 
 create_output_img(){
     docker build -f $DOCKER_DIR/Dockerfile-output -t toxicoutput $DOCKER_DIR
+    docker tag toxicoutput jucacrispim/toxicbuild:output
 }
 
 
 create_master_img(){
     docker build -f $DOCKER_DIR/Dockerfile-master -t toxicmaster $DOCKER_DIR
+    docker tag toxicmaster jucacrispim/toxicbuild:master
 }
 
 create_scheduler_img(){
     docker build -f $DOCKER_DIR/Dockerfile-scheduler -t toxicscheduler $DOCKER_DIR
+    docker tag toxicscheduler jucacrispim/toxicbuild:scheduler
 }
 
 create_poller_img(){
     docker build -f $DOCKER_DIR/Dockerfile-poller -t toxicpoller $DOCKER_DIR
+    docker tag toxicpoller jucacrispim/toxicbuild:poller
 }
 
 create_integrations_img(){
-    docker build -f $DOCKER_DIR/Dockerfile-integrations -t toxicintegrations $DOCKER_DIR &> /dev/null
+    docker build -f $DOCKER_DIR/Dockerfile-integrations -t toxicintegrations $DOCKER_DIR
+    docker tag toxicintegrations jucacrispim/toxicbuild:integrations
 }
 
 
 create_web_img(){
-    docker build -f $DOCKER_DIR/Dockerfile-web -t toxicweb $DOCKER_DIR &> /dev/null
+    docker build -f $DOCKER_DIR/Dockerfile-web -t toxicweb $DOCKER_DIR
+    docker tag toxicweb jucacrispim/toxicbuild:web
 }
 
 
@@ -120,6 +127,17 @@ create_imgs(){
     create_integrations_img
     create_web_img
 }
+
+upload_images(){
+    docker push jucacrispim/toxicbuild:slave
+    docker push jucacrispim/toxicbuild:output
+    docker push jucacrispim/toxicbuild:master
+    docker push jucacrispim/toxicbuild:scheduler
+    docker push jucacrispim/toxicbuild:poller
+    docker push jucacrispim/toxicbuild:integrations
+    docker push jucacrispim/toxicbuild:web
+}
+
 
 
 create_test_env(){
@@ -292,6 +310,10 @@ case "$1" in
 	clean
 	;;
 
+    upload-images)
+	upload_images
+	;;
+
     create-test-env)
 	drop_db
 	create_empty_envs
@@ -315,6 +337,7 @@ case "$1" in
 	echo " - clean-local"
 	echo " - start-local"
 	echo " - create-images"
+	echo " - upload-images"
 	echo " - create-test-env"
 	echo " - create-test-selenium-env"
 	exit 1;

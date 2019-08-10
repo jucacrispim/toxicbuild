@@ -2,7 +2,7 @@ version: '2'
 services:
 
   web:
-    image: toxicweb:latest
+    image: jucacrispim/toxicbuild:web
     env_file: web.env
     ports:
       - "8888:8888"
@@ -14,11 +14,11 @@ services:
       - master
 
   slave:
-    image: toxicslave:latest
+    image: jucacrispim/toxicbuild:slave
     env_file: ./slave.env
 
   output:
-    image: toxicoutput:latest
+    image: jucacrispim/toxicbuild:output
     env_file: ./output.env
 
     depends_on:
@@ -30,7 +30,7 @@ services:
        AMQPHOST: rabbitmq
 
   scheduler:
-    image: toxicscheduler:latest
+    image: jucacrispim/toxicbuild:scheduler
     env_file: ./master.env
 
     environment:
@@ -44,7 +44,7 @@ services:
       - zookeeper
 
   poller:
-    image: toxicpoller:latest
+    image: jucacrispim/toxicbuild:poller
     env_file: ./master.env
 
     environment:
@@ -58,7 +58,7 @@ services:
       - zookeeper
 
   integrations:
-    image: toxicintegrations:latest
+    image: jucacrispim/toxicbuild:integrations
     env_file: ./integrations.env
     ports:
       - "9999:9999"
@@ -70,7 +70,7 @@ services:
        NOTIFICATIONS_API_URL: "http://output:9432/"
 
   master:
-    image: toxicmaster:latest
+    image: jucacrispim/toxicbuild:master
     env_file: ./master.env
 
     depends_on:
@@ -90,11 +90,11 @@ services:
        NOTIFICATIONS_API_URL: "http://output:9432/"
 
   create_slave_token:
-    image: toxicslave:latest
+    image: jucacrispim/toxicbuild:slave
     command: toxicslave create_token /home/toxicuser/ci/slave/toxicslave.conf --show-encrypted
 
   create_output_token:
-    image: toxicoutput:latest
+    image: jucacrispim/toxicbuild:output
     command: toxicoutput create_token /home/toxicuser/ci/output
 
     depends_on:
@@ -104,14 +104,14 @@ services:
        DBHOST: mongo
 
   create_master_token:
-    image: toxicmaster:latest
+    image: jucacrispim/toxicbuild:master
     command: toxicmaster create_token /home/toxicuser/ci/master/toxicmaster.conf --show-encrypted
 
     depends_on:
       - mongo
 
   create_user:
-    image: toxicmaster:latest
+    image: jucacrispim/toxicbuild:master
     command: toxicmaster create_user /home/toxicuser/ci/master/toxicmaster.conf --email $TOXICMASTER_USER_EMAIL --password $TOXICMASTER_USER_PASSWORD --superuser
 
     depends_on:
@@ -121,7 +121,7 @@ services:
        DBHOST: mongo
 
   add_slave:
-    image: toxicmaster:latest
+    image: jucacrispim/toxicbuild:master
     command: toxicmaster add_slave /home/toxicuser/ci/master/toxicmaster.conf localslave slave 7777 $SLAVE_ACCESS_TOKEN $SLAVE_OWNER_ID
 
     depends_on:
