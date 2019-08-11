@@ -65,6 +65,7 @@ builders:
 
       - name: Selenium tests
         command: docker-compose -f ops/docker/docker-compose.yml run selenium-tests
+        timeout: 45
 
       - name: Selenium integration tests
         command: docker-compose -f ops/docker/docker-compose.yml run selenium-integration-tests
@@ -73,4 +74,3 @@ builders:
 
       - name: Clean old images
         command: ./build-scripts/clean_images.sh
-        timeout: 45
