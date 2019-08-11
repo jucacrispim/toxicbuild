@@ -26,8 +26,8 @@ import asyncio
 from asyncio import ensure_future
 
 from asyncblink import signal
+from toxicbuild.common.client import get_hole_client
 from toxicbuild.core.utils import LoggerMixin
-from toxicbuild.ui.client import get_hole_client
 from toxicbuild.ui.utils import get_client_settings
 
 
@@ -80,6 +80,7 @@ class StreamConnector(LoggerMixin):
             return
 
         client_settings = get_client_settings()
+
         client = yield from get_hole_client(self.user, **client_settings)
 
         yield from client.connect2stream({'event_types': self.events})

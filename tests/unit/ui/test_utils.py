@@ -24,7 +24,8 @@ from toxicbuild.master.build import Build, BuildSet, Builder
 from toxicbuild.master.repository import Repository, RepositoryRevision
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.users import User
-from toxicbuild.ui import utils, models
+from toxicbuild.common import api_models
+from toxicbuild.ui import utils
 from tests import async_test, AsyncMagicMock
 
 
@@ -83,19 +84,19 @@ class BuildsetUtilsTest(TestCase):
         await Repository.drop_collection()
         await User.drop_collection()
 
-    @patch.object(models.Builder, 'list', AsyncMagicMock(
-        spec=models.Builder.list))
+    @patch.object(api_models.Builder, 'list', AsyncMagicMock(
+        spec=api_models.Builder.list))
     @async_test
     async def test_get_builders_for_buildset(self):
-        buildset = models.BuildSet(self.user,
-                                   ordered_kwargs=self.buildset.to_dict())
+        buildset = api_models.BuildSet(self.user,
+                                       ordered_kwargs=self.buildset.to_dict())
         expected = sorted([self.builder])
         builder = await self.builder.to_dict()
-        models.Builder.list.return_value = [models.Builder(
+        api_models.Builder.list.return_value = [api_models.Builder(
             self.user, ordered_kwargs=builder)]
         returned = await utils.get_builders_for_buildsets(self.user,
                                                           [buildset])
-        called_args = models.Builder.list.call_args[1]
+        called_args = api_models.Builder.list.call_args[1]
 
         expected = {'id__in': [str(b.id) for b in [self.builder]]}
         self.assertEqual(expected, called_args)

@@ -44,7 +44,8 @@ from pyrocumulus.auth import AccessToken  # noqa f402
 from toxicbuild.master.exchanges import scheduler_action  # noqa f402
 from toxicbuild.ui import settings  # noqa f402
 from toxicbuild.master.users import User  # noqa f402
-from toxicbuild.ui.models import Slave, Repository  # noqa 402
+from toxicbuild.common.api_models import (  # noqa 402
+    Slave, Repository, BaseModel)
 from tests.functional import (start_slave, stop_slave,  # noqa 402
                               start_master, stop_master,
                               start_poller, stop_poller,
@@ -53,6 +54,9 @@ from tests.functional import (start_slave, stop_slave,  # noqa 402
                               start_webui, stop_webui,
                               REPO_DIR)
 from tests.webui import SeleniumBrowser  # noqa 402
+
+
+BaseModel.settings = settings
 
 
 def create_browser(context):

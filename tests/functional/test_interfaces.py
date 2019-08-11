@@ -18,12 +18,15 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from toxicbuild.common.api_models import (Slave, Repository, BuildSet, User,
+                                          BaseModel)
 from toxicbuild.master.repository import Repository as RepoDBModel
 from toxicbuild.master.users import User as UserDBModel
 from toxicbuild.ui import settings
-from toxicbuild.ui.models import Slave, Repository, BuildSet, User
 from tests import async_test
 from tests.functional import BaseFunctionalTest, start_all, stop_all
+
+BaseModel.settings = settings
 
 
 def setUpModule():

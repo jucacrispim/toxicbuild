@@ -136,7 +136,7 @@ class StreamConnectorTest(TestCase):
 
         @asyncio.coroutine
         def get_hole_client(requester, host, port, use_ssl=True,
-                            validate_cert=True):
+                            hole_token=None, validate_cert=True):
             return client
 
         connectors.get_hole_client = get_hole_client

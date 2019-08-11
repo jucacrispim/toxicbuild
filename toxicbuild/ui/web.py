@@ -37,14 +37,14 @@ from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
 from toxicbuild.ui.exceptions import (BadSettingsType, UserDoesNotExist,
                                       BadResetPasswordToken)
-from toxicbuild.common.api_models import Notification
+from toxicbuild.common.api_models import (Repository, Slave, User,
+                                          BuildSet, Builder, Build, BaseModel,
+                                          Notification)
 from toxicbuild.common.utils import format_datetime
-from toxicbuild.ui.models import (Repository, Slave, User,
-                                  BuildSet, Builder, Build)
 from toxicbuild.ui.utils import (get_defaulte_locale_morsel,
                                  get_default_timezone_morsel)
 
-Notification.settings = settings
+BaseModel.settings = settings
 
 COOKIE_NAME = 'toxicui'
 

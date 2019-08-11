@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017, 2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,40 +17,39 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.core.utils import LoggerMixin
-from toxicbuild.ui import settings
-from toxicbuild.ui.exceptions import (UserDoesNotExist, NotEnoughPerms,
-                                      BadResetPasswordToken)
+from .exceptions import (UserDoesNotExist, NotEnoughPerms,
+                         BadResetPasswordToken)
 
 
-class UIHoleClient(BaseToxicClient, LoggerMixin):
+class HoleClient(BaseToxicClient, LoggerMixin):
     """Client for the master's hole. """
 
+    settings = None
+
     def __init__(self, requester, *args, hole_token=None, **kwargs):
-        """:param requester: The users who is willing to talk to the
+        """:param requester: The user who is willing to talk to the
         master.
         :param args: List arguments passed to super() constructor.
         :param hole_token: The token for access on the master.
         :param kwargs: Named arguments passed to super() constructor."""
 
-        self.hole_token = hole_token or settings.HOLE_TOKEN
+        self.hole_token = hole_token or self.settings.HOLE_TOKEN
         self.requester = requester
         super().__init__(*args, **kwargs)
 
     def __getattr__(self, name):
         action = name.replace('_', '-')
 
-        @asyncio.coroutine
-        def _2serverandback(**kwargs):
-            return (yield from self.request2server(action, body=kwargs))
+        async def _2serverandback(**kwargs):
+            r = await self.request2server(action, body=kwargs)
+            return r
 
         return _2serverandback
 
-    @asyncio.coroutine
-    def request2server(self, action, body):
+    async def request2server(self, action, body):
         """Performs a request to a hole server.
 
         :param action: The action to perform on the server.
@@ -65,23 +64,21 @@ class UIHoleClient(BaseToxicClient, LoggerMixin):
         if action not in ['user-authenticate']:
             data['user_id'] = str(self.requester.id)
 
-        yield from self.write(data)
-        response = yield from self.get_response()
+        await self.write(data)
+        response = await self.get_response()
         return response['body'][action]
 
-    @asyncio.coroutine
-    def connect2stream(self, body):
+    async def connect2stream(self, body):
         """Connects the client to the master's hole stream."""
 
         action = 'stream'
         user_body = {'user_id': str(self.requester.id)}
         body.update(user_body)
 
-        yield from self.request2server(action, body)
+        await self.request2server(action, body)
 
-    @asyncio.coroutine
-    def get_response(self):
-        response = yield from self.read()
+    async def get_response(self):
+        response = await self.read()
 
         if 'code' in response and int(response['code']) == 1:
             # server error
@@ -99,10 +96,9 @@ class UIHoleClient(BaseToxicClient, LoggerMixin):
         return response
 
 
-@asyncio.coroutine
-def get_hole_client(requester, host, port, hole_token=None,
-                    **kwargs):
-    client = UIHoleClient(requester, host, port, hole_token=hole_token,
-                          **kwargs)
-    yield from client.connect()
+async def get_hole_client(requester, host, port, hole_token=None,
+                          **kwargs):
+    client = HoleClient(requester, host, port, hole_token=hole_token,
+                        **kwargs)
+    await client.connect()
     return client

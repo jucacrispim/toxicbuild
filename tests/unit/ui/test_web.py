@@ -21,7 +21,8 @@ import asyncio
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 import tornado
-from toxicbuild.ui import web, models, utils
+from toxicbuild.common import api_models
+from toxicbuild.ui import web, utils
 from tests import AsyncMagicMock, async_test, create_autospec
 
 
@@ -228,13 +229,13 @@ class LoginHandlerTest(TestCase):
         self.assertEqual(template, self.handler.reset_password_template)
 
 
-@patch.object(models.Repository, 'get_client', AsyncMagicMock(
-    spec=models.Repository.get_client, return_value=MagicMock()))
+@patch.object(api_models.Repository, 'get_client', AsyncMagicMock(
+    spec=api_models.Repository.get_client, return_value=MagicMock()))
 class ModelRestHandlerTest(TestCase):
 
     @async_test
     async def setUp(self):
-        self.model = models.Repository
+        self.model = api_models.Repository
         application, request = MagicMock(), MagicMock()
         application.ui_methods = {}
         self.handler = web.ModelRestHandler(application, request,
@@ -249,7 +250,7 @@ class ModelRestHandlerTest(TestCase):
 
     @async_test
     async def test_add(self):
-        client = models.Repository.get_client.return_value
+        client = api_models.Repository.get_client.return_value
         client.__enter__.return_value.repo_add = AsyncMagicMock()
         client.__enter__.return_value.repo_add.return_value = {
             'id': '123', 'name': 'something'}
@@ -262,7 +263,7 @@ class ModelRestHandlerTest(TestCase):
         args = {'id': [b'123']}
         self.handler.request.arguments = args
         await self.handler.async_prepare()
-        client = models.Repository.get_client.return_value
+        client = api_models.Repository.get_client.return_value
         client.__enter__.return_value.repo_get = AsyncMagicMock()
         client.__enter__.return_value.repo_get.return_value = {
             'id': '123', 'name': 'something'}
@@ -272,7 +273,7 @@ class ModelRestHandlerTest(TestCase):
 
     @async_test
     async def test_get_or_list_list(self):
-        client = models.Repository.get_client.return_value
+        client = api_models.Repository.get_client.return_value
         client.__enter__.return_value.repo_list = AsyncMagicMock()
         client.__enter__.return_value.repo_list.return_value = [
             {'id': '123', 'name': 'something'},
@@ -283,10 +284,11 @@ class ModelRestHandlerTest(TestCase):
 
     @async_test
     async def test_update(self):
-        client = models.Repository.get_client.return_value
+        client = api_models.Repository.get_client.return_value
         client.__enter__.return_value.repo_get = AsyncMagicMock()
         client.__enter__.return_value.repo_get.return_value = {
             'id': '123', 'name': 'something'}
+        client.__enter__.return_value.repo_update = AsyncMagicMock()
         self.model.get_client = AsyncMagicMock(return_value=client)
         self.handler.body = {'parallel_builds': 2}
         json_resp = await self.handler.update()
@@ -294,8 +296,9 @@ class ModelRestHandlerTest(TestCase):
 
     @async_test
     async def test_delete(self):
-        client = models.Repository.get_client.return_value
+        client = api_models.Repository.get_client.return_value
         client.__enter__.return_value.repo_get = AsyncMagicMock()
+        client.__enter__.return_value.repo_remove = AsyncMagicMock()
         client.__enter__.return_value.repo_get.return_value = {
             'id': '123', 'name': 'something'}
         self.model.get_client = AsyncMagicMock(return_value=client)

@@ -19,6 +19,8 @@
 
 from http.cookies import Morsel
 
+from toxicbuild.common.api_models import Builder
+from toxicbuild.common.utils import get_hole_client_settings
 from toxicbuild.core.utils import DTFORMAT
 from toxicbuild.ui import settings
 
@@ -34,21 +36,7 @@ def get_dtformat():
 
 def get_client_settings():
     """Returns the settings that must be used by the client"""
-    host = settings.HOLE_HOST
-    port = settings.HOLE_PORT
-    try:
-        use_ssl = settings.MASTER_USES_SSL
-    except AttributeError:
-        use_ssl = False
-
-    try:
-        validate_cert = settings.VALIDATE_CERT_MASTER
-    except AttributeError:
-        validate_cert = False
-
-    return {'host': host, 'port': port,
-            'use_ssl': use_ssl,
-            'validate_cert': validate_cert}
+    return get_hole_client_settings(settings)
 
 
 async def get_builders_for_buildsets(user, buildsets):
@@ -56,8 +44,6 @@ async def get_builders_for_buildsets(user, buildsets):
 
     :param user: The user to authenticate in the master
     :param buildsets: A list of buildsets returned by the master."""
-
-    from toxicbuild.ui.models import Builder
 
     builders = set()
     buildsets = buildsets or []

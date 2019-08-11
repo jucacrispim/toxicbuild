@@ -57,3 +57,24 @@ def format_datetime(dt, dtformat, tzname=None):
         dt = dt.astimezone(tz)
 
     return datetime2string(dt, dtformat=dtformat)
+
+
+def get_hole_client_settings(settings):
+    """Returns the settings that must be used by the hole client"""
+    host = settings.HOLE_HOST
+    port = settings.HOLE_PORT
+    token = settings.HOLE_TOKEN
+    try:
+        use_ssl = settings.MASTER_USES_SSL
+    except AttributeError:
+        use_ssl = False
+
+    try:
+        validate_cert = settings.VALIDATE_CERT_MASTER
+    except AttributeError:
+        validate_cert = False
+
+    return {'host': host, 'port': port,
+            'use_ssl': use_ssl,
+            'validate_cert': validate_cert,
+            'hole_token': token}
