@@ -5,57 +5,57 @@ import datetime
 import json
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
-from toxicbuild.common import api_models, client
+from toxicbuild.common import interfaces, client
 from tests import AsyncMagicMock, async_test
 
 
 class BaseModelTest(TestCase):
 
     def test_get_ref_cls(self):
-        cls = 'toxicbuild.common.api_models.BaseModel'
-        model = api_models.BaseModel(MagicMock(), ordered_kwargs={})
+        cls = 'toxicbuild.common.interfaces.BaseModel'
+        model = interfaces.BaseModel(MagicMock(), ordered_kwargs={})
         new_cls = model._get_ref_cls(cls)
-        self.assertIs(new_cls, api_models.BaseModel)
+        self.assertIs(new_cls, interfaces.BaseModel)
 
     def test_attributes_order(self):
-        ordered = api_models.OrderedDict()
+        ordered = interfaces.OrderedDict()
         ordered['z'] = 1
         ordered['a'] = 2
         requester = MagicMock()
-        model = api_models.BaseModel(requester, ordered)
+        model = interfaces.BaseModel(requester, ordered)
         self.assertLess(model.__ordered__.index('z'),
                         model.__ordered__.index('a'))
 
     def test_datetime_attributes(self):
         requester = MagicMock()
-        model = api_models.BaseModel(requester,
+        model = interfaces.BaseModel(requester,
                                      {'somedt': '3 10 25 06:50:49 2017 +0000'})
         self.assertIsInstance(model.somedt, datetime.datetime)
 
     def test_to_dict(self):
-        kw = api_models.OrderedDict()
+        kw = interfaces.OrderedDict()
         kw['name'] = 'bla'
         kw['other'] = 'ble'
         kw['somedt'] = '3 10 25 06:50:49 2017 +0000'
         requester = MagicMock()
-        instance = api_models.BaseModel(requester, kw)
+        instance = interfaces.BaseModel(requester, kw)
 
         instance_dict = instance.to_dict('%d')
 
-        expected = api_models.OrderedDict()
+        expected = interfaces.OrderedDict()
         expected['name'] = 'bla'
         expected['other'] = 'ble'
-        expected['somedt'] = api_models.format_datetime(instance.somedt, '%d')
+        expected['somedt'] = interfaces.format_datetime(instance.somedt, '%d')
         self.assertEqual(expected, instance_dict)
         keys = list(instance_dict.keys())
         self.assertLess(keys.index('name'), keys.index('other'))
 
     def test_to_json(self):
-        kw = api_models.OrderedDict()
+        kw = interfaces.OrderedDict()
         kw['name'] = 'bla'
         kw['other'] = 'ble'
         requester = MagicMock()
-        instance = api_models.BaseModel(requester, kw)
+        instance = interfaces.BaseModel(requester, kw)
 
         instance_json = instance.to_json()
 
@@ -63,7 +63,7 @@ class BaseModelTest(TestCase):
         self.assertEqual(expected, instance_json)
 
     def test_equal(self):
-        class T(api_models.BaseModel):
+        class T(interfaces.BaseModel):
 
             def __init__(self, id=None):
                 self.id = id
@@ -73,7 +73,7 @@ class BaseModelTest(TestCase):
         self.assertEqual(a, b)
 
     def test_unequal_id(self):
-        class T(api_models.BaseModel):
+        class T(interfaces.BaseModel):
 
             def __init__(self, id=None):
                 self.id = id
@@ -83,12 +83,12 @@ class BaseModelTest(TestCase):
         self.assertNotEqual(a, b)
 
     def test_unequal_type(self):
-        class T(api_models.BaseModel):
+        class T(interfaces.BaseModel):
 
             def __init__(self, id=None):
                 self.id = id
 
-        class TT(api_models.BaseModel):
+        class TT(interfaces.BaseModel):
 
             def __init__(self, id=None):
                 self.id = id
@@ -101,7 +101,7 @@ class BaseModelTest(TestCase):
 class NotificationTest(TestCase):
 
     def setUp(self):
-        self.notification = api_models.Notification
+        self.notification = interfaces.Notification
         self.notification.settings = MagicMock()
         self.notification.settings.NOTIFICATIONS_API_TOKEN = 'asdf123'
 
@@ -111,31 +111,31 @@ class NotificationTest(TestCase):
         returned = self.notification._get_headers()
         self.assertEqual(expected, returned)
 
-    @patch.object(api_models.requests, 'get', AsyncMagicMock(
-        spec=api_models.requests.get))
+    @patch.object(interfaces.requests, 'get', AsyncMagicMock(
+        spec=interfaces.requests.get))
     @async_test
     async def test_list_no_repo(self):
         r = MagicMock()
-        api_models.requests.get.return_value = r
+        interfaces.requests.get.return_value = r
         r.json.return_value = {'notifications': [{'name': 'bla'}]}
 
         r = await self.notification.list()
         self.assertEqual(r[0].name, 'bla')
 
-    @patch.object(api_models.requests, 'get', AsyncMagicMock(
-        spec=api_models.requests.get))
+    @patch.object(interfaces.requests, 'get', AsyncMagicMock(
+        spec=interfaces.requests.get))
     @async_test
     async def test_list_for_repo(self):
         r = MagicMock()
         obj_id = 'fake-obj-id'
-        api_models.requests.get.return_value = r
+        interfaces.requests.get.return_value = r
         r.json.return_value = {'notifications': [{'name': 'bla'}]}
 
         r = await self.notification.list(obj_id)
         self.assertEqual(r[0].name, 'bla')
 
-    @patch.object(api_models.requests, 'post', AsyncMagicMock(
-        spec=api_models.requests.post))
+    @patch.object(interfaces.requests, 'post', AsyncMagicMock(
+        spec=interfaces.requests.post))
     @async_test
     async def test_enable(self):
         obj_id = 'fake-obj-id'
@@ -146,15 +146,15 @@ class NotificationTest(TestCase):
         expected_url = '{}/{}'.format(self.notification.api_url(),
                                       notif_name)
         await self.notification.enable(obj_id, notif_name, **config)
-        called_url = api_models.requests.post.call_args[0][0]
+        called_url = interfaces.requests.post.call_args[0][0]
         called_config = json.loads(
-            api_models.requests.post.call_args[1]['data'])
+            interfaces.requests.post.call_args[1]['data'])
 
         self.assertEqual(expected_url, called_url)
         self.assertEqual(expected_config, called_config)
 
-    @patch.object(api_models.requests, 'delete', AsyncMagicMock(
-        spec=api_models.requests.delete))
+    @patch.object(interfaces.requests, 'delete', AsyncMagicMock(
+        spec=interfaces.requests.delete))
     @async_test
     async def test_disable(self):
         obj_id = 'fake-obj-id'
@@ -163,15 +163,15 @@ class NotificationTest(TestCase):
         expected_url = '{}/{}'.format(self.notification.api_url(),
                                       notif_name)
         await self.notification.disable(obj_id, notif_name)
-        called_url = api_models.requests.delete.call_args[0][0]
+        called_url = interfaces.requests.delete.call_args[0][0]
         called_config = json.loads(
-            api_models.requests.delete.call_args[1]['data'])
+            interfaces.requests.delete.call_args[1]['data'])
 
         self.assertEqual(expected_url, called_url)
         self.assertEqual(expected_config, called_config)
 
-    @patch.object(api_models.requests, 'put', AsyncMagicMock(
-        spec=api_models.requests.put))
+    @patch.object(interfaces.requests, 'put', AsyncMagicMock(
+        spec=interfaces.requests.put))
     @async_test
     async def test_update(self):
         obj_id = 'fake-obj-id'
@@ -184,9 +184,9 @@ class NotificationTest(TestCase):
                            'repository_id': obj_id}
 
         await self.notification.update(obj_id, notif_name, **config)
-        called_url = api_models.requests.put.call_args[0][0]
+        called_url = interfaces.requests.put.call_args[0][0]
         called_config = json.loads(
-            api_models.requests.put.call_args[1]['data'])
+            interfaces.requests.put.call_args[1]['data'])
 
         self.assertEqual(expected_url, called_url)
         self.assertEqual(expected_config, called_config)
@@ -194,45 +194,45 @@ class NotificationTest(TestCase):
 
 class BaseHoleModelTest(TestCase):
 
-    @patch.object(api_models, 'get_hole_client', AsyncMagicMock(
-        spec=api_models.get_hole_client))
-    @patch.object(api_models.BaseHoleModel, 'settings', MagicMock())
+    @patch.object(interfaces, 'get_hole_client', AsyncMagicMock(
+        spec=interfaces.get_hole_client))
+    @patch.object(interfaces.BaseHoleModel, 'settings', MagicMock())
     @async_test
     def test_get_client(self):
         requester = MagicMock()
-        yield from api_models.BaseHoleModel.get_client(requester)
-        self.assertTrue(api_models.get_hole_client.called)
+        yield from interfaces.BaseHoleModel.get_client(requester)
+        self.assertTrue(interfaces.get_hole_client.called)
 
-    @patch.object(api_models, 'get_hole_client', MagicMock(
-        spec=api_models.get_hole_client))
+    @patch.object(interfaces, 'get_hole_client', MagicMock(
+        spec=interfaces.get_hole_client))
     @async_test
     def test_get_client_client_exists(self):
         try:
             requester = MagicMock()
             client = MagicMock()
             client.connect = AsyncMagicMock()
-            api_models.BaseHoleModel._client = client
-            client = yield from api_models.BaseHoleModel.get_client(requester)
-            self.assertEqual(client, api_models.BaseHoleModel._client)
+            interfaces.BaseHoleModel._client = client
+            client = yield from interfaces.BaseHoleModel.get_client(requester)
+            self.assertEqual(client, interfaces.BaseHoleModel._client)
             self.assertFalse(client.connect.called)
         finally:
-            api_models.BaseHoleModel._client = None
+            interfaces.BaseHoleModel._client = None
 
-    @patch.object(api_models, 'get_hole_client', MagicMock(
-        spec=api_models.get_hole_client))
+    @patch.object(interfaces, 'get_hole_client', MagicMock(
+        spec=interfaces.get_hole_client))
     @async_test
     def test_get_client_client_exists_disconnected(self):
         try:
             requester = MagicMock()
             client = MagicMock()
             client.connect = AsyncMagicMock()
-            api_models.BaseHoleModel._client = client
-            api_models.BaseHoleModel._client._connected = False
-            client = yield from api_models.BaseHoleModel.get_client(requester)
-            self.assertEqual(client, api_models.BaseHoleModel._client)
+            interfaces.BaseHoleModel._client = client
+            interfaces.BaseHoleModel._client._connected = False
+            client = yield from interfaces.BaseHoleModel.get_client(requester)
+            self.assertEqual(client, interfaces.BaseHoleModel._client)
             self.assertTrue(client.connect.called)
         finally:
-            api_models.BaseHoleModel._client = None
+            interfaces.BaseHoleModel._client = None
 
 
 async def get_client_mock(requester, r2s_return_value=None):
@@ -254,73 +254,73 @@ async def get_client_mock(requester, r2s_return_value=None):
     return cl
 
 
-@patch.object(api_models.BaseHoleModel, 'settings', MagicMock())
+@patch.object(interfaces.BaseHoleModel, 'settings', MagicMock())
 class UserTest(TestCase):
 
-    @patch.object(api_models.BaseHoleModel, 'get_client', lambda requester:
+    @patch.object(interfaces.BaseHoleModel, 'get_client', lambda requester:
                   get_client_mock(None, {'id': 'some-id',
                                          'email': 'some-email@bla.com'}))
     @async_test
     async def test_authenticate(self):
-        user = await api_models.User.authenticate('some-email@bla.com', 'asdf')
+        user = await interfaces.User.authenticate('some-email@bla.com', 'asdf')
         self.assertEqual(user.id, 'some-id')
 
-    @patch.object(api_models.BaseHoleModel, 'get_client', lambda requester:
+    @patch.object(interfaces.BaseHoleModel, 'get_client', lambda requester:
                   get_client_mock(None, 'ok'))
     @async_test
     async def test_change_password(self):
         requester = MagicMock()
         requester.email = 'a@a.com'
-        ok = await api_models.User.change_password(
+        ok = await interfaces.User.change_password(
             requester, 'oldpwd', 'newpwd')
         self.assertTrue(ok)
 
-    @patch.object(api_models.BaseHoleModel, 'get_client', lambda requester:
+    @patch.object(interfaces.BaseHoleModel, 'get_client', lambda requester:
                   get_client_mock(None, 'ok'))
     @async_test
     async def test_change_password_with_token(self):
         requester = MagicMock()
         requester.email = 'a@a.com'
-        ok = await api_models.User.change_password_with_token(
+        ok = await interfaces.User.change_password_with_token(
             'token', 'newpwd')
         self.assertTrue(ok)
 
-    @patch.object(api_models.BaseHoleModel, 'get_client', lambda requester:
+    @patch.object(interfaces.BaseHoleModel, 'get_client', lambda requester:
                   get_client_mock(None, 'ok'))
     @async_test
     async def test_request_password_reset(self):
         requester = MagicMock()
         requester.email = 'a@a.com'
-        ok = await api_models.User.request_password_reset(
+        ok = await interfaces.User.request_password_reset(
             'a@a.com', 'https://bla.nada/reset?token={token}')
         self.assertTrue(ok)
 
-    @patch.object(api_models.BaseHoleModel, 'get_client', lambda requester:
+    @patch.object(interfaces.BaseHoleModel, 'get_client', lambda requester:
                   get_client_mock(None, {'id': 'some-id',
                                          'email': 'some-email@bla.com'}))
     @async_test
     async def test_add(self):
-        user = await api_models.User.add('some-email@bla.com',
+        user = await interfaces.User.add('some-email@bla.com',
                                          'some-guy', 'asdf',
                                          ['add_repo'])
 
         self.assertEqual(user.id, 'some-id')
 
-    @patch.object(api_models.BaseHoleModel, 'get_client', lambda requester:
+    @patch.object(interfaces.BaseHoleModel, 'get_client', lambda requester:
                   get_client_mock(None, 'ok'))
     @async_test
     async def test_delete(self):
         requester = MagicMock()
         requester.id = 'asdf'
-        user = api_models.User(requester, {'id': 'some-id'})
+        user = interfaces.User(requester, {'id': 'some-id'})
         r = await user.delete()
         self.assertEqual(r, 'ok')
 
-    @patch.object(api_models.BaseHoleModel, 'get_client', lambda requester:
+    @patch.object(interfaces.BaseHoleModel, 'get_client', lambda requester:
                   get_client_mock(None, False))
     @async_test
     async def test_exists(self):
-        exists = await api_models.User.exists(username='some-guy')
+        exists = await interfaces.User.exists(username='some-guy')
         self.assertFalse(exists)
 
 
@@ -333,41 +333,41 @@ class RepositoryTest(TestCase):
                          name='my-repo')
 
         self.requester = MagicMock()
-        self.repository = api_models.Repository(self.requester, kw)
+        self.repository = interfaces.Repository(self.requester, kw)
 
         self.repository.get_client = get_client_mock
 
-    @patch.object(api_models.Repository, 'get_client', get_client_mock)
+    @patch.object(interfaces.Repository, 'get_client', get_client_mock)
     @async_test
     async def test_add(self):
         owner = MagicMock()
         owner.id = 'some-id'
-        repo = await api_models.Repository.add(
+        repo = await interfaces.Repository.add(
             self.requester, 'some-repo', 'git@somewhere.com', owner, 'git')
         self.assertTrue(repo.id)
 
-    @patch.object(api_models.Repository, 'get_client', get_client_mock)
+    @patch.object(interfaces.Repository, 'get_client', get_client_mock)
     @async_test
     async def test_get(self):
         requester = MagicMock()
-        repo = await api_models.Repository.get(
+        repo = await interfaces.Repository.get(
             requester, name='some-repo')
         self.assertTrue(repo.id)
 
-    @patch.object(api_models.Repository, 'get_client', get_client_mock)
+    @patch.object(interfaces.Repository, 'get_client', get_client_mock)
     @async_test
     async def test_repo_slaves(self):
         requester = MagicMock()
-        repo = await api_models.Repository.get(requester, name='some-repo')
-        self.assertEqual(type(repo.slaves[0]), api_models.Slave)
+        repo = await interfaces.Repository.get(requester, name='some-repo')
+        self.assertEqual(type(repo.slaves[0]), interfaces.Slave)
 
-    @patch.object(api_models.Repository, 'get_client', lambda requester:
+    @patch.object(interfaces.Repository, 'get_client', lambda requester:
                   get_client_mock(requester,
                                   [{'name': 'repo0'}, {'name': 'repo1'}]))
     @async_test
     async def test_list(self):
         requester = MagicMock()
-        repos = await api_models.Repository.list(requester)
+        repos = await interfaces.Repository.list(requester)
         self.assertEqual(len(repos), 2)
 
     @async_test
@@ -386,7 +386,7 @@ class RepositoryTest(TestCase):
         kw = OrderedDict(name='localslave', host='localhost', port=7777,
                          token='123', id='some-id')
         requester = MagicMock()
-        slave = api_models.Slave(requester, kw)
+        slave = interfaces.Slave(requester, kw)
         resp = await self.repository.add_slave(slave)
 
         self.assertEqual(resp, 'add slave ok')
@@ -398,7 +398,7 @@ class RepositoryTest(TestCase):
         kw = dict(name='localslave', host='localhost', port=7777,
                   id='some-id')
         requester = MagicMock()
-        slave = api_models.Slave(requester, kw)
+        slave = interfaces.Slave(requester, kw)
         resp = await self.repository.remove_slave(slave)
 
         self.assertEqual(resp, 'remove slave ok')
@@ -435,17 +435,17 @@ class RepositoryTest(TestCase):
     def test_to_dict(self):
         requester = MagicMock()
         kw = dict(name='bla')
-        self.repository.slaves = [api_models.Slave(requester, kw)]
+        self.repository.slaves = [interfaces.Slave(requester, kw)]
         repo_dict = self.repository.to_dict()
         self.assertTrue(isinstance(repo_dict['slaves'][0], dict))
 
     def test_to_dict_lastbuildset(self):
         requester = MagicMock()
         kw = dict(name='bla')
-        buildset = api_models.BuildSet(
+        buildset = interfaces.BuildSet(
             requester, ordered_kwargs={'bla': 'ble'})
         self.repository.last_buildset = buildset
-        self.repository.slaves = [api_models.Slave(requester, kw)]
+        self.repository.slaves = [interfaces.Slave(requester, kw)]
         repo_dict = self.repository.to_dict()
         self.assertTrue(isinstance(repo_dict['slaves'][0], dict))
 
@@ -483,7 +483,7 @@ class RepositoryTest(TestCase):
 
 class SlaveTest(TestCase):
 
-    @patch.object(api_models.Slave, 'get_client', lambda requester:
+    @patch.object(interfaces.Slave, 'get_client', lambda requester:
                   get_client_mock(
                       requester, {'host': 'localhost'}))
     @async_test
@@ -491,27 +491,27 @@ class SlaveTest(TestCase):
         requester = MagicMock()
         owner = MagicMock()
         owner.id = 'some-id'
-        slave = await api_models.Slave.add(requester,
+        slave = await interfaces.Slave.add(requester,
                                            'localhost', 8888,
                                            '1233', owner, host='localslave')
         self.assertEqual(slave.host, 'localhost')
 
-    @patch.object(api_models.Slave, 'get_client', lambda requester:
+    @patch.object(interfaces.Slave, 'get_client', lambda requester:
                   get_client_mock(requester,
                                   {'host': 'localhost', 'name': 'slave'}))
     @async_test
     async def test_get(self):
         requester = MagicMock()
-        slave = await api_models.Slave.get(requester, name='slave')
+        slave = await interfaces.Slave.get(requester, name='slave')
         self.assertEqual(slave.name, 'slave')
 
-    @patch.object(api_models.Slave, 'get_client', lambda requester:
+    @patch.object(interfaces.Slave, 'get_client', lambda requester:
                   get_client_mock(
                       requester, [{'name': 'slave0'}, {'name': 'slave1'}]))
     @async_test
     async def test_list(self):
         requester = MagicMock()
-        slaves = await api_models.Slave.list(requester)
+        slaves = await interfaces.Slave.list(requester)
         self.assertEqual(len(slaves), 2)
 
     @async_test
@@ -519,7 +519,7 @@ class SlaveTest(TestCase):
         requester = MagicMock()
         kw = dict(name='slave', host='localhost', port=1234,
                   id='some=id')
-        slave = api_models.Slave(requester, kw)
+        slave = interfaces.Slave(requester, kw)
         slave.get_client = lambda requester: get_client_mock(
             requester, 'ok')
 
@@ -531,7 +531,7 @@ class SlaveTest(TestCase):
         requester = MagicMock()
         kw = dict(name='slave', host='localhost', port=1234,
                   id='some=id')
-        slave = api_models.Slave(requester, kw)
+        slave = interfaces.Slave(requester, kw)
         slave.get_client = lambda requester: get_client_mock(
             requester, 'ok')
 
@@ -541,8 +541,8 @@ class SlaveTest(TestCase):
 
 class BuildSetTest(TestCase):
 
-    @patch.object(api_models.BuildSet, 'get_client', AsyncMagicMock(
-        spec=api_models.BuildSet.get_client))
+    @patch.object(interfaces.BuildSet, 'get_client', AsyncMagicMock(
+        spec=interfaces.BuildSet.get_client))
     @async_test
     async def test_list(self):
         requester = MagicMock()
@@ -555,13 +555,13 @@ class BuildSetTest(TestCase):
              'builds': [{'steps': [{'name': 'unit'}],
                          'builder': {'name': 'some'}}]},
             {'id': 'paopofe', 'builds': [{}]}]
-        api_models.BuildSet.get_client.return_value = client
-        buildsets = await api_models.BuildSet.list(requester)
+        interfaces.BuildSet.get_client.return_value = client
+        buildsets = await interfaces.BuildSet.list(requester)
         r = await client.buildset_list()
         self.assertEqual(len(buildsets), 2, r)
         self.assertTrue(len(buildsets[0].builds[0].steps), 1)
 
-    @patch.object(api_models.BuildSet, 'get_client', lambda requester:
+    @patch.object(interfaces.BuildSet, 'get_client', lambda requester:
                   get_client_mock(
                       requester, [
                           {'id': 'sasdfasf',
@@ -574,14 +574,14 @@ class BuildSetTest(TestCase):
     @async_test
     async def test_to_dict(self):
         requester = MagicMock()
-        buildsets = await api_models.BuildSet.list(requester)
+        buildsets = await interfaces.BuildSet.list(requester)
         buildset = buildsets[0]
         b_dict = buildset.to_dict('%s')
         self.assertTrue(b_dict['id'])
         self.assertTrue(b_dict['builds'][0]['steps'])
         self.assertTrue(b_dict['repository'])
 
-    @patch.object(api_models.BuildSet, 'get_client', lambda requester:
+    @patch.object(interfaces.BuildSet, 'get_client', lambda requester:
                   get_client_mock(
                       requester,
                       {'id': 'sasdfasf',
@@ -591,13 +591,13 @@ class BuildSetTest(TestCase):
     @async_test
     async def test_get(self):
         requester = MagicMock()
-        buildset = await api_models.BuildSet.get(requester, 'some-id')
+        buildset = await interfaces.BuildSet.get(requester, 'some-id')
         self.assertTrue(buildset.id)
 
 
 class BuilderTest(TestCase):
 
-    @patch.object(api_models.Builder, 'get_client', lambda requester:
+    @patch.object(interfaces.Builder, 'get_client', lambda requester:
                   get_client_mock(requester,
                                   [{'id': 'sasdfasf', 'name': 'b0',
                                     'status': 'running'},
@@ -606,7 +606,7 @@ class BuilderTest(TestCase):
     @async_test
     async def test_list(self):
         requester = MagicMock()
-        builders = await api_models.Builder.list(requester,
+        builders = await interfaces.Builder.list(requester,
                                                  id__in=['sasdfasf',
                                                          'paopofe'])
 
@@ -617,18 +617,18 @@ class BuilderTest(TestCase):
 class BuildTest(TestCase):
 
     def test_to_dict(self):
-        build = api_models.Build(MagicMock(),
+        build = interfaces.Build(MagicMock(),
                                  ordered_kwargs={'builder': {'id': 'some-id'},
                                                  'steps': [{'uuid': 'some'}]})
         d = build.to_dict()
         self.assertTrue(d['builder']['id'])
         self.assertTrue(d['steps'][0]['uuid'])
 
-    @patch.object(api_models.Build, 'get_client', lambda requester:
+    @patch.object(interfaces.Build, 'get_client', lambda requester:
                   get_client_mock(requester,
                                   {'uuid': 'some-uuid', 'output': 'bla'}))
     @async_test
     async def test_get(self):
         requester = MagicMock()
-        build = await api_models.Build.get(requester, 'some-uuid')
+        build = await interfaces.Build.get(requester, 'some-uuid')
         self.assertEqual(build.output, 'bla')

@@ -455,7 +455,7 @@ class Repository(BaseHoleModel):
     """Class representing a repository."""
 
     references = {'slaves': Slave,
-                  'last_buildset': 'toxicbuild.common.api_models.BuildSet'}
+                  'last_buildset': 'toxicbuild.common.interfaces.BuildSet'}
 
     @classmethod
     async def add(cls, requester, name, url, owner, vcs_type,

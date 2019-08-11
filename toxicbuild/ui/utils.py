@@ -19,7 +19,7 @@
 
 from http.cookies import Morsel
 
-from toxicbuild.common.api_models import Builder
+from toxicbuild.common.interfaces import Builder
 from toxicbuild.common.utils import get_hole_client_settings
 from toxicbuild.core.utils import DTFORMAT
 from toxicbuild.ui import settings

@@ -24,7 +24,7 @@ from toxicbuild.master.build import Build, BuildSet, Builder
 from toxicbuild.master.repository import Repository, RepositoryRevision
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.users import User
-from toxicbuild.common import api_models
+from toxicbuild.common import interfaces
 from toxicbuild.ui import utils
 from tests import async_test, AsyncMagicMock
 
@@ -84,19 +84,19 @@ class BuildsetUtilsTest(TestCase):
         await Repository.drop_collection()
         await User.drop_collection()
 
-    @patch.object(api_models.Builder, 'list', AsyncMagicMock(
-        spec=api_models.Builder.list))
+    @patch.object(interfaces.Builder, 'list', AsyncMagicMock(
+        spec=interfaces.Builder.list))
     @async_test
     async def test_get_builders_for_buildset(self):
-        buildset = api_models.BuildSet(self.user,
+        buildset = interfaces.BuildSet(self.user,
                                        ordered_kwargs=self.buildset.to_dict())
         expected = sorted([self.builder])
         builder = await self.builder.to_dict()
-        api_models.Builder.list.return_value = [api_models.Builder(
+        interfaces.Builder.list.return_value = [interfaces.Builder(
             self.user, ordered_kwargs=builder)]
         returned = await utils.get_builders_for_buildsets(self.user,
                                                           [buildset])
-        called_args = api_models.Builder.list.call_args[1]
+        called_args = interfaces.Builder.list.call_args[1]
 
         expected = {'id__in': [str(b.id) for b in [self.builder]]}
         self.assertEqual(expected, called_args)

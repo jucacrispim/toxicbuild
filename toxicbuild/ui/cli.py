@@ -33,7 +33,7 @@ import urwid
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.ui import inutils
 from toxicbuild.common.client import get_hole_client
-from toxicbuild.common.api_models import User, BuildSet, BaseModel
+from toxicbuild.common.interfaces import User, BuildSet, BaseModel
 from toxicbuild.ui.utils import get_builders_for_buildsets
 
 

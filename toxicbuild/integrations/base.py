@@ -21,7 +21,7 @@ from mongoengine.errors import NotUniqueError
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (ReferenceField, StringField, IntField,
                                EmbeddedDocumentListField)
-from toxicbuild.common.api_models import Notification
+from toxicbuild.common.interfaces import Notification
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.repository import Repository, RepositoryBranch
 from toxicbuild.master.slave import Slave

@@ -18,7 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-from toxicbuild.common.api_models import (Slave, Repository, BuildSet, User,
+from toxicbuild.common.interfaces import (Slave, Repository, BuildSet, User,
                                           BaseModel)
 from toxicbuild.master.repository import Repository as RepoDBModel
 from toxicbuild.master.users import User as UserDBModel
