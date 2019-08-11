@@ -319,11 +319,11 @@ class BaseIntegrationInstallationTest(TestCase):
 
         self.assertEqual(c['installation'], str(self.installation.id))
 
-    @patch.object(base.Notification, 'enable', AsyncMagicMock())
+    @patch.object(base.NotificationInterface, 'enable', AsyncMagicMock())
     @async_test
     async def test_enable_notification(self):
         repo = Mock()
         self.installation.get_notif_config = Mock(return_value={})
         await self.installation.enable_notification(repo)
 
-        self.assertTrue(base.Notification.enable.called)
+        self.assertTrue(base.NotificationInterface.enable.called)

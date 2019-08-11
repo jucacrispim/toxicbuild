@@ -183,7 +183,7 @@ class LoginHandlerTest(TestCase):
         with self.assertRaises(web.HTTPError):
             await self.handler.do_login()
 
-    @patch.object(web.User, 'authenticate', AsyncMagicMock(
+    @patch.object(web.UserInterface, 'authenticate', AsyncMagicMock(
         side_effect=Exception))
     @async_test
     async def test_do_login_bad_auth(self):
@@ -192,15 +192,15 @@ class LoginHandlerTest(TestCase):
         with self.assertRaises(web.HTTPError):
             await self.handler.do_login()
 
-    @patch.object(web.User, 'authenticate', AsyncMagicMock(
-        spec=web.User.authenticate))
+    @patch.object(web.UserInterface, 'authenticate', AsyncMagicMock(
+        spec=web.UserInterface.authenticate))
     @async_test
     async def test_do_login(self):
         user = MagicMock()
         user.id = 'some-id'
         user.email = 'a@a.com'
         user.username = 'a'
-        web.User.authenticate.return_value = user
+        web.UserInterface.authenticate.return_value = user
         self.handler.body = {'username_or_email': 'a@a.com',
                              'password': 'somepassword'}
         self.handler.set_secure_cookie = MagicMock()
@@ -229,13 +229,13 @@ class LoginHandlerTest(TestCase):
         self.assertEqual(template, self.handler.reset_password_template)
 
 
-@patch.object(interfaces.Repository, 'get_client', AsyncMagicMock(
-    spec=interfaces.Repository.get_client, return_value=MagicMock()))
+@patch.object(interfaces.RepositoryInterface, 'get_client', AsyncMagicMock(
+    spec=interfaces.RepositoryInterface.get_client, return_value=MagicMock()))
 class ModelRestHandlerTest(TestCase):
 
     @async_test
     async def setUp(self):
-        self.model = interfaces.Repository
+        self.model = interfaces.RepositoryInterface
         application, request = MagicMock(), MagicMock()
         application.ui_methods = {}
         self.handler = web.ModelRestHandler(application, request,
@@ -250,7 +250,7 @@ class ModelRestHandlerTest(TestCase):
 
     @async_test
     async def test_add(self):
-        client = interfaces.Repository.get_client.return_value
+        client = interfaces.RepositoryInterface.get_client.return_value
         client.__enter__.return_value.repo_add = AsyncMagicMock()
         client.__enter__.return_value.repo_add.return_value = {
             'id': '123', 'name': 'something'}
@@ -263,7 +263,7 @@ class ModelRestHandlerTest(TestCase):
         args = {'id': [b'123']}
         self.handler.request.arguments = args
         await self.handler.async_prepare()
-        client = interfaces.Repository.get_client.return_value
+        client = interfaces.RepositoryInterface.get_client.return_value
         client.__enter__.return_value.repo_get = AsyncMagicMock()
         client.__enter__.return_value.repo_get.return_value = {
             'id': '123', 'name': 'something'}
@@ -273,7 +273,7 @@ class ModelRestHandlerTest(TestCase):
 
     @async_test
     async def test_get_or_list_list(self):
-        client = interfaces.Repository.get_client.return_value
+        client = interfaces.RepositoryInterface.get_client.return_value
         client.__enter__.return_value.repo_list = AsyncMagicMock()
         client.__enter__.return_value.repo_list.return_value = [
             {'id': '123', 'name': 'something'},
@@ -284,7 +284,7 @@ class ModelRestHandlerTest(TestCase):
 
     @async_test
     async def test_update(self):
-        client = interfaces.Repository.get_client.return_value
+        client = interfaces.RepositoryInterface.get_client.return_value
         client.__enter__.return_value.repo_get = AsyncMagicMock()
         client.__enter__.return_value.repo_get.return_value = {
             'id': '123', 'name': 'something'}
@@ -296,7 +296,7 @@ class ModelRestHandlerTest(TestCase):
 
     @async_test
     async def test_delete(self):
-        client = interfaces.Repository.get_client.return_value
+        client = interfaces.RepositoryInterface.get_client.return_value
         client.__enter__.return_value.repo_get = AsyncMagicMock()
         client.__enter__.return_value.repo_remove = AsyncMagicMock()
         client.__enter__.return_value.repo_get.return_value = {
@@ -310,7 +310,7 @@ class UserPublicRestHandler(TestCase):
 
     @async_test
     async def setUp(self):
-        self.model = web.User
+        self.model = web.UserInterface
         application, request = MagicMock(), MagicMock()
         request.body = web.json.dumps({})
         application.ui_methods = {}
@@ -320,29 +320,30 @@ class UserPublicRestHandler(TestCase):
         self.handler._get_user_from_cookie = MagicMock()
         await self.handler.async_prepare()
 
-    @patch.object(web.User, 'exists', AsyncMagicMock(return_value=True,
-                                                     spec=web.User.exists))
+    @patch.object(web.UserInterface, 'exists',
+                  AsyncMagicMock(return_value=True,
+                                 spec=web.UserInterface.exists))
     @async_test
     async def test_check_exists(self):
         r = await self.handler.check_exists()
         self.assertTrue(r)
 
-    @patch.object(web.User, 'add', AsyncMagicMock(spec=web.User.add,
-                                                  return_value=MagicMock()))
+    @patch.object(web.UserInterface, 'add', AsyncMagicMock(
+        spec=web.UserInterface.add, return_value=MagicMock()))
     @async_test
     async def test_add(self):
         self.handler.body = {'email': 'a@a.com', 'username': 'mra',
                              'password': 'asdf'}
-        new_user = web.User.add.return_value
+        new_user = web.UserInterface.add.return_value
         new_user.username = 'bla'
         new_user.email = 'bla@a.com'
         new_user.id = 'some-id'
         await self.handler.add()
-        user = web.User.add.return_value
+        user = web.UserInterface.add.return_value
         self.assertTrue(user.to_dict.called)
-        self.assertTrue(web.User.add.called)
+        self.assertTrue(web.UserInterface.add.called)
 
-    @patch.object(web.User, 'request_password_reset', AsyncMagicMock())
+    @patch.object(web.UserInterface, 'request_password_reset', AsyncMagicMock())
     @async_test
     async def test_request_password_reset(self):
         email = 'a@a.com'
@@ -355,7 +356,7 @@ class UserPublicRestHandler(TestCase):
         self.assertTrue(self.model.request_password_reset.called_with(
             email, url))
 
-    @patch.object(web.User, 'request_password_reset', AsyncMagicMock(
+    @patch.object(web.UserInterface, 'request_password_reset', AsyncMagicMock(
         side_effect=web.UserDoesNotExist))
     @async_test
     async def test_request_password_reset_bad_user(self):
@@ -368,7 +369,8 @@ class UserPublicRestHandler(TestCase):
         with self.assertRaises(web.HTTPError):
             await self.handler.request_password_reset()
 
-    @patch.object(web.User, 'change_password_with_token', AsyncMagicMock())
+    @patch.object(web.UserInterface, 'change_password_with_token',
+                  AsyncMagicMock())
     @async_test
     async def test_change_password_with_token(self):
         token = 'asdf'
@@ -380,8 +382,8 @@ class UserPublicRestHandler(TestCase):
         self.assertTrue(self.model.change_password_with_token.called_with(
             token, password))
 
-    @patch.object(web.User, 'change_password_with_token', AsyncMagicMock(
-        side_effect=web.BadResetPasswordToken))
+    @patch.object(web.UserInterface, 'change_password_with_token',
+                  AsyncMagicMock(side_effect=web.BadResetPasswordToken))
     @async_test
     async def test_change_password_with_token_bad_token(self):
         token = 'asdf'
@@ -399,9 +401,9 @@ class UserRestHandlerTest(TestCase):
         application, request = MagicMock(), MagicMock()
         application.ui_methods = {}
         self.handler = web.UserRestHandler(application, request,
-                                           model=web.User)
+                                           model=web.UserInterface)
 
-    @patch.object(web.User, 'change_password', AsyncMagicMock(
+    @patch.object(web.UserInterface, 'change_password', AsyncMagicMock(
         return_value=None))
     @async_test
     async def test_change_user_password(self):
@@ -434,7 +436,7 @@ class BuildSetRestHandlerTest(TestCase):
 
     @async_test
     async def setUp(self):
-        self.model = web.BuildSet
+        self.model = web.BuildSetInterface
         application, request = MagicMock(), MagicMock()
         request.body = web.json.dumps({})
         application.ui_methods = {}
@@ -444,20 +446,22 @@ class BuildSetRestHandlerTest(TestCase):
         self.handler._get_user_from_cookie = MagicMock()
         await self.handler.async_prepare()
 
-    @patch.object(web.BuildSet, 'list', AsyncMagicMock(spec=web.BuildSet.list))
+    @patch.object(web.BuildSetInterface, 'list',
+                  AsyncMagicMock(spec=web.BuildSetInterface.list))
     @async_test
     async def test_list_or_get_list(self):
         self.handler.query = {'repo_name': 'somename'}
-        self.handler.model.list.return_value = [web.BuildSet(
+        self.handler.model.list.return_value = [web.BuildSetInterface(
             MagicMock(), ordered_kwargs={'id': 'someid'})]
         items = await self.handler.list_or_get()
         self.assertEqual(len(items['items']), 1)
 
-    @patch.object(web.BuildSet, 'get', AsyncMagicMock(spec=web.BuildSet.get))
+    @patch.object(web.BuildSetInterface, 'get', AsyncMagicMock(
+        spec=web.BuildSetInterface.get))
     @async_test
     async def test_list_or_get_get(self):
         self.handler.query = {'buildset_id': 'some-id'}
-        self.handler.model.get.return_value = web.BuildSet(
+        self.handler.model.get.return_value = web.BuildSetInterface(
             MagicMock(), ordered_kwargs={'id': 'some-id'})
         buildset = await self.handler.list_or_get()
         self.assertTrue(buildset['id'])
@@ -472,7 +476,7 @@ class BuildHandlerTest(TestCase):
 
     @async_test
     async def setUp(self):
-        self.model = web.Build
+        self.model = web.BuildInterface
         application, request = MagicMock(), MagicMock()
         request.body = web.json.dumps({})
         application.ui_methods = {}
@@ -487,20 +491,22 @@ class BuildHandlerTest(TestCase):
         with self.assertRaises(web.HTTPError):
             await self.handler.get_build()
 
-    @patch.object(web.Build, 'get', AsyncMagicMock(spec=web.Build.get))
+    @patch.object(web.BuildInterface, 'get',
+                  AsyncMagicMock(spec=web.BuildInterface.get))
     @async_test
     async def test_get_build(self):
         self.handler.query = {'build_uuid': 'some-uuid'}
-        web.Build.get.return_value = web.Build(MagicMock(), {'builder': {}})
+        web.BuildInterface.get.return_value = web.BuildInterface(
+            MagicMock(), {'builder': {}})
         await self.handler.get_build()
-        self.assertTrue(web.Build.get.called)
+        self.assertTrue(web.BuildInterface.get.called)
 
 
 class WaterfallRestHandlerTest(TestCase):
 
     @async_test
     async def setUp(self):
-        self.model = web.BuildSet
+        self.model = web.BuildSetInterface
         application, request = MagicMock(), MagicMock()
         request.body = web.json.dumps({})
         application.ui_methods = {}
@@ -510,14 +516,16 @@ class WaterfallRestHandlerTest(TestCase):
         self.handler._get_user_from_cookie = MagicMock()
         await self.handler.async_prepare()
 
-    @patch.object(web.BuildSet, 'list', AsyncMagicMock(spec=web.BuildSet.list))
+    @patch.object(web.BuildSetInterface, 'list',
+                  AsyncMagicMock(spec=web.BuildSetInterface.list))
     @patch.object(web.WaterfallRestHandler, '_get_builders', AsyncMagicMock(
         spec=web.WaterfallRestHandler._get_builders))
     @async_test
     async def test_get_waterfall(self):
-        web.BuildSet.list.return_value = [web.BuildSet(MagicMock(), {})]
+        web.BuildSetInterface.list.return_value = [
+            web.BuildSetInterface(MagicMock(), {})]
         web.WaterfallRestHandler._get_builders.return_value = [
-            web.Builder(MagicMock(), {})]
+            web.BuilderInterface(MagicMock(), {})]
         self.handler.query = {'repo_name': 'some/repo'}
         r = await self.handler.get_waterfall()
         self.assertTrue(r)
@@ -527,17 +535,18 @@ class WaterfallRestHandlerTest(TestCase):
         with self.assertRaises(web.HTTPError):
             await self.handler.get_waterfall()
 
-    @patch.object(web.Builder, 'list', AsyncMagicMock(spec=web.Builder.list))
+    @patch.object(web.BuilderInterface, 'list', AsyncMagicMock(
+        spec=web.BuilderInterface.list))
     @async_test
     async def test_get_builders(self):
-        buildsets = [web.BuildSet(
+        buildsets = [web.BuildSetInterface(
             MagicMock(), ordered_kwargs={'id': 'someid',
                                          'builds': [
                                              {'builder': {'id': 'some-id'}}]})]
 
         await self.handler._get_builders(buildsets)
 
-        called = web.Builder.list.call_args[1]
+        called = web.BuilderInterface.list.call_args[1]
         expected = {'id__in': ['some-id']}
         self.assertEqual(called, expected)
 
@@ -546,7 +555,7 @@ class RepositoryRestHandlerTest(TestCase):
 
     @async_test
     async def setUp(self):
-        self.model = web.Repository
+        self.model = web.RepositoryInterface
         application, request = MagicMock(), MagicMock()
         request.body = web.json.dumps({})
         application.ui_methods = {}
@@ -556,13 +565,13 @@ class RepositoryRestHandlerTest(TestCase):
         self.handler._get_user_from_cookie = MagicMock()
         await self.handler.async_prepare()
 
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get,
-        return_value=create_autospec(spec=web.Repository,
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
                                      mock_cls=AsyncMagicMock)))
-    @patch.object(web.Slave, 'get', AsyncMagicMock(
-        spec=web.Slave.get,
-        return_value=create_autospec(spec=web.Slave,
+    @patch.object(web.SlaveInterface, 'get', AsyncMagicMock(
+        spec=web.SlaveInterface.get,
+        return_value=create_autospec(spec=web.SlaveInterface,
                                      mock_cls=AsyncMagicMock)))
     @async_test
     async def test_add_slave(self):
@@ -571,13 +580,13 @@ class RepositoryRestHandlerTest(TestCase):
         r = await self.handler.add_slave()
         self.assertEqual(r['repo-add-slave'], 'slave added')
 
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get,
-        return_value=create_autospec(spec=web.Repository,
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
                                      mock_cls=AsyncMagicMock)))
-    @patch.object(web.Slave, 'get', AsyncMagicMock(
-        spec=web.Slave.get,
-        return_value=create_autospec(spec=web.Slave,
+    @patch.object(web.SlaveInterface, 'get', AsyncMagicMock(
+        spec=web.SlaveInterface.get,
+        return_value=create_autospec(spec=web.SlaveInterface,
                                      mock_cls=AsyncMagicMock)))
     @async_test
     async def test_remove_slave(self):
@@ -586,9 +595,9 @@ class RepositoryRestHandlerTest(TestCase):
         r = await self.handler.remove_slave()
         self.assertEqual(r['repo-remove-slave'], 'slave removed')
 
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get,
-        return_value=create_autospec(spec=web.Repository,
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
                                      mock_cls=AsyncMagicMock)))
     @async_test
     async def test_add_branch(self):
@@ -597,9 +606,9 @@ class RepositoryRestHandlerTest(TestCase):
         r = await self.handler.add_branch()
         self.assertEqual(r['repo-add-branch'], '1 branches added')
 
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get,
-        return_value=create_autospec(spec=web.Repository,
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
                                      mock_cls=AsyncMagicMock)))
     @async_test
     async def test_remove_branch(self):
@@ -607,9 +616,9 @@ class RepositoryRestHandlerTest(TestCase):
         r = await self.handler.remove_branch()
         self.assertEqual(r['repo-remove-branch'], '1 branches removed')
 
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get,
-        return_value=create_autospec(spec=web.Repository,
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
                                      mock_cls=AsyncMagicMock)))
     @async_test
     async def test_start_build(self):
@@ -617,9 +626,9 @@ class RepositoryRestHandlerTest(TestCase):
         r = await self.handler.start_build()
         self.assertTrue(r)
 
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get,
-        return_value=create_autospec(spec=web.Repository,
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
                                      mock_cls=AsyncMagicMock)))
     @async_test
     async def test_cancel_build(self):
@@ -627,9 +636,9 @@ class RepositoryRestHandlerTest(TestCase):
         r = await self.handler.cancel_build()
         self.assertTrue(r)
 
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get,
-        return_value=create_autospec(spec=web.Repository,
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
                                      mock_cls=AsyncMagicMock)))
     @async_test
     async def test_enable(self):
@@ -637,9 +646,9 @@ class RepositoryRestHandlerTest(TestCase):
         r = await self.handler.enable()
         self.assertTrue(r)
 
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get,
-        return_value=create_autospec(spec=web.Repository,
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
                                      mock_cls=AsyncMagicMock)))
     @async_test
     async def test_disable(self):
@@ -652,7 +661,7 @@ class SlaveRestHandlerTest(TestCase):
 
     @async_test
     async def setUp(self):
-        self.model = web.Slave
+        self.model = web.SlaveInterface
         application, request = MagicMock(), MagicMock()
         request.body = web.json.dumps({})
         application.ui_methods = {}
@@ -678,28 +687,28 @@ class NotificationRestHandlerTest(TestCase):
         self.handler = web.NotificationRestHandler(application,
                                                    request=request)
 
-    @patch.object(web.Notification, 'enable', AsyncMagicMock(
-        spec=web.Notification.enable))
+    @patch.object(web.NotificationInterface, 'enable', AsyncMagicMock(
+        spec=web.NotificationInterface.enable))
     @async_test
     async def test_enable(self):
         notif_name = b'some-notif'
         repo_id = b'some-repo-id'
         self.handler.body = {'some': 'field'}
         await self.handler.enable(notif_name, repo_id)
-        self.assertTrue(web.Notification.enable.called)
+        self.assertTrue(web.NotificationInterface.enable.called)
 
-    @patch.object(web.Notification, 'disable', AsyncMagicMock(
-        spec=web.Notification.disable))
+    @patch.object(web.NotificationInterface, 'disable', AsyncMagicMock(
+        spec=web.NotificationInterface.disable))
     @async_test
     async def test_disable(self):
         notif_name = b'some-notif'
         repo_id = b'some-repo-id'
         self.handler.body = {'some': 'field'}
         await self.handler.disable(notif_name, repo_id)
-        self.assertTrue(web.Notification.disable.called)
+        self.assertTrue(web.NotificationInterface.disable.called)
 
-    @patch.object(web.Notification, 'update', AsyncMagicMock(
-        spec=web.Notification.update))
+    @patch.object(web.NotificationInterface, 'update', AsyncMagicMock(
+        spec=web.NotificationInterface.update))
     @async_test
     async def test_update(self):
         notif_name = b'some-notif'
@@ -707,23 +716,23 @@ class NotificationRestHandlerTest(TestCase):
         self.handler.body = {'some': 'field'}
         self.handler.body = {'some': 'field'}
         await self.handler.update(notif_name, repo_id)
-        self.assertTrue(web.Notification.update.called)
+        self.assertTrue(web.NotificationInterface.update.called)
 
-    @patch.object(web.Notification, 'list', AsyncMagicMock(
-        spec=web.Notification.list, return_value=[]))
+    @patch.object(web.NotificationInterface, 'list', AsyncMagicMock(
+        spec=web.NotificationInterface.list, return_value=[]))
     @async_test
     async def test_list_no_repo_id(self):
         self.handler.query = {}
         await self.handler.list()
-        self.assertTrue(web.Notification.list.called)
+        self.assertTrue(web.NotificationInterface.list.called)
 
-    @patch.object(web.Notification, 'list', AsyncMagicMock(
-        spec=web.Notification.list, return_value=[]))
+    @patch.object(web.NotificationInterface, 'list', AsyncMagicMock(
+        spec=web.NotificationInterface.list, return_value=[]))
     @async_test
     async def test_list(self):
         self.handler.query = {'repo_id': 'some-id'}
         await self.handler.list()
-        self.assertTrue(web.Notification.list.called)
+        self.assertTrue(web.NotificationInterface.list.called)
 
 
 @patch.object(web.LoggedTemplateHandler, 'redirect', MagicMock())
@@ -746,9 +755,9 @@ class StreamHandlerTest(TestCase):
         self.handler.prepare()
         self.handler._get_user.called
 
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get, return_value=web.Repository(MagicMock(),
-                                                             {'id': 'asdf'})))
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get, return_value=web.RepositoryInterface(MagicMock(),
+                                                                               {'id': 'asdf'})))
     @async_test
     async def test_get_repo_id_repo_name(self):
         self.handler.request.arguments = {'repo_name': [b'my/repo']}
@@ -767,7 +776,7 @@ class StreamHandlerTest(TestCase):
         self.assertIsNone(repo_id)
 
     @patch.object(web, 'StreamConnector', MagicMock())
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
         return_value=MagicMock()))
     @async_test
     async def test_open(self):
@@ -1139,8 +1148,8 @@ class DashboardHandlerTest(TestCase):
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get, return_value=MagicMock()))
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get, return_value=MagicMock()))
     @async_test
     async def test_show_repository_notifications(self):
         self.handler._get_notifications_template = MagicMock(
@@ -1172,7 +1181,7 @@ class DashboardHandlerTest(TestCase):
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 
-    @patch.object(web.BuildSet, 'get', AsyncMagicMock(spec=web.BuildSet.get))
+    @patch.object(web.BuildSetInterface, 'get', AsyncMagicMock(spec=web.BuildSetInterface.get))
     @async_test
     async def test_show_buildset_details(self):
         self.handler._get_buildset_template = MagicMock(
@@ -1258,8 +1267,8 @@ class DashboardHandlerTest(TestCase):
         self.assertTrue(self.handler._get_repository_template.called)
         self.assertTrue(self.handler.write.called)
 
-    @patch.object(web.Repository, 'get', AsyncMagicMock(
-        spec=web.Repository.get, return_value=MagicMock()))
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get, return_value=MagicMock()))
     @async_test
     async def test_show_repository_notifications_template(self):
         self.handler._get_notifications_template = MagicMock(
@@ -1288,7 +1297,7 @@ class DashboardHandlerTest(TestCase):
         self.assertTrue(self.handler._get_buildset_list_template.called)
         self.assertTrue(self.handler.write.called)
 
-    @patch.object(web.BuildSet, 'get', AsyncMagicMock(spec=web.BuildSet.get))
+    @patch.object(web.BuildSetInterface, 'get', AsyncMagicMock(spec=web.BuildSetInterface.get))
     @async_test
     async def test_show_buildset_template(self):
         self.handler._get_buildset_template = MagicMock(

@@ -32,7 +32,7 @@ __doc__ = """Module with base models that are populated using a remote api.
 """
 
 
-class BaseModel:
+class BaseInterface:
     # These references are fields that refer to other objects.
     # Note that this references are not always references on
     # database, they may be (and most are) embedded documents
@@ -107,9 +107,9 @@ class BaseModel:
         """Transforms a model into a json.
 
         :param args: Positional arguments passed to
-          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+          :meth:`~toxicbuild.common.interfaces.BaseInterface.to_dict`.
         :param kwargs: Named arguments passed to
-          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+          :meth:`~toxicbuild.common.interfaces.BaseInterface.to_dict`.
         """
 
         d = self.to_dict(*args, **kwargs)
@@ -127,7 +127,7 @@ class BaseModel:
             kw[key] = obj_id
 
 
-class Notification(BaseModel):
+class NotificationInterface(BaseInterface):
     """Integration with the notifications api."""
 
     def __init__(self, ordered_kwargs):
@@ -211,7 +211,7 @@ class Notification(BaseModel):
         return r
 
 
-class BaseHoleModel(BaseModel):
+class BaseHoleInterface(BaseInterface):
 
     # This is for the cli only. Do not use.
     _client = None
@@ -230,7 +230,7 @@ class BaseHoleModel(BaseModel):
         return client
 
 
-class User(BaseHoleModel):
+class UserInterface(BaseHoleInterface):
     """A user created in the master"""
 
     def __init__(self, requester, ordered_kwargs):
@@ -332,7 +332,7 @@ class User(BaseHoleModel):
         return exists
 
 
-class Slave(BaseHoleModel):
+class SlaveInterface(BaseHoleInterface):
 
     @classmethod
     async def add(cls, requester, name, port, token, owner,
@@ -404,7 +404,7 @@ class Slave(BaseHoleModel):
         return resp
 
 
-class Builder(BaseHoleModel):
+class BuilderInterface(BaseHoleInterface):
 
     @classmethod
     async def list(cls, requester, **kwargs):
@@ -417,21 +417,21 @@ class Builder(BaseHoleModel):
         return builders_list
 
 
-class Step(BaseHoleModel):
+class StepInterface(BaseHoleInterface):
     pass
 
 
-class Build(BaseHoleModel):
-    references = {'steps': Step,
-                  'builder': Builder}
+class BuildInterface(BaseHoleInterface):
+    references = {'steps': StepInterface,
+                  'builder': BuilderInterface}
 
     def to_dict(self, *args, **kwargs):
         """Converts a build object in to a dictionary.
 
         :param args: Positional arguments passed to
-          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+          :meth:`~toxicbuild.common.interfaces.BaseInterface.to_dict`.
         :param kwargs: Named arguments passed to
-          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+          :meth:`~toxicbuild.common.interfaces.BaseInterface.to_dict`.
         """
         d = super().to_dict(*args, **kwargs)
         d['builder'] = d['builder'].to_dict(*args, **kwargs)
@@ -450,12 +450,14 @@ class Build(BaseHoleModel):
         return build
 
 
-class Repository(BaseHoleModel):
+class RepositoryInterface(BaseHoleInterface):
 
     """Class representing a repository."""
 
-    references = {'slaves': Slave,
-                  'last_buildset': 'toxicbuild.common.interfaces.BuildSet'}
+    references = {
+        'slaves': SlaveInterface,
+        'last_buildset': 'toxicbuild.common.interfaces.BuildSetInterface'
+    }
 
     @classmethod
     async def add(cls, requester, name, url, owner, vcs_type,
@@ -590,9 +592,9 @@ class Repository(BaseHoleModel):
         """Transforms a repository into a dictionary.
 
         :param args: Positional arguments passed to
-          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+          :meth:`~toxicbuild.common.interfaces.BaseInterface.to_dict`.
         :param kwargs: Named arguments passed to
-          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+          :meth:`~toxicbuild.common.interfaces.BaseInterface.to_dict`.
         """
 
         d = super().to_dict(*args, **kwargs)
@@ -625,9 +627,9 @@ class Repository(BaseHoleModel):
         return resp
 
 
-class BuildSet(BaseHoleModel):
-    references = {'builds': Build,
-                  'repository': Repository}
+class BuildSetInterface(BaseHoleInterface):
+    references = {'builds': BuildInterface,
+                  'repository': RepositoryInterface}
 
     @classmethod
     async def list(cls, requester, repo_name_or_id=None, summary=True):
@@ -650,9 +652,9 @@ class BuildSet(BaseHoleModel):
         """Returns a dictionary based in a BuildSet object.
 
         :param args: Positional arguments passed to
-          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+          :meth:`~toxicbuild.common.interfaces.BaseInterface.to_dict`.
         :param kwargs: Named arguments passed to
-          :meth:`~toxicbuild.ui.models.BaseModel.to_dict`.
+          :meth:`~toxicbuild.common.interfaces.BaseInterface.to_dict`.
         """
         d = super().to_dict(*args, **kwargs)
         d['builds'] = [b.to_dict(*args, **kwargs) for b in d.get('builds', [])]

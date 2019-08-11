@@ -37,14 +37,15 @@ from toxicbuild.core.utils import (LoggerMixin, string2datetime,
                                    create_validation_string)
 from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
-from toxicbuild.common.interfaces import (Repository, Slave, User,
-                                          BuildSet, Builder, Build, BaseModel,
-                                          Notification)
+from toxicbuild.common.interfaces import (RepositoryInterface, SlaveInterface,
+                                          UserInterface, BuildSetInterface,
+                                          BuilderInterface, BuildInterface,
+                                          BaseInterface, NotificationInterface)
 from toxicbuild.common.utils import format_datetime
 from toxicbuild.ui.utils import (get_defaulte_locale_morsel,
                                  get_default_timezone_morsel)
 
-BaseModel.settings = settings
+BaseInterface.settings = settings
 
 COOKIE_NAME = 'toxicui'
 
@@ -130,7 +131,7 @@ class CookieAuthHandlerMixin(LoggerMixin):
             return
 
         userjson = base64.decodebytes(cookie).decode('utf-8')
-        return User(None, json.loads(userjson))
+        return UserInterface(None, json.loads(userjson))
 
 
 class TemplateHandler(BasePyroHandler):
@@ -220,7 +221,8 @@ class LoginHandler(BaseNotLoggedTemplate):
             raise HTTPError(400, 'Missing parameters for login')
 
         try:
-            self.user = await User.authenticate(username_or_email, password)
+            self.user = await UserInterface.authenticate(
+                username_or_email, password)
         except Exception:
             raise HTTPError(403)
 
@@ -440,7 +442,7 @@ class WaterfallRestHandler(ReadOnlyRestHandler):
 
     async def _get_builders(self, buildsets):
         bids = [b.builder.id for bs in buildsets for b in bs.builds]
-        builders = await Builder.list(self.user, id__in=bids)
+        builders = await BuilderInterface.list(self.user, id__in=bids)
         return builders
 
 
@@ -454,14 +456,14 @@ class RepositoryRestHandler(ModelRestHandler):
     @post('add-slave')
     async def add_slave(self):
         repo = await self.model.get(self.user, **self.query)
-        slave = await Slave.get(self.user, **self.body)
+        slave = await SlaveInterface.get(self.user, **self.body)
         await repo.add_slave(slave)
         return {'repo-add-slave': 'slave added'}
 
     @post('remove-slave')
     async def remove_slave(self):
         repo = await self.model.get(self.user, **self.query)
-        slave = await Slave.get(self.user, **self.body)
+        slave = await SlaveInterface.get(self.user, **self.body)
         await repo.remove_slave(slave)
         return {'repo-remove-slave': 'slave removed'}
 
@@ -528,27 +530,27 @@ class NotificationRestHandler(ReadOnlyRestHandler):
     async def enable(self, notif_name, repo_id):
         notif_name = notif_name.decode()
         repo_id = repo_id.decode()
-        await Notification.enable(repo_id, notif_name, **self.body)
+        await NotificationInterface.enable(repo_id, notif_name, **self.body)
         return {notif_name: 'enabled'}
 
     @delete('(.*)/(.*)')
     async def disable(self, notif_name, repo_id):
         notif_name = notif_name.decode()
         repo_id = repo_id.decode()
-        await Notification.disable(repo_id, notif_name)
+        await NotificationInterface.disable(repo_id, notif_name)
         return {notif_name: 'disabled'}
 
     @put('(.*)/(.*)')
     async def update(self, notif_name, repo_id):
         notif_name = notif_name.decode()
         repo_id = repo_id.decode()
-        await Notification.update(repo_id, notif_name, **self.body)
+        await NotificationInterface.update(repo_id, notif_name, **self.body)
         return {notif_name: 'updated'}
 
     @get('')
     async def list(self):
         repo_id = self.query.get('repo_id')
-        r = await Notification.list(repo_id)
+        r = await NotificationInterface.list(repo_id)
         items = [i.to_dict(dtformat=self._dtformat,
                            tzname=self._tzname) for i in r]
         return {'items': items}
@@ -649,7 +651,7 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
         except TypeError:
             return
 
-        repo = await Repository.get(self.user, repo_name_or_id=repo_name)
+        repo = await RepositoryInterface.get(self.user, repo_name_or_id=repo_name)
         return repo.id
 
     async def open(self, action):
@@ -864,7 +866,7 @@ class DashboardHandler(LoggedTemplateHandler):
     @get('buildset/([\d\w\-]+)')
     async def show_buildset_details(self, buildset_id):
         buildset_id = buildset_id.decode()
-        buildset = await BuildSet.get(self.user, buildset_id)
+        buildset = await BuildSetInterface.get(self.user, buildset_id)
         repo_id = buildset.repository.id
         content = self._get_buildset_template(buildset_id, repo_id)
         context = {'content': content}
@@ -887,7 +889,8 @@ class DashboardHandler(LoggedTemplateHandler):
     @get('{}/notifications'.format(FULL_NAME_REGEX))
     async def show_repository_notifications(self, full_name):
         full_name = full_name.decode()
-        repo = await Repository.get(self.user, repo_name_or_id=full_name)
+        repo = await RepositoryInterface.get(self.user,
+                                             repo_name_or_id=full_name)
         content = self._get_notifications_template(full_name, str(repo.id))
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
@@ -924,7 +927,8 @@ class DashboardHandler(LoggedTemplateHandler):
     @get('templates/repo-notifications/{}'.format(FULL_NAME_REGEX))
     async def show_repository_notifications_template(self, full_name):
         full_name = full_name.decode()
-        repo = await Repository.get(self.user, repo_name_or_id=full_name)
+        repo = await RepositoryInterface.get(self.user,
+                                             repo_name_or_id=full_name)
         content = self._get_notifications_template(full_name, str(repo.id))
         self.write(content)
 
@@ -960,7 +964,7 @@ class DashboardHandler(LoggedTemplateHandler):
     @get('templates/buildset/([\d\w\-]+)')
     async def show_buildset_template(self, buildset_id):
         buildset_id = buildset_id.decode()
-        buildset = await BuildSet.get(self.user, buildset_id)
+        buildset = await BuildSetInterface.get(self.user, buildset_id)
         repo_id = buildset.repository.id
         content = self._get_buildset_template(buildset_id, repo_id)
         self.write(content)
@@ -983,13 +987,13 @@ static_app = StaticApplication()
 
 cors_origins = getattr(settings, 'CORS_ORIGINS', '*')
 
-repo_kwargs = {'model': Repository,
+repo_kwargs = {'model': RepositoryInterface,
                'cors_origins': cors_origins}
 repo_api_url = URLSpec('/api/repo/(.*)', CookieAuthRepositoryRestHandler,
                        repo_kwargs)
 
 websocket = URLSpec('/api/socks/(.*)', StreamHandler)
-slave_kwargs = {'model': Slave,
+slave_kwargs = {'model': SlaveInterface,
                 'cors_origins': cors_origins}
 
 slave_api_url = URLSpec('/api/slave/(.*)', CookieAuthSlaveRestHandler,
@@ -1000,26 +1004,26 @@ notifications_api_url = URLSpec('/api/notification/(.*)$',
                                 {'cors_origins': cors_origins})
 
 user_add_api = URLSpec('/api/public/user/(.*)$',
-                       UserPublicRestHandler, {'model': User,
+                       UserPublicRestHandler, {'model': UserInterface,
                                                'cors_origins': cors_origins})
 
 user_api = URLSpec('/api/user/(.*)$', UserRestHandler,
-                   {'model': User,
+                   {'model': UserInterface,
                     'cors_origins': cors_origins})
 
 buildset_api = URLSpec('/api/buildset/(.*)$',
                        CookieAuthBuildSetHandler,
-                       {'model': BuildSet,
+                       {'model': BuildSetInterface,
                         'cors_origins': cors_origins})
 
 build_api = URLSpec('/api/build/(.*)$',
                     CookieAuthBuildHandler,
-                    {'model': Build,
+                    {'model': BuildInterface,
                      'cors_origins': cors_origins})
 
 waterfall_api = URLSpec('/api/waterfall/(.*)$',
                         CookieAuthWaterfallHandler,
-                        {'model': BuildSet,
+                        {'model': BuildSetInterface,
                          'cors_origins': cors_origins})
 
 api_app = PyroApplication(

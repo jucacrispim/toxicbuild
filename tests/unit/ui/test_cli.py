@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import gettext  # flake8:  noqa
 import asyncio
 import concurrent
 import builtins
@@ -34,7 +35,6 @@ import locale
 locale.setlocale(locale.LC_ALL, 'C')
 
 # installing gettext so we can text the cli properly
-import gettext  # flake8:  noqa
 gettext.install('toxicbuild.ui', 'fakedir')
 
 
@@ -541,7 +541,6 @@ class ToxicCliTest(unittest.TestCase):
         self.assertIsNone(f)
         self.assertEqual(self.cmdline, None)
 
-
     def test_execute_and_show_with_show_waterfall(self):
         self.cli.show_waterfall = AsyncMagicMock()
         self.loop.run_until_complete(self.cli.execute_and_show('waterfall b'))
@@ -655,6 +654,7 @@ class ToxicCliTest(unittest.TestCase):
         fn_mock = Mock()
 
         self.COUNT = 0
+
         def fn(r):
             if self.COUNT > 0:
                 self.cli._stop_peek = True
@@ -672,7 +672,7 @@ class ToxicCliTest(unittest.TestCase):
     @async_test
     async def test_show_watefall_no_repo(self):
         self.cli.messages = Mock()
-        r = await  self.cli.show_waterfall('waterfall')
+        r = await self.cli.show_waterfall('waterfall')
         self.assertFalse(r)
 
     @patch.object(cli.Waterfall, 'show_waterfall', AsyncMagicMock())
@@ -680,7 +680,7 @@ class ToxicCliTest(unittest.TestCase):
     async def test_show_watefall(self):
         self.cli.messages = Mock()
         self.cli.get_client = AsyncMagicMock()
-        r = await  self.cli.show_waterfall('waterfall a')
+        r = await self.cli.show_waterfall('waterfall a')
         self.assertTrue(r)
 
     def test_get_welcome_text(self):
@@ -784,7 +784,6 @@ class ToxicCliTest(unittest.TestCase):
 
         self.assertEqual(''.join(formated).strip(), expected.strip())
 
-
     def test_format_output_columns_index_error(self):
 
         self.cli._format_row = Mock(side_effect=IndexError)
@@ -875,7 +874,7 @@ class WaterfallTest(unittest.TestCase):
     def setUp(self):
         client = AsyncMagicMock()
         cli_mock = Mock()
-        cli_mock.peek  = AsyncMagicMock()
+        cli_mock.peek = AsyncMagicMock()
         self.waterfall = cli.Waterfall(client, 'some-repo-name', cli_mock)
 
     def test_get_ordered_builds(self):
@@ -975,7 +974,6 @@ class WaterfallTest(unittest.TestCase):
         returned = self.waterfall.post_item_formatter(item)
         self.assertEqual(expected, returned)
 
-
     def test_post_item_formatter_index_error(self):
         item = 'some-builder other-builder'
         expected = item
@@ -990,8 +988,8 @@ class WaterfallTest(unittest.TestCase):
         returned = self.waterfall.post_row_formatter(row)
         self.assertEqual(returned, expected)
 
-    @patch.object(cli.BuildSet, 'list', AsyncMagicMock(
-        spec=cli.BuildSet.list))
+    @patch.object(cli.BuildSetInterface, 'list', AsyncMagicMock(
+        spec=cli.BuildSetInterface.list))
     @patch.object(cli, 'get_builders_for_buildsets', AsyncMagicMock(
         spe=cli.get_builders_for_buildsets))
     @async_test

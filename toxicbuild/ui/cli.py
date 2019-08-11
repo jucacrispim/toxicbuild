@@ -33,7 +33,9 @@ import urwid
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.ui import inutils
 from toxicbuild.common.client import get_hole_client
-from toxicbuild.common.interfaces import User, BuildSet, BaseModel
+from toxicbuild.common.interfaces import (UserInterface,
+                                          BuildSetInterface,
+                                          BaseInterface)
 from toxicbuild.ui.utils import get_builders_for_buildsets
 
 
@@ -220,7 +222,7 @@ class ToxicCliActions:
         client = await self.get_client()
         try:
             user_dict = await client.user_authenticate(**kw)
-            self.user = User(None, user_dict)
+            self.user = UserInterface(None, user_dict)
         finally:
             client.disconnect()
 
@@ -304,15 +306,15 @@ class Waterfall:
 
     async def show_waterfall(self):
 
-        BaseModel._client = self.client
+        BaseInterface._client = self.client
         try:
-            buildsets = await BuildSet.list(self.client.user,
-                                            repo_name_or_id=self.repo_name)
+            buildsets = await BuildSetInterface.list(
+                self.client.user, repo_name_or_id=self.repo_name)
             builders = await get_builders_for_buildsets(
                 self.client.user, buildsets)
             return self._format_waterfall(builders, buildsets)
         finally:
-            BaseModel._client = None
+            BaseInterface._client = None
 
     def peek_callback(self, response):
         if isinstance(response, str):

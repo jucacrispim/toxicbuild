@@ -19,7 +19,7 @@
 
 from http.cookies import Morsel
 
-from toxicbuild.common.interfaces import Builder
+from toxicbuild.common.interfaces import BuilderInterface
 from toxicbuild.common.utils import get_hole_client_settings
 from toxicbuild.core.utils import DTFORMAT
 from toxicbuild.ui import settings
@@ -56,7 +56,7 @@ async def get_builders_for_buildsets(user, buildsets):
     # the builder id for builds, so now I retrieve the
     # 'full' builder using builder-list
     ids = [b.id for b in builders]
-    builders = await Builder.list(user, id__in=ids)
+    builders = await BuilderInterface.list(user, id__in=ids)
     builders_dict = {str(b.id): b for b in builders}
     for buildset in buildsets:
         for build in buildset.builds:

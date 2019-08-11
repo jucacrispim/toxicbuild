@@ -84,19 +84,19 @@ class BuildsetUtilsTest(TestCase):
         await Repository.drop_collection()
         await User.drop_collection()
 
-    @patch.object(interfaces.Builder, 'list', AsyncMagicMock(
-        spec=interfaces.Builder.list))
+    @patch.object(interfaces.BuilderInterface, 'list', AsyncMagicMock(
+        spec=interfaces.BuilderInterface.list))
     @async_test
     async def test_get_builders_for_buildset(self):
-        buildset = interfaces.BuildSet(self.user,
-                                       ordered_kwargs=self.buildset.to_dict())
+        buildset = interfaces.BuildSetInterface(
+            self.user, ordered_kwargs=self.buildset.to_dict())
         expected = sorted([self.builder])
         builder = await self.builder.to_dict()
-        interfaces.Builder.list.return_value = [interfaces.Builder(
-            self.user, ordered_kwargs=builder)]
+        interfaces.BuilderInterface.list.return_value = [
+            interfaces.BuilderInterface(self.user, ordered_kwargs=builder)]
         returned = await utils.get_builders_for_buildsets(self.user,
                                                           [buildset])
-        called_args = interfaces.Builder.list.call_args[1]
+        called_args = interfaces.BuilderInterface.list.call_args[1]
 
         expected = {'id__in': [str(b.id) for b in [self.builder]]}
         self.assertEqual(expected, called_args)

@@ -21,7 +21,7 @@ from mongoengine.errors import NotUniqueError
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (ReferenceField, StringField, IntField,
                                EmbeddedDocumentListField)
-from toxicbuild.common.interfaces import Notification
+from toxicbuild.common.interfaces import NotificationInterface
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.repository import Repository, RepositoryBranch
 from toxicbuild.master.slave import Slave
@@ -30,7 +30,7 @@ from toxicbuild.integrations import settings
 from toxicbuild.integrations.exceptions import BadRepository
 
 
-Notification.settings = settings
+NotificationInterface.settings = settings
 
 
 class BaseIntegrationApp(LoggerMixin, Document):
@@ -113,7 +113,7 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         :param repo: A repository instance."""
 
         conf = self.get_notif_config()
-        await Notification.enable(
+        await NotificationInterface.enable(
             str(repo.id), self.notif_name, **conf)
 
     async def import_repository(self, repo_info, clone=True):
