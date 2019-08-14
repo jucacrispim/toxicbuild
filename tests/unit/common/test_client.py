@@ -21,7 +21,8 @@ from unittest import TestCase
 from unittest.mock import MagicMock, patch
 from toxicbuild.common.client import (HoleClient, get_hole_client,
                                       ToxicClientException, UserDoesNotExist,
-                                      NotEnoughPerms, BadResetPasswordToken)
+                                      NotEnoughPerms, BadResetPasswordToken,
+                                      AlreadyExists)
 from tests import async_test, AsyncMagicMock
 
 
@@ -115,6 +116,13 @@ class HoleClientTest(TestCase):
     @async_test
     async def test_get_response_bad_reset_token(self):
         with self.assertRaises(BadResetPasswordToken):
+            await self.client.get_response()
+
+    @patch.object(HoleClient, 'read', AsyncMagicMock(
+        return_value={'code': '5', 'body': {'error': 'bla'}}))
+    @async_test
+    async def test_get_response_already_exists(self):
+        with self.assertRaises(AlreadyExists):
             await self.client.get_response()
 
     @patch.object(HoleClient, 'read', AsyncMagicMock(

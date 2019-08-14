@@ -306,3 +306,11 @@ class UserTest(BaseFunctionalTest):
                                             ['add_repo'])
         auth = await UserInterface.authenticate('a@a.com', 'asdf')
         self.assertEqual(self.user.id, auth.id)
+
+    @async_test
+    async def test_get(self):
+        self.user = await UserInterface.add('a@a.com', 'a', 'asdf',
+                                            ['add_repo'])
+        u = await UserInterface.get(email='a@a.com')
+
+        self.assertEqual(u.id, self.user.id)

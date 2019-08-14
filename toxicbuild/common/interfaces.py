@@ -239,6 +239,19 @@ class UserInterface(BaseHoleInterface):
         super().__init__(requester, ordered_kwargs)
 
     @classmethod
+    async def get(cls, **kwargs):
+        """Returns a user.
+
+        :param requester: The user who is requesting the operation.
+        :param kwargs: kwargs to get the user."""
+
+        requester = cls._get_root_user()
+        with await cls.get_client(requester) as client:
+            user_dict = await client.user_get(**kwargs)
+        user = cls(requester, user_dict)
+        return user
+
+    @classmethod
     def _get_root_user(cls):
         root_id = cls.settings.ROOT_USER_ID
         return cls(None, {'id': root_id})
@@ -452,7 +465,7 @@ class BuildInterface(BaseHoleInterface):
 
 class RepositoryInterface(BaseHoleInterface):
 
-    """Class representing a repository."""
+    """Interface for a repository."""
 
     references = {
         'slaves': SlaveInterface,
@@ -461,7 +474,9 @@ class RepositoryInterface(BaseHoleInterface):
 
     @classmethod
     async def add(cls, requester, name, url, owner, vcs_type,
-                  update_seconds=300, slaves=None, parallel_builds=None):
+                  update_seconds=300, slaves=None, parallel_builds=None,
+                  schedule_poller=True, branches=None, external_id=None,
+                  external_full_name=None, fetch_url=None):
         """Adds a new repository.
 
         :param requester: The user who is requesting the operation.
@@ -472,12 +487,26 @@ class RepositoryInterface(BaseHoleInterface):
         :param update_seconds: Interval to update the repository code.
         :param slaves: List with slave names for this reporitory.
         :params parallel_builds: How many paralles builds this repository
-          executes. If None, there is no limit."""
+          executes. If None, there is no limit.
+        :param schedule_poller: Should this repository be scheduled for
+          polling? If this repository comes from an integration
+          (with github, gitlab, etc...) this should be False.
+        :param branches: A list of branches configuration that trigger builds.
+        :param external_id: The id of the repository in an external service.
+        :param external_full_name: The full name in an external service.
+        :param fetch_url: If the repository uses a differente url to fetch code
+          (ie: it has an auth token url) this is the fetch_url.
+        """
 
         kw = {'repo_name': name, 'repo_url': url, 'vcs_type': vcs_type,
               'update_seconds': update_seconds,
               'parallel_builds': parallel_builds,
-              'owner_id': str(owner.id)}
+              'owner_id': str(owner.id),
+              'schedule_poller': schedule_poller,
+              'branches': branches,
+              'external_id': external_id,
+              'external_full_name': external_full_name,
+              'fetch_url': fetch_url}
 
         kw.update({'slaves': slaves or []})
 
@@ -623,6 +652,34 @@ class RepositoryInterface(BaseHoleInterface):
     async def disable(self):
         with await self.get_client(self.requester) as client:
             resp = await client.repo_disable(repo_name_or_id=self.id)
+
+        return resp
+
+    async def request_code_update(self, repo_branches=None, external=None,
+                                  wait_for_lock=False):
+        """Request the code update of the repository.
+
+        :param repo_branches: A dictionary with information about the branches
+          to be updated. If no ``repo_branches`` all branches in the repo
+          config will be updated.
+
+          The dictionary has the following format.
+
+          .. code-block:: python
+
+             {'branch-name': {'notify_only_latest': True}}
+
+        :param external: If we should update code from an external
+          (not the origin) repository, `external` is the information about
+          this remote repo.
+        :param wait_for_lock: Indicates if we should wait for the release of
+          the lock or simply return if we cannot get a lock.
+        """
+
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_request_code_update(
+                repo_name_or_id=self.id, repo_branches=repo_branches,
+                external=external, wait_for_lock=wait_for_lock)
 
         return resp
 

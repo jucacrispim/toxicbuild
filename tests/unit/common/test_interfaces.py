@@ -341,6 +341,12 @@ class UserInterfaceTest(TestCase):
         exists = await interfaces.UserInterface.exists(username='some-guy')
         self.assertFalse(exists)
 
+    @patch.object(interfaces.UserInterface, 'get_client', get_client_mock)
+    @async_test
+    async def test_get(self):
+        user = await interfaces.UserInterface.get(username='the-user')
+        self.assertTrue(user.id)
+
 
 class RepositoryTest(TestCase):
 
@@ -502,6 +508,14 @@ class RepositoryTest(TestCase):
 
         resp = await self.repository.disable()
         self.assertEqual(resp, 'repo-disable')
+
+    @async_test
+    async def test_request_code_update(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-request-code-update')
+
+        resp = await self.repository.request_code_update()
+        self.assertEqual(resp, 'repo-request-code-update')
 
 
 class SlaveTest(TestCase):

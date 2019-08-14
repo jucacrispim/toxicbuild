@@ -45,7 +45,7 @@ from toxicbuild.master.exchanges import scheduler_action  # noqa f402
 from toxicbuild.ui import settings  # noqa f402
 from toxicbuild.master.users import User  # noqa f402
 from toxicbuild.common.interfaces import (  # noqa 402
-    Slave, Repository, BaseModel)
+    SlaveInterface, RepositoryInterface, BaseInterface)
 from tests.functional import (start_slave, stop_slave,  # noqa 402
                               start_master, stop_master,
                               start_poller, stop_poller,
@@ -56,7 +56,7 @@ from tests.functional import (start_slave, stop_slave,  # noqa 402
 from tests.webui import SeleniumBrowser  # noqa 402
 
 
-BaseModel.settings = settings
+BaseInterface.settings = settings
 
 
 def create_browser(context):
@@ -78,19 +78,20 @@ def quit_browser(context):
 def create_slave(context):
     """Creates a slave to be used in repo tests"""
 
-    yield from Slave.add(context.user, name='repo-slave', host='localhost',
-                         owner=context.user,
-                         port=2222,
-                         token='123',
-                         use_ssl=True,
-                         validate_cert=False)
+    yield from SlaveInterface.add(
+        context.user, name='repo-slave', host='localhost',
+        owner=context.user,
+        port=2222,
+        token='123',
+        use_ssl=True,
+        validate_cert=False)
 
 
 @asyncio.coroutine
 def del_slave(context):
     """Deletes the slaves created in the tests"""
 
-    slaves = yield from Slave.list(context.user)
+    slaves = yield from SlaveInterface.list(context.user)
     for slave in slaves:
         try:
             yield from slave.delete()
@@ -109,11 +110,12 @@ def create_repo(context):
     yield from scheduler_action.connection.connect()
     yield from scheduler_action.declare()
 
-    repo = yield from Repository.add(context.user,
-                                     name='repo-bla', update_seconds=1,
-                                     owner=context.user,
-                                     vcs_type='git', url=REPO_DIR,
-                                     slaves=['repo-slave'])
+    repo = yield from RepositoryInterface.add(
+        context.user,
+        name='repo-bla', update_seconds=1,
+        owner=context.user,
+        vcs_type='git', url=REPO_DIR,
+        slaves=['repo-slave'])
 
     yield from repo.add_branch('master', False)
 
@@ -134,7 +136,7 @@ async def del_user(context):
 def del_repo(context):
     """Deletes the repositories created in tests."""
 
-    repos = yield from Repository.list(context.user)
+    repos = yield from RepositoryInterface.list(context.user)
     for repo in repos:
         try:
             yield from repo.delete()

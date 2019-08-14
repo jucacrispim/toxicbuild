@@ -31,6 +31,7 @@ import ssl
 import sys
 import traceback
 from bson.objectid import ObjectId
+from mongoengine.errors import NotUniqueError
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import (LoggerMixin, datetime2string,
                                    format_timedelta, now, localtime2utc)
@@ -125,6 +126,12 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
             status = 4
             await self.send_response(code=status, body={'error': msg})
 
+        except NotUniqueError:
+            msg = 'Object already exists'
+            self.log(msg, level='warning')
+            status = 5
+            await self.send_response(code=status, body={'error': msg})
+
         except Exception:
             msg = traceback.format_exc()
             status = 1
@@ -152,6 +159,7 @@ class HoleHandler:
     * `repo-cancel-build`
     * `repo-enable`
     * `repo-disable`
+    * `repo-request-code-update`
     * `slave-add`
     * `slave-get`
     * `slave-list`
@@ -310,8 +318,10 @@ class HoleHandler:
 
     async def repo_add(self, repo_name, repo_url, owner_id,
                        update_seconds, vcs_type, slaves=None,
-                       parallel_builds=None):
-        """ Adds a new repository and first_run() it.
+                       parallel_builds=None, schedule_poller=True,
+                       branches=None, external_id=None,
+                       external_full_name=None, fetch_url=None):
+        """Adds a new repository and first_run() it.
 
         :param repo_name: Repository name
         :param repo_url: Repository vcs url
@@ -319,8 +329,17 @@ class HoleHandler:
         :param update_seconds: Time to poll for changes
         :param vcs_type: Type of vcs being used.
         :param slaves: A list of slave names.
-        :params parallel_builds: How many parallel builds this repository
-          executes. If None, there is no limit."""
+        :param parallel_builds: How many parallel builds this repository
+          executes. If None, there is no limit.
+        :param schedule_poller: Should this repository be scheduled for
+          polling? If this repository comes from an integration
+          (with github, gitlab, etc...) this should be False.
+        :param branches: A list of branches configuration that trigger builds.
+        :param external_id: The id of the repository in an external service.
+        :param external_full_name: The full name in an external service.
+        :param fetch_url: If the repository uses a differente url to fetch code
+          (ie: it has an auth token url) this is the fetch_url.
+        """
 
         if not self._user_is_allowed('add_repo'):
             raise NotEnoughPerms
@@ -336,6 +355,12 @@ class HoleHandler:
         kw = {}
         if parallel_builds:
             kw['parallel_builds'] = parallel_builds
+
+        kw['schedule_poller'] = schedule_poller
+        kw['branches'] = branches or []
+        kw['external_id'] = external_id
+        kw['external_full_name'] = external_full_name
+        kw['fetch_url'] = fetch_url
 
         owner = await self._get_owner(owner_id)
 
@@ -521,6 +546,27 @@ class HoleHandler:
         repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.disable()
         return {'repo-disable': 'ok'}
+
+    async def repo_request_code_update(self, repo_name_or_id,
+                                       repo_branches=None, external=None,
+                                       wait_for_lock=False):
+        """Requests to a repository the update of its code.
+
+        :param repo_name_or_id: The name or the id of the repository.
+        :param repo_branches: Passed to
+          :meth:`~toxicbuild.master.repository.Repository.request_code_update`.
+        :param external: Passed to
+          :meth:`~toxicbuild.master.repository.Repository.request_code_update`.
+        :param wait_for_lock: Passed to
+          :meth:`~toxicbuild.master.repository.Repository.request_code_update`.
+        """
+
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.request_code_update(repo_branches=repo_branches,
+                                       external=external,
+                                       wait_for_lock=wait_for_lock)
+        return {'repo-request-code-update': 'ok'}
 
     async def slave_add(self, slave_name, slave_host, slave_port, slave_token,
                         owner_id, use_ssl=True, validate_cert=True,

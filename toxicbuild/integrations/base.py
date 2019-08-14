@@ -17,20 +17,25 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future, gather
-from mongoengine.errors import NotUniqueError
 from mongomotor import Document, EmbeddedDocument
-from mongomotor.fields import (ReferenceField, StringField, IntField,
+from mongomotor.fields import (StringField, IntField,
                                EmbeddedDocumentListField)
-from toxicbuild.common.interfaces import NotificationInterface
+from toxicbuild.common.exceptions import AlreadyExists
+from toxicbuild.common.interfaces import (
+    NotificationInterface,
+    RepositoryInterface,
+    SlaveInterface,
+    UserInterface,
+    BaseInterface
+)
+
+from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.core.utils import LoggerMixin
-from toxicbuild.master.repository import Repository, RepositoryBranch
-from toxicbuild.master.slave import Slave
-from toxicbuild.master.users import User
 from toxicbuild.integrations import settings
 from toxicbuild.integrations.exceptions import BadRepository
 
 
-NotificationInterface.settings = settings
+BaseInterface.settings = settings
 
 
 class BaseIntegrationApp(LoggerMixin, Document):
@@ -69,9 +74,11 @@ class ExternalInstallationRepository(LoggerMixin, EmbeddedDocument):
 class BaseIntegrationInstallation(LoggerMixin, Document):
     """A installation is created"""
 
-    user = ReferenceField(User, required=True)
-    """A reference to the :class:`~toxicbuild.master.users.User` that owns
-      the installation"""
+    user_id = StringField(required=True)
+    """The id of the user who owns the installation"""
+
+    user_name = StringField(requierd=True)
+    """The name of the user who owns the installation"""
 
     repositories = EmbeddedDocumentListField(ExternalInstallationRepository)
     """The repositories imported from the user external service account."""
@@ -79,6 +86,11 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
     notif_name = None
 
     meta = {'allow_inheritance': True}
+
+    @property
+    def user(self):
+        return UserInterface(None, {'id': self.user_id,
+                                    'name': self.user_name})
 
     async def list_repos(self):
         raise NotImplementedError
@@ -131,27 +143,27 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         self.log(msg)
 
         branches = [
-            RepositoryBranch(name='master', notify_only_latest=True),
-            RepositoryBranch(name='feature-*', notify_only_latest=True),
-            RepositoryBranch(name='bug-*', notify_only_latest=True)]
-        slaves = await Slave.list_for_user(await self.user)
-        slaves = await slaves.to_list()
+            dict(name='master', notify_only_latest=True),
+            dict(name='feature-*', notify_only_latest=True),
+            dict(name='bug-*', notify_only_latest=True)]
+        slaves = await SlaveInterface.list(self.user)
         # update_seconds=0 because it will not be scheduled in fact.
         # note the schedule_poller=False.
-        # What triggers an update code is a message from github in the
+        # What triggers an update code is a message from github/gitlab in the
         # webhook receiver.
-        user = await self.user
+        user = self.user
         fetch_url = await self._get_auth_url(repo_info['clone_url'])
         external_id = repo_info['id']
         external_full_name = repo_info['full_name']
         try:
-            repo = await Repository.create(
+            repo = await RepositoryInterface.add(
+                user,
                 name=repo_info['name'], url=repo_info['clone_url'],
                 owner=user, fetch_url=fetch_url, update_seconds=0,
                 vcs_type='git', schedule_poller=False, parallel_builds=1,
                 branches=branches, slaves=slaves, external_id=str(external_id),
                 external_full_name=external_full_name)
-        except NotUniqueError:
+        except AlreadyExists:
             msg = 'Repository {}/{} already exists. Leaving.'.format(
                 user.name, repo_info['name'])
             self.log(msg, level='error')
@@ -172,7 +184,7 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
     async def import_repositories(self):
         """Imports all repositories available to the installation."""
 
-        user = await self.user
+        user = self.user
         msg = 'Importing repos for {}'.format(user.id)
         self.log(msg, level='debug')
         repos = []
@@ -207,11 +219,13 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         :param kwargs: Named arguments passed to installation class init.
         """
 
-        installation = await cls.objects.filter(user=user, **kwargs).first()
+        installation = await cls.objects.filter(
+            user_id=user.id, **kwargs).first()
         if not installation:
             msg = 'Creating installation for {}'.format(kwargs)
             cls.log_cls(msg)
-            installation = cls(user=user, **kwargs)
+            installation = cls(user_id=str(user.id), user_name=user.username,
+                               **kwargs)
             await installation.save()
 
         await installation.import_repositories()
@@ -220,7 +234,8 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
     async def _get_repo_by_external_id(self, external_repo_id):
         for repo in self.repositories:
             if repo.external_id == external_repo_id:  # pragma no branch
-                repo_inst = await Repository.objects.get(id=repo.repository_id)
+                repo_inst = await RepositoryInterface.get(
+                    self.user, id=repo.repository_id)
                 return repo_inst
 
         raise BadRepository(
@@ -258,18 +273,18 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         :param named_tree: The named tree to build."""
 
         repo = await self._get_repo_by_external_id(external_repo_id)
-        await repo.request_build(branch, named_tree=named_tree)
+        await repo.start_build(branch, named_tree=named_tree)
 
     async def delete(self, *args, **kwargs):
         """Deletes the installation from the system"""
 
         for install_repo in self.repositories:
             try:
-                repo = await Repository.objects.get(
+                repo = await RepositoryInterface.get(
                     id=install_repo.repository_id)
-            except Repository.DoesNotExist:
+            except ToxicClientException:
                 continue
-            await repo.request_removal()
+            await repo.delete()
 
         r = await super().delete(*args, **kwargs)
         return r
@@ -280,4 +295,4 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         :param github_repo_id: The id of the repository in github."""
 
         repo = await self._get_repo_by_external_id(github_repo_id)
-        await repo.request_removal()
+        await repo.delete()

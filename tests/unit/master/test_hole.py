@@ -791,6 +791,20 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @patch.object(repository.Repository, 'request_code_update',
+                  AsyncMagicMock())
+    @async_test
+    async def test_repo_request_code_update(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-request-code-update', protocol)
+        await handler.repo_request_code_update(str(self.repo.id))
+        self.assertTrue(repository.Repository.request_code_update.called)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_slave_add(self):
         await self._create_test_data_owner()

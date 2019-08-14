@@ -24,7 +24,7 @@ from toxicbuild.core import requests
 from toxicbuild.integrations import settings
 
 __doc__ = """This module implements integration with gitlab. Imports
-Repositories from GitLab and reacts to messages sent by gitlab to
+repositories from GitLab and reacts to messages sent by gitlab to
 toxicbuild's integrations webhook.
 See: `GitLab integration docs <https://about.gitlab.com/partners/integrate/>`_.
 """

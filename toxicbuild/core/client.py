@@ -68,8 +68,11 @@ class BaseToxicClient(utils.LoggerMixin):
         self.writer = None
         self._connected = False
 
+    def is_connected(self):
+        return self._connected
+
     def __enter__(self):
-        if not self._connected:
+        if not self.is_connected():
             msg = "Use ``async with``"
             raise ToxicClientException(msg)
         return self

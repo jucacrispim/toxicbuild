@@ -32,3 +32,7 @@ class BadSettingsType(Exception):
 
 class BadResetPasswordToken(Exception):
     pass
+
+
+class AlreadyExists(Exception):
+    pass

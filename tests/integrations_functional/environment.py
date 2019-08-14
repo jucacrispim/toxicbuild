@@ -19,6 +19,7 @@
 import asyncio
 from toxicbuild.master.users import User
 from tests.webui import SeleniumBrowser
+from tests.webui.environment import create_root_user
 from tests.integrations_functional import start_all, stop_all
 
 
@@ -70,6 +71,7 @@ def before_all(context):
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(create_user(context))
+    loop.run_until_complete(create_root_user(context))
 
 
 def after_feature(context, feature):
@@ -78,6 +80,7 @@ def after_feature(context, feature):
 
     from toxicbuild.integrations.github import GithubInstallation
     loop.run_until_complete(GithubInstallation.drop_collection())
+    loop.run_until_complete(User.drop_collection())
 
 
 def after_all(context):

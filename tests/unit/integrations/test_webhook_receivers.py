@@ -51,18 +51,17 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         self.assertIsNone(user)
 
     @patch.object(webhook_receivers, 'settings', Mock())
+    @patch.object(webhook_receivers.UserInterface, 'get',
+                  AsyncMagicMock(spec=webhook_receivers.UserInterface.get))
     @async_test
     async def test_get_user_from_cookie(self):
-        user = webhook_receivers.User(email='bla@bla.com')
-        await user.save()
-        try:
-            cookie = base64.encodebytes(
-                json.dumps({'id': str(user.id)}).encode('utf-8'))
-            self.webhook_receiver.get_secure_cookie = Mock(return_value=cookie)
-            ret_user = await self.webhook_receiver._get_user_from_cookie()
-            self.assertEqual(user.id, ret_user.id)
-        finally:
-            await user.delete()
+        user = webhook_receivers.UserInterface(
+            None, dict(email='bla@bla.com', id='some-id', name='bla'))
+        cookie = base64.encodebytes(
+            json.dumps({'id': str(user.id)}).encode('utf-8'))
+        self.webhook_receiver.get_secure_cookie = Mock(return_value=cookie)
+        ret_user = await self.webhook_receiver._get_user_from_cookie()
+        self.assertEqual(user.id, ret_user.id)
 
     def test_parse_body(self):
         self.webhook_receiver._parse_body()

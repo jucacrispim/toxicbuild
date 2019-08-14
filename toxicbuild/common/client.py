@@ -21,7 +21,7 @@ from toxicbuild.core import BaseToxicClient
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.core.utils import LoggerMixin
 from .exceptions import (UserDoesNotExist, NotEnoughPerms,
-                         BadResetPasswordToken)
+                         BadResetPasswordToken, AlreadyExists)
 
 
 class HoleClient(BaseToxicClient, LoggerMixin):
@@ -66,6 +66,7 @@ class HoleClient(BaseToxicClient, LoggerMixin):
 
         await self.write(data)
         response = await self.get_response()
+        print(response)
         return response['body'][action]
 
     async def connect2stream(self, body):
@@ -92,6 +93,9 @@ class HoleClient(BaseToxicClient, LoggerMixin):
 
         if 'code' in response and int(response['code']) == 4:
             raise BadResetPasswordToken(response['body']['error'])
+
+        if 'code' in response and int(response['code']) == 5:
+            raise AlreadyExists(response['body']['error'])
 
         return response
 

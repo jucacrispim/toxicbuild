@@ -26,8 +26,8 @@ from pyrocumulus.web.handlers import BasePyroHandler, PyroRequest
 from pyrocumulus.web.urlmappers import URLSpec
 from tornado import gen
 from tornado.web import HTTPError
+from toxicbuild.common.interfaces import UserInterface
 from toxicbuild.core.utils import LoggerMixin, validate_string
-from toxicbuild.master.users import User
 from toxicbuild.integrations import settings
 from toxicbuild.integrations.github import (GithubInstallation, GithubApp,
                                             BadSignature)
@@ -50,7 +50,7 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
             return
 
         user_dict = json.loads(base64.decodebytes(cookie).decode('utf-8'))
-        user = await User.objects.get(id=user_dict['id'])
+        user = await UserInterface.get(id=user_dict['id'])
         return user
 
     def _parse_body(self):

@@ -251,19 +251,17 @@ class GithubInstallationTest(TestCase):
 
     @async_test
     async def setUp(self):
-        self.user = base.User(email='bla@bla.com')
-        self.user.set_password('1234')
-        await self.user.save()
-        self.installation = github.GithubInstallation(user=self.user,
+        self.user = base.UserInterface(None, dict(email='bla@bla.com',
+                                                  id='some-id',
+                                                  name='bla'))
+        self.installation = github.GithubInstallation(user_id=self.user.id,
+                                                      user_name=self.user.name,
                                                       github_id=1234)
         await self.installation.save()
 
     @async_test
     async def tearDown(self):
-        await base.User.drop_collection()
-        await base.Repository.drop_collection()
         await github.GithubApp.drop_collection()
-        await base.Slave.drop_collection()
         await github.GithubInstallation.drop_collection()
 
     @patch.object(github, 'now', Mock())
