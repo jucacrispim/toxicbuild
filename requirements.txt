@@ -1,6 +1,6 @@
 aiobotocore==0.10.2
 aiohttp==3.4.4
-aiozk==0.15.0
+aiozk==0.16.0
 aioamqp==0.13.0
 astroid==2.2.5
 asyncamqp==0.1.5
