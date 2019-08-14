@@ -227,7 +227,8 @@ class GithubWebhookReceiver(BaseWebhookReceiver):
 
     async def _handle_install_deleted(self):
         install = await self.get_install()
-        await install.delete()
+        user = UserInterface(None, {'id': install.user_id})
+        await install.delete(user)
 
     async def validate_webhook(self):
         signature = self.request.headers.get('X-Hub-Signature')

@@ -304,7 +304,7 @@ class BaseIntegrationInstallationTest(TestCase):
 
         base.RepositoryInterface.get.side_effect = [
             base.ToxicClientException, repo]
-        await self.installation.delete()
+        await self.installation.delete(MagicMock())
         self.assertTrue(repo.delete.called)
 
     @patch.object(base.RepositoryInterface, 'delete', AsyncMagicMock(

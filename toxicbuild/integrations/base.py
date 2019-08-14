@@ -275,13 +275,13 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         repo = await self._get_repo_by_external_id(external_repo_id)
         await repo.start_build(branch, named_tree=named_tree)
 
-    async def delete(self, *args, **kwargs):
+    async def delete(self, requester, *args, **kwargs):
         """Deletes the installation from the system"""
 
         for install_repo in self.repositories:
             try:
                 repo = await RepositoryInterface.get(
-                    id=install_repo.repository_id)
+                    requester, id=install_repo.repository_id)
             except ToxicClientException:
                 continue
             await repo.delete()

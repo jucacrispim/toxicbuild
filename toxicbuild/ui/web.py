@@ -651,7 +651,8 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
         except TypeError:
             return
 
-        repo = await RepositoryInterface.get(self.user, repo_name_or_id=repo_name)
+        repo = await RepositoryInterface.get(
+            self.user, repo_name_or_id=repo_name)
         return repo.id
 
     async def open(self, action):
