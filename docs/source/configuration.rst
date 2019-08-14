@@ -161,16 +161,14 @@ Set the following environment variables to configure the database.
 * ``DBPASSWORD``
 
 
-Queue manager
-~~~~~~~~~~~~~
+Master api
+~~~~~~~~~~
 
-The queue manager is configured by the following environment variables:
-
-* ``AMQPHOST`` - Defaults to `localhost`
-* ``AMQPPORT`` - Defaults to `5672`
-* ``AMQPLOGIN``
-* ``AMQPPASSWORD``
-* ``AMQPVIRTUALHOST``
+* ``HOLE_HOST`` - The server where the master is
+* ``HOLE_PORT`` - The port which master is listening.
+* ``MASTER_USES_SSL`` - Indicates if the connection to toxicmaster is secure.
+  Defaults to `0`. Possible values are `0` and `1`.
+* ``VALIDATE_CERT_MASTER``. Indicates if we should validate the master SSL
 
 
 Notifications

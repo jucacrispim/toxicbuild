@@ -206,9 +206,11 @@ update_envfiles(){
     cookie_secret=$3
     output_token=$4
     echo "HOLE_TOKEN=$master_token" > $DOCKER_DIR/web.env
+    echo "HOLE_TOKEN=$master_token" >> $DOCKER_DIR/integrations.env
     echo "NOTIFICATIONS_API_TOKEN=$output_token" >> $DOCKER_DIR/web.env
     echo "NOTIFICATIONS_API_TOKEN=$output_token" >> $DOCKER_DIR/integrations.env
     echo "WEB_ROOT_USER_ID=$root_user_id" >> $DOCKER_DIR/web.env
+    echo "WEB_ROOT_USER_ID=$root_user_id" >> $DOCKER_DIR/integrations.env
     echo "COOKIE_SECRET=$cookie_secret" >> $DOCKER_DIR/web.env
 
 }

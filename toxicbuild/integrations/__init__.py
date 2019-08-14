@@ -61,11 +61,14 @@ def ensure_indexes():
 
 
 @command
-def create(root_dir, output_token='', cookie_secret=''):
+def create(root_dir, access_token='', output_token='', root_user_id='',
+           cookie_secret=''):
     """Creates a new toxicbuild integrations environment.
 
     :param --root_dir: Root directory for toxicbuild integrations.
+    :param --access-token: Access token to master's hole.
     :param --output-token: The auth token on the output web api
+    :param --root-user-id: The id for the root user of the system.
     :param --cookie-secret: The secret used for secure cookies. This MUST
       be the same secret used in toxicui.
     """
@@ -86,6 +89,8 @@ def create(root_dir, output_token='', cookie_secret=''):
     content = content.replace(
         '{{NOTIFICATIONS_API_TOKEN}}', output_token)
     content = content.replace('{{COOKIE_SECRET}}', cookie_secret)
+    content = content.replace('{{HOLE_TOKEN}}', access_token)
+    content = content.replace('{{ROOT_USER_ID}}', root_user_id)
 
     with open(dest_file, 'w') as fd:
         fd.write(content)

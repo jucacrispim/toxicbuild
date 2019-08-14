@@ -6,7 +6,6 @@ import pkg_resources
 # toxicui settings
 HOLE_HOST = os.environ.get('HOLE_HOST', '127.0.0.1')
 HOLE_PORT = int(os.environ.get('HOLE_PORT', 6666))
-
 HOLE_TOKEN = os.environ.get('HOLE_TOKEN', '{{HOLE_TOKEN}}')
 
 # pyrocumulus/tornado settings
@@ -43,5 +42,7 @@ NOTIFICATIONS_API_URL = os.environ.get('NOTIFICATIONS_API_URL',
 # This is a user that ideally is a limited user only allowed to create new
 # users. This is used for the registration feature on the web ui.
 ROOT_USER_ID = os.environ.get('WEB_ROOT_USER_ID', '{{ROOT_USER_ID}}')
+MASTER_USES_SSL = os.environ.get('MASTER_USES_SSL', '0') == '1'
+VALIDATE_CERT_MASTER = os.environ.get('VALIDATE_CERT_MASTER', '0') == '1'
 
 # end of configfile
