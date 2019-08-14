@@ -68,10 +68,10 @@ class BaseIntegrationInstallationTest(TestCase):
     @async_test
     async def setUp(self):
         self.user = base.UserInterface(None, {'email': 'bla@bla.com',
-                                              'name': 'zé'})
+                                              'username': 'zé'})
         self.user.id = 'some-id'
         self.installation = base.BaseIntegrationInstallation(
-            user_id=self.user.id, user_name=self.user.name)
+            user_id=self.user.id, user_name=self.user.username)
 
     @async_test
     async def tearDown(self):
@@ -225,8 +225,10 @@ class BaseIntegrationInstallationTest(TestCase):
             spec=base.BaseIntegrationInstallation._get_repo_by_external_id,
             return_value=base.RepositoryInterface(
                 None, {'url': 'https://someurl.bla/bla.git',
-                       'fetch_url': 'https://someurl.bla/bla.git'}))
+                       'fetch_url': 'https://auth@someurl.bla/bla.git'}))
     )
+    @patch.object(base.RepositoryInterface, 'update',
+                  AsyncMagicMock(spec=base.RepositoryInterface.update))
     @async_test
     async def test_update_repository(self):
         install_repo = base.ExternalInstallationRepository(

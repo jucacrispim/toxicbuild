@@ -66,7 +66,6 @@ class HoleClient(BaseToxicClient, LoggerMixin):
 
         await self.write(data)
         response = await self.get_response()
-        print(response)
         return response['body'][action]
 
     async def connect2stream(self, body):
@@ -81,21 +80,19 @@ class HoleClient(BaseToxicClient, LoggerMixin):
     async def get_response(self):
         response = await self.read()
 
-        if 'code' in response and int(response['code']) == 1:
-            # server error
-            raise ToxicClientException(response['body']['error'])
+        excs = {1: ToxicClientException,
+                2: UserDoesNotExist,
+                3: NotEnoughPerms,
+                4: BadResetPasswordToken,
+                5: AlreadyExists}
 
-        if 'code' in response and int(response['code']) == 2:
-            raise UserDoesNotExist(response['body']['error'])
+        if 'code' not in response:
+            return response
 
-        if 'code' in response and int(response['code']) == 3:
-            raise NotEnoughPerms(response['body']['error'])
-
-        if 'code' in response and int(response['code']) == 4:
-            raise BadResetPasswordToken(response['body']['error'])
-
-        if 'code' in response and int(response['code']) == 5:
-            raise AlreadyExists(response['body']['error'])
+        code = int(response['code'])
+        exc = excs.get(code)
+        if exc:
+            raise exc(response['body'], 'error')
 
         return response
 

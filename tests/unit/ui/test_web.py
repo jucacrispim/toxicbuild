@@ -343,7 +343,8 @@ class UserPublicRestHandler(TestCase):
         self.assertTrue(user.to_dict.called)
         self.assertTrue(web.UserInterface.add.called)
 
-    @patch.object(web.UserInterface, 'request_password_reset', AsyncMagicMock())
+    @patch.object(web.UserInterface, 'request_password_reset',
+                  AsyncMagicMock())
     @async_test
     async def test_request_password_reset(self):
         email = 'a@a.com'
@@ -756,8 +757,8 @@ class StreamHandlerTest(TestCase):
         self.handler._get_user.called
 
     @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
-        spec=web.RepositoryInterface.get, return_value=web.RepositoryInterface(MagicMock(),
-                                                                               {'id': 'asdf'})))
+        spec=web.RepositoryInterface.get,
+        return_value=web.RepositoryInterface(MagicMock(), {'id': 'asdf'})))
     @async_test
     async def test_get_repo_id_repo_name(self):
         self.handler.request.arguments = {'repo_name': [b'my/repo']}
@@ -1181,7 +1182,8 @@ class DashboardHandlerTest(TestCase):
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 
-    @patch.object(web.BuildSetInterface, 'get', AsyncMagicMock(spec=web.BuildSetInterface.get))
+    @patch.object(web.BuildSetInterface, 'get', AsyncMagicMock(
+        spec=web.BuildSetInterface.get))
     @async_test
     async def test_show_buildset_details(self):
         self.handler._get_buildset_template = MagicMock(
@@ -1297,7 +1299,8 @@ class DashboardHandlerTest(TestCase):
         self.assertTrue(self.handler._get_buildset_list_template.called)
         self.assertTrue(self.handler.write.called)
 
-    @patch.object(web.BuildSetInterface, 'get', AsyncMagicMock(spec=web.BuildSetInterface.get))
+    @patch.object(web.BuildSetInterface, 'get', AsyncMagicMock(
+        spec=web.BuildSetInterface.get))
     @async_test
     async def test_show_buildset_template(self):
         self.handler._get_buildset_template = MagicMock(

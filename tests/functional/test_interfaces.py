@@ -29,10 +29,9 @@ from toxicbuild.ui import settings
 from tests import async_test
 from tests.functional import BaseFunctionalTest, start_all, stop_all
 
-BaseInterface.settings = settings
-
 
 def setUpModule():
+    BaseInterface.settings = settings
     start_all()
 
 
@@ -205,16 +204,19 @@ class RepositoryTest(BaseUITest):
     def test_remove_slave(self):
         self.slave = yield from SlaveInterface.add(self.user,
                                                    'test-slave', 1234,
-                                                   '2123', self.user, host='localhost')
-        self.repo = yield from RepositoryInterface.add(self.user, name='some-repo',
+                                                   '2123', self.user,
+                                                   host='localhost')
+        self.repo = yield from RepositoryInterface.add(self.user,
+                                                       name='some-repo',
                                                        url='bla@gla.com',
                                                        owner=self.user,
                                                        vcs_type='git',
                                                        update_seconds=200,
-                                                       slaves=[self.slave.name])
+                                                       slaves=[self.slave.name]
+                                                       )
         yield from self.repo.remove_slave(self.slave)
-        repo = yield from RepositoryInterface.get(self.user,
-                                                  name='asdf/' + self.repo.name)
+        repo = yield from RepositoryInterface.get(
+            self.user, name='asdf/' + self.repo.name)
         self.assertEqual(len(repo.slaves), 0)
 
     @async_test

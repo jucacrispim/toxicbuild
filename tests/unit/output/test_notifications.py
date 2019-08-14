@@ -325,7 +325,8 @@ class GithubCheckRunNotificationTest(TestCase):
         self.user = User(email='a@a.com')
         await self.user.save()
         self.installation = github.GithubInstallation(
-            github_id=1234, user=self.user)
+            github_id=1234, user_id=str(self.user.id),
+            user_name=self.user.username)
         await self.installation.save()
 
         await self.installation.save()
@@ -422,7 +423,8 @@ class GitlabCommitStatusNotificationTest(TestCase):
         self.user = User(email='a@a.com')
         await self.user.save()
         self.installation = gitlab.GitLabInstallation(
-            gitlab_user_id=1234, user=self.user)
+            gitlab_user_id=1234, user_id=str(self.user.id),
+            user_name=self.user.username)
         await self.installation.save()
 
         await self.installation.save()

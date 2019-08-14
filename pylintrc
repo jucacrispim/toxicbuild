@@ -314,11 +314,11 @@ ignored-modules=
 # List of classes names for which member attributes should not be checked
 # (useful for classes with attributes dynamically set). This supports can work
 # with qualified names.
-ignored-classes=toxicbuild.common.interfaces.Repository,
-	 	toxicbuild.common.interfaces.BuildSet,
-	        toxicbuild.common.interfaces.Slave,
-	        toxicbuild.common.interfaces.User,
-	        toxicbuild.common.interfaces.BaseModel,
+ignored-classes=toxicbuild.common.interfaces.RepositoryInterface,
+	 	toxicbuild.common.interfaces.BuildSetInterface,
+	        toxicbuild.common.interfaces.SlaveInterface,
+	        toxicbuild.common.interfaces.UserInterface,
+	        toxicbuild.common.interfaces.BaseInterface,
 
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E1101 when accessed. Python regular

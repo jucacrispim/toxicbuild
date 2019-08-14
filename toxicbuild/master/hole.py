@@ -81,6 +81,10 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
             return None
 
         data = self.data.get('body') or {}
+        statuses = {User.DoesNotExist: 2,
+                    NotEnoughPerms: 3,
+                    ResetUserPasswordToken.DoesNotExist: 4,
+                    NotUniqueError: 5}
 
         if self.action != 'user-authenticate':
             # when we are authenticating we don't need (and we can't have)
@@ -106,36 +110,10 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
             await handler.handle()
             status = 0
 
-        except User.DoesNotExist:
-            msg = "Invalid user"
-            status = 2
-            await self.send_response(code=status, body={'error': msg})
-            self.close_connection()
-
-        except NotEnoughPerms:
-            msg = 'User {} does not have enough permissions.'.format(
-                str(self.user.id))
-            self.log(msg, level='warning')
-            status = 3
-            await self.send_response(code=status, body={'error': msg})
-
-        except (  # pylint: disable=duplicate-except
-                ResetUserPasswordToken.DoesNotExist):
-            msg = 'Bad reset password token'
-            self.log(msg, level='warning')
-            status = 4
-            await self.send_response(code=status, body={'error': msg})
-
-        except NotUniqueError:
-            msg = 'Object already exists'
-            self.log(msg, level='warning')
-            status = 5
-            await self.send_response(code=status, body={'error': msg})
-
-        except Exception:
+        except Exception as e:
             msg = traceback.format_exc()
-            status = 1
-            await self.send_response(code=1, body={'error': msg})
+            status = statuses.get(type(e), 1)
+            await self.send_response(code=status, body={'error': msg})
             self.close_connection()
 
         return status

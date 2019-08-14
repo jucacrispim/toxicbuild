@@ -259,7 +259,7 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
         url = await self._get_auth_url(repo.url)
         if repo.fetch_url != url:
             repo.fetch_url = url
-            await repo.save()
+            await repo.update(fetch_url=repo.fetch_url)
         await repo.request_code_update(
             repo_branches=repo_branches, external=external,
             wait_for_lock=wait_for_lock)

@@ -131,3 +131,10 @@ class HoleClientTest(TestCase):
     async def test_get_response_ok(self):
         r = await self.client.get_response()
         self.assertEqual(r['body']['bla'], 'ble')
+
+    @patch.object(HoleClient, 'read', AsyncMagicMock(
+        return_value={'body': {'bla': 'ble'}}))
+    @async_test
+    async def test_get_response_no_code(self):
+        r = await self.client.get_response()
+        self.assertEqual(r['body']['bla'], 'ble')
