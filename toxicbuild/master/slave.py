@@ -134,6 +134,8 @@ class Slave(OwnedDocument, LoggerMixin):
                    'full_name': self.full_name,
                    'is_alive': self.is_alive, 'id': self.id,
                    'on_demand': self.on_demand,
+                   'use_ssl': self.use_ssl,
+                   'validate_cert': self.validate_cert,
                    'instance_type': self.instance_type,
                    'instance_confs': self.instance_confs}
 
