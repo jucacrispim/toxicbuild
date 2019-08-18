@@ -120,19 +120,39 @@ class BaseIntegrationInstallationTest(TestCase):
         with self.assertRaises(NotImplementedError):
             await self.installation._get_auth_url('https://some-url')
 
+    @patch.object(base.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=base.RepositoryInterface.get,
+        side_effect=[
+            base.RepositoryInterface(None, {'status': 'cloning', 'id': 'i'}),
+            base.RepositoryInterface(None, {'status': 'ready', 'id': 'i'})]))
+    @patch.object(base, 'sleep', AsyncMagicMock())
+    @async_test
+    async def test_wait_clone(self):
+        repo = Mock()
+        repo.id = 'bla'
+        await self.installation._wait_clone(repo)
+
+        self.assertEqual(len(base.RepositoryInterface.get.call_args_list), 2)
+        self.assertTrue(base.sleep.called)
+
+    @patch.object(base.BaseIntegrationInstallation, '_wait_clone',
+                  AsyncMagicMock(
+                      spec=base.BaseIntegrationInstallation._wait_clone))
     @async_test
     async def test_import_repositories(self):
         self.installation.list_repos = AsyncMagicMock(return_value=[
             Mock(), Mock()])
 
-        repo = Mock()
+        repo = Mock(spec=base.RepositoryInterface(None, {}))
         repo.request_code_update = AsyncMagicMock()
-        repo._wait_update = AsyncMagicMock()
         self.installation.import_repository = AsyncMagicMock(return_value=repo)
         await self.installation.import_repositories()
         self.assertEqual(
             len(self.installation.import_repository.call_args_list), 2)
 
+    @patch.object(base.BaseIntegrationInstallation, '_wait_clone',
+                  AsyncMagicMock(
+                      spec=base.BaseIntegrationInstallation._wait_clone))
     @patch.object(base.BaseIntegrationInstallation, 'log', Mock())
     @async_test
     async def test_import_repositories_error(self):

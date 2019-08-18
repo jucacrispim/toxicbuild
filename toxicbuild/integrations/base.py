@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-from asyncio import ensure_future, gather
+from asyncio import ensure_future, gather, sleep
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, IntField,
                                EmbeddedDocumentListField)
@@ -183,6 +183,12 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
             await repo.request_code_update()
         return repo
 
+    async def _wait_clone(self, repo):
+        repo = await RepositoryInterface.get(self.user, id=repo.id)
+        while repo.status == 'cloning':
+            await sleep(0.5)
+            repo = await RepositoryInterface.get(self.user, id=repo.id)
+
     async def import_repositories(self):
         """Imports all repositories available to the installation."""
 
@@ -205,7 +211,7 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
             tasks = []
             for repo in chunk:
                 await repo.request_code_update()
-                t = ensure_future(repo._wait_update())
+                t = ensure_future(self._wait_clone(repo))
                 tasks.append(t)
 
             await gather(*tasks)
