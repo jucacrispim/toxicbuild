@@ -147,6 +147,7 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
             dict(name='feature-*', notify_only_latest=True),
             dict(name='bug-*', notify_only_latest=True)]
         slaves = await SlaveInterface.list(self.user)
+        slaves_names = [s.name for s in slaves]
         # update_seconds=0 because it will not be scheduled in fact.
         # note the schedule_poller=False.
         # What triggers an update code is a message from github/gitlab in the
@@ -161,7 +162,8 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
                 name=repo_info['name'], url=repo_info['clone_url'],
                 owner=user, fetch_url=fetch_url, update_seconds=0,
                 vcs_type='git', schedule_poller=False, parallel_builds=1,
-                branches=branches, slaves=slaves, external_id=str(external_id),
+                branches=branches, slaves=slaves_names,
+                external_id=str(external_id),
                 external_full_name=external_full_name)
         except AlreadyExists:
             msg = 'Repository {}/{} already exists. Leaving.'.format(

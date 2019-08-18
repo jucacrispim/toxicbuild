@@ -196,6 +196,7 @@ class BaseIntegrationInstallationTest(TestCase):
     @patch.object(base.RepositoryInterface, 'add', AsyncMagicMock(
         side_effect=base.AlreadyExists, spec=base.RepositoryInterface.add))
     @patch.object(base.SlaveInterface, 'list', AsyncMagicMock(return_value=[]))
+    @patch.object(base.BaseIntegrationInstallation, 'log', MagicMock())
     @async_test
     async def test_import_repository_not_unique(self):
         repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
