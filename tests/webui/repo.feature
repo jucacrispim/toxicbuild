@@ -30,6 +30,15 @@ Feature:
         And clicks in the save button
         Then he sees the "Repository updated" message
 
+    Scenario: The user updates the environment variables
+
+        Given the user is in the repository settings page
+        And he sees the advanced options
+        When he clicks in the environment variables button
+        And fills the key and value fiels
+        And clicks in the save environment variables button
+        Then he sees the "Environment variables updated" message
+
     Scenario: The user adds a branch configuration to the repository
 
         Given the user is in the repository settings page

@@ -52,6 +52,32 @@ def fill_parallel_builds(context):
     el_input.send_keys(2)
 
 
+@when('he clicks in the environment variables button')
+def click_envvars_button(context):
+    browser = context.browser
+    btn = browser.find_elements_by_class_name('envvars-badge')[1]
+    btn.click()
+
+
+@when('fills the key and value fiels')
+def fill_envvar(context):
+    browser = context.browser
+    key = browser.wait_element_become_present(
+        lambda: browser.find_elements_by_class_name('envvars-key')[0])
+
+    val = browser.wait_element_become_present(
+        lambda: browser.find_elements_by_class_name('envvars-value')[0])
+    key.send_keys('the-key')
+    val.send_keys('the-value')
+
+
+@when('clicks in the save environment variables button')
+def click_save_envvars(context):
+    browser = context.browser
+    btn = browser.find_element_by_id('btn-update-envvars')
+    btn.click()
+
+
 @given('the user is in the repository settings page')
 def is_in_repo_settings_page(context):
     browser = context.browser
