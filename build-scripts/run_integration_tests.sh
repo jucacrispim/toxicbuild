@@ -2,6 +2,7 @@
 
 if [ "$ENV" = "ci" ]
 then
+    # git checkout .
     echo "$GCRYPTKEY" | base64 -d > ~/toxictest-gcrypt.key
     git-crypt unlock ~/toxictest-gcrypt.key
 fi
