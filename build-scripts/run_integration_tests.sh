@@ -2,7 +2,8 @@
 
 if [ "$ENV" = "ci" ]
 then
-   git-crypt unlock ~/.keys/toxictest-gcrypt.key
+    echo "$GCRYPTKEY" | base64 -d > toxictest-gcrypt.key
+    git-crypt unlock toxictest-gcrypt.key
 fi
 
 export DISPLAY=:99
