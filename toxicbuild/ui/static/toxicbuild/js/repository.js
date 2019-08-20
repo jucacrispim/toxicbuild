@@ -760,9 +760,9 @@ class RepositoryEnvvarsView extends Backbone.View{
     let envvars = this._getEnvvars();
     try{
       await this.repo.replace_envvars(envvars);
-      utils.showSuccessMessage(i18n('Environment variables updated.'));
+      utils.showSuccessMessage(i18n('Environment variables updated'));
     }catch(e){
-      utils.showErrorMessage(i18n('Error updating environment variables.'));
+      utils.showErrorMessage(i18n('Error updating environment variables'));
     }
     // close modal
     $('#envvarsModal .close').click();
