@@ -198,7 +198,7 @@ class SlaveTest(TestCase):
         def gc():
 
             @asyncio.coroutine
-            def b(build, process_coro):
+            def b(build, envvars, process_coro):
                 client.build()
                 return []
 
@@ -220,7 +220,7 @@ class SlaveTest(TestCase):
         def gc():
 
             @asyncio.coroutine
-            def b(build, process_coro):
+            def b(build, envvars, process_coro):
                 raise slave.ToxicClientException
 
             client.__enter__.return_value.build = b

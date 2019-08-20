@@ -657,6 +657,36 @@ class RepositoryRestHandlerTest(TestCase):
         r = await self.handler.disable()
         self.assertTrue(r)
 
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_add_envvars(self):
+        self.handler.body = {'envvars': {'bla': 'ble'}}
+        r = await self.handler.add_envvars()
+        self.assertTrue(r)
+
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_rm_envvars(self):
+        self.handler.body = {'envvars': {'bla': 'ble'}}
+        r = await self.handler.rm_envvars()
+        self.assertTrue(r)
+
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
+                                     mock_cls=AsyncMagicMock)))
+    @async_test
+    async def test_replace_envvars(self):
+        self.handler.body = {'envvars': {'bla': 'ble'}}
+        r = await self.handler.replace_envvars()
+        self.assertTrue(r)
+
 
 class SlaveRestHandlerTest(TestCase):
 

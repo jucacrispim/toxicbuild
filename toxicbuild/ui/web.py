@@ -520,6 +520,27 @@ class RepositoryRestHandler(ModelRestHandler):
         await repo.disable()
         return {'repo-disable': 'disabled'}
 
+    @post('add-envvars')
+    async def add_envvars(self):
+        repo = await self.model.get(self.user, **self.query)
+        envvars = self.body.get('envvars', {})
+        await repo.add_envvars(**envvars)
+        return {'repo-add-envvars': 'added'}
+
+    @post('rm-envvars')
+    async def rm_envvars(self):
+        repo = await self.model.get(self.user, **self.query)
+        envvars = self.body.get('envvars', {})
+        await repo.rm_envvars(**envvars)
+        return {'repo-rm-envvars': 'removed'}
+
+    @post('replace-envvars')
+    async def replace_envvars(self):
+        repo = await self.model.get(self.user, **self.query)
+        envvars = self.body.get('envvars', {})
+        await repo.replace_envvars(**envvars)
+        return {'repo-replace-envvars': 'replaced'}
+
 
 class NotificationRestHandler(ReadOnlyRestHandler):
     """Handler for enable/disable/update notifications for

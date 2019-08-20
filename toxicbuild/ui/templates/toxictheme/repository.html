@@ -42,7 +42,7 @@
 
 	  <div class="cancel-btn-container inner-btn-container">
 	    <button class="btn btn-sm btn-light btn-block" type="submit"
-		    id="btn-cancel-save-repo">
+		    id="btn-cancel-save-repo" data-dismiss="modal">
 	      <span class="spinner icon-spinner-2" id="save-repo-btn-spinner"
 		    style="display:none">
 	      </span>
@@ -55,6 +55,59 @@
   </div>
 </div>
 <!-- end add branch modal -->
+
+<!-- envvars modal -->
+<div class="modal fade" id="envvarsModal" tabindex="-1" role="dialog"
+     aria-labelledby="envvarsLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">
+	  {% raw translate('Environment variables') %}
+	</h6>
+        <button type="button" class="close" data-dismiss="modal"
+		aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+	<span class="fas fa-plus"></span>
+	<div class="envvar-rows-container"></div>
+
+      </div>
+
+      <div class="modal-footer">
+
+	  <div class="update-envvars-btn-container inner-btn-container col-sm-4">
+	    <button class="btn btn-sm btn-block btn-dark" type="submit"
+		    id="btn-update-envvars">
+	      <span class="spinner icon-spinner-2" id="add-branch-btn-spinner"
+		    style="display:none">
+	      </span>
+	      <span id="update-envvars-btn-text">
+		{% raw translate('Save') %}
+	      </span>
+	    </button>
+	  </div>
+
+	  <div class="cancel-btn-container inner-btn-container">
+	    <button class="btn btn-sm btn-light btn-block" type="submit"
+		    id="btn-cancel-update-envvars"
+		    data-dismiss="modal">
+	      <span class="spinner icon-spinner-2" id="save-repo-btn-spinner"
+		    style="display:none">
+	      </span>
+	      <span id="cancel-update-envvars-btn-text">
+		{{translate('Cancel')}}
+	      </span>
+	    </button>
+	  </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<!-- end envvars modal -->
 
 <!-- confirm delete repo modal -->
 <div class="modal fade" id="removeRepoModal" tabindex="-1" role="dialog"
@@ -105,6 +158,22 @@
 
 <!-- template -->
 <div class="template">
+
+  <div class="row envvars-row">
+    <div class="col">
+      <input type="text" class="form-control envvars-key"
+	     placeholder="{% raw translate('Key') %}">
+    </div>
+    <div class="col">
+      <input type="text" class="form-control envvars-value"
+	     placeholder="{% raw translate('Value') %}">
+    </div>
+    <div class="envvar-remove">
+      <span class="fas fa-times"></span>
+    </div>
+
+  </div>
+
 
   <div id="repo-details">
     <div class="form-group repo-name-group ">
@@ -164,6 +233,7 @@
 	       inline css -->
 	</div>
 	<!-- end enabled enabled -->
+
 	<!-- end second row -->
       </div>
 
@@ -216,6 +286,12 @@
 		     data-valuefor="parallel_builds">
 	    </div>
 	    <!-- end builds in palallel -->
+	    <span class="badge badge-dark envvars-badge"
+		  data-toggle="modal"
+		  data-target="#envvarsModal">
+	      {{translate('Environment variables')}}
+	    </span>
+
 	  </div>
 	  <!-- end branches -->
 
@@ -372,6 +448,10 @@
 
 	  <p id="parallel-builds-config-p">
 	    {% raw translate('Determine how many <b>builds</b> can be executed <b>in parallel</b> in the repository. If no value there is no limit.') %}
+	  </p>
+
+	  <p id="envvars-config-p">
+	    {% raw translate('You can set <b>environment variables</b> to be used in the builds.') %}
 	  </p>
 
 	  <p id="slaves-config-p">

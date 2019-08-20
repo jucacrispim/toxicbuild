@@ -119,8 +119,10 @@ class BuildServerProtocol(BaseToxicProtocol):
             except KeyError:
                 raise BadData("No builder name for build.")
 
+            envvars = self.data['body'].get('envvars', {})
+
             try:
-                builder = await manager.load_builder(builder_name)
+                builder = await manager.load_builder(builder_name, envvars)
             except BadBuilderConfig:
                 build_info = {'steps': [], 'status': 'exception',
                               'started': datetime2string(now()),

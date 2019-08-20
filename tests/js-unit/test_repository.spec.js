@@ -142,6 +142,33 @@ describe('RepositoryTest', function(){
     expect(called_url).toEqual(expected_url);
   });
 
+  it('test-add_envvars', async function(){
+    let repo = new Repository();
+    repo._post2api = jasmine.createSpy('_post2api');
+    await repo.add_envvars({env: 'var'});
+    let expected_url = repo._api_url + 'add-envvars?id=' + repo.id;
+    let called_url = repo._post2api.calls.allArgs()[0][0];
+    expect(called_url).toEqual(expected_url);
+  });
+
+  it('test-rm_envvars', async function(){
+    let repo = new Repository();
+    repo._post2api = jasmine.createSpy('_post2api');
+    await repo.rm_envvars({env: 'var'});
+    let expected_url = repo._api_url + 'rm-envvars?id=' + repo.id;
+    let called_url = repo._post2api.calls.allArgs()[0][0];
+    expect(called_url).toEqual(expected_url);
+  });
+
+  it('test-replace_envvars', async function(){
+    let repo = new Repository();
+    repo._post2api = jasmine.createSpy('_post2api');
+    await repo.replace_envvars({env: 'var'});
+    let expected_url = repo._api_url + 'replace-envvars?id=' + repo.id;
+    let called_url = repo._post2api.calls.allArgs()[0][0];
+    expect(called_url).toEqual(expected_url);
+  });
+
   it('test-is-name-available', async function(){
     let r = await Repository.is_name_available('some-name');
     expect(r).toBe(true);
@@ -618,4 +645,157 @@ describe('RepositoryAddViewTest', function(){
     enabled_container = $('.repository-info-enabled-container');
     expect(enabled_container.is(':visible')).toBe(false);
   });
+});
+
+
+describe('EnvvarRowView-test', function(){
+
+  beforeEach(function(){
+    affix('.template .envvars-row');
+    let tmpl = $('.template .envvars-row');
+    tmpl.affix('input.envvars-key');
+    tmpl.affix('input.envvars-value');
+    this.view = new EnvvarRowView('VAR', 'the-value');
+  });
+
+  it('test-render', function(){
+    spyOn($.fn, 'show');
+    this.view.render();
+    expect(this.view.$el.html().indexOf('VAR') > -1).toBe(true);
+    expect($.fn.show).toHaveBeenCalled();
+  });
+
+  it('test-render-no-key', function(){
+    let view = new EnvvarRowView('', '');
+    spyOn($.fn, 'show');
+    view.render();
+    expect($.fn.show).not.toHaveBeenCalled();
+  });
+
+  it('test-isKey-true', function(){
+    let el = $(document.createElement('input'));
+    el.addClass('envvars-key');
+    let r = this.view._isKey(el);
+
+    expect(r).toBe(true);
+  });
+
+  it('test-isKey-false', function(){
+    let el = $(document.createElement('input'));
+    el.addClass('envvars-val');
+    let r = this.view._isKey(el);
+
+    expect(r).toBe(false);
+  });
+
+  it('test-handleInput-ok', function(){
+    affix('.envvars-row .col input.envvars-key', this.view.$el);
+    let row = $('.envvars-row', this.view.$el);
+    row.affix('input.envvars-val');
+    let key = $('.envvars-key');
+    key.val('asdf');
+    let val = $('.envvars-value');
+    val.val('asdf');
+
+    this.view.showTimes = jasmine.createSpy();
+
+    this.view._handleInput(key);
+    expect(this.view.showTimes).toHaveBeenCalled();
+  });
+
+  it('test-handleInput', function(){
+    affix('.envvars-row .col input.envvars-key', this.view.$el);
+    let row = $('.envvars-row', this.view.$el);
+    row.affix('input.envvars-val');
+    let val = $('.envvars-val');
+    val.val('asdf');
+    this.view.showTimes = jasmine.createSpy();
+
+    this.view._handleInput(val);
+    expect(this.view.showTimes).not.toHaveBeenCalled();
+  });
+
+  it('test-hideEnvvars', function(){
+    affix('.envvars-row .envvar-remove .fa-times', this.view.$el);
+    let el = $('.fa-times', this.view.$el);
+    spyOn($.fn, 'fadeOut');
+    this.view._hideEnvvars(el);
+
+    expect($.fn.fadeOut).toHaveBeenCalled();
+  });
+
+
+});
+
+
+describe('RepositoryEnvvarsView-test', function(){
+
+  beforeEach(function(){
+    affix('.envvar-rows-container');
+    affix('.template .envvars-row .col');
+    let tmpl = $('.template .envvars-row .col');
+    tmpl.affix('input.envvars-key');
+    tmpl.affix('input.envvars-value');
+    let repo = jasmine.createSpy();
+    this.view = new RepositoryEnvvarsView({'ONE-VAR': 'one-val',
+					   'OTHER-VAR': 'other-val'},
+					  repo);
+  });
+
+  it('test-render', function(){
+    this.view.render();
+    expect(this.view.$el.html().indexOf('ONE-VAR') > -1).toBe(true);
+    expect(this.view.$el.html().indexOf('OTHER-VAR') > -1).toBe(true);
+  });
+
+  it('test-addRow', function(){
+    spyOn(EnvvarRowView.prototype, 'render');
+    spyOn($.fn, 'append');
+    this.view.addRow();
+    expect(EnvvarRowView.prototype.render).toHaveBeenCalled();
+    expect($.fn.append).toHaveBeenCalled();
+  });
+
+  it('test-cleanView', function(){
+    spyOn($.fn, 'off');
+    this.view.cleanView();
+    expect($.fn.off).toHaveBeenCalled();
+  });
+
+  it('test-getEnvvars', function(){
+    this.view.render();
+    let envvars = this.view._getEnvvars();
+    let expected = {'ONE-VAR': 'one-val',
+		    'OTHER-VAR': 'other-val'};
+    expect(envvars).toEqual(expected);
+  });
+
+  it('test-getEnvvars-dont-set-rows', function(){
+    this.view.render();
+    this.view.rows = [];
+    let envvars = this.view._getEnvvars(false);
+    let expected = {'ONE-VAR': 'one-val',
+		    'OTHER-VAR': 'other-val'};
+    expect(envvars).toEqual(expected);
+    expect(this.view.rows).toEqual([]);
+  });
+
+  it('test-saveEnvvars-ok', async function(){
+    this.view.repo.replace_envvars = jasmine.createSpy();
+    spyOn(utils, 'showSuccessMessage');
+
+    await this.view.saveEnvvars();
+
+    expect(utils.showSuccessMessage).toHaveBeenCalled();
+  });
+
+  it('test-saveEnvvars-error', async function(){
+    this.view.repo.replace_envvars = jasmine.createSpy().and.throwError();
+    spyOn(utils, 'showErrorMessage');
+
+    await this.view.saveEnvvars();
+
+    expect(utils.showErrorMessage).toHaveBeenCalled();
+  });
+
 });

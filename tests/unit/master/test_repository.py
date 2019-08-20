@@ -734,6 +734,32 @@ class RepositoryTest(TestCase):
         r = await self.repo.get_config_for(self.revs[0])
         self.assertTrue(r)
 
+    @async_test
+    async def test_add_envvars(self):
+        await self._create_db_revisions()
+        await self.repo.add_envvars(**{'BLA': 'oi'})
+        await self.repo.reload()
+
+        self.assertEqual(self.repo.envvars, {'BLA': 'oi'})
+
+    @async_test
+    async def test_rm_envvars(self):
+        await self._create_db_revisions()
+        await self.repo.add_envvars(**{'BLA': 'oi'})
+        await self.repo.rm_envvars(**{'BLA': 'oi', 'BLE': 'nada'})
+        await self.repo.reload()
+
+        self.assertEqual(self.repo.envvars, {})
+
+    @async_test
+    async def test_replace_envvars(self):
+        await self._create_db_revisions()
+        await self.repo.add_envvars(**{'BLA': 'oi'})
+        await self.repo.replace_envvars(**{'BLE': 'OI'})
+        await self.repo.reload()
+
+        self.assertEqual(self.repo.envvars, {'BLE': 'OI'})
+
     async def _create_db_revisions(self):
         self.owner = users.User(email='zezinho@nada.co', password='123')
         await self.owner.save()

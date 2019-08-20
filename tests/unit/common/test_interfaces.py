@@ -517,6 +517,30 @@ class RepositoryTest(TestCase):
         resp = await self.repository.request_code_update()
         self.assertEqual(resp, 'repo-request-code-update')
 
+    @async_test
+    async def test_add_envvars(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-add-envvars')
+
+        resp = await self.repository.add_envvars()
+        self.assertEqual(resp, 'repo-add-envvars')
+
+    @async_test
+    async def test_rm_envvars(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-rm-envvars')
+
+        resp = await self.repository.rm_envvars()
+        self.assertEqual(resp, 'repo-rm-envvars')
+
+    @async_test
+    async def test_replace_envvars(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-replace-envvars')
+
+        resp = await self.repository.rm_envvars()
+        self.assertEqual(resp, 'repo-replace-envvars')
+
 
 class SlaveTest(TestCase):
 

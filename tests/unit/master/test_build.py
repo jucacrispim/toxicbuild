@@ -668,7 +668,8 @@ class BuildExecuterTest(TestCase):
         self.executer = build.BuildExecuter(repo, builds)
 
     @mock.patch.object(repository.Repository, 'add_running_build', mock.Mock())
-    @mock.patch.object(slave.Slave, 'build', AsyncMagicMock())
+    @mock.patch.object(slave.Slave, 'build',
+                       AsyncMagicMock(spec=slave.Slave.build))
     @mock.patch.object(repository.Repository, 'remove_running_build',
                        mock.Mock())
     @async_test

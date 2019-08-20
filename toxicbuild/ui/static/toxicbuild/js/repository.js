@@ -59,7 +59,8 @@ class Repository extends BaseModel{
     let new_branches = [];
     for (let i in repo_branches){
       let branch = repo_branches[i];
-      if (branches.indexOf(branch.name) < 0 && new_branches.indexOf(branch) < 0){
+      if (branches.indexOf(branch.name) < 0 &&
+	  new_branches.indexOf(branch) < 0){
 	new_branches.push(branch);
       }
     }
@@ -100,6 +101,24 @@ class Repository extends BaseModel{
   async disable(){
     let url = this._api_url + 'disable?id=' + this.id;
     return this._post2api(url);
+  }
+
+  async add_envvars(envvars){
+    let url = this._api_url + 'add-envvars?id=' + this.id;
+    let body = {envvars: envvars};
+    return this._post2api(url, body);
+  }
+
+  async rm_envvars(envvars){
+    let url = this._api_url + 'rm-envvars?id=' + this.id;
+    let body = {envvars: envvars};
+    return this._post2api(url, body);
+  }
+
+  async replace_envvars(envvars){
+    let url = this._api_url + 'replace-envvars?id=' + this.id;
+    let body = {envvars: envvars};
+    return this._post2api(url, body);
   }
 
   static async is_name_available(name){
@@ -563,6 +582,7 @@ class RepositoryDetailsView extends BaseRepositoryView{
 
   async render_details(){
     await this.model.fetch({'full_name': this.full_name});
+    let self = this;
     this._model_init_values = this.model.changed;
     // we need to set this to {} because when we fetch a model from the
     // remote host it is marked as changed since the initial model here
@@ -570,6 +590,20 @@ class RepositoryDetailsView extends BaseRepositoryView{
     this.model.changed = {};
 
     await super.render_details();
+    let e = this.model.get('envvars');
+    let envvars = {};
+    for (let k in e){
+      envvars[k] = _.escape(e[k]);
+    }
+    this.envvars_view = new RepositoryEnvvarsView(envvars, this.model);
+
+    $('#envvarsModal').on('show.bs.modal', function(e){
+      self.envvars_view.render();
+    });
+
+    $('#envvarsModal').on('hidden.bs.modal', function(e){
+      self.envvars_view.cleanView();
+    });
 
     this._setValidations();
     let has_branches = this.model.get('branches').length ? true : false;
@@ -579,6 +613,159 @@ class RepositoryDetailsView extends BaseRepositoryView{
     let enabled = this.model.get('enabled');
     this._setEnabled(enabled, this.container);
     let branches = this.model.get('branches') || [];
+  }
+}
+
+
+class EnvvarRowView extends Backbone.View{
+
+  constructor(key, val){
+    let options = {};
+    super(options);
+    this.key = key;
+    this.value = val;
+    this.directive = {
+      '.envvars-key@value': 'key',
+      '.envvars-value@value': 'value'
+    };
+    this.template_selector = '.template .envvars-row';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+  }
+
+  showTimes(){
+    $('.fa-times', this.$el).show();
+  }
+
+  _isKey(el){
+    return el.hasClass('envvars-key');
+  }
+
+  _handleInput(el){
+    let parent = el.parent().parent();
+    let key = $('.envvars-key', parent).val();
+    let value = $('.envvars-value', parent).val();
+    this.key = key;
+    this.value = value;
+    if (this.key && this.value){
+      this.showTimes();
+    }
+  }
+
+  _hideEnvvars(el){
+    let parent = el.parent().parent();
+    parent.fadeOut();
+  }
+
+  render(){
+    let self = this;
+    let kw = {'key': this.key,
+	      'value': this.value};
+    let compiled = $(this.compiled_template(kw));
+    this.$el.html(compiled);
+    if (this.key && this.value){
+      this.showTimes();
+    }
+
+    let handleInput = _.debounce(function(el){self._handleInput(el);},
+				 300);
+    $('input', this.$el).on('input', function(e){
+      let el = $(e.target);
+      handleInput(el);
+    });
+
+    $('.fa-times', this.$el).on('click', function(e){
+      let el = $(e.target);
+      self._hideEnvvars(el);
+    });
+
+    return this;
+  }
+}
+
+
+class RepositoryEnvvarsView extends Backbone.View{
+
+  constructor(envvars, repo){
+    let options = {};
+    super(options);
+    this.$el = $('.envvar-rows-container');
+    this.envvars = envvars;
+    this.repo = repo;
+    this.rows = [];
+
+    for (let key in this.envvars){
+      let val = this.envvars[key];
+      let row = new EnvvarRowView(key, val);
+      this.rows.push(row);
+    }
+  }
+
+  render(){
+    let self = this;
+    this.$el.html('');
+    for (let i in this.rows){
+      let row = this.rows[i];
+      row.render();
+      this.$el.append(row.$el);
+    }
+    this.addRow();
+
+    $('#envvarsModal .fa-plus').on('click', function(){
+      self.addRow();
+    });
+
+    $('#btn-update-envvars').on('click', function(){
+      self.saveEnvvars();
+    });
+    return this;
+  }
+
+  addRow(){
+    let row = new EnvvarRowView('', '');
+    row.render();
+    this.$el.append(row.$el);
+  }
+
+  cleanView(){
+    $('#envvarsModal .fa-plus').off('click');
+  }
+
+  _getEnvvars(set_rows=true){
+    let self = this;
+    let rows = [];
+    let envvars = {};
+    $('.envvars-row:visible').each(function(){
+      let el = $(this);
+      let key = $('.envvars-key', el).val();
+      let value = $('.envvars-value', el).val();
+      if (!key || !value){
+	// continue
+	return true;
+      };
+      let row = new EnvvarRowView(key, value);
+      rows.push(row);
+      envvars[key] = value;
+      return true;
+    });
+
+    if (set_rows){
+      this.rows = rows;
+    }
+
+    return envvars;
+  }
+
+  async saveEnvvars(){
+    let envvars = this._getEnvvars();
+    try{
+      await this.repo.replace_envvars(envvars);
+      utils.showSuccessMessage(i18n('Environment variables updated.'));
+    }catch(e){
+      utils.showErrorMessage(i18n('Error updating environment variables.'));
+    }
+    // close modal
+    $('#envvarsModal .close').click();
   }
 }
 

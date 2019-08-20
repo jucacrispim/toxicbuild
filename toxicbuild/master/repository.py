@@ -28,7 +28,7 @@ from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, IntField, ReferenceField,
                                DateTimeField, ListField, BooleanField,
-                               EmbeddedDocumentField)
+                               EmbeddedDocumentField, DictField)
 from toxicbuild.core import utils, build_config
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.master import settings
@@ -120,6 +120,11 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     external_full_name = StringField()
     """The full name of the repository in an external service"""
 
+    envvars = DictField()
+    """Environment variables that are used in every build in this
+    repository. It is a dictionary {'VAR': 'VAL', ...}
+    """
+
     meta = {
         'ordering': ['name'],
     }
@@ -175,11 +180,13 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                    'external_full_name': self.external_full_name,
                    'update_seconds': self.update_seconds,
                    'vcs_type': self.vcs_type,
+                   'fetch_url': self.fetch_url,
                    'branches': [b.to_dict() for b in self.branches],
                    'slaves': [s.to_dict(True) for s in slaves],
                    'enabled': self.enabled,
                    'parallel_builds': self.parallel_builds,
-                   'clone_status': self.clone_status}
+                   'clone_status': self.clone_status,
+                   'envvars': self.envvars}
 
         return my_dict
 
@@ -246,7 +253,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     @classmethod
     async def create(cls, **kwargs):
-        """ Creates a new repository and schedule it.
+        """Creates a new repository and schedule it if needed.
 
         :param kwargs: kwargs used to create the repository."""
 
@@ -724,6 +731,38 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             revision, conf)
 
         return builders, origin
+
+    async def add_envvars(self, **envvars):
+        """Adds new environment variables to this repository.
+
+        :param envvars: A dictionary {var: val, ...}.
+        """
+
+        self.envvars.update(envvars)
+        await self.save()
+
+    async def rm_envvars(self, **envvars):
+        """Removes environment variables from this repository.
+
+        :param envvars: A dictionary {var: val, ...}.
+        """
+
+        for k in envvars:
+            try:
+                self.envvars.pop(k)
+            except KeyError:
+                pass
+        await self.save()
+
+    async def replace_envvars(self, **envvars):
+        """Replaces the current environment variables of the repository.
+
+        :param envvars: The environment variables that will replace the
+          current one.
+        """
+
+        self.envvars = envvars
+        await self.save()
 
 
 class RepositoryRevision(Document):

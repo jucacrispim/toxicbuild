@@ -476,7 +476,7 @@ class RepositoryInterface(BaseHoleInterface):
     async def add(cls, requester, name, url, owner, vcs_type,
                   update_seconds=300, slaves=None, parallel_builds=None,
                   schedule_poller=True, branches=None, external_id=None,
-                  external_full_name=None, fetch_url=None):
+                  external_full_name=None, fetch_url=None, envvars=None):
         """Adds a new repository.
 
         :param requester: The user who is requesting the operation.
@@ -496,6 +496,8 @@ class RepositoryInterface(BaseHoleInterface):
         :param external_full_name: The full name in an external service.
         :param fetch_url: If the repository uses a differente url to fetch code
           (ie: it has an auth token url) this is the fetch_url.
+        :param envvars: Environment variables that will be used in every build
+          in this repository.
         """
 
         kw = {'repo_name': name, 'repo_url': url, 'vcs_type': vcs_type,
@@ -504,6 +506,7 @@ class RepositoryInterface(BaseHoleInterface):
               'owner_id': str(owner.id),
               'schedule_poller': schedule_poller,
               'branches': branches,
+              'envvars': envvars or {},
               'external_id': external_id,
               'external_full_name': external_full_name,
               'fetch_url': fetch_url}
@@ -644,12 +647,14 @@ class RepositoryInterface(BaseHoleInterface):
         return resp
 
     async def enable(self):
+        """Enables this repository."""
         with await self.get_client(self.requester) as client:
             resp = await client.repo_enable(repo_name_or_id=self.id)
 
         return resp
 
     async def disable(self):
+        """Disables this repository."""
         with await self.get_client(self.requester) as client:
             resp = await client.repo_disable(repo_name_or_id=self.id)
 
@@ -680,6 +685,42 @@ class RepositoryInterface(BaseHoleInterface):
             resp = await client.repo_request_code_update(
                 repo_name_or_id=self.id, repo_branches=repo_branches,
                 external=external, wait_for_lock=wait_for_lock)
+
+        return resp
+
+    async def add_envvars(self, **envvars):
+        """Adds environment variables to use in the builds of this repository.
+
+        :param envvars: Environment variables in the format {var: val, ...}
+        """
+
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_add_envvars(
+                repo_name_or_id=self.id, **envvars)
+
+        return resp
+
+    async def rm_envvars(self, **envvars):
+        """Removes environment variables from this repository.
+
+        :param envvars: Environment variables in the format {var: val, ...}
+        """
+
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_rm_envvars(
+                repo_name_or_id=self.id, **envvars)
+
+        return resp
+
+    async def replace_envvars(self, **envvars):
+        """Replaces environment variables of this repository.
+
+        :param envvars: Environment variables in the format {var: val, ...}
+        """
+
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_replace_envvars(
+                repo_name_or_id=self.id, **envvars)
 
         return resp
 

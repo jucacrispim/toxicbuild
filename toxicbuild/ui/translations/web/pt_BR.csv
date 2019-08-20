@@ -30,7 +30,11 @@ Advanced,Avançado
 Branches,<i>Branches</i>
 No branch configuration.,Nenhuma configuração de <i>branch</i>.
 Builds in parallel,<i>Builds</i> em paralelo
+Environment variables,Variáveis de ambiente
 Slaves,Escravos
+Key,Chave
+Value,Valor
+Save,Salvar
 General configurations,Configurações gerais
 Notifications,Notificações
 Add repository,Adicionar repositório
@@ -38,8 +42,9 @@ Save changes,Salvar alterações
 Basic configuration,Configuração básica
 Give a <b>name</b> to your repository and provide a clone <b>url</b>.,Dê um <b>nome</b> ao seu repositório e forneça uma <b>url</b> para cloná-lo.
 Advanced configuration,Configuração avançada
-Define which <b>branches</b> trigger builds. If no branch configuration| changes in all <b>branches</b> will trigger builds.,Defina quais <i><b>branches</b></i> disparam <i>builds</i>. Se não houver configuração de <i>branch</i>| alterações in todos os <i><b>branches</b></i> dispararão <i>builds</i>
+Define which <b>branches</b> trigger builds. If no branch configuration| changes in all <b>branches</b> will trigger builds.,Defina quais <i><b>branches</b></i> disparam <i>builds</i>. Se não houver configuração de <i>branch</i>| alterações em todos os <i><b>branches</b></i> dispararão <i>builds</i>
 Determine how many <b>builds</b> can be executed <b>in parallel</b> in the repository. If no value there is no limit.,Determine quantos <i><b>builds</b></i> podem ser executados <b>em paralelo</b> no repositório. Se não houver valor não há limite.
+You can set <b>environment variables</b> to be used in the builds.,Você pode definir <b>variáveis de ambiente</b> para serem usadas nos <i>builds</i>.
 <b>Slaves</b> are the ones who execute the builds. You need at least one <b>slave</b> or no builds will be created.,<b>Escravos</b> são os que executam os <i>builds</i>. Você precisa de pelo menos um <b>escravo</b> ou nenhum <i>build</i> será criado.
 Enable,Habilitar
 Disable,Desabilitar

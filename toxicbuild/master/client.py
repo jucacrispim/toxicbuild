@@ -73,10 +73,11 @@ class BuildClient(BaseToxicClient, LoggerMixin):
         builders = response['body']['builders']
         return builders
 
-    async def build(self, build, process_coro=None):
+    async def build(self, build, envvars=None, process_coro=None):
         """Requests a build for the build server.
 
         :param build: The build that will be executed.
+        param evvars: Environment variables to use in the build.
         :param process_coro: A coroutine to process the intermediate
           build information sent by the build server."""
 
@@ -88,6 +89,7 @@ class BuildClient(BaseToxicClient, LoggerMixin):
         data = {'action': 'build',
                 'token': slave.token,
                 'body': {'repo_url': repository.get_url(),
+                         'envvars': envvars or {},
                          'repo_id': str(repository.id),
                          'vcs_type': repository.vcs_type,
                          'branch': build.branch,

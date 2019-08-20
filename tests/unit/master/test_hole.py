@@ -805,6 +805,48 @@ class HoleHandlerTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @patch.object(repository.Repository, 'add_envvars',
+                  AsyncMagicMock(spec=repository.Repository.add_envvars))
+    @async_test
+    async def test_repo_add_envvars(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-add-envvars', protocol)
+        await handler.repo_add_envvars(str(self.repo.id), **{'bla': '1'})
+        self.assertTrue(repository.Repository.add_envvars.called)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @patch.object(repository.Repository, 'rm_envvars',
+                  AsyncMagicMock(spec=repository.Repository.rm_envvars))
+    @async_test
+    async def test_repo_rm_envvars(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-rm-envvars', protocol)
+        await handler.repo_rm_envvars(str(self.repo.id), **{'bla': '1'})
+        self.assertTrue(repository.Repository.rm_envvars.called)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @patch.object(repository.Repository, 'replace_envvars',
+                  AsyncMagicMock(spec=repository.Repository.rm_envvars))
+    @async_test
+    async def test_repo_replace_envvars(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-replace-envvars', protocol)
+        await handler.repo_replace_envvars(str(self.repo.id), **{'bla': '1'})
+        self.assertTrue(repository.Repository.replace_envvars.called)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_slave_add(self):
         await self._create_test_data_owner()

@@ -803,6 +803,41 @@ body{
     min-height: 50px;
 }
 
+.envvars-badge{
+    padding: 5px;
+    font-size: 0.8em;
+    cursor: pointer;
+    background-color: #302e2e;
+    color:#f3f3f4;
+    font-weight: normal;
+}
+
+
+.envvar-remove{
+    color: var(--danger);
+    padding-right: 10px;
+    min-width: 20px;
+}
+
+.envvar-remove span{
+    cursor: pointer;
+    display: none;
+}
+
+#envvarsModal .modal-body{
+    padding-top: 0.5rem;
+}
+
+#envvarsModal .fa-plus{
+    color: var(--success);
+    padding-bottom: 10px;
+    cursor: pointer;
+}
+
+.envvars-row{
+    margin-bottom: 15px;
+}
+
 #repo-details-advanced-container{
     display: none;
     margin-top: 20px;

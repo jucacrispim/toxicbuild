@@ -310,10 +310,11 @@ class Slave(OwnedDocument, LoggerMixin):
                                  output=exc_out, status='exception')]
         await build.update()
 
-    async def build(self, build):
+    async def build(self, build, **envvars):
         """ Connects to a build server and requests a build on that server
 
         :param build: An instance of :class:`toxicbuild.master.build.Build`
+        :param envvars: Environment variables to use in the builds.
         """
         repo = await build.repository
         await self.add_running_repo(repo.id)
@@ -332,7 +333,7 @@ class Slave(OwnedDocument, LoggerMixin):
 
             try:
                 build_info = await client.build(
-                    build, process_coro=self._process_info)
+                    build, envvars=envvars, process_coro=self._process_info)
             except (ToxicClientException, BadJsonData):
                 output = traceback.format_exc()
                 build.status = 'exception'

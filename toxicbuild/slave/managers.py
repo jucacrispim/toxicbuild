@@ -245,13 +245,17 @@ class BuildManager(LoggerMixin):
 
         return builders
 
-    async def load_builder(self, name):
-        """ Loads a builder from toxicbuild.(conf|yml). If a container
-        is to be used for the build, returns a container builder
-        instance. Otherwise, return a Builder instance.
+    async def load_builder(self, name, envvars=None):
+        """ Loads a builder from toxicbuild.yml. If USE_DOCKER
+        returns a DockerContainerBuilder instance. Otherwise returns a Builder
+        instance.
 
         :param name: builder name
+        :param envvars: A dictionary with environment variables used in
+          a build.
         """
+
+        envvars = envvars or {}
         builders_branch = self.builders_from or self.branch
 
         try:
@@ -276,8 +280,9 @@ class BuildManager(LoggerMixin):
         # this envvars are used in all steps in this builder
         builder_envvars = bdict.get('envvars', {})
         builder_envvars['COMMIT_SHA'] = self.named_tree
+        envvars.update(builder_envvars)
         builder = builder_cls(self, bdict, self.workdir, platform,
-                              remove_env=remove_env, **builder_envvars)
+                              remove_env=remove_env, **envvars)
 
         return builder
 

@@ -298,7 +298,8 @@ class HoleHandler:
                        update_seconds, vcs_type, slaves=None,
                        parallel_builds=None, schedule_poller=True,
                        branches=None, external_id=None,
-                       external_full_name=None, fetch_url=None):
+                       external_full_name=None, fetch_url=None,
+                       envvars=None):
         """Adds a new repository and first_run() it.
 
         :param repo_name: Repository name
@@ -317,6 +318,7 @@ class HoleHandler:
         :param external_full_name: The full name in an external service.
         :param fetch_url: If the repository uses a differente url to fetch code
           (ie: it has an auth token url) this is the fetch_url.
+        :param envvars: The environment variables for this repository.
         """
 
         if not self._user_is_allowed('add_repo'):
@@ -339,6 +341,7 @@ class HoleHandler:
         kw['external_id'] = external_id
         kw['external_full_name'] = external_full_name
         kw['fetch_url'] = fetch_url
+        kw['envvars'] = envvars or {}
 
         owner = await self._get_owner(owner_id)
 
@@ -545,6 +548,39 @@ class HoleHandler:
                                        external=external,
                                        wait_for_lock=wait_for_lock)
         return {'repo-request-code-update': 'ok'}
+
+    async def repo_add_envvars(self, repo_name_or_id, **envvars):
+        """Adds environment variables to a repository.
+
+        :param repo_name_or_id: The name or the id of the repository.
+        :param envvars: Environment variables in the format {var: val, ...}.
+        """
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.add_envvars(**envvars)
+        return {'repo-add-envvars': 'ok'}
+
+    async def repo_rm_envvars(self, repo_name_or_id, **envvars):
+        """Removes environment variables from a repository.
+
+        :param repo_name_or_id: The name or the id of the repository.
+        :param envvars: Environment variables in the format {var: val, ...}.
+        """
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.rm_envvars(**envvars)
+        return {'repo-rm-envvars': 'ok'}
+
+    async def repo_replace_envvars(self, repo_name_or_id, **envvars):
+        """Replaces the repository's environment variables.
+
+        :param repo_name_or_id: The name or the id of the repository.
+        :param envvars: Environment variables in the format {var: val, ...}.
+        """
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.replace_envvars(**envvars)
+        return {'repo-replace-envvars': 'ok'}
 
     async def slave_add(self, slave_name, slave_host, slave_port, slave_token,
                         owner_id, use_ssl=True, validate_cert=True,

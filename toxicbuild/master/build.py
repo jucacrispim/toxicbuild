@@ -766,7 +766,7 @@ class BuildExecuter(LoggerMixin):
         try:
             slave = await build.slave
             type(self.repository).add_running_build()
-            await slave.build(build)
+            await slave.build(build, **self.repository.envvars)
             type(self.repository).remove_running_build()
             self._queue.remove(build)
         finally:
