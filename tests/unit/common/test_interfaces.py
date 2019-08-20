@@ -538,7 +538,7 @@ class RepositoryTest(TestCase):
         self.repository.get_client = lambda requester: get_client_mock(
             requester, 'repo-replace-envvars')
 
-        resp = await self.repository.rm_envvars()
+        resp = await self.repository.replace_envvars(**{})
         self.assertEqual(resp, 'repo-replace-envvars')
 
 
