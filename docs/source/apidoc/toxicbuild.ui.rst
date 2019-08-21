@@ -12,14 +12,6 @@ toxicbuild.ui.cli module
     :undoc-members:
     :show-inheritance:
 
-toxicbuild.ui.client module
----------------------------
-
-.. automodule:: toxicbuild.ui.client
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 toxicbuild.ui.connectors module
 -------------------------------
 
@@ -36,26 +28,10 @@ toxicbuild.ui.context\_processors module
     :undoc-members:
     :show-inheritance:
 
-toxicbuild.ui.exceptions module
--------------------------------
-
-.. automodule:: toxicbuild.ui.exceptions
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 toxicbuild.ui.inutils module
 ----------------------------
 
 .. automodule:: toxicbuild.ui.inutils
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-toxicbuild.ui.models module
----------------------------
-
-.. automodule:: toxicbuild.ui.models
     :members:
     :undoc-members:
     :show-inheritance:

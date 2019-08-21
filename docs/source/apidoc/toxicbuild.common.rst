@@ -4,10 +4,26 @@ toxicbuild.common package
 Submodules
 ----------
 
-toxicbuild.common.api\_models module
-------------------------------------
+toxicbuild.common.client module
+-------------------------------
 
-.. automodule:: toxicbuild.common.api_models
+.. automodule:: toxicbuild.common.client
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+toxicbuild.common.exceptions module
+-----------------------------------
+
+.. automodule:: toxicbuild.common.exceptions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+toxicbuild.common.interfaces module
+-----------------------------------
+
+.. automodule:: toxicbuild.common.interfaces
     :members:
     :undoc-members:
     :show-inheritance:

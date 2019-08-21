@@ -77,7 +77,7 @@ class BuildClient(BaseToxicClient, LoggerMixin):
         """Requests a build for the build server.
 
         :param build: The build that will be executed.
-        param evvars: Environment variables to use in the build.
+          param evvars: Environment variables to use in the build.
         :param process_coro: A coroutine to process the intermediate
           build information sent by the build server."""
 

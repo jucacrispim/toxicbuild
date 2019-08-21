@@ -66,6 +66,37 @@ and then we install what is needed using the ``system_packages`` parameter.
    :ref:`system-plugins`
 
 
+An example
+----------
+
+The following configuration
+
+.. code-block:: yaml
+
+   language: python
+   versions:
+     - '3.5'
+     - '3.6'
+     - '3.7'
+
+   steps:
+     - name: Run pylint
+       command: pylint pylint_mongoengine
+       warning_on_fail: true
+
+     - name: Tests coverage
+       command: sh ./build-scripts/check_coverage.sh pylint_mongoengine 100
+
+
+Generates the following buildset
+
+|waterfall-py-example-img|
+
+.. |waterfall-py-example-img| image:: ./_static/waterfall-py-example.jpg
+    :alt: Waterfall buildsets example
+
+
+
 .. _build-advanced-config:
 
 Advanced configuration

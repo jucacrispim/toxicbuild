@@ -87,11 +87,29 @@ these are the available options:
   branches configuration, all branches will trigger builds. The branches
   configuration has the following options:
 
+  |repo-branch-config-img|
+
+  .. |repo-branch-config-img| image:: ./_static/repo-branch-config.jpg
+					:alt: Repository branch configuration
+
+
   - ``Name`` - The branch name. You can use wildcards here.
   - ``Only most recent changes`` - If checked when a bunch of commits
     are pushed at the same time only the most recent will trigger builds
 
 * ``Parallel builds`` - How many parallel builds this repository can
   run. If no parallel builds there is no limit.
+
+* ``Environment variables`` - Environment variables that will be present
+  in the build environment.
+
+  |repo-envvars-config-img|
+
+  .. |repo-envvars-config-img| image:: ./_static/repo-envvars-config.jpg
+				       :alt: Repository envvars configuration
+
+  - ``Key`` - The environment variable name
+  - ``Value`` - The value of the variable
+
 * ``Slaves`` - Which slaves can execute builds for the repository. If a
   repository don't have any enabled slave no builds will be executed.

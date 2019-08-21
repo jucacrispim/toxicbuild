@@ -256,11 +256,11 @@ The default configuration for the docker images is:
 
 .. code-block:: json
 
-   default_images = {
-       "linux-generic": "jucacrispim/toxiccontainers:debian-generic",
-       "python3.5": "jucacrispim/toxiccontainers:debian-python3.5",
-       "python3.6": "jucacrispim/toxiccontainers:debian-python3.6",
-       "python3.7": "jucacrispim/toxiccontainers:debian-python3.7"
+   {
+     "linux-generic": "jucacrispim/toxiccontainers:debian-generic",
+     "python3.5": "jucacrispim/toxiccontainers:debian-python3.5",
+     "python3.6": "jucacrispim/toxiccontainers:debian-python3.6",
+     "python3.7": "jucacrispim/toxiccontainers:debian-python3.7"
    }
 
 
