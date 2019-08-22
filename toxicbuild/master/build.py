@@ -880,7 +880,7 @@ class BuildManager(LoggerMixin):
             last_bs = buildset
             builders_conf = revision.get_builders_conf()
             builders, builders_origin = await self.get_builders(
-                revisions, conf, include=builders_conf['include'],
+                revision, conf, include=builders_conf['include'],
                 exclude=builders_conf['exclude'])
             await self.add_builds_for_buildset(
                 buildset, conf, builders=builders,
