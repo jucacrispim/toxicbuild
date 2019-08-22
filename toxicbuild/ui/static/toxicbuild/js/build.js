@@ -273,6 +273,9 @@ class BuildDetailsView extends BaseBuildDetailsView{
   }
 
   _renderStatusChange(data){
+    if (data.uuid != this.build_uuid){
+      return;
+    }
     this.model.set('status', data.status);
     this.model.set('started', data.started);
     this.model.set('finished', data.finished);

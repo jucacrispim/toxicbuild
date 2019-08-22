@@ -111,6 +111,13 @@ describe('BuildDetailsViewTest', function(){
     expect(this.view.model.fetch).toHaveBeenCalled();
   });
 
+  it('test-renderStatusChange-other-build', function(){
+    let data = {'uuid': 'other-uuid'};
+    spyOn(this.view, 'render');
+    this.view._renderStatusChange(data);
+    expect(this.view.render).not.toHaveBeenCalled();
+  });
+
   it('test-render-no-fetch', async function(){
     spyOn(this.view.model, 'fetch');
     this.view.model.set({repository: {name: 'bla'}});
