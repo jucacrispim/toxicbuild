@@ -125,10 +125,11 @@ var utils = {
       });
   },
 
-  async rescheduleBuildSet(buildset, el_container, builder_name=null){
-    let repo = new Repository({'id': buildset.get('repository').id});
-    let branch = buildset.get('branch');
-    let named_tree = buildset.get('commit');
+  async rescheduleBuildSet(buildset_or_build, el_container, builder_name=null){
+    let repo = new Repository({'id': buildset_or_build.get('repository').id});
+    let branch = buildset_or_build.get('branch');
+    let named_tree = buildset_or_build.get('commit')  || buildset_or_build.get(
+      'named_tree');
 
     let spinner = $('.spinner-reschedule-buildset', el_container);
     let retry_btn = $('.fa-redo', el_container);

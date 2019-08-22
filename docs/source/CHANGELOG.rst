@@ -1,6 +1,13 @@
 Changelog
 =========
 
+* 0.7.0
+
+  - Added ci-include-builders and ci-exclude-builders commit instructions.
+  - Added environment variables to repository.
+  - Minor ui fixes.
+  - Updated aiozk - fix poller deadlock.
+
 * 0.6.2
 
   - Web ui fixes.
