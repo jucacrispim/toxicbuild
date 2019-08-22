@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -898,3 +898,21 @@ class RepositoryRevisionTest(TestCase):
     def test_check_skip_dont_skip(self):
         self.rev.body = 'some body\n'
         self.assertTrue(self.rev.create_builds())
+
+    def test_get_builders_conf_include(self):
+        self.rev.body = 'some body\nci-include-builders: a-builder, o-builder'
+        expected = {
+            'include': ['a-builder', 'o-builder'],
+            'exclude': []
+        }
+        builders = self.rev.get_builders_conf()
+        self.assertEqual(builders, expected)
+
+    def test_get_builders_conf_exclude(self):
+        self.rev.body = 'some body\nci-exclude-builders: a-builder, o-builder'
+        expected = {
+            'include': [],
+            'exclude': ['a-builder', 'o-builder'],
+        }
+        builders = self.rev.get_builders_conf()
+        self.assertEqual(builders, expected)

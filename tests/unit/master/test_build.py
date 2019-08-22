@@ -855,9 +855,10 @@ class BuildManagerTest(TestCase):
         await b.save()
         self.manager.repository = self.repo
         self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
+        self.manager.get_builders = AsyncMagicMock(
+            return_value=([b, self.builder], 'master'))
         conf = {'builders': []}
-        await self.manager.add_builds_for_buildset(self.buildset, conf,
-                                                   [b, self.builder])
+        await self.manager.add_builds_for_buildset(self.buildset, conf)
         self.assertEqual(len(self.manager.build_queues), 1)
         buildset = self.manager.build_queues[0]
         # It already has two builds from _create_test_data and more two
@@ -1015,6 +1016,62 @@ class BuildManagerTest(TestCase):
 
         self.assertFalse(builders)
         self.assertTrue(self.manager.log.called)
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
+    @mock.patch.object(build, 'list_builders_from_config',
+                       mock.Mock(return_value=[{'name': 'builder-0'},
+                                               {'name': 'builder-1'}]))
+    @async_test
+    async def test_get_builders_include(self):
+        await self._create_test_data()
+        checkout = mock.MagicMock()
+        self.repo.schedule = mock.Mock()
+        await self.repo.bootstrap()
+        self.manager.repository = self.repo
+        self.manager.config_type = 'py'
+        self.manager.repository.vcs.checkout = asyncio.coroutine(
+            lambda *a, **kw: checkout())
+        conf = mock.Mock()
+        builders, origin = await self.manager.get_builders(self.revision,
+                                                           conf,
+                                                           include='builder-0')
+
+        for b in builders:
+            self.assertTrue(isinstance(b, build.Document))
+
+        self.assertEqual(len(builders), 1)
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
+    @mock.patch.object(build, 'list_builders_from_config',
+                       mock.Mock(return_value=[{'name': 'builder-0'},
+                                               {'name': 'builder-1'}]))
+    @async_test
+    async def test_get_builders_exclude(self):
+        await self._create_test_data()
+        checkout = mock.MagicMock()
+        self.repo.schedule = mock.Mock()
+        await self.repo.bootstrap()
+        self.manager.repository = self.repo
+        self.manager.config_type = 'py'
+        self.manager.repository.vcs.checkout = asyncio.coroutine(
+            lambda *a, **kw: checkout())
+        conf = mock.Mock()
+        builders, origin = await self.manager.get_builders(self.revision,
+                                                           conf,
+                                                           exclude='builder-0')
+
+        for b in builders:
+            self.assertTrue(isinstance(b, build.Document))
+
+        self.assertEqual(len(builders), 1)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

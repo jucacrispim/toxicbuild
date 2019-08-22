@@ -329,3 +329,18 @@ command.
 
    This is a plugin that uses the APT package system, thus can only be used in
    Debian (or Debian-based) systems.
+
+
+Commit instructions
++++++++++++++++++++
+
+Commit instructions are instructions in the body of the commit that specify
+the behavior of the builds triggered by the commit.
+
+The build instructions are:
+
+- ``ci: skip``: A commit with this instruction will not trigger builds.
+- ``ci-include-builders: a-builder,o-builder``: A list of builder names
+  that may be triggered by this commit.
+- ``ci-exclude-builders: a-builder,o-builder``: A list of builder names
+  that will not be triggered by this commit.

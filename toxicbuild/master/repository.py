@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -833,10 +833,52 @@ class RepositoryRevision(Document):
 
         return not self._check_skip()
 
+    def _get_match(self, pattern):
+        if not self.body:
+            return None
+
+        for l in self.body.splitlines():
+            m = re.match(pattern, l)
+            if m:
+                return m
+
     def _check_skip(self):
         skip_pattern = re.compile(r'(^|.*\s+)ci:\s*skip(\s+|$)')
-        for l in self.body.split('\n'):
-            if bool(re.match(skip_pattern, l)):
-                return True
+        return bool(self._get_match(skip_pattern))
 
-        return False
+    def _get_builders_match(self, pattern):
+        builders_match = self._get_match(pattern)
+        if builders_match:
+            builders = builders_match.groups()[1].split(',')
+            builders = [b.strip() for b in builders]
+        else:
+            builders = []
+
+        return builders
+
+    def get_builders_conf(self):
+        """Returns the builder configuration - includes and excludes -
+        for a given revison in its commit body.
+
+        Known instructions:
+
+        - ``ci-include-builders: builder-name,other-builder``: Include only
+          the builders listed in the configuration. The names are separated
+          by comma.
+
+        - ``ci-exclude-builders: builder-name,other-builder``: Exclude
+          the builders listed in the configuration. The names are separated
+          by comma.
+        """
+
+        confs = {}
+        include_pattern = re.compile(
+            r'(^|.*\s+)ci-include-builders:\s*(.*)$')
+
+        exclude_pattern = re.compile(
+            r'(^|.*\s+)ci-exclude-builders:\s*(.*)$')
+
+        confs['include'] = self._get_builders_match(include_pattern)
+        confs['exclude'] = self._get_builders_match(exclude_pattern)
+
+        return confs

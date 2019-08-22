@@ -878,7 +878,13 @@ class BuildManager(LoggerMixin):
                 continue
 
             last_bs = buildset
-            await self.add_builds_for_buildset(buildset, conf)
+            builders_conf = revision.get_builders_conf()
+            builders, builders_origin = await self.get_builders(
+                revisions, conf, include=builders_conf['include'],
+                exclude=builders_conf['exclude'])
+            await self.add_builds_for_buildset(
+                buildset, conf, builders=builders,
+                builders_origin=builders_origin)
 
         if last_bs and self.repository.notify_only_latest(buildset.branch):
             await self.cancel_previous_pending(buildset)
@@ -932,12 +938,25 @@ class BuildManager(LoggerMixin):
         if not self.is_building:  # pragma: no branch
             ensure_future(self._execute_builds())
 
-    async def get_builders(self, revision, conf):
+    def _filter_builders(self, builders_conf, include, exclude):
+        if include:
+            builders_conf = [b for b in builders_conf if b['name'] in include]
+        elif exclude:
+            builders_conf = [b for b in builders_conf if b['name']
+                             not in exclude]
+
+        return builders_conf
+
+    async def get_builders(self, revision, conf, include=None, exclude=None):
         """ Get builders for a given slave and revision.
 
         :param revision: A
           :class:`toxicbuild.master.repository.RepositoryRevision`.
         :param conf: The build configuration.
+        :param include: A list of builder names to include. Builders not
+          in this list will not be returned.
+        :param exclude: A list of builder names to exclude. Builders in
+          this list will not be returned.
         """
 
         origin = revision.branch
@@ -956,6 +975,7 @@ class BuildManager(LoggerMixin):
                 conf, revision.builders_fallback)
 
         builders = []
+        builders_conf = self._filter_builders(builders_conf, include, exclude)
         for bconf in builders_conf:
             name = bconf['name']
             triggered_by = bconf.get('triggered_by', [])
