@@ -1120,6 +1120,7 @@ body{
 }
 
 .build-preparing,
+.badge-preparing,
 .builder-preparing{
     background-color: var(--orange);
     color: #fff;
