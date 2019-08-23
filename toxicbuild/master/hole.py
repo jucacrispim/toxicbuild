@@ -659,7 +659,7 @@ class HoleHandler:
         return {'slave-update': 'ok'}
 
     async def buildset_list(self, repo_name_or_id=None, skip=0, offset=None,
-                            summary=False):
+                            summary=False, branch=None):
         """Lists all buildsets. If ``repo_name_or_id``, only builders from
         this repository will be listed.
 
@@ -667,6 +667,8 @@ class HoleHandler:
         :param skip: skip for buildset list.
         :param offset: offset for buildset list.
         :param summary: If true, no builds information will be included.
+        :param branch: List buildsets for this branch. If None list buildsets
+          from all branches.
         """
 
         buildsets = BuildSet.objects
@@ -675,6 +677,9 @@ class HoleHandler:
             repository = await Repository.get_for_user(
                 self.protocol.user, **kw)
             buildsets = buildsets.filter(repository=repository)
+
+        if branch:
+            buildsets = buildsets.filter(branch=branch)
 
         buildsets = buildsets.order_by('-created')
         count = await buildsets.count()

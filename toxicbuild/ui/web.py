@@ -429,8 +429,9 @@ class WaterfallRestHandler(ReadOnlyRestHandler):
         except KeyError:
             raise HTTPError(400)
 
+        branch = self.query.get('branch')
         buildsets = await self.model.list(self.user, repo_name_or_id=repo_name,
-                                          summary=False)
+                                          summary=False, branch=branch)
         builders = await self._get_builders(buildsets)
         r = {'builders': [b.to_dict(dtformat=self._dtformat,
                                     tzname=self._tzname)

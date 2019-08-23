@@ -730,18 +730,21 @@ class BuildSetInterface(BaseHoleInterface):
                   'repository': RepositoryInterface}
 
     @classmethod
-    async def list(cls, requester, repo_name_or_id=None, summary=True):
+    async def list(cls, requester, repo_name_or_id=None, summary=True,
+                   branch=None):
         """Lists buildsets. If ``repo_name_or_id`` only builds of this
         repsitory will be listed.
 
         :param repo_name: Name of a repository.
         :param summary: If True, no builds information will be returned.
+        :param branch: List buildsets for this branch. If None list buildsets
+          from all branches.
         """
 
         with await cls.get_client(requester) as client:
             buildsets = await client.buildset_list(
                 repo_name_or_id=repo_name_or_id, offset=10,
-                summary=summary)
+                summary=summary, branch=branch)
 
         buildset_list = [cls(requester, buildset) for buildset in buildsets]
         return buildset_list
