@@ -139,6 +139,45 @@ upload_images(){
 }
 
 
+create_debian_generic_img(){
+    docker build -f build-images/debian/Dockerfile-debian-generic -t toxic-debian-generic build-images/debian
+    docker tag toxic-debian-generic jucacrispim/toxiccontainers:debian-generic
+}
+
+
+create_debian_py35_img(){
+    docker build -f build-images/debian/Dockerfile-debian-generic -t toxic-debian-py35 build-images/debian
+    docker tag toxic-debian-py35 jucacrispim/toxiccontainers:debian-python3.5
+}
+
+
+create_debian_py36_img(){
+    docker build -f build-images/debian/Dockerfile-debian-generic -t toxic-debian-py36 build-images/debian
+    docker tag toxic-debian-py36 jucacrispim/toxiccontainers:debian-python3.6
+}
+
+
+create_debian_py37_img(){
+    docker build -f build-images/debian/Dockerfile-debian-generic -t toxic-debian-py37 build-images/debian
+    docker tag toxic-debian-py36 jucacrispim/toxiccontainers:debian-python3.7
+}
+
+
+create_build_images(){
+    create_debian_generic_img;
+    create_debian_py35_img;
+    create_debian_py36_img;
+    create_debian_py37_img;
+}
+
+
+upload_build_images(){
+    docker push jucacrispim/toxiccontainers:debian-generic
+    docker push jucacrispim/toxiccontainers:debian-python3.5
+    docker push jucacrispim/toxiccontainers:debian-python3.6
+    docker push jucacrispim/toxiccontainers:debian-python3.7
+}
+
 
 create_test_env(){
     echo "Creating test environment"
@@ -316,6 +355,14 @@ case "$1" in
 	upload_images
 	;;
 
+    create-build-images)
+	create_build_images
+	;;
+
+    upload-build-images)
+	upload_build_images
+	;;
+
     create-test-env)
 	drop_db
 	create_empty_envs
@@ -340,6 +387,8 @@ case "$1" in
 	echo " - start-local"
 	echo " - create-images"
 	echo " - upload-images"
+	echo " - create-build-images"
+	echo " - upload-build-images"
 	echo " - create-test-env"
 	echo " - create-test-selenium-env"
 	exit 1;
