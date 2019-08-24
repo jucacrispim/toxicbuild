@@ -105,17 +105,19 @@
 <div class="top-page-header-info-container buildset-list-top-page-header-info">
 
   <span class="repo-full-name">{{ repo_full_name.split('/')[1] }}</span>
-  <a href="{{ '/' + repo_full_name + '/settings' }}" class="no-decoration">
-    <span class="fas fa-wrench"></span>
-  </a>
-  <a href="{{ '/' + repo_full_name + '/' }}" title="{{translate('Summary')}}"
-     class="summary-link link-enabled no-decoration">
+  <br/>
+  <a href="{{ '/' + repo_full_name + '/' }}" title="Summary"
+     class="summary-link no-decoration  link-enabled">
     <span class="fas fa-list"></span>
   </a>
 
   <a href="{{ '/' + repo_full_name + '/waterfall' }}"
      title="Warterfall" class="waterfall-link no-decoration">
     <span class="fas fa-th"></span>
+  </a>
+
+  <a href="{{ '/' + repo_full_name + '/settings' }}" class="no-decoration">
+    <span class="fas fa-wrench"></span>
   </a>
 
 </div>

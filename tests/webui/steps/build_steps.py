@@ -43,10 +43,15 @@ def buildset_already_rescheduled(context):
     browser = context.browser
 
     def fn():
-        try:
-            el = browser.find_elements_by_class_name('build-pending')[1]
-        except IndexError:
-            el = None
+        classes = ['build-preparing', 'build-pending']
+        for cls in classes:
+            try:
+                el = browser.find_elements_by_class_name(cls)[0]
+            except IndexError:
+                el = None
+
+            if el:
+                break
 
         return el
 

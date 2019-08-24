@@ -690,11 +690,11 @@ body{
 .buildset-list-top-page-header-info{
     display: none;
     margin-bottom: 10px;
-    margin-top: -10px;
+    margin-top: -15px;
 }
 
 .buildset-list-top-page-header-info .repo-full-name{
-    font-size: 1.4em;
+    /* font-size: 1.4em; */
 }
 
 .buildset-list-top-page-header-info .fa-wrench{
@@ -1061,11 +1061,16 @@ body{
 
 
 .summary-link{
-    margin-left: 25px;
+    /* margin-left: 25px; */
 }
 
 .waterfall-link{
     margin-left: 0px;
+    margin-right: 5px;
+}
+
+.waterfall-link span{
+    padding-left: 4px;
 }
 
 
@@ -1223,7 +1228,8 @@ body{
 }
 
 #waterfall-container .summary-link{
-    margin-left: 0;
+    margin-left: 2px;
+    margin-right: 2px;
 }
 
 #waterfall-container .fa-wrench{
@@ -1237,8 +1243,7 @@ body{
 
 #waterfall-header a{
     color: var(--black-almost-there);
-    padding-left: 4px;
-    padding-right: 4px;
+    margin-left: 4px;
     border-radius: 3px;
 }
 

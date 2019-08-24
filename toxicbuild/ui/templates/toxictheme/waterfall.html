@@ -80,9 +80,6 @@
     <tr id="waterfall-header">
       <th scope="col" class="waterfall-first-col">
 	<span class="repo-full-name">{{ repo_name.split('/')[1] }}</span>
-	<a href="{{ '/' + repo_name + '/settings' }}" class="no-decoration">
-	  <span class="fas fa-wrench"></span>
-	</a>
 	<br/>
 	<a href="{{ '/' + repo_name + '/' }}" title="Summary"
 	   class="summary-link no-decoration">
@@ -94,6 +91,9 @@
 	  <span class="fas fa-th"></span>
 	</a>
 
+	<a href="{{ '/' + repo_name + '/settings' }}" class="no-decoration">
+	  <span class="fas fa-wrench"></span>
+	</a>
       </th>
     </tr>
   </thead>
