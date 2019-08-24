@@ -70,11 +70,18 @@ class Waterfall{
 
   _updateBuild(data){
     let build = this._builds[data.uuid];
+    if (!build){
+      return false;
+    }
     build.set('status', data.status);
+    return true;
   }
 
   _addStep(data){
     let build = this.getBuild(data.build.uuid);
+    if (!build){
+      return false;
+    }
     let steps = build.get('steps');
     let step = new BuildStep(data);
     this._steps[step.get('uuid')] = step;
@@ -85,6 +92,7 @@ class Waterfall{
     if (finished_data){
       this._updateStep(data);
     }
+    return true;
   }
 
   _updateStep(data){
@@ -97,9 +105,14 @@ class Waterfall{
   }
 
   _updateBuilder(data){
+    let branch = data['branch'];
+    if (this.branch && this.branch != branch){
+      return false;
+    }
     let builder_id = data.builder.id;
     let builder = this.builders.get(builder_id);
     builder.set('status', data.status);
+    return true;
   }
 
   _getURL(){
@@ -148,6 +161,10 @@ class Waterfall{
   }
 
   _addBuildSet(data){
+    let branch = data['branch'];
+    if (this.branch && this.branch != branch){
+      return false;
+    }
     let builders = this._getBuildsetBuilders(data);
     let new_builders = new Array();
     for (let i in builders){
@@ -161,6 +178,7 @@ class Waterfall{
     utils.setBuildsForBuildSet(buildset);
     this.buildsets.add([buildset], {at: 0});
     this._setWaterfallBuilds([this.buildsets.models[0]]);
+    return true;
   }
 
   getBuild(uuid){

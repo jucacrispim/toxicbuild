@@ -133,7 +133,11 @@ class BuildSetList extends BaseCollection{
 
   updateBuildSet(data){
     let buildset = this.get(data.id);
+    if (!buildset){
+      return false;
+    }
     buildset.set(data);
+    return true;
   }
 }
 

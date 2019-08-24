@@ -137,6 +137,28 @@ describe('WaterfallTest', function(){
 
     expect(builder.get('status')).toEqual('fail');
   });
+
+  it('test-updateBuilder-other-branch', function(){
+    this.waterfall.builders.reset([new Builder({status: 'success',
+						id: 'some-id'})]);
+    this.waterfall.branch = 'master';
+    let data = {builder: {id: 'some-id'}, status: 'fail',
+		'branch': 'other'};
+
+    this.waterfall._updateBuilder(data);
+
+    let builder = this.waterfall.builders.get('some-id');
+
+    expect(builder.get('status')).toEqual('success');
+  });
+
+
+  it('test-addBuildSet-different-branch', function(){
+    let data = {'branch': 'other'};
+    this.waterfall.branch = 'master';
+    let r = this.waterfall._addBuildSet(data);
+    expect(r).toBe(false);
+  });
 });
 
 describe('WaterfallBuilderViewTest', function(){

@@ -79,6 +79,12 @@ describe('BuildSetLisTest', function(){
     expect(model.get('title')).toEqual('some title');
   });
 
+  it('test-updateBuildSet-no-buildset', function(){
+    let data = {'id': 'some-id', 'title' :'some title'};
+    let r = this.list.updateBuildSet(data);
+    expect(r).toBe(false);
+  });
+
 });
 
 describe('BuildDetailsViewTest', function(){
