@@ -65,7 +65,7 @@ def click_buildetails_button(context):
 
     def fn():
         try:
-            el = browser.find_elements_by_class_name('fa-info')[1]
+            el = browser.find_elements_by_class_name('build-details-link')[1]
         except IndexError:
             el = None
 

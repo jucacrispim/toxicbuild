@@ -1096,6 +1096,7 @@ body{
 }
 
 .step-exception,
+.build-exception a.build-details-link,
 .build-exception,
 .builder-exception{
     background-color: var(--exception);
@@ -1104,6 +1105,7 @@ body{
 
 
 .build-pending,
+.build-pending a.build-details-link,
 .builder-pending{
     background-color: var(--yellow);
     color: var(--black-almost-there);
@@ -1127,6 +1129,7 @@ body{
 
 .build-cancelled,
 .step-cancelled,
+.build-cancelled a.build-details-link,
 .builder-cancelled{
     background-color: #827f7f;
     color: #fff;
@@ -1134,6 +1137,7 @@ body{
 
 .build-success,
 .step-success,
+.build-success a.build-details-link,
 .builder-success{
     background-color: var(--green-light);
     color: #fff;
@@ -1141,6 +1145,7 @@ body{
 
 .build-warning,
 .step-warning,
+.build-warning a.build-details-link,
 .builder-warning{
     background-color: var(--pink);
     color: #fff;
@@ -1148,6 +1153,7 @@ body{
 
 .build-fail,
 .step-fail,
+.build-fail a.build-details-link,
 .builder-fail{
     /* background-color: var(--danger); */
     background-color: #d9534f;
@@ -1156,6 +1162,7 @@ body{
 
 .build-running,
 .step-running,
+.build-running a.build-details-link,
 .builder-running{
     background-color: #31b0d5;
     /* background-color: var(--blue); */
@@ -1164,6 +1171,7 @@ body{
 
 .build-preparing,
 .badge-preparing,
+.build-preparing a.build-details-link,
 .builder-preparing{
     background-color: var(--orange);
     color: #fff;
