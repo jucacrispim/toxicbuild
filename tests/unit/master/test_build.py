@@ -467,6 +467,7 @@ class BuildSetTest(TestCase):
         objdict = self.buildset.to_dict()
         self.assertEqual(len(objdict['builds']), 1)
         self.assertTrue(objdict['commit_date'])
+        self.assertIn('commit_body', objdict)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -574,11 +575,14 @@ class BuildSetTest(TestCase):
     @async_test
     async def test_aggregate_get(self):
         await self._create_test_data()
+        self.buildset.commit_body = 'body'
+        await self.buildset.save()
         buildset = await build.BuildSet.aggregate_get(id=self.buildset.id)
         self.assertTrue(buildset.id)
         self.assertTrue(buildset.builds)
         build_inst = buildset.builds[0]
         self.assertTrue(build_inst._data.get('builder').name)
+        self.assertTrue(buildset.commit_body)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

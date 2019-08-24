@@ -362,7 +362,7 @@ class BaseBuildSetView extends Backbone.View{
 
  _get_kw(){
    let title = this.model.escape('title');
-   let body = this.model.escape('body') || '<no body>';
+   let body = this.model.escape('commit_body') || '<no body>';
    body = i18n(body);
    let status = this.model.get('status');
    let status_translation = i18n(status);

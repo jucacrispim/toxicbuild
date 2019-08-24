@@ -513,6 +513,9 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
     commit_date = DateTimeField(required=True)
     """The date of the commit"""
 
+    commit_body = StringField()
+    """The body of the commit."""
+
     branch = StringField(required=True)
     """The branch of the commit"""
 
@@ -597,7 +600,8 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
                        commit=revision.commit,
                        commit_date=revision.commit_date,
                        branch=revision.branch, author=revision.author,
-                       title=revision.title, number=number)
+                       title=revision.title, number=number,
+                       commit_body=revision.body)
         await buildset.save()
         ensure_future(buildset.notify('buildset-added'))
         return buildset
@@ -613,6 +617,7 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
                    'title': self.title, 'repository': {'id': repo_id},
                    'status': self.status, 'number': self.number}
         objdict['commit_date'] = datetime2string(self.commit_date)
+        objdict['commit_body'] = self.commit_body
         objdict['created'] = datetime2string(self.created)
         objdict['started'] = datetime2string(self.started) if self.started \
             else ''
@@ -715,7 +720,7 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
               'total_time': '$doc.total_time',
               "branch": "$doc.branch",
               "title": "$doc.title",
-              "body": "$doc.body",
+              "commit_body": "$doc.commit_body",
               "number": "$doc.number",
               'commit': '$doc.commit',
               'author': '$doc.author'}},
