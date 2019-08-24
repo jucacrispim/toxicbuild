@@ -59,6 +59,36 @@ describe('WaterfallTest', function(){
     expect(this.waterfall._finished_steps_data['some-uuid']).toBe(data);
   });
 
+  it('test-getURL', function(){
+    this.waterfall.branch = null;
+    this.waterfall.repo_name = 'me/repo';
+    this.waterfall._api_url = '/api';
+    let expected = '/api?repo_name=me/repo';
+    let r = this.waterfall._getURL();
+    expect(r).toEqual(expected);
+  });
+
+  it('test-getURL-branch', function(){
+    this.waterfall.branch = 'master';
+    this.waterfall.repo_name = 'me/repo';
+    this.waterfall._api_url = '/api';
+    let expected = '/api?repo_name=me/repo&branch=master';
+    let r = this.waterfall._getURL();
+    expect(r).toEqual(expected);
+  });
+
+  it('test-setBranch', async function(){
+    spyOn(this.waterfall, 'fetch');
+    await this.waterfall.setBranch('master');
+    expect(this.waterfall.fetch).toHaveBeenCalled();
+  });
+
+  it('test-setBranch-no-fetch', async function(){
+    spyOn(this.waterfall, 'fetch');
+    await this.waterfall.setBranch('master', false);
+    expect(this.waterfall.fetch).not.toHaveBeenCalled();
+  });
+
   it('test-fetch', async function(){
     $.ajax.and.returnValue({buildsets: [{}],
 			    builders: [{}]});
@@ -383,6 +413,7 @@ describe('WaterfallViewTest', function(){
   beforeEach(function(){
     affix('#waterfall-header');
     affix('#waterfall-body');
+    affix('#navbar-actions');
     affix('.template .waterfall-tr');
     let template = $('.waterfall-tr');
     template.affix('.builder-name');
@@ -394,7 +425,7 @@ describe('WaterfallViewTest', function(){
 
     window.wsconsumer = jasmine.createSpy();
 
-    this.view = new WaterfallView('some/repo');
+    this.view = new WaterfallView('some/repo', 'master');
   });
 
   it('test-renderHeader', function(){
@@ -402,6 +433,15 @@ describe('WaterfallViewTest', function(){
     this.view._renderHeader();
     let header = $('#waterfall-header');
     expect(header.length).toEqual(1);
+  });
+
+  it('test-renderBranchesSelect', function(){
+    this.view.model.branches = ['master', 'release'];
+    this.view._renderBranchesSelect();
+    let actions = $('#navbar-actions');
+    let opt = $('option:selected', actions);
+    expect(actions.html().indexOf('master')).toBeGreaterThan(0);
+    expect(opt.text()).toEqual('master');
   });
 
   it('test-renderBody', function(){
@@ -483,10 +523,31 @@ describe('WaterfallViewTest', function(){
     spyOn(this.view.model, 'fetch');
     spyOn(this.view, '_renderHeader');
     spyOn(this.view, '_renderBody');
+    spyOn(this.view, '_renderBranchesSelect');
     window.wsconsumer.connectTo = jasmine.createSpy();
     await this.view.render();
     expect(this.view._renderHeader).toHaveBeenCalled();
     expect(this.view._renderBody).toHaveBeenCalled();
+    expect(this.view._renderBranchesSelect).toHaveBeenCalled();
+  });
+
+  it('test-render-no-branches', async function(){
+    spyOn(this.view.model, 'fetch');
+    spyOn(this.view, '_renderHeader');
+    spyOn(this.view, '_renderBody');
+    spyOn(this.view, '_renderBranchesSelect');
+    window.wsconsumer.connectTo = jasmine.createSpy();
+    await this.view.render(false);
+    expect(this.view._renderHeader).toHaveBeenCalled();
+    expect(this.view._renderBody).toHaveBeenCalled();
+    expect(this.view._renderBranchesSelect).not.toHaveBeenCalled();
+  });
+
+  it('test-setBranch', async function(){
+    spyOn(this.view.model, 'fetch');
+    spyOn(this.view, 'render');
+    await this.view.setBranch('master');
+    expect(this.view.render).toHaveBeenCalled();
   });
 
 });

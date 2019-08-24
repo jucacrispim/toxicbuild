@@ -71,10 +71,15 @@ def reschedule_buildset(context):
     browser = context.browser
 
     def fn():
-        try:
-            el = browser.find_elements_by_class_name('build-pending')[0]
-        except IndexError:
-            el = None
+        classes = ['build-preparing', 'build-pending']
+        for cls in classes:
+            try:
+                el = browser.find_elements_by_class_name(cls)[0]
+            except IndexError:
+                el = None
+
+            if el:
+                break
 
         return el
 
@@ -114,3 +119,24 @@ def wait_builds_complete(context):
 
     el = browser.wait_element_be_removed(fn)
     assert not el
+
+
+@when('he clicks in the branch select filter')
+def click_branch_select(context):
+    browser = context.browser
+
+    el = browser.wait_element_become_present(
+        lambda: browser.find_elements_by_class_name('navbar-select')[1])
+    el.click()
+
+
+@when('clicks in the master branch')
+def click_master_branch(context):
+    browser = context.browser
+
+    def fn():
+        return browser.find_elements_by_class_name('option')[1]
+
+    el = browser.wait_element_become_present(fn, check_display=False)
+    assert el
+    el.click()

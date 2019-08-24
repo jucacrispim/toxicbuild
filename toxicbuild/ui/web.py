@@ -430,6 +430,9 @@ class WaterfallRestHandler(ReadOnlyRestHandler):
             raise HTTPError(400)
 
         branch = self.query.get('branch')
+        repo = RepositoryInterface(
+            self.user, {'id': '', 'full_name': repo_name})
+        branches = await repo.list_branches()
         buildsets = await self.model.list(self.user, repo_name_or_id=repo_name,
                                           summary=False, branch=branch)
         builders = await self._get_builders(buildsets)
@@ -438,7 +441,8 @@ class WaterfallRestHandler(ReadOnlyRestHandler):
                           for b in builders],
              'buildsets': [b.to_dict(dtformat=self._dtformat,
                                      tzname=self._tzname)
-                           for b in buildsets]}
+                           for b in buildsets],
+             'branches': branches}
         return r
 
     async def _get_builders(self, buildsets):

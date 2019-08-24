@@ -519,6 +519,8 @@ class WaterfallRestHandlerTest(TestCase):
 
     @patch.object(web.BuildSetInterface, 'list',
                   AsyncMagicMock(spec=web.BuildSetInterface.list))
+    @patch.object(web.RepositoryInterface, 'list_branches',
+                  AsyncMagicMock(spec=web.RepositoryInterface.list_branches))
     @patch.object(web.WaterfallRestHandler, '_get_builders', AsyncMagicMock(
         spec=web.WaterfallRestHandler._get_builders))
     @async_test

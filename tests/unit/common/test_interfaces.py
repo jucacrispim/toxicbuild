@@ -541,6 +541,25 @@ class RepositoryTest(TestCase):
         resp = await self.repository.replace_envvars(**{})
         self.assertEqual(resp, 'repo-replace-envvars')
 
+    @async_test
+    async def test_list_branches_id(self):
+        self.repository.id = 'a-id'
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-list-branches-response')
+
+        resp = await self.repository.list_branches()
+        self.assertEqual(resp, 'repo-list-branches-response')
+
+    @async_test
+    async def test_list_branches_full_name(self):
+        self.repository.id = ''
+        self.repository.full_name = 'user/repo'
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-list-branches-response')
+
+        resp = await self.repository.list_branches()
+        self.assertEqual(resp, 'repo-list-branches-response')
+
 
 class SlaveTest(TestCase):
 

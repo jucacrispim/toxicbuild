@@ -582,11 +582,21 @@ class HoleHandler:
         await repo.replace_envvars(**envvars)
         return {'repo-replace-envvars': 'ok'}
 
+    async def repo_list_branches(self, repo_name_or_id):
+        """List the branches known by a repository.
+
+        :param repo_name_or_id: The name or the id of the repository.
+        """
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        branches = await repo.get_known_branches()
+        return {'repo-list-branches': branches}
+
     async def slave_add(self, slave_name, slave_host, slave_port, slave_token,
                         owner_id, use_ssl=True, validate_cert=True,
                         on_demand=False, instance_type=None,
                         instance_confs=None):
-        """ Adds a new slave to toxicbuild.
+        """Adds a new slave to toxicbuild.
 
         :param slave_name: A name for the slave,
         :param slave_host: Host where the slave is.

@@ -724,6 +724,17 @@ class RepositoryInterface(BaseHoleInterface):
 
         return resp
 
+    async def list_branches(self):
+        """Lists the branches known by this repositor.
+        """
+
+        repo_name_or_id = self.id or self.full_name
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_list_branches(
+                repo_name_or_id=repo_name_or_id)
+
+        return resp
+
 
 class BuildSetInterface(BaseHoleInterface):
     references = {'builds': BuildInterface,

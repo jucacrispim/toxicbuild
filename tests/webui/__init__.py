@@ -146,12 +146,15 @@ class SeleniumBrowser(webdriver.Chrome):
         raise SeleniumBrowserException(
             'The element %s not hidden after %s seconds' % (el, timeout))
 
-    def wait_element_become_present(self, fn, timeout=10):
+    def wait_element_become_present(self, fn, timeout=10, check_display=True):
         """Waits until an element is present in the DOM.
 
         :param fn: A function that should return an element. If no return value
           tries again until timeout is reached.
-        :param timeout: Timeout for the operation."""
+        :param timeout: Timeout for the operation.
+        :param check_display: Checks if the element is displayed before
+          returning it.
+        """
 
         r = int(timeout * 10)
 
@@ -159,7 +162,8 @@ class SeleniumBrowser(webdriver.Chrome):
             time.sleep(0.1)
             try:
                 el = fn()
-                el = el if el.is_displayed() else None
+                if check_display:
+                    el = el if el.is_displayed() else None
             except Exception:
                 el = None
 

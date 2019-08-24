@@ -835,7 +835,7 @@ class HoleHandlerTest(TestCase):
         spec=build.BuildSet.notify))
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository.Repository, 'replace_envvars',
-                  AsyncMagicMock(spec=repository.Repository.rm_envvars))
+                  AsyncMagicMock(spec=repository.Repository.replace_envvars))
     @async_test
     async def test_repo_replace_envvars(self):
         await self._create_test_data()
@@ -844,6 +844,21 @@ class HoleHandlerTest(TestCase):
         handler = hole.HoleHandler({}, 'repo-replace-envvars', protocol)
         await handler.repo_replace_envvars(str(self.repo.id), **{'bla': '1'})
         self.assertTrue(repository.Repository.replace_envvars.called)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @patch.object(repository.Repository, 'get_known_branches',
+                  AsyncMagicMock(
+                      spec=repository.Repository.get_known_branches))
+    @async_test
+    async def test_repo_list_branches(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-list-branches', protocol)
+        await handler.repo_list_branches(str(self.repo.id))
+        self.assertTrue(repository.Repository.get_known_branches.called)
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

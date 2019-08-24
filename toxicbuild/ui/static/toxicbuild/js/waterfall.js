@@ -22,10 +22,12 @@ var _waterfall_builds = {};
 
 class Waterfall{
 
-  constructor(repo_name){
+  constructor(repo_name, branch){
     this.repo_name = repo_name;
     this.buildsets = new BuildSetList();
     this.builders = new BuilderList();
+    this.branch = branch;
+    this.branches = [];
 
     $(document).off('buildset_added');
 
@@ -100,19 +102,39 @@ class Waterfall{
     builder.set('status', data.status);
   }
 
+  _getURL(){
+    let url = this._api_url + '?repo_name=' + this.repo_name;
+    if (this.branch){
+      url += '&branch=' + this.branch;
+    }
+    return url;
+  }
+
+  async setBranch(branch, fetch=true){
+    this.branch = branch;
+    if(fetch){
+      await this.fetch();
+    }
+  }
+
   async fetch(){
     let self = this;
-    let url = this._api_url + '?repo_name=' + this.repo_name;
+    let url = this._getURL();
     let r = await $.ajax({url: url});
     let buildsets = r.buildsets;
     let builders = r.builders;
+    let branches = r.branches;
+    this.branches = [];
+    for (let i in branches){
+      let branch = _.escape(branches[i]);
+      this.branches.push(branch);
+    }
     this.buildsets.reset(buildsets, {no_events: true});
     this.buildsets.each(function(b){
       utils.setBuildsForBuildSet(b);
     });
     this._setWaterfallBuilds(this.buildsets.models);
     this.builders.reset(builders);
-
   }
 
   _getBuildsetBuilders(data){
@@ -561,11 +583,12 @@ class WaterfallBuildSetView extends BaseWaterfallView{
 
 class WaterfallView extends Backbone.View{
 
-  constructor(repo_name){
+  constructor(repo_name, branch){
     super();
     let self = this;
     this.repo_name = repo_name;
-    this.model = new Waterfall(this.repo_name);
+    this.branch = branch;
+    this.model = new Waterfall(this.repo_name, this.branch);
     this.model.buildsets.on({'add': function(){
       self._addNewBuilders();
       self._addNewBuildSet();
@@ -592,6 +615,40 @@ class WaterfallView extends Backbone.View{
       let view = new WaterfallBuilderView({builder: e});
       let el = view.getRendered().$el;
       header_container.append(el);
+    });
+  }
+
+  async setBranch(branch){
+    this.branch = branch;
+    this.model.setBranch(branch, false);
+    this.render(false);
+  }
+
+  _renderBranchesSelect(){
+    let action_container = $('#navbar-actions');
+
+    let sel = $(document.createElement('select'));
+    sel.addClass('navbar-select');
+    let opt = $(document.createElement('option'));
+    opt.val('');
+    opt.text(i18n('all branches'));
+    sel.append(opt);
+    for (let i in this.model.branches){
+      let branch = this.model.branches[i];
+      opt = $(document.createElement('option'));
+      opt.val(branch);
+      opt.text(branch);
+      if (this.branch == branch){
+	opt.prop('selected', true);
+      }
+      sel.append(opt);
+    }
+    action_container.append(sel);
+    let self = this;
+    $('select', action_container).niceSelect();
+    $('select', action_container).on('change', function(e){
+      let el = $('option:selected', $(e.target));
+      self.setBranch(el.text());
     });
   }
 
@@ -668,9 +725,16 @@ class WaterfallView extends Backbone.View{
     wsconsumer.connectTo(path);
   }
 
-  async render(){
+  async render(branches=true){
+    $('#waterfall-container').hide();
+    $('#waterfall-body').html('');
+    $('th', $('#waterfall-header')).not($('.waterfall-first-col')).remove();
+    $('.wait-toxic-spinner').show();
     await this.model.fetch();
     this._renderHeader();
+    if (branches){
+      this._renderBranchesSelect();
+    }
     this._renderBody();
     this._connect2ws();
     $('.wait-toxic-spinner').hide();

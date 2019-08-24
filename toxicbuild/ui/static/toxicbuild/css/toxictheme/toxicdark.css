@@ -75,3 +75,19 @@ body.dark-theme{
 .dark-theme .repo-locations-link-container a {
     color: #D0D0D0;
  }
+
+.dark-theme #navbar-actions .navbar-select .list{
+    background-color: #4c4a49;
+    color: #D0D0D0;
+}
+
+.dark-theme #navbar-actions .navbar-select .list .option:hover{
+    color: #D0D0D0;
+}
+
+.dark-theme #navbar-actions .nice-select .option:hover,
+.dark-theme #navbar-actions .nice-select .option.focus,
+.dark-theme #navbar-actions .nice-select .option.selected.focus {
+    background-color: #5e5b5b;
+    font-weight: normal;
+}

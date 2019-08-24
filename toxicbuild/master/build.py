@@ -547,7 +547,8 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
 
     meta = {
         'indexes': [
-            'repository'
+            'repository',
+            'branch'
         ]
     }
 

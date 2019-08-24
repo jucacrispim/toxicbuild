@@ -8,6 +8,8 @@
     <title>{% block title %}Toxicbuild{% end %}</title>
 
     {% block stylesheet %}
+    <link href="{{static_url}}jquery/jquery.nice-select.css"
+	  rel="stylesheet">
     <link href="{{static_url}}bootstrap/css/bootstrap.min.css"
 	  rel="stylesheet">
     <link href="{{static_url}}bootstrap/css/bootstrap-toggle.min.css"
@@ -39,6 +41,7 @@
 	</a>
       </div>
 
+      <div id="navbar-actions"></div>
       {% block logout_link %}
       <ul class="navbar-nav">
 	<li class="nav-item dropdown">
@@ -128,6 +131,7 @@
       $('.alert-danger .close').on('click', function(){
 	utils.hideErrorMessage();
       });
+
 
     </script>
   </body>

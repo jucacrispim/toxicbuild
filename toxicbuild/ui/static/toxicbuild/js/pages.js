@@ -26,6 +26,8 @@ class BasePage extends Backbone.View{
     super();
     this.router = options.router;
     this.template_container = $('#main-area-container');
+    this.navbar_actions_container = $('#navbar-actions');
+    this.navbar_actions_container.html('');
   }
 
   async fetch_template(){
@@ -118,6 +120,7 @@ class SettingsPage extends BasePage{
     this._listen2events();
     this.right_sidebar.fadeIn(300);
     this.nav_pills.fadeIn(300);
+    $('select').niceSelect();
   }
 
   _handle_navigation(settings_type){
@@ -191,9 +194,11 @@ class WaterfallPage extends BasePage{
 
   constructor(options){
     super(options);
+    let q = new URLSearchParams(window.location.search);
+    this.branch = q.get('branch');
     this.repo_name = options.repo_name;
     this.template_url = '/templates/waterfall/' + this.repo_name;
-    this.view = new WaterfallView(this.repo_name);
+    this.view = new WaterfallView(this.repo_name, this.branch);
   }
 
   async render(){
