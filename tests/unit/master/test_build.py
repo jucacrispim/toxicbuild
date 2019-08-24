@@ -1341,6 +1341,20 @@ class BuildManagerTest(TestCase):
         s = await self.build.slave
         self.assertTrue(s.id)
 
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @mock.patch.object(build.Build, 'notify', AsyncMagicMock(
+        spec=build.Build.notify))
+    @async_test
+    async def test_handle_build_triggered_by(self):
+        await self._create_test_data()
+        b = build.Build(triggered_by=[{'builder_name': 'builder-1'},
+                                      {'builder_name': 'builder-2'}])
+        builders = [build.Builder(name='builder-1')]
+        self.repo.build_manager._handle_build_triggered_by(b, builders)
+
+        self.assertEqual(len(b.triggered_by), 1)
+
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asdf')
         await self.owner.save()

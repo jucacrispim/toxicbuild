@@ -909,6 +909,20 @@ class BuildManager(LoggerMixin):
                 if buildset.builds else 0
         return highest
 
+    def _handle_build_triggered_by(self, build, builders):
+        """So, when a buildset doesn't have all its builders we need
+        to handle the triggered_by config here otherwise we may end with
+        builds that can't start because of triggered_by rules.
+        """
+
+        rules = []
+        builder_names = [b.name for b in builders]
+        for rule in build.triggered_by:
+            if rule.builder_name in builder_names:
+                rules.append(rule)
+
+        build.triggered_by = rules
+
     async def add_builds_for_buildset(self, buildset, conf, builders=None,
                                       builders_origin=None):
         """Adds builds for for a given buildset.
@@ -932,7 +946,7 @@ class BuildManager(LoggerMixin):
                           builder=builder, builders_from=builders_origin,
                           number=last_build,
                           triggered_by=builder.triggered_by)
-
+            self._handle_build_triggered_by(build, builders)
             buildset.builds.append(build)
             await buildset.save()
             build_added.send(str(self.repository.id), build=build)
