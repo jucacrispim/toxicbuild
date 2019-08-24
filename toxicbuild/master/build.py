@@ -233,7 +233,7 @@ class BuildTrigger(EmbeddedDocument):
     """A list of statuses that trigger a build."""
 
 
-class Build(EmbeddedDocument):
+class Build(EmbeddedDocument, LoggerMixin):
 
     """ A set of steps for a repository. This is the object that stores
     the build data. The build is carried by the slave.
@@ -437,6 +437,9 @@ class Build(EmbeddedDocument):
 
         :param slave: An :class:`~toxicbuild.master.slave.Slave` instance.
         """
+        self.log(
+            'Adding slave {} to build {}'.format(slave.name, build.uuid),
+            level='debug')
         self.slave = slave
         await self.update()
         await slave.increment_queue()
