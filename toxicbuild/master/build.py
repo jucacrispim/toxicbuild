@@ -438,7 +438,7 @@ class Build(EmbeddedDocument, LoggerMixin):
         :param slave: An :class:`~toxicbuild.master.slave.Slave` instance.
         """
         self.log(
-            'Adding slave {} to build {}'.format(slave.name, build.uuid),
+            'Adding slave {} to build {}'.format(slave.name, self.uuid),
             level='debug')
         self.slave = slave
         await self.update()
