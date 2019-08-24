@@ -544,10 +544,15 @@ describe('WaterfallViewTest', function(){
   });
 
   it('test-setBranch', async function(){
+    let router = jasmine.createSpy();
+    router.redir = jasmine.createSpy();
+    window.router = router;
+
     spyOn(this.view.model, 'fetch');
     spyOn(this.view, 'render');
     await this.view.setBranch('master');
     expect(this.view.render).toHaveBeenCalled();
+    expect(window.router.redir).toHaveBeenCalled();
   });
 
 });

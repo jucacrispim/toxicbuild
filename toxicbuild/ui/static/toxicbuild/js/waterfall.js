@@ -618,8 +618,18 @@ class WaterfallView extends Backbone.View{
     });
   }
 
+  _getBrachURL(){
+    let url = window.location.pathname;
+    if (this.branch){
+      url += '?branch=' + this.branch;
+    }
+    return url;
+  }
+
   async setBranch(branch){
     this.branch = branch;
+    let url = this._getBrachURL();
+    router.redir(url, false);
     this.model.setBranch(branch, false);
     this.render(false);
   }
@@ -648,7 +658,7 @@ class WaterfallView extends Backbone.View{
     $('select', action_container).niceSelect();
     $('select', action_container).on('change', function(e){
       let el = $('option:selected', $(e.target));
-      self.setBranch(el.text());
+      self.setBranch(el.val());
     });
   }
 
