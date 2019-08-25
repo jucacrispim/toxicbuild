@@ -1055,7 +1055,8 @@ class HoleHandlerTest(TestCase):
     async def test_build_get(self):
         await self._create_test_data()
         build_inst = self.buildset.builds[0]
-        step = build.BuildStep(command='ls', status='success',
+        step = build.BuildStep(repository=self.repo,
+                               command='ls', status='success',
                                output='nada.txt\n',
                                name='list-files')
         build_inst.steps.append(step)
@@ -1529,7 +1530,8 @@ class UIStreamHandlerTest(TestCase):
                                 branch='master', named_tree='master',
                                 builder=testbuilder, status='running')
 
-        teststep = build.BuildStep(name='s1', command='ls', status='running',
+        teststep = build.BuildStep(repository=testrepo, name='s1',
+                                   command='ls', status='running',
                                    output='')
         testbuild.steps.append(teststep)
 

@@ -28,6 +28,15 @@ from tests import async_test, AsyncMagicMock
 
 class BuildStepTest(TestCase):
 
+    @async_test
+    async def tearDown(self):
+        await build.BuildSet.drop_collection()
+        await build.Builder.drop_collection()
+        await slave.Slave.drop_collection()
+        await repository.RepositoryRevision.drop_collection()
+        await repository.Repository.drop_collection()
+        await users.User.drop_collection()
+
     def test_to_dict(self):
         bs = build.BuildStep(name='bla', command='ls', status='fail',
                              started=now(), finished=now(),
@@ -59,6 +68,46 @@ class BuildStepTest(TestCase):
                              status='pending')
         bsd = build.json.loads(bs.to_json())
         self.assertIn('finished', bsd.keys())
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def get(self):
+        await self._create_test_data()
+        step_uuid = self.buildset.builds[0].steps[0].uuid
+        step = await build.BuildStep.get(step_uuid)
+
+        self.assertEqual(step.uuid, step_uuid)
+
+    async def _create_test_data(self):
+        self.owner = users.User(email='a@a.com', password='asfd')
+        await self.owner.save()
+        self.repo = repository.Repository(name='bla', url='git@bla.com',
+                                          owner=self.owner)
+        await self.repo.save()
+        self.slave = slave.Slave(name='sla', host='localhost', port=1234,
+                                 token='123', owner=self.owner)
+        await self.slave.save()
+        self.builder = build.Builder(repository=self.repo, name='builder-bla')
+        await self.builder.save()
+        b = build.Build(branch='master', builder=self.builder,
+                        repository=self.repo, slave=self.slave,
+                        named_tree='v0.1', number=1)
+        s = build.BuildStep(name='some step', output='some output',
+                            command='some command')
+        b.steps.append(s)
+        self.rev = repository.RepositoryRevision(commit='saçfijf',
+                                                 commit_date=now(),
+                                                 repository=self.repo,
+                                                 branch='master',
+                                                 author='tião',
+                                                 title='blabla')
+        await self.rev.save()
+
+        self.buildset = await build.BuildSet.create(repository=self.repo,
+                                                    revision=self.rev)
+        self.buildset.builds.append(b)
+        await self.buildset.save()
 
 
 class BuildTest(TestCase):
@@ -400,7 +449,8 @@ class BuildTest(TestCase):
         b = build.Build(branch='master', builder=self.builder,
                         repository=self.repo, slave=self.slave,
                         named_tree='v0.1', number=1)
-        s = build.BuildStep(name='some step', output='some output',
+        s = build.BuildStep(repository=self.repo, name='some step',
+                            output='some output',
                             command='some command')
         b.steps.append(s)
         self.rev = repository.RepositoryRevision(commit='saçfijf',

@@ -304,9 +304,10 @@ class Slave(OwnedDocument, LoggerMixin):
 
         return list(builder_instnces)
 
-    async def _finish_build_start_exception(self, build, exc_out):
+    async def _finish_build_start_exception(self, build, repo, exc_out):
         build.status = 'exception'
-        build.steps = [BuildStep(name='Exception', command='exception',
+        build.steps = [BuildStep(repository=repo, name='Exception',
+                                 command='exception',
                                  output=exc_out, status='exception')]
         await build.update()
 
@@ -326,7 +327,7 @@ class Slave(OwnedDocument, LoggerMixin):
         try:
             await self.start_instance()
         except Exception as e:
-            await self._finish_build_start_exception(build, str(e))
+            await self._finish_build_start_exception(build, repo, str(e))
             return False
 
         with (await self.get_client()) as client:
@@ -339,7 +340,7 @@ class Slave(OwnedDocument, LoggerMixin):
                 build.status = 'exception'
                 build.started = build.started or localtime2utc(now())
                 build.finished = build.finished or localtime2utc(now())
-                exception_step = BuildStep(output=output,
+                exception_step = BuildStep(repository=repo, output=output,
                                            started=localtime2utc(now()),
                                            finished=localtime2utc(now()),
                                            status='exception',
@@ -434,7 +435,7 @@ class Slave(OwnedDocument, LoggerMixin):
             await build_notifications.publish(msg)
 
         else:
-            requested_step = BuildStep(name=name, command=cmd,
+            requested_step = BuildStep(repository=repo, name=name, command=cmd,
                                        status=status, output=output,
                                        started=string2datetime(started),
                                        index=index, uuid=uuid)

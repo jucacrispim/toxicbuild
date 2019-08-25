@@ -161,6 +161,10 @@ class BuildStep(EmbeddedDocument):
     WARNING = 'warning'
     STATUSES = [RUNNING, FAIL, SUCCESS, EXCEPTION, WARNING]
 
+    repository = ReferenceField('toxicbuild.master.Repository', required=True)
+    """A referece to :class:`~toxicbuild.master.repository.Repository`
+    """
+
     uuid = UUIDField(required=True, default=lambda: uuid4())
     """The uuid that indentifies the build step"""
 
@@ -221,6 +225,41 @@ class BuildStep(EmbeddedDocument):
         """Returns a json representation of the BuildStep."""
 
         return json.dumps(self.to_dict())
+
+    @classmethod
+    async def get(cls, uuid):
+        """Returns a step based on a uuid.
+
+        :param uuid: The uuid of the step."""
+
+        if isinstance(uuid, str):
+            uuid = UUID(uuid)
+
+        pipeline = [
+            {"$match": {"builds.steps.uuid": uuid}},
+            {'$unwind': '$builds'},
+            {"$match": {"builds.steps.uuid": uuid}},
+            {"$project": {
+                "steps": {
+                    '$filter': {
+                        'input': '$builds.steps',
+                        'as': 'step',
+                        'cond': {'$eq': ['$$step.uuid', uuid]}
+                    }
+                },
+            }},
+        ]
+
+        r = await BuildSet.objects().aggregate(*pipeline).to_list(1)
+
+        try:
+            step_doc = r[0]['steps'][0]
+        except IndexError:
+            raise cls.DoesNotExist
+        else:
+            build = cls(**step_doc)
+
+        return build
 
 
 class BuildTrigger(EmbeddedDocument):
@@ -554,7 +593,9 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
     meta = {
         'indexes': [
             'repository',
-            'branch'
+            'branch',
+            'builds.uuid',
+            'builds.steps.uuid',
         ]
     }
 
@@ -971,7 +1012,7 @@ class BuildManager(LoggerMixin):
         return builders_conf
 
     async def get_builders(self, revision, conf, include=None, exclude=None):
-        """ Get builders for a given slave and revision.
+        """ Get builders for a given revision.
 
         :param revision: A
           :class:`toxicbuild.master.repository.RepositoryRevision`.
@@ -982,6 +1023,10 @@ class BuildManager(LoggerMixin):
           this list will not be returned.
         """
 
+        self.log('Getting builders for {} on {}'.format(self.repository.id,
+                                                        revision.commit),
+                 level='debug')
+
         origin = revision.branch
         try:
             builders_conf = self._get_builders_conf(conf, revision.branch)
@@ -989,7 +1034,7 @@ class BuildManager(LoggerMixin):
         except AttributeError:
             self.log('Bad config for {} on {}'.format(self.repository.id,
                                                       revision.commit),
-                     level='debug')
+                     level='error')
             return [], origin
 
         if not builders_conf and revision.builders_fallback:

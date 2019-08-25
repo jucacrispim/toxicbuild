@@ -174,7 +174,8 @@ class SlaveTest(TestCase):
     @async_test
     async def test_finish_build_start_exception(self):
         await self._create_test_data()
-        await self.slave._finish_build_start_exception(self.build, '')
+        await self.slave._finish_build_start_exception(
+            self.build, self.repo, '')
         self.assertEqual(self.build.status, 'exception')
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
@@ -265,7 +266,8 @@ class SlaveTest(TestCase):
         future_now = now + datetime.timedelta(seconds=2)
         future_formated_now = datetime2string(future_now)
 
-        self.build.steps = [build.BuildStep(command='ls', name='ls')]
+        self.build.steps = [
+            build.BuildStep(repository=self.repo, command='ls', name='ls')]
         build_info = {
             'status': 'running', 'steps': [
                 {'status': 'success',

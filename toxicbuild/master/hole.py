@@ -36,7 +36,7 @@ from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import (LoggerMixin, datetime2string,
                                    format_timedelta, now, localtime2utc)
 from toxicbuild.master import settings
-from toxicbuild.master.build import BuildSet, Builder
+from toxicbuild.master.build import BuildSet, Builder, Build
 from toxicbuild.master.consumers import RepositoryMessageConsumer
 from toxicbuild.master.repository import Repository
 from toxicbuild.master.exceptions import (UIFunctionNotFound,
@@ -726,14 +726,14 @@ class HoleHandler:
                 return build
 
     async def build_get(self, build_uuid):
-        buildset = await BuildSet.objects.filter(
-            builds__uuid=build_uuid).first()
-        build = self._get_build(buildset, build_uuid)
-        builder = await build.builder
+        build = await Build.get(build_uuid)
         repo = await build.repository
         has_perms = await repo.check_perms(self.protocol.user)
         if not has_perms:
             raise NotEnoughPerms
+
+        buildset = await build.get_buildset()
+        builder = await build.builder
 
         bdict = build.to_dict(output=True, steps_output=False)
         bdict['repository'] = await repo.to_dict()

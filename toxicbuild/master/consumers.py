@@ -143,6 +143,7 @@ class RepositoryMessageConsumer(LoggerMixin):
         return repo
 
     async def _add_builds(self, msg):
+        self.log('New revisions arrived!', level='debug')
         repo = await self._get_repo_from_msg(msg)
         if not repo:
             return
