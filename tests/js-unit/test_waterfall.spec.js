@@ -189,6 +189,7 @@ describe('WaterfallStepViewTest', function(){
     affix('.template .waterfall-step-info');
     let template = $('.waterfall-step-info');
     template.affix('.step-status');
+    template.affix('.step-details-link');
     template.affix('.step-name');
     let step = new BuildStep();
     let build_view = jasmine.createSpy();
@@ -212,6 +213,7 @@ describe('WaterfallBuildViewTest', function(){
     affix('.template .waterfall-step-info');
     let template = $('.waterfall-step-info');
     template.affix('.step-status');
+    template.affix('.step-details-link');
     template.affix('.step-name');
     affix('.template .waterfall-build-info-container');
     template = $('.waterfall-build-info-container');
