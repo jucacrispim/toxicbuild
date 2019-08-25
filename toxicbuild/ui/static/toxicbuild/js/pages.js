@@ -1,4 +1,4 @@
-// Copyright 2018 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2018, 2019 Juca Crispim <juca@poraodojuca.net>
 
 // This file is part of toxicbuild.
 
@@ -303,6 +303,15 @@ class BaseOneSideFloatingPage extends BaseFloatingPage{
 			    function(){self._inner.fadeIn(100);});
   }
 
+  async render(){
+
+    this._prepareOpenAnimation();
+    await this.view.render();
+    this._listen2events();
+    $('.wait-toxic-spinner').hide();
+    this._animateOpen();
+  }
+
 }
 
 
@@ -315,14 +324,17 @@ class BuildDetailsPage extends BaseOneSideFloatingPage{
     this.view = new BuildDetailsView({build_uuid: this.build_uuid});
   }
 
-  async render(){
+}
 
-    this._prepareOpenAnimation();
-    await this.view.render();
-    this._listen2events();
-    $('.wait-toxic-spinner').hide();
-    this._animateOpen();
+class BuildStepDetailsPage extends BaseOneSideFloatingPage{
+
+  constructor(options){
+    super(options);
+    this.step_uuid = options ? options.step_uuid : '';
+    this.template_url = '/templates/step/' + this.step_uuid;
+    this.view = new BuildStepDetailsView({step_uuid: this.step_uuid});
   }
+
 }
 
 class BuildSetDetailsPage extends BaseOneSideFloatingPage{
@@ -332,15 +344,6 @@ class BuildSetDetailsPage extends BaseOneSideFloatingPage{
     this.buildset_id = options ? options.buildset_id : '';
     this.template_url = '/templates/buildset/' + this.buildset_id;
     this.view = new BuildSetDetailsView({buildset_id: this.buildset_id});
-  }
-
-  async render(){
-
-    this._prepareOpenAnimation();
-    await this.view.render();
-    this._listen2events();
-    $('.wait-toxic-spinner').hide();
-    this._animateOpen();
   }
 
   close_page(){

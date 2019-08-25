@@ -34,6 +34,7 @@ class DashboardRouter extends Backbone.Router{
 		  ':owner/:name/waterfall': 'showWaterfallPage',
 		  ':owner/:name/': 'showBuildSetListPage',
 		  'build/:build_uuid': 'showBuildDetaisPage',
+		  'step/:step_uuid': 'showBuildStepDetaisPage',
 		  'buildset/:buildset_id': 'showBuildSetDetaisPage'};
 
     options['routes'] = routes;
@@ -193,6 +194,12 @@ class DashboardRouter extends Backbone.Router{
   async showBuildDetaisPage(build_uuid){
     let page = new BuildDetailsPage({router: this,
 				     build_uuid: build_uuid});
+    await this._showPage(page);
+  }
+
+  async showBuildStepDetaisPage(step_uuid){
+    let page = new BuildStepDetailsPage({router: this,
+					 step_uuid: step_uuid});
     await this._showPage(page);
   }
 

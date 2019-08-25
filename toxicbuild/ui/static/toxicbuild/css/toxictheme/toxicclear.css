@@ -1097,6 +1097,7 @@ body{
 
 .step-exception,
 .build-exception a.build-details-link,
+.step-exception a.step-details-link,
 .build-exception,
 .builder-exception{
     background-color: var(--exception);
@@ -1129,6 +1130,7 @@ body{
 
 .build-cancelled,
 .step-cancelled,
+.step-cancelled a.step-details-link,
 .build-cancelled a.build-details-link,
 .builder-cancelled{
     background-color: #827f7f;
@@ -1137,6 +1139,7 @@ body{
 
 .build-success,
 .step-success,
+.step-success a.step-details-link,
 .build-success a.build-details-link,
 .builder-success{
     background-color: var(--green-light);
@@ -1145,6 +1148,7 @@ body{
 
 .build-warning,
 .step-warning,
+.step-warning a.step-details-link,
 .build-warning a.build-details-link,
 .builder-warning{
     background-color: var(--pink);
@@ -1153,6 +1157,7 @@ body{
 
 .build-fail,
 .step-fail,
+.step-fail a.step-details-link,
 .build-fail a.build-details-link,
 .builder-fail{
     /* background-color: var(--danger); */
@@ -1162,6 +1167,7 @@ body{
 
 .build-running,
 .step-running,
+.step-running a.step-details-link,
 .build-running a.build-details-link,
 .builder-running{
     background-color: #31b0d5;
@@ -1276,6 +1282,7 @@ body{
     border: 2px solid var(--gray-dark);
 }
 
+.step-details-container pre,
 .build-details-container pre{
     background-color: #000;
     color: #11e436;
@@ -1286,6 +1293,7 @@ body{
 }
 
 .build-builder-row,
+#step-details span,
 #build-details span{
     font-size: 0.9em;
 }
@@ -1313,6 +1321,7 @@ body{
     /* margin-left: 20px; */
 }
 
+#step-details .fa-arrow-circle-down,
 #build-details .fa-arrow-circle-down{
     position: absolute;
     right: 20px;

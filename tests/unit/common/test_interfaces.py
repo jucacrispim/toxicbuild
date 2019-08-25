@@ -714,3 +714,18 @@ class BuildTest(TestCase):
         requester = MagicMock()
         build = await interfaces.BuildInterface.get(requester, 'some-uuid')
         self.assertEqual(build.output, 'bla')
+
+
+class StepInterfaceTest(TestCase):
+
+    @patch.object(interfaces.StepInterface, 'get_client',
+                  AsyncMagicMock(return_value=MagicMock()))
+    @async_test
+    async def test_get(self):
+        client = interfaces.StepInterface.get_client.return_value.\
+            __enter__.return_value
+        client.buildstep_get = AsyncMagicMock(return_value={})
+        requester = MagicMock()
+        step = await interfaces.StepInterface.get(requester, 'a-uuid')
+        self.assertTrue(client.buildstep_get.called)
+        self.assertTrue(step)

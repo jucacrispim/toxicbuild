@@ -17,6 +17,7 @@
 
 var TOXIC_BUILDSET_API_URL = window.TOXIC_API_URL + 'buildset/';
 var TOXIC_BUILD_API_URL = window.TOXIC_API_URL + 'build/';
+var TOXIC_STEP_API_URL = window.TOXIC_API_URL + 'step/';
 
 
 class BuildSet extends BaseModel{
@@ -102,6 +103,7 @@ class BuildStep extends BaseModel{
     options = options || {};
     options.idAttribute = 'uuid';
     super(attributes, options);
+    this._api_url = TOXIC_STEP_API_URL;
   }
 
 }
@@ -149,6 +151,71 @@ class BuilderList extends BaseCollection{
     this.model = Builder;
     this.comparator = 'name';
   }
+
+}
+
+
+class BuildStepDetailsView extends Backbone.View{
+
+  constructor(options){
+    options = options || {'tagName': 'div'};
+    options.model = options.model || new BuildStep();
+    super(options);
+
+    this.directive = {'.step-status': 'status',
+		      '.step-output': 'output',
+		      '.step-started': 'started',
+		      '.step-total-time': 'total_time',
+		      '.step-command': 'command'};
+
+    this.model = this.step = options.model;
+    this.step_uuid = options.step_uuid;
+    this.template_selector = '#step-details';
+    this.compiled_template = null;
+    this.container_selector = '.step-details-container';
+    this.container = null;
+
+    this._scroll = false;
+
+  }
+
+  _get_kw(){
+    let status_translation = i18n(status);
+    let kw = {
+      status: status_translation,
+      original_status: this.model.get('status'),
+      started: this.model.get('started'),
+      output: this.model.get('output'),
+      total_time: this.model.get('total_time'),
+      command: this.model.get('command'),
+    };
+    return kw;
+  }
+
+  async render(fetch=true){
+    if (fetch){
+      await this.model.fetch({step_uuid: this.step_uuid});
+      let repo = this.model.get('repository');
+      let uuid = this.model.get('uuid');
+      let path = 'step-info?repo_id=' + repo.id + '&uuid=' + uuid;
+      wsconsumer.connectTo(path);
+    }
+
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+
+    $('.wait-toxic-spinner').hide();
+
+    let kw = this._get_kw();
+    let compiled = $(this.compiled_template(kw));
+    let badge_class = utils.get_badge_class(kw.original_status);
+    $('.step-status', compiled).removeClass().addClass(
+      'step-status badge ' + badge_class);
+    $('.obj-details-buttons-container', compiled).show();
+    this.container = $(this.container_selector);
+    this.container.html(compiled);
+  }
+
 
 }
 

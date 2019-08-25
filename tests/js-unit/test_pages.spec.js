@@ -1,4 +1,4 @@
-// Copyright 2018 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2018, 2019 Juca Crispim <juca@poraodojuca.net>
 
 // This file is part of toxicbuild.
 

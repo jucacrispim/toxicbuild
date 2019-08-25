@@ -7,12 +7,12 @@
   <!-- end loading spinner -->
 
 
-<!-- main build detaile container -->
+<!-- main step details container -->
 <div class="details-main-container box-shadow-gray">
   <div class="close-btn">&times;</div>
 
 
-  <div class="build-details-container"></div>
+  <div class="step-details-container"></div>
 
 </div>
 
@@ -20,39 +20,27 @@
 <!-- template -->
 <div class="template">
 
-  <div id="build-details">
-    <div class="repo-name-container col-sm-10">
-      <span class="repo-name"></span> - <span class="build-label">Build</span>
-      <b>#<span class="build-number"></span></b>
-      <span class="build-status badge" data-toggle="tooltip">
+  <div id="step-details">
+    <div class="command-container col-sm-10">
+      <span class="step-command"></span>
+      <span class="step-status badge" data-toggle="tooltip">
       </span>
     </div>
     <div class="inner-container-left col-sm-6">
-      <div class="build-builder-row">
-	<span>{% raw translate('Builder') %}:</span> <b><span class="builder-name"></span></b>
-      </div>
       <span class="far fa-calendar-check" data-toggle="tooltip"
 	    title="{{translate('started at')}}"></span>
-      <span class="build-started" data-toggle="tooltip"
+      <span class="step-started" data-toggle="tooltip"
 	    title="{{translate('started at')}}"></span><br/>
 
       <span class="far fa-clock" data-toggle="tooltip"
 	    title="{{translate('duration')}}"></span>
-      <span class="build-total-time" data-toggle="tooltip"
+      <span class="step-total-time" data-toggle="tooltip"
 	    title="{{translate('duration')}}"></span><br/>
     </div>
-    <div class="inner-container-right col-sm-5">
-      <div class="build-commit-row">
-	<span>{{translate('Author')}}: </span><b><span class="commit-author"></span></b><br/>
-	<span>{{translate('Title')}}: </span><b><span class="commit-title"></span></b><br/>
-	<span>{% raw translate('Branch') %}: </span><b><span class="commit-branch"></b></span>
-      </div>
 
-    </div>
-
-    <div class="col-sm-12 build-output-container">
+    <div class="col-sm-12 step-output-container">
       <span class="fas fa-arrow-circle-down follow-output"></span>
-      <pre class="build-output">
+      <pre class="step-output">
       </pre>
     </div>
 
@@ -76,13 +64,13 @@
 <!-- end template -->
 
 
-<input type="hidden" value="{{build_uuid}}" id="build-uuid">
+<input type="hidden" value="{{step_uuid}}" id="step-uuid">
 
 <script>
   async function init(){
-    let build_uuid = jQuery('#build-uuid').val();
+    let step_uuid = jQuery('#step-uuid').val();
     let page;
-    page = new BuildDetailsPage({router: router, build_uuid: build_uuid});
+    page = new BuildStepDetailsPage({router: router, step_uuid: step_uuid});
     await page.render();
   }
 

@@ -503,6 +503,36 @@ class BuildHandlerTest(TestCase):
         self.assertTrue(web.BuildInterface.get.called)
 
 
+class StepHandlerTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.model = web.StepInterface
+        application, request = MagicMock(), MagicMock()
+        request.body = web.json.dumps({})
+        application.ui_methods = {}
+        self.handler = web.CookieAuthStepHandler(application,
+                                                 request,
+                                                 model=self.model)
+        self.handler._get_user_from_cookie = MagicMock()
+        await self.handler.async_prepare()
+
+    @async_test
+    async def test_get_step_no_uuid(self):
+        with self.assertRaises(web.HTTPError):
+            await self.handler.get_step()
+
+    @patch.object(web.StepInterface, 'get',
+                  AsyncMagicMock(spec=web.StepInterface.get))
+    @async_test
+    async def test_get_step(self):
+        self.handler.query = {'step_uuid': 'some-uuid'}
+        web.StepInterface.get.return_value = web.StepInterface(
+            MagicMock(), {})
+        await self.handler.get_step()
+        self.assertTrue(web.StepInterface.get.called)
+
+
 class WaterfallRestHandlerTest(TestCase):
 
     @async_test
@@ -1079,6 +1109,16 @@ class DashboardHandlerTest(TestCase):
 
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
+    def test_get_step_template(self):
+        self.handler._get_step_template('some-uuid')
+        called = web.render_template.call_args
+        called_template = called[0][0]
+        called_context = called[0][2]
+        self.assertEqual(called_template, self.handler.step_template)
+        self.assertEqual(called_context, {'step_uuid': 'some-uuid'})
+
+    @patch.object(web, 'render_template', MagicMock(return_value='asdf',
+                                                    spec=web.render_template))
     def test_get_buildset_template(self):
         self.handler._get_buildset_template('some-buildset-id', 'some-repo-id')
         called = web.render_template.call_args
@@ -1240,10 +1280,18 @@ class DashboardHandlerTest(TestCase):
 
         self.handler.show_build_details(b'some-uuid')
 
+    def test_show_step_details(self):
+        self.handler._get_step_template = MagicMock(
+            spec=self.handler._get_step_template)
+        self.handler.render_template = MagicMock(
+            spec=self.handler.render_template)
+
+        self.handler.show_step_details(b'some-uuid')
+
         expected_keys = ['content']
         called_template = self.handler.render_template.call_args[0][0]
         called_context = self.handler.render_template.call_args[0][1]
-        self.assertTrue(self.handler._get_build_template.called)
+        self.assertTrue(self.handler._get_step_template.called)
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 
@@ -1350,6 +1398,15 @@ class DashboardHandlerTest(TestCase):
 
         self.handler.show_build_template(b'some-uuid')
         self.assertTrue(self.handler._get_build_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    def test_show_step_template(self):
+        self.handler._get_step_template = MagicMock(
+            spec=self.handler._get_step_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        self.handler.show_step_template(b'some-uuid')
+        self.assertTrue(self.handler._get_step_template.called)
         self.assertTrue(self.handler.write.called)
 
     def test_show_repo_waterfall_template(self):

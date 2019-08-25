@@ -40,7 +40,8 @@ from toxicbuild.ui.connectors import StreamConnector
 from toxicbuild.common.interfaces import (RepositoryInterface, SlaveInterface,
                                           UserInterface, BuildSetInterface,
                                           BuilderInterface, BuildInterface,
-                                          BaseInterface, NotificationInterface)
+                                          BaseInterface, NotificationInterface,
+                                          StepInterface)
 from toxicbuild.common.utils import format_datetime
 from toxicbuild.ui.utils import (get_defaulte_locale_morsel,
                                  get_default_timezone_morsel)
@@ -420,6 +421,23 @@ class CookieAuthBuildHandler(CookieAuthHandlerMixin, BuildHandler):
     pass
 
 
+class StepHandler(ReadOnlyRestHandler):
+
+    @get('')
+    async def get_step(self):
+        try:
+            step_uuid = self.query['step_uuid']
+        except KeyError:
+            raise HTTPError(400)
+
+        step = await self.model.get(self.user, step_uuid)
+        return step.to_dict(dtformat=self._dtformat, tzname=self._tzname)
+
+
+class CookieAuthStepHandler(CookieAuthHandlerMixin, StepHandler):
+    pass
+
+
 class WaterfallRestHandler(ReadOnlyRestHandler):
 
     @get('')
@@ -650,6 +668,10 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
                                                'step_finished',
                                                'step_output_arrived'],
 
+                                'step-info': ['step_started',
+                                              'step_finished',
+                                              'step_output_arrived'],
+
                                 'buildset-info': ['build_started',
                                                   'build_finished',
                                                   'build_preparing',
@@ -772,6 +794,7 @@ class DashboardHandler(LoggedTemplateHandler):
     buildset_list_template = 'toxictheme/buildset_list.html'
     waterfall_template = 'toxictheme/waterfall.html'
     build_template = 'toxictheme/build.html'
+    step_template = 'toxictheme/step.html'
     buildset_template = 'toxictheme/buildset.html'
     notifications_template = 'toxictheme/notifications.html'
 
@@ -851,6 +874,11 @@ class DashboardHandler(LoggedTemplateHandler):
     def _get_build_template(self, build_uuid):
         rendered = render_template(self.build_template, self.request,
                                    {'build_uuid': build_uuid})
+        return rendered
+
+    def _get_step_template(self, step_uuid):
+        rendered = render_template(self.step_template, self.request,
+                                   {'step_uuid': step_uuid})
         return rendered
 
     def _get_buildset_template(self, buildset_id, repo_id):
@@ -944,6 +972,13 @@ class DashboardHandler(LoggedTemplateHandler):
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
+    @get('step/([\d\w\-]+)')
+    def show_step_details(self, step_uuid):
+        step_uuid = step_uuid.decode()
+        content = self._get_step_template(step_uuid)
+        context = {'content': content}
+        self.render_template(self.skeleton_template, context)
+
     @get('templates/repo-details')
     @get('templates/repo-details/{}'.format(FULL_NAME_REGEX))
     def show_repository_details_template(self, full_name=b''):
@@ -986,6 +1021,12 @@ class DashboardHandler(LoggedTemplateHandler):
     def show_build_template(self, build_uuid):
         build_uuid = build_uuid.decode()
         content = self._get_build_template(build_uuid)
+        self.write(content)
+
+    @get('templates/step/([\d\w\-]+)')
+    def show_step_template(self, step_uuid):
+        step_uuid = step_uuid.decode()
+        content = self._get_step_template(step_uuid)
         self.write(content)
 
     @get('templates/buildset/([\d\w\-]+)')
@@ -1048,6 +1089,11 @@ build_api = URLSpec('/api/build/(.*)$',
                     {'model': BuildInterface,
                      'cors_origins': cors_origins})
 
+step_api = URLSpec('/api/step/(.*)$',
+                   CookieAuthStepHandler,
+                   {'model': StepInterface,
+                    'cors_origins': cors_origins})
+
 waterfall_api = URLSpec('/api/waterfall/(.*)$',
                         CookieAuthWaterfallHandler,
                         {'model': BuildSetInterface,
@@ -1055,4 +1101,5 @@ waterfall_api = URLSpec('/api/waterfall/(.*)$',
 
 api_app = PyroApplication(
     [websocket, repo_api_url, slave_api_url, notifications_api_url,
-     buildset_api, user_add_api, waterfall_api, build_api, user_api])
+     buildset_api, user_add_api, waterfall_api, build_api, user_api,
+     step_api])

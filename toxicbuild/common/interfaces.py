@@ -431,7 +431,17 @@ class BuilderInterface(BaseHoleInterface):
 
 
 class StepInterface(BaseHoleInterface):
-    pass
+
+    @classmethod
+    async def get(cls, requester, uuid):
+        """Returns information about a step.
+        :param uuid: The uuid of the step."""
+
+        with await cls.get_client(requester) as client:
+            sdict = await client.buildstep_get(step_uuid=uuid)
+
+        step = cls(requester, sdict)
+        return step
 
 
 class BuildInterface(BaseHoleInterface):

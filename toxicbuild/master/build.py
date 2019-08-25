@@ -154,6 +154,8 @@ class BuildStep(EmbeddedDocument):
     the step data. Who actually execute the steps is the slave.
     """
 
+    DoesNotExist = Builder.DoesNotExist
+
     RUNNING = 'running'
     FAIL = 'fail'
     SUCCESS = 'success'

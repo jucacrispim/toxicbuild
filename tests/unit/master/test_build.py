@@ -72,12 +72,33 @@ class BuildStepTest(TestCase):
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
-    async def get(self):
+    async def test_get(self):
         await self._create_test_data()
         step_uuid = self.buildset.builds[0].steps[0].uuid
         step = await build.BuildStep.get(step_uuid)
 
         self.assertEqual(step.uuid, step_uuid)
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_get_str_uuid(self):
+        await self._create_test_data()
+        step_uuid = self.buildset.builds[0].steps[0].uuid
+        step = await build.BuildStep.get(str(step_uuid))
+
+        self.assertEqual(step.uuid, step_uuid)
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_get_does_not_exist(self):
+        await self._create_test_data()
+        step_uuid = self.buildset.builds[0].steps[0].uuid
+        self.buildset.builds[0].steps = []
+        await self.buildset.save()
+        with self.assertRaises(build.BuildStep.DoesNotExist):
+            await build.BuildStep.get(str(step_uuid))
 
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asfd')
@@ -93,7 +114,8 @@ class BuildStepTest(TestCase):
         b = build.Build(branch='master', builder=self.builder,
                         repository=self.repo, slave=self.slave,
                         named_tree='v0.1', number=1)
-        s = build.BuildStep(name='some step', output='some output',
+        s = build.BuildStep(repository=self.repo, name='some step',
+                            output='some output',
                             command='some command')
         b.steps.append(s)
         self.rev = repository.RepositoryRevision(commit='saçfijf',

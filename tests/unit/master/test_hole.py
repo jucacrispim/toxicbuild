@@ -1071,6 +1071,43 @@ class HoleHandlerTest(TestCase):
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
+    async def test_buildstep_get_no_perms(self):
+        await self._create_test_data()
+        build_inst = self.buildset.builds[0]
+        step = build.BuildStep(repository=self.repo,
+                               command='ls', status='success',
+                               output='nada.txt\n',
+                               name='list-files')
+        build_inst.steps.append(step)
+        await build_inst.update()
+        user = MagicMock()
+        user.id = 'some-id'
+        user.is_superuser = False
+        self.protocol.user = user
+        with self.assertRaises(hole.NotEnoughPerms):
+            await self.handler.buildstep_get(step.uuid)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
+    async def test_buildstep_get(self):
+        await self._create_test_data()
+        build_inst = self.buildset.builds[0]
+        step = build.BuildStep(repository=self.repo,
+                               command='ls', status='success',
+                               output='nada.txt\n',
+                               name='list-files')
+        build_inst.steps.append(step)
+        await build_inst.update()
+
+        step = (await self.handler.buildstep_get(
+            step.uuid))['buildstep-get']
+        self.assertTrue(step['output'])
+        self.assertTrue(step['command'])
+
+    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @async_test
     async def test_builder_show(self):
         await self._create_test_data()
 

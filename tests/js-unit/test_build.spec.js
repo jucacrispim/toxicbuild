@@ -87,6 +87,41 @@ describe('BuildSetLisTest', function(){
 
 });
 
+describe('BuildStepDetailsView', function(){
+
+  beforeEach(function(){
+    affix('.template #step-details');
+    let container = $('#step-details');
+    container.affix('.step-command');
+    container.affix('.step-status');
+    container.affix('.step-output');
+    container.affix('.step-started');
+    container.affix('.step-total-time');
+    this.view = new BuildStepDetailsView({step_uuid: 'some-uuid'});
+  });
+
+  it('test-render', async function(){
+    window.wsconsumer = jasmine.createSpy();
+    window.wsconsumer.connectTo = jasmine.createSpy();
+    this.view.model.set({repository: {id: 'bla'}});
+    spyOn(this.view.model, 'fetch');
+    await this.view.render();
+    expect($('.wait-toxic-spinner').is('visible')).toBe(false);
+    expect(this.view.model.fetch).toHaveBeenCalled();
+  });
+
+  it('test-render-no-fetch', async function(){
+    window.wsconsumer = jasmine.createSpy();
+    window.wsconsumer.connectTo = jasmine.createSpy();
+    this.view.model.set({repository: {id: 'bla'}});
+    spyOn(this.view.model, 'fetch');
+    await this.view.render(false);
+    expect($('.wait-toxic-spinner').is('visible')).toBe(false);
+    expect(this.view.model.fetch).not.toHaveBeenCalled();
+  });
+
+});
+
 describe('BuildDetailsViewTest', function(){
 
   beforeEach(function(){

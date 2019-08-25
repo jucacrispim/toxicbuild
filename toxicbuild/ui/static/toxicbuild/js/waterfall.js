@@ -249,7 +249,8 @@ class WaterfallStepView extends BaseWaterfallView{
     this.step = options.step;
     this.build_view = options.build_view;
     this.directive = {'.step-status': 'status',
-		      '.step-name': 'name'};
+		      '.step-name': 'name',
+		      '.step-details-link@href': 'step_details_link'};
     this.template_selector = '.template .waterfall-step-info';
     this.compiled_template = $p(this.template_selector).compile(
       this.directive);
@@ -262,11 +263,13 @@ class WaterfallStepView extends BaseWaterfallView{
 
   _get_kw(){
     let status = this.step.escape('status');
+    let step_details_link = '/step/' + this.step.get('uuid');
     let status_translation = i18n(status);
     let name = this.step.escape('name');
     return {status: status_translation,
 	    original_status: status,
-	    name: name};
+	    name: name,
+	    step_details_link: step_details_link};
   }
 
   render(){

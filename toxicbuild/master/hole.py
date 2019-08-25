@@ -36,7 +36,7 @@ from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import (LoggerMixin, datetime2string,
                                    format_timedelta, now, localtime2utc)
 from toxicbuild.master import settings
-from toxicbuild.master.build import BuildSet, Builder, Build
+from toxicbuild.master.build import BuildSet, Builder, Build, BuildStep
 from toxicbuild.master.consumers import RepositoryMessageConsumer
 from toxicbuild.master.repository import Repository
 from toxicbuild.master.exceptions import (UIFunctionNotFound,
@@ -138,6 +138,10 @@ class HoleHandler:
     * `repo-enable`
     * `repo-disable`
     * `repo-request-code-update`
+    * `repo-add-envvars`
+    * `repo-rm-envvars`
+    * `repo-replace-envvars`
+    * `repo-list-branches`
     * `slave-add`
     * `slave-get`
     * `slave-list`
@@ -720,12 +724,11 @@ class HoleHandler:
         bdict['repository'] = await repo.to_dict()
         return {'buildset-get': bdict}
 
-    def _get_build(self, buildset, build_uuid):
-        for build in buildset.builds:  # pragma no branch
-            if str(build_uuid) == str(build.uuid):  # pragma no branch
-                return build
-
     async def build_get(self, build_uuid):
+        """Returns a build.
+
+        :param build_uuid: The uuid of a build.
+        """
         build = await Build.get(build_uuid)
         repo = await build.repository
         has_perms = await repo.check_perms(self.protocol.user)
@@ -743,6 +746,21 @@ class HoleHandler:
         bdict['commit_branch'] = buildset.branch
         bdict['commit_author'] = buildset.author
         return {'build-get': bdict}
+
+    async def buildstep_get(self, step_uuid):
+        """Returns a buildstep.
+
+        :param step_uuid: The uuid of a step.
+        """
+        step = await BuildStep.get(step_uuid)
+        repo = await step.repository
+        has_perms = await repo.check_perms(self.protocol.user)
+        if not has_perms:
+            raise NotEnoughPerms
+
+        sdict = step.to_dict()
+        sdict['repository'] = await repo.to_dict()
+        return {'buildstep-get': sdict}
 
     async def builder_list(self, **kwargs):
         """List builders.
