@@ -900,7 +900,7 @@ class RepositoryRevisionTest(TestCase):
         self.assertTrue(self.rev.create_builds())
 
     def test_get_builders_conf_include(self):
-        self.rev.body = 'some body\nci-include-builders: a-builder, o-builder'
+        self.rev.body = 'some body\nci: include-builders a-builder, o-builder'
         expected = {
             'include': ['a-builder', 'o-builder'],
             'exclude': []
@@ -909,7 +909,7 @@ class RepositoryRevisionTest(TestCase):
         self.assertEqual(builders, expected)
 
     def test_get_builders_conf_exclude(self):
-        self.rev.body = 'some body\nci-exclude-builders: a-builder, o-builder'
+        self.rev.body = 'some body\nci: exclude-builders a-builder, o-builder'
         expected = {
             'include': [],
             'exclude': ['a-builder', 'o-builder'],

@@ -862,21 +862,21 @@ class RepositoryRevision(Document):
 
         Known instructions:
 
-        - ``ci-include-builders: builder-name,other-builder``: Include only
+        - ``ci: include-builders builder-name,other-builder``: Include only
           the builders listed in the configuration. The names are separated
           by comma.
 
-        - ``ci-exclude-builders: builder-name,other-builder``: Exclude
+        - ``ci: exclude-builders builder-name,other-builder``: Exclude
           the builders listed in the configuration. The names are separated
           by comma.
         """
 
         confs = {}
         include_pattern = re.compile(
-            r'(^|.*\s+)ci-include-builders:\s*(.*)$')
+            r'(^|.*\s+)ci:\s*include-builders\s+(.*)$')
 
         exclude_pattern = re.compile(
-            r'(^|.*\s+)ci-exclude-builders:\s*(.*)$')
+            r'(^|.*\s+)ci:\s*exclude-builders\s+(.*)$')
 
         confs['include'] = self._get_builders_match(include_pattern)
         confs['exclude'] = self._get_builders_match(exclude_pattern)

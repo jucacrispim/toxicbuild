@@ -340,7 +340,7 @@ the behavior of the builds triggered by the commit.
 The build instructions are:
 
 - ``ci: skip``: A commit with this instruction will not trigger builds.
-- ``ci-include-builders: a-builder,o-builder``: A list of builder names
+- ``ci: include-builders a-builder,other-builder``: A list of builder names
   that may be triggered by this commit.
-- ``ci-exclude-builders: a-builder,o-builder``: A list of builder names
+- ``ci: exclude-builders a-builder,other-builder``: A list of builder names
   that will not be triggered by this commit.
