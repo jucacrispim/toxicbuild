@@ -129,12 +129,19 @@ create_imgs(){
 }
 
 upload_images(){
+    echo "Uploading slave"
     docker push jucacrispim/toxicbuild:slave
+    echo "Uploading output"
     docker push jucacrispim/toxicbuild:output
+    echo "Uploading master"
     docker push jucacrispim/toxicbuild:master
+    echo "Uploading scheduler"
     docker push jucacrispim/toxicbuild:scheduler
+    echo "Uploading poller"
     docker push jucacrispim/toxicbuild:poller
+    echo "Uploading integrations"
     docker push jucacrispim/toxicbuild:integrations
+    echo "Uploading web"
     docker push jucacrispim/toxicbuild:web
 }
 
