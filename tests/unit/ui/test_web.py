@@ -932,6 +932,15 @@ class StreamHandlerTest(TestCase):
         self.handler._send_step_output_info(info)
         self.assertTrue(self.handler.write2sock.called)
 
+    def test_send_step_output_info_step_uuid(self):
+        self.handler.request.arguments = {
+            'uuid': ['sfdaf1'.encode('utf-8')]}
+
+        info = {'uuid': 'sfdaf1', 'build': {'uuid': 'some-uuid'}}
+        self.handler.write2sock = MagicMock()
+        self.handler._send_step_output_info(info)
+        self.assertTrue(self.handler.write2sock.called)
+
     def test_send_step_output_info_wrong_uuid(self):
         self.handler.request.arguments = {
             'uuid': ['sfdafs1'.encode('utf-8')]}

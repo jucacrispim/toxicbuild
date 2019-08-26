@@ -1298,6 +1298,15 @@ body{
     font-size: 0.9em;
 }
 
+#step-details .step-command{
+    font-size: 1.0em;
+    margin-right: 15px;
+}
+
+#step-details .inner-container-left{
+    margin-top: 10px;
+}
+
 .build-builder-row{
     margin-bottom: 10px;
 }

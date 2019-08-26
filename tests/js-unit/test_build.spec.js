@@ -120,6 +120,55 @@ describe('BuildStepDetailsView', function(){
     expect(this.view.model.fetch).not.toHaveBeenCalled();
   });
 
+  it('test-addStepOutput-bad-uuid', function(){
+    let data = {'uuid': 'a-uuid'};
+    this.view.step_uuid = 'other-uuid';
+    let r = this.view._addStepOutput(data);
+    expect(r).toBe(false);
+  });
+
+  it('test-addStepOutput', function(){
+    spyOn($.fn, 'append');
+    spyOn(utils, 'scrollToBottom');
+    let data = {'uuid': 'a-uuid'};
+    this.view.step_uuid = 'a-uuid';
+    this.view._scroll = false;
+    let r = this.view._addStepOutput(data);
+    expect(r).toBe(true);
+    expect($.fn.append).toHaveBeenCalled();
+    expect(utils.scrollToBottom).not.toHaveBeenCalled();
+  });
+
+  it('test-addStepOutput-scroll', function(){
+    spyOn($.fn, 'append');
+    spyOn(utils, 'scrollToBottom');
+    let data = {'uuid': 'a-uuid'};
+    this.view.step_uuid = 'a-uuid';
+    this.view._scroll = true;
+    let r = this.view._addStepOutput(data);
+    expect(r).toBe(true);
+    expect($.fn.append).toHaveBeenCalled();
+    expect(utils.scrollToBottom).toHaveBeenCalled();
+  });
+
+  it('test-reRenderFinished', function(){
+    spyOn(this.view, 'render');
+    this.view.step_uuid = 'uuid';
+    let data = {status: 'success', output: 'ok', total_time: 10, uuid: 'uuid'};
+    this.view._reRenderFinished(data);
+
+    expect(this.view.render).toHaveBeenCalled();
+  });
+
+  it('test-reRenderFinished-bad-uuid', function(){
+    spyOn(this.view, 'render');
+    this.view.step_uuid = 'other';
+    let data = {status: 'success', output: 'ok', total_time: 10, uuid: 'uuid'};
+    this.view._reRenderFinished(data);
+
+    expect(this.view.render).not.toHaveBeenCalled();
+  });
+
 });
 
 describe('BuildDetailsViewTest', function(){

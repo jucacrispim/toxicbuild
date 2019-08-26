@@ -307,9 +307,9 @@ class BaseOneSideFloatingPage extends BaseFloatingPage{
 
     this._prepareOpenAnimation();
     await this.view.render();
-    this._listen2events();
     $('.wait-toxic-spinner').hide();
     this._animateOpen();
+    this._listen2events();
   }
 
 }
@@ -333,6 +333,11 @@ class BuildStepDetailsPage extends BaseOneSideFloatingPage{
     this.step_uuid = options ? options.step_uuid : '';
     this.template_url = '/templates/step/' + this.step_uuid;
     this.view = new BuildStepDetailsView({step_uuid: this.step_uuid});
+  }
+
+  close_page(){
+    let reject_regex = /^\/step\/.*/;
+    super.close_page(reject_regex);
   }
 
 }

@@ -161,6 +161,7 @@ class BuildStepDetailsView extends Backbone.View{
     options = options || {'tagName': 'div'};
     options.model = options.model || new BuildStep();
     super(options);
+    let self = this;
 
     this.directive = {'.step-status': 'status',
 		      '.step-output': 'output',
@@ -174,16 +175,26 @@ class BuildStepDetailsView extends Backbone.View{
     this.compiled_template = null;
     this.container_selector = '.step-details-container';
     this.container = null;
+    this._compiled_html = null;
 
     this._scroll = false;
+
+    $(document).on('step_output_info', function(e, data){
+      self._addStepOutput(data);
+    });
+
+    $(document).on('step_finished', function(e, data){
+      self._reRenderFinished(data);
+    });
 
   }
 
   _get_kw(){
+    let status = this.model.get('status');
     let status_translation = i18n(status);
     let kw = {
       status: status_translation,
-      original_status: this.model.get('status'),
+      original_status: status,
       started: this.model.get('started'),
       output: this.model.get('output'),
       total_time: this.model.get('total_time'),
@@ -192,7 +203,41 @@ class BuildStepDetailsView extends Backbone.View{
     return kw;
   }
 
+  setSetpOutput(output){
+    let model_output = this.model.get('output') || '';
+    model_output += output;
+    this.model.set('output', model_output);
+
+  }
+
+  _addStepOutput(data){
+    let step_uuid = data['uuid'];
+    if (step_uuid != this.step_uuid){
+      return false;
+    }
+
+    this.setSetpOutput(data.output);
+    $('.step-output', this._compiled_html).append(data.output);
+
+    if (this._scroll){
+      utils.scrollToBottom();
+    }
+    return true;
+  }
+
+  _reRenderFinished(data){
+    if (data.uuid != this.step_uuid){
+      return false;
+    }
+    this.model.set('status', data.status);
+    this.model.set('output', data.output);
+    this.model.set('total_time', data.total_time);
+    this.render(false);
+    return true;
+  }
+
   async render(fetch=true){
+    let self = this;
     if (fetch){
       await this.model.fetch({step_uuid: this.step_uuid});
       let repo = this.model.get('repository');
@@ -207,17 +252,24 @@ class BuildStepDetailsView extends Backbone.View{
     $('.wait-toxic-spinner').hide();
 
     let kw = this._get_kw();
-    let compiled = $(this.compiled_template(kw));
+    let compiled = this._compiled_html = $(this.compiled_template(kw));
     let badge_class = utils.get_badge_class(kw.original_status);
     $('.step-status', compiled).removeClass().addClass(
       'step-status badge ' + badge_class);
     $('.obj-details-buttons-container', compiled).show();
     this.container = $(this.container_selector);
     this.container.html(compiled);
+
+    $('.follow-output', this.container).on('click', function(){
+      utils.scrollToBottom();
+      self._scroll = true;
+    });
+
   }
 
 
 }
+
 
 class BuildDetailsView extends BaseBuildDetailsView{
 
@@ -377,7 +429,7 @@ class BuildDetailsView extends BaseBuildDetailsView{
   }
 
   _scrollToBottom(){
-    window.scrollTo(0,document.body.scrollHeight);
+    utils.scrollToBottom();
   }
 
   _listen2events(template){

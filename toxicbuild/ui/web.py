@@ -727,9 +727,10 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
         """Sends information about step output to the ws client.
 
         :param info: Message sent by the master"""
-        build_uuid = self.request.arguments.get('uuid')[0].decode()
-        uuid = info.get('build').get('uuid')
-        if build_uuid == uuid:
+        requested_uuid = self.request.arguments.get('uuid')[0].decode()
+        build_uuid = info.get('build').get('uuid')
+        step_uuid = info.get('uuid')
+        if requested_uuid in [build_uuid, step_uuid]:
             self.write2sock(info)
 
     def _send_build_info(self, info):

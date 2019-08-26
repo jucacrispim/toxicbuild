@@ -209,6 +209,10 @@ var utils = {
   setTZCookie(){
     let tz = utils.getClientTZ();
     Cookies.set('tzname', tz);
+  },
+
+  scrollToBottom(){
+    window.scrollTo(0,document.body.scrollHeight);
   }
 
 };
