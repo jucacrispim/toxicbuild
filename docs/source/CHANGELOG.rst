@@ -3,6 +3,7 @@ Changelog
 
 * 0.7.0
 
+  - Added step details page
   - Added branch filter on waterfall
   - Added ci-include-builders and ci-exclude-builders commit instructions.
   - Added environment variables to repository.
