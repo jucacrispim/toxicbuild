@@ -1,0 +1,51 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-08-27 00:48-0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Add a new repository to the system"
+msgstr "Adiciona um novo repositório ao sistema"
+
+msgid "List the repositories"
+msgstr ""
+
+msgid "Interact with a repository"
+msgstr ""
+
+msgid "The full name of a repository"
+msgstr ""
+
+msgid "Welcome to {toxicbuild}"
+msgstr ""
+
+msgid "Type {h} for help and {q} for quit"
+msgstr ""
+
+msgid "Displays this help text. If `command-name` displays the command help text"
+msgstr ""
+
+msgid "Parameters"
+msgstr ""
+
+msgid "Finishes the program"
+msgstr ""
+
+msgid "Example"
+msgstr ""
+
+msgid "Command \"{}\" does not exist"
+msgstr ""
