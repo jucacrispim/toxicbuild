@@ -128,7 +128,11 @@ class BottomAlignedListBox(urwid.ListBox):
     by padding on top of the actual content if needed.
     """
 
-    def render(self, *args, **kwargs):
+    def render(self, *args, **kwargs):  # pylint: disable=E0202
+        # urwid.ListBox handles an exception and may override this method
+        # in its __init__. If that happens this may break here, but
+        # disable pylint anyways.
+
         canvas = super().render(*args, **kwargs)
 
         top = self._get_top_blank_count(canvas)
