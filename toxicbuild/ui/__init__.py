@@ -18,6 +18,8 @@ here = os.path.dirname(os.path.abspath(__file__))
 # translations for cli
 cli_translations = os.path.join(here, 'translations')
 gettext.install('toxicbuild.ui', cli_translations)
+t = gettext.translation('toxicbuild.ui', cli_translations)
+translate = t.gettext
 
 
 # translations for ui

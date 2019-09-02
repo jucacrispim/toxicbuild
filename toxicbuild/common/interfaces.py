@@ -606,7 +606,7 @@ class RepositoryInterface(BaseHoleInterface):
         return resp
 
     async def update(self, **kwargs):
-        """Updates a slave"""
+        """Updates a repository"""
         with await self.get_client(self.requester) as client:
             resp = await client.repo_update(repo_name_or_id=self.id,
                                             **kwargs)
