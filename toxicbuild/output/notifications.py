@@ -71,8 +71,8 @@ from toxicbuild.core.mail import MailSender as MailSenderCore
 from toxicbuild.core.plugins import Plugin, PluginMeta
 from toxicbuild.core.utils import (LoggerMixin, datetime2string,
                                    string2datetime)
-from toxicbuild.integrations.github import GithubInstallation
-from toxicbuild.integrations.gitlab import GitLabInstallation
+from toxicbuild.integrations.github import GithubIntegration
+from toxicbuild.integrations.gitlab import GitlabIntegration
 from toxicbuild.master.utils import (PrettyListField, PrettyStringField,
                                      PrettyURLField)
 from toxicbuild.output import settings
@@ -414,8 +414,8 @@ class GithubCheckRunNotification(Notification):
     run_name = 'ToxicBuild CI'
     """The name displayed on github."""
 
-    installation = ReferenceField(GithubInstallation)
-    """The :class:`~toxicbuild.integrations.github.GithubInstallation`
+    installation = ReferenceField(GithubIntegration)
+    """The :class:`~toxicbuild.integrations.github.GithubIntegration`
     that owns the notification. It is needed because each installation has
     its own auth token and it is needed send the checks.
     """
@@ -506,8 +506,8 @@ class GitlabCommitStatusNotification(Notification):
 
     no_list = True
 
-    installation = ReferenceField(GitLabInstallation)
-    """The :class:`~toxicbuild.integrations.gitlab.GitLabInstallation`
+    installation = ReferenceField(GitlabIntegration)
+    """The :class:`~toxicbuild.integrations.gitlab.GitlabIntegration`
     that owns the notification. It is needed because each installation has
     its own auth token and it is needed send the checks.
     """

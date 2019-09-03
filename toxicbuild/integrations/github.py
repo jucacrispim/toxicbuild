@@ -27,7 +27,7 @@ from toxicbuild.core.utils import (string2datetime, now, localtime2utc,
                                    utc2localtime)
 from toxicbuild.integrations import settings
 from toxicbuild.integrations.base import (BaseIntegrationApp,
-                                          BaseIntegrationInstallation)
+                                          BaseIntegration)
 from toxicbuild.integrations.exceptions import (BadRequestToExternalAPI,
                                                 BadSignature)
 
@@ -44,7 +44,7 @@ Usage:
     # When a new installation is created on github we must create a
     # installation here.
 
-    install = await GithubInstallation.create(github_install_id, user)
+    install = await GithubIntegration.create(github_install_id, user)
 
     # When a push happens or a pull request is created or synchronized
     # we update the code here.
@@ -187,7 +187,7 @@ class GithubApp(BaseIntegrationApp):
         return installation
 
 
-class GithubInstallation(BaseIntegrationInstallation):
+class GithubIntegration(BaseIntegration):
     """An installation of the GitHub App. Installations have access to
     repositories and events."""
 

@@ -18,7 +18,7 @@
 
 
 from toxicbuild.integrations.exceptions import BadRequestToExternalAPI
-from toxicbuild.integrations.base import BaseIntegrationInstallation
+from toxicbuild.integrations.base import BaseIntegration
 from mongomotor.fields import StringField, IntField
 from toxicbuild.core import requests
 from toxicbuild.integrations import settings
@@ -30,7 +30,7 @@ See: `GitLab integration docs <https://about.gitlab.com/partners/integrate/>`_.
 """
 
 
-class GitLabInstallation(BaseIntegrationInstallation):
+class GitlabIntegration(BaseIntegration):
 
     code = StringField(requied=True)
     """The code first sent by the gitlab api. Used to generate the access token

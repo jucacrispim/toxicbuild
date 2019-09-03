@@ -63,44 +63,44 @@ class BaseIntegrationApp(TestCase):
 @patch('toxicbuild.common.interfaces.get_hole_client_settings',
        MagicMock(return_value={'host': 'localhost', 'port': 123,
                                'hole_token': 'asdf'}))
-class BaseIntegrationInstallationTest(TestCase):
+class BaseIntegrationTest(TestCase):
 
     @async_test
     async def setUp(self):
         self.user = base.UserInterface(None, {'email': 'bla@bla.com',
                                               'username': 'zé'})
         self.user.id = 'some-id'
-        self.installation = base.BaseIntegrationInstallation(
+        self.installation = base.BaseIntegration(
             user_id=self.user.id, user_name=self.user.username)
 
     @async_test
     async def tearDown(self):
         await base.BaseIntegrationApp.drop_collection()
-        await base.BaseIntegrationInstallation.drop_collection()
+        await base.BaseIntegration.drop_collection()
 
-    @patch.object(base.BaseIntegrationInstallation, 'import_repositories',
+    @patch.object(base.BaseIntegration, 'import_repositories',
                   AsyncMagicMock())
-    @patch.object(base.BaseIntegrationInstallation, 'save', AsyncMagicMock())
+    @patch.object(base.BaseIntegration, 'save', AsyncMagicMock())
     @patch.object(base.LoggerMixin, 'log_cls', Mock())
     @async_test
     async def test_create(self):
 
-        install = await base.BaseIntegrationInstallation.create(
+        install = await base.BaseIntegration.create(
             self.user)
         self.assertTrue(install.import_repositories.called)
         self.assertTrue(install.save.called)
 
-    @patch.object(base.BaseIntegrationInstallation, 'save', AsyncMagicMock())
-    @patch.object(base.BaseIntegrationInstallation, 'objects', Mock())
+    @patch.object(base.BaseIntegration, 'save', AsyncMagicMock())
+    @patch.object(base.BaseIntegration, 'objects', Mock())
     @patch.object(base.LoggerMixin, 'log_cls', Mock())
     @async_test
     async def test_create_install_already_exists(self):
         install = Mock()
         install.import_repositories = AsyncMagicMock()
-        base.BaseIntegrationInstallation.objects.filter.\
+        base.BaseIntegration.objects.filter.\
             return_value.first = AsyncMagicMock(return_value=install)
-        await base.BaseIntegrationInstallation.create(self.user)
-        install = await base.BaseIntegrationInstallation.create(self.user)
+        await base.BaseIntegration.create(self.user)
+        install = await base.BaseIntegration.create(self.user)
         self.assertFalse(install.save.called)
 
     @async_test
@@ -135,9 +135,9 @@ class BaseIntegrationInstallationTest(TestCase):
         self.assertEqual(len(base.RepositoryInterface.get.call_args_list), 2)
         self.assertTrue(base.sleep.called)
 
-    @patch.object(base.BaseIntegrationInstallation, '_wait_clone',
+    @patch.object(base.BaseIntegration, '_wait_clone',
                   AsyncMagicMock(
-                      spec=base.BaseIntegrationInstallation._wait_clone))
+                      spec=base.BaseIntegration._wait_clone))
     @async_test
     async def test_import_repositories(self):
         self.installation.list_repos = AsyncMagicMock(return_value=[
@@ -150,10 +150,10 @@ class BaseIntegrationInstallationTest(TestCase):
         self.assertEqual(
             len(self.installation.import_repository.call_args_list), 2)
 
-    @patch.object(base.BaseIntegrationInstallation, '_wait_clone',
+    @patch.object(base.BaseIntegration, '_wait_clone',
                   AsyncMagicMock(
-                      spec=base.BaseIntegrationInstallation._wait_clone))
-    @patch.object(base.BaseIntegrationInstallation, 'log', Mock())
+                      spec=base.BaseIntegration._wait_clone))
+    @patch.object(base.BaseIntegration, 'log', Mock())
     @async_test
     async def test_import_repositories_error(self):
         self.installation.list_repos = AsyncMagicMock(return_value=[
@@ -216,7 +216,7 @@ class BaseIntegrationInstallationTest(TestCase):
     @patch.object(base.RepositoryInterface, 'add', AsyncMagicMock(
         side_effect=base.AlreadyExists, spec=base.RepositoryInterface.add))
     @patch.object(base.SlaveInterface, 'list', AsyncMagicMock(return_value=[]))
-    @patch.object(base.BaseIntegrationInstallation, 'log', MagicMock())
+    @patch.object(base.BaseIntegration, 'log', MagicMock())
     @async_test
     async def test_import_repository_not_unique(self):
         repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
@@ -236,14 +236,14 @@ class BaseIntegrationInstallationTest(TestCase):
     @patch.object(base.RepositoryInterface, 'request_code_update',
                   AsyncMagicMock(
                       spec=base.RepositoryInterface.request_code_update))
-    @patch.object(base.BaseIntegrationInstallation, '_get_auth_url',
+    @patch.object(base.BaseIntegration, '_get_auth_url',
                   AsyncMagicMock(
-                      spec=base.BaseIntegrationInstallation._get_auth_url,
+                      spec=base.BaseIntegration._get_auth_url,
                       return_value='https://someurl.bla/bla.git'))
     @patch.object(
-        base.BaseIntegrationInstallation, '_get_repo_by_external_id',
+        base.BaseIntegration, '_get_repo_by_external_id',
         AsyncMagicMock(
-            spec=base.BaseIntegrationInstallation._get_repo_by_external_id,
+            spec=base.BaseIntegration._get_repo_by_external_id,
             return_value=base.RepositoryInterface(
                 None, {'url': 'https://someurl.bla/bla.git',
                        'fetch_url': 'https://auth@someurl.bla/bla.git'}))
@@ -261,14 +261,14 @@ class BaseIntegrationInstallationTest(TestCase):
     @patch.object(base.RepositoryInterface, 'request_code_update',
                   AsyncMagicMock(
                       spec=base.RepositoryInterface.request_code_update))
-    @patch.object(base.BaseIntegrationInstallation, '_get_auth_url',
+    @patch.object(base.BaseIntegration, '_get_auth_url',
                   AsyncMagicMock(
-                      spec=base.BaseIntegrationInstallation._get_auth_url,
+                      spec=base.BaseIntegration._get_auth_url,
                       return_value='https://someurl.bla/bla.git'))
     @patch.object(
-        base.BaseIntegrationInstallation, '_get_repo_by_external_id',
+        base.BaseIntegration, '_get_repo_by_external_id',
         AsyncMagicMock(
-            spec=base.BaseIntegrationInstallation._get_repo_by_external_id,
+            spec=base.BaseIntegration._get_repo_by_external_id,
             return_value=base.RepositoryInterface(
                 None, {'url': 'https://someurl.bla/bla.git',
                        'fetch_url': 'https://someurl.bla/bla.git'}))

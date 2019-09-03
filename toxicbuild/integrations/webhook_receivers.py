@@ -29,9 +29,9 @@ from tornado.web import HTTPError
 from toxicbuild.common.interfaces import UserInterface
 from toxicbuild.core.utils import LoggerMixin, validate_string
 from toxicbuild.integrations import settings
-from toxicbuild.integrations.github import (GithubInstallation, GithubApp,
+from toxicbuild.integrations.github import (GithubIntegration, GithubApp,
                                             BadSignature)
-from toxicbuild.integrations.gitlab import GitLabInstallation
+from toxicbuild.integrations.gitlab import GitlabIntegration
 
 
 class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
@@ -166,7 +166,7 @@ class GithubWebhookReceiver(BaseWebhookReceiver):
         if not githubapp_id:
             raise HTTPError(400)
 
-        ensure_future(GithubInstallation.create(
+        ensure_future(GithubIntegration.create(
             user, github_id=githubapp_id))
 
     async def _handle_ping(self):  # pragma no cover
@@ -177,7 +177,7 @@ class GithubWebhookReceiver(BaseWebhookReceiver):
 
     async def get_install(self):
         install_id = self.body['installation']['id']
-        install = await GithubInstallation.objects.get(github_id=install_id)
+        install = await GithubIntegration.objects.get(github_id=install_id)
         return install
 
     def get_repo_external_id(self):
@@ -282,11 +282,11 @@ class GitlabWebhookReceiver(BaseWebhookReceiver):
         if not self.state_is_valid():
             raise HTTPError(400)
 
-        ensure_future(GitLabInstallation.create(user, code=code))
+        ensure_future(GitlabIntegration.create(user, code=code))
 
     async def get_install(self):
         install_id = self.params.get('installation_id')
-        install = await GitLabInstallation.objects.get(id=install_id)
+        install = await GitlabIntegration.objects.get(id=install_id)
         return install
 
     def get_repo_external_id(self):

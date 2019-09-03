@@ -324,7 +324,7 @@ class GithubCheckRunNotificationTest(TestCase):
     async def setUp(self):
         self.user = User(email='a@a.com')
         await self.user.save()
-        self.installation = github.GithubInstallation(
+        self.installation = github.GithubIntegration(
             github_id=1234, user_id=str(self.user.id),
             user_name=self.user.username)
         await self.installation.save()
@@ -336,7 +336,7 @@ class GithubCheckRunNotificationTest(TestCase):
     @async_test
     async def tearDown(self):
         await User.drop_collection()
-        await github.GithubInstallation.drop_collection()
+        await github.GithubIntegration.drop_collection()
 
     @async_test
     async def test_run(self):
@@ -390,8 +390,8 @@ class GithubCheckRunNotificationTest(TestCase):
 
     @patch.object(github.requests, 'post', AsyncMagicMock(
         spec=github.requests.post))
-    @patch.object(github.GithubInstallation, 'get_header', AsyncMagicMock(
-        spec=github.GithubInstallation.get_header))
+    @patch.object(github.GithubIntegration, 'get_header', AsyncMagicMock(
+        spec=github.GithubIntegration.get_header))
     @async_test
     async def test_send_message(self):
         self.check_run.sender = {'id': 'some-id',
@@ -422,7 +422,7 @@ class GitlabCommitStatusNotificationTest(TestCase):
     async def setUp(self):
         self.user = User(email='a@a.com')
         await self.user.save()
-        self.installation = gitlab.GitLabInstallation(
+        self.installation = gitlab.GitlabIntegration(
             gitlab_user_id=1234, user_id=str(self.user.id),
             user_name=self.user.username)
         await self.installation.save()
@@ -434,7 +434,7 @@ class GitlabCommitStatusNotificationTest(TestCase):
     @async_test
     async def tearDown(self):
         await User.drop_collection()
-        await gitlab.GitLabInstallation.drop_collection()
+        await gitlab.GitlabIntegration.drop_collection()
 
     @async_test
     async def test_run(self):
@@ -448,8 +448,8 @@ class GitlabCommitStatusNotificationTest(TestCase):
 
     @patch.object(gitlab.requests, 'post', AsyncMagicMock(
         spec=gitlab.requests.post))
-    @patch.object(gitlab.GitLabInstallation, 'get_header', AsyncMagicMock(
-        spec=gitlab.GitLabInstallation.get_header))
+    @patch.object(gitlab.GitlabIntegration, 'get_header', AsyncMagicMock(
+        spec=gitlab.GitlabIntegration.get_header))
     @async_test
     async def test_send_message(self):
         self.notif.sender = {'id': 'some-id',

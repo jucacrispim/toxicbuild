@@ -39,6 +39,11 @@ BaseInterface.settings = settings
 
 
 class BaseIntegrationApp(LoggerMixin, Document):
+    """Base class for integrations application. When integrating
+    with a 3rd party service like gitlab, github or bitbucket you
+    need first to create an application - called oauth client on
+    bitbucket - on their side.
+    """
 
     meta = {'allow_inheritance': True}
 
@@ -71,8 +76,10 @@ class ExternalInstallationRepository(LoggerMixin, EmbeddedDocument):
     """Full name of the repository in the external service."""
 
 
-class BaseIntegrationInstallation(LoggerMixin, Document):
-    """A installation is created"""
+class BaseIntegration(LoggerMixin, Document):
+    """A installation is created when a user gives permission to an
+    application in their repositories.
+    """
 
     user_id = StringField(required=True)
     """The id of the user who owns the installation"""
@@ -85,7 +92,8 @@ class BaseIntegrationInstallation(LoggerMixin, Document):
 
     notif_name = None
 
-    meta = {'allow_inheritance': True}
+    meta = {'allow_inheritance': True,
+            'collection': 'base_integration_installation'}
 
     @property
     def user(self):

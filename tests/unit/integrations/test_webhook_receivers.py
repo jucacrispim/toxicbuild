@@ -175,7 +175,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     @async_test
     async def test_handle_pull_request_different_repos(self):
         install = create_autospec(
-            spec=webhook_receivers.GithubInstallation,
+            spec=webhook_receivers.GithubIntegration,
             mock_cls=AsyncMagicMock)
 
         self.webhook_receiver.get_install.return_value = install
@@ -204,7 +204,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     @async_test
     async def test_handle_pull_request_opended_same_repo(self):
         install = create_autospec(
-            spec=webhook_receivers.GithubInstallation,
+            spec=webhook_receivers.GithubIntegration,
             mock_cls=AsyncMagicMock)
 
         self.webhook_receiver.get_install.return_value = install
@@ -279,7 +279,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
             yield self.webhook_receiver.create_installation(user)
 
     @patch.object(
-        webhook_receivers.GithubInstallation, 'create', AsyncMagicMock())
+        webhook_receivers.GithubIntegration, 'create', AsyncMagicMock())
     @patch.object(webhook_receivers, 'settings', Mock())
     @gen_test
     def test_create_installation_ok(self):
@@ -288,7 +288,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver.params = {'installation_id': 1234}
         self.webhook_receiver.redirect = Mock()
         yield self.webhook_receiver.create_installation(user)
-        self.assertTrue(webhook_receivers.GithubInstallation.create.called)
+        self.assertTrue(webhook_receivers.GithubIntegration.create.called)
 
     def test_check_event_type_ping(self):
         self.webhook_receiver.request.headers = {'X-GitHub-Event': 'ping'}
@@ -311,7 +311,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         r = self.webhook_receiver.check_event_type()
         self.assertIsNone(r)
 
-    @patch.object(webhook_receivers.GithubInstallation, 'objects',
+    @patch.object(webhook_receivers.GithubIntegration, 'objects',
                   AsyncMagicMock())
     @async_test
     async def test_handle_install_repo_added(self):
@@ -320,10 +320,10 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver.body = body
         tasks = await self.webhook_receiver._handle_install_repo_added()
         await asyncio.gather(*tasks)
-        install = webhook_receivers.GithubInstallation.objects.get.return_value
+        install = webhook_receivers.GithubIntegration.objects.get.return_value
         self.assertTrue(install.import_repository.called)
 
-    @patch.object(webhook_receivers.GithubInstallation, 'objects',
+    @patch.object(webhook_receivers.GithubIntegration, 'objects',
                   AsyncMagicMock())
     @async_test
     async def test_handle_install_repo_removed(self):
@@ -331,7 +331,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
                 'repositories_removed': [{'id': '4321'}]}
         self.webhook_receiver.body = body
         await self.webhook_receiver._handle_install_repo_removed()
-        install = webhook_receivers.GithubInstallation.objects.get.return_value
+        install = webhook_receivers.GithubIntegration.objects.get.return_value
         self.assertTrue(install.remove_repository.called)
 
     def test_get_pull_request_source(self):
@@ -367,7 +367,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
     @async_test
     async def test_handle_check_run_rerequested(self):
         install = create_autospec(
-            spec=webhook_receivers.GithubInstallation,
+            spec=webhook_receivers.GithubIntegration,
             mock_cls=AsyncMagicMock)
 
         self.webhook_receiver.get_install.return_value = install
@@ -537,7 +537,7 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
         with self.assertRaises(webhook_receivers.HTTPError):
             self.webhook_receiver.create_installation(user)
 
-    @patch.object(webhook_receivers.GitLabInstallation, 'create',
+    @patch.object(webhook_receivers.GitlabIntegration, 'create',
                   AsyncMagicMock())
     @patch.object(webhook_receivers.GitlabWebhookReceiver, 'state_is_valid',
                   Mock(return_value=True))
@@ -546,7 +546,7 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver.params = {'code': 'some-code',
                                         'state': 'some-state'}
         self.webhook_receiver.create_installation(user)
-        self.assertTrue(webhook_receivers.GitLabInstallation.create.called)
+        self.assertTrue(webhook_receivers.GitlabIntegration.create.called)
 
     def test_check_event_type(self):
 
@@ -693,11 +693,11 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
 
         self.assertTrue(r['branch'])
 
-    @patch.object(webhook_receivers.GitLabInstallation, 'objects', Mock())
+    @patch.object(webhook_receivers.GitlabIntegration, 'objects', Mock())
     @async_test
     async def test_get_install(self):
-        webhook_receivers.GitLabInstallation.objects.get = AsyncMagicMock()
-        install = webhook_receivers.GitLabInstallation.objects.get.return_value
+        webhook_receivers.GitlabIntegration.objects.get = AsyncMagicMock()
+        install = webhook_receivers.GitlabIntegration.objects.get.return_value
         self.webhook_receiver.params = {'installation_id': '123'}
 
         r = await self.webhook_receiver.get_install()

@@ -25,11 +25,11 @@ from tests import async_test, AsyncMagicMock
 from tests.unit.integrations import INTEGRATIONS_DATA_PATH
 
 
-class GitLabInstallationTest(TestCase):
+class GitlabIntegrationTest(TestCase):
 
     @async_test
     def setUp(self):
-        self.installation = gitlab.GitLabInstallation(access_token='asdf')
+        self.installation = gitlab.GitlabIntegration(access_token='asdf')
 
     @async_test
     async def test_get_header(self):
@@ -48,7 +48,7 @@ class GitLabInstallationTest(TestCase):
         self.assertTrue(self.installation.create_access_token.called)
         self.assertEqual(r, expected)
 
-    @patch.object(gitlab.GitLabInstallation, 'get_header', AsyncMagicMock(
+    @patch.object(gitlab.GitlabIntegration, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(gitlab.requests, 'get', AsyncMagicMock())
     @async_test
@@ -69,7 +69,7 @@ class GitLabInstallationTest(TestCase):
         self.assertTrue(' ' not in repos[0]['full_name'])
         self.assertEqual(len(repos), 20)
 
-    @patch.object(gitlab.GitLabInstallation, 'get_header', AsyncMagicMock(
+    @patch.object(gitlab.GitlabIntegration, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(gitlab.requests, 'get', AsyncMagicMock())
     @async_test
@@ -104,7 +104,7 @@ class GitLabInstallationTest(TestCase):
         self.assertTrue(self.installation.create_access_token.called)
         self.assertEqual(expected, returned)
 
-    @patch.object(gitlab.GitLabInstallation, 'get_header', AsyncMagicMock(
+    @patch.object(gitlab.GitlabIntegration, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(gitlab.requests, 'post', AsyncMagicMock())
     @async_test
@@ -115,7 +115,7 @@ class GitLabInstallationTest(TestCase):
         ret = await self.installation.create_webhook(1234)
         self.assertTrue(ret)
 
-    @patch.object(gitlab.GitLabInstallation, 'get_header', AsyncMagicMock(
+    @patch.object(gitlab.GitlabIntegration, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(gitlab.requests, 'post', AsyncMagicMock())
     @async_test
@@ -125,7 +125,7 @@ class GitLabInstallationTest(TestCase):
         with self.assertRaises(gitlab.BadRequestToExternalAPI):
             await self.installation.create_webhook(1234)
 
-    @patch.object(gitlab.BaseIntegrationInstallation, 'import_repository',
+    @patch.object(gitlab.BaseIntegration, 'import_repository',
                   AsyncMagicMock(return_value=Mock()))
     @async_test
     async def test_import_repository(self):
@@ -134,7 +134,7 @@ class GitLabInstallationTest(TestCase):
 
         self.assertTrue(self.installation.create_webhook.called)
 
-    @patch.object(gitlab.BaseIntegrationInstallation, 'import_repository',
+    @patch.object(gitlab.BaseIntegration, 'import_repository',
                   AsyncMagicMock(return_value=False))
     @async_test
     async def test_import_repository_dont_create_webhook(self):
@@ -143,7 +143,7 @@ class GitLabInstallationTest(TestCase):
 
         self.assertFalse(self.installation.create_webhook.called)
 
-    @patch.object(gitlab.GitLabInstallation, 'save', AsyncMagicMock())
+    @patch.object(gitlab.GitlabIntegration, 'save', AsyncMagicMock())
     @patch.object(gitlab.requests, 'post', AsyncMagicMock())
     @async_test
     async def test_create_access_token(self):
@@ -165,7 +165,7 @@ class GitLabInstallationTest(TestCase):
         with self.assertRaises(gitlab.BadRequestToExternalAPI):
             await self.installation.create_access_token()
 
-    @patch.object(gitlab.GitLabInstallation, 'save', AsyncMagicMock())
+    @patch.object(gitlab.GitlabIntegration, 'save', AsyncMagicMock())
     @patch.object(gitlab.requests, 'get', AsyncMagicMock())
     @async_test
     async def test_get_user_id(self):

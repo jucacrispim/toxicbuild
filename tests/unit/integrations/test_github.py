@@ -37,7 +37,7 @@ class GitHubAppTest(TestCase):
     @async_test
     async def tearDown(self):
         await github.GithubApp.drop_collection()
-        await github.GithubInstallation.drop_collection()
+        await github.GithubIntegration.drop_collection()
 
     @patch.object(github.jwt, 'encode', Mock(spec=github.jwt.encode,
                                              return_value=b'retval'))
@@ -247,22 +247,22 @@ class GitHubAppTest(TestCase):
         self.assertTrue(eq)
 
 
-class GithubInstallationTest(TestCase):
+class GithubIntegrationTest(TestCase):
 
     @async_test
     async def setUp(self):
         self.user = base.UserInterface(None, dict(email='bla@bla.com',
                                                   id='some-id',
                                                   name='bla'))
-        self.installation = github.GithubInstallation(user_id=self.user.id,
-                                                      user_name=self.user.name,
-                                                      github_id=1234)
+        self.installation = github.GithubIntegration(user_id=self.user.id,
+                                                     user_name=self.user.name,
+                                                     github_id=1234)
         await self.installation.save()
 
     @async_test
     async def tearDown(self):
         await github.GithubApp.drop_collection()
-        await github.GithubInstallation.drop_collection()
+        await github.GithubIntegration.drop_collection()
 
     @patch.object(github, 'now', Mock())
     def test_token_is_expired_not_expired(self):
@@ -304,7 +304,7 @@ class GithubInstallationTest(TestCase):
 
     @patch.object(github.GithubApp, 'create_installation_token',
                   AsyncMagicMock())
-    @patch.object(github.GithubInstallation, 'token_is_expired', True)
+    @patch.object(github.GithubIntegration, 'token_is_expired', True)
     @async_test
     async def test_get_header_token_expired(self):
 
@@ -319,7 +319,7 @@ class GithubInstallationTest(TestCase):
 
     @patch.object(github.GithubApp, 'create_installation_token',
                   AsyncMagicMock())
-    @patch.object(github.GithubInstallation, 'token_is_expired', False)
+    @patch.object(github.GithubIntegration, 'token_is_expired', False)
     @async_test
     async def test_get_header(self):
         self.installation.auth_token = 'auth-token'
@@ -330,7 +330,7 @@ class GithubInstallationTest(TestCase):
 
     @patch.object(github.GithubApp, 'create_installation_token',
                   AsyncMagicMock())
-    @patch.object(github.GithubInstallation, 'token_is_expired', True)
+    @patch.object(github.GithubIntegration, 'token_is_expired', True)
     @async_test
     async def test_get_auth_url_expired_token(self):
         self.installation.auth_token = 'my-token'
@@ -342,7 +342,7 @@ class GithubInstallationTest(TestCase):
 
     @patch.object(github.GithubApp, 'create_installation_token',
                   AsyncMagicMock())
-    @patch.object(github.GithubInstallation, 'token_is_expired', False)
+    @patch.object(github.GithubIntegration, 'token_is_expired', False)
     @async_test
     async def test_get_auth_url(self):
         self.installation.auth_token = 'my-token'
@@ -353,7 +353,7 @@ class GithubInstallationTest(TestCase):
             self.installation.app.create_installation_token.called)
         self.assertEqual(expected, returned)
 
-    @patch.object(github.GithubInstallation, 'get_header', AsyncMagicMock(
+    @patch.object(github.GithubIntegration, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(github.requests, 'get', AsyncMagicMock())
     @async_test
@@ -370,7 +370,7 @@ class GithubInstallationTest(TestCase):
         repos = await self.installation.list_repos()
         self.assertEqual(len(repos), 1)
 
-    @patch.object(github.GithubInstallation, 'get_header', AsyncMagicMock(
+    @patch.object(github.GithubIntegration, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(github.requests, 'get', AsyncMagicMock())
     @async_test
@@ -387,7 +387,7 @@ class GithubInstallationTest(TestCase):
         with self.assertRaises(github.BadRequestToExternalAPI):
             await self.installation.list_repos()
 
-    @patch.object(github.GithubInstallation, 'get_header', AsyncMagicMock(
+    @patch.object(github.GithubIntegration, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(github.requests, 'get', AsyncMagicMock())
     @async_test
@@ -404,7 +404,7 @@ class GithubInstallationTest(TestCase):
         repo = await self.installation.get_repo(1234)
         self.assertEqual(repo['name'], 'Hello-World')
 
-    @patch.object(github.GithubInstallation, 'get_header', AsyncMagicMock(
+    @patch.object(github.GithubIntegration, 'get_header', AsyncMagicMock(
         return_value={}))
     @patch.object(github.requests, 'get', AsyncMagicMock())
     @async_test
