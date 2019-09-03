@@ -53,19 +53,22 @@ class Response:
 
 
 @asyncio.coroutine
-def _request(method, url, **kwargs):
+def _request(method, url, sesskw=None, **kwargs):
     """Performs a http request and returns an instance of
     :class:`toxicbuild.core.requests.Response`
 
     :param method: The requrest's method.
     :param url: Request's url.
+    :param sesskw: Named arguments passed to aiohttp.ClientSession.
     :param kwargs: Arguments passed to aiohttp.ClientSession.request
         method.
     """
 
-    loop = asyncio.get_event_loop()
-
-    client = aiohttp.ClientSession(loop=loop)
+    sesskw = sesskw or {}
+    if not sesskw.get('loop'):
+        loop = asyncio.get_event_loop()
+        sesskw['loop'] = loop
+    client = aiohttp.ClientSession(**sesskw)
     try:
         resp = yield from client.request(method, url, **kwargs)
         status = resp.status

@@ -78,8 +78,8 @@ def after_feature(context, feature):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(del_repo(context))
 
-    from toxicbuild.integrations.github import GithubInstallation
-    loop.run_until_complete(GithubInstallation.drop_collection())
+    from toxicbuild.integrations.github import GithubIntegration
+    loop.run_until_complete(GithubIntegration.drop_collection())
     loop.run_until_complete(User.drop_collection())
 
 

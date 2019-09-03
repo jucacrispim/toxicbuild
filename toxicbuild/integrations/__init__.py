@@ -54,10 +54,10 @@ def _check_conffile(workdir, conffile):
 
 
 def ensure_indexes():
-    from .github import GithubApp, GithubInstallation
+    from .github import GithubApp, GithubIntegration
 
     GithubApp.ensure_indexes()
-    GithubInstallation.ensure_indexes()
+    GithubIntegration.ensure_indexes()
 
 
 @command

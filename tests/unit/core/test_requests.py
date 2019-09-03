@@ -21,7 +21,7 @@ import asyncio
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 from toxicbuild.core import requests
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class ResponseTest(TestCase):
@@ -64,6 +64,19 @@ class RequestsTest(TestCase):
         requests.aiohttp.ClientSession.return_value.request = req
         r = yield from requests._request(method, url)
         self.assertEqual(r.text, 'some text')
+
+    @patch.object(requests.aiohttp, 'ClientSession', MagicMock())
+    @async_test
+    async def test_request_sesskw(self):
+        method = 'GET'
+        url = 'http://somewhere.com'
+
+        requests.aiohttp.ClientSession.return_value.request = AsyncMagicMock(
+            return_value=MagicMock())
+        await requests._request(method, url, sesskw={'a': 'thing',
+                                                     'loop': MagicMock()})
+        called_kw = requests.aiohttp.ClientSession.call_args[1]
+        self.assertEqual(sorted(list(called_kw.keys())), ['a', 'loop'])
 
     @patch.object(requests, '_request', MagicMock())
     @async_test
