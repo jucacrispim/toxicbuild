@@ -8,10 +8,10 @@ docker stop $(docker ps -q) &> /dev/null
 echo "  Done!"
 echo ""
 
-# echo "  Removing containers..."
-# docker rm $(docker ps -a -q) &> /dev/null
-# echo "  Done!"
-# echo ""
+echo "  Removing containers..."
+docker rm $(docker ps -a -q) &> /dev/null
+echo "  Done!"
+echo ""
 
 echo "  Removing old images..."
 docker rmi $(docker images --filter "before=toxicbase"  -q) &> /dev/null
