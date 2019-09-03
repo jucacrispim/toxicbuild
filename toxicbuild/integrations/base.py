@@ -21,7 +21,6 @@ import re
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (
     StringField,
-    IntField,
     EmbeddedDocumentListField,
     DynamicField,
 )
@@ -148,7 +147,6 @@ class BaseIntegration(LoggerMixin, Document):
     async def post_import_hooks(self, repo_external_id):  # pragma no cover
         """May execute actions after a repository is imported.
         """
-        pass
 
     async def get_auth_url(self, url):
         """Returns the repo url with the acces token for authentication.
