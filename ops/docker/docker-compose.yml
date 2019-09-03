@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 services:
 
   web:
@@ -53,9 +53,13 @@ services:
        ZK_SERVERS: "zookeeper:2181"
 
     depends_on:
+      - volumes-provisioner
       - rabbitmq
       - mongo
       - zookeeper
+
+    volumes:
+      - src-data:/home/toxicuser/ci/master/src/
 
   integrations:
     image: jucacrispim/toxicbuild:integrations
@@ -74,6 +78,7 @@ services:
     env_file: ./master.env
 
     depends_on:
+      - volumes-provisioner
       - rabbitmq
       - mongo
       - zookeeper
@@ -88,6 +93,10 @@ services:
        AMQPHOST: rabbitmq
        ZK_SERVERS: "zookeeper:2181"
        NOTIFICATIONS_API_URL: "http://output:9432/"
+
+    volumes:
+      - src-data:/home/toxicuser/ci/master/src/
+
 
   create_slave_token:
     image: jucacrispim/toxicbuild:slave
@@ -210,6 +219,15 @@ services:
       - zookeeper
       - rabbitmq
 
+  volumes-provisioner:
+      image: hasnat/volumes-provisioner
+      environment:
+        PROVISION_DIRECTORIES: "1000:1000:0755:/home/toxicuser/ci/master/src"
+
+      volumes:
+        - src-data:/home/toxicuser/ci/master/src/
+      network_mode: none
+
 
   mongo:
     image: mongo:4.0
@@ -222,3 +240,7 @@ services:
   zookeeper:
     image: zookeeper:3.5
     restart: always
+
+
+volumes:
+  src-data:

@@ -52,6 +52,7 @@ pull_imgs(){
     docker pull rabbitmq:3.7-alpine
     docker pull zookeeper:3.5
     docker pull python:3.7.4-slim-buster
+    docker pull hasnat/volumes-provisioner
 
     if [ $create_images -eq "1" ]
     then
@@ -331,6 +332,7 @@ clean_images(){
     docker rmi toxictest
     docker rmi toxictest-selenium
     docker rmi toxicbase
+    docker volume rm docker_src-data
     drop_db
 }
 
