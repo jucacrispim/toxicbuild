@@ -4,21 +4,21 @@
 echo "Cleaning environment..."
 
 echo "  Stopping containers..."
-docker stop $(docker ps -q)
+docker stop $(docker ps -q) &> /dev/null
 echo "  Done!"
-echo "\n"
+echo ""
 
 echo "  Removing containers..."
-docker rm $(docker ps -a -q)
+docker rm $(docker ps -a -q) &> /dev/null
 echo "  Done!"
-echo "\n"
+echo ""
 
 echo "  Removing old images..."
-docker rmi $(docker images --filter "before=toxicbase"  -q)
-docker rmi $(docker images --filter "before=toxictest"  -q)
-docker rmi $(docker images --filter "before=toxictest-selenium"  -q)
+docker rmi $(docker images --filter "before=toxicbase"  -q) &> /dev/null
+docker rmi $(docker images --filter "before=toxictest"  -q) &> /dev/null
+docker rmi $(docker images --filter "before=toxictest-selenium"  -q) &> /dev/null
 echo "  Done!"
-echo "\n"
+echo ""
 
 echo "Environment clean!"
 
