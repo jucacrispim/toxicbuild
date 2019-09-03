@@ -547,7 +547,7 @@ class GitlabCommitStatusNotification(Notification):
                   'ref': buildset_info['branch'],
                   'state': state}
         install = await self.installation
-        header = await install.get_header()
+        header = await install.get_headers()
 
         r = await requests.post(url, headers=header, params=params)
 

@@ -283,10 +283,10 @@ class GithubIntegrationTest(TestCase):
 
         self.assertTrue(self.installation.token_is_expired)
 
-    def test_auth_token_url(self):
+    def test_access_token_url(self):
         url = 'https://api.github.com/installations/{}/access_tokens'.format(
             str(self.installation.github_id))
-        self.assertEqual(self.installation.auth_token_url, url)
+        self.assertEqual(self.installation.access_token_url, url)
 
     @patch.object(github.GithubApp, 'create_installation_token',
                   AsyncMagicMock())
@@ -294,10 +294,10 @@ class GithubIntegrationTest(TestCase):
     async def test_get_header_no_token(self):
 
         def cmock(installation):
-            installation.auth_token = 'auth-token'
+            installation.access_token = 'auth-token'
 
         github.GithubApp.create_installation_token = asyncio.coroutine(cmock)
-        self.installation.auth_token = None
+        self.installation.access_token = None
         expected = 'token auth-token'
         header = await self.installation.get_header()
         self.assertEqual(header['Authorization'], expected)
@@ -309,10 +309,10 @@ class GithubIntegrationTest(TestCase):
     async def test_get_header_token_expired(self):
 
         def cmock(installation):
-            installation.auth_token = 'new-auth-token'
+            installation.access_token = 'new-auth-token'
 
         github.GithubApp.create_installation_token = asyncio.coroutine(cmock)
-        self.installation.auth_token = 'auth-token'
+        self.installation.access_token = 'auth-token'
         expected = 'token new-auth-token'
         header = await self.installation.get_header()
         self.assertEqual(header['Authorization'], expected)
@@ -322,33 +322,35 @@ class GithubIntegrationTest(TestCase):
     @patch.object(github.GithubIntegration, 'token_is_expired', False)
     @async_test
     async def test_get_header(self):
-        self.installation.auth_token = 'auth-token'
+        self.installation.access_token = 'auth-token'
         expected = 'token auth-token'
         header = await self.installation.get_header()
         self.assertEqual(header['Authorization'], expected)
         self.assertFalse(github.GithubApp.create_installation_token.called)
 
     @patch.object(github.GithubApp, 'create_installation_token',
-                  AsyncMagicMock())
+                  AsyncMagicMock(
+                      spec=github.GithubApp.create_installation_token))
     @patch.object(github.GithubIntegration, 'token_is_expired', True)
     @async_test
     async def test_get_auth_url_expired_token(self):
-        self.installation.auth_token = 'my-token'
+        self.installation.access_token = 'my-token'
         url = 'https://github.com/me/somerepo.git'
-        expected = 'https://x-access-token:my-token@github.com/me/somerepo.git'
-        returned = await self.installation._get_auth_url(url)
+        expected = 'https://x-access-token:None@github.com/me/somerepo.git'
+        returned = await self.installation.get_auth_url(url)
         self.assertTrue(self.installation.app.create_installation_token.called)
         self.assertEqual(expected, returned)
 
     @patch.object(github.GithubApp, 'create_installation_token',
-                  AsyncMagicMock())
+                  AsyncMagicMock(
+                      spec=github.GithubApp.create_installation_token))
     @patch.object(github.GithubIntegration, 'token_is_expired', False)
     @async_test
     async def test_get_auth_url(self):
-        self.installation.auth_token = 'my-token'
+        self.installation.access_token = 'my-token'
         url = 'https://github.com/me/somerepo.git'
         expected = 'https://x-access-token:my-token@github.com/me/somerepo.git'
-        returned = await self.installation._get_auth_url(url)
+        returned = await self.installation.get_auth_url(url)
         self.assertFalse(
             self.installation.app.create_installation_token.called)
         self.assertEqual(expected, returned)

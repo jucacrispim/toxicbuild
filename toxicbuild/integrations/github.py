@@ -173,13 +173,14 @@ class GithubApp(BaseIntegrationApp):
         header = {'Authorization': 'Bearer {}'.format(myjwt),
                   'Accept': 'application/vnd.github.machine-man-preview+json'}
 
-        ret = await requests.post(installation.auth_token_url, headers=header)
+        ret = await requests.post(installation.access_token_url,
+                                  headers=header)
 
         if ret.status != 201:
             raise BadRequestToExternalAPI(ret.status, ret.text)
 
         ret = ret.json()
-        installation.auth_token = ret['token']
+        installation.access_token = ret['token']
         expires_at = ret['expires_at'].replace('Z', '+0000')
         installation.expires = string2datetime(expires_at,
                                                dtformat="%Y-%m-%dT%H:%M:%S%z")
@@ -188,19 +189,22 @@ class GithubApp(BaseIntegrationApp):
 
 
 class GithubIntegration(BaseIntegration):
-    """An installation of the GitHub App. Installations have access to
-    repositories and events."""
+    """Github integrations uses a jwt based authentication instead of the
+    standad oath2. This is why this is a little different.
+    """
 
     app = GithubApp
     notif_name = 'github-check-run'
 
     # the id of the github app installation
     github_id = IntField()
-    auth_token = StringField()
+    access_token = StringField()
     expires = DateTimeField()
 
+    url_user = 'x-access-token'
+
     @property
-    def auth_token_url(self):
+    def access_token_url(self):
         """URL used to retrieve an access token for this installation."""
 
         url = settings.GITHUB_API_URL
@@ -217,25 +221,22 @@ class GithubIntegration(BaseIntegration):
     async def get_header(
             self, accept='application/vnd.github.machine-man-preview+json'):
 
-        if not self.auth_token or self.token_is_expired:
+        if not self.access_token or self.token_is_expired:
             await self.app.create_installation_token(self)
 
-        header = {'Authorization': 'token {}'.format(self.auth_token),
+        header = {'Authorization': 'token {}'.format(self.access_token),
                   'Accept': accept}
         return header
 
-    async def _get_auth_url(self, url):
-        """Returns the repo url with the acces token for authentication.
+    async def get_auth_url(self, url):
+        if self.token_is_expired:
+            self.access_token = None
 
-        :param url: The https repo url"""
+        r = await super().get_auth_url(url)
+        return r
 
-        if not self.auth_token or self.token_is_expired:
-            await self.app.create_installation_token(self)
-
-        new_url = url.replace('https://', '')
-        new_url = '{}x-access-token:{}@{}'.format('https://',
-                                                  self.auth_token, new_url)
-        return new_url
+    async def create_access_token(self):
+        await self.app.create_installation_token(self)
 
     async def list_repos(self):
         """Lists all respositories available to an installation.
@@ -261,3 +262,8 @@ class GithubIntegration(BaseIntegration):
         if ret.status != 200:
             raise BadRequestToExternalAPI(ret.status, ret.text, url)
         return ret.json()
+
+    async def get_user_id(self):  # pragma no cover
+        # we over write this for nothing because we don't need
+        # the user id in the github integration
+        pass

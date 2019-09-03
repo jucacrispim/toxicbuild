@@ -17,9 +17,14 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future, gather, sleep
+import re
 from mongomotor import Document, EmbeddedDocument
-from mongomotor.fields import (StringField, IntField,
-                               EmbeddedDocumentListField)
+from mongomotor.fields import (
+    StringField,
+    IntField,
+    EmbeddedDocumentListField,
+    DynamicField,
+)
 from toxicbuild.common.exceptions import AlreadyExists
 from toxicbuild.common.interfaces import (
     NotificationInterface,
@@ -28,12 +33,14 @@ from toxicbuild.common.interfaces import (
     UserInterface,
     BaseInterface
 )
-
+from toxicbuild.core import requests
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.integrations import settings
-from toxicbuild.integrations.exceptions import BadRepository
-
+from toxicbuild.integrations.exceptions import (
+    BadRepository,
+    BadRequestToExternalAPI
+)
 
 BaseInterface.settings = settings
 
@@ -66,7 +73,7 @@ class BaseIntegrationApp(LoggerMixin, Document):
 class ExternalInstallationRepository(LoggerMixin, EmbeddedDocument):
     """Information about a repository in an external service."""
 
-    external_id = IntField(required=True)
+    external_id = DynamicField(required=True)
     """The id of the repository in the external service."""
 
     repository_id = StringField(required=True)
@@ -77,8 +84,13 @@ class ExternalInstallationRepository(LoggerMixin, EmbeddedDocument):
 
 
 class BaseIntegration(LoggerMixin, Document):
-    """A installation is created when a user gives permission to an
-    application in their repositories.
+    """A basic oauth2 integration with third-party services. Extend this
+    one to create integrations.
+    """
+
+    code = StringField()
+    """The code first sent by the external api. Used to generate the
+    access token
     """
 
     user_id = StringField(required=True)
@@ -87,8 +99,18 @@ class BaseIntegration(LoggerMixin, Document):
     user_name = StringField(requierd=True)
     """The name of the user who owns the installation"""
 
+    external_user_id = DynamicField()
+    """The id of the user in a 3rd party service."""
+
     repositories = EmbeddedDocumentListField(ExternalInstallationRepository)
     """The repositories imported from the user external service account."""
+
+    access_token = StringField()
+    """Access token used for authentication on the api."""
+
+    url_user = None
+    """Used as username in a url that has authentication like user:pass@host.
+    """
 
     notif_name = None
 
@@ -101,28 +123,65 @@ class BaseIntegration(LoggerMixin, Document):
                                     'name': self.user_name})
 
     async def list_repos(self):
+        """Lists the repositories using a thrid-party api. Returns a list
+        of dictionaries. Each dictionary has the following keys:
+        - name
+        - id
+        - clone_url
+        - full_name
+        """
         raise NotImplementedError
 
-    def _get_import_chunks(self, repos):
+    async def request_access_token(self):
+        """Requests a new access token to a 3rd party service api.
+        Returns an access token.
+        """
 
-        try:
-            parallel_imports = settings.PARALLEL_IMPORTS
-        except AttributeError:
-            parallel_imports = None
+        raise NotImplementedError
 
-        if not parallel_imports:
-            yield repos
-            return
+    async def get_user_id(self):
+        """Get the user id using the 3rd party api and saves it.
+        """
 
-        for i in range(0, len(repos), parallel_imports):
-            yield repos[i:i + parallel_imports]
+        raise NotImplementedError
 
-    async def _get_auth_url(self, url):
+    async def post_import_hooks(self, repo_external_id):  # pragma no cover
+        """May execute actions after a repository is imported.
+        """
+        pass
+
+    async def get_auth_url(self, url):
         """Returns the repo url with the acces token for authentication.
 
         :param url: The https repo url"""
 
-        raise NotImplementedError
+        if not self.url_user:
+            raise BadRequestToExternalAPI(
+                'You need to set an url_user in your integration class')
+
+        if not self.access_token:
+            await self.create_access_token()
+
+        p = re.compile(r'(\w+)://(.*)')
+        protocol, url = p.match(url).groups()
+        new_url = '{}://{}:{}@{}'.format(protocol,
+                                         self.url_user, self.access_token, url)
+        return new_url
+
+    async def get_headers(self):
+        """Returns the header used for authenticated access to the api.
+        """
+        if not self.access_token:
+            await self.create_access_token()
+
+        headers = {'Authorization': 'Bearer {}'.format(self.access_token)}
+        return headers
+
+    async def create_access_token(self):
+        """Creates an access token to the gitlab api.
+        """
+        self.access_token = await self.request_access_token()
+        await self.save()
 
     def get_notif_config(self):
         return {'installation': str(self.id)}
@@ -161,7 +220,7 @@ class BaseIntegration(LoggerMixin, Document):
         # What triggers an update code is a message from github/gitlab in the
         # webhook receiver.
         user = self.user
-        fetch_url = await self._get_auth_url(repo_info['clone_url'])
+        fetch_url = await self.get_auth_url(repo_info['clone_url'])
         external_id = repo_info['id']
         external_full_name = repo_info['full_name']
         try:
@@ -189,13 +248,9 @@ class BaseIntegration(LoggerMixin, Document):
 
         if clone:
             await repo.request_code_update()
-        return repo
 
-    async def _wait_clone(self, repo):
-        repo = await RepositoryInterface.get(self.user, id=repo.id)
-        while repo.status == 'cloning':
-            await sleep(0.5)
-            repo = await RepositoryInterface.get(self.user, id=repo.id)
+        await self.post_import_hooks(external_id)
+        return repo
 
     async def import_repositories(self):
         """Imports all repositories available to the installation."""
@@ -228,8 +283,8 @@ class BaseIntegration(LoggerMixin, Document):
 
     @classmethod
     async def create(cls, user, **kwargs):
-        """Creates a new integration installation. Imports the repositories
-        available to the installation.
+        """Creates a new integration. Imports the repositories available
+        to the installation.
 
         :param user: The user that owns the installation.
         :param kwargs: Named arguments passed to installation class init.
@@ -243,20 +298,11 @@ class BaseIntegration(LoggerMixin, Document):
             installation = cls(user_id=str(user.id), user_name=user.username,
                                **kwargs)
             await installation.save()
+            await installation.create_access_token()
+            await installation.get_user_id()
 
         await installation.import_repositories()
         return installation
-
-    async def _get_repo_by_external_id(self, external_repo_id):
-        for repo in self.repositories:
-            if repo.external_id == external_repo_id:  # pragma no branch
-                repo_inst = await RepositoryInterface.get(
-                    self.user, id=repo.repository_id)
-                return repo_inst
-
-        raise BadRepository(
-            'External repository {} does not exist here.'.format(
-                external_repo_id))
 
     async def update_repository(self, external_repo_id, repo_branches=None,
                                 external=None, wait_for_lock=False):
@@ -272,7 +318,7 @@ class BaseIntegration(LoggerMixin, Document):
         """
 
         repo = await self._get_repo_by_external_id(external_repo_id)
-        url = await self._get_auth_url(repo.url)
+        url = await self.get_auth_url(repo.url)
         if repo.fetch_url != url:
             repo.fetch_url = url
             await repo.update(fetch_url=repo.fetch_url)
@@ -312,3 +358,48 @@ class BaseIntegration(LoggerMixin, Document):
 
         repo = await self._get_repo_by_external_id(github_repo_id)
         await repo.delete()
+
+    async def request2api(self, method, *args, **kwargs):
+        """Does a request to a 3rd party service. Returns a response object.
+
+        :param method: Request method.
+        :param args: Args passed to the request.
+        :param kwargs: Named arguments passed to the request.
+        """
+        fn = getattr(requests, method)
+        r = await fn(*args, **kwargs)
+        if r.status != 200:
+            raise BadRequestToExternalAPI(r.status, r.text)
+
+        return r
+
+    def _get_import_chunks(self, repos):
+
+        try:
+            parallel_imports = settings.PARALLEL_IMPORTS
+        except AttributeError:
+            parallel_imports = None
+
+        if not parallel_imports:
+            yield repos
+            return
+
+        for i in range(0, len(repos), parallel_imports):
+            yield repos[i:i + parallel_imports]
+
+    async def _get_repo_by_external_id(self, external_repo_id):
+        for repo in self.repositories:
+            if repo.external_id == external_repo_id:  # pragma no branch
+                repo_inst = await RepositoryInterface.get(
+                    self.user, id=repo.repository_id)
+                return repo_inst
+
+        raise BadRepository(
+            'External repository {} does not exist here.'.format(
+                external_repo_id))
+
+    async def _wait_clone(self, repo):
+        repo = await RepositoryInterface.get(self.user, id=repo.id)
+        while repo.status == 'cloning':
+            await sleep(0.5)
+            repo = await RepositoryInterface.get(self.user, id=repo.id)

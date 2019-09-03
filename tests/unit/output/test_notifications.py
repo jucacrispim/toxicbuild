@@ -423,7 +423,7 @@ class GitlabCommitStatusNotificationTest(TestCase):
         self.user = User(email='a@a.com')
         await self.user.save()
         self.installation = gitlab.GitlabIntegration(
-            gitlab_user_id=1234, user_id=str(self.user.id),
+            external_user_id=1234, user_id=str(self.user.id),
             user_name=self.user.username)
         await self.installation.save()
 
@@ -448,8 +448,8 @@ class GitlabCommitStatusNotificationTest(TestCase):
 
     @patch.object(gitlab.requests, 'post', AsyncMagicMock(
         spec=gitlab.requests.post))
-    @patch.object(gitlab.GitlabIntegration, 'get_header', AsyncMagicMock(
-        spec=gitlab.GitlabIntegration.get_header))
+    @patch.object(gitlab.GitlabIntegration, 'get_headers', AsyncMagicMock(
+        spec=gitlab.GitlabIntegration.get_headers))
     @async_test
     async def test_send_message(self):
         self.notif.sender = {'id': 'some-id',
