@@ -17,6 +17,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future, gather, sleep
+from datetime import timedelta
 import re
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (
@@ -35,7 +36,8 @@ from toxicbuild.common.interfaces import (
 )
 from toxicbuild.core import requests
 from toxicbuild.core.exceptions import ToxicClientException
-from toxicbuild.core.utils import LoggerMixin, now, utc2localtime
+from toxicbuild.core.utils import (LoggerMixin, now, utc2localtime,
+                                   localtime2utc)
 from toxicbuild.integrations import settings
 from toxicbuild.integrations.exceptions import (
     BadRepository,
@@ -452,11 +454,20 @@ class BaseIntegration(LoggerMixin, Document):
         return r
 
     async def post_import_hooks(self, repo_external_id):
-        """Eexecute actions after a repository is imported. Be default
+        """Execute actions after a repository is imported. Be default
         executes ``self.create_webhook``
         """
 
         await self.create_webhook(repo_external_id)
+
+    def get_expire_dt(self, secs):
+        """Given a number of seconds returns a datetime in the future
+        that is now() + (secs - 10)
+
+        :para secs: A number of seconds
+        """
+
+        return localtime2utc(now()) + timedelta(seconds=secs - 10)
 
     def _get_import_chunks(self, repos):
 

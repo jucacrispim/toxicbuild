@@ -532,3 +532,9 @@ class BaseIntegrationTest(TestCase):
 
         self.assertFalse(self.integration.refresh_access_token.called)
         self.assertFalse(self.integration.refresh_access_token.called)
+
+    def test_get_expire_dt(self):
+        secs = 20
+        dt = self.integration.get_expire_dt(secs)
+        self.assertTrue(dt > base.now())
+        self.assertTrue(dt < base.now() + base.timedelta(seconds=secs))

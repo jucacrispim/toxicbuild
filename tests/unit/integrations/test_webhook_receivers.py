@@ -726,3 +726,8 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
         r = self.webhook_receiver.get_pull_request_target()
 
         self.assertTrue(r['branch'])
+
+    def test_request_signature(self):
+        self.webhook_receiver.request.headers = {'X-Gitlab-Token': 'token'}
+        r = self.webhook_receiver.get_request_signature()
+        self.assertEqual(r, 'token')

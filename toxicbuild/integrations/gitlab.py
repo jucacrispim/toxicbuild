@@ -74,7 +74,9 @@ class GitlabIntegration(BaseIntegration):
                   'redirect_uri': self.REDIRECT_URI}
 
         r = await self.request2api('post', url, params=params)
-        return r.json()['access_token']
+        r = r.json()
+        r['expires'] = self.get_expire_dt(r['expires_in'])
+        return r
 
     async def list_repos(self):
         """Lists the repositories using GitLab API.

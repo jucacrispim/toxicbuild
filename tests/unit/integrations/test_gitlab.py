@@ -118,11 +118,13 @@ class GitlabIntegrationTest(TestCase):
         self.integration.access_token = None
         ret.status = 200
         ret.json = Mock()
-        ret.json.return_value = {'access_token': 'asdf'}
+        ret.json.return_value = {'access_token': 'asdf',
+                                 'expires_in': 7200}
         gitlab.GitlabIntegration.request2api.return_value = ret
         self.integration.get_user_id = AsyncMagicMock()
         r = await self.integration.request_access_token()
-        self.assertEqual(r, 'asdf')
+        self.assertEqual(r['access_token'], 'asdf')
+        self.assertIn('expires', r)
 
     @patch.object(gitlab.GitlabIntegration, 'request2api',
                   AsyncMagicMock(spec=gitlab.GitlabIntegration.request2api))
