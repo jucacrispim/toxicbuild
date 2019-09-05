@@ -17,10 +17,9 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
-from toxicbuild.integrations.exceptions import BadRequestToExternalAPI
-from toxicbuild.integrations.base import BaseIntegration
-from toxicbuild.core import requests
+from toxicbuild.integrations.base import BaseIntegration, BaseIntegrationApp
 from toxicbuild.integrations import settings
+from toxicbuild.integrations.exceptions import BadSignature
 
 __doc__ = """This module implements integration with gitlab. Imports
 repositories from GitLab and reacts to messages sent by gitlab to
@@ -29,7 +28,27 @@ See: `GitLab integration docs <https://about.gitlab.com/partners/integrate/>`_.
 """
 
 
+class GitlabApp(BaseIntegrationApp):
+
+    @classmethod
+    async def create_app(cls):
+        webhook_token = settings.GITLAB_WEBHOOK_TOKEN
+        app_id = settings.GITLAB_APP_ID
+        secret = settings.GITLAB_APP_SECRET
+        app = cls(app_id=app_id, webhook_token=webhook_token,
+                  secret=secret)
+        await app.save()
+        return app
+
+    async def validate_token(self, token):
+        if token != self.webhook_token:
+            raise BadSignature
+        return True
+
+
 class GitlabIntegration(BaseIntegration):
+
+    APP_CLS = GitlabApp
 
     url_user = 'oauth2'
     notif_name = 'gitlab-commit-status'
@@ -37,32 +56,25 @@ class GitlabIntegration(BaseIntegration):
     REDIRECT_URI = getattr(
         settings, 'INTEGRATIONS_HTTP_URL', '') + 'gitlab/setup'
 
-    async def get_user_id(self):
-        """Gets the user id from the gitlab api.
+    async def request_user_id(self):
+        """Gets the user id from the gitlab api. Returns the id
         """
         header = await self.get_headers()
         url = settings.GITLAB_API_URL + 'user'
         r = await self.request2api('get', url, headers=header)
-        r = r.json()
-        self.external_user_id = r['id']
-        await self.save()
+        return r.json()['id']
 
     async def request_access_token(self):
         url = settings.GITLAB_URL + 'oauth/token'
-
-        params = {'client_id': settings.GITLAB_APP_ID,
-                  'client_secret': settings.GITLAB_APP_SECRET,
+        app = await self.APP_CLS.get_app()
+        params = {'client_id': app.app_id,
+                  'client_secret': app.secret,
                   'code': self.code,
                   'grant_type': 'authorization_code',
                   'redirect_uri': self.REDIRECT_URI}
 
         r = await self.request2api('post', url, params=params)
         return r.json()['access_token']
-
-    async def create_access_token(self):
-        r = await super().create_access_token()
-        await self.get_user_id()
-        return r
 
     async def list_repos(self):
         """Lists the repositories using GitLab API.
@@ -101,21 +113,20 @@ class GitlabIntegration(BaseIntegration):
         self.log('Creating webhook to {}'.format(repo_external_id))
 
         header = await self.get_headers()
-        callback_url = settings.INTEGRATIONS_HTTP_URL + \
-            'gitlab/webhooks?installation_id={}'.format(str(self.id))
         body = {'id': repo_external_id,
-                'url': callback_url,
+                'url': self.webhook_url,
                 'push_events': True,
                 'merge_requests_events': True,
                 'token': settings.GITLAB_WEBHOOK_TOKEN}
 
         url = settings.GITLAB_API_URL + 'projects/{}/hooks'.format(
             repo_external_id)
-        ret = await requests.post(url, data=body, headers=header)
-
-        if ret.status not in [200, 201]:
-            raise BadRequestToExternalAPI(ret.status, ret.text)
+        await self.request2api('post', url, statuses=[200, 201], data=body,
+                               headers=header)
         return True
 
-    async def post_import_hooks(self, repo_external_id):
-        await self.create_webhook(repo_external_id)
+    @property
+    def token_is_expired(self):
+        """Gitlab tokens do not expire.
+        """
+        return False

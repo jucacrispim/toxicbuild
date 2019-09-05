@@ -25,18 +25,62 @@ from tests import async_test, AsyncMagicMock
 from tests.unit.integrations import INTEGRATIONS_DATA_PATH
 
 
+@patch.object(gitlab, 'settings', Mock(GITLAB_WEBHOOK_TOKEN='whtoken',
+                                       GITLAB_APP_ID='app-id',
+                                       GITLAB_APP_SECRET='app-secret'))
+class GitlabAppTest(TestCase):
+
+    @patch.object(gitlab, 'settings', Mock(GITLAB_WEBHOOK_TOKEN='whtoken',
+                                           GITLAB_APP_ID='app-id',
+                                           GITLAB_APP_SECRET='app-secret'))
+    @async_test
+    async def setUp(self):
+        self.app = await gitlab.GitlabApp.create_app()
+
+    @async_test
+    async def tearDown(self):
+        await gitlab.GitlabApp.drop_collection()
+
+    @async_test
+    async def test_create_app(self):
+        app = await gitlab.GitlabApp.create_app()
+        self.assertTrue(app.id)
+        self.assertEqual(app.app_id, 'app-id')
+
+    @async_test
+    async def test_validate_token_bad(self):
+        with self.assertRaises(gitlab.BadSignature):
+            await self.app.validate_token('bad')
+
+    @async_test
+    async def test_validate_token(self):
+        r = await self.app.validate_token('whtoken')
+        self.assertTrue(r)
+
+
+@patch.object(gitlab, 'settings', Mock(GITLAB_WEBHOOK_TOKEN='whtoken',
+                                       GITLAB_APP_ID='app-id',
+                                       GITLAB_API_URL='https://api.git.lab',
+                                       GITLAB_APP_SECRET='app-secret',
+                                       GITLAB_URL='https://git.lab'))
 class GitlabIntegrationTest(TestCase):
 
     @async_test
     def setUp(self):
         self.integration = gitlab.GitlabIntegration(access_token='asdf')
 
+    @async_test
+    async def tearDown(self):
+        gitlab.GitlabApp.drop_collection()
+        gitlab.GitlabIntegration.drop_collection()
+
     @patch.object(gitlab.GitlabIntegration, 'get_headers', AsyncMagicMock(
         return_value={}))
-    @patch.object(gitlab.requests, 'get', AsyncMagicMock())
+    @patch.object(gitlab.GitlabIntegration, 'request2api',
+                  AsyncMagicMock(spec=gitlab.GitlabIntegration.request2api))
     @async_test
     async def test_list_repos(self):
-        ret = gitlab.requests.get.return_value
+        ret = Mock()
         json_file = os.path.join(INTEGRATIONS_DATA_PATH,
                                  'gitlab-list-repos.json')
         with open(json_file, 'rb') as fd:
@@ -47,6 +91,7 @@ class GitlabIntegrationTest(TestCase):
         ret.headers = {'X-Next-Page': 0,
                        'X-Total-Pages': 1}
         ret.json = Mock(return_value=json_contents)
+        gitlab.GitlabIntegration.request2api.return_value = ret
 
         repos = await self.integration.list_repos()
         self.assertTrue(' ' not in repos[0]['full_name'])
@@ -54,67 +99,40 @@ class GitlabIntegrationTest(TestCase):
 
     @patch.object(gitlab.GitlabIntegration, 'get_headers', AsyncMagicMock(
         return_value={}))
-    @patch.object(gitlab.requests, 'post', AsyncMagicMock())
+    @patch.object(gitlab.GitlabIntegration, 'request2api',
+                  AsyncMagicMock(spec=gitlab.GitlabIntegration.request2api))
     @async_test
     async def test_create_webhook(self):
-        ret = gitlab.requests.post.return_value
+        ret = Mock()
 
-        ret.status = 200
+        ret.status = 201
+        gitlab.GitlabIntegration.request2api.return_value = ret
         ret = await self.integration.create_webhook(1234)
         self.assertTrue(ret)
 
-    @patch.object(gitlab.GitlabIntegration, 'get_headers', AsyncMagicMock(
-        return_value={}))
-    @patch.object(gitlab.requests, 'post', AsyncMagicMock())
-    @async_test
-    async def test_create_webhook_bad_request(self):
-        ret = gitlab.requests.post.return_value
-        ret.status = 400
-        with self.assertRaises(gitlab.BadRequestToExternalAPI):
-            await self.integration.create_webhook(1234)
-
-    @patch.object(gitlab.GitlabIntegration, 'create_webhook',
-                  AsyncMagicMock(
-                      spec=gitlab.GitlabIntegration.create_webhook,
-                      return_value=Mock()))
-    @async_test
-    async def test_post_import_hooks(self):
-        await self.integration.post_import_hooks('external-id')
-
-        self.assertTrue(self.integration.create_webhook.called)
-
-    @patch.object(gitlab.requests, 'post', AsyncMagicMock())
+    @patch.object(gitlab.GitlabIntegration, 'request2api',
+                  AsyncMagicMock(spec=gitlab.GitlabIntegration.request2api))
     @async_test
     async def test_request_access_token(self):
-        ret = gitlab.requests.post.return_value
+        ret = Mock()
         self.integration.access_token = None
         ret.status = 200
         ret.json = Mock()
         ret.json.return_value = {'access_token': 'asdf'}
+        gitlab.GitlabIntegration.request2api.return_value = ret
         self.integration.get_user_id = AsyncMagicMock()
         r = await self.integration.request_access_token()
         self.assertEqual(r, 'asdf')
 
-    @patch.object(gitlab.BaseIntegration, 'create_access_token',
-                  AsyncMagicMock(
-                      spec=gitlab.BaseIntegration.create_access_token))
+    @patch.object(gitlab.GitlabIntegration, 'request2api',
+                  AsyncMagicMock(spec=gitlab.GitlabIntegration.request2api))
     @async_test
-    async def test_create_access_token(self):
-        self.integration.get_user_id = AsyncMagicMock(
-            spec=self.integration.get_user_id)
-        await self.integration.create_access_token()
-
-        self.assertTrue(gitlab.BaseIntegration.create_access_token.called)
-        self.assertTrue(self.integration.get_user_id.called)
-
-    @patch.object(gitlab.GitlabIntegration, 'save', AsyncMagicMock())
-    @patch.object(gitlab.requests, 'get', AsyncMagicMock())
-    @async_test
-    async def test_get_user_id(self):
-        ret = gitlab.requests.get.return_value
+    async def test_request_user_id(self):
+        ret = Mock()
         self.integration.external_user_id = None
         ret.status = 200
         ret.json = Mock()
         ret.json.return_value = {'id': 666}
-        await self.integration.get_user_id()
-        self.assertTrue(self.integration.external_user_id)
+        gitlab.GitlabIntegration.request2api.return_value = ret
+        r = await self.integration.request_user_id()
+        self.assertEqual(r, 666)

@@ -80,9 +80,29 @@ class BaseWebhookReceiverTest(AsyncTestCase):
             self.webhook_receiver.check_event_type()
 
     @async_test
+    async def test_validate_webhook_error(self):
+        app_cls = Mock()
+        app = AsyncMagicMock()
+        app.validate_token = AsyncMagicMock(
+            side_effect=webhook_receivers.BadSignature)
+        app_cls.get_app.return_value = app
+
+        self.webhook_receiver.APP_CLS = app_cls
+
+        with self.assertRaises(webhook_receivers.HTTPError):
+            await self.webhook_receiver.validate_webhook('token')
+
+    @async_test
     async def test_validate_webhook(self):
-        with self.assertRaises(NotImplementedError):
-            await self.webhook_receiver.validate_webhook()
+        app_cls = Mock()
+        app = AsyncMagicMock()
+        app.validate_token = AsyncMagicMock()
+        app_cls.get_app.return_value = app
+
+        self.webhook_receiver.APP_CLS = app_cls
+
+        r = await self.webhook_receiver.validate_webhook('token')
+        self.assertTrue(r)
 
     def test_hello(self):
         expected = {'code': 200, 'msg': 'Hi there!'}
@@ -113,11 +133,6 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         with self.assertRaises(webhook_receivers.HTTPError):
             await self.webhook_receiver.receive_webhook()
 
-    def test_create_installation(self):
-        user = Mock()
-        with self.assertRaises(NotImplementedError):
-            self.webhook_receiver.create_installation(user)
-
     @patch.object(webhook_receivers, 'settings', Mock())
     @gen_test
     def test_setup_without_user(self):
@@ -141,11 +156,6 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         yield self.webhook_receiver.setup()
 
         self.assertTrue(self.webhook_receiver.create_installation.called)
-
-    @async_test
-    async def test_get_install(self):
-        with self.assertRaises(NotImplementedError):
-            await self.webhook_receiver.get_install()
 
     def test_get_repo_external_id(self):
         with self.assertRaises(NotImplementedError):
@@ -228,6 +238,30 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         called = install.update_repository.call_args[1]
         self.assertEqual(sorted(list(called.keys())), [
             'repo_branches', 'wait_for_lock'])
+
+    def test_create_installation_without_code(self):
+        # installation_id is sent as a get param by github
+        user = Mock()
+        self.webhook_receiver.params = {}
+        with self.assertRaises(webhook_receivers.HTTPError):
+            self.webhook_receiver.create_installation(user)
+
+    @async_test
+    async def test_create_installation(self):
+        user = Mock()
+        self.webhook_receiver.APP_CLS = Mock()
+        self.webhook_receiver.APP_CLS.create = AsyncMagicMock()
+        self.webhook_receiver.params = {'code': 'some-code',
+                                        'state': 'some-state'}
+        await self.webhook_receiver.create_installation(user)
+        self.assertTrue(self.webhook_receiver.APP_CLS.create.called)
+
+    @async_test
+    async def test_get_install(self):
+        self.webhook_receiver.params = {'installation_id': 'asf'}
+        self.webhook_receiver.APP_CLS = AsyncMagicMock()
+        await self.webhook_receiver.get_install()
+        self.assertTrue(self.webhook_receiver.APP_CLS.objects.get.called)
 
 
 class GithubWebhookReceiverTest(AsyncTestCase):
@@ -521,13 +555,6 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
         r = self.webhook_receiver.state_is_valid()
         self.assertFalse(r)
 
-    def test_create_installation_without_code(self):
-        # installation_id is sent as a get param by github
-        user = Mock()
-        self.webhook_receiver.params = {}
-        with self.assertRaises(webhook_receivers.HTTPError):
-            self.webhook_receiver.create_installation(user)
-
     @patch.object(webhook_receivers.GitlabWebhookReceiver, 'state_is_valid',
                   Mock(return_value=False))
     def test_create_installation_invalid_state(self):
@@ -537,16 +564,18 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
         with self.assertRaises(webhook_receivers.HTTPError):
             self.webhook_receiver.create_installation(user)
 
-    @patch.object(webhook_receivers.GitlabIntegration, 'create',
-                  AsyncMagicMock())
     @patch.object(webhook_receivers.GitlabWebhookReceiver, 'state_is_valid',
                   Mock(return_value=True))
-    def test_create_installation(self):
+    @patch.object(
+        webhook_receivers.BaseWebhookReceiver, 'create_installation',
+        Mock(spec=webhook_receivers.BaseWebhookReceiver.create_installation))
+    def test_create_installation_ok(self):
         user = Mock()
         self.webhook_receiver.params = {'code': 'some-code',
                                         'state': 'some-state'}
         self.webhook_receiver.create_installation(user)
-        self.assertTrue(webhook_receivers.GitlabIntegration.create.called)
+        self.assertTrue(
+            webhook_receivers.BaseWebhookReceiver.create_installation.called)
 
     def test_check_event_type(self):
 
@@ -562,20 +591,15 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
 
         self.assertEqual(self.webhook_receiver.get_repo_external_id(), 15)
 
-    @patch.object(webhook_receivers, 'settings', Mock())
+    @patch.object(
+        webhook_receivers.BaseWebhookReceiver, 'validate_webhook',
+        AsyncMagicMock(
+            spec=webhook_receivers.BaseWebhookReceiver.validate_webhook))
     @async_test
-    async def test_validate_webhook_error(self):
-        webhook_receivers.settings.GITLAB_WEBHOOK_TOKEN = 'adsf'
-        with self.assertRaises(webhook_receivers.HTTPError):
-            await self.webhook_receiver.validate_webhook()
-
-    @patch.object(webhook_receivers, 'settings', Mock())
-    @async_test
-    async def test_validate_webhook_ok(self):
-        webhook_receivers.settings.GITLAB_WEBHOOK_TOKEN = 'asdf'
-        self.webhook_receiver.request.headers = {'X-Gitlab-Token': 'asdf'}
-        r = await self.webhook_receiver.validate_webhook()
-        self.assertTrue(r)
+    async def test_validate_webhook(self):
+        await self.webhook_receiver.validate_webhook()
+        self.assertTrue(
+            webhook_receivers.BaseWebhookReceiver.validate_webhook.called)
 
     def test_get_pull_request_source(self):
         self.webhook_receiver.body = {
@@ -692,14 +716,3 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
         r = self.webhook_receiver.get_pull_request_target()
 
         self.assertTrue(r['branch'])
-
-    @patch.object(webhook_receivers.GitlabIntegration, 'objects', Mock())
-    @async_test
-    async def test_get_install(self):
-        webhook_receivers.GitlabIntegration.objects.get = AsyncMagicMock()
-        install = webhook_receivers.GitlabIntegration.objects.get.return_value
-        self.webhook_receiver.params = {'installation_id': '123'}
-
-        r = await self.webhook_receiver.get_install()
-
-        self.assertIs(r, install)

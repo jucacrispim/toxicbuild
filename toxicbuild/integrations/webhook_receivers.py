@@ -31,40 +31,40 @@ from toxicbuild.core.utils import LoggerMixin, validate_string
 from toxicbuild.integrations import settings
 from toxicbuild.integrations.github import (GithubIntegration, GithubApp,
                                             BadSignature)
-from toxicbuild.integrations.gitlab import GitlabIntegration
+from toxicbuild.integrations.gitlab import GitlabIntegration, GitlabApp
 
 
 class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
+
+    APP_CLS = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.event_type = None
         self.params = None
         self.body = None
-        self.events = {}
-
-    async def _get_user_from_cookie(self):
-        cookie = self.get_secure_cookie(settings.TOXICUI_COOKIE)
-        if not cookie:
-            self.log('No cookie found.', level='debug')
-            return
-
-        user_dict = json.loads(base64.decodebytes(cookie).decode('utf-8'))
-        user = await UserInterface.get(id=user_dict['id'])
-        return user
-
-    def _parse_body(self):
-        if self.request.body:
-            self.body = json.loads(self.request.body.decode())
+        self.events = {'push': self.handle_push,
+                       'merge_request': self.handle_pull_request}
 
     def check_event_type(self):
         raise NotImplementedError
 
-    async def validate_webhook(self):
+    def get_repo_external_id(self):
         raise NotImplementedError
 
-    async def get_install(self):
+    def get_pull_request_source(self):
         raise NotImplementedError
+
+    def get_pull_request_target(self):
+        raise NotImplementedError
+
+    async def validate_webhook(self, token):
+        app = self.APP_CLS.get_app()
+        try:
+            await app.validate_token(token)
+        except BadSignature:
+            raise HTTPError(403)
+        return True
 
     def prepare(self):
         self.params = PyroRequest(self.request.arguments)
@@ -74,6 +74,18 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
     @get('hello')
     def hello(self):
         return {'code': 200, 'msg': 'Hi there!'}
+
+    def create_installation(self, user):
+        code = self.params.get('code')
+        if not code:
+            raise HTTPError(400)
+
+        return ensure_future(self.APP_CLS.create(user, code=code))
+
+    async def get_install(self):
+        install_id = self.params.get('installation_id')
+        install = await self.APP_CLS.objects.get(id=install_id)
+        return install
 
     @post('webhooks')
     async def receive_webhook(self):
@@ -89,23 +101,11 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
         msg = '{} handled successfully'.format(self.event_type)
         return {'code': 200, 'msg': msg}
 
-    def create_installation(self, user):
-        raise NotImplementedError
-
-    def get_repo_external_id(self):
-        raise NotImplementedError
-
     async def handle_push(self):
         external_id = self.get_repo_external_id()
         install = await self.get_install()
         ensure_future(install.update_repository(external_id))
         return 'updating repo'
-
-    def get_pull_request_source(self):
-        raise NotImplementedError
-
-    def get_pull_request_target(self):
-        raise NotImplementedError
 
     async def handle_pull_request(self):
         install = await self.get_install()
@@ -143,8 +143,24 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
 
         return self.redirect(url)
 
+    async def _get_user_from_cookie(self):
+        cookie = self.get_secure_cookie(settings.TOXICUI_COOKIE)
+        if not cookie:
+            self.log('No cookie found.', level='debug')
+            return
+
+        user_dict = json.loads(base64.decodebytes(cookie).decode('utf-8'))
+        user = await UserInterface.get(id=user_dict['id'])
+        return user
+
+    def _parse_body(self):
+        if self.request.body:
+            self.body = json.loads(self.request.body.decode())
+
 
 class GithubWebhookReceiver(BaseWebhookReceiver):
+
+    APP_CLS = GithubApp
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -253,10 +269,7 @@ class GithubWebhookReceiver(BaseWebhookReceiver):
 
 class GitlabWebhookReceiver(BaseWebhookReceiver):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.events = {'push': self.handle_push,
-                       'merge_request': self.handle_pull_request}
+    APP_CLS = GitlabApp
 
     def check_event_type(self):
         body = self.body or {}
@@ -275,29 +288,18 @@ class GitlabWebhookReceiver(BaseWebhookReceiver):
         return validate_string(state, secret)
 
     def create_installation(self, user):
-        code = self.params.get('code')
-        if not code:
-            raise HTTPError(400)
-
         if not self.state_is_valid():
             raise HTTPError(400)
 
-        ensure_future(GitlabIntegration.create(user, code=code))
-
-    async def get_install(self):
-        install_id = self.params.get('installation_id')
-        install = await GitlabIntegration.objects.get(id=install_id)
-        return install
+        return super().create_installation(user)
 
     def get_repo_external_id(self):
         return self.body['project']['id']
 
     async def validate_webhook(self):
         secret = self.request.headers.get('X-Gitlab-Token')
-
-        if secret != settings.GITLAB_WEBHOOK_TOKEN:
-            raise HTTPError(403)
-        return True
+        r = await super().validate_webhook(secret)
+        return r
 
     def get_pull_request_source(self):
         attrs = self.body['object_attributes']

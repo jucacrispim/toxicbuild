@@ -446,10 +446,10 @@ class GitlabCommitStatusNotificationTest(TestCase):
         await self.notif.run(info)
         self.assertTrue(self.notif._send_message.called)
 
-    @patch.object(gitlab.requests, 'post', AsyncMagicMock(
-        spec=gitlab.requests.post))
     @patch.object(gitlab.GitlabIntegration, 'get_headers', AsyncMagicMock(
         spec=gitlab.GitlabIntegration.get_headers))
+    @patch.object(notifications.requests, 'post', AsyncMagicMock(
+        spec=notifications.requests.post))
     @async_test
     async def test_send_message(self):
         self.notif.sender = {'id': 'some-id',
@@ -465,4 +465,4 @@ class GitlabCommitStatusNotificationTest(TestCase):
         github.requests.post.return_value = ret
 
         await self.notif._send_message(buildset_info)
-        self.assertTrue(gitlab.requests.post.called)
+        self.assertTrue(notifications.requests.post.called)

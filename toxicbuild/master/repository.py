@@ -28,7 +28,8 @@ from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, IntField, ReferenceField,
                                DateTimeField, ListField, BooleanField,
-                               EmbeddedDocumentField, DictField)
+                               EmbeddedDocumentField, DictField,
+                               DynamicField)
 from toxicbuild.core import utils, build_config
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.master import settings
@@ -113,9 +114,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     enabled = BooleanField(default=True)
     """Indicates if this repository is enabled to run builds."""
 
-    external_id = StringField()
-    """The repository id in an external service. Is a string because is not
-    guaranteed a external id is a int."""
+    external_id = DynamicField()
+    """The repository id in an external service."""
 
     external_full_name = StringField()
     """The full name of the repository in an external service"""

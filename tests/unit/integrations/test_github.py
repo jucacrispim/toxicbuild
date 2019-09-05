@@ -264,25 +264,6 @@ class GithubIntegrationTest(TestCase):
         await github.GithubApp.drop_collection()
         await github.GithubIntegration.drop_collection()
 
-    @patch.object(github, 'now', Mock())
-    def test_token_is_expired_not_expired(self):
-        self.installation.expires = github.localtime2utc(
-            datetime.datetime.now())
-        github.now.return_value = (github.utc2localtime(
-            self.installation.expires) -
-            datetime.timedelta(seconds=60))
-        self.assertFalse(self.installation.token_is_expired)
-
-    @patch.object(github, 'now', Mock())
-    def test_token_is_expired(self):
-        self.installation.expires = github.localtime2utc(
-            datetime.datetime.now())
-        github.now.return_value = (github.utc2localtime(
-            self.installation.expires) +
-            datetime.timedelta(seconds=60))
-
-        self.assertTrue(self.installation.token_is_expired)
-
     def test_access_token_url(self):
         url = 'https://api.github.com/installations/{}/access_tokens'.format(
             str(self.installation.github_id))

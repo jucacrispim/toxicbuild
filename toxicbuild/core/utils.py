@@ -478,7 +478,7 @@ def create_validation_string(secret):
 
 def validate_string(b64_str, secret):
     """Validates a string created with
-    :func:`~toxicbuild.core.utils.create_validattion_string`.
+    :func:`~toxicbuild.core.utils.create_validation_string`.
 
     Given a base64 string the validation is as follows:
 

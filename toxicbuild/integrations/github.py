@@ -33,8 +33,7 @@ from toxicbuild.integrations.exceptions import (BadRequestToExternalAPI,
 
 __doc__ = """This module implements the integration with Github. It is
 a `GithubApp <https://developer.github.com/apps/>`_  that reacts to events
-sent by github webhooks and informs about build statuses using
-`checks <https://developer.github.com/v3/checks/>`_.
+sent by github webhooks.
 
 Usage:
 ``````
@@ -64,18 +63,11 @@ class GithubApp(BaseIntegrationApp):
     private_key = StringField(required=True)
     """The private key you generated in github."""
 
-    app_id = IntField(required=True)
-    """The id of the app in github."""
-
     jwt_expires = DateTimeField()
     """When auth token for the github api. expires. It must be in UTC"""
 
     jwt_token = StringField()
     """The auth token for the github api."""
-
-    webhook_token = StringField()
-    """The token used to sign the incomming request in the webhook. This must
-    be set in the github app creation page."""
 
     @classmethod
     async def create_app(cls):
@@ -198,8 +190,6 @@ class GithubIntegration(BaseIntegration):
 
     # the id of the github app installation
     github_id = IntField()
-    access_token = StringField()
-    expires = DateTimeField()
 
     url_user = 'x-access-token'
 
@@ -209,14 +199,6 @@ class GithubIntegration(BaseIntegration):
 
         url = settings.GITHUB_API_URL
         return url + 'installations/{}/access_tokens'.format(self.github_id)
-
-    @property
-    def token_is_expired(self):
-        """Informs if the installation auth token is expired."""
-        n = now()
-        if n > utc2localtime(self.expires):
-            return True
-        return False
 
     async def get_header(
             self, accept='application/vnd.github.machine-man-preview+json'):

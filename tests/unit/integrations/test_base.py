@@ -16,18 +16,29 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
 from unittest import TestCase
 from unittest.mock import patch, Mock, MagicMock
+
+from toxicbuild.core.utils import localtime2utc
 from toxicbuild.integrations import base
 from tests import AsyncMagicMock, async_test, create_autospec
 
 
 class BaseIntegrationApp(TestCase):
 
+    def setUp(self):
+        self.app = base.BaseIntegrationApp()
+
     @async_test
     async def test_create_app(self):
         with self.assertRaises(NotImplementedError):
             await base.BaseIntegrationApp.create_app()
+
+    @async_test
+    async def test_validate_token(self):
+        with self.assertRaises(NotImplementedError):
+            await self.app.validate_token('token')
 
     @patch.object(base.BaseIntegrationApp, 'objects', Mock())
     @patch.object(base.BaseIntegrationApp, 'create_app', AsyncMagicMock())
@@ -128,9 +139,19 @@ class BaseIntegrationTest(TestCase):
             await self.integration.request_access_token()
 
     @async_test
-    async def test_get_user_id(self):
+    async def test_refresh_access_token(self):
         with self.assertRaises(NotImplementedError):
-            await self.integration.get_user_id()
+            await self.integration.refresh_access_token()
+
+    @async_test
+    async def test_request_user_id(self):
+        with self.assertRaises(NotImplementedError):
+            await self.integration.request_user_id()
+
+    @async_test
+    async def test_create_webhook(self):
+        with self.assertRaises(NotImplementedError):
+            await self.integration.create_webhook('the-external-repo-id')
 
     @async_test
     async def test_get_auth_url(self):
@@ -239,6 +260,8 @@ class BaseIntegrationTest(TestCase):
     @patch.object(base.RepositoryInterface, 'request_code_update',
                   AsyncMagicMock(
                       spec=base.RepositoryInterface.request_code_update))
+    @patch.object(base.BaseIntegration, 'create_webhook',
+                  AsyncMagicMock(spec=base.BaseIntegration.create_webhook))
     @async_test
     async def test_import_repository_no_clone(self):
         repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
@@ -394,22 +417,13 @@ class BaseIntegrationTest(TestCase):
 
         self.assertTrue(base.NotificationInterface.enable.called)
 
+    @patch.object(base.BaseIntegration, 'token_is_expired', False)
     @async_test
     async def test_get_headers(self):
         self.integration.access_token = 'asdf'
         expected = {'Authorization': 'Bearer asdf'}
         r = await self.integration.get_headers()
 
-        self.assertEqual(r, expected)
-
-    @async_test
-    async def test_get_headers_no_access_token(self):
-        expected = {'Authorization': 'Bearer None'}
-        self.integration.create_access_token = AsyncMagicMock()
-        self.integration.access_token = None
-        r = await self.integration.get_headers()
-
-        self.assertTrue(self.integration.create_access_token.called)
         self.assertEqual(r, expected)
 
     @patch.object(base.requests, 'post', AsyncMagicMock(
@@ -439,6 +453,82 @@ class BaseIntegrationTest(TestCase):
         self.integration.get_user_id = AsyncMagicMock()
         self.integration.request_access_token = AsyncMagicMock(
             spec=self.integration.request_access_token,
-            return_value='token')
+            return_value={'access_token': 'token',
+                          'refresh_token': 'refresh',
+                          'expires': base.now()})
         await self.integration.create_access_token()
         self.assertEqual(self.integration.access_token, 'token')
+
+    @patch.object(base.BaseIntegration, 'request_user_id',
+                  AsyncMagicMock(spec=base.BaseIntegration.request_user_id,
+                                 return_value='a-user-id'))
+    @async_test
+    async def test_get_user_id(self):
+        await self.integration.get_user_id()
+        self.assertEqual(self.integration.external_user_id, 'a-user-id')
+
+    @patch.object(base, 'settings',
+                  Mock(INTEGRATIONS_HTTP_URL='https://the.url/'))
+    def test_webhook_url(self):
+        self.integration.id = 'the-id'
+        expected = 'https://the.url/base/webhooks?installation_id=the-id'
+        self.assertEqual(self.integration.webhook_url, expected)
+
+    @patch.object(base.BaseIntegration, 'create_webhook',
+                  AsyncMagicMock(spec=base.BaseIntegration.create_webhook))
+    @async_test
+    async def test_post_import_hooks(self):
+        await self.integration.post_import_hooks('external-repo-id')
+        self.assertTrue(self.integration.create_webhook.called)
+
+    @patch.object(base, 'now', Mock())
+    def test_token_is_expired_not_expired(self):
+        self.integration.expires = localtime2utc(
+            datetime.datetime.now())
+        base.now.return_value = (base.utc2localtime(
+            self.integration.expires) -
+            datetime.timedelta(seconds=60))
+        self.assertFalse(self.integration.token_is_expired)
+
+    @patch.object(base, 'now', Mock())
+    def test_token_is_expired(self):
+        self.integration.expires = localtime2utc(
+            datetime.datetime.now())
+        base.now.return_value = (base.utc2localtime(
+            self.integration.expires) +
+            datetime.timedelta(seconds=60))
+
+        self.assertTrue(self.integration.token_is_expired)
+
+    @patch.object(base.BaseIntegration, 'create_access_token',
+                  AsyncMagicMock(
+                      spec=base.BaseIntegration.create_access_token))
+    @async_test
+    async def test_get_access_token_doesnt_exist(self):
+        self.integration.access_token = None
+        await self.integration.get_access_token()
+
+        self.assertTrue(self.integration.create_access_token.called)
+
+    @patch.object(base.BaseIntegration, 'refresh_access_token',
+                  AsyncMagicMock(
+                      spec=base.BaseIntegration.create_access_token))
+    @patch.object(base.BaseIntegration, 'token_is_expired', True)
+    @async_test
+    async def test_get_access_token_expired(self):
+        self.integration.access_token = 'token'
+        await self.integration.get_access_token()
+
+        self.assertTrue(self.integration.refresh_access_token.called)
+
+    @patch.object(base.BaseIntegration, 'refresh_access_token',
+                  AsyncMagicMock(
+                      spec=base.BaseIntegration.create_access_token))
+    @patch.object(base.BaseIntegration, 'token_is_expired', False)
+    @async_test
+    async def test_get_access_token(self):
+        self.integration.access_token = 'token'
+        await self.integration.get_access_token()
+
+        self.assertFalse(self.integration.refresh_access_token.called)
+        self.assertFalse(self.integration.refresh_access_token.called)
