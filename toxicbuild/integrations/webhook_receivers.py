@@ -37,6 +37,7 @@ from toxicbuild.integrations.gitlab import GitlabIntegration, GitlabApp
 class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
 
     APP_CLS = None
+    INSTALL_CLS = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -58,7 +59,11 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
     def get_pull_request_target(self):
         raise NotImplementedError
 
-    async def validate_webhook(self, token):
+    def get_request_signature(self):
+        raise NotImplementedError
+
+    async def validate_webhook(self):
+        token = self.get_request_signature()
         app = self.APP_CLS.get_app()
         try:
             await app.validate_token(token)
@@ -80,7 +85,7 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
         if not code:
             raise HTTPError(400)
 
-        return ensure_future(self.APP_CLS.create(user, code=code))
+        return ensure_future(self.INSTALL_CLS.create(user, code=code))
 
     async def get_install(self):
         install_id = self.params.get('installation_id')
@@ -270,6 +275,7 @@ class GithubWebhookReceiver(BaseWebhookReceiver):
 class GitlabWebhookReceiver(BaseWebhookReceiver):
 
     APP_CLS = GitlabApp
+    INSTALL_CLS = GitlabIntegration
 
     def check_event_type(self):
         body = self.body or {}
@@ -296,10 +302,8 @@ class GitlabWebhookReceiver(BaseWebhookReceiver):
     def get_repo_external_id(self):
         return self.body['project']['id']
 
-    async def validate_webhook(self):
-        secret = self.request.headers.get('X-Gitlab-Token')
-        r = await super().validate_webhook(secret)
-        return r
+    def get_request_signature(self):
+        return self.request.headers.get('X-Gitlab-Token')
 
     def get_pull_request_source(self):
         attrs = self.body['object_attributes']

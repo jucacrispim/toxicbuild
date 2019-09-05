@@ -43,6 +43,10 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver = webhook_receivers.BaseWebhookReceiver(
             application, request)
 
+    def test_get_request_signature(self):
+        with self.assertRaises(NotImplementedError):
+            self.webhook_receiver.get_request_signature()
+
     @patch.object(webhook_receivers, 'settings', Mock())
     @async_test
     async def test_get_user_from_cookie_without_cookie(self):
@@ -79,6 +83,9 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         with self.assertRaises(NotImplementedError):
             self.webhook_receiver.check_event_type()
 
+    @patch.object(
+        webhook_receivers.BaseWebhookReceiver, 'get_request_signature',
+        Mock(spec=webhook_receivers.BaseWebhookReceiver.get_request_signature))
     @async_test
     async def test_validate_webhook_error(self):
         app_cls = Mock()
@@ -90,8 +97,11 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver.APP_CLS = app_cls
 
         with self.assertRaises(webhook_receivers.HTTPError):
-            await self.webhook_receiver.validate_webhook('token')
+            await self.webhook_receiver.validate_webhook()
 
+    @patch.object(
+        webhook_receivers.BaseWebhookReceiver, 'get_request_signature',
+        Mock(spec=webhook_receivers.BaseWebhookReceiver.get_request_signature))
     @async_test
     async def test_validate_webhook(self):
         app_cls = Mock()
@@ -101,7 +111,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
 
         self.webhook_receiver.APP_CLS = app_cls
 
-        r = await self.webhook_receiver.validate_webhook('token')
+        r = await self.webhook_receiver.validate_webhook()
         self.assertTrue(r)
 
     def test_hello(self):
@@ -249,12 +259,12 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     @async_test
     async def test_create_installation(self):
         user = Mock()
-        self.webhook_receiver.APP_CLS = Mock()
-        self.webhook_receiver.APP_CLS.create = AsyncMagicMock()
+        self.webhook_receiver.INSTALL_CLS = Mock()
+        self.webhook_receiver.INSTALL_CLS.create = AsyncMagicMock()
         self.webhook_receiver.params = {'code': 'some-code',
                                         'state': 'some-state'}
         await self.webhook_receiver.create_installation(user)
-        self.assertTrue(self.webhook_receiver.APP_CLS.create.called)
+        self.assertTrue(self.webhook_receiver.INSTALL_CLS.create.called)
 
     @async_test
     async def test_get_install(self):

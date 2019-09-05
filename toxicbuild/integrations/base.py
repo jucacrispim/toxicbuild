@@ -70,7 +70,7 @@ class BaseIntegrationApp(LoggerMixin, Document):
     async def create_app(cls):
         raise NotImplementedError
 
-    async def validate_token(cls, token):
+    async def validate_token(self):
         """Validates a token sent by a 3rd party hook as request signature.
         """
         raise NotImplementedError
