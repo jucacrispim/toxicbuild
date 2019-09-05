@@ -38,7 +38,7 @@ class BaseIntegrationApp(TestCase):
     @async_test
     async def test_validate_token(self):
         with self.assertRaises(NotImplementedError):
-            await self.app.validate_token('token')
+            await self.app.validate_token()
 
     @patch.object(base.BaseIntegrationApp, 'objects', Mock())
     @patch.object(base.BaseIntegrationApp, 'create_app', AsyncMagicMock())
