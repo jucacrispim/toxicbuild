@@ -80,12 +80,12 @@ def after_feature(context, feature):
 
     from toxicbuild.integrations.github import GithubIntegration
     loop.run_until_complete(GithubIntegration.drop_collection())
-    loop.run_until_complete(User.drop_collection())
 
 
 def after_all(context):
     stop_all()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(del_user(context))
+    loop.run_until_complete(User.drop_collection())
 
     quit_browser(context)
