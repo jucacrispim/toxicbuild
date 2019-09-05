@@ -75,7 +75,8 @@ class GitlabIntegration(BaseIntegration):
 
         r = await self.request2api('post', url, params=params)
         r = r.json()
-        r['expires'] = self.get_expire_dt(r['expires_in'])
+        # gitlab token never expires
+        r['expires'] = None
         return r
 
     async def list_repos(self):
