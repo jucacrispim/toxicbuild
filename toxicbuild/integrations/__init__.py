@@ -150,10 +150,10 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         SettingsPatcher().patch_pyro_settings(settings)
 
         from pyrocumulus.commands.base import get_command
-        from toxicbuild.master.exchanges import connect_exchanges
+        from toxicbuild.common import common_setup
 
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(connect_exchanges())
+        loop.run_until_complete(common_setup(settings))
 
         ensure_indexes()
 

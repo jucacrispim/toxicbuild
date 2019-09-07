@@ -632,6 +632,7 @@ body{
 
 .top-page-repositories-info-container .fa-plus,
 .top-page-repositories-info-container .fa-github,
+.top-page-repositories-info-container .fa-bitbucket,
 .top-page-repositories-info-container .fa-gitlab{
     margin-left: 10px;
 }
@@ -642,7 +643,8 @@ body{
 }
 
 .top-page-repositories-info-container .fa-github,
-.top-page-repositories-info-container .fa-gitlab{
+.top-page-repositories-info-container .fa-gitlab,
+.top-page-repositories-info-container .fa-bitbucket{
     color: var(--black-almost-there);
 }
 

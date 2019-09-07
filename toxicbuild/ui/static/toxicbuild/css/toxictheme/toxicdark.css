@@ -46,6 +46,7 @@ body.dark-theme{
 }
 
 .dark-theme .top-page-repositories-info-container .fa-github,
+.dark-theme .top-page-repositories-info-container .fa-bitbucket,
 .dark-theme .top-page-repositories-info-container .fa-gitlab {
     color: #D0D0D0;
 }

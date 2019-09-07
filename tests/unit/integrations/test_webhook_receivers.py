@@ -731,3 +731,71 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
         self.webhook_receiver.request.headers = {'X-Gitlab-Token': 'token'}
         r = self.webhook_receiver.get_request_signature()
         self.assertEqual(r, 'token')
+
+
+class BitbucketWebhookReceriverTest(AsyncTestCase):
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
+
+    def setUp(self):
+        super().setUp()
+        body = webhook_receivers.json.dumps({"some": "thing"})
+        request = Mock()
+        request.body = body.encode('utf-8')
+        request.headers = {'X-Event-Key': 'repo:push'}
+        request.arguments = {}
+        application = Mock()
+        application.ui_methods = {}
+
+        self.webhook_receriver = webhook_receivers.BitbucketWebhookReceiver(
+            application, request)
+
+    def test_check_event_type(self):
+        self.assertEqual(self.webhook_receriver.check_event_type(),
+                         'repo:push')
+
+    def test_get_request_signature(self):
+        self.webhook_receriver.params = {'token': 'bla'}
+        self.assertEqual(self.webhook_receriver.get_request_signature(),
+                         'bla')
+
+    def test_get_external_id(self):
+        self.webhook_receriver.body = {
+            'repository': {
+                'uuid': 'the-repo-uuid'
+            }
+        }
+
+        self.assertEqual(self.webhook_receriver.get_external_id(),
+                         'the-repo-uuid')
+
+    def test_get_pull_request_source(self):
+        self.webhook_receriver.body = {
+            'source': {
+                'repository': {
+                    'name': 'the-repo',
+                    'uuid': 'the-uuid'
+                },
+                'branch': 'master'
+            }
+        }
+
+        self.assertEqual(
+            self.webhook_receriver.get_pull_request_source()['branch'],
+            'master')
+
+    def test_get_pull_request_target(self):
+        self.webhook_receriver.body = {
+            'target': {
+                'repository': {
+                    'name': 'the-repo',
+                    'uuid': 'the-uuid'
+                },
+                'branch': 'master'
+            }
+        }
+
+        self.assertEqual(
+            self.webhook_receriver.get_pull_request_target()['branch'],
+            'master')

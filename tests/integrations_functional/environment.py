@@ -41,7 +41,7 @@ def quit_browser(context):
 async def del_repo(context):
     """Deletes the repositories created in tests."""
 
-    from toxicbuild.master.exchanges import scheduler_action
+    from toxicbuild.common.exchanges import scheduler_action
 
     await scheduler_action.declare()
     await scheduler_action.queue_delete()

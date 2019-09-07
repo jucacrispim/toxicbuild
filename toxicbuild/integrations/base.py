@@ -19,6 +19,8 @@
 from asyncio import ensure_future, gather, sleep
 from datetime import timedelta
 import re
+import traceback
+
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (
     StringField,
@@ -41,7 +43,8 @@ from toxicbuild.core.utils import (LoggerMixin, now, utc2localtime,
 from toxicbuild.integrations import settings
 from toxicbuild.integrations.exceptions import (
     BadRepository,
-    BadRequestToExternalAPI
+    BadRequestToExternalAPI,
+    BadSignature
 )
 
 BaseInterface.settings = settings
@@ -72,10 +75,10 @@ class BaseIntegrationApp(LoggerMixin, Document):
     async def create_app(cls):
         raise NotImplementedError
 
-    async def validate_token(self):
-        """Validates a token sent by a 3rd party hook as request signature.
-        """
-        raise NotImplementedError
+    async def validate_token(self, token):
+        if token != self.webhook_token:
+            raise BadSignature
+        return True
 
     @classmethod
     async def get_app(cls):
@@ -326,7 +329,7 @@ class BaseIntegration(LoggerMixin, Document):
         if clone:
             await repo.request_code_update()
 
-        await self.post_import_hooks(external_id)
+        await self.post_import_hooks(repo_info)
         return repo
 
     async def import_repositories(self):
@@ -339,9 +342,10 @@ class BaseIntegration(LoggerMixin, Document):
         for repo_info in await self.list_repos():
             try:
                 repo = await self.import_repository(repo_info, clone=False)
-            except Exception as e:
+            except Exception:
+                msg = traceback.format_exc()
                 self.log('Error importing repository {}: {}'.format(
-                    repo_info['name'], str(e)), level='error')
+                    repo_info['name'], msg), level='error')
                 continue
 
             if repo:  # pragma no branch
@@ -453,12 +457,14 @@ class BaseIntegration(LoggerMixin, Document):
 
         return r
 
-    async def post_import_hooks(self, repo_external_id):
+    async def post_import_hooks(self, repo_info):
         """Execute actions after a repository is imported. Be default
-        executes ``self.create_webhook``
+        executes ``self.create_webhook``.
+
+        :param repo_info: A dictionary. The same created by repo_list.
         """
 
-        await self.create_webhook(repo_external_id)
+        await self.create_webhook(repo_info)
 
     def get_expire_dt(self, secs):
         """Given a number of seconds returns a datetime in the future

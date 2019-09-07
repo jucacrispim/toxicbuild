@@ -28,7 +28,7 @@ from tests import AsyncMagicMock, async_test, create_autospec
 class BaseIntegrationApp(TestCase):
 
     def setUp(self):
-        self.app = base.BaseIntegrationApp()
+        self.app = base.BaseIntegrationApp(webhook_token='token')
 
     @async_test
     async def test_create_app(self):
@@ -36,9 +36,14 @@ class BaseIntegrationApp(TestCase):
             await base.BaseIntegrationApp.create_app()
 
     @async_test
+    async def test_validate_token_bad(self):
+        with self.assertRaises(base.BadSignature):
+            await self.app.validate_token('bad')
+
+    @async_test
     async def test_validate_token(self):
-        with self.assertRaises(NotImplementedError):
-            await self.app.validate_token()
+        r = await self.app.validate_token('token')
+        self.assertTrue(r)
 
     @patch.object(base.BaseIntegrationApp, 'objects', Mock())
     @patch.object(base.BaseIntegrationApp, 'create_app', AsyncMagicMock())
@@ -478,7 +483,7 @@ class BaseIntegrationTest(TestCase):
                   AsyncMagicMock(spec=base.BaseIntegration.create_webhook))
     @async_test
     async def test_post_import_hooks(self):
-        await self.integration.post_import_hooks('external-repo-id')
+        await self.integration.post_import_hooks({'some': 'thing'})
         self.assertTrue(self.integration.create_webhook.called)
 
     @patch.object(base, 'now', Mock())

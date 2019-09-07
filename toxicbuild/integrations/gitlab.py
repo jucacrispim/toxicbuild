@@ -19,7 +19,6 @@
 
 from toxicbuild.integrations.base import BaseIntegration, BaseIntegrationApp
 from toxicbuild.integrations import settings
-from toxicbuild.integrations.exceptions import BadSignature
 
 __doc__ = """This module implements integration with gitlab. Imports
 repositories from GitLab and reacts to messages sent by gitlab to
@@ -39,11 +38,6 @@ class GitlabApp(BaseIntegrationApp):
                   secret=secret)
         await app.save()
         return app
-
-    async def validate_token(self, token):
-        if token != self.webhook_token:
-            raise BadSignature
-        return True
 
 
 class GitlabIntegration(BaseIntegration):
@@ -108,11 +102,12 @@ class GitlabIntegration(BaseIntegration):
 
         return repos
 
-    async def create_webhook(self, repo_external_id):
+    async def create_webhook(self, repo_info):
         """Creates a webhook at gitlab for a given repository.
 
-        :param repo_external_id: The repository's id on gitlab.
+        :param repo_info: One of the dicts created in repo_list.
         """
+        repo_external_id = repo_info['id']
         self.log('Creating webhook to {}'.format(repo_external_id))
 
         header = await self.get_headers()

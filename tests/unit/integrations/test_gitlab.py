@@ -47,16 +47,6 @@ class GitlabAppTest(TestCase):
         self.assertTrue(app.id)
         self.assertEqual(app.app_id, 'app-id')
 
-    @async_test
-    async def test_validate_token_bad(self):
-        with self.assertRaises(gitlab.BadSignature):
-            await self.app.validate_token('bad')
-
-    @async_test
-    async def test_validate_token(self):
-        r = await self.app.validate_token('whtoken')
-        self.assertTrue(r)
-
 
 @patch.object(gitlab, 'settings', Mock(GITLAB_WEBHOOK_TOKEN='whtoken',
                                        GITLAB_APP_ID='app-id',
@@ -107,7 +97,7 @@ class GitlabIntegrationTest(TestCase):
 
         ret.status = 201
         gitlab.GitlabIntegration.request2api.return_value = ret
-        ret = await self.integration.create_webhook(1234)
+        ret = await self.integration.create_webhook({'id': 1234})
         self.assertTrue(ret)
 
     @patch.object(gitlab.GitlabIntegration, 'request2api',

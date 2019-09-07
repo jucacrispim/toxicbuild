@@ -818,11 +818,13 @@ class DashboardHandler(LoggedTemplateHandler):
     def _get_settings_template(self, settings_type):
         github_import_url = getattr(settings, 'GITHUB_IMPORT_URL', '#')
         gitlab_import_url = self._get_gitlab_import_url()
-        rendered = render_template(self.settings_template,
-                                   self.request,
-                                   {'github_import_url': github_import_url,
-                                    'gitlab_import_url': gitlab_import_url,
-                                    'settings_type': settings_type})
+        bitbucket_import_url = getattr(settings, 'BITBUCKET_IMPORT_URL', '#')
+        rendered = render_template(
+            self.settings_template, self.request,
+            {'github_import_url': github_import_url,
+             'gitlab_import_url': gitlab_import_url,
+             'bitbucket_import_url': bitbucket_import_url,
+             'settings_type': settings_type})
         return rendered
 
     def _get_settings_main_template(self, settings_type):

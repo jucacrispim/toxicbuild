@@ -29,6 +29,8 @@ from tornado.web import HTTPError
 from toxicbuild.common.interfaces import UserInterface
 from toxicbuild.core.utils import LoggerMixin, validate_string
 from toxicbuild.integrations import settings
+from toxicbuild.integrations.bitbucket import (BitbucketIntegration,
+                                               BitbucketApp)
 from toxicbuild.integrations.github import (GithubIntegration, GithubApp,
                                             BadSignature)
 from toxicbuild.integrations.gitlab import GitlabIntegration, GitlabApp
@@ -163,6 +165,87 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
             self.body = json.loads(self.request.body.decode())
 
 
+class BitbucketWebhookReceiver(BaseWebhookReceiver):
+
+    APP_CLS = BitbucketApp
+    INSTALL_CLS = BitbucketIntegration
+
+    def check_event_type(self):
+        return self.request.headers.get('X-Event-Key')
+
+    def get_request_signature(self):
+        return self.params.get('token')
+
+    def get_external_id(self):
+        return self.body['repository']['uuid']
+
+    def get_pull_request_source(self):
+        attrs = self.body['source']
+        return {'name': attrs['repository']['name'],
+                'id': attrs['repository']['uuid'],
+                'branch': attrs['branch'],
+                # no url in repo payloads. This not work with
+                # pr from other repos
+                'url': None}
+
+    def get_pull_request_target(self):
+        attrs = self.body['target']
+        return {'name': attrs['repository']['name'],
+                'id': attrs['repository']['uuid'],
+                'branch': attrs['branch'],
+                # no url in repo payloads. This not work with
+                # pr from other repos
+                'url': None}
+
+
+class GitlabWebhookReceiver(BaseWebhookReceiver):
+
+    APP_CLS = GitlabApp
+    INSTALL_CLS = GitlabIntegration
+
+    def check_event_type(self):
+        body = self.body or {}
+        return body.get('object_kind')
+
+    def state_is_valid(self):
+        """Checks if the state hash sent by gitlab is valid.
+        """
+
+        state = self.params.get('state')
+        if not state:
+            raise HTTPError(400)
+
+        secret = settings.TORNADO_OPTS['cookie_secret']
+
+        return validate_string(state, secret)
+
+    def create_installation(self, user):
+        if not self.state_is_valid():
+            raise HTTPError(400)
+
+        return super().create_installation(user)
+
+    def get_repo_external_id(self):
+        return self.body['project']['id']
+
+    def get_request_signature(self):
+        return self.request.headers.get('X-Gitlab-Token')
+
+    def get_pull_request_source(self):
+        attrs = self.body['object_attributes']
+        return {'name': attrs['source']['name'],
+                'id': attrs['source_project_id'],
+                'branch': attrs['source_branch'],
+                'url': attrs['source']['git_http_url']}
+
+    def get_pull_request_target(self):
+        attrs = self.body['object_attributes']
+        return {'name': attrs['target']['name'],
+                'id': attrs['target_project_id'],
+                'branch': attrs['target_branch'],
+                'url': attrs['target']['git_http_url']}
+
+
 class GithubWebhookReceiver(BaseWebhookReceiver):
 
     APP_CLS = GithubApp
@@ -272,54 +355,7 @@ class GithubWebhookReceiver(BaseWebhookReceiver):
         return event_type
 
 
-class GitlabWebhookReceiver(BaseWebhookReceiver):
-
-    APP_CLS = GitlabApp
-    INSTALL_CLS = GitlabIntegration
-
-    def check_event_type(self):
-        body = self.body or {}
-        return body.get('object_kind')
-
-    def state_is_valid(self):
-        """Checks if the state hash sent by gitlab is valid.
-        """
-
-        state = self.params.get('state')
-        if not state:
-            raise HTTPError(400)
-
-        secret = settings.TORNADO_OPTS['cookie_secret']
-
-        return validate_string(state, secret)
-
-    def create_installation(self, user):
-        if not self.state_is_valid():
-            raise HTTPError(400)
-
-        return super().create_installation(user)
-
-    def get_repo_external_id(self):
-        return self.body['project']['id']
-
-    def get_request_signature(self):
-        return self.request.headers.get('X-Gitlab-Token')
-
-    def get_pull_request_source(self):
-        attrs = self.body['object_attributes']
-        return {'name': attrs['source']['name'],
-                'id': attrs['source_project_id'],
-                'branch': attrs['source_branch'],
-                'url': attrs['source']['git_http_url']}
-
-    def get_pull_request_target(self):
-        attrs = self.body['object_attributes']
-        return {'name': attrs['target']['name'],
-                'id': attrs['target_project_id'],
-                'branch': attrs['target_branch'],
-                'url': attrs['target']['git_http_url']}
-
-
 gh_url = URLSpec('/github/(.*)', GithubWebhookReceiver)
 gl_url = URLSpec('/gitlab/(.*)', GitlabWebhookReceiver)
-app = PyroApplication([gh_url, gl_url])
+bb_url = URLSpec('/bitbucket/(.*)', BitbucketWebhookReceiver)
+app = PyroApplication([gh_url, gl_url, bb_url])
