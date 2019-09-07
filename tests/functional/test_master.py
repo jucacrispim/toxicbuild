@@ -19,7 +19,7 @@
 
 import asyncio
 from unittest.mock import patch, Mock
-from toxicbuild.common.exchanges import scheduler_action
+from toxicbuild.common.exchanges import scheduler_action, conn
 from toxicbuild.master import settings
 from toxicbuild.master.repository import Repository
 from toxicbuild.master.slave import Slave
@@ -135,6 +135,7 @@ class ToxicMasterTest(BaseFunctionalTest):
 
         await User.drop_collection()
         await Repository.drop_collection()
+        await conn.connect(**settings.RABBITMQ_CONNECTION)
         await scheduler_action.declare()
         await scheduler_action.queue_delete()
         await scheduler_action.connection.disconnect()
