@@ -41,7 +41,10 @@ def quit_browser(context):
 async def del_repo(context):
     """Deletes the repositories created in tests."""
 
-    from toxicbuild.common.exchanges import scheduler_action
+    from toxicbuild.common.exchanges import scheduler_action, conn
+
+    from toxicbuild.master import settings as master_settings
+    yield from conn.connect(**master_settings.RABBITMQ_CONNECTION)
 
     await scheduler_action.declare()
     await scheduler_action.queue_delete()

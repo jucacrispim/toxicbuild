@@ -109,7 +109,6 @@ def create_repo(context):
 
     from toxicbuild.master import settings as master_settings
     yield from conn.connect(**master_settings.RABBITMQ_CONNECTION)
-    yield from scheduler_action.connection.connect()
     yield from scheduler_action.declare()
 
     repo = yield from RepositoryInterface.add(
