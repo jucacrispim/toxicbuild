@@ -41,7 +41,7 @@ create_settings_and_connect()
 create_settings_output()
 
 from pyrocumulus.auth import AccessToken  # noqa f402
-from toxicbuild.common.exchanges import scheduler_action  # noqa f402
+from toxicbuild.common.exchanges import scheduler_action, conn  # noqa f402
 from toxicbuild.ui import settings  # noqa f402
 from toxicbuild.master.users import User  # noqa f402
 from toxicbuild.common.interfaces import (  # noqa 402
@@ -107,6 +107,8 @@ async def del_auth_token(context):
 def create_repo(context):
     """Creates a new repo to be used in tests"""
 
+    from toxicbuild.master import settings as master_settings
+    yield from conn.connect(**master_settings.RABBITMQ_CONNECTION)
     yield from scheduler_action.connection.connect()
     yield from scheduler_action.declare()
 
