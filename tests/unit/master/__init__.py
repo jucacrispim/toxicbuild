@@ -3,6 +3,7 @@
 import asyncio
 import atexit
 import os
+from toxicbuild.common import common_setup, exchanges
 from toxicbuild.master import create_settings_and_connect
 from toxicbuild.master import create_scheduler
 
@@ -15,7 +16,7 @@ os.environ['TOXICMASTER_SETTINGS'] = os.path.join(
 
 create_settings_and_connect()
 create_scheduler()
-from toxicbuild.master import scheduler  # noqa: f402
+from toxicbuild.master import scheduler, settings  # noqa: f402
 scheduler.stop()
 
 
@@ -24,10 +25,14 @@ from toxicbuild.master.coordination import ToxicZKClient  # noqa: F402
 
 loop = asyncio.get_event_loop()
 
+loop.run_until_complete(common_setup(settings))
+
 
 def clean():
     if ToxicZKClient._zk_client:
         loop.run_until_complete(ToxicZKClient._zk_client.close())
+
+    loop.run_until_complete(exchanges.conn.disconnect())
 
 
 atexit.register(clean)

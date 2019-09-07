@@ -19,3 +19,6 @@ os.environ['TOXICINTEGRATIONS_SETTINGS'] = os.path.join(
 
 create_settings_and_connect()
 create_settings()
+
+
+from toxicbuild.output import settings  # noqa

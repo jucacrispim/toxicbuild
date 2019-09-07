@@ -88,11 +88,14 @@ class AmqpConnection(LoggerMixin):
         self.protocol = None
         self._connected = False
 
-    async def connect(self):
-        """Connects to the Rabbitmq server."""
+    async def connect(self, **conn_kwargs):
+        """Connects to the Rabbitmq server.
 
-        self.transport, self.protocol = await asyncamqp.connect(
-            **self.conn_kwargs)
+        :param conn_kwargs: Named arguments passed to ``asyncamqp.connect()``
+        """
+
+        kw = conn_kwargs or self.conn_kwargs
+        self.transport, self.protocol = await asyncamqp.connect(**kw)
         self._connected = True
 
     async def disconnect(self):

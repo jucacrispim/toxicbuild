@@ -20,10 +20,10 @@
 import asyncio
 from asyncio import ensure_future
 import time
+from toxicbuild.common.exchanges import scheduler_action
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master.consumers import BaseConsumer
 from toxicbuild.master.exceptions import UnknownSchedulerAction
-from toxicbuild.master.exchanges import scheduler_action
 from toxicbuild.master.repository import Repository
 
 

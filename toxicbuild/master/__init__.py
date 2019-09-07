@@ -12,6 +12,7 @@ import shutil
 import sys
 from time import sleep
 from mongomotor import connect
+from toxicbuild.common import common_setup
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.utils import (log, daemonize as daemon,
@@ -73,9 +74,7 @@ def toxicinit(server):
 
     create_scheduler()
 
-    from toxicbuild.master.exchanges import connect_exchanges
-
-    yield from connect_exchanges()
+    yield from common_setup(settings)
 
     log('[init] Boostrap for everyone', level='debug')
     yield from Repository.bootstrap_all()
@@ -148,9 +147,8 @@ def run_scheduler(loglevel):
 
     loop = asyncio.get_event_loop()
     create_settings_and_connect()
-    from toxicbuild.master.exchanges import connect_exchanges
 
-    loop.run_until_complete(connect_exchanges())
+    loop.run_until_complete(common_setup(settings))
 
     from toxicbuild.master.scheduler import SchedulerServer
 
@@ -167,9 +165,9 @@ def run_poller(loglevel):
 
     loop = asyncio.get_event_loop()
     create_settings_and_connect()
-    from toxicbuild.master.exchanges import connect_exchanges
     from toxicbuild.master.pollers import PollerServer
-    loop.run_until_complete(connect_exchanges())
+
+    loop.run_until_complete(common_setup(settings))
 
     server = PollerServer()
 

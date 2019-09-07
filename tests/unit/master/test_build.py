@@ -274,17 +274,17 @@ class BuildTest(TestCase):
         with self.assertRaises(build.Build.DoesNotExist):
             await build.Build.get(build.uuid4())
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
-        spec=build.build_notifications.publish))
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
     @async_test
     async def test_notify(self):
         await self._create_test_data()
         build_inst = self.buildset.builds[0]
         await build_inst.notify('build-added')
-        self.assertTrue(build.build_notifications.publish.called)
+        self.assertTrue(build.notifications.publish.called)
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
-        spec=build.build_notifications.publish))
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
     @async_test
     async def test_cancel(self):
         await self._create_test_data()
@@ -297,8 +297,8 @@ class BuildTest(TestCase):
         await slave.reload()
         self.assertEqual(slave.queue_count, 0)
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
-        spec=build.build_notifications.publish))
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
     @async_test
     async def test_cancel_no_slave(self):
         await self._create_test_data()
@@ -308,8 +308,8 @@ class BuildTest(TestCase):
         await build_inst.cancel()
         self.assertEqual(build_inst.status, 'cancelled')
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
-        spec=build.build_notifications.publish))
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
@@ -320,8 +320,8 @@ class BuildTest(TestCase):
         with self.assertRaises(build.ImpossibleCancellation):
             await build_inst.cancel()
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
-        spec=build.build_notifications.publish))
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
@@ -332,8 +332,8 @@ class BuildTest(TestCase):
 
         self.assertTrue(self.slave.queue_count)
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
-        spec=build.build_notifications.publish))
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
@@ -344,8 +344,8 @@ class BuildTest(TestCase):
 
         self.assertTrue(r)
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
-        spec=build.build_notifications.publish))
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
@@ -358,8 +358,8 @@ class BuildTest(TestCase):
 
         self.assertFalse(r)
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
-        spec=build.build_notifications.publish))
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
@@ -391,8 +391,8 @@ class BuildTest(TestCase):
 
         self.assertFalse(r)
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
-        spec=build.build_notifications.publish))
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
@@ -424,8 +424,8 @@ class BuildTest(TestCase):
 
         self.assertIsNone(r)
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
-        spec=build.build_notifications.publish))
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @async_test
@@ -498,12 +498,12 @@ class BuildSetTest(TestCase):
         await repository.Repository.drop_collection()
         await users.User.drop_collection()
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock())
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock())
     @async_test
     async def test_notify(self):
         await self._create_test_data()
         await self.buildset.notify('buildset-added')
-        self.assertTrue(build.build_notifications.publish.called)
+        self.assertTrue(build.notifications.publish.called)
 
     @async_test
     async def test_get_buildset_number(self):
@@ -893,7 +893,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @async_test
@@ -917,7 +917,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build.buildset_added, 'send', mock.Mock(
@@ -944,7 +944,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @async_test
@@ -965,7 +965,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @async_test
@@ -993,7 +993,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @async_test
@@ -1014,7 +1014,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build, 'list_builders_from_config',
@@ -1041,7 +1041,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build, 'list_builders_from_config',
@@ -1071,7 +1071,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build, 'list_builders_from_config',
@@ -1095,7 +1095,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build, 'list_builders_from_config',
@@ -1123,7 +1123,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build, 'list_builders_from_config',
@@ -1151,7 +1151,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @async_test
@@ -1167,7 +1167,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @async_test
@@ -1189,7 +1189,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build.BuildSet, 'reload', AsyncMagicMock())
@@ -1208,7 +1208,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @async_test
@@ -1225,7 +1225,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @async_test
@@ -1242,7 +1242,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build.BuildSet, 'reload', AsyncMagicMock())
@@ -1257,7 +1257,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build.BuildSet.objects, 'get', AsyncMagicMock())
@@ -1274,7 +1274,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build, 'now', mock.Mock())
@@ -1292,7 +1292,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @async_test
@@ -1312,7 +1312,7 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', mock.MagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build, 'ensure_future', mock.Mock)
@@ -1335,7 +1335,8 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', mock.MagicMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(repository.repo_added, 'publish', AsyncMagicMock())
+    @mock.patch.object(
+        repository.ui_notifications, 'publish', AsyncMagicMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        AsyncMagicMock())
     @mock.patch.object(build, 'ensure_future', mock.Mock)
@@ -1381,17 +1382,17 @@ class BuildManagerTest(TestCase):
         await self.repo.build_manager.cancel_build(build.uuid)
         self.assertTrue(self.repo.build_manager.log.called)
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
-        spec=build.build_notifications.publish))
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
     @async_test
     async def test_notify(self):
         await self._create_test_data()
         build_inst = self.buildset.builds[0]
         await build_inst.notify('build-added')
-        self.assertTrue(build.build_notifications.publish.called)
+        self.assertTrue(build.notifications.publish.called)
 
-    @mock.patch.object(build.build_notifications, 'publish', AsyncMagicMock(
-        spec=build.build_notifications.publish))
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
     @async_test
     async def test_cancel_previous_pending(self):
         await self._create_test_data()

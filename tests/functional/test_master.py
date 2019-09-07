@@ -19,11 +19,11 @@
 
 import asyncio
 from unittest.mock import patch, Mock
+from toxicbuild.common.exchanges import scheduler_action
 from toxicbuild.master import settings
 from toxicbuild.master.repository import Repository
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.users import User
-from toxicbuild.master.exchanges import scheduler_action
 from tests import async_test
 from tests.functional import (BaseFunctionalTest, DummyMasterHoleClient,
                               STREAM_EVENT_TYPES)

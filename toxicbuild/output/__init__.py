@@ -27,6 +27,7 @@ import sys
 from time import sleep
 from uuid import uuid4
 from mongomotor import connect
+from toxicbuild.common import common_setup
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import (changedir, log, daemonize as daemon,
@@ -73,8 +74,7 @@ def run_toxicoutput(loglevel, tornado_server):
 
     loop = asyncio.get_event_loop()
 
-    from toxicbuild.output.exchanges import connect_exchanges
-    loop.run_until_complete(connect_exchanges())
+    loop.run_until_complete(common_setup(settings))
 
     from toxicbuild.output.server import OutputMessageHandler
     handler = OutputMessageHandler()

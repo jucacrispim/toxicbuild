@@ -27,8 +27,7 @@ from pyrocumulus.web.decorators import post, delete, get, put
 from pyrocumulus.web.handlers import BasePyroAuthHandler
 from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.core.utils import LoggerMixin
-from toxicbuild.output.exchanges import (repo_notifications,
-                                         build_notifications)
+from toxicbuild.common.exchanges import notifications
 from toxicbuild.output.notifications import Notification, send_email
 
 
@@ -42,8 +41,7 @@ class OutputMessageHandler(LoggerMixin):
         self.loop = loop or get_event_loop()
 
     async def run(self):
-        ensure_future(self._handle_build_notifications())
-        ensure_future(self._handle_repo_notifications())
+        ensure_future(self._handle_notifications())
 
     def add_running_task(self):
         self._running_tasks += 1
@@ -51,14 +49,9 @@ class OutputMessageHandler(LoggerMixin):
     def remove_running_task(self):
         self._running_tasks -= 1
 
-    async def _handle_build_notifications(self):
-        await self._handle_notifications(build_notifications)
-
-    async def _handle_repo_notifications(self):
-        await self._handle_notifications(repo_notifications)
-
-    async def _handle_notifications(self, exchange):
+    async def _handle_notifications(self):
         self.log('Handling notifications', level='debug')
+        exchange = notifications
         async with await exchange.consume(timeout=1000) as consumer:
             while not self._stop_consuming_messages:
                 try:

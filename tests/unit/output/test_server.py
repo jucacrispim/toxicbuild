@@ -22,7 +22,6 @@ from unittest import TestCase
 from unittest.mock import patch, MagicMock
 from toxicbuild.core.exchange import JsonAckMessage
 from toxicbuild.output import server
-from toxicbuild.output.exchanges import connect_exchanges, disconnect_exchanges
 from toxicbuild.output.notifications import (Notification, SlackNotification)
 from tests import async_test, AsyncMagicMock
 
@@ -31,7 +30,6 @@ class OutputMessageHandlerTest(TestCase):
 
     @async_test
     async def setUp(self):
-        await connect_exchanges()
         self.server = server.OutputMessageHandler()
         self.obj_id = ObjectId()
         self.notification = SlackNotification(webhook_url='https://bla.nada',
@@ -41,7 +39,6 @@ class OutputMessageHandlerTest(TestCase):
     @patch('aioamqp.protocol.logger')
     @async_test
     async def tearDown(self, *args, **kwargs):
-        await disconnect_exchanges()
         await Notification.drop_collection()
 
     @patch.object(Notification, 'run', AsyncMagicMock(
@@ -53,38 +50,17 @@ class OutputMessageHandlerTest(TestCase):
         await self.server.run_notifications(msg)
         self.assertTrue(Notification.run.called)
 
-    @patch.object(server, 'repo_notifications', AsyncMagicMock(
-        spec=server.repo_notifications))
+    @patch.object(server, 'notifications', AsyncMagicMock(
+        spec=server.notifications))
     @patch.object(server.OutputMessageHandler, 'run_notifications',
                   AsyncMagicMock(
                       spec=server.OutputMessageHandler.run_notifications))
     @async_test
-    async def test_handle_repo_notifications(self):
+    async def test_handle_notifications_timeout(self):
         msg = AsyncMagicMock(spec=JsonAckMessage)
         msg.body = {'event_type': 'repo-added',
                     'repository_id': self.obj_id}
-        consumer = server.repo_notifications.consume.return_value
-
-        async def fm(cancel_on_timeout):
-            self.server._stop_consuming_messages = True
-            return msg
-
-        consumer.fetch_message = fm
-
-        await self.server._handle_repo_notifications()
-        self.assertTrue(self.server.run_notifications.called)
-
-    @patch.object(server, 'repo_notifications', AsyncMagicMock(
-        spec=server.repo_notifications))
-    @patch.object(server.OutputMessageHandler, 'run_notifications',
-                  AsyncMagicMock(
-                      spec=server.OutputMessageHandler.run_notifications))
-    @async_test
-    async def test_handle_repo_notifications_timeout(self):
-        msg = AsyncMagicMock(spec=JsonAckMessage)
-        msg.body = {'event_type': 'repo-added',
-                    'repository_id': self.obj_id}
-        consumer = server.repo_notifications.consume.return_value
+        consumer = server.notifications.consume.return_value
 
         async def fm(cancel_on_timeout):
             self.server._stop_consuming_messages = True
@@ -92,21 +68,21 @@ class OutputMessageHandlerTest(TestCase):
 
         consumer.fetch_message = fm
 
-        await self.server._handle_repo_notifications()
+        await self.server._handle_notifications()
         self.assertFalse(self.server.run_notifications.called)
 
-    @patch.object(server, 'build_notifications', AsyncMagicMock(
-        spec=server.build_notifications))
+    @patch.object(server, 'notifications', AsyncMagicMock(
+        spec=server.notifications))
     @patch.object(server.OutputMessageHandler, 'run_notifications',
                   AsyncMagicMock(
                       spec=server.OutputMessageHandler.run_notifications))
     @async_test
-    async def test_handle_build_notifications(self):
+    async def test_handle_notifications(self):
         msg = AsyncMagicMock(spec=JsonAckMessage)
         msg.body = {'event_type': 'build-added',
                     'repository_id': self.obj_id}
 
-        consumer = server.build_notifications.consume.return_value
+        consumer = server.notifications.consume.return_value
 
         async def fm(cancel_on_timeout):
             self.server._stop_consuming_messages = True
@@ -114,7 +90,7 @@ class OutputMessageHandlerTest(TestCase):
 
         consumer.fetch_message = fm
 
-        await self.server._handle_build_notifications()
+        await self.server._handle_notifications()
         self.assertTrue(self.server.run_notifications.called)
 
     @patch.object(server, 'sleep', AsyncMagicMock())
@@ -135,15 +111,11 @@ class OutputMessageHandlerTest(TestCase):
 
     @async_test
     async def test_run(self):
-        self.server._handle_build_notifications = AsyncMagicMock(
-            spec=self.server._handle_build_notifications)
-
-        self.server._handle_repo_notifications = AsyncMagicMock(
-            spec=self.server._handle_repo_notifications)
+        self.server._handle_notifications = AsyncMagicMock(
+            spec=self.server._handle_notifications)
 
         await self.server.run()
-        self.assertTrue(self.server._handle_repo_notifications.called)
-        self.assertTrue(self.server._handle_build_notifications.called)
+        self.assertTrue(self.server._handle_notifications.called)
 
     def test_sync_shutdown(self):
         self.server.shutdown = AsyncMagicMock()

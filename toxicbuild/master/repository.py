@@ -26,10 +26,23 @@ from aiozk import exc
 from bson.objectid import ObjectId
 from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
-from mongomotor.fields import (StringField, IntField, ReferenceField,
-                               DateTimeField, ListField, BooleanField,
-                               EmbeddedDocumentField, DictField,
-                               DynamicField)
+from mongomotor.fields import (
+    StringField,
+    IntField, ReferenceField,
+    DateTimeField,
+    ListField,
+    BooleanField,
+    EmbeddedDocumentField,
+    DictField,
+    DynamicField
+)
+from toxicbuild.common.exchanges import (
+    notifications,
+    ui_notifications,
+    update_code,
+    poll_status,
+    scheduler_action,
+)
 from toxicbuild.core import utils, build_config
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.master import settings
@@ -37,10 +50,6 @@ from toxicbuild.master.build import (BuildSet, Builder, BuildManager)
 from toxicbuild.master.coordination import Lock
 from toxicbuild.master.document import OwnedDocument, ExternalRevisionIinfo
 from toxicbuild.master.exceptions import RepoBranchDoesNotExist
-from toxicbuild.master.exchanges import (update_code, poll_status,
-                                         scheduler_action, repo_status_changed,
-                                         repo_added, ui_notifications,
-                                         repo_notifications)
 from toxicbuild.master.utils import (get_build_config_type,
                                      get_build_config_filename)
 from toxicbuild.master.signals import buildset_added
@@ -235,7 +244,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     @classmethod
     async def _notify_repo_creation(cls, repo):
         repo_added_msg = await repo.to_dict()
-        await repo_added.publish(repo_added_msg)
+        await ui_notifications.publish(repo_added_msg)
         repo_added_msg['msg_type'] = 'repo_added'
         async for user in await repo.get_allowed_users():
             ensure_future(ui_notifications.publish(
@@ -244,8 +253,8 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     async def _notify_status_changed(self, status_msg):
         self.log('Notify status changed {}'.format(status_msg),
                  level='debug')
-        await repo_status_changed.publish(status_msg,
-                                          routing_key=str(self.id))
+        await ui_notifications.publish(status_msg,
+                                       routing_key=str(self.id))
         status_msg['msg_type'] = 'repo_status_changed'
         async for user in await self.get_allowed_users():
             ensure_future(ui_notifications.publish(
@@ -309,17 +318,17 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     async def request_removal(self):
         """Request the removal of a repository by publishing a message in the
-        ``repo_notifications`` queue with the routing key
+        ``notifications`` queue with the routing key
         `repo-removal-requested`."""
 
         msg = {'repository_id': str(self.id)}
-        await repo_notifications.publish(
+        await notifications.publish(
             msg, routing_key='repo-removal-requested')
 
     async def request_code_update(self, repo_branches=None, external=None,
                                   wait_for_lock=False):
         """Request the code update of a repository by publishing a message in
-        the ``repo_notifications`` queue with the routing key
+        the ``notifications`` queue with the routing key
         `repo-update-code-requested`.
 
         :param repo_branches: A dictionary with information about the branches
@@ -343,7 +352,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                'repo_branches': repo_branches,
                'external': external,
                'wait_for_lock': wait_for_lock}
-        await repo_notifications.publish(
+        await notifications.publish(
             msg, routing_key='update-code-requested')
 
     @classmethod
@@ -662,7 +671,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     async def request_build(self, branch, builder_name=None, named_tree=None,
                             slaves=None):
-        """Publishes a message in the `repo_notifications` exchange requesting
+        """Publishes a message in the `notifications` exchange requesting
         a build. Uses the routing_key `build-requested`"""
         slaves = slaves or []
         msg = {'repository_id': str(self.id),
@@ -670,7 +679,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                'named_tree': named_tree,
                'slaves_ids': [str(s.id) for s in slaves]}
 
-        await repo_notifications.publish(msg, routing_key='build-requested')
+        await notifications.publish(msg, routing_key='build-requested')
 
     async def cancel_build(self, build_uuid):
         """Cancels a build.

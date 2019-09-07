@@ -24,25 +24,10 @@ from unittest import mock, TestCase
 from toxicbuild.core.exchange import JsonAckMessage as Message
 from toxicbuild.master import pollers, repository, users
 from toxicbuild.master.exceptions import CloneException
-from toxicbuild.master.exchanges import connect_exchanges, disconnect_exchanges
 from tests import async_test, AsyncMagicMock
 
 
 class GitPollerTest(TestCase):
-
-    @classmethod
-    @async_test
-    async def setUpClass(cls):
-        await connect_exchanges()
-
-    @classmethod
-    @mock.patch('aioamqp.protocol.logger', mock.Mock())
-    @async_test
-    async def tearDownClass(cls):
-        channel = await pollers.revisions_added.connection.protocol.channel()
-        await channel.queue_delete(
-            'toxicmaster.revisions_added_queue')
-        await disconnect_exchanges()
 
     @mock.patch.object(pollers, 'get_vcs', mock.MagicMock())
     @async_test
@@ -368,22 +353,16 @@ class GitPollerTest(TestCase):
 class PollerServerTest(TestCase):
 
     @classmethod
-    @async_test
-    async def setUpClass(cls):
-        await connect_exchanges()
-
-    @classmethod
     @mock.patch('aioamqp.protocol.logger', mock.Mock())
     @async_test
     async def tearDownClass(cls):
         channel = await pollers.update_code.connection.protocol.channel()
         await channel.queue_delete(
-            'toxicmaster.update_code_queue')
+            'toxicbuild.update_code_queue')
         await channel.queue_delete(
-            'toxicmaster.revisions_added_queue')
+            'toxicbuild.revisions_added_queue')
         await channel.queue_delete(
-            'toxicmaster.scheduler_action_queue')
-        await disconnect_exchanges()
+            'toxicbuild.scheduler_action_queue')
 
     def setUp(self):
         self.server = pollers.PollerServer()

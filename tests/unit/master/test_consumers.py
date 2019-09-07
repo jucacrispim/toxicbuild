@@ -75,8 +75,9 @@ class BaseConsumerTest(TestCase):
         self.assertFalse(self.handle.called)
 
     @patch.object(consumers.LoggerMixin, 'log', Mock())
-    @patch.object(consumers, 'connect_exchanges',
-                  AsyncMagicMock(spec=consumers.connect_exchanges))
+    @patch.object(consumers.BaseConsumer, 'reconnect_exchanges',
+                  AsyncMagicMock(
+                      spec=consumers.BaseConsumer.reconnect_exchanges))
     @async_test
     async def test_run_connection_closed(self):
         server = self.srv_class(self.exchange, lambda: None)
@@ -89,7 +90,7 @@ class BaseConsumerTest(TestCase):
         consumer.fetch_message = fm
         await server.run()
         self.assertFalse(self.handle.called)
-        self.assertTrue(consumers.connect_exchanges.called)
+        self.assertTrue(consumers.BaseConsumer.reconnect_exchanges.called)
 
     @patch.object(consumers.asyncio, 'sleep', AsyncMagicMock())
     @async_test
@@ -116,6 +117,15 @@ class BaseConsumerTest(TestCase):
         server = consumers.BaseConsumer(exchange, lambda: None)
         server.sync_shutdown()
         self.assertTrue(server.shutdown.called)
+
+    @patch.object(consumers.conn, 'connect', AsyncMagicMock(
+        spec=consumers.conn.connect))
+    @async_test
+    async def test_reconnect_exchanges(self):
+        server = consumers.BaseConsumer(AsyncMagicMock(), lambda: None)
+        await server.reconnect_exchanges()
+
+        self.assertTrue(consumers.conn.connect.called)
 
 
 class RepositoryMessageConsumerTest(TestCase):

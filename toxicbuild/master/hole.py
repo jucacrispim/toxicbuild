@@ -32,6 +32,7 @@ import sys
 import traceback
 from bson.objectid import ObjectId
 from mongoengine.errors import NotUniqueError
+from toxicbuild.common.exchanges import ui_notifications
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import (LoggerMixin, datetime2string,
                                    format_timedelta, now, localtime2utc)
@@ -41,7 +42,6 @@ from toxicbuild.master.consumers import RepositoryMessageConsumer
 from toxicbuild.master.repository import Repository
 from toxicbuild.master.exceptions import (UIFunctionNotFound,
                                           OwnerDoesNotExist, NotEnoughPerms)
-from toxicbuild.master.exchanges import ui_notifications
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,

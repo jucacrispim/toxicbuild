@@ -20,12 +20,13 @@ import asyncio
 import signal
 from aioamqp.exceptions import AmqpClosedConnection
 from asyncamqp.exceptions import ConsumerTimeout
-from toxicbuild.core.utils import LoggerMixin
-from toxicbuild.master.exchanges import (
-    repo_notifications,
-    revisions_added,
-    connect_exchanges
+from toxicbuild.common.exchanges import (
+    conn,
+    notifications,
+    revisions_added
 )
+from toxicbuild.core.utils import LoggerMixin
+from toxicbuild.master import settings
 from toxicbuild.master.repository import Repository, RepositoryRevision
 
 
@@ -69,7 +70,7 @@ class BaseConsumer(LoggerMixin):
                 except AmqpClosedConnection:
                     self.log('AmqpClosedConnection. Trying again...',
                              level='error')
-                    await connect_exchanges()
+                    await self.reconnect_exchanges()
                     continue
 
                 self.log('Consuming message')
@@ -78,6 +79,9 @@ class BaseConsumer(LoggerMixin):
                 await msg.acknowledge()
 
             self._stop = False
+
+    async def reconnect_exchanges(self):
+        await conn.connect(**settings.RABBITMQ_CONNECTION)
 
     def stop(self):
         self._stop = True
@@ -94,7 +98,7 @@ class BaseConsumer(LoggerMixin):
 
 
 class RepositoryMessageConsumer(LoggerMixin):
-    """Waits for messages published in the ``repo_notifications``
+    """Waits for messages published in the ``notifications``
     exchange and reacts to them."""
 
     REPOSITORY_CLASS = Repository
@@ -108,14 +112,14 @@ class RepositoryMessageConsumer(LoggerMixin):
     def __init__(self):
         type(self).revision_consumer = BaseConsumer(revisions_added,
                                                     self._add_builds)
-        type(self).build_consumer = BaseConsumer(repo_notifications,
+        type(self).build_consumer = BaseConsumer(notifications,
                                                  self._add_requested_build,
                                                  routing_key='build-requested')
         type(self).removal_consumer = BaseConsumer(
-            repo_notifications, self._remove_repo,
+            notifications, self._remove_repo,
             routing_key='repo-removal-requested')
         type(self).update_consumer = BaseConsumer(
-            repo_notifications, self._update_repo,
+            notifications, self._update_repo,
             routing_key='update-code-requested')
 
     def run(self):

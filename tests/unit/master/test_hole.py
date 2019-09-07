@@ -26,7 +26,7 @@ from toxicbuild.master import hole, build, repository, slave
 from tests import async_test, AsyncMagicMock, create_autospec
 
 
-@patch.object(repository, 'repo_added', AsyncMagicMock())
+@patch.object(repository, 'ui_notifications', AsyncMagicMock())
 class UIHoleTest(TestCase):
 
     def setUp(self):
@@ -199,7 +199,6 @@ class UIHoleTest(TestCase):
         self.assertTrue(hole.HoleHandler.user_authenticate.called)
 
 
-@patch.object(repository, 'repo_added', AsyncMagicMock())
 @patch.object(repository, 'ui_notifications', AsyncMagicMock())
 @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
 @patch.object(repository.utils, 'log', Mock())
@@ -1266,8 +1265,7 @@ class HoleHandlerTest(TestCase):
 
 
 @patch.object(repository, 'ui_notifications', AsyncMagicMock())
-@patch.object(repository, 'repo_added', AsyncMagicMock())
-@patch.object(repository, 'repo_status_changed', AsyncMagicMock())
+@patch.object(repository, 'ui_notifications', AsyncMagicMock())
 @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
 @patch.object(hole.UIStreamHandler, 'log', Mock())
 class UIStreamHandlerTest(TestCase):

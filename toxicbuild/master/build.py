@@ -34,9 +34,9 @@ from toxicbuild.core.build_config import list_builders_from_config
 from toxicbuild.core.utils import (now, datetime2string, MatchKeysDict,
                                    format_timedelta, LoggerMixin,
                                    localtime2utc, set_tzinfo)
+from toxicbuild.common.exchanges import notifications
 from toxicbuild.master.document import ExternalRevisionIinfo
 from toxicbuild.master.exceptions import (DBError, ImpossibleCancellation)
-from toxicbuild.master.exchanges import build_notifications
 from toxicbuild.master.signals import (build_added, build_cancelled,
                                        buildset_started, buildset_finished,
                                        buildset_added)
@@ -458,7 +458,7 @@ class Build(EmbeddedDocument, LoggerMixin):
         repo = await self.repository
         msg.update({'repository_id': str(repo.id),
                     'event_type': event_type})
-        await build_notifications.publish(msg)
+        await notifications.publish(msg)
 
     async def cancel(self):
         """Cancel the build if it is not started yet."""
@@ -607,7 +607,7 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         return queryset.order_by('created')
 
     async def notify(self, event_type, status=None):
-        """Notifies an event to the build_notifications exchange.
+        """Notifies an event to the notifications exchange.
 
         :param event_type: The event type to notify about
         :param status: The status of the buildset. If None, the value of
@@ -620,7 +620,7 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         msg['event_type'] = event_type
         msg['status'] = status or self.status
         msg['repository_id'] = str(repo.id)
-        await build_notifications.publish(msg)
+        await notifications.publish(msg)
 
     @classmethod
     async def _get_next_number(cls, repository):
