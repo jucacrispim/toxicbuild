@@ -16,10 +16,12 @@ echo ""
 echo "  Removing old images..."
 docker rmi $(docker images --filter "before=toxicbase"  -q) &> /dev/null
 if [ "$TEST" = "python"  ]
-   docker rmi $(docker images --filter "before=toxictest"  -q) &> /dev/null
+then
+    docker rmi $(docker images --filter "before=toxictest"  -q) &> /dev/null
 fi
 
 if [ "$TEST" = "selenium" ]
+then
    docker rmi $(docker images --filter "before=toxictest-selenium"  -q) &> /dev/null
 fi
 echo "  Done!"
