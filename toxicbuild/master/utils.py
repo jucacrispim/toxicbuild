@@ -19,8 +19,6 @@
 
 import json
 
-from mongomotor.fields import StringField, URLField, ListField
-
 from toxicbuild.core import requests
 
 from toxicbuild.master import settings
