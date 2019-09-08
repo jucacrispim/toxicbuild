@@ -324,7 +324,12 @@ class BaseIntegration(LoggerMixin, Document):
             full_name=external_full_name)
         self.repositories.append(ext_repo)
         await self.save()
-        await self.enable_notification(repo)
+        try:
+            await self.enable_notification(repo)
+        except Exception:
+            msg = traceback.format_exc()
+            self.log('Error enabling notification: {}'.format(msg),
+                     level='error')
 
         if clone:
             await repo.request_code_update()

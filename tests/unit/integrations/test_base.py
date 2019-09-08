@@ -298,6 +298,28 @@ class BaseIntegrationTest(TestCase):
                                                         clone=False)
         self.assertIs(repo, False)
 
+    @patch.object(base.RepositoryInterface, 'add', AsyncMagicMock(
+        spec=base.RepositoryInterface.add, return_value=Mock()))
+    @patch.object(base.SlaveInterface, 'list', AsyncMagicMock(return_value=[]))
+    @patch.object(base.BaseIntegration, 'post_import_hooks',
+                  AsyncMagicMock(spec=base.BaseIntegration.post_import_hooks))
+    @patch.object(base.BaseIntegration, 'enable_notification',
+                  AsyncMagicMock(
+                      side_effect=Exception,
+                      spec=base.BaseIntegration.enable_notification))
+    @patch.object(base.BaseIntegration, 'log', MagicMock())
+    @async_test
+    async def test_import_repository_bad_notification(self):
+        repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
+                     'id': 1234, 'full_name': 'ze/my-repo'}
+        self.integration.get_auth_url = AsyncMagicMock(
+            return_value='https://some-url')
+
+        repo = await self.integration.import_repository(repo_info,
+                                                        clone=False)
+        self.assertTrue(base.BaseIntegration.log.called)
+        self.assertTrue(repo)
+
     @async_test
     async def test_get_repo_by_exernal_id_bad_repo(self):
         with self.assertRaises(base.BadRepository):
