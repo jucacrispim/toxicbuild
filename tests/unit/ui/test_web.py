@@ -1026,7 +1026,8 @@ class DashboardHandlerTest(TestCase):
         called = web.render_template.call_args
         called_template = called[0][0]
         called_context = called[0][2]
-        expected_keys = ['github_import_url', 'gitlab_import_url']
+        expected_keys = ['github_import_url', 'gitlab_import_url',
+                         'bitbucket_import_url']
         self.assertEqual(called_template, self.handler.repo_settings_template)
         self.assertEqual(expected_keys, list(called_context.keys()))
 

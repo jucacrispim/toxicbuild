@@ -831,9 +831,13 @@ class DashboardHandler(LoggedTemplateHandler):
         if settings_type == 'repositories':
             github_import_url = getattr(settings, 'GITHUB_IMPORT_URL', '#')
             gitlab_import_url = self._get_gitlab_import_url()
+            bitbucket_import_url = getattr(
+                settings, 'BITBUCKET_IMPORT_URL', '#')
 
             context = {'github_import_url': github_import_url,
-                       'gitlab_import_url': gitlab_import_url}
+                       'gitlab_import_url': gitlab_import_url,
+                       'bitbucket_import_url': bitbucket_import_url
+                       }
             template = self.repo_settings_template
 
         elif settings_type == 'slaves':
