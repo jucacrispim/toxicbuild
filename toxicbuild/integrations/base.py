@@ -295,14 +295,14 @@ class BaseIntegration(LoggerMixin, Document):
             dict(name='bug-*', notify_only_latest=True)]
         slaves = await SlaveInterface.list(self.user)
         slaves_names = [s.name for s in slaves]
-        # update_seconds=0 because it will not be scheduled in fact.
-        # note the schedule_poller=False.
-        # What triggers an update code is a message from github/gitlab in the
-        # webhook receiver.
         user = self.user
         fetch_url = await self.get_auth_url(repo_info['clone_url'])
         external_id = repo_info['id']
         external_full_name = repo_info['full_name']
+        # update_seconds=0 because it will not be scheduled in fact.
+        # note the schedule_poller=False.
+        # What triggers an update code is a message from github/gitlab in the
+        # webhook receiver.
         try:
             repo = await RepositoryInterface.add(
                 user,

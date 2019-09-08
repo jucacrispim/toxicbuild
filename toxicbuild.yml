@@ -11,6 +11,11 @@ builders:
       - 'feature-*'
       - 'bug-*'
 
+    envvars:
+      ENV: ci
+      TEST: python
+
+
     steps:
 
       - name: Create test environment
@@ -56,6 +61,7 @@ builders:
 
     envvars:
       ENV: ci
+      TEST: selenium
 
     steps:
 
