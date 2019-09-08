@@ -58,7 +58,11 @@ class BitbucketIntegration(BaseIntegration):
 
         r = await self.request2api('post', url, sesskw=sesskw, data=params)
         r = r.json()
-        r['expires'] = self.get_expire_dt(r['expires_in'])
+        # bitbucket tokens expire in one hour. Don't use the
+        # expires_in response
+        # expires_in = r['expires_in']
+        expires_in = 3600
+        r['expires'] = self.get_expire_dt(expires_in)
         return r
 
     async def refresh_access_token(self):
@@ -71,7 +75,7 @@ class BitbucketIntegration(BaseIntegration):
         params = {'refresh_token': self.refresh_token,
                   'grant_type': 'refresh_token'}
 
-        r = await self.request2api('post', url, sesskw=sesskw, params=params)
+        r = await self.request2api('post', url, sesskw=sesskw, data=params)
         r = r.json()
         self.access_token = r['access_token']
         self.expires = self.get_expire_dt(r['expires_in'])
@@ -111,13 +115,16 @@ class BitbucketIntegration(BaseIntegration):
         """
         app = await self.APP_CLS.get_app()
 
-        url = self.webhook_url + '&token={}'.format(app.webhook_token)
+        ret_url = self.webhook_url + '&token={}'.format(app.webhook_token)
         self.log('Creating webhook to {}'.format(repo_info['full_name']))
-        self.log('With url: {}'.format(url), level='debug')
+        self.log('With url: {}'.format(ret_url), level='debug')
 
-        header = await self.get_headers()
+        headers = await self.get_headers()
+        headers.update({'Content-Type': 'application/json'})
+        # headers = {'Content-Type': 'application/json'}
+        # auth = {'auth': app.get_auth()}
         body = {'description': 'Toxicbuild Webhook',
-                'url': url,
+                'url': ret_url,
                 'active': True,
                 'events': [
                     'repo:push',
@@ -127,8 +134,10 @@ class BitbucketIntegration(BaseIntegration):
 
         url = settings.BITBUCKET_API_URL + 'repositories/{}/hooks'.format(
             repo_info['full_name'])
-        await self.request2api('post', url, statuses=[200, 201], data=body,
-                               headers=header)
+        self.log('API url: {}'.format(url))
+        await self.request2api('post', url,
+                               statuses=[200, 201], json=body,
+                               headers=headers)
         return True
 
     def _get_repo_dict(self, repo_info):

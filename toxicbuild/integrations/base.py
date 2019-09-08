@@ -208,6 +208,7 @@ class BaseIntegration(LoggerMixin, Document):
     def token_is_expired(self):
         """Informs if the installation auth token is expired."""
         n = now()
+        print(utc2localtime(self.expires))
         if n > utc2localtime(self.expires):
             return True
         return False

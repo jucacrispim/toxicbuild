@@ -166,13 +166,17 @@ class BitbucketIntegrationTest(TestCase):
 
         self.assertEqual(len(repos), 4)
 
-    @patch.object(bitbucket.BitbucketIntegration, 'get_headers',
+    @patch.object(bitbucket.BitbucketApp, 'get_app',
                   AsyncMagicMock(
-                      spec=bitbucket.BitbucketIntegration.get_headers,
-                      return_value={'the': 'header'}))
+                      spec=bitbucket.BitbucketApp.get_app,
+                      return_value=bitbucket.BitbucketApp()))
     @patch.object(bitbucket.BitbucketIntegration, 'request2api',
                   AsyncMagicMock(
                       spec=bitbucket.BitbucketIntegration.request2api))
+    @patch.object(bitbucket.BitbucketIntegration, 'get_headers',
+                  AsyncMagicMock(
+                      spec=bitbucket.BitbucketIntegration.get_headers,
+                      return_value={}))
     @async_test
     async def test_create_webhook(self):
         await self.integration.create_webhook({'full_name': 'me/repo',
