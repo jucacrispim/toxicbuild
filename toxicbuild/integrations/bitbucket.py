@@ -78,7 +78,9 @@ class BitbucketIntegration(BaseIntegration):
         r = await self.request2api('post', url, sesskw=sesskw, data=params)
         r = r.json()
         self.access_token = r['access_token']
-        self.expires = self.get_expire_dt(r['expires_in'])
+        # expires_in = r['expires_in']
+        expires_in = 3600
+        self.expires = self.get_expire_dt(expires_in)
         await self.save()
 
     async def request_user_id(self):

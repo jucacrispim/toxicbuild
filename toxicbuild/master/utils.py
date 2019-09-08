@@ -38,33 +38,6 @@ def get_build_config_filename():
     return getattr(settings, 'BUILD_CONFIG_FILENAME', 'toxicbuild.yml')
 
 
-class PrettyFieldMixin:  # pylint: disable=too-few-public-methods
-    """A field with a descriptive name for humans"""
-
-    def __init__(self, *args, **kwargs):
-        keys = ['pretty_name', 'description']
-        for k in keys:
-            setattr(self, k, kwargs.get(k))
-            try:
-                del kwargs[k]
-            except KeyError:
-                pass
-
-        super().__init__(*args, **kwargs)
-
-
-class PrettyStringField(PrettyFieldMixin, StringField):
-    pass
-
-
-class PrettyURLField(PrettyFieldMixin, URLField):
-    pass
-
-
-class PrettyListField(PrettyFieldMixin, ListField):
-    pass
-
-
 async def send_email(recipients, subject, message):
     """Sends an email using the output's web api
 

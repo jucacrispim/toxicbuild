@@ -28,7 +28,8 @@ from pyrocumulus.web.handlers import BasePyroAuthHandler
 from pyrocumulus.web.urlmappers import URLSpec
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.common.exchanges import notifications
-from toxicbuild.output.notifications import Notification, send_email
+from toxicbuild.output.notifications import Notification
+from toxicbuild.output.notifications.email import send_email
 
 
 class OutputMessageHandler(LoggerMixin):
