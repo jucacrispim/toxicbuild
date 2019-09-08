@@ -73,3 +73,4 @@ def user_sees_repositories_imported(context):
 
     r = browser.refresh_until(fn)
     assert r
+    browser.get(settings.TOXICUI_URL + 'logout')
