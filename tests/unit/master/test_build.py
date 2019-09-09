@@ -457,6 +457,19 @@ class BuildTest(TestCase):
 
         self.assertTrue(r)
 
+    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+        spec=build.notifications.publish))
+    @mock.patch.object(build.build_added, 'send', mock.MagicMock(
+        spec=build.buildset_added.send))
+    @async_test
+    async def test_add_build(self):
+        await self._create_test_data()
+        b = build.Build(repository=self.repo, branch='master',
+                        named_tree='v0.1', number=3, builder=self.builder)
+        await self.buildset.add_build(b)
+        self.assertTrue(build.notifications.publish.called)
+        self.assertTrue(build.build_added.send.called)
+
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asfd')
         await self.owner.save()
@@ -698,6 +711,10 @@ class BuildSetTest(TestCase):
         builds = await self.buildset.get_builds_for(builder=self.builder,
                                                     branch='master')
         self.assertEqual(len(builds), 1)
+
+    @async_test
+    async def add_build(self):
+        pass
 
     async def _create_test_data(self):
         self.owner = users.User(email='a@a.com', password='asdf')

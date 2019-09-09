@@ -456,6 +456,10 @@ class Build(EmbeddedDocument, LoggerMixin):
         :param event_type: The name of the event."""
         msg = self.to_dict()
         repo = await self.repository
+        builder = await self.builder
+        msg['repository'] = await repo.to_dict()
+        msg['builder'] = await builder.to_dict()
+        msg['status'] = self.status
         msg.update({'repository_id': str(repo.id),
                     'event_type': event_type})
         await notifications.publish(msg)
@@ -800,6 +804,13 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
                 builds.append(build)
         return builds
 
+    async def add_build(self, build):
+        self.builds.append(build)
+        await self.save()
+        repo = await self.repository
+        build_added.send(str(repo.id), build=build)
+        await build.notify('build-added')
+
 
 class BuildExecuter(LoggerMixin):
     """Class responsible for executing builds taking care of wich builds
@@ -990,9 +1001,7 @@ class BuildManager(LoggerMixin):
                           number=last_build,
                           triggered_by=builder.triggered_by)
             self._handle_build_triggered_by(build, builders)
-            buildset.builds.append(build)
-            await buildset.save()
-            build_added.send(str(self.repository.id), build=build)
+            await buildset.add_build(build)
 
             self.log('build {} added for named_tree {} on branch {}'.format(
                 last_build, revision.commit, revision.branch), level='debug')
