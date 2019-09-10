@@ -41,12 +41,13 @@ class BitbucketCommitStatusNotification(Notification):
     installation = ReferenceField(BitbucketIntegration)
 
     async def run(self, build_info):
+        self.log('Sending build status to bitbucket', level='debug')
         sender = build_info['repository']
         installation = await self.installation
         url = settings.BITBUCKET_API_URL + \
             'repositories/{}/commit/{}/statuses/build'.format(
                 sender['external_full_name'], build_info['commit'])
-
+        self.log('With url: {}'.format(url))
         state_tb = {
             'running': 'INPROGRESS',
             'success': 'SUCCESSFULL',
