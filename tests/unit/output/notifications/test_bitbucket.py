@@ -50,7 +50,7 @@ class BitbucketCommitStatusNotificationTest(TestCase):
             'number': 1,
             'uuid': 'the-uuid',
             'status': 'running',
-            'commit': 'the-sha',
+            'named_tree': 'the-sha',
         }
 
         await self.notification.run(build_info)

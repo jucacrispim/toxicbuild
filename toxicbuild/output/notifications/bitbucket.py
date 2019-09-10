@@ -46,7 +46,7 @@ class BitbucketCommitStatusNotification(Notification):
         installation = await self.installation
         url = settings.BITBUCKET_API_URL + \
             'repositories/{}/commit/{}/statuses/build'.format(
-                sender['external_full_name'], build_info['commit'])
+                sender['external_full_name'], build_info['named_tree'])
         self.log('With url: {}'.format(url))
         state_tb = {
             'running': 'INPROGRESS',
