@@ -66,7 +66,7 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
 
     async def validate_webhook(self):
         token = self.get_request_signature()
-        app = self.APP_CLS.get_app()
+        app = await self.APP_CLS.get_app()
         try:
             await app.validate_token(token)
         except BadSignature:

@@ -92,7 +92,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         app = AsyncMagicMock()
         app.validate_token = AsyncMagicMock(
             side_effect=webhook_receivers.BadSignature)
-        app_cls.get_app.return_value = app
+        app_cls.get_app = AsyncMagicMock(return_value=app)
 
         self.webhook_receiver.APP_CLS = app_cls
 
@@ -107,7 +107,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         app_cls = Mock()
         app = AsyncMagicMock()
         app.validate_token = AsyncMagicMock()
-        app_cls.get_app.return_value = app
+        app_cls.get_app = AsyncMagicMock(return_value=app)
 
         self.webhook_receiver.APP_CLS = app_cls
 
