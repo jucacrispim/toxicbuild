@@ -91,7 +91,7 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
 
     async def get_install(self):
         install_id = self.params.get('installation_id')
-        install = await self.APP_CLS.objects.get(id=install_id)
+        install = await self.INSTALL_CLS.objects.get(id=install_id)
         return install
 
     @post('webhooks')

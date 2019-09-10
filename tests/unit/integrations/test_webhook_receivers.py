@@ -269,9 +269,9 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     @async_test
     async def test_get_install(self):
         self.webhook_receiver.params = {'installation_id': 'asf'}
-        self.webhook_receiver.APP_CLS = AsyncMagicMock()
+        self.webhook_receiver.INSTALL_CLS = AsyncMagicMock()
         await self.webhook_receiver.get_install()
-        self.assertTrue(self.webhook_receiver.APP_CLS.objects.get.called)
+        self.assertTrue(self.webhook_receiver.INSTALL_CLS.objects.get.called)
 
 
 class GithubWebhookReceiverTest(AsyncTestCase):
