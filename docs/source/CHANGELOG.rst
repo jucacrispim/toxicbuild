@@ -1,6 +1,10 @@
 Changelog
 =========
 
+* 0.8.0
+
+  - Add Bitbucket integration
+
 * 0.7.0
 
   - Added step details page

@@ -32,8 +32,9 @@ from toxicbuild.core.conf import Settings
 from toxicbuild.core.cmd import command, main
 from toxicbuild.core.utils import (changedir, log, daemonize as daemon,
                                    SettingsPatcher, set_loglevel)
-from toxicbuild.master import (
-    create_settings_and_connect as create_settings_and_connect_master)
+
+from toxicbuild.integrations import (
+    create_settings as create_settings_integrations)
 
 PIDFILE = 'toxicoutput.pid'
 LOGFILE = './toxicoutput.log'
@@ -104,7 +105,7 @@ def _set_conffile_env(workdir, conffile):
         os.environ['TOXICOUTPUT_SETTINGS'] = os.path.join(
             workdir, 'toxicoutput.conf')
 
-    os.environ['TOXICMASTER_SETTINGS'] = os.environ[
+    os.environ['TOXICINTEGRATIONS_SETTINGS'] = os.environ[
         'TOXICOUTPUT_SETTINGS']
 
 
@@ -113,7 +114,7 @@ async def create_auth_token(workdir=None):
     if workdir:
         _set_conffile_env(workdir, None)
         create_settings_and_connect()
-        create_settings_and_connect_master()
+        create_settings_integrations()
 
     from pyrocumulus.auth import AccessToken, Permission
     from toxicbuild.output.notifications import Notification
@@ -173,7 +174,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
 
         _set_conffile_env(workdir, conffile)
 
-        create_settings_and_connect_master()
+        create_settings_integrations()
         create_settings_and_connect()
 
         SettingsPatcher().patch_pyro_settings(settings)
@@ -244,7 +245,7 @@ def stop(workdir, pidfile=PIDFILE, kill=False):
         os.environ['TOXICINTEGRATIONS_SETTINGS'] = os.environ[
             'TOXICOUTPUT_SETTINGS']
 
-        create_settings_and_connect_master()
+        create_settings_integrations()
         create_settings_and_connect()
 
         print('Stopping output')
@@ -291,7 +292,7 @@ def create_token(workdir, conffile=None):
     _set_conffile_env(workdir, conffile)
 
     create_settings_and_connect()
-    create_settings_and_connect_master()
+    create_settings_integrations()
 
     loop = asyncio.get_event_loop()
     uncrypted_token = loop.run_until_complete(create_auth_token())
