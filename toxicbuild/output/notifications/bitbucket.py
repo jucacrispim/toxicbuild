@@ -17,7 +17,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from mongomotor.fields import ReferenceField
-import requests
+from toxicbuild.core import requests
 
 from toxicbuild.integrations.bitbucket import BitbucketIntegration
 
