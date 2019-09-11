@@ -201,7 +201,7 @@ class DockerContainerBuilderManagerTest(TestCase):
         self.container._is_dind = True
         self.container.manager.repo_id = 'repo_id'
         self.container.container_exists = AsyncMagicMock(return_value=False)
-        mount = '--mount source=repo_id-volume,destination=/var/lib/docker/'
+        mount = '--mount source=repo_id-b1-volume,destination=/var/lib/docker/'
         exp = 'docker run -d -t --privileged {} --name {} my-image'.format(
             mount, self.container.cname)
         await self.container.start_container()
