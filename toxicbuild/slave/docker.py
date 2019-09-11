@@ -55,8 +55,14 @@ class DockerContainerBuilder(Builder):
         self.docker_user = settings.CONTAINER_USER
         self.docker_src_dir = DOCKER_SRC_DIR.format(user=self.docker_user)
         self.image_name = settings.DOCKER_IMAGES[self.platform]
-        # are we about to start a container that has a dockerd inside it?
+        # Are we about to start a container that has a dockerd inside it?
+        # Note that here we have a big caveat. The key in the docker images
+        # configuration MUST starts with `docker`, otherwise this will not
+        # work.
         self._is_dind = self.platform.startswith('docker')
+        # Should we use a volume to keep the docker caches for
+        # subsequent builds?
+        self._dind_volume = getattr(settings, 'USE_DIND_VOLUME', True)
 
     def _get_name(self, name, workdir, platform):
         name = '{}-{}-{}'.format(
@@ -163,9 +169,9 @@ class DockerContainerBuilder(Builder):
 
     def _get_dind_opts(self):
         privileged = '--privileged' if self._is_dind else ''
-        vol_name = '{}-volume'.format(self.manager.repo_id)
+        vol_name = '{}-{}-volume'.format(self.manager.repo_id, self.name)
         volume = '--mount source={},destination=/var/lib/docker/'.format(
-            vol_name) if self._is_dind else ''
+            vol_name) if self._is_dind and self._dind_volume else ''
 
         dind_opts = '{} {}'.format(privileged, volume)
         return dind_opts

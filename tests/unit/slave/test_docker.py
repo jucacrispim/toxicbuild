@@ -164,11 +164,20 @@ class DockerContainerBuilderManagerTest(TestCase):
         opts = self.container._get_dind_opts()
         self.assertFalse(opts.strip())
 
+    def test_get_dind_opts_no_volume(self):
+        self.container._is_dind = True
+        self.container._dind_volume = False
+        self.container.manager.repo_id = 'i'
+        opts = self.container._get_dind_opts()
+        e = '--privileged '
+        self.assertEqual(opts, e)
+
     def test_get_dind_opts(self):
         self.container._is_dind = True
         self.container.manager.repo_id = 'i'
         opts = self.container._get_dind_opts()
-        e = '--privileged --mount source=i-volume,destination=/var/lib/docker/'
+        e = '--privileged --mount source=i-b1-volume,'\
+            'destination=/var/lib/docker/'
         self.assertEqual(opts, e)
 
     @patch.object(docker, 'exec_cmd', AsyncMagicMock())
