@@ -137,6 +137,17 @@ variable in order to have the build status informed to your GitLab install:
 * ``GITLAB_URL`` - The default value is `https://gitlab.com/`
 
 
+Commit statuses to custom Bitbucket installation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you use a custom installation of Bitbucket you need to change the following
+variable in order to have the build status informed to your Bitbucket install:
+
+* ``BITBUCKET_URL``
+* ``BITBUCKET_API_URL``
+
+
+
 Other config values
 ~~~~~~~~~~~~~~~~~~~
 
@@ -363,6 +374,45 @@ In your toxicui set the following:
    ``GITLAB_APP_ID`` and ``GITLAB_APP_SECRET`` are the ones you got from
    gitlab. ``GITLAB_WEBHOOK_TOKEN`` must be a unique string. <redirect-url>
    must be the same as in the gitlab app.
+
+
+.. _bitbucket-integration-config:
+
+Integration with Bitbucket
+++++++++++++++++++++++++++
+
+To integrate with Bitbucket you also need to create an app and then configure
+ToxicBuild.
+
+
+Create an app on Bitbucket
+--------------------------
+
+Naviagate to ``Bitbucket settings > Oauth`` and fill the name field with
+`ToxicBuild` and the field ``redirect URL`` with
+`<your-integrations-server>:9999/bitbucket/setup`. In the permissions section
+check ``accout > read``, ``repositories > read``, ``pull requests > read``
+and ``webhooks > read and write``. Save the application. Copy and save the
+``Key`` and ``Secret`` shown.
+
+
+Toxicbuild Configuration
+------------------------
+
+In your toxicintegrations environment set the following variables:
+
+* ``BITBUCKET_APP_ID``
+* ``BITBUCKET_APP_SECRET``
+* ``BITBUCKET_WEBHOOK_TOKEN``
+
+In your toxicui set the following:
+
+* ``BITBUCKET_IMPORT_URL`` - 'https://bitbucket.org/site/oauth2/authorize?client_id=<bitbucket-app-id>&response_type=code'
+
+.. note::
+
+   ``BITBUCKET_APP_ID`` and ``GITLAB_APP_SECRET`` are the ones you got from
+   bitbucket. ``BITBUCKET_WEBHOOK_TOKEN`` must be a unique string.
 
 
 .. _ec2-integration:

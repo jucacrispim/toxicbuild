@@ -68,6 +68,13 @@ GITLAB_APP_ID = os.environ.get('GITLAB_APP_ID')
 GITLAB_APP_SECRET = os.environ.get('GITLAB_APP_SECRET')
 GITLAB_WEBHOOK_TOKEN = os.environ.get('GITLAB_WEBHOOK_TOKEN')
 
+BITBUCKET_URL = os.environ.get('BITBUCKET_URL', 'https://bitbucket.org/')
+BITBUCKET_API_URL = os.environ.get('BITBUCKET_API_URL',
+                                   'https://api.bitbucket.org/2.0/')
+BITBUCKET_APP_ID = os.environ.get('BITBUCKET_APP_ID')
+BITBUCKET_APP_SECRET = os.environ.get('BITBUCKET_APP_SECRET')
+BITBUCKET_WEBHOOK_TOKEN = os.environ.get('BITBUCKET_WEBHOOK_TOKEN')
+
 TOXICUI_COOKIE = 'toxicui'
 TOXICUI_URL = os.environ.get('TOXICUI_URL', 'http://localhost:8888/')
 TOXICUI_LOGIN_URL = '{}login/'.format(TOXICUI_URL)

@@ -51,3 +51,7 @@ APPLICATIONS = ['toxicbuild.output.server.app']
 
 GITLAB_URL = os.environ.get('GITLAB_URL', 'https://gitlab.com/')
 GITLAB_API_URL = '{}api/v4/'.format(GITLAB_URL)
+
+BITBUCKET_URL = os.environ.get('BITBUCKET_URL', 'https://bitbucket.org/')
+BITBUCKET_API_URL = os.environ.get('BITBUCKET_API_URL',
+                                   'https://api.bitbucket.org/2.0/')
