@@ -23,7 +23,8 @@ from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch
 from uuid import uuid4
 from asyncamqp.exceptions import ConsumerTimeout
-from toxicbuild.core import utils, exchange
+from toxicbuild.common import exchange
+from toxicbuild.core import utils
 from toxicbuild.master import (repository, build, slave, users)
 from tests import async_test, AsyncMagicMock, create_autospec
 

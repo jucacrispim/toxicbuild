@@ -23,28 +23,54 @@ from unittest import TestCase
 from unittest.mock import patch, Mock
 from aioamqp.exceptions import ChannelClosed
 from asyncamqp.exceptions import ConsumerTimeout
-from toxicbuild.core import exchange
+from toxicbuild.common import exchange
 from tests import async_test, AsyncMagicMock
 
 
 class AmqpConnectionTest(TestCase):
+
+    @patch.object(exchange, 'Lock', Mock(spec=exchange.Lock))
+    def setUp(self):
+        self.conn = exchange.AmqpConnection()
+        self.conn.transport = Mock()
+        self.conn.protocol = AsyncMagicMock()
+        self.conn.reconn_lock.acquire_write = AsyncMagicMock(
+            spec=self.conn.reconn_lock.acquire_write,
+            return_value=AsyncMagicMock())
 
     @patch.object(exchange.asyncamqp, 'connect',
                   AsyncMagicMock(return_value=(AsyncMagicMock(),
                                                AsyncMagicMock())))
     @async_test
     async def test_connect(self):
-        conn = exchange.AmqpConnection()
-        await conn.connect()
-        self.assertTrue(conn._connected)
+        await self.conn.connect()
+        self.assertTrue(self.conn._connected)
 
     @async_test
     async def test_disconnect(self):
-        conn = exchange.AmqpConnection()
-        conn.transport = Mock()
-        conn.protocol = AsyncMagicMock()
-        await conn.disconnect()
-        self.assertFalse(conn._connected)
+        await self.conn.disconnect()
+        self.assertFalse(self.conn._connected)
+
+    @async_test
+    async def test_reconnect_exception(self):
+        self.conn.disconnect = AsyncMagicMock(spec=self.conn.disconnect,
+                                              side_effect=Exception)
+        self.conn.log = Mock(spec=self.conn.log)
+        self.conn.connect = AsyncMagicMock(spec=self.conn.connect)
+        await self.conn.reconnect()
+
+        self.assertTrue(self.conn.log.called)
+        self.assertTrue(self.conn.connect.called)
+
+    @async_test
+    async def test_reconnect(self):
+        self.conn.disconnect = AsyncMagicMock(spec=self.conn.disconnect)
+        self.conn.log = Mock(spec=self.conn.log)
+        self.conn.connect = AsyncMagicMock(spec=self.conn.connect)
+        await self.conn.reconnect()
+
+        self.assertFalse(self.conn.log.called)
+        self.assertTrue(self.conn.connect.called)
 
 
 class JsonAckMessageTest(TestCase):
@@ -71,6 +97,7 @@ class JsonAckMessageTest(TestCase):
 class ExchangeTest(TestCase):
 
     @classmethod
+    @patch.object(exchange, 'Lock', Mock(spec=exchange.Lock))
     @async_test
     async def setUpClass(cls):
         host = os.environ.get('AMQPHOST', 'localhost')
@@ -85,16 +112,23 @@ class ExchangeTest(TestCase):
         try:
             channel = await cls.exchange.connection.protocol.channel()
             await channel.exchange_delete(cls.exchange.name)
-        except ChannelClosed as e:
+        except (ChannelClosed, AttributeError) as e:
             pass
-        await cls.exchange.connection.disconnect()
+        try:
+            await cls.exchange.connection.disconnect()
+        except AttributeError:
+            pass
+        try:
+            await cls.conn.disconnect()
+        except exchange.AmqpClosedConnection:
+            pass
 
     @async_test
     async def tearDown(self):
         try:
             channel = await self.exchange.connection.protocol.channel()
             await channel.queue_delete(self.exchange.queue_name)
-        except ChannelClosed as e:
+        except (ChannelClosed, AttributeError) as e:
             pass
 
     @async_test
@@ -300,3 +334,39 @@ class ExchangeTest(TestCase):
             self.assertTrue(consumer.cancel.called)
 
         self.assertTrue(asserted)
+
+    @async_test
+    async def test_get_channel(self):
+        host = os.environ.get('AMQPHOST', 'localhost')
+        self.conn = exchange.AmqpConnection(
+            **{'host': host, 'port': 5672})
+        await self.conn.connect()
+        exch = exchange.Exchange('test-exc', self.conn,
+                                 'direct', bind_publisher=True)
+        exch.connection.protocol.channel = AsyncMagicMock(
+            spec=exch.connection.protocol.channel,
+            return_value=Mock())
+
+        r = await exch._get_channel()
+        self.assertTrue(r)
+        await self.conn.disconnect()
+
+    @async_test
+    async def test_get_channel_disconnected(self):
+        host = os.environ.get('AMQPHOST', 'localhost')
+        self.conn = exchange.AmqpConnection(
+            **{'host': host, 'port': 5672})
+        await self.conn.connect()
+
+        exch = exchange.Exchange('test-exc', self.conn,
+                                 'direct', bind_publisher=True)
+        exch.connection.protocol.channel = AsyncMagicMock(
+            spec=exch.connection.protocol.channel,
+            side_effect=[exchange.AmqpClosedConnection, Mock()])
+        exch.connection.reconnect = AsyncMagicMock(
+            spec=exch.connection.reconnect)
+
+        r = await exch._get_channel()
+        self.assertTrue(r)
+        self.assertTrue(exch.connection.reconnect.called)
+        await self.conn.disconnect()

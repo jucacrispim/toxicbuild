@@ -16,9 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-from aiozk.exc import TimeoutError
+import os
 from unittest import TestCase
-from toxicbuild.master import coordination
+from unittest.mock import Mock
+
+from aiozk.exc import TimeoutError
+
+from toxicbuild.common import coordination
 from tests import async_test
 
 
@@ -27,12 +31,16 @@ class ToxicLocksTest(TestCase):
     @classmethod
     @async_test
     async def setUpClass(cls):
+        coordination.ToxicZKClient.settings = Mock(
+            ZK_SERVERS=[os.environ.get('ZK_SERVERS', 'localhost:2181')],
+            ZK_KWARGS={})
         cls.lock_carrier = coordination.Lock('/path')
 
     @classmethod
     @async_test
     async def tearDownClass(cls):
         await cls.lock_carrier.client._client.delete('/path')
+        await cls.lock_carrier.client._get_client().close()
 
     @async_test
     async def test_acquire_write_lock(self):

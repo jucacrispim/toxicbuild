@@ -20,8 +20,12 @@
 import asyncio
 import json
 from uuid import uuid4
+
+from aioamqp.exceptions import AmqpClosedConnection
 import asyncamqp
 from toxicbuild.core.utils import LoggerMixin
+
+from .coordination import Lock
 
 
 class JsonAckMessage(asyncamqp.consumer.Message):
@@ -87,6 +91,14 @@ class AmqpConnection(LoggerMixin):
         self.transport = None
         self.protocol = None
         self._connected = False
+        self._reconn_lock = None
+
+    @property
+    def reconn_lock(self):
+        if self._reconn_lock:
+            return self._reconn_lock
+        self._reconn_lock = Lock('amqp-reconn-lock')
+        return self._reconn_lock
 
     async def connect(self, **conn_kwargs):
         """Connects to the Rabbitmq server.
@@ -96,6 +108,7 @@ class AmqpConnection(LoggerMixin):
 
         kw = conn_kwargs or self.conn_kwargs
         self.transport, self.protocol = await asyncamqp.connect(**kw)
+        self.conn_kwargs = kw
         self._connected = True
 
     async def disconnect(self):
@@ -104,6 +117,15 @@ class AmqpConnection(LoggerMixin):
         await self.protocol.close()
         self.transport.close()
         self._connected = False
+
+    async def reconnect(self):
+        async with self.reconn_lock.acquire_write:
+            try:
+                await self.disconnect()
+            except Exception as e:
+                msg = 'Error disconnectig... {}'.format(str(e))
+                self.log(msg, level='error')
+            await self.connect()
 
 
 class Exchange(LoggerMixin):
@@ -160,7 +182,7 @@ class Exchange(LoggerMixin):
         # self.channel = await self.connection.protocol.channel()
         # but we use a new channel everytime to avoid waiter already
         # exists stuff.
-        channel = await self.connection.protocol.channel()
+        channel = await self._get_channel()
         try:
             # self.channel = await self.connection.protocol.channel()
             if not queue_name:
@@ -212,7 +234,7 @@ class Exchange(LoggerMixin):
                                                           queue_name)
         local_channel = False
         if not channel:
-            channel = await self.connection.protocol.channel()
+            channel = await self._get_channel()
             local_channel = True
 
         if not self.is_declared(queue_name):
@@ -228,7 +250,7 @@ class Exchange(LoggerMixin):
         return r
 
     async def unbind(self, routing_key, channel=None):
-        channel = channel or await self.connection.protocol.channel()
+        channel = channel or await self._get_channel()
         try:
             r = await channel.queue_unbind(exchange_name=self.name,
                                            queue_name=self.queue_name,
@@ -246,7 +268,7 @@ class Exchange(LoggerMixin):
           exchange. Must be something that can be serialized into a json.
         :param routing_key: The routing key to pdublish the message."""
 
-        channel = await self.connection.protocol.channel()
+        channel = await self._get_channel()
         try:
             if self.bind_publisher:
                 await self.bind(routing_key, channel=channel)
@@ -276,7 +298,7 @@ class Exchange(LoggerMixin):
         """
 
         queue_name = self.queue_name
-        channel = await self.connection.protocol.channel()
+        channel = await self._get_channel()
         if self.exclusive_consumer_queue:
             queue_name = '{}-consumer-queue-{}'.format(self.name, str(uuid4()))
             await self.bind(routing_key, queue_name, channel)
@@ -304,7 +326,7 @@ class Exchange(LoggerMixin):
         if not queue_name:
             queue_name = self.queue_name
 
-        channel = await self.connection.protocol.channel()
+        channel = await self._get_channel()
         try:
             info = await channel.queue_declare(queue_name,
                                                durable=self.durable,
@@ -324,7 +346,16 @@ class Exchange(LoggerMixin):
 
         queue_name = queue_name or self.queue_name
         try:
-            channel = await self.connection.protocol.channel()
+            channel = await self._get_channel()
             await channel.queue_delete(queue_name)
         finally:
             await channel.close()
+
+    async def _get_channel(self):
+        try:
+            channel = await self.connection.protocol.channel()
+        except AmqpClosedConnection:
+            await self.connection.reconnect()
+            channel = await self.connection.protocol.channel()
+
+        return channel

@@ -20,7 +20,7 @@ from toxicbuild.master import scheduler, settings  # noqa: f402
 scheduler.stop()
 
 
-from toxicbuild.master.coordination import ToxicZKClient  # noqa: F402
+from toxicbuild.common.coordination import ToxicZKClient  # noqa: F402
 
 
 loop = asyncio.get_event_loop()

@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-from toxicbuild.core.exchange import AmqpConnection, Exchange
+from .exchange import AmqpConnection, Exchange
 
 
 conn = AmqpConnection()

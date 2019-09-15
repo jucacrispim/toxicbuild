@@ -20,10 +20,11 @@
 from aiozk import ZKClient
 from aiozk.recipes.shared_lock import SharedLock
 from toxicbuild.core.utils import LoggerMixin
-from toxicbuild.master import settings
 
 
 class ToxicZKClient(LoggerMixin):
+    settings = None
+
     _zk_client = None
     _started = False
 
@@ -33,8 +34,8 @@ class ToxicZKClient(LoggerMixin):
 
     def __init__(self):
         if not self._client:
-            servers = ','.join(settings.ZK_SERVERS)
-            kwargs = getattr(settings, 'ZK_KWARGS', {})
+            servers = ','.join(self.settings.ZK_SERVERS)
+            kwargs = getattr(self.settings, 'ZK_KWARGS', {})
             client = ZKClient(servers, **kwargs)
             self._client = client
 

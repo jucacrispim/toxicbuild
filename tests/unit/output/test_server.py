@@ -20,7 +20,7 @@
 from bson import ObjectId
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
-from toxicbuild.core.exchange import JsonAckMessage
+from toxicbuild.common.exchange import JsonAckMessage
 from toxicbuild.output import server
 from toxicbuild.output.notifications import (Notification, SlackNotification)
 from tests import async_test, AsyncMagicMock

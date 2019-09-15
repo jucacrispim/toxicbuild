@@ -26,7 +26,6 @@ from toxicbuild.common.exchanges import (
     revisions_added
 )
 from toxicbuild.core.utils import LoggerMixin
-from toxicbuild.master import settings
 from toxicbuild.master.repository import Repository, RepositoryRevision
 
 
@@ -81,7 +80,7 @@ class BaseConsumer(LoggerMixin):
             self._stop = False
 
     async def reconnect_exchanges(self):
-        await conn.connect(**settings.RABBITMQ_CONNECTION)
+        await conn.reconnect()
 
     def stop(self):
         self._stop = True

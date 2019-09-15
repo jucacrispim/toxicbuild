@@ -118,14 +118,14 @@ class BaseConsumerTest(TestCase):
         server.sync_shutdown()
         self.assertTrue(server.shutdown.called)
 
-    @patch.object(consumers.conn, 'connect', AsyncMagicMock(
-        spec=consumers.conn.connect))
+    @patch.object(consumers.conn, 'reconnect', AsyncMagicMock(
+        spec=consumers.conn.reconnect))
     @async_test
     async def test_reconnect_exchanges(self):
         server = consumers.BaseConsumer(AsyncMagicMock(), lambda: None)
         await server.reconnect_exchanges()
 
-        self.assertTrue(consumers.conn.connect.called)
+        self.assertTrue(consumers.conn.reconnect.called)
 
 
 class RepositoryMessageConsumerTest(TestCase):

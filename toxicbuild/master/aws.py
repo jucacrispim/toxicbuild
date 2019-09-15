@@ -22,9 +22,9 @@ import asyncio
 
 import aiobotocore
 
+from toxicbuild.common.coordination import Lock
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
-from toxicbuild.master.coordination import Lock
 
 
 class EC2Instance(LoggerMixin):

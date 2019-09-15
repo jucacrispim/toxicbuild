@@ -21,7 +21,7 @@ import asyncio
 import datetime
 import json
 from unittest import mock, TestCase
-from toxicbuild.core.exchange import JsonAckMessage as Message
+from toxicbuild.common.exchange import JsonAckMessage as Message
 from toxicbuild.master import pollers, repository, users
 from toxicbuild.master.exceptions import CloneException
 from tests import async_test, AsyncMagicMock

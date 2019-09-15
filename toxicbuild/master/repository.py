@@ -36,6 +36,7 @@ from mongomotor.fields import (
     DictField,
     DynamicField
 )
+from toxicbuild.common.coordination import Lock
 from toxicbuild.common.exchanges import (
     notifications,
     ui_notifications,
@@ -47,7 +48,6 @@ from toxicbuild.core import utils, build_config
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.master import settings
 from toxicbuild.master.build import (BuildSet, Builder, BuildManager)
-from toxicbuild.master.coordination import Lock
 from toxicbuild.master.document import OwnedDocument, ExternalRevisionIinfo
 from toxicbuild.master.exceptions import RepoBranchDoesNotExist
 from toxicbuild.master.utils import (get_build_config_type,
