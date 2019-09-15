@@ -14,6 +14,10 @@ builders:
     envvars:
       ENV: ci
       TEST: python
+      DBHOST: mongo
+      AMQPHOST: rabbitmq
+      ZK_SERVERS: "zookeeper:2181"
+
 
 
     steps:
@@ -62,6 +66,10 @@ builders:
     envvars:
       ENV: ci
       TEST: selenium
+      DBHOST: mongo
+      AMQPHOST: rabbitmq
+      ZK_SERVERS: "zookeeper:2181"
+
 
     steps:
 
