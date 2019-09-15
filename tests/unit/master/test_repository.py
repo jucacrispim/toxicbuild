@@ -219,6 +219,8 @@ class RepositoryTest(TestCase):
 
     @patch.object(repository, 'update_code', AsyncMagicMock())
     @patch.object(exchange, 'uuid4', MagicMock())
+    @patch.object(repository.Lock, 'acquire_write', AsyncMagicMock(
+        spec=repository.Lock.acquire_write, return_value=AsyncMagicMock()))
     @async_test
     async def test_update_code(self):
         self.repo.clone_status = 'cloning'
@@ -242,6 +244,8 @@ class RepositoryTest(TestCase):
 
     @patch.object(repository, 'update_code', AsyncMagicMock())
     @patch.object(exchange, 'uuid4', MagicMock())
+    @patch.object(repository.Lock, 'acquire_write', AsyncMagicMock(
+        spec=repository.Lock.acquire_write, return_value=AsyncMagicMock()))
     @async_test
     async def test_update_code_waiting_lock(self):
         self.repo.clone_status = 'cloning'
@@ -262,11 +266,15 @@ class RepositoryTest(TestCase):
         await self.repo.reload()
         self.assertEqual(self.repo.clone_status, 'ready')
 
+    @patch.object(repository.Lock, 'acquire_write', AsyncMagicMock(
+        spec=repository.Lock.acquire_write, return_value=AsyncMagicMock()))
     @patch.object(exchange, 'uuid4', MagicMock())
     @async_test
     async def test_update_code_locked(self):
         self.repo.clone_status = 'cloning'
         await self.repo.save()
+        self.repo.update_code_lock.acquire_write.side_effect = [
+            AsyncMagicMock(), repository.exc.TimeoutError]
         lock = await self.repo.update_code_lock.acquire_write()
         async with lock:
             self.repo.get_url = MagicMock(spec=self.repo.get_url)
@@ -276,6 +284,8 @@ class RepositoryTest(TestCase):
     @patch.object(exchange, 'uuid4', MagicMock())
     @patch.object(repository, 'update_code', AsyncMagicMock())
     @patch.object(repository, 'ui_notifications', AsyncMagicMock())
+    @patch.object(repository.Lock, 'acquire_write', AsyncMagicMock(
+        spec=repository.Lock.acquire_write, return_value=AsyncMagicMock()))
     @async_test
     async def test_update_with_clone_sending_signal(self):
         self.repo.clone_status = 'cloning'
