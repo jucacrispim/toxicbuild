@@ -95,6 +95,8 @@ class EC2InstanceTest(TestCase):
         with self.assertRaises(TimeoutError):
             await self.instance._wait_for_status('stopped')
 
+    @patch.object(aws.Lock, 'acquire_write', AsyncMagicMock(
+        spec=aws.Lock.acquire_write, return_value=AsyncMagicMock()))
     @async_test
     async def test_start(self):
         self.instance._run_method = AsyncMagicMock()
@@ -111,6 +113,8 @@ class EC2InstanceTest(TestCase):
         self.assertEqual(self.instance._wait_for_status.call_args[0][0],
                          'running')
 
+    @patch.object(aws.Lock, 'acquire_write', AsyncMagicMock(
+        spec=aws.Lock.acquire_write, return_value=AsyncMagicMock()))
     @async_test
     async def test_stop(self):
         self.instance._run_method = AsyncMagicMock()
