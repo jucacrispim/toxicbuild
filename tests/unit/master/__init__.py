@@ -29,8 +29,8 @@ loop.run_until_complete(common_setup(settings))
 
 
 def clean():
-    if ToxicZKClient._zk_client:
-        loop.run_until_complete(ToxicZKClient._zk_client.close())
+    # if ToxicZKClient._zk_client:
+    #     loop.run_until_complete(ToxicZKClient._zk_client.close())
 
     loop.run_until_complete(exchanges.conn.disconnect())
 

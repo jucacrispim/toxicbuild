@@ -40,7 +40,7 @@ class ToxicLocksTest(TestCase):
     @async_test
     async def tearDownClass(cls):
         await cls.lock_carrier.client._client.delete('/path')
-        await cls.lock_carrier.client._get_client().close()
+        # await cls.lock_carrier.client._get_client().close()
 
     @async_test
     async def test_acquire_write_lock(self):
