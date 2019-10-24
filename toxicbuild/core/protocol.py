@@ -28,7 +28,20 @@ from toxicbuild.core import utils
 
 class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
 
-    """ Base protocol for toxicbulid servers
+    """ Base protocol for toxicbulid servers. To create your own server
+    extend this class and implement the client_connected method.
+
+    Example:
+    _______
+
+
+    class MyServer(BaseToxicProtocol):
+
+        async def client_connectec(self):
+            assert self.action
+             r = await fn(**self.data)
+             self.send_response({'some': 'thing'})
+
     """
 
     # This is the token used to authenticate incomming requests.

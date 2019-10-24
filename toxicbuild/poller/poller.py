@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,6 +19,7 @@
 
 from functools import partial
 import traceback
+from aiozk import exc
 from toxicbuild.common.coordination import Lock
 from toxicbuild.common.exchanges import (
     poll_status,
@@ -34,25 +35,41 @@ from toxicbuild.master.repository import Repository
 
 class Poller(LoggerMixin):
 
-    """ Class to poll changes from a vcs, process them and notificate about
+    """ Class to poll changes from a vcs, process them and notify about
     incoming changes
     """
 
-    def __init__(self, repository, vcs_type, workdir):
-        """:param repository: An instance of
-          :class:`toxicbuild.repositories.Repository`
+    def __init__(self, repo_id, url, branches_conf, since, known_branches,
+                 vcs_type, workdir):
+        """Constructor for Poller.
 
+        :param repo_id: The id of the repository that will update or clone
+          code.
+        :param url: A repository url.
+        :param branches_conf: The branch configuration of the repository.
+        :param since: A dict in the format {'branch-name': commit_dt} with
+          the date of the last known commit for the branch.
+        :param known_branches: A list of branches that already have
+          a revision.
         :param vcs_type: Vcs type for :func:`toxicbuild.core.vcs.get_vcs`.
         :param workdir: workdir for vcs.
         """
-        self.repository = repository
+        self.repo_id = repo_id
+        self.url = url
+        self.branches_conf = branches_conf
+        self.known_branches = known_branches
+        self.since = since
         self.vcs = get_vcs(vcs_type)(workdir)
-        self._is_polling = False
         self._external_info = None
         self._lock = None
 
-    def is_polling(self):
-        return self._is_polling
+    @property
+    def lock(self):
+        if self._lock:
+            return self._lock
+
+        self._lock = Lock('poller-{}'.format(str(self.repo_id)))
+        return self._lock
 
     async def external_poll(self, external_url, external_name,
                             external_branch, into):
@@ -62,39 +79,36 @@ class Poller(LoggerMixin):
         :param external_url: The url of the external remote repository.
         :param external_name: The name to identiry the external repo.
         :param external_branch: The name of the branch in the external repo.
-        :param into: The name of the local repository."""
+        :param into: The name of the local branch."""
 
         await self.vcs.import_external_branch(external_url, external_name,
                                               external_branch, into)
         repo_branches = {into: True}
         self._external_info = {'name': external_name, 'url': external_url,
                                'branch': external_branch, 'into': into}
+        self.repo_branches = repo_branches
         await self.poll(repo_branches)
 
-    async def poll(self, repo_branches=None):
-        """ Check for changes on repository and if there are changes, notify
+    async def poll(self):
+        """ Check for changes in a repository and if there are changes, notify
         about it.
-
-        :param repo_branches: Param to be passed to
-          :meth:`~toxicbuild.master.pollers.Poller.process_changes`.
         """
 
         with_clone = False
 
-        async with await self.repository.toxicbuild_conf_lock.acquire_write():
-            if self.is_polling():
-                self.log('{} alreay polling. leaving...'.format(
-                    self.repository.url), level='debug')
-                return
+        try:
+            lock = await self.lock.acquire_write(timeout=0.2)
+        except exc.TimeoutError:
+            # Already polling for the repository
+            return None
 
-            url = self.repository.get_url()
-            self.log('Polling with url {}'.format(url))
-            self._is_polling = True
+        async with lock:
+            self.log('Polling with url {}'.format(self.url))
 
             if not self.vcs.workdir_exists():
                 self.log('clonning repo')
                 try:
-                    await self.vcs.clone(url)
+                    await self.vcs.clone(self.url)
                     with_clone = True
                 except Exception as e:
                     msg = traceback.format_exc()
@@ -103,7 +117,7 @@ class Poller(LoggerMixin):
 
             # here we change the remote url if needed. eg: a new token
             # is beeing used to authenticate, so a new url is used.
-            await self.vcs.try_set_remote(url)
+            await self.vcs.try_set_remote(self.url)
 
             # for git.
             # remove no branch when hg is implemented
@@ -112,7 +126,7 @@ class Poller(LoggerMixin):
                 await self.vcs.update_submodule()
 
             try:
-                await self.process_changes(repo_branches)
+                await self.process_changes()
             except Exception as e:
                 # shit happends
                 msg = traceback.format_exc()
@@ -121,7 +135,7 @@ class Poller(LoggerMixin):
 
         return with_clone
 
-    async def process_changes(self, repo_branches=None):
+    async def process_changes(self):
         """ Process all changes since the last revision in db
 
         :param repo_branches: The branches to look for incomming changes. If no
@@ -138,11 +152,7 @@ class Poller(LoggerMixin):
         """
         self.log('processing changes', level='debug')
 
-        dbrevisions = await self.repository.get_latest_revisions()
-
-        since = dict((branch, r.commit_date) for branch, r
-                     in dbrevisions.items() if r)
-
+        repo_branches = self.repo_branches
         if not repo_branches:
             repo_branches = MatchKeysDict(
                 **{b.name: {'notify_only_latest': b.notify_only_latest}
@@ -151,9 +161,7 @@ class Poller(LoggerMixin):
         branches = repo_branches.keys()
 
         newer_revisions = await self.vcs.get_revisions(
-            since=since, branches=branches)
-
-        known_branches = dbrevisions.keys()
+            since=self.since, branches=branches)
 
         revisions = []
         for branch, revs in newer_revisions.items():
@@ -162,7 +170,7 @@ class Poller(LoggerMixin):
             # the thing here is that if the branch is a new one
             # or is the first time its running, I don't want to get all
             # revisions, but the last one only.
-            if branch not in known_branches:
+            if branch not in self.known_branches:
                 revs = [revs[-1]]
 
             notify_only_latest = repo_branches.get(
@@ -195,7 +203,7 @@ class Poller(LoggerMixin):
         await revisions_added.publish(msg)
 
     def log(self, msg, level='info'):
-        msg = '[{}] {}'.format(self.repository.name, msg)
+        msg = '[{}] {}'.format(self.repo_id, msg)
         super().log(msg, level)
 
     async def _process_branch_revisions(self, branch, revisions,
