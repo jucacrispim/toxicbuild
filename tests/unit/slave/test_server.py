@@ -30,32 +30,6 @@ class BuildServerTest(unittest.TestCase):
     def setUp(self):
         self.buildserver = server.BuildServer(addr='127.0.0.1', port=1234)
 
-    def test_instanciation(self):
-        self.assertTrue(self.buildserver.loop.create_server.called)
-
-    def test_get_protocol_instance(self):
-        self.assertTrue(isinstance(self.buildserver.get_protocol_instance(),
-                                   protocols.BuildServerProtocol))
-
-    def test_start(self):
-        self.buildserver.shutdown = MagicMock()
-        self.buildserver.start()
-        self.assertTrue(self.buildserver.loop.run_forever.called)
-
-    def test_context_manager(self):
-        with self.buildserver as inst:
-            self.assertTrue(isinstance(inst, server.BuildServer))
-
-        self.assertTrue(self.buildserver.loop.close.called)
-
-    @patch.object(server, 'BuildServer', MagicMock())
-    def test_runserver(self):
-        server.run_server()
-
-        server_inst = server.BuildServer.return_value.__enter__.return_value
-
-        self.assertTrue(server_inst.start.called)
-
     @patch.object(server.asyncio, 'sleep', AsyncMagicMock(
         spec=server.asyncio.sleep))
     @async_test
@@ -64,27 +38,10 @@ class BuildServerTest(unittest.TestCase):
         self.called = False
 
         async def sleep(n):
-            self.buildserver.protocol._clients_connected -= 1
+            self.buildserver.PROTOCOL_CLS._clients_connected -= 1
             self.called = True
 
         server.asyncio.sleep = sleep
-        self.buildserver.protocol._clients_connected = 1
+        self.buildserver.PROTOCOL_CLS._clients_connected = 1
         await self.buildserver.shutdown()
         self.assertTrue(self.called)
-
-    def test_sync_shutdown(self):
-        self.buildserver.shutdown = MagicMock()
-        self.buildserver.sync_shutdown()
-        self.assertTrue(self.buildserver.shutdown.called)
-
-    @patch.object(asyncio, 'get_event_loop', MagicMock(
-        spec=asyncio.get_event_loop))
-    @patch.object(server.ssl, 'create_default_context', MagicMock(
-        spec=server.ssl.create_default_context))
-    def test_create_ssl(self):
-        server.BuildServer(use_ssl=True, certfile='', keyfile='')
-        loop = asyncio.get_event_loop.return_value
-        kw = loop.create_server.call_args[1]
-        ssl_context = server.ssl.create_default_context.return_value
-        self.assertTrue(ssl_context.load_cert_chain.called)
-        self.assertIn('ssl', kw.keys())

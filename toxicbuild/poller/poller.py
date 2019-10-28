@@ -17,8 +17,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-from functools import partial
 import traceback
+import os
+
 from aiozk import exc
 from toxicbuild.common.coordination import Lock
 from toxicbuild.common.exchanges import (
@@ -28,9 +29,8 @@ from toxicbuild.common.exchanges import (
 )
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.core.utils import LoggerMixin, MatchKeysDict
-from toxicbuild.master.consumers import BaseConsumer
-from toxicbuild.master.exceptions import CloneException
-from toxicbuild.master.repository import Repository
+from toxicbuild.poller import settings
+from toxicbuild.poller.exceptions import CloneException
 
 
 class Poller(LoggerMixin):
@@ -40,7 +40,7 @@ class Poller(LoggerMixin):
     """
 
     def __init__(self, repo_id, url, branches_conf, since, known_branches,
-                 vcs_type, workdir):
+                 vcs_type):
         """Constructor for Poller.
 
         :param repo_id: The id of the repository that will update or clone
@@ -52,14 +52,13 @@ class Poller(LoggerMixin):
         :param known_branches: A list of branches that already have
           a revision.
         :param vcs_type: Vcs type for :func:`toxicbuild.core.vcs.get_vcs`.
-        :param workdir: workdir for vcs.
         """
         self.repo_id = repo_id
         self.url = url
         self.branches_conf = branches_conf
         self.known_branches = known_branches
         self.since = since
-        self.vcs = get_vcs(vcs_type)(workdir)
+        self.vcs = get_vcs(vcs_type)(self.workdir)
         self._external_info = None
         self._lock = None
 
@@ -70,6 +69,11 @@ class Poller(LoggerMixin):
 
         self._lock = Lock('poller-{}'.format(str(self.repo_id)))
         return self._lock
+
+    @property
+    def workdir(self):
+        base_dir = settings.SOURCE_CODE_DIR
+        return os.path.join(base_dir, str(self.repo_id))
 
     async def external_poll(self, external_url, external_name,
                             external_branch, into):
@@ -83,7 +87,7 @@ class Poller(LoggerMixin):
 
         await self.vcs.import_external_branch(external_url, external_name,
                                               external_branch, into)
-        repo_branches = {into: True}
+        repo_branches = {into: {'notify_only_latest': True}}
         self._external_info = {'name': external_name, 'url': external_url,
                                'branch': external_branch, 'into': into}
         self.repo_branches = repo_branches
@@ -128,6 +132,7 @@ class Poller(LoggerMixin):
             try:
                 await self.process_changes()
             except Exception as e:
+
                 # shit happends
                 msg = traceback.format_exc()
                 self.log(msg, level='error')
@@ -152,11 +157,8 @@ class Poller(LoggerMixin):
         """
         self.log('processing changes', level='debug')
 
-        repo_branches = self.repo_branches
-        if not repo_branches:
-            repo_branches = MatchKeysDict(
-                **{b.name: {'notify_only_latest': b.notify_only_latest}
-                   for b in self.repository.branches})
+        repo_branches = MatchKeysDict(
+            **{name: conf for name, conf in self.branches_conf.items()})
 
         branches = repo_branches.keys()
 
@@ -196,8 +198,8 @@ class Poller(LoggerMixin):
 
         :param revisions: A list of new revisions"""
 
-        msg = {'repository_id': str(self.repository.id),
-               'revisions_ids': [str(r.id) for r in revisions]}
+        msg = {'repository_id': str(self.repo_id),
+               'revisions': revisions}
 
         self.log('publishing on revisions_added', level='debug')
         await revisions_added.publish(msg)
@@ -213,75 +215,17 @@ class Poller(LoggerMixin):
 
         branch_revs = []
         for rev in revisions:
-            revision = await self.repository.add_revision(
-                branch, external=self._external_info,
-                builders_fallback=builders_fallback, **rev)
-            # the thing here is: if notify_only_latest, we only
-            # add the most recent revision, the last one of the revisions
-            # list to the revisionset
             if (not revisions[-1] == rev and notify_only_latest):
                 continue
 
-            to_notify.append(revision)
+            rev['branch'] = branch
+            rev['external'] = self._external_info
+            rev['builders_fallback'] = builders_fallback
+
+            to_notify.append(rev)
             # branch_revs just for logging
-            branch_revs.append(revision)
+            branch_revs.append(rev)
 
-        if branch_revs:
-            msg = '{} new revisions for {} on branch {} added'
-            self.log(msg.format(len(branch_revs), self.repository.url,
-                                branch))
-
-
-class PollerServer(BaseConsumer):
-    """A server for pollers. Uses Rabbitmq to publish/consume messages from
-    the master"""
-
-    def __init__(self, loop=None):
-        exchange = update_code
-        msg_callback = self._handler_counter
-        super().__init__(exchange, msg_callback, loop=loop)
-
-    async def _handler_counter(self, msg):
-        self._running_tasks += 1
-        rmsg = {'with_clone': False,
-                'clone_status': 'clone-exception'}
-        repo_id = msg.body['repo_id']
-        try:
-            r = await self.handle_update_request(msg)
-            rmsg.update(r)
-        finally:
-            await poll_status.publish(rmsg, routing_key=repo_id)
-            self._running_tasks -= 1
-
-    async def handle_update_request(self, msg):
-        """Handle an update code request sent by the master."""
-
-        body = msg.body
-        repo_id = body['repo_id']
-        repo = await Repository.get(id=repo_id)
-        vcs_type = body['vcs_type']
-        external = body.get('external')
-        poller = Poller(repo, vcs_type, repo.workdir)
-        if external:
-            external_url = external.get('url')
-            external_name = external.get('name')
-            external_branch = external.get('branch')
-            into = external.get('into')
-            pollfn = partial(poller.external_poll, external_url, external_name,
-                             external_branch, into)
-        else:
-            repo_branches = body.get('repo_branches')
-            pollfn = partial(poller.poll, repo_branches)
-        try:
-            with_clone = await pollfn()
-            clone_status = 'ready'
-        except Exception:
-            tb = traceback.format_exc()
-            self.log(tb, level='error')
-            with_clone = False
-            clone_status = 'clone-exception'
-
-        msg = {'with_clone': with_clone,
-               'clone_status': clone_status}
-
-        return msg
+        msg = '{} new revisions for {} on branch {} added'
+        self.log(msg.format(len(branch_revs), self.url,
+                            branch))

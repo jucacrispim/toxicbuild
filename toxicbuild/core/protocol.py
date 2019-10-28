@@ -27,7 +27,6 @@ from toxicbuild.core import utils
 
 
 class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
-
     """ Base protocol for toxicbulid servers. To create your own server
     extend this class and implement the client_connected method.
 
