@@ -19,7 +19,7 @@ pytz==2018.4
 pylint==2.3.1
 pylint-plugin-utils==0.5
 pylint-mongoengine==0.3.0
-pyyaml==3.10
+pyyaml==5.1
 mongomotor==0.14.4
 motor==2.0.0
 mongoengine==0.18.2
