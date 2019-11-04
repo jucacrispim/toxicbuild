@@ -26,11 +26,11 @@ from toxicbuild.poller import server
 from tests import AsyncMagicMock, async_test
 
 
-class PollerServerTest(TestCase):
+class PollerProtocolTest(TestCase):
 
     def setUp(self):
         self.loop = asyncio.get_event_loop()
-        self.poller_server = server.PollerServer(self.loop)
+        self.poller_server = server.PollerProtocol(self.loop)
 
     @async_test
     async def test_client_connected_bad_action(self):
@@ -46,27 +46,32 @@ class PollerServerTest(TestCase):
             spec=self.poller_server.poll_repo, return_value={'a': 'dict'})
         self.poller_server.send_response = AsyncMagicMock(
             spec=self.poller_server.send_response)
+        self.poller_server.close_connection = Mock(
+            spec=self.poller_server.close_connection)
 
         r = await self.poller_server.client_connected()
 
         self.assertTrue(r)
         self.assertTrue(self.poller_server.send_response.called)
+        self.assertTrue(self.poller_server.close_connection.called)
 
     @patch.object(server.Poller, 'poll', AsyncMagicMock(
         spec=server.Poller.poll, side_effect=Exception))
     @patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
-    @patch('toxicbuild.poller.server.PollerServer.log', Mock())
+    @patch('toxicbuild.poller.server.PollerProtocol.log', Mock())
     @async_test
     async def test_poll_repo_exception(self):
         self.poller_server.data = {
-            'repo_id': 'some-id',
-            'url': 'https://some.where/repo',
-            'vcs_type': 'git',
-            'since': {'master': datetime.now(),
-                      'release': datetime.now()},
-            'known_branches': ['master', 'release'],
-            'branches_conf': {'master': {'notify_only_latest': True},
-                              'release': {'notify_only_latest': True}},
+            'body': {
+                'repo_id': 'some-id',
+                'url': 'https://some.where/repo',
+                'vcs_type': 'git',
+                'since': {'master': datetime.now(),
+                          'release': datetime.now()},
+                'known_branches': ['master', 'release'],
+                'branches_conf': {'master': {'notify_only_latest': True},
+                                  'release': {'notify_only_latest': True}},
+            }
         }
 
         r = await self.poller_server.poll_repo()
@@ -77,18 +82,20 @@ class PollerServerTest(TestCase):
     @patch.object(server.Poller, 'poll', AsyncMagicMock(
         spec=server.Poller.poll, return_value=True))
     @patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
-    @patch('toxicbuild.poller.server.PollerServer.log', Mock())
+    @patch('toxicbuild.poller.server.PollerProtocol.log', Mock())
     @async_test
     async def test_poll_repo(self):
         self.poller_server.data = {
-            'repo_id': 'some-id',
-            'url': 'https://some.where/repo',
-            'vcs_type': 'git',
-            'since': {'master': datetime.now(),
-                      'release': datetime.now()},
-            'known_branches': ['master', 'release'],
-            'branches_conf': {'master': {'notify_only_latest': True},
-                              'release': {'notify_only_latest': True}},
+            'body': {
+                'repo_id': 'some-id',
+                'url': 'https://some.where/repo',
+                'vcs_type': 'git',
+                'since': {'master': datetime.now(),
+                          'release': datetime.now()},
+                'known_branches': ['master', 'release'],
+                'branches_conf': {'master': {'notify_only_latest': True},
+                                  'release': {'notify_only_latest': True}},
+            }
         }
 
         r = await self.poller_server.poll_repo()
@@ -99,23 +106,25 @@ class PollerServerTest(TestCase):
     @patch.object(server.Poller, 'external_poll', AsyncMagicMock(
         spec=server.Poller.external_poll, return_value=True))
     @patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
-    @patch('toxicbuild.poller.server.PollerServer.log', Mock())
+    @patch('toxicbuild.poller.server.PollerProtocol.log', Mock())
     @async_test
     async def test_external_poll_repo(self):
         self.poller_server.data = {
-            'repo_id': 'some-id',
-            'url': 'https://some.where/repo',
-            'vcs_type': 'git',
-            'since': {'master': datetime.now(),
-                      'release': datetime.now()},
-            'known_branches': ['master', 'release'],
-            'branches_conf': {'master': {'notify_only_latest': True},
-                              'release': {'notify_only_latest': True}},
-            'external': {
-                'url': 'https://some.where/external-repo',
-                'name': 'some-name',
-                'branch': 'master',
-                'into': 'master',
+            'body': {
+                'repo_id': 'some-id',
+                'url': 'https://some.where/repo',
+                'vcs_type': 'git',
+                'since': {'master': datetime.now(),
+                          'release': datetime.now()},
+                'known_branches': ['master', 'release'],
+                'branches_conf': {'master': {'notify_only_latest': True},
+                                  'release': {'notify_only_latest': True}},
+                'external': {
+                    'url': 'https://some.where/external-repo',
+                    'name': 'some-name',
+                    'branch': 'master',
+                    'into': 'master',
+                }
             }
         }
 

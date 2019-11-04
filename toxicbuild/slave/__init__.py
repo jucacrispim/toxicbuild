@@ -32,7 +32,7 @@ def create_settings():
 def start(workdir, daemonize=False, stdout=LOGFILE,
           stderr=LOGFILE, conffile=None, loglevel='info',
           pidfile=PIDFILE):
-    """ Starts toxicslave.
+    """Starts toxicslave.
 
     Starts the build server to listen on the specified port for
     requests from addr (0.0.0.0 means everyone). Addr and port params

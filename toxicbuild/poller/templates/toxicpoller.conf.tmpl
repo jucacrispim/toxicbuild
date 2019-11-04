@@ -1,0 +1,32 @@
+# -*- coding: utf-8 -*-
+
+import json
+import os
+
+amqp_host = os.environ.get('AMQPHOST', 'localhost')
+amqp_port = int(os.environ.get('AMQPPORT', 5672))
+amqp_login = os.environ.get('AMQPLOGIN')
+amqp_virtualhost = os.environ.get('AMQPVIRTUALHOST')
+amqp_password = os.environ.get('AMQPASSWORD')
+
+RABBITMQ_CONNECTION = {'host': amqp_host, 'port': amqp_port}
+
+if amqp_login:
+    RABBITMQ_CONNECTION['login'] = amqp_login
+
+if amqp_virtualhost:
+    RABBITMQ_CONNECTION['virtualhost'] = amqp_virtualhost
+
+if amqp_password:
+    RABBITMQ_CONNECTION['password'] = amqp_password
+
+ACCESS_TOKEN = os.environ.get('POLLER_ENCRYPTED_TOKEN', '{{ACCESS_TOKEN}}')
+
+SOURCE_CODE_DIR = 'src'
+
+ZK_SERVERS = os.environ.get('ZK_SERVERS', 'localhost:2181').split(',')
+ZK_KWARGS = json.loads(os.environ.get('ZK_KWARGS', '{}'))
+
+USE_SSL = os.environ.get('POLLER_USE_SSL', '0') == '1'
+CERTFILE = os.environ.get('POLLER_CERTFILE')
+KEYFILE = os.environ.get('POLLER_KEYFILE')

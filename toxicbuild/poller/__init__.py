@@ -54,11 +54,11 @@ def _check_workdir(workdir):
         sys.exit(1)
 
 
-def _set_toxicmaster_conf(conffile):
+def _set_toxicpoller_conf(conffile):
     if conffile:
-        os.environ['TOXICMASTER_SETTINGS'] = conffile
+        os.environ['TOXICPOLLER_SETTINGS'] = conffile
     else:
-        os.environ['TOXICMASTER_SETTINGS'] = DEFAULT_SETTINGS
+        os.environ['TOXICPOLLER_SETTINGS'] = DEFAULT_SETTINGS
 
 
 def _process_exist(pid):
@@ -91,7 +91,7 @@ def _kill_thing(workdir, pidfile, kill=True):
 def create_token(conffile, show_encrypted=False):
     """Creates the access token to the master.
 
-    :param conffile: The path for the toxicmaster.conf
+    :param conffile: The path for the toxicpoller.conf
     :param --show-encrypted: Show the encrypted token?
     """
     access_token = token_urlsafe()
@@ -124,7 +124,7 @@ def create(root_dir, no_token=False):
     template_dir = pkg_resources.resource_filename('toxicbuild.poller',
                                                    'templates')
     template_file = os.path.join(template_dir, template_fname)
-    dest_file = os.path.join(root_dir, 'toxicmaster.conf')
+    dest_file = os.path.join(root_dir, 'toxicpoller.conf')
     shutil.copyfile(template_file, dest_file)
     if no_token:
         access_token = None
@@ -152,21 +152,84 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
       ``toxicpoller.pid``
     """
 
-    set_loglevel(loglevel)
-
     loop = asyncio.get_event_loop()
     create_settings()
     loop.run_until_complete(common_setup(settings))
 
-    from toxicbuild.poller.server import PollerServer
+    from toxicbuild.poller.server import run_server
 
-    server = PollerServer()
-
-    loop.run_until_complete(server.serve())
+    addr = settings.ADDR
+    port = settings.PORT
     try:
-        loop.run_forever()
-    finally:
-        server.sync_shutdown()
+        use_ssl = settings.USE_SSL
+    except AttributeError:
+        use_ssl = False
+
+    try:
+        certfile = settings.CERTFILE
+    except AttributeError:
+        certfile = None
+
+    try:
+        keyfile = settings.KEYFILE
+    except AttributeError:
+        keyfile = None
+
+    if daemonize:
+        daemon(call=run_server, cargs=(addr, port),
+               ckwargs={'use_ssl': use_ssl, 'certfile': certfile,
+                        'keyfile': keyfile},
+               stdout=stdout, stderr=stderr, workdir=workdir, pidfile=pidfile)
+    else:
+        set_loglevel(loglevel)
+
+        with changedir(workdir):
+            run_server(addr, port, use_ssl=use_ssl,
+                       certfile=certfile, keyfile=keyfile)
+
+
+@command
+def stop(workdir, pidfile=PIDFILE, kill=False):
+    """ Stops toxicpoller.
+
+    The instance of toxicpoller in ``workdir`` will be stopped.
+
+    :param workdir: Workdir for master to be killed.
+    :param --pidfile: Name of the file to use as pidfile.  Defaults to
+      ``toxicpoller.pid``
+    :param kill: If true, send signum 9, otherwise, 15.
+    """
+
+    print('Stopping toxicpoller')
+    with changedir(workdir):
+        with open(pidfile) as fd:
+            pid = int(fd.read())
+
+        sig = 9 if kill else 15
+
+        os.kill(pid, sig)
+        if sig != 9:
+            print('Waiting for the process shutdown')
+            while _process_exist(pid):
+                sleep(0.5)
+
+        os.remove(pidfile)
+
+
+@command
+def restart(workdir, pidfile=PIDFILE, loglevel='info'):
+    """Restarts toxicpoller
+
+    The instance of toxicpoller in ``workdir`` will be restarted.
+
+    :param workdir: Workdir for master to be killed.
+    :param --pidfile: Name of the file to use as pidfile.  Defaults to
+        ``toxicpoller.pid``
+    :param --loglevel: Level for logging messages.
+    """
+
+    stop(workdir, pidfile=pidfile)
+    start(workdir, pidfile=pidfile, daemonize=True, loglevel=loglevel)
 
 
 if __name__ == '__main__':

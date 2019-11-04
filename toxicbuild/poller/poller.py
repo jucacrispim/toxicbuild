@@ -23,12 +23,10 @@ import os
 from aiozk import exc
 from toxicbuild.common.coordination import Lock
 from toxicbuild.common.exchanges import (
-    poll_status,
-    update_code,
     revisions_added,
 )
 from toxicbuild.core.vcs import get_vcs
-from toxicbuild.core.utils import LoggerMixin, MatchKeysDict
+from toxicbuild.core.utils import LoggerMixin, MatchKeysDict, datetime2string
 from toxicbuild.poller import settings
 from toxicbuild.poller.exceptions import CloneException
 
@@ -221,6 +219,7 @@ class Poller(LoggerMixin):
             rev['branch'] = branch
             rev['external'] = self._external_info
             rev['builders_fallback'] = builders_fallback
+            rev['commit_date'] = datetime2string(rev['commit_date'])
 
             to_notify.append(rev)
             # branch_revs just for logging

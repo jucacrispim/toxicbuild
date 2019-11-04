@@ -16,32 +16,43 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
 from functools import partial
 import traceback
 
 from toxicbuild.core.protocol import BaseToxicProtocol
+from toxicbuild.core.server import ToxicServer
+from toxicbuild.core.utils import log
+from toxicbuild.poller import settings
 from toxicbuild.poller.poller import Poller
 
 
-class PollerServer(BaseToxicProtocol):
+class PollerProtocol(BaseToxicProtocol):
+
+    @property
+    def encrypted_token(self):  # pragma no cover
+        return settings.ACCESS_TOKEN
 
     async def client_connected(self):
         assert self.action == 'poll', 'Bad Action'
-        r = await self.poll_repo()
-        await self.send_response(r, code=0)
-        return r
+        self.log('client polling', level='debug')
+        asyncio.ensure_future(self.poll_repo())
+        await self.send_response(body={'poll': 'polling'}, code=0)
+        self.close_connection()
+        self.log('client disconnected from poller', level='debug')
+        return True
 
     async def poll_repo(self):
-        repo_id = self.data['repo_id']
-        url = self.data['url']
-        vcs_type = self.data['vcs_type']
-        since = self.data['since']
-        known_branches = self.data['known_branches']
-        branches_conf = self.data['branches_conf']
-        external = self.data.get('external')
+        body = self.data['body']
+        repo_id = body['repo_id']
+        url = body['url']
+        vcs_type = body['vcs_type']
+        since = body['since']
+        known_branches = body['known_branches']
+        branches_conf = body['branches_conf']
+        external = body.get('external')
         poller = Poller(repo_id, url, branches_conf, since, known_branches,
                         vcs_type)
-
         if external:
             external_url = external.get('url')
             external_name = external.get('name')
@@ -65,3 +76,15 @@ class PollerServer(BaseToxicProtocol):
                'clone_status': clone_status}
 
         return msg
+
+
+class PollerServer(ToxicServer):
+
+    PROTOCOL_CLS = PollerProtocol
+
+
+def run_server(addr='0.0.0.0', port=1234, loop=None, use_ssl=False,
+               **ssl_kw):  # pragma no cover
+    log('Serving at {}'.format(port))
+    with PollerServer(addr, port, loop, use_ssl, **ssl_kw) as server:
+        server.start()

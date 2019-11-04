@@ -16,6 +16,7 @@ from toxicbuild.master import create_settings_and_connect
 from toxicbuild.slave import create_settings
 from toxicbuild.output import (
     create_settings_and_connect as create_settings_output)
+from toxicbuild.poller import create_settings as create_settings_poller
 from toxicbuild.ui import create_settings as create_settings_ui
 
 
@@ -25,6 +26,7 @@ SCRIPTS_DIR = os.path.join(SOURCE_DIR, 'scripts')
 REPO_DIR = os.path.join(DATA_DIR, 'repo')
 SLAVE_ROOT_DIR = os.path.join(DATA_DIR, 'slave')
 MASTER_ROOT_DIR = os.path.join(DATA_DIR, 'master')
+POLLER_ROOT_DIR = os.path.join(DATA_DIR, 'poller')
 UI_ROOT_DIR = os.path.join(DATA_DIR, 'ui')
 OUTPUT_ROOT_DIR = os.path.join(DATA_DIR, 'output')
 PYVERSION = ''.join([str(n) for n in sys.version_info[:2]])
@@ -33,6 +35,11 @@ toxicmaster_conf = os.environ.get('TOXICMASTER_SETTINGS')
 if not toxicmaster_conf:
     toxicmaster_conf = os.path.join(MASTER_ROOT_DIR, 'toxicmaster.conf')
     os.environ['TOXICMASTER_SETTINGS'] = toxicmaster_conf
+
+toxicpoller_conf = os.environ.get('TOXICPOLLER_SETTINGS')
+if not toxicpoller_conf:
+    toxicpoller_conf = os.path.join(POLLER_ROOT_DIR, 'toxicpoller.conf')
+    os.environ['TOXICPOLLER_SETTINGS'] = toxicpoller_conf
 
 toxicslave_conf = os.environ.get('TOXICSLAVE_SETTINGS')
 if not toxicslave_conf:
@@ -53,6 +60,7 @@ create_settings()
 create_settings_ui()
 create_settings_and_connect()
 create_settings_output()
+create_settings_poller()
 
 
 def start_slave(sleep=0.5):
@@ -78,6 +86,33 @@ def stop_slave():
     pidfile = 'toxicslave{}.pid'.format(PYVERSION)
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', toxicslave_cmd, 'stop', SLAVE_ROOT_DIR,
+           '--pidfile', pidfile, '--kill']
+
+    os.system(' '.join(cmd))
+
+
+def start_new_poller():
+
+    toxicpoller_conf = os.environ.get('TOXICPOLLER_SETTINGS')
+    pidfile = 'toxicpoller{}.pid'.format(PYVERSION)
+    toxicpoller_cmd = os.path.join(SCRIPTS_DIR, 'toxicpoller')
+    cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
+           toxicpoller_cmd, 'start', POLLER_ROOT_DIR, '--daemonize',
+           '--pidfile', pidfile, '--loglevel', 'debug']
+
+    if toxicpoller_conf:
+        cmd += ['-c', toxicpoller_conf]
+
+    print(' '.join(cmd))
+    os.system(' '.join(cmd))
+
+
+def stop_new_poller():
+
+    toxicpoller_cmd = os.path.join(SCRIPTS_DIR, 'toxicpoller')
+    pidfile = 'toxicpoller{}.pid'.format(PYVERSION)
+    cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
+           'python', toxicpoller_cmd, 'stop', POLLER_ROOT_DIR,
            '--pidfile', pidfile, '--kill']
 
     os.system(' '.join(cmd))
