@@ -121,11 +121,12 @@ class Poller(LoggerMixin):
             # is beeing used to authenticate, so a new url is used.
             await self.vcs.try_set_remote(self.url)
 
-            # for git.
-            # remove no branch when hg is implemented
-            if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
-                self.log('updating submodule', level='debug')
-                await self.vcs.update_submodule()
+            # I don't think we need submodules here. What we do is
+            # to get new revisions in the main repository not in its
+            # submodules
+            # if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
+            #     self.log('updating submodule', level='debug')
+            #     await self.vcs.update_submodule()
 
             try:
                 await self.process_changes()

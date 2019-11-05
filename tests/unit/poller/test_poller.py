@@ -129,7 +129,7 @@ class PollerTest(TestCase):
 
         r = await self.poller.poll()
         self.assertFalse(r)
-        self.assertEqual(len(self.poller.log.call_args_list), 2)
+        self.assertEqual(len(self.poller.log.call_args_list), 1)
 
     @patch.object(poller, 'revisions_added', AsyncMagicMock())
     @async_test
