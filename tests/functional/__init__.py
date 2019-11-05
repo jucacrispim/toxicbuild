@@ -24,6 +24,7 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 SOURCE_DIR = os.path.join(DATA_DIR, '..', '..', '..')
 SCRIPTS_DIR = os.path.join(SOURCE_DIR, 'scripts')
 REPO_DIR = os.path.join(DATA_DIR, 'repo')
+OTHER_REPO_DIR = os.path.join(DATA_DIR, 'other-repo')
 SLAVE_ROOT_DIR = os.path.join(DATA_DIR, 'slave')
 MASTER_ROOT_DIR = os.path.join(DATA_DIR, 'master')
 POLLER_ROOT_DIR = os.path.join(DATA_DIR, 'poller')
@@ -103,7 +104,6 @@ def start_new_poller():
     if toxicpoller_conf:
         cmd += ['-c', toxicpoller_conf]
 
-    print(' '.join(cmd))
     os.system(' '.join(cmd))
 
 

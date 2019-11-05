@@ -19,7 +19,7 @@
 
 from functools import partial
 import traceback
-from toxicbuild.common.coordination import Lock
+# from toxicbuild.common.coordination import Lock
 from toxicbuild.common.exchanges import (
     poll_status,
     update_code,

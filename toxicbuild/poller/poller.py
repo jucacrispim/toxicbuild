@@ -56,7 +56,8 @@ class Poller(LoggerMixin):
         self.branches_conf = branches_conf
         self.known_branches = known_branches
         self.since = since
-        self.vcs = get_vcs(vcs_type)(self.workdir)
+        self.vcs_type = vcs_type
+        self.vcs = get_vcs(self.vcs_type)(self.workdir)
         self._external_info = None
         self._lock = None
 
@@ -79,17 +80,16 @@ class Poller(LoggerMixin):
         into a local branch.
 
         :param external_url: The url of the external remote repository.
-        :param external_name: The name to identiry the external repo.
+        :param external_name: The name to identify the external repo.
         :param external_branch: The name of the branch in the external repo.
         :param into: The name of the local branch."""
 
         await self.vcs.import_external_branch(external_url, external_name,
                                               external_branch, into)
-        repo_branches = {into: {'notify_only_latest': True}}
+        self.branches_conf = {into: {'notify_only_latest': True}}
         self._external_info = {'name': external_name, 'url': external_url,
                                'branch': external_branch, 'into': into}
-        self.repo_branches = repo_branches
-        await self.poll(repo_branches)
+        await self.poll()
 
     async def poll(self):
         """ Check for changes in a repository and if there are changes, notify

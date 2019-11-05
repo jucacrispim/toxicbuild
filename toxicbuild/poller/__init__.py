@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# pylint: disable=global-statement
+
 import asyncio
 import os
 import pkg_resources

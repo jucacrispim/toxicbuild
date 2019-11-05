@@ -1,3 +1,7 @@
 [submodule "tests/functional/data/repo"]
 	path = tests/functional/data/repo
 	url = https://gitlab.com/jucacrispim/toxictest.git
+
+[submodule "tests/functional/data/other-repo"]
+	path = tests/functional/data/other-repo
+	url = git@gitlab.com:jucacrispim/toxicothertest.git

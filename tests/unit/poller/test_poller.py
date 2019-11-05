@@ -25,6 +25,7 @@ from toxicbuild.poller import poller
 from tests import async_test, AsyncMagicMock
 
 
+@patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
 class PollerTest(TestCase):
 
     @patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
@@ -61,7 +62,7 @@ class PollerTest(TestCase):
                                         external_branch, into)
         self.assertTrue(self.poller.vcs.import_external_branch.called)
         self.assertTrue(self.poller.poll.called)
-        self.assertEqual(self.poller.repo_branches,
+        self.assertEqual(self.poller.branches_conf,
                          {'local-branch': {'notify_only_latest': True}})
 
     @async_test

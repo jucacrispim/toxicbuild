@@ -17,6 +17,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from copy import copy
 from unittest import TestCase
 
 from toxicbuild.core.client import BaseToxicClient
@@ -25,7 +26,7 @@ from toxicbuild.common.exchanges import revisions_added
 
 from tests import async_test
 
-from . import REPO_DIR, start_new_poller, stop_new_poller
+from . import REPO_DIR, OTHER_REPO_DIR, start_new_poller, stop_new_poller
 
 
 def setUpModule():
@@ -45,6 +46,21 @@ class DummyPollerClient(BaseToxicClient):
         kwargs['use_ssl'] = True
         kwargs['validate_cert'] = False
         super().__init__(*args, **kwargs)
+        self.body = {
+            'repo_id': 'some-id',
+            'url': REPO_DIR,
+            'vcs_type': 'git',
+            'since': None,
+            'known_branches': [],
+            'branches_conf': {},
+        }
+        self.external_body = copy(self.body)
+        self.external_body['external'] = {
+            'url': OTHER_REPO_DIR,
+            'name': 'other-repo',
+            'branch': 'master',
+            'into': 'other-repo/master',
+        }
 
     async def request2server(self, action, body):
 
@@ -55,17 +71,16 @@ class DummyPollerClient(BaseToxicClient):
         return response['body'][action]
 
     async def poll(self):
-        body = {
-            'repo_id': 'some-id',
-            'url': REPO_DIR,
-            'vcs_type': 'git',
-            'since': None,
-            'known_branches': [],
-            'branches_conf': {},
-        }
-
         action = 'poll'
-        await self.request2server(action, body)
+        await self.request2server(action, self.body)
+        # wait for the message that must be sent by the poller
+        async with await revisions_added.consume() as consumer:
+            async for msg in consumer:
+                return msg
+
+    async def poll_external(self):
+        action = 'poll'
+        await self.request2server(action, self.external_body)
         # wait for the message that must be sent by the poller
         async with await revisions_added.consume() as consumer:
             async for msg in consumer:
@@ -82,5 +97,11 @@ class PollerTest(TestCase):
     @async_test
     async def test_poll(self):
         got_msg = await self.client.poll()
+
+        self.assertTrue(got_msg)
+
+    @async_test
+    async def test_poll_external(self):
+        got_msg = await self.client.poll_external()
 
         self.assertTrue(got_msg)
