@@ -113,7 +113,7 @@ class PollerTest(TestCase):
 
         r = await self.poller.poll()
         self.assertFalse(r)
-        self.assertEqual(len(self.poller.log.call_args_list), 3)
+        self.assertEqual(len(self.poller.log.call_args_list), 2)
 
     @patch.object(poller.Poller, 'log', Mock(spec=poller.Poller.log))
     @patch.object(poller.Poller, 'process_changes', AsyncMagicMock(
