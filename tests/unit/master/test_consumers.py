@@ -285,7 +285,7 @@ class RepositoryMessageConsumerTest(TestCase):
         msg = AsyncMagicMock()
         msg.body = {'repository_id': 'some-id'}
         message_consumer = consumers.RepositoryMessageConsumer()
-        r = await message_consumer._update_repo(msg)
+        r = await message_consumer.update_repo(msg)
         self.assertTrue(r)
         self.assertTrue(repo.update_code.called)
 
@@ -306,7 +306,7 @@ class RepositoryMessageConsumerTest(TestCase):
         msg = AsyncMagicMock()
         msg.body = {'repository_id': 'some-id'}
         message_consumer = consumers.RepositoryMessageConsumer()
-        r = await message_consumer._update_repo(msg)
+        r = await message_consumer.update_repo(msg)
         self.assertTrue(r)
         self.assertTrue(repo.update_code.called)
         self.assertTrue(consumers.LoggerMixin.log.called)
@@ -322,7 +322,7 @@ class RepositoryMessageConsumerTest(TestCase):
         msg = AsyncMagicMock()
         msg.body = {'repository_id': 'some-id'}
         message_consumer = consumers.RepositoryMessageConsumer()
-        r = await message_consumer._update_repo(msg)
+        r = await message_consumer.update_repo(msg)
         self.assertFalse(r)
 
     @patch.object(consumers.BaseConsumer, 'run', AsyncMagicMock())
