@@ -133,3 +133,53 @@ async def get_build_client(slave, addr, port, use_ssl=True,
                          validate_cert=validate_cert)
     await client.connect()
     return client
+
+
+class PollerClient(BaseToxicClient):
+    """A client to :class:`~toxicbuild.poller.server.PollerServer`.
+    """
+
+    def __init__(self, repo, *args, **kwargs):
+        """:param repo: A :class:`~toxicbuild.master.repository.Repository`
+          instance.
+        :param args: Arguments passed to
+          :class:`toxicbuild.core.server.ToxicServer`
+        :param args: Named arguments passed to
+          :class:`toxicbuild.core.server.ToxicServer`
+        """
+        self.repo = repo
+        super().__init__(*args, **kwargs)
+
+    async def poll_repo(self, branches_conf=None, external=None):
+        """Requests for the poller to poll the code of a repository.
+
+        :param branches_conf: Branches config in the form:
+
+          .. code-block:: python
+
+             {'branch-name': {'notify_only_latest': True,
+                              'builders_fallback': 'master'}}
+
+          If branches_conf is None the default repo branches config will be
+          used.
+        """
+        dbrevisions = await self.repo.get_latest_revisions()
+        since = dict((branch, r.commit_date) for branch, r
+                     in dbrevisions.items() if r)
+
+        branches_conf = branches_conf or {
+            b.name: {'notify_only_latest': b.notify_only_latest}
+            for b in self.repo.branches}
+
+        body = {
+            'repo_id': str(self.repo.id),
+            'url': self.repo.get_url(),
+            'vcs_type': self.repo.vcs_type,
+            'known_branches': await self.repo.get_known_branches(),
+            'since': since,
+            'branches_conf': branches_conf,
+            'external': external
+        }
+
+        r = await self.request2server('poll', body)
+        return r

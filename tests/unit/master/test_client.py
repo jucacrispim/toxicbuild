@@ -313,3 +313,38 @@ class BuildClientTest(TestCase):
         inst = await client.get_build_client(slave, 'localhost', 7777)
 
         self.assertTrue(inst.connect.called)
+
+
+class PollerClientTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.user = users.User(email='a@a.com', password='asdf')
+        await self.user.save()
+        self.repo = repository.Repository(
+            name='my-repo', url='git@bla.com', vcs_type='git',
+            update_seconds=10, owner=self.user)
+        await self.repo.save()
+        self.client = client.PollerClient(self.repo, 'host', 1235)
+        self.client.request2server = AsyncMagicMock(
+            spec=self.client.request2server)
+
+    @async_test
+    async def tearDown(self):
+        await repository.Repository.drop_collection()
+        await users.User.drop_collection()
+
+    @async_test
+    async def test_poll_repo_no_branches_conf(self):
+        await self.client.poll_repo()
+        called = self.client.request2server.call_args[0][1]
+
+        self.assertIsInstance(called['branches_conf'], dict)
+
+    @async_test
+    async def test_poll_repo(self):
+        await self.client.poll_repo(
+            branches_conf={'master': {'notify_only_latest': True}})
+        called = self.client.request2server.call_args[0][1]
+
+        self.assertIsInstance(called['branches_conf'], dict)

@@ -211,3 +211,15 @@ class BuildClientTest(TestCase):
 
         with self.assertRaises(client.ToxicClientException):
             yield from self.client.get_response()
+
+    @async_test
+    async def test_request2server(self):
+        self.client.write = AsyncMagicMock(spec=self.client.write)
+        self.client.read = AsyncMagicMock(
+            spec=self.client.read,
+            return_value={'body': {'action': 'ok'}})
+
+        r = await self.client.request2server('action', {'the': 'body'},
+                                             'token')
+
+        self.assertEqual(r, 'ok')

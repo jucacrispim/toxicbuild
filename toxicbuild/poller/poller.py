@@ -140,18 +140,6 @@ class Poller(LoggerMixin):
 
     async def process_changes(self):
         """ Process all changes since the last revision in db
-
-        :param repo_branches: The branches to look for incomming changes. If no
-          branches, all branches in repo config will be used. It is a
-          dictionary with the following format:
-
-          .. code block:: python
-
-             # builders_fallback is the builders_fallback to
-             # :class:`~toxicbuild.master.repository.RepositoryRevision`
-             {'branch-name': {'notify_only_latest': True
-                              'builders_fallback': 'branch-name'}}
-
         """
         self.log('processing changes', level='debug')
 

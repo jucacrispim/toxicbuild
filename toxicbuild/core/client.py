@@ -93,7 +93,8 @@ class BaseToxicClient(utils.LoggerMixin):
         .. note::
 
             This is called by the asynchronous context manager
-            (aka ``async with``)"""
+            (aka ``async with``)
+        """
 
         if self.use_ssl:
             ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH,
@@ -148,3 +149,17 @@ class BaseToxicClient(utils.LoggerMixin):
         if 'code' in response and int(response['code']) != 0:
             raise ToxicClientException(response['body']['error'])
         return response
+
+    async def request2server(self, action, body, token):
+        """Performs a request to a toxicbuild server and
+        server returns the response.
+
+        :param action: The action to perform on the server.
+        :param body: The body for the action.
+        :param token: An authentication token.
+        """
+        data = {'action': action, 'body': body,
+                'token': token}
+        await self.write(data)
+        response = await self.get_response()
+        return response['body'][action]
