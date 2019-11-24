@@ -163,6 +163,23 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         path = '/{}-update_code'.format(str(self.id))
         return Lock(path)
 
+    @property
+    def vcs(self):
+        """An instance of a subclass of :class:`~toxicbuild.core.vcs.VCS`."""
+
+        if not self._vcs_instance:
+            self._vcs_instance = get_vcs(self.vcs_type)(self.workdir)
+
+        return self._vcs_instance
+
+    @property
+    def workdir(self):
+        """ The directory where the source code of this repository is
+        cloned into
+        """
+        base_dir = settings.SOURCE_CODE_DIR
+        return os.path.join(base_dir, str(self.id))
+
     @classmethod
     def add_running_build(cls):
         """Add a running build to the count of running builds among all
@@ -180,6 +197,55 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     def get_running_builds(cls):
         """Returns the number of running builds among all the repos."""
         return cls._running_builds
+
+    @classmethod
+    async def create(cls, **kwargs):
+        """Creates a new repository and schedule it if needed.
+
+        :param kwargs: kwargs used to create the repository."""
+
+        slaves = kwargs.pop('slaves', [])
+        branches = kwargs.pop('branches', [])
+
+        repo = cls(**kwargs, slaves=slaves, branches=branches)
+        await repo.save()
+        await cls._notify_repo_creation(repo)
+        if repo.schedule_poller:
+            repo.schedule()
+        return repo
+
+    def get_url(self):
+        return self.fetch_url or self.url
+
+    @classmethod
+    async def get(cls, **kwargs):
+        """Returns a repository instance and create locks if needed
+
+        :param kwargs: kwargs to match the repository."""
+
+        repo = await cls.objects.get(**kwargs)
+        return repo
+
+    @classmethod
+    async def get_for_user(cls, user, **kwargs):
+        """Returns a repository if ``user`` has permission for it.
+        If not raises an error.
+
+        :param user: User who is requesting the repository.
+        :param kwargs: kwargs to match the repository.
+        """
+        repo = await super().get_for_user(user, **kwargs)
+        return repo
+
+    async def save(self, *args, **kwargs):
+        set_full_name = (hasattr(self, '_changed_fields') and
+                         ('name' in self._changed_fields or
+                          'owner' in self._changed_fields))
+        if set_full_name or not self.full_name:
+            owner = await self.owner
+            self.full_name = '{}/{}'.format(owner.name, self.name)
+        r = await super().save(*args, **kwargs)
+        return r
 
     async def to_dict(self):
         """Returns a dict representation of the object."""
@@ -199,31 +265,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         return my_dict
 
-    @property
-    def vcs(self):
-        """An instance of a subclass of :class:`~toxicbuild.core.vcs.VCS`."""
-
-        if not self._vcs_instance:
-            self._vcs_instance = get_vcs(self.vcs_type)(self.workdir)
-
-        return self._vcs_instance
-
-    @property
-    def workdir(self):
-        """ The directory where the source code of this repository is
-        cloned into
-        """
-        base_dir = settings.SOURCE_CODE_DIR
-        return os.path.join(base_dir, str(self.id))
-
-    async def get_last_buildset(self):
-        bad_statuses = [BuildSet.PENDING, BuildSet.NO_BUILDS,
-                        BuildSet.NO_CONFIG]
-        last_buildset = await BuildSet.objects(
-            repository=self, status__not__in=bad_statuses).order_by(
-            '-created').first()
-        return last_buildset
-
     async def get_status(self):
         """Returns the status for the repository. The status is the
         status of the last buildset created for this repository that is
@@ -241,50 +282,49 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         return status
 
-    @classmethod
-    async def _notify_repo_creation(cls, repo):
-        repo_added_msg = await repo.to_dict()
-        await ui_notifications.publish(repo_added_msg)
-        repo_added_msg['msg_type'] = 'repo_added'
-        async for user in await repo.get_allowed_users():
-            ensure_future(ui_notifications.publish(
-                repo_added_msg, routing_key=str(user.id)))
+    async def bootstrap(self):
+        """Initialise the needed stuff. Schedules updates for code,
+         start of pending builds, connect to signals.
+        """
 
-    async def _notify_status_changed(self, status_msg):
-        self.log('Notify status changed {}'.format(status_msg),
-                 level='debug')
-        await ui_notifications.publish(status_msg,
-                                       routing_key=str(self.id))
-        status_msg['msg_type'] = 'repo_status_changed'
-        async for user in await self.get_allowed_users():
-            ensure_future(ui_notifications.publish(
-                status_msg, routing_key=str(user.id)))
+        self.schedule()
 
     @classmethod
-    async def create(cls, **kwargs):
-        """Creates a new repository and schedule it if needed.
+    async def bootstrap_all(cls):
+        async for repo in cls.objects.all():
+            await repo.bootstrap()
 
-        :param kwargs: kwargs used to create the repository."""
+    def schedule(self):
+        """Schedules all needed actions for a repository. The actions are:
 
-        slaves = kwargs.pop('slaves', [])
-        branches = kwargs.pop('branches', [])
+        * Sends an ``add-udpate-code`` to the scheduler server.
+        * Starts builds that are pending using
+          ``self.build_manager.start_pending``.
+        """
 
-        repo = cls(**kwargs, slaves=slaves, branches=branches)
-        await repo.save()
-        await cls._notify_repo_creation(repo)
-        if repo.schedule_poller:
+        self.log('Scheduling {url}'.format(url=self.url))
+
+        if self.schedule_poller:
+
+            sched_msg = {'type': 'add-update-code',
+                         'repository_id': str(self.id)}
+
+            ensure_future(scheduler_action.publish(sched_msg))
+
+        # adding start_pending
+        start_pending_hash = self.scheduler.add(
+            self.build_manager.start_pending, 120)
+
+        _scheduler_hashes['{}-start-pending'.format(
+            self.url)] = start_pending_hash
+
+    @classmethod
+    async def schedule_all(cls):
+        """ Schedule all repositories. """
+
+        repos = await cls.objects.all().to_list()
+        for repo in repos:
             repo.schedule()
-        return repo
-
-    async def save(self, *args, **kwargs):
-        set_full_name = (hasattr(self, '_changed_fields') and
-                         ('name' in self._changed_fields or
-                          'owner' in self._changed_fields))
-        if set_full_name or not self.full_name:
-            owner = await self.owner
-            self.full_name = '{}/{}'.format(owner.name, self.name)
-        r = await super().save(*args, **kwargs)
-        return r
 
     async def remove(self):
         """ Removes all builds and builders and revisions related to the
@@ -355,29 +395,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await notifications.publish(
             msg, routing_key='update-code-requested')
 
-    @classmethod
-    async def get(cls, **kwargs):
-        """Returns a repository instance and create locks if needed
-
-        :param kwargs: kwargs to match the repository."""
-
-        repo = await cls.objects.get(**kwargs)
-        return repo
-
-    @classmethod
-    async def get_for_user(cls, user, **kwargs):
-        """Returns a repository if ``user`` has permission for it.
-        If not raises an error.
-
-        :param user: User who is requesting the repository.
-        :param kwargs: kwargs to match the repository.
-        """
-        repo = await super().get_for_user(user, **kwargs)
-        return repo
-
-    def get_url(self):
-        return self.fetch_url or self.url
-
     async def update_code(self, repo_branches=None, external=None,
                           wait_for_lock=False):
         """Requests a code update to a poller and waits for its response.
@@ -435,68 +452,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
             await self._notify_status_changed(status_msg)
 
-    async def _get_poll_status_consumer(self):
-        consumer = await poll_status.consume(routing_key=str(self.id),
-                                             no_ack=False)
-        return consumer
-
-    async def _wait_update(self):
-        consumer = await self._get_poll_status_consumer()
-        async with consumer:
-            # wait for the message with the poll response.
-            msg = await consumer.fetch_message()
-            self.log('poll status received', level='debug')
-            await msg.acknowledge()
-            self.log('poll status msg acknowledged', level='debug')
-
-        return msg
-
-    async def bootstrap(self):
-        """Initialise the needed stuff. Schedules updates for code,
-         start of pending builds, connect to signals.
-        """
-
-        self.schedule()
-
-    @classmethod
-    async def bootstrap_all(cls):
-        async for repo in cls.objects.all():
-            await repo.bootstrap()
-
-    def schedule(self):
-        """Schedules all needed actions for a repository. The actions are:
-
-        * Sends an ``add-udpate-code`` to the scheduler server.
-        * Starts builds that are pending using
-          ``self.build_manager.start_pending``.
-        * Connects to ``build_started`` and ``build_finished`` signals
-          to handle changing of status.
-        """
-
-        self.log('Scheduling {url}'.format(url=self.url))
-
-        if self.schedule_poller:
-
-            sched_msg = {'type': 'add-update-code',
-                         'repository_id': str(self.id)}
-
-            ensure_future(scheduler_action.publish(sched_msg))
-
-        # adding start_pending
-        start_pending_hash = self.scheduler.add(
-            self.build_manager.start_pending, 120)
-
-        _scheduler_hashes['{}-start-pending'.format(
-            self.url)] = start_pending_hash
-
-    @classmethod
-    async def schedule_all(cls):
-        """ Schedule all repositories. """
-
-        repos = await cls.objects.all().to_list()
-        for repo in repos:
-            repo.schedule()
-
     async def add_slave(self, slave):
         """Adds a new slave to a repository.
 
@@ -548,6 +503,14 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         :param branch_name: The branch name."""
 
         await self.update(pull__branches__name=branch_name)
+
+    async def get_last_buildset(self):
+        bad_statuses = [BuildSet.PENDING, BuildSet.NO_BUILDS,
+                        BuildSet.NO_CONFIG]
+        last_buildset = await BuildSet.objects(
+            repository=self, status__not__in=bad_statuses).order_by(
+            '-created').first()
+        return last_buildset
 
     async def get_latest_revision_for_branch(self, branch):
         """ Returns the latest revision for a given branch
@@ -735,12 +698,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         return conf
 
-    async def _get_builders(self, revision, conf):
-        builders, origin = await self.build_manager.get_builders(
-            revision, conf)
-
-        return builders, origin
-
     async def add_envvars(self, **envvars):
         """Adds new environment variables to this repository.
 
@@ -772,6 +729,47 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         self.envvars = envvars
         await self.save()
+
+    async def _get_poll_status_consumer(self):
+        consumer = await poll_status.consume(routing_key=str(self.id),
+                                             no_ack=False)
+        return consumer
+
+    async def _wait_update(self):
+        consumer = await self._get_poll_status_consumer()
+        async with consumer:
+            # wait for the message with the poll response.
+            msg = await consumer.fetch_message()
+            self.log('poll status received', level='debug')
+            await msg.acknowledge()
+            self.log('poll status msg acknowledged', level='debug')
+
+        return msg
+
+    async def _get_builders(self, revision, conf):
+        builders, origin = await self.build_manager.get_builders(
+            revision, conf)
+
+        return builders, origin
+
+    @classmethod
+    async def _notify_repo_creation(cls, repo):
+        repo_added_msg = await repo.to_dict()
+        await ui_notifications.publish(repo_added_msg)
+        repo_added_msg['msg_type'] = 'repo_added'
+        async for user in await repo.get_allowed_users():
+            ensure_future(ui_notifications.publish(
+                repo_added_msg, routing_key=str(user.id)))
+
+    async def _notify_status_changed(self, status_msg):
+        self.log('Notify status changed {}'.format(status_msg),
+                 level='debug')
+        await ui_notifications.publish(status_msg,
+                                       routing_key=str(self.id))
+        status_msg['msg_type'] = 'repo_status_changed'
+        async for user in await self.get_allowed_users():
+            ensure_future(ui_notifications.publish(
+                status_msg, routing_key=str(user.id)))
 
 
 class RepositoryRevision(Document):

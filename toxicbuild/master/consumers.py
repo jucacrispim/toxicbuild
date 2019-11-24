@@ -97,8 +97,8 @@ class BaseConsumer(LoggerMixin):
 
 
 class RepositoryMessageConsumer(LoggerMixin):
-    """Waits for messages published in the ``notifications``
-    exchange and reacts to them."""
+    """Waits for messages published in the ``notifications`` and
+    ``revisions_added`` exchanges and reacts to them."""
 
     REPOSITORY_CLASS = Repository
     REPOSITORY_REVISION_CLASS = RepositoryRevision
@@ -110,15 +110,15 @@ class RepositoryMessageConsumer(LoggerMixin):
 
     def __init__(self):
         type(self).revision_consumer = BaseConsumer(revisions_added,
-                                                    self._add_builds)
+                                                    self.add_builds)
         type(self).build_consumer = BaseConsumer(notifications,
-                                                 self._add_requested_build,
+                                                 self.add_requested_build,
                                                  routing_key='build-requested')
         type(self).removal_consumer = BaseConsumer(
-            notifications, self._remove_repo,
+            notifications, self.remove_repo,
             routing_key='repo-removal-requested')
         type(self).update_consumer = BaseConsumer(
-            notifications, self._update_repo,
+            notifications, self.update_repo,
             routing_key='update-code-requested')
 
     def run(self):
@@ -133,19 +133,13 @@ class RepositoryMessageConsumer(LoggerMixin):
         self.log('[init] Waiting code update requests')
         asyncio.ensure_future(type(self).update_consumer.run())
 
-    async def _get_repo_from_msg(self, msg):
-        try:
-            repo = await self.REPOSITORY_CLASS.get(
-                id=msg.body['repository_id'])
-        except Repository.DoesNotExist:
-            log_msg = '[_get_repo_from_msg] repo {} does not exist'.format(
-                msg.body['repository_id'])
-            self.log(log_msg, level='warning')
-            return
+    async def add_builds(self, msg):
+        """Creates builds for the new revisions in a repository. Called
+        when we get a message in ``revisions_added`` exchange.
 
-        return repo
+        :param msg: A incomming message from the exchange.
+        """
 
-    async def _add_builds(self, msg):
         self.log('New revisions arrived!', level='debug')
         repo = await self._get_repo_from_msg(msg)
         if not repo:
@@ -162,7 +156,13 @@ class RepositoryMessageConsumer(LoggerMixin):
             log_msg += 'Exception was {}'.format(str(e))
             self.log(log_msg, level='error')
 
-    async def _add_requested_build(self, msg):
+    async def add_requested_build(self, msg):
+        """Reacts to ``build-requested`` messages in the ``notifications``
+        exchange. Adds builds for a given ``branch`` with optionally
+        ``builder_name`` and ``named_tree``.
+
+        :param msg: A incomming message from the exchange.
+        """
         repo = await self._get_repo_from_msg(msg)
         if not repo:
             return
@@ -180,7 +180,13 @@ class RepositoryMessageConsumer(LoggerMixin):
             log_msg += 'Exception was {}'.format(str(e))
             self.log(log_msg, level='error')
 
-    async def _remove_repo(self, msg):
+    async def remove_repo(self, msg):
+        """Removes a repository from the system reacting to
+        ``repo-removal-requested`` messages in the ``notifications``
+        exchange.
+
+        :param msg: A incomming message from the exchange.
+        """
         repo = await self._get_repo_from_msg(msg)
         if not repo:
             return False
@@ -193,7 +199,12 @@ class RepositoryMessageConsumer(LoggerMixin):
 
         return True
 
-    async def _update_repo(self, msg):
+    async def update_repo(self, msg):
+        """Updates a repository reacting to ``update-code-requested`` in
+        the ``notifications`` exchange.
+
+        :param msg: A incomming message from the exchange.
+        """
         repo = await self._get_repo_from_msg(msg)
         repo_branches = msg.body.get('repo_branches')
         external = msg.body.get('external')
@@ -218,3 +229,15 @@ class RepositoryMessageConsumer(LoggerMixin):
         cls.build_consumer.stop()
         cls.removal_consumer.stop()
         cls.update_consumer.stop()
+
+    async def _get_repo_from_msg(self, msg):
+        try:
+            repo = await self.REPOSITORY_CLASS.get(
+                id=msg.body['repository_id'])
+        except Repository.DoesNotExist:
+            log_msg = '[_get_repo_from_msg] repo {} does not exist'.format(
+                msg.body['repository_id'])
+            self.log(log_msg, level='warning')
+            return
+
+        return repo

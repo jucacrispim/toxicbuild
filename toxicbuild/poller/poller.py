@@ -130,8 +130,7 @@ class Poller(LoggerMixin):
 
             try:
                 await self.process_changes()
-            except Exception as e:
-
+            except Exception:
                 # shit happends
                 msg = traceback.format_exc()
                 self.log(msg, level='error')

@@ -125,7 +125,7 @@ class BuildClient(BaseToxicClient, LoggerMixin):
 
 async def get_build_client(slave, addr, port, use_ssl=True,
                            validate_cert=True):
-    """ Instanciate :class:`toxicbuild.master.client.BuildClient` and
+    """Instanciate :class:`toxicbuild.master.client.BuildClient` and
     connects it to a build server
     """
 

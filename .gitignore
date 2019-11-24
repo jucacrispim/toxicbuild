@@ -33,3 +33,4 @@ artifacts/
 /ops/docker/output.env
 /ops/docker/slave.env
 /ops/docker/web.env
+tests/functional/data/poller/src/

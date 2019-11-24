@@ -148,7 +148,7 @@ class RepositoryMessageConsumerTest(TestCase):
         consumers.RepositoryRevision\
             .objects.filter.return_value.to_list = to_list
         message_consumer = consumers.RepositoryMessageConsumer()
-        await message_consumer._add_builds(msg)
+        await message_consumer.add_builds(msg)
         self.assertTrue(consumers.Repository.get.called)
         self.assertTrue(to_list.called)
 
@@ -166,7 +166,7 @@ class RepositoryMessageConsumerTest(TestCase):
         consumers.RepositoryRevision\
             .objects.filter.return_value.to_list = to_list
         message_consumer = consumers.RepositoryMessageConsumer()
-        await message_consumer._add_builds(msg)
+        await message_consumer.add_builds(msg)
         self.assertTrue(consumers.Repository.get.called)
         self.assertTrue(to_list.called)
 
@@ -182,7 +182,7 @@ class RepositoryMessageConsumerTest(TestCase):
         consumers.RepositoryRevision\
             .objects.filter.return_value.to_list = to_list
         message_consumer = consumers.RepositoryMessageConsumer()
-        await message_consumer._add_builds(msg)
+        await message_consumer.add_builds(msg)
         self.assertTrue(consumers.Repository.get.called)
         self.assertFalse(to_list.called)
 
@@ -196,7 +196,7 @@ class RepositoryMessageConsumerTest(TestCase):
         msg.body = {'repository_id': 'asdf',
                     'branch': 'master'}
         message_consumer = consumers.RepositoryMessageConsumer()
-        await message_consumer._add_requested_build(msg)
+        await message_consumer.add_requested_build(msg)
         self.assertTrue(repo.start_build.called)
 
     @patch.object(consumers.Repository, 'get', AsyncMagicMock(
@@ -207,7 +207,7 @@ class RepositoryMessageConsumerTest(TestCase):
         msg.body = {'repository_id': 'asdf',
                     'branch': 'master'}
         message_consumer = consumers.RepositoryMessageConsumer()
-        await message_consumer._add_requested_build(msg)
+        await message_consumer.add_requested_build(msg)
 
     @patch.object(consumers.Repository, 'get', AsyncMagicMock())
     @patch.object(consumers.LoggerMixin, 'log', Mock())
@@ -219,7 +219,7 @@ class RepositoryMessageConsumerTest(TestCase):
         msg = AsyncMagicMock()
         msg.body = {'repository_id': 'asdf'}
         message_consumer = consumers.RepositoryMessageConsumer()
-        await message_consumer._add_requested_build(msg)
+        await message_consumer.add_requested_build(msg)
         self.assertFalse(repo.start_build.called)
         self.assertTrue(consumers.LoggerMixin.log.called)
 
@@ -230,7 +230,7 @@ class RepositoryMessageConsumerTest(TestCase):
         msg = AsyncMagicMock()
         msg.body = {'repository_id': 'some-id'}
         message_consumer = consumers.RepositoryMessageConsumer()
-        r = await message_consumer._remove_repo(msg)
+        r = await message_consumer.remove_repo(msg)
         self.assertFalse(r)
 
     @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
@@ -244,7 +244,7 @@ class RepositoryMessageConsumerTest(TestCase):
         msg = AsyncMagicMock()
         msg.body = {'repository_id': 'some-id'}
         message_consumer = consumers.RepositoryMessageConsumer()
-        r = await message_consumer._remove_repo(msg)
+        r = await message_consumer.remove_repo(msg)
         repo = message_consumer._get_repo_from_msg.\
             return_value
         self.assertTrue(repo.remove.called)
@@ -265,7 +265,7 @@ class RepositoryMessageConsumerTest(TestCase):
         msg = AsyncMagicMock()
         msg.body = {'repository_id': 'some-id'}
         message_consumer = consumers.RepositoryMessageConsumer()
-        r = await message_consumer._remove_repo(msg)
+        r = await message_consumer.remove_repo(msg)
         self.assertTrue(repo.remove.called)
         self.assertTrue(consumers.LoggerMixin.log.called)
         self.assertTrue(r)
