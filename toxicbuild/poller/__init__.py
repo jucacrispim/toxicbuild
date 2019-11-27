@@ -155,6 +155,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
     """
 
     loop = asyncio.get_event_loop()
+    _set_toxicpoller_conf(conffile)
     create_settings()
     loop.run_until_complete(common_setup(settings))
 

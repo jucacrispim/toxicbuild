@@ -159,13 +159,27 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
     @abstractmethod  # pragma no branch
     @asyncio.coroutine
     def get_revisions(self, since=None, branches=None):
-        """ Returns the revisions for ``branches`` since ``since``.
+        """Returns the newer revisions ``since`` for ``branches`` from
+        the default remote repository.
 
         :param since: dictionary in the format: {branch_name: since_date}.
           ``since`` is a datetime object.
         :param branches: A list of branches to look for new revisions. If
           ``branches`` is None all remote branches will be used. You can use
           wildcards in branches to filter the remote branches.
+        """
+
+    @abstractmethod  # pragma no branch
+    @asyncio.coroutine
+    def get_local_revisions(self, since=None, branches=None):
+        """Returns the newer revisions ``since`` for ``branches`` in the
+        local repository
+
+        :param since: dictionary in the format: {branch_name: since_date}.
+          ``since`` is a datetime object.
+        :param branches: A list of branches to look for new revisions. If
+          ``branches`` is None all remote branches will be used. You can use
+          wildcards in branches to filter the local branches.
         """
 
     @abstractmethod  # pragma no branch
@@ -237,8 +251,13 @@ class Git(VCS):
     @asyncio.coroutine
     def add_remote(self, remote_url, remote_name):
         cmd = '{} remote add {} {}'.format(self.vcsbin,
-                                           remote_url, remote_name)
+                                           remote_name, remote_url)
         r = yield from self.exec_cmd(cmd)
+        return r
+
+    async def rm_remote(self, remote_name):
+        cmd = '{} remote rm {}'.format(self.vcsbin, remote_name)
+        r = await self.exec_cmd(cmd)
         return r
 
     @asyncio.coroutine
@@ -301,6 +320,7 @@ class Git(VCS):
         await self.add_remote(external_url, external_name)
         await self.checkout(into)
         await self.pull(external_branch, external_name)
+        await self.rm_remote(external_name)
 
     @asyncio.coroutine
     def branch_exists(self, branch_name):
@@ -320,6 +340,23 @@ class Git(VCS):
         cmd = '{} submodule update'.format(self.vcsbin)
         ret = yield from self.exec_cmd(cmd)
         return ret
+
+    async def get_local_revisions(self, since=None, branches=None):
+        since = since or {}
+        branches = branches or []
+        revisions = {}
+        for branch in branches:
+            try:
+                await self.checkout(branch)
+                since_date = since.get(branch)
+                revs = await self.get_revisions_for_branch(branch, since_date)
+                if revs:
+                    revisions[branch] = revs
+            except Exception as e:
+                msg = 'Error fetching local changes on branch {}. {}'.format(
+                    branch, str(e))
+                self.log(msg, level='error')
+        return revisions
 
     @asyncio.coroutine
     def get_revisions(self, since=None, branches=None):
@@ -345,8 +382,9 @@ class Git(VCS):
                 if revs:
                     revisions[branch] = revs
             except Exception as e:
-                msg = 'Error fetching changes. {}'.format(str(e))
-                self.log(msg)
+                msg = 'Error fetching changes on branch {}. {}'.format(
+                    branch, str(e))
+                self.log(msg, level='error')
 
         return revisions
 

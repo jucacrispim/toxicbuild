@@ -22,7 +22,6 @@ from unittest import TestCase
 
 from toxicbuild.core.client import BaseToxicClient
 from toxicbuild.common import common_setup
-from toxicbuild.common.exchanges import revisions_added
 
 from tests import async_test
 
@@ -72,19 +71,13 @@ class DummyPollerClient(BaseToxicClient):
 
     async def poll(self):
         action = 'poll'
-        await self.request2server(action, self.body)
-        # wait for the message that must be sent by the poller
-        async with await revisions_added.consume() as consumer:
-            async for msg in consumer:
-                return msg
+        r = await self.request2server(action, self.body)
+        return r
 
     async def poll_external(self):
         action = 'poll'
-        await self.request2server(action, self.external_body)
-        # wait for the message that must be sent by the poller
-        async with await revisions_added.consume() as consumer:
-            async for msg in consumer:
-                return msg
+        r = await self.request2server(action, self.external_body)
+        return r
 
 
 class PollerTest(TestCase):
@@ -96,12 +89,11 @@ class PollerTest(TestCase):
 
     @async_test
     async def test_poll(self):
-        got_msg = await self.client.poll()
-
-        self.assertTrue(got_msg)
+        r = await self.client.poll()
+        self.assertTrue(r['revisions'])
 
     @async_test
     async def test_poll_external(self):
-        got_msg = await self.client.poll_external()
+        r = await self.client.poll_external()
 
-        self.assertTrue(got_msg)
+        self.assertEqual(len(r['revisions']), 1)

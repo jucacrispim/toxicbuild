@@ -78,6 +78,9 @@ class VCSTest(TestCase):
                                        external_branch, into):
                 pass
 
+            def get_local_revisions(self, since, branches):
+                pass
+
         super(VCSTest, self).setUp()
         self.vcs = DummyVcs('/some/workdir')
 
@@ -162,7 +165,15 @@ class GitTest(TestCase):
     async def test_add_remote(self):
         expected = 'git remote add new-origin http://someurl.net/bla.git'
         self.vcs.exec_cmd = AsyncMagicMock(spec=self.vcs.exec_cmd)
-        await self.vcs.add_remote('new-origin', 'http://someurl.net/bla.git')
+        await self.vcs.add_remote('http://someurl.net/bla.git', 'new-origin')
+        called = self.vcs.exec_cmd.call_args[0][0]
+        self.assertEqual(expected, called)
+
+    @async_test
+    async def test_rm_remote(self):
+        expected = 'git remote rm new-origin'
+        self.vcs.exec_cmd = AsyncMagicMock(spec=self.vcs.exec_cmd)
+        await self.vcs.rm_remote('new-origin')
         called = self.vcs.exec_cmd.call_args[0][0]
         self.assertEqual(expected, called)
 
@@ -275,6 +286,7 @@ class GitTest(TestCase):
         self.vcs.branch_exists = AsyncMagicMock(spec=self.vcs.branch_exists,
                                                 return_value=True)
         self.vcs.add_remote = AsyncMagicMock(spec=self.vcs.add_remote)
+        self.vcs.rm_remote = AsyncMagicMock(spec=self.vcs.rm_remote)
         self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
         self.vcs.pull = AsyncMagicMock(spec=self.vcs.pull)
         await self.vcs.import_external_branch(external_url, external_name,
@@ -285,9 +297,12 @@ class GitTest(TestCase):
         checkout_expected = 'other-repo:master'
         pull = self.vcs.pull.call_args[0]
         pull_expected = (external_branch, external_name)
+        rm = self.vcs.rm_remote.call_args[0]
+        rm_expected = 'other-repo'
         self.assertEqual(remote_added, remote_expected)
         self.assertEqual(checkout, checkout_expected)
         self.assertEqual(pull, pull_expected)
+        self.assertEqual(rm, (rm_expected,))
 
     @async_test
     async def test_import_external_branch_dont_exist(self):
@@ -439,6 +454,58 @@ class GitTest(TestCase):
         vcs.exec_cmd = e
         revisions = yield from self.vcs.get_revisions_for_branch('master')
         self.assertEqual(revisions[0]['commit'], '0sdflf095')
+
+    @async_test
+    async def test_get_local_revisions(self):
+        now = datetime.datetime.now()
+        since = {'master': now,
+                 'dev': now}
+
+        @asyncio.coroutine
+        def branch_revisions(*a, **kw):
+            return [{'123adsf': now}, {'asdf123': now}]
+
+        self.vcs.get_revisions_for_branch = branch_revisions
+
+        revisions = await self.vcs.get_local_revisions(since=since,
+                                                       branches=['a-branch'])
+
+        self.assertEqual(len(revisions['a-branch']), 2)
+
+    @async_test
+    async def test_get_local_revisions_no_revs(self):
+        now = datetime.datetime.now()
+        since = {'master': now,
+                 'dev': now}
+
+        @asyncio.coroutine
+        def branch_revisions(*a, **kw):
+            return []
+
+        self.vcs.get_revisions_for_branch = branch_revisions
+
+        revisions = await self.vcs.get_local_revisions(since=since,
+                                                       branches=['a-branch'])
+
+        self.assertNotIn('a-branch', revisions)
+
+    @mock.patch.object(vcs.LoggerMixin, 'log', mock.Mock())
+    @async_test
+    async def test_get_local_revisions_error(self):
+        now = datetime.datetime.now()
+        since = {'master': now,
+                 'dev': now}
+
+        @asyncio.coroutine
+        def branch_revisions(*a, **kw):
+            raise Exception
+
+        self.vcs.get_revisions_for_branch = branch_revisions
+
+        revisions = await self.vcs.get_local_revisions(since=since,
+                                                       branches=['a-branch'])
+
+        self.assertNotIn('a-branch', revisions)
 
     @async_test
     def test_get_revision(self):

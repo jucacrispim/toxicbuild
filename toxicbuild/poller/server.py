@@ -18,7 +18,6 @@
 
 import asyncio
 from functools import partial
-import traceback
 
 from toxicbuild.core.protocol import BaseToxicProtocol
 from toxicbuild.core.server import ToxicServer
@@ -36,8 +35,8 @@ class PollerProtocol(BaseToxicProtocol):
     async def client_connected(self):
         assert self.action == 'poll', 'Bad Action'
         self.log('client polling', level='debug')
-        asyncio.ensure_future(self.poll_repo())
-        await self.send_response(body={'poll': 'polling'}, code=0)
+        r = await self.poll_repo()
+        await self.send_response(body={'poll': r}, code=0)
         self.close_connection()
         self.log('client disconnected from poller', level='debug')
         return True
@@ -63,19 +62,9 @@ class PollerProtocol(BaseToxicProtocol):
         else:
             pollfn = poller.poll
 
-        try:
-            with_clone = await pollfn()
-            clone_status = 'ready'
-        except Exception:
-            tb = traceback.format_exc()
-            self.log(tb, level='error')
-            with_clone = False
-            clone_status = 'clone-exception'
+        r = await pollfn()
 
-        msg = {'with_clone': with_clone,
-               'clone_status': clone_status}
-
-        return msg
+        return r
 
 
 class PollerServer(ToxicServer):

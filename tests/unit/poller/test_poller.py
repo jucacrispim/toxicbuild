@@ -65,12 +65,13 @@ class PollerTest(TestCase):
         self.assertEqual(self.poller.branches_conf,
                          {'local-branch': {'notify_only_latest': True}})
 
+    @patch.object(poller.LoggerMixin, 'log', Mock(spec=poller.LoggerMixin.log))
     @async_test
     async def test_poll_already_polling(self):
         async with await self.poller.lock.acquire_write():
             r = await self.poller.poll()
 
-        self.assertIsNone(r)
+        self.assertTrue(r['locked'])
 
     @patch.object(poller.Poller, 'log', Mock(spec=poller.Poller.log))
     @async_test
@@ -80,12 +81,12 @@ class PollerTest(TestCase):
         self.poller.vcs.workdir_exists = Mock(
             spec=self.poller.vcs.workdir_exists, return_value=False)
 
-        with self.assertRaises(poller.CloneException):
-            await self.poller.poll()
+        r = await self.poller.poll()
+        self.assertTrue(r['clone_error'])
 
     @patch.object(poller.Poller, 'log', Mock(spec=poller.Poller.log))
     @patch.object(poller.Poller, 'process_changes', AsyncMagicMock(
-        spec=poller.Poller.process_changes))
+        spec=poller.Poller.process_changes, return_value=[Mock(), Mock()]))
     @async_test
     async def test_poll_clone_ok(self):
         self.poller.vcs.clone = AsyncMagicMock(spec=self.poller.vcs.clone)
@@ -97,7 +98,8 @@ class PollerTest(TestCase):
             spec=self.poller.vcs.update_submodule)
 
         r = await self.poller.poll()
-        self.assertTrue(r)
+        self.assertTrue(r['revisions'])
+        self.assertTrue(r['with_clone'])
 
     @patch.object(poller.Poller, 'log', Mock(spec=poller.Poller.log))
     @patch.object(poller.Poller, 'process_changes', AsyncMagicMock(
@@ -112,12 +114,13 @@ class PollerTest(TestCase):
             spec=self.poller.vcs.update_submodule)
 
         r = await self.poller.poll()
-        self.assertFalse(r)
+        self.assertTrue(r['error'])
+        self.assertFalse(r['clone_error'])
         self.assertEqual(len(self.poller.log.call_args_list), 2)
 
     @patch.object(poller.Poller, 'log', Mock(spec=poller.Poller.log))
     @patch.object(poller.Poller, 'process_changes', AsyncMagicMock(
-        spec=poller.Poller.process_changes))
+        spec=poller.Poller.process_changes, return_value=[Mock(), Mock()]))
     @async_test
     async def test_poll_process_changes_ok(self):
         self.poller.vcs.workdir_exists = Mock(
@@ -128,10 +131,10 @@ class PollerTest(TestCase):
             spec=self.poller.vcs.update_submodule)
 
         r = await self.poller.poll()
-        self.assertFalse(r)
+        self.assertTrue(r['revisions'])
+        self.assertFalse(r['with_clone'])
         self.assertEqual(len(self.poller.log.call_args_list), 1)
 
-    @patch.object(poller, 'revisions_added', AsyncMagicMock())
     @async_test
     async def test_process_changes(self):
         # now in the future, of course!
@@ -149,11 +152,9 @@ class PollerTest(TestCase):
                          'author': 'jc', 'title': 'Our lord John Cleese'}]}
 
         self.poller.vcs.get_revisions = AsyncMagicMock(return_value=revs)
-        await self.poller.process_changes()
+        r = await self.poller.process_changes()
+        self.assertTrue(r)
 
-        self.assertTrue(poller.revisions_added.publish.called)
-
-    @patch.object(poller, 'revisions_added', AsyncMagicMock())
     @async_test
     async def test_process_changes_no_revisions(self):
         branches = {'master': {'notify_only_latest': True},
@@ -162,6 +163,26 @@ class PollerTest(TestCase):
 
         self.poller.vcs.get_revisions = AsyncMagicMock(return_value={})
 
-        await self.poller.process_changes()
+        r = await self.poller.process_changes()
 
-        self.assertFalse(poller.revisions_added.publish.called)
+        self.assertFalse(r)
+
+    @async_test
+    async def test_process_changes_local_branch(self):
+        now = datetime.datetime.now() + datetime.timedelta(100)
+        self.poller.known_branches = ['master']
+        branches = {'master': {'notify_only_latest': True}}
+        self.poller.branches_conf = branches
+        self.poller.local_branch = True
+        revs = {'master': [{'commit': '123sdf', 'commit_date': now,
+                            'author': 'zé', 'title': 'sometitle'},
+                           {'commit': 'asdf213', 'commit_date': now,
+                            'author': 'tião', 'title': 'other'}],
+                'dev': [{'commit': 'sdfljfew', 'commit_date': now,
+                         'author': 'mariazinha', 'title': 'bla'},
+                        {'commit': 'sdlfjslfer3', 'commit_date': now,
+                         'author': 'jc', 'title': 'Our lord John Cleese'}]}
+
+        self.poller.vcs.get_local_revisions = AsyncMagicMock(return_value=revs)
+        r = await self.poller.process_changes()
+        self.assertTrue(r)

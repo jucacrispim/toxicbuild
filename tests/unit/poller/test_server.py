@@ -56,31 +56,7 @@ class PollerProtocolTest(TestCase):
         self.assertTrue(self.poller_server.close_connection.called)
 
     @patch.object(server.Poller, 'poll', AsyncMagicMock(
-        spec=server.Poller.poll, side_effect=Exception))
-    @patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
-    @patch('toxicbuild.poller.server.PollerProtocol.log', Mock())
-    @async_test
-    async def test_poll_repo_exception(self):
-        self.poller_server.data = {
-            'body': {
-                'repo_id': 'some-id',
-                'url': 'https://some.where/repo',
-                'vcs_type': 'git',
-                'since': {'master': datetime.now(),
-                          'release': datetime.now()},
-                'known_branches': ['master', 'release'],
-                'branches_conf': {'master': {'notify_only_latest': True},
-                                  'release': {'notify_only_latest': True}},
-            }
-        }
-
-        r = await self.poller_server.poll_repo()
-
-        self.assertTrue(server.Poller.poll.called)
-        self.assertEqual(r['clone_status'], 'clone-exception')
-
-    @patch.object(server.Poller, 'poll', AsyncMagicMock(
-        spec=server.Poller.poll, return_value=True))
+        spec=server.Poller.poll))
     @patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
     @patch('toxicbuild.poller.server.PollerProtocol.log', Mock())
     @async_test
@@ -98,13 +74,12 @@ class PollerProtocolTest(TestCase):
             }
         }
 
-        r = await self.poller_server.poll_repo()
+        await self.poller_server.poll_repo()
 
         self.assertTrue(server.Poller.poll.called)
-        self.assertEqual(r['clone_status'], 'ready')
 
     @patch.object(server.Poller, 'external_poll', AsyncMagicMock(
-        spec=server.Poller.external_poll, return_value=True))
+        spec=server.Poller.external_poll))
     @patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
     @patch('toxicbuild.poller.server.PollerProtocol.log', Mock())
     @async_test
@@ -128,7 +103,6 @@ class PollerProtocolTest(TestCase):
             }
         }
 
-        r = await self.poller_server.poll_repo()
+        await self.poller_server.poll_repo()
 
         self.assertTrue(server.Poller.external_poll.called)
-        self.assertEqual(r['clone_status'], 'ready')

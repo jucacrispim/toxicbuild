@@ -22,13 +22,9 @@ import os
 
 from aiozk import exc
 from toxicbuild.common.coordination import Lock
-from toxicbuild.common.exchanges import (
-    revisions_added,
-)
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.core.utils import LoggerMixin, MatchKeysDict, datetime2string
 from toxicbuild.poller import settings
-from toxicbuild.poller.exceptions import CloneException
 
 
 class Poller(LoggerMixin):
@@ -58,7 +54,8 @@ class Poller(LoggerMixin):
         self.since = since
         self.vcs_type = vcs_type
         self.vcs = get_vcs(self.vcs_type)(self.workdir)
-        self._external_info = None
+        self.external_info = None
+        self.local_branch = False
         self._lock = None
 
     @property
@@ -84,25 +81,38 @@ class Poller(LoggerMixin):
         :param external_branch: The name of the branch in the external repo.
         :param into: The name of the local branch."""
 
+        self.log('external polling in {}'.format(external_url), level='debug')
+
         await self.vcs.import_external_branch(external_url, external_name,
                                               external_branch, into)
         self.branches_conf = {into: {'notify_only_latest': True}}
-        self._external_info = {'name': external_name, 'url': external_url,
-                               'branch': external_branch, 'into': into}
-        await self.poll()
+        self.external_info = {'name': external_name, 'url': external_url,
+                              'branch': external_branch, 'into': into}
+        # The trick here is that we import an external branch into a
+        # local branch
+        self.local_branch = True
+        r = await self.poll()
+        return r
 
     async def poll(self):
         """ Check for changes in a repository and if there are changes, notify
         about it.
         """
 
-        with_clone = False
+        ret = {'with_clone': False,
+               'error': None,
+               'revisions': [],
+               'locked': False,
+               'clone_error': False,
+               'clone_status': 'ready'}
 
         try:
             lock = await self.lock.acquire_write(timeout=0.2)
         except exc.TimeoutError:
-            # Already polling for the repository
-            return None
+            self.log('Repo {} already polling'.format(self.repo_id),
+                     level='warning')
+            ret['locked'] = True
+            return ret
 
         async with lock:
             self.log('Polling with url {}'.format(self.url))
@@ -111,32 +121,30 @@ class Poller(LoggerMixin):
                 self.log('clonning repo')
                 try:
                     await self.vcs.clone(self.url)
-                    with_clone = True
-                except Exception as e:
+                    ret['with_clone'] = True
+                except Exception:
                     msg = traceback.format_exc()
                     self.log(msg, level='error')
-                    raise CloneException(str(e))
+                    ret['clone_error'] = True
+                    ret['error'] = msg
+                    ret['clone_status'] = 'clone-exception'
+                    return ret
 
             # here we change the remote url if needed. eg: a new token
             # is beeing used to authenticate, so a new url is used.
             await self.vcs.try_set_remote(self.url)
 
-            # I don't think we need submodules here. What we do is
-            # to get new revisions in the main repository not in its
-            # submodules
-            # if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
-            #     self.log('updating submodule', level='debug')
-            #     await self.vcs.update_submodule()
-
             try:
-                await self.process_changes()
+                revs = await self.process_changes()
+                ret['revisions'] = revs
             except Exception:
                 # shit happends
                 msg = traceback.format_exc()
                 self.log(msg, level='error')
+                ret['error'] = msg
                 # but the show must go on
 
-        return with_clone
+        return ret
 
     async def process_changes(self):
         """ Process all changes since the last revision in db
@@ -148,8 +156,13 @@ class Poller(LoggerMixin):
 
         branches = repo_branches.keys()
 
-        newer_revisions = await self.vcs.get_revisions(
-            since=self.since, branches=branches)
+        if self.local_branch:
+            newer_revisions = await self.vcs.get_local_revisions(
+                since=self.since, branches=branches)
+
+        else:
+            newer_revisions = await self.vcs.get_revisions(
+                since=self.since, branches=branches)
 
         revisions = []
         for branch, revs in newer_revisions.items():
@@ -174,25 +187,8 @@ class Poller(LoggerMixin):
                                                  builders_fallback,
                                                  revisions)
 
-        if revisions:
-            await self.notify_change(*revisions)
-
         self.log('Processing changes done!', level='debug')
-
-    async def notify_change(self, *revisions):
-        """ Notify about new revisions added to the repository.
-
-        :param revisions: A list of new revisions"""
-
-        msg = {'repository_id': str(self.repo_id),
-               'revisions': revisions}
-
-        self.log('publishing on revisions_added', level='debug')
-        await revisions_added.publish(msg)
-
-    def log(self, msg, level='info'):
-        msg = '[{}] {}'.format(self.repo_id, msg)
-        super().log(msg, level)
+        return revisions
 
     async def _process_branch_revisions(self, branch, revisions,
                                         notify_only_latest, builders_fallback,
@@ -205,7 +201,7 @@ class Poller(LoggerMixin):
                 continue
 
             rev['branch'] = branch
-            rev['external'] = self._external_info
+            rev['external'] = self.external_info
             rev['builders_fallback'] = builders_fallback
             rev['commit_date'] = datetime2string(rev['commit_date'])
 
