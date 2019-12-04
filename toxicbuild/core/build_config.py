@@ -25,8 +25,12 @@ except ImportError:
     from yaml import Loader
 
 from toxicbuild.core.exceptions import ConfigError
-from toxicbuild.core.utils import (load_module_from_file, read_file,
-                                   match_string)
+from toxicbuild.core.utils import (
+    load_module_from_file,
+    read_file,
+    match_string,
+    load_module_from_content,
+)
 
 
 def get_toxicbuildconf(directory):
@@ -38,6 +42,20 @@ def get_toxicbuildconf(directory):
     return load_module_from_file(configfile)
 
 
+def load_yaml_conf(config):
+    """Loads a configuration using ``yaml.load``
+
+    :param conf: A string - usually the contents of a file - containing
+      a yaml config.
+    """
+    try:
+        return yaml.load(config, Loader=Loader)
+    except yaml.scanner.ScannerError as e:
+        err_msg = 'There is something wrong with your file. '
+        err_msg += 'The original exception was:\n{}'.format(e.args[0])
+        raise ConfigError(err_msg)
+
+
 async def get_toxicbuildconf_yaml(directory, filename='toxicbuild.yml'):
     """Returns the python objet representing the yaml build configuration.
 
@@ -46,12 +64,7 @@ async def get_toxicbuildconf_yaml(directory, filename='toxicbuild.yml'):
     """
     configfile = os.path.join(directory, filename)
     config = await read_file(configfile)
-    try:
-        return yaml.load(config, Loader=Loader)
-    except yaml.scanner.ScannerError as e:
-        err_msg = 'There is something wrong with your file. '
-        err_msg += 'The original exception was:\n{}'.format(e.args[0])
-        raise ConfigError(err_msg)
+    return load_yaml_conf(config)
 
 
 async def get_config(workdir, config_type, config_filename):
@@ -67,6 +80,22 @@ async def get_config(workdir, config_type, config_filename):
         conf = get_toxicbuildconf(workdir)
     else:
         conf = await get_toxicbuildconf_yaml(workdir, config_filename)
+
+    return conf
+
+
+def load_config(config_type, config):
+    """Loads a config based in a string with the config content.
+
+    :param config_type: Which type of configuration we are using,
+      'py' or 'yaml'.
+    :param config: A string with the build config
+    """
+
+    if config_type == 'py':
+        conf = load_module_from_content(config)
+    else:
+        conf = load_yaml_conf(config)
 
     return conf
 

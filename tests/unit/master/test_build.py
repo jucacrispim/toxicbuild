@@ -997,7 +997,7 @@ class BuildManagerTest(TestCase):
 
         @asyncio.coroutine
         def gb(branch, slave):
-            return [self.builder]
+            return [self.builder], 'master'
 
         self.manager.get_builders = gb
         self.revision.body = 'some commit \n# ci: skip'
@@ -1023,16 +1023,44 @@ class BuildManagerTest(TestCase):
         await self._create_test_data()
         self.manager._execute_builds = AsyncMagicMock(
             spec=self.manager._execute_builds)
+
         self.manager.get_builders = AsyncMagicMock(
             spec=self.manager.get_builders,
-            return_value=[self.builder, self.revision.branch])
+            return_value=([self.builder], self.revision.branch))
         self.manager.cancel_previous_pending = AsyncMagicMock(
             spec=self.manager.cancel_previous_pending)
         self.manager.repository = self.repo
+
         self.repo.branches = [repository.RepositoryBranch(
             name='master', notify_only_latest=False)]
         await self.manager.add_builds([self.revision])
         self.assertFalse(self.manager.cancel_previous_pending.called)
+
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+        spec=build.BuildSet.notify))
+    @mock.patch.object(
+        repository.ui_notifications, 'publish', AsyncMagicMock())
+    @mock.patch.object(repository.scheduler_action, 'publish',
+                       AsyncMagicMock())
+    @async_test
+    async def test_add_builds_no_revision_conf(self):
+        await self._create_test_data()
+        self.manager._execute_builds = AsyncMagicMock(
+            spec=self.manager._execute_builds)
+
+        self.manager.get_builders = AsyncMagicMock(
+            spec=self.manager.get_builders,
+            return_value=([self.builder], self.revision.branch))
+        self.manager.cancel_previous_pending = AsyncMagicMock(
+            spec=self.manager.cancel_previous_pending)
+        self.manager.repository = self.repo
+        self.manager.repository.get_config_for = mock.Mock()
+        self.repo.branches = [repository.RepositoryBranch(
+            name='master', notify_only_latest=False)]
+        self.revision.config = None
+        await self.revision.save()
+        await self.manager.add_builds([self.revision])
+        self.assertFalse(self.manager.repository.get_config_for.called)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -1046,13 +1074,10 @@ class BuildManagerTest(TestCase):
     @async_test
     async def test_get_builders(self):
         await self._create_test_data()
-        checkout = mock.MagicMock()
         self.repo.schedule = mock.Mock()
         await self.repo.bootstrap()
         self.manager.repository = self.repo
         self.manager.config_type = 'py'
-        self.manager.repository.vcs.checkout = asyncio.coroutine(
-            lambda *a, **kw: checkout())
         conf = mock.Mock()
         builders, origin = await self.manager.get_builders(self.revision,
                                                            conf)
@@ -1074,7 +1099,6 @@ class BuildManagerTest(TestCase):
     @async_test
     async def test_get_builders_fallback(self):
         await self._create_test_data()
-        checkout = mock.MagicMock()
         self.revision.branch = 'no-builders'
         self.revision.builders_fallback = 'master'
         self.repo.schedule = mock.Mock()
@@ -1082,8 +1106,6 @@ class BuildManagerTest(TestCase):
         self.manager.repository = self.repo
         self.manager.config_type = 'py'
         conf = mock.Mock()
-        self.manager.repository.vcs.checkout = asyncio.coroutine(
-            lambda *a, **kw: checkout())
         builders, origin = await self.manager.get_builders(self.revision,
                                                            conf)
 
@@ -1108,10 +1130,7 @@ class BuildManagerTest(TestCase):
         self.repo.schedule = mock.Mock()
         self.manager.log = mock.Mock()
         await self.repo.bootstrap()
-        checkout = mock.MagicMock()
         conf = mock.Mock()
-        self.manager.repository.vcs.checkout = asyncio.coroutine(
-            lambda *a, **kw: checkout())
         builders, origin = await self.manager.get_builders(self.revision,
                                                            conf)
 
@@ -1130,13 +1149,10 @@ class BuildManagerTest(TestCase):
     @async_test
     async def test_get_builders_include(self):
         await self._create_test_data()
-        checkout = mock.MagicMock()
         self.repo.schedule = mock.Mock()
         await self.repo.bootstrap()
         self.manager.repository = self.repo
         self.manager.config_type = 'py'
-        self.manager.repository.vcs.checkout = asyncio.coroutine(
-            lambda *a, **kw: checkout())
         conf = mock.Mock()
         builders, origin = await self.manager.get_builders(self.revision,
                                                            conf,
@@ -1159,13 +1175,10 @@ class BuildManagerTest(TestCase):
     @async_test
     async def test_get_builders_exclude(self):
         await self._create_test_data()
-        checkout = mock.MagicMock()
         self.repo.schedule = mock.Mock()
         await self.repo.bootstrap()
         self.manager.repository = self.repo
         self.manager.config_type = 'py'
-        self.manager.repository.vcs.checkout = asyncio.coroutine(
-            lambda *a, **kw: checkout())
         conf = mock.Mock()
         builders, origin = await self.manager.get_builders(self.revision,
                                                            conf,
@@ -1480,7 +1493,8 @@ class BuildManagerTest(TestCase):
         self.revision = repository.RepositoryRevision(
             repository=self.repo, branch='master', commit='bgcdf3123',
             commit_date=datetime.datetime.now(),
-            author='ze', title='fixes nothing'
+            author='ze', title='fixes nothing',
+            config='language: python',
         )
 
         await self.revision.save()

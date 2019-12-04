@@ -135,9 +135,12 @@ class PollerTest(TestCase):
         self.assertFalse(r['with_clone'])
         self.assertEqual(len(self.poller.log.call_args_list), 1)
 
+    @patch.object(poller, 'read_file', AsyncMagicMock(spec=poller.read_file,
+                                                      return_value='config'))
+    @patch('toxicbuild.core.vcs.Git.checkout', AsyncMagicMock())
     @async_test
     async def test_process_changes(self):
-        # now in the future, of course!
+        # now in the future, of course!a
         now = datetime.datetime.now() + datetime.timedelta(100)
         self.poller.known_branches = ['master']
         branches = {'master': {'notify_only_latest': True}}
@@ -154,6 +157,7 @@ class PollerTest(TestCase):
         self.poller.vcs.get_revisions = AsyncMagicMock(return_value=revs)
         r = await self.poller.process_changes()
         self.assertTrue(r)
+        self.assertTrue(r[0]['config'])
 
     @async_test
     async def test_process_changes_no_revisions(self):
@@ -167,6 +171,9 @@ class PollerTest(TestCase):
 
         self.assertFalse(r)
 
+    @patch.object(poller, 'read_file', AsyncMagicMock(spec=poller.read_file,
+                                                      return_value='config'))
+    @patch('toxicbuild.core.vcs.Git.checkout', AsyncMagicMock())
     @async_test
     async def test_process_changes_local_branch(self):
         now = datetime.datetime.now() + datetime.timedelta(100)
@@ -186,3 +193,4 @@ class PollerTest(TestCase):
         self.poller.vcs.get_local_revisions = AsyncMagicMock(return_value=revs)
         r = await self.poller.process_changes()
         self.assertTrue(r)
+        self.assertTrue(r[0]['config'])

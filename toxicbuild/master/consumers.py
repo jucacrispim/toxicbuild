@@ -208,10 +208,8 @@ class RepositoryMessageConsumer(LoggerMixin):
         repo = await self._get_repo_from_msg(msg)
         repo_branches = msg.body.get('repo_branches')
         external = msg.body.get('external')
-        wait_for_lock = msg.body.get('wait_for_lock', False)
         kw = {'repo_branches': repo_branches,
-              'external': external,
-              'wait_for_lock': wait_for_lock}
+              'external': external}
         if not repo:
             return False
         try:

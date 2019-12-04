@@ -91,9 +91,11 @@ class PollerTest(TestCase):
     async def test_poll(self):
         r = await self.client.poll()
         self.assertTrue(r['revisions'])
+        self.assertTrue(r['revisions'][0]['config'])
 
     @async_test
     async def test_poll_external(self):
         r = await self.client.poll_external()
 
         self.assertEqual(len(r['revisions']), 1)
+        self.assertTrue(r['revisions'][0]['config'])

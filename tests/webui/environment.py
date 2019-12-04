@@ -48,8 +48,7 @@ from toxicbuild.common.interfaces import (  # noqa 402
     SlaveInterface, RepositoryInterface, BaseInterface)
 from tests.functional import (start_slave, stop_slave,  # noqa 402
                               start_master, stop_master,
-                              start_poller, stop_poller,
-                              start_scheduler, stop_scheduler,
+                              start_new_poller, stop_new_poller,
                               start_output, stop_output,
                               start_webui, stop_webui,
                               REPO_DIR)
@@ -160,8 +159,7 @@ async def create_root_user(context):
 
 def before_all(context):
     start_slave()
-    start_poller()
-    start_scheduler()
+    start_new_poller()
     start_output()
     start_master()
     start_webui()
@@ -238,8 +236,7 @@ def after_all(context):
 
     stop_webui()
     stop_output()
-    stop_scheduler()
-    stop_poller()
+    stop_new_poller()
     stop_master()
     stop_slave()
 

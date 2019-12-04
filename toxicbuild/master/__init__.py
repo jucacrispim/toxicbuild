@@ -26,12 +26,6 @@ scheduler = None
 PIDFILE = 'toxicmaster.pid'
 LOGFILE = 'toxicmaster.log'
 
-SCHEDULER_PIDFILE = 'toxicscheduler.pid'
-SCHEDULER_LOGFILE = 'toxicscheduler.log'
-
-POLLER_PIDFILE = 'toxicpoller.pid'
-POLLER_LOGFILE = 'toxicpoller.log'
-
 ENVVAR = 'TOXICMASTER_SETTINGS'
 DEFAULT_SETTINGS = 'toxicmaster.conf'
 
@@ -87,20 +81,6 @@ def toxicinit(server):
     log('[init] Toxicmaster is running!')
 
 
-async def scheduler_server_init(server):
-    """Starts the scheduler server"""
-
-    ensure_future(server.run())
-    log('[init] Toxicscheduler is running!')
-
-
-async def poller_server_init(server):
-    """Starts a poller server."""
-
-    ensure_future(server.run())
-    log('[init] Toxicpoller is running!')
-
-
 def run(loglevel):
     """ Runs Toxicbuild master """
 
@@ -138,44 +118,6 @@ def run(loglevel):
         loop.run_forever()
     finally:
         loop.run_until_complete(server.shutdown())
-
-
-def run_scheduler(loglevel):
-    """Runs a scheduler server for toxicbuild master."""
-
-    set_loglevel(loglevel)
-
-    loop = asyncio.get_event_loop()
-    create_settings_and_connect()
-
-    loop.run_until_complete(common_setup(settings))
-
-    from toxicbuild.master.scheduler import SchedulerServer
-
-    server = SchedulerServer()
-
-    loop.run_until_complete(scheduler_server_init(server))
-    loop.run_forever()
-
-
-def run_poller(loglevel):
-    """Runs a poller server for toxicbuild master."""
-
-    set_loglevel(loglevel)
-
-    loop = asyncio.get_event_loop()
-    create_settings_and_connect()
-    from toxicbuild.master.pollers import PollerServer
-
-    loop.run_until_complete(common_setup(settings))
-
-    server = PollerServer()
-
-    loop.run_until_complete(poller_server_init(server))
-    try:
-        loop.run_forever()
-    finally:
-        server.sync_shutdown()
 
 
 # console commands
@@ -230,59 +172,8 @@ def _kill_thing(workdir, pidfile, kill=True):
 
 
 @command
-def start_scheduler(workdir, daemonize=False,
-                    stdout=SCHEDULER_LOGFILE, stderr=SCHEDULER_LOGFILE,
-                    conffile=None, loglevel='info', pidfile=SCHEDULER_PIDFILE):
-    """Starts a scheduler server.
-
-    :param workdir: Work directory for the server.
-    :param --daemonize: Run as daemon. Defaults to False
-    :param --stdout: stdout path. Defaults to /dev/null
-    :param --stderr: stderr path. Defaults to /dev/null
-    :param -c, --conffile: path to config file. Defaults to None.
-      If not conffile, will look for a file called ``toxicmaster.conf``
-      inside ``workdir``
-    :param --loglevel: Level for logging messages. Defaults to `info`.
-    :param --pidfile: Name of the file to use as pidfile.  Defaults to
-      ``toxicslave.pid``
-
-    """
-    print('Starting toxicscheduler')
-    _check_workdir(workdir)
-    _set_toxicmaster_conf(conffile)
-    _run_callable_with_loglevel(run_scheduler, daemonize, loglevel,
-                                stdout, stderr, workdir, pidfile)
-
-
-@command
-def start_poller(workdir, daemonize=False,
-                 stdout=POLLER_LOGFILE, stderr=POLLER_LOGFILE,
-                 conffile=None, loglevel='info', pidfile=POLLER_PIDFILE):
-    """Starts a poller server.
-
-    :param workdir: Work directory for the server.
-    :param --daemonize: Run as daemon. Defaults to False
-    :param --stdout: stdout path. Defaults to /dev/null
-    :param --stderr: stderr path. Defaults to /dev/null
-    :param -c, --conffile: path to config file. Defaults to None.
-      If not conffile, will look for a file called ``toxicmaster.conf``
-      inside ``workdir``
-    :param --loglevel: Level for logging messages. Defaults to `info`.
-    :param --pidfile: Name of the file to use as pidfile.  Defaults to
-      ``toxicslave.pid``
-
-    """
-    print('Starting toxicpoller')
-    _check_workdir(workdir)
-    _set_toxicmaster_conf(conffile)
-    _run_callable_with_loglevel(run_poller, daemonize, loglevel,
-                                stdout, stderr, workdir, pidfile)
-
-
-@command
 def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
-          conffile=None, loglevel='info', pidfile=PIDFILE,
-          no_scheduler=False, no_poller=False):
+          conffile=None, loglevel='info', pidfile=PIDFILE):
     """ Starts toxicmaster.
 
     :param workdir: Work directory for server.
@@ -321,36 +212,6 @@ def stop(workdir, pidfile=PIDFILE, kill=False):
 
 
 @command
-def stop_scheduler(workdir, pidfile=SCHEDULER_PIDFILE, kill=False):
-    """Kills toxicmaster scheduler.
-
-    :param --workdir: Workdir for master to be killed. Looks for a file
-      ``toxicmaster.pid`` inside ``workdir``.
-    :param --pidfile: Name of the file to use as pidfile.  Defaults to
-      ``toxicscheduler.pid``.
-    :param kill: If true, send signum 9, otherwise, 15.
-    """
-
-    print('Stopping toxicscheduler')
-    _kill_thing(workdir, pidfile, kill)
-
-
-@command
-def stop_poller(workdir, pidfile=POLLER_PIDFILE, kill=False):
-    """Kills toxicmaster poller.
-
-    :param --workdir: Workdir for master to be killed. Looks for a file
-      ``toxicmaster.pid`` inside ``workdir``.
-    :param --pidfile: Name of the file to use as pidfile.  Defaults to
-      ``toxicpoller.pid``
-    :param kill: If true, send signum 9, otherwise, 15.
-    """
-
-    print('Stopping toxicpoller')
-    _kill_thing(workdir, pidfile, kill)
-
-
-@command
 def restart(workdir, pidfile=PIDFILE, loglevel='info'):
     """Restarts toxicmaster
 
@@ -363,38 +224,6 @@ def restart(workdir, pidfile=PIDFILE, loglevel='info'):
 
     stop(workdir, pidfile=pidfile)
     start(workdir, pidfile=pidfile, daemonize=True, loglevel=loglevel)
-
-
-@command
-def restart_scheduler(workdir, pidfile=SCHEDULER_PIDFILE, loglevel='info'):
-    """Restarts toxicmaster scheduler. The instance of toxicmaster scheduler
-    in ``workdir`` will be restarted.
-
-    :param workdir: Workdir for the scheduler to be killed.
-    :param --pidfile: Name of the file to use as pidfile.  Defaults to
-      ``toxicscheduler.pid``
-    :param --loglevel: Level for logging messages. Defaults to `info`.
-    """
-
-    stop_scheduler(workdir, pidfile=pidfile)
-    start_scheduler(workdir, pidfile=pidfile, daemonize=True,
-                    loglevel=loglevel)
-
-
-@command
-def restart_poller(workdir, pidfile=POLLER_PIDFILE, loglevel='info'):
-    """Restarts toxicmaster poller. The instance of toxicmaster poller
-    in ``workdir`` will be restarted.
-
-    :param workdir: Workdir for the poller to be killed.
-    :param --pidfile: Name of the file to use as pidfile.  Defaults to
-      ``toxicpoller.pid``
-    :param --loglevel: Level for logging messages. Defaults to `info`.
-    """
-
-    stop_poller(workdir, pidfile=pidfile)
-    start_poller(workdir, pidfile=pidfile, daemonize=True,
-                 loglevel=loglevel)
 
 
 @command

@@ -21,7 +21,8 @@ import asyncio
 from asyncio import ensure_future
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.core.exceptions import ToxicClientException
-from toxicbuild.core.utils import LoggerMixin
+from toxicbuild.core.utils import LoggerMixin, datetime2string
+from toxicbuild.master import settings
 from toxicbuild.master.utils import (get_build_config_type,
                                      get_build_config_filename)
 
@@ -164,7 +165,7 @@ class PollerClient(BaseToxicClient):
           used.
         """
         dbrevisions = await self.repo.get_latest_revisions()
-        since = dict((branch, r.commit_date) for branch, r
+        since = dict((branch, datetime2string(r.commit_date)) for branch, r
                      in dbrevisions.items() if r)
 
         branches_conf = branches_conf or {
@@ -178,8 +179,24 @@ class PollerClient(BaseToxicClient):
             'known_branches': await self.repo.get_known_branches(),
             'since': since,
             'branches_conf': branches_conf,
-            'external': external
+            'external': external,
+            'conffile': self.repo.config_filename,
         }
-
-        r = await self.request2server('poll', body)
+        self.log('Updating code with url {}'.format(self.repo.get_url()),
+                 level='debug')
+        token = settings.POLLER_TOKEN
+        r = await self.request2server('poll', body, token)
         return r
+
+
+def get_poller_client(repo):
+    """Returns an instance of :class:`~toxicbuild.master.client.PollerClient`.
+    """
+
+    host = settings.POLLER_HOST
+    port = settings.POLLER_PORT
+    use_ssl = settings.POLLER_USES_SSL
+    validate_cert = settings.POLLER_VALIDATES_CERT
+    client = PollerClient(repo, host, port, use_ssl=use_ssl,
+                          validate_cert=validate_cert)
+    return client

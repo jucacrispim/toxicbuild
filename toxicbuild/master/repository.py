@@ -22,7 +22,6 @@ import os
 import re
 import shutil
 from threading import Thread
-from aiozk import exc
 from bson.objectid import ObjectId
 from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
@@ -40,14 +39,14 @@ from toxicbuild.common.coordination import Lock
 from toxicbuild.common.exchanges import (
     notifications,
     ui_notifications,
-    update_code,
-    poll_status,
     scheduler_action,
 )
 from toxicbuild.core import utils, build_config
+from toxicbuild.core.utils import string2datetime
 from toxicbuild.core.vcs import get_vcs
 from toxicbuild.master import settings
 from toxicbuild.master.build import (BuildSet, Builder, BuildManager)
+from toxicbuild.master.client import get_poller_client
 from toxicbuild.master.document import OwnedDocument, ExternalRevisionIinfo
 from toxicbuild.master.exceptions import RepoBranchDoesNotExist
 from toxicbuild.master.utils import (get_build_config_type,
@@ -58,6 +57,8 @@ from toxicbuild.master.slave import Slave
 # The thing here is: When a repository poller is scheduled, I need to
 # keep track of the hashes so I can remove it from the scheduler
 # when needed.
+# {repourl-update-code: hash}
+_update_code_hashes = {}
 # The is {repourl-start-pending: hash} for starting pending builds
 _scheduler_hashes = {}
 
@@ -152,33 +153,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         self._old_status = None
         self._vcs_instance = None
-
-    @property
-    def toxicbuild_conf_lock(self):
-        path = '/{}-toxicbuild_conf'.format(str(self.id))
-        return Lock(path)
-
-    @property
-    def update_code_lock(self):
-        path = '/{}-update_code'.format(str(self.id))
-        return Lock(path)
-
-    @property
-    def vcs(self):
-        """An instance of a subclass of :class:`~toxicbuild.core.vcs.VCS`."""
-
-        if not self._vcs_instance:
-            self._vcs_instance = get_vcs(self.vcs_type)(self.workdir)
-
-        return self._vcs_instance
-
-    @property
-    def workdir(self):
-        """ The directory where the source code of this repository is
-        cloned into
-        """
-        base_dir = settings.SOURCE_CODE_DIR
-        return os.path.join(base_dir, str(self.id))
 
     @classmethod
     def add_running_build(cls):
@@ -311,6 +285,12 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
             ensure_future(scheduler_action.publish(sched_msg))
 
+        # add update_code
+        update_code_hash = self.scheduler.add(self.update_code,
+                                              self.update_seconds)
+        _update_code_hashes['{}-update-code'.format(
+            self.url)] = update_code_hash
+
         # adding start_pending
         start_pending_hash = self.scheduler.add(
             self.build_manager.start_pending, 120)
@@ -344,6 +324,12 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         sched_msg = {'type': 'rm-update-code', 'repository_id': str(self.id)}
         await scheduler_action.publish(sched_msg)
         try:
+            update_hash = _update_code_hashes['{}-update-code'.format(
+                self.url)]
+            self.scheduler.remove_by_hash(update_hash)
+            del _update_code_hashes['{}-update-code'.format(
+                self.url)]
+
             pending_hash = _scheduler_hashes['{}-start-pending'.format(
                 self.url)]
             self.scheduler.remove_by_hash(pending_hash)
@@ -352,8 +338,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             # means the repository was not scheduled
             pass
 
-        # removes the repository from the file system.
-        Thread(target=shutil.rmtree, args=[self.workdir]).start()
         await self.delete()
 
     async def request_removal(self):
@@ -365,8 +349,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await notifications.publish(
             msg, routing_key='repo-removal-requested')
 
-    async def request_code_update(self, repo_branches=None, external=None,
-                                  wait_for_lock=False):
+    async def request_code_update(self, repo_branches=None, external=None):
         """Request the code update of a repository by publishing a message in
         the ``notifications`` queue with the routing key
         `repo-update-code-requested`.
@@ -384,21 +367,17 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         :param external: If we should update code from an external
           (not the origin) repository, `external` is the information about
           this remote repo.
-        :param wait_for_lock: Indicates if we should wait for the release of
-          the lock or simply return if we cannot get a lock.
         """
 
         msg = {'repository_id': str(self.id),
                'repo_branches': repo_branches,
-               'external': external,
-               'wait_for_lock': wait_for_lock}
+               'external': external}
         await notifications.publish(
             msg, routing_key='update-code-requested')
 
-    async def update_code(self, repo_branches=None, external=None,
-                          wait_for_lock=False):
-        """Requests a code update to a poller and waits for its response.
-        This is done using ``update_code`` and ``poll_status`` exchanges.
+    async def update_code(self, repo_branches=None, external=None):
+        """Requests a code update to a poller and adds builds to the
+        new revisions returned.
 
         :param repo_branches: A dictionary with information about the branches
           to be updated. If no ``repo_branches`` all branches in the repo
@@ -413,39 +392,25 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         :param external: If we should update code from an external
           (not the origin) repository, `external` is the information about
           this remote repo.
-        :param wait_for_lock: Indicates if we should wait for the release of
-          the lock or simply return if we cannot get a lock.
-
         """
 
-        if wait_for_lock:
-            timeout = None
-        else:
-            timeout = 0.5
+        async with get_poller_client(self) as client:
+            ret = await client.poll_repo(branches_conf=repo_branches,
+                                         external=external)
 
-        try:
-            lock = await self.update_code_lock.acquire_write(timeout)
-        except exc.TimeoutError:
-            self.log('Repo already updating. Leaving.', level='debug')
-            return
+        self.clone_status = ret['clone_status']
+        if ret['revisions']:
+            revs = []
+            for rinfo in ret['revisions']:
+                rev = RepositoryRevision(repository=self, **rinfo)
+                rev.commit_date = string2datetime(rinfo['commit_date'])
+                rev.config_type = self.config_type
+                revs.append(rev)
 
-        async with lock:
-            url = self.get_url()
-            self.log('Updating code with url {}.'.format(url), level='debug')
+            revs = await RepositoryRevision.objects.insert(revs)
+            await self.build_manager.add_builds(revs)
 
-            msg = {'repo_id': str(self.id),
-                   'vcs_type': self.vcs_type,
-                   'repo_branches': repo_branches,
-                   'external': external}
-
-            ensure_future(update_code.publish(msg))
-            msg = await self._wait_update()
-
-        self.log('update_code_lock released', level='debug')
-        self.clone_status = msg.body['clone_status']
-        await self.save()
-
-        if msg.body['with_clone']:
+        if ret['with_clone']:
             status_msg = {'repository_id': str(self.id),
                           'old_status': 'cloning',
                           'new_status': self.clone_status}
@@ -608,19 +573,18 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             rev = await self.get_latest_revision_for_branch(branch)
             named_tree = rev.commit
         else:
-            rev = await RepositoryRevision.get(repository=self,
-                                               branch=branch,
-                                               commit=named_tree)
+            rev = await RepositoryRevision.objects(branch=branch,
+                                                   commit=named_tree).first()
 
         buildset = await BuildSet.create(repository=self, revision=rev)
-        try:
-            conf = await self.get_config_for(rev)
-        except FileNotFoundError:
+        if not rev.config:
             self.log('No config found', level='debug')
             buildset.status = type(buildset).NO_CONFIG
             await buildset.save()
             buildset_added.send(str(self.id), buildset=buildset)
             return
+
+        conf = self.get_config_for(rev)
 
         if not builder_name_or_id:
             builders, builders_origin = await self._get_builders(rev, conf)
@@ -681,21 +645,15 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         return only_latest
 
-    async def get_config_for(self, revision):
+    def get_config_for(self, revision):
         """Returns the build configuration for a given revision.
 
         :param revision: A
           :class`~toxicbuild.master.repository.RepositoryRevision` instance.
         """
 
-        async with await self.toxicbuild_conf_lock.acquire_write():
-            self.log('checkout on {} to {}'.format(
-                self.url, revision.commit), level='debug')
-            await self.vcs.checkout(revision.commit)
-            conf = await build_config.get_config(self.workdir,
-                                                 self.config_type,
-                                                 self.config_filename)
-
+        conf = build_config.load_config(
+            self.config_type, revision.config)
         return conf
 
     async def add_envvars(self, **envvars):
@@ -729,22 +687,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         self.envvars = envvars
         await self.save()
-
-    async def _get_poll_status_consumer(self):
-        consumer = await poll_status.consume(routing_key=str(self.id),
-                                             no_ack=False)
-        return consumer
-
-    async def _wait_update(self):
-        consumer = await self._get_poll_status_consumer()
-        async with consumer:
-            # wait for the message with the poll response.
-            msg = await consumer.fetch_message()
-            self.log('poll status received', level='debug')
-            await msg.acknowledge()
-            self.log('poll status msg acknowledged', level='debug')
-
-        return msg
 
     async def _get_builders(self, revision, conf):
         builders, origin = await self.build_manager.get_builders(
@@ -804,6 +746,12 @@ class RepositoryRevision(Document):
     """A name of a branch. If not None, builders from this branch will be used
     if there are no builders for the branch of the revision."""
 
+    config = StringField()
+    """The build configuration for this revision"""
+
+    config_type = StringField()
+    """The type of congif used"""
+
     @classmethod
     async def get(cls, **kwargs):
         """Returs a RepositoryRevision object."""
@@ -825,7 +773,7 @@ class RepositoryRevision(Document):
         return rev_dict
 
     def create_builds(self):
-        """Checks for instructions in the commit body to know if a
+        r"""Checks for instructions in the commit body to know if a
         revision should create builds.
 
         Known instructions:

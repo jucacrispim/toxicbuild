@@ -16,12 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 from functools import partial
 
 from toxicbuild.core.protocol import BaseToxicProtocol
 from toxicbuild.core.server import ToxicServer
-from toxicbuild.core.utils import log
+from toxicbuild.core.utils import log, string2datetime
 from toxicbuild.poller import settings
 from toxicbuild.poller.poller import Poller
 
@@ -46,12 +45,16 @@ class PollerProtocol(BaseToxicProtocol):
         repo_id = body['repo_id']
         url = body['url']
         vcs_type = body['vcs_type']
-        since = body['since']
+        if body.get('since'):
+            since = {k: string2datetime(v) for k, v in body['since'].items()}
+        else:
+            since = {}
         known_branches = body['known_branches']
         branches_conf = body['branches_conf']
         external = body.get('external')
+        conffile = body.get('conffile', 'toxicbuild.yml')
         poller = Poller(repo_id, url, branches_conf, since, known_branches,
-                        vcs_type)
+                        vcs_type, conffile)
         if external:
             external_url = external.get('url')
             external_name = external.get('name')

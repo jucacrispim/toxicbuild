@@ -31,6 +31,7 @@ import logging
 import os
 import random
 import subprocess
+import tempfile
 import string
 import sys
 import time
@@ -211,6 +212,23 @@ def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
         raise ExecCmdError(output)
 
     return output
+
+
+def load_module_from_content(module_content):
+    """Loads a module from a string that is the contents of the module.
+
+    :param module_content: A string with the module content.
+    """
+
+    # This is a shitty hack. I don't want to  remove python build config
+    # but I don't want spend time on it. :P
+
+    with tempfile.NamedTemporaryFile(suffix='.py') as fd:
+        fd.write(module_content.encode())
+        fd.flush()
+        mod = load_module_from_file(fd.name)
+
+    return mod
 
 
 def load_module_from_file(filename):

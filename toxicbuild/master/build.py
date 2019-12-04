@@ -931,14 +931,13 @@ class BuildManager(LoggerMixin):
 
             buildset = await BuildSet.create(repository=self.repository,
                                              revision=revision)
-
-            try:
-                conf = await self.repository.get_config_for(revision)
-            except FileNotFoundError:
+            if not revision.config:
                 buildset.status = type(buildset).NO_CONFIG
                 await buildset.save()
                 buildset_added.send(str(self.repository.id), buildset=buildset)
                 continue
+
+            conf = self.repository.get_config_for(revision)
 
             last_bs = buildset
             builders_conf = revision.get_builders_conf()

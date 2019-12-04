@@ -17,13 +17,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 import datetime
 from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch
-from uuid import uuid4
 from asyncamqp.exceptions import ConsumerTimeout
-from toxicbuild.common import exchange
 from toxicbuild.core import utils
 from toxicbuild.master import (repository, build, slave, users)
 from tests import async_test, AsyncMagicMock, create_autospec
@@ -90,15 +87,10 @@ class RepositoryTest(TestCase):
                 pass
         self.assertTrue(self.GOT_MSG)
 
-    def test_vcs(self):
-        self.assertTrue(self.repo.vcs)
-
-    def test_workdir(self):
-        expected = 'src/{}'.format(str(self.repo.id))
-        self.assertEqual(self.repo.workdir, expected)
-
     @patch.object(repository, 'ui_notifications', AsyncMagicMock())
     @patch.object(repository.Repository, 'log', Mock())
+    @patch.object(repository.Repository, 'schedule', Mock(
+        spec=repository.Repository.schedule))
     @async_test
     async def test_create(self):
         slave_inst = await slave.Slave.create(name='name', host='bla.com',
@@ -112,9 +104,12 @@ class RepositoryTest(TestCase):
         self.assertTrue(repository.ui_notifications.publish.called)
         slaves = await repo.slaves
         self.assertEqual(slaves[0], slave_inst)
+        self.assertTrue(repository.Repository.schedule.called)
 
     @patch.object(repository, 'ui_notifications', AsyncMagicMock())
     @patch.object(repository.Repository, 'log', Mock())
+    @patch.object(repository.Repository, 'schedule', Mock(
+        spec=repository.Repository.schedule))
     @async_test
     async def test_create_with_branches(self):
         slave_inst = await slave.Slave.create(name='name', host='bla.com',
@@ -130,7 +125,28 @@ class RepositoryTest(TestCase):
             branches=branches)
 
         self.assertTrue(repo.id)
+        self.assertTrue(repository.Repository.schedule.called)
         self.assertEqual(len(repo.branches), 3)
+
+    @patch.object(repository, 'ui_notifications', AsyncMagicMock())
+    @patch.object(repository.Repository, 'log', Mock())
+    @patch.object(repository.Repository, 'schedule', Mock(
+        spec=repository.Repository.schedule))
+    @async_test
+    async def test_create_dont_schedule(self):
+        slave_inst = await slave.Slave.create(name='name', host='bla.com',
+                                              port=1234, token='123',
+                                              owner=self.owner)
+        repo = await repository.Repository.create(
+            name='reponame', url='git@somewhere.com', owner=self.owner,
+            update_seconds=300, vcs_type='git', slaves=[slave_inst],
+            schedule_poller=False)
+
+        self.assertTrue(repo.id)
+        self.assertTrue(repository.ui_notifications.publish.called)
+        slaves = await repo.slaves
+        self.assertEqual(slaves[0], slave_inst)
+        self.assertFalse(repository.Repository.schedule.called)
 
     @async_test
     async def test_save_change_name(self):
@@ -197,114 +213,59 @@ class RepositoryTest(TestCase):
         self.assertEqual(old_repo, new_repo)
         self.assertEqual(slaves[0], slave_inst)
 
-    @patch.object(repository, 'update_code', AsyncMagicMock())
-    @patch.object(repository, 'ui_notifications', AsyncMagicMock())
-    @patch.object(exchange, 'uuid4', MagicMock())
-    @async_test
-    async def test_update_code_with_clone_exception(self, *args, **kwargs):
-        uuid4_ret = uuid4()
-        exchange.uuid4.return_value = uuid4_ret
-        queue_name = '{}-consumer-queue-{}'.format(repository.poll_status.name,
-                                                   str(uuid4_ret))
-        await repository.poll_status.bind(routing_key=str(self.repo.id),
-                                          queue_name=queue_name)
-        await repository.poll_status.publish(
-            {'with_clone': True,
-             'clone_status': 'clone-exception'},
-            routing_key=str(self.repo.id))
-        await self.repo.save()
-        await self.repo.update_code()
-        await self.repo.reload()
-        self.assertEqual(self.repo.clone_status, 'clone-exception')
-
-    @patch.object(repository, 'update_code', AsyncMagicMock())
-    @patch.object(exchange, 'uuid4', MagicMock())
-    @patch.object(repository.Lock, 'acquire_write', AsyncMagicMock(
-        spec=repository.Lock.acquire_write, return_value=AsyncMagicMock()))
+    @patch.object(repository, 'get_poller_client', Mock(
+        return_value=AsyncMagicMock(poll_repo=AsyncMagicMock(
+            return_value={'revisions': [
+                {'commit': 'adsf',
+                 'branch': 'master',
+                 'commit_date': '4 04 25 23:49:19 2019 +0000',
+                 'author': 'me',
+                 'title':  'zhe-commit'}],
+                'clone_status': 'success',
+                'with_clone': False}))))
+    @patch.object(repository.BuildManager, 'add_builds', AsyncMagicMock(
+        spec=repository.BuildManager.add_builds))
+    @patch.object(repository.ui_notifications, 'publish', AsyncMagicMock(
+        spec=repository.ui_notifications.publish))
     @async_test
     async def test_update_code(self):
-        self.repo.clone_status = 'cloning'
-
-        uuid4_ret = exchange.uuid4()
-        exchange.uuid4.return_value = uuid4_ret
-        queue_name = '{}-consumer-queue-{}'.format(repository.poll_status.name,
-                                                   str(uuid4_ret))
-        await repository.poll_status.bind(routing_key=str(self.repo.id),
-                                          queue_name=queue_name)
-
-        await repository.poll_status.publish(
-            {'with_clone': False,
-             'clone_status': 'ready'},
-            routing_key=str(self.repo.id))
-        await self.repo.save()
         await self.repo.update_code()
-        await asyncio.sleep(0.1)
-        await self.repo.reload()
-        self.assertEqual(self.repo.clone_status, 'ready')
+        self.assertTrue(repository.BuildManager.add_builds.called)
+        self.assertFalse(repository.ui_notifications.publish.called)
 
-    @patch.object(repository, 'update_code', AsyncMagicMock())
-    @patch.object(exchange, 'uuid4', MagicMock())
-    @patch.object(repository.Lock, 'acquire_write', AsyncMagicMock(
-        spec=repository.Lock.acquire_write, return_value=AsyncMagicMock()))
+    @patch.object(repository, 'get_poller_client', Mock(
+        return_value=AsyncMagicMock(poll_repo=AsyncMagicMock(
+            return_value={'revisions': [],
+                          'clone_status': 'success',
+                          'with_clone': False}))))
+    @patch.object(repository.BuildManager, 'add_builds', AsyncMagicMock(
+        spec=repository.BuildManager.add_builds))
+    @patch.object(repository.ui_notifications, 'publish', AsyncMagicMock(
+        spec=repository.ui_notifications.publish))
     @async_test
-    async def test_update_code_waiting_lock(self):
-        self.repo.clone_status = 'cloning'
-        uuid4_ret = exchange.uuid4()
-        exchange.uuid4.return_value = uuid4_ret
-        queue_name = '{}-consumer-queue-{}'.format(repository.poll_status.name,
-                                                   str(uuid4_ret))
-        await repository.poll_status.bind(routing_key=str(self.repo.id),
-                                          queue_name=queue_name)
-
-        await repository.poll_status.publish(
-            {'with_clone': False,
-             'clone_status': 'ready'},
-            routing_key=str(self.repo.id))
-        await self.repo.save()
-        await self.repo.update_code(wait_for_lock=True)
-        await asyncio.sleep(0.1)
-        await self.repo.reload()
-        self.assertEqual(self.repo.clone_status, 'ready')
-
-    @patch.object(repository.Lock, 'acquire_write', AsyncMagicMock(
-        spec=repository.Lock.acquire_write, return_value=AsyncMagicMock()))
-    @patch.object(exchange, 'uuid4', MagicMock())
-    @async_test
-    async def test_update_code_locked(self):
-        self.repo.clone_status = 'cloning'
-        await self.repo.save()
-        self.repo.update_code_lock.acquire_write.side_effect = [
-            AsyncMagicMock(), repository.exc.TimeoutError]
-        lock = await self.repo.update_code_lock.acquire_write()
-        async with lock:
-            self.repo.get_url = MagicMock(spec=self.repo.get_url)
-            await self.repo.update_code()
-            self.assertFalse(self.repo.get_url.called)
-
-    @patch.object(exchange, 'uuid4', MagicMock())
-    @patch.object(repository, 'update_code', AsyncMagicMock())
-    @patch.object(repository, 'ui_notifications', AsyncMagicMock())
-    @patch.object(repository.Lock, 'acquire_write', AsyncMagicMock(
-        spec=repository.Lock.acquire_write, return_value=AsyncMagicMock()))
-    @async_test
-    async def test_update_with_clone_sending_signal(self):
-        self.repo.clone_status = 'cloning'
-        await self.repo.save()
-        self.repo._poller_instance = MagicMock()
-        uuid4_ret = exchange.uuid4()
-        exchange.uuid4.return_value = uuid4_ret
-        queue_name = '{}-consumer-queue-{}'.format(repository.poll_status.name,
-                                                   str(uuid4_ret))
-        await repository.poll_status.bind(routing_key=str(self.repo.id),
-                                          queue_name=queue_name)
-
-        await repository.poll_status.publish(
-            {'with_clone': True,
-             'clone_status': 'ready'},
-            routing_key=str(self.repo.id))
-
-        self.repo._poller_instance.poll = asyncio.coroutine(lambda: True)
+    async def test_update_code_without_revisions(self):
         await self.repo.update_code()
+        self.assertFalse(repository.BuildManager.add_builds.called)
+        self.assertFalse(repository.ui_notifications.publish.called)
+
+    @patch.object(repository, 'get_poller_client', Mock(
+        return_value=AsyncMagicMock(poll_repo=AsyncMagicMock(
+            return_value={'revisions': [
+                {'commit': 'adsf',
+                 'branch': 'master',
+                 'commit_date': '4 04 25 23:49:19 2019 +0000',
+                 'author': 'me',
+                 'title':  'zhe-commit'}],
+                'clone_status': 'success',
+                'with_clone': True}))))
+    @patch.object(repository.BuildManager, 'add_builds', AsyncMagicMock(
+        spec=repository.BuildManager.add_builds))
+    @patch.object(repository.ui_notifications, 'publish', AsyncMagicMock(
+        spec=repository.ui_notifications.publish))
+    @async_test
+    async def test_update_code_with_clone(self):
+        await self.repo.update_code()
+        self.assertTrue(repository.BuildManager.add_builds.called)
         self.assertTrue(repository.ui_notifications.publish.called)
 
     @async_test
@@ -623,7 +584,7 @@ class RepositoryTest(TestCase):
     async def test_start_build(self):
         await self._create_db_revisions()
 
-        self.repo.get_config_for = AsyncMagicMock(
+        self.repo.get_config_for = MagicMock(
             spec=self.repo.get_config_for)
         self.repo.add_builds_for_buildset = create_autospec(
             spec=self.repo.add_builds_for_buildset, mock_cls=AsyncMagicMock)
@@ -644,7 +605,7 @@ class RepositoryTest(TestCase):
     async def test_start_build_params(self):
         await self._create_db_revisions()
 
-        self.repo.get_config_for = AsyncMagicMock(
+        self.repo.get_config_for = MagicMock(
             spec=self.repo.get_config_for)
         self.repo.add_builds_for_buildset = create_autospec(
             spec=self.repo.add_builds_for_buildset, mock_cls=AsyncMagicMock)
@@ -667,12 +628,15 @@ class RepositoryTest(TestCase):
     @async_test
     async def test_start_build_no_conf(self):
         await self._create_db_revisions()
-
+        self.revs[0].config = None
+        await self.revs[0].save()
         self.repo.add_builds_for_buildset = create_autospec(
             spec=self.repo.add_builds_for_buildset, mock_cls=AsyncMagicMock)
 
+        await repository.RepositoryRevision.objects.update(set__config=None)
+
         await self.repo.start_build('master', builder_name_or_id='builder0',
-                                    named_tree='asdf')
+                                    named_tree=self.revs[0].commit)
 
         self.assertFalse(self.repo.add_builds_for_buildset.called)
         self.assertTrue(repository.buildset_added.send.called)
@@ -729,15 +693,9 @@ class RepositoryTest(TestCase):
         await self.repo.disable()
         self.assertFalse(self.repo.enabled)
 
-    @patch('toxicbuild.core.vcs.Git.checkout', AsyncMagicMock())
-    @patch.object(repository.build_config, 'get_config', AsyncMagicMock(
-        spec=repository.build_config.get_config,
-        return_value={'some': 'conf'}))
-    @async_test
-    async def test_get_config_for(self):
-        self.repo.log = MagicMock(spec=self.repo.log)
-        self.repo.vcs.checkcout = AsyncMagicMock(spec=self.repo.vcs.checkout)
-        r = await self.repo.get_config_for(self.revs[0])
+    def test_get_config_for(self):
+        self.revs[0].config = 'language: python'
+        r = self.repo.get_config_for(self.revs[0])
         self.assertTrue(r)
 
     @async_test
@@ -795,17 +753,20 @@ class RepositoryTest(TestCase):
                     branch=branch,
                     author='ze',
                     title='commit {}'.format(r),
+                    config='language: python',
                     commit_date=now + datetime.timedelta(r))
 
                 await rev.save()
                 self.revs.append(rev)
 
-        self.revision = repository.RepositoryRevision(repository=self.repo,
-                                                      branch='master',
-                                                      commit='asdf',
-                                                      author='j@d.com',
-                                                      title='bla',
-                                                      commit_date=now)
+        self.revision = repository.RepositoryRevision(
+            repository=self.repo,
+            branch='master',
+            commit='asdf',
+            author='j@d.com',
+            title='bla',
+            config='language: python',
+            commit_date=now)
         await self.revision.save()
         # creating another repo just to test the known branches stuff.
         self.other_repo = repository.Repository(name='bla', url='/bla/bla',
@@ -822,6 +783,7 @@ class RepositoryTest(TestCase):
                     repository=self.other_repo,
                     commit='123asdf{}'.format(str(r)),
                     branch=branch,
+                    config='language: python',
                     commit_date=now + datetime.timedelta(r))
 
                 await rev.save()

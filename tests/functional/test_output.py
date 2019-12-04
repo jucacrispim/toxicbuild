@@ -31,8 +31,8 @@ from tests import async_test
 from tests.functional import (start_master, stop_master, start_slave,
                               stop_slave, start_output, stop_output,
                               DummyMasterHoleClient, start_customwebserver,
-                              stop_customwebserver, start_poller, stop_poller,
-                              start_scheduler, stop_scheduler)
+                              stop_customwebserver, start_new_poller,
+                              stop_new_poller)
 from tests.functional.custom_webhook import WebHookMessage
 
 
@@ -46,8 +46,7 @@ class DummyUIClient(DummyMasterHoleClient):
 
 def setUpModule():
     start_slave()
-    start_scheduler()
-    start_poller()
+    start_new_poller()
     start_master()
     start_output()
     start_customwebserver()
@@ -56,8 +55,7 @@ def setUpModule():
 def tearDownModule():
     stop_output()
     stop_master()
-    stop_scheduler()
-    stop_poller()
+    stop_new_poller()
     stop_slave()
     stop_customwebserver()
 

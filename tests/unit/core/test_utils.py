@@ -185,8 +185,12 @@ class UtilsTest(TestCase):
     def test_load_module_from_file(self):
         filename = os.path.join(TEST_DATA_DIR, 'toxicbuild.conf')
         mod = utils.load_module_from_file(filename)
-
         self.assertEqual(mod.BLA, 'val')
+
+    def test_load_module_from_content(self):
+        contents = 'BLA = 1'
+        mod = utils.load_module_from_content(contents)
+        self.assertEqual(mod.BLA, 1)
 
     @patch.object(utils.logger, 'setLevel', Mock())
     def test_set_loglevel(self):

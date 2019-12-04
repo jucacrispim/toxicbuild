@@ -23,7 +23,12 @@ import os
 from aiozk import exc
 from toxicbuild.common.coordination import Lock
 from toxicbuild.core.vcs import get_vcs
-from toxicbuild.core.utils import LoggerMixin, MatchKeysDict, datetime2string
+from toxicbuild.core.utils import (
+    LoggerMixin,
+    MatchKeysDict,
+    datetime2string,
+    read_file
+)
 from toxicbuild.poller import settings
 
 
@@ -34,7 +39,7 @@ class Poller(LoggerMixin):
     """
 
     def __init__(self, repo_id, url, branches_conf, since, known_branches,
-                 vcs_type):
+                 vcs_type, conffile='toxicbuild.yml'):
         """Constructor for Poller.
 
         :param repo_id: The id of the repository that will update or clone
@@ -46,6 +51,7 @@ class Poller(LoggerMixin):
         :param known_branches: A list of branches that already have
           a revision.
         :param vcs_type: Vcs type for :func:`toxicbuild.core.vcs.get_vcs`.
+        :param conffile: The name of the build config file.
         """
         self.repo_id = repo_id
         self.url = url
@@ -56,6 +62,7 @@ class Poller(LoggerMixin):
         self.vcs = get_vcs(self.vcs_type)(self.workdir)
         self.external_info = None
         self.local_branch = False
+        self.conffile = conffile
         self._lock = None
 
     @property
@@ -204,6 +211,7 @@ class Poller(LoggerMixin):
             rev['external'] = self.external_info
             rev['builders_fallback'] = builders_fallback
             rev['commit_date'] = datetime2string(rev['commit_date'])
+            rev['config'] = await self._get_config(rev['commit'])
 
             to_notify.append(rev)
             # branch_revs just for logging
@@ -212,3 +220,9 @@ class Poller(LoggerMixin):
         msg = '{} new revisions for {} on branch {} added'
         self.log(msg.format(len(branch_revs), self.url,
                             branch))
+
+    async def _get_config(self, commit):
+        await self.vcs.checkout(commit)
+        path = os.path.join(self.vcs.workdir, self.conffile)
+        config = await read_file(path)
+        return config

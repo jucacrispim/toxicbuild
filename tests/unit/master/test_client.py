@@ -348,3 +348,10 @@ class PollerClientTest(TestCase):
         called = self.client.request2server.call_args[0][1]
 
         self.assertIsInstance(called['branches_conf'], dict)
+
+    @async_test
+    async def test_get_poller_client(self):
+        repo = mock.Mock()
+        c = client.get_poller_client(repo)
+
+        self.assertIsInstance(c, client.PollerClient)

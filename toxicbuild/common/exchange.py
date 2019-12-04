@@ -232,10 +232,10 @@ class Exchange(LoggerMixin):
 
         queue_name = self._get_queue_name_for_routing_key(routing_key,
                                                           queue_name)
-        local_channel = False
-        if not channel:
-            channel = await self._get_channel()
-            local_channel = True
+        # local_channel = False
+        # if not channel:
+        #     channel = await self._get_channel()
+        #     local_channel = True
 
         if not self.is_declared(queue_name):
             await self._declare_queue(queue_name, channel)
@@ -245,8 +245,8 @@ class Exchange(LoggerMixin):
                                      routing_key=routing_key)
 
         self._bound_rt.add(routing_key)
-        if local_channel:
-            await channel.close()
+        # if local_channel:
+        #     await channel.close()
         return r
 
     async def unbind(self, routing_key, channel=None):

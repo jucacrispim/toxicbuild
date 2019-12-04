@@ -117,6 +117,16 @@ class BuildConfigTest(TestCase):
         builders = build_config.list_builders_from_config(config)
         self.assertEqual(len(builders), 3)
 
+    def test_load_config_py(self):
+        conf = 'BLA = 1'
+        conf = build_config.load_config('py', conf)
+        self.assertEqual(conf.BLA, 1)
+
+    def test_load_config_yml(self):
+        conf = 'BLA: 1'
+        conf = build_config.load_config('yml', conf)
+        self.assertEqual(conf['BLA'], 1)
+
 
 class APTPluginConfigTest(TestCase):
 

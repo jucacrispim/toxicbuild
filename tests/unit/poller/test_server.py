@@ -21,6 +21,7 @@ from datetime import datetime
 from unittest import TestCase
 from unittest.mock import patch, Mock
 
+from toxicbuild.core.utils import datetime2string
 from toxicbuild.poller import server
 
 from tests import AsyncMagicMock, async_test
@@ -66,8 +67,30 @@ class PollerProtocolTest(TestCase):
                 'repo_id': 'some-id',
                 'url': 'https://some.where/repo',
                 'vcs_type': 'git',
-                'since': {'master': datetime.now(),
-                          'release': datetime.now()},
+                'since': {'master': datetime2string(datetime.now()),
+                          'release': datetime2string(datetime.now())},
+                'known_branches': ['master', 'release'],
+                'branches_conf': {'master': {'notify_only_latest': True},
+                                  'release': {'notify_only_latest': True}},
+            }
+        }
+
+        await self.poller_server.poll_repo()
+
+        self.assertTrue(server.Poller.poll.called)
+
+    @patch.object(server.Poller, 'poll', AsyncMagicMock(
+        spec=server.Poller.poll))
+    @patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
+    @patch('toxicbuild.poller.server.PollerProtocol.log', Mock())
+    @async_test
+    async def test_poll_repo_no_since(self):
+        self.poller_server.data = {
+            'body': {
+                'repo_id': 'some-id',
+                'url': 'https://some.where/repo',
+                'vcs_type': 'git',
+                'since': None,
                 'known_branches': ['master', 'release'],
                 'branches_conf': {'master': {'notify_only_latest': True},
                                   'release': {'notify_only_latest': True}},
@@ -89,8 +112,8 @@ class PollerProtocolTest(TestCase):
                 'repo_id': 'some-id',
                 'url': 'https://some.where/repo',
                 'vcs_type': 'git',
-                'since': {'master': datetime.now(),
-                          'release': datetime.now()},
+                'since': {'master': datetime2string(datetime.now()),
+                          'release': datetime2string(datetime.now())},
                 'known_branches': ['master', 'release'],
                 'branches_conf': {'master': {'notify_only_latest': True},
                                   'release': {'notify_only_latest': True}},

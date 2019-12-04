@@ -112,7 +112,7 @@ class ExchangeTest(TestCase):
         try:
             channel = await cls.exchange.connection.protocol.channel()
             await channel.exchange_delete(cls.exchange.name)
-        except (ChannelClosed, AttributeError) as e:
+        except (ChannelClosed, AttributeError):
             pass
         try:
             await cls.exchange.connection.disconnect()
@@ -128,7 +128,7 @@ class ExchangeTest(TestCase):
         try:
             channel = await self.exchange.connection.protocol.channel()
             await channel.queue_delete(self.exchange.queue_name)
-        except (ChannelClosed, AttributeError) as e:
+        except (ChannelClosed, AttributeError):
             pass
 
     @async_test
