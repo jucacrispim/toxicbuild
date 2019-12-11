@@ -392,7 +392,7 @@ class BaseIntegration(LoggerMixin, Document):
         return installation
 
     async def update_repository(self, external_repo_id, repo_branches=None,
-                                external=None, wait_for_lock=False):
+                                external=None):
         """Updates a repository's code.
 
         :param external_repo_id: The id of the repository on github.
@@ -400,8 +400,6 @@ class BaseIntegration(LoggerMixin, Document):
           :meth:`~toxicbuild.master.repository.Repository.request_code_update`.
         :param external: Information about an third party repository i.e a
           commit from a pull request from another repository.
-        :param wait_for_lock: Indicates if we should wait for the release of
-          the lock or simply return if we cannot get a lock.
         """
 
         repo = await self._get_repo_by_external_id(external_repo_id)
@@ -410,8 +408,7 @@ class BaseIntegration(LoggerMixin, Document):
             repo.fetch_url = url
             await repo.update(fetch_url=repo.fetch_url)
         await repo.request_code_update(
-            repo_branches=repo_branches, external=external,
-            wait_for_lock=wait_for_lock)
+            repo_branches=repo_branches, external=external)
 
     async def repo_request_build(self, external_repo_id, branch, named_tree):
         """Requests a new build.

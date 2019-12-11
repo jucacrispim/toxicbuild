@@ -130,12 +130,10 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
                         'into': target['branch']}
 
             await install.update_repository(target['id'], external=external,
-                                            repo_branches=repo_branches,
-                                            wait_for_lock=True)
+                                            repo_branches=repo_branches)
         else:
             await install.update_repository(target['id'],
-                                            repo_branches=repo_branches,
-                                            wait_for_lock=True)
+                                            repo_branches=repo_branches)
 
     @get('setup')
     @gen.coroutine

@@ -215,7 +215,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         await self.webhook_receiver.handle_pull_request()
         called = install.update_repository.call_args[1]
         self.assertEqual(sorted(list(called.keys())), [
-                         'external', 'repo_branches', 'wait_for_lock'])
+                         'external', 'repo_branches'])
 
     @patch.object(
         webhook_receivers.BaseWebhookReceiver, 'get_install',
@@ -247,7 +247,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         self.assertTrue(install.update_repository.called)
         called = install.update_repository.call_args[1]
         self.assertEqual(sorted(list(called.keys())), [
-            'repo_branches', 'wait_for_lock'])
+            'repo_branches'])
 
     def test_create_installation_without_code(self):
         # installation_id is sent as a get param by github
