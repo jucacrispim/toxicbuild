@@ -670,8 +670,7 @@ class RepositoryInterface(BaseHoleInterface):
 
         return resp
 
-    async def request_code_update(self, repo_branches=None, external=None,
-                                  wait_for_lock=False):
+    async def request_code_update(self, repo_branches=None, external=None):
         """Request the code update of the repository.
 
         :param repo_branches: A dictionary with information about the branches
@@ -687,14 +686,11 @@ class RepositoryInterface(BaseHoleInterface):
         :param external: If we should update code from an external
           (not the origin) repository, `external` is the information about
           this remote repo.
-        :param wait_for_lock: Indicates if we should wait for the release of
-          the lock or simply return if we cannot get a lock.
         """
 
         with await self.get_client(self.requester) as client:
             resp = await client.repo_request_code_update(
-                repo_name_or_id=self.id, repo_branches=repo_branches,
-                external=external, wait_for_lock=wait_for_lock)
+                repo_name_or_id=self.id, repo_branches=repo_branches)
 
         return resp
 

@@ -533,8 +533,7 @@ class HoleHandler:
         return {'repo-disable': 'ok'}
 
     async def repo_request_code_update(self, repo_name_or_id,
-                                       repo_branches=None, external=None,
-                                       wait_for_lock=False):
+                                       repo_branches=None, external=None):
         """Requests to a repository the update of its code.
 
         :param repo_name_or_id: The name or the id of the repository.
@@ -542,15 +541,12 @@ class HoleHandler:
           :meth:`~toxicbuild.master.repository.Repository.request_code_update`.
         :param external: Passed to
           :meth:`~toxicbuild.master.repository.Repository.request_code_update`.
-        :param wait_for_lock: Passed to
-          :meth:`~toxicbuild.master.repository.Repository.request_code_update`.
         """
 
         kw = self._get_kw_for_name_or_id(repo_name_or_id)
         repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.request_code_update(repo_branches=repo_branches,
-                                       external=external,
-                                       wait_for_lock=wait_for_lock)
+                                       external=external)
         return {'repo-request-code-update': 'ok'}
 
     async def repo_add_envvars(self, repo_name_or_id, **envvars):
