@@ -169,7 +169,6 @@ class RepositoryTest(TestCase):
         self.assertEqual(repo.full_name, 'huguinho/reponame')
 
     @patch.object(repository, 'ui_notifications', AsyncMagicMock())
-    @patch.object(repository, 'shutil', Mock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
     @patch.object(repository.Repository, 'log', Mock())
     @async_test

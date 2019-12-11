@@ -474,7 +474,6 @@ class HoleHandlerTest(TestCase):
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
-    @patch.object(repository, 'shutil', Mock())
     @async_test
     async def test_repo_remove(self):
         await self._create_test_data()

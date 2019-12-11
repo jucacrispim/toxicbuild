@@ -18,10 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from asyncio import ensure_future
-import os
 import re
-import shutil
-from threading import Thread
 from bson.objectid import ObjectId
 from mongoengine import PULL
 from mongomotor import Document, EmbeddedDocument
@@ -35,7 +32,6 @@ from mongomotor.fields import (
     DictField,
     DynamicField
 )
-from toxicbuild.common.coordination import Lock
 from toxicbuild.common.exchanges import (
     notifications,
     ui_notifications,
@@ -43,8 +39,6 @@ from toxicbuild.common.exchanges import (
 )
 from toxicbuild.core import utils, build_config
 from toxicbuild.core.utils import string2datetime
-from toxicbuild.core.vcs import get_vcs
-from toxicbuild.master import settings
 from toxicbuild.master.build import (BuildSet, Builder, BuildManager)
 from toxicbuild.master.client import get_poller_client
 from toxicbuild.master.document import OwnedDocument, ExternalRevisionIinfo

@@ -19,7 +19,6 @@ builders:
       ZK_SERVERS: "zookeeper:2181"
 
 
-
     steps:
 
       - name: Create test environment
@@ -87,7 +86,6 @@ builders:
       - name: Selenium integration tests
         command: docker-compose -f ops/docker/docker-compose.yml run -e ENV=ci -e GCRYPTKEY=$GCRYPTKEY selenium-integration-tests
         timeout: 45
-
 
       - name: Clean old images
         command: ./build-scripts/clean_images.sh
