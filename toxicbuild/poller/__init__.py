@@ -56,11 +56,12 @@ def _check_workdir(workdir):
         sys.exit(1)
 
 
-def _set_toxicpoller_conf(conffile):
+def _set_toxicpoller_conf(conffile, workdir):
     if conffile:
         os.environ['TOXICPOLLER_SETTINGS'] = conffile
     else:
-        os.environ['TOXICPOLLER_SETTINGS'] = DEFAULT_SETTINGS
+        os.environ['TOXICPOLLER_SETTINGS'] = os.path.join(
+            workdir, DEFAULT_SETTINGS)
 
 
 def _process_exist(pid):
@@ -155,7 +156,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
     """
 
     loop = asyncio.get_event_loop()
-    _set_toxicpoller_conf(conffile)
+    _set_toxicpoller_conf(conffile, workdir)
     create_settings()
     loop.run_until_complete(common_setup(settings))
 
