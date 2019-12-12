@@ -28,28 +28,12 @@ from tests import async_test, AsyncMagicMock, create_autospec
 
 class RepositoryTest(TestCase):
 
-    @classmethod
-    @async_test
-    async def setUpClass(cls):
-        cls.exchange = None
-
-    @classmethod
-    @patch('aioamqp.protocol.logger', Mock())
-    @patch('aiozk.connection.log', Mock())
-    @async_test
-    async def tearDownClass(cls):
-        if cls.exchange:
-            await cls.exchange.channel.queue_delete(
-                'toxicbuild.poll_status_queue')
-            await cls.exchange.channel.exchange_delete(
-                'toxicbuild.poll_status')
-
     @async_test
     async def setUp(self):
         super(RepositoryTest, self).setUp()
         await self._create_db_revisions()
         repository.Repository._running_builds = 0
-        repository.Repository._stop_consuming_messages = False
+        repository._update_code_hashes = {}
 
     @async_test
     async def tearDown(self):
@@ -286,7 +270,7 @@ class RepositoryTest(TestCase):
         self.repo.schedule()
 
         self.assertTrue(self.repo.scheduler.add.called)
-        self.assertTrue(repository.scheduler_action.publish.called)
+        self.assertTrue(repository._update_code_hashes)
 
     @patch.object(repository.utils, 'log', Mock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
@@ -296,7 +280,7 @@ class RepositoryTest(TestCase):
         self.repo.schedule()
 
         self.assertTrue(self.repo.scheduler.add.called)
-        self.assertFalse(repository.scheduler_action.publish.called)
+        self.assertFalse(repository._update_code_hashes)
 
     @patch.object(repository.utils, 'log', Mock())
     @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())

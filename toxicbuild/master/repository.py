@@ -273,17 +273,11 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         self.log('Scheduling {url}'.format(url=self.url))
 
         if self.schedule_poller:
-
-            sched_msg = {'type': 'add-update-code',
-                         'repository_id': str(self.id)}
-
-            ensure_future(scheduler_action.publish(sched_msg))
-
-        # add update_code
-        update_code_hash = self.scheduler.add(self.update_code,
-                                              self.update_seconds)
-        _update_code_hashes['{}-update-code'.format(
-            self.url)] = update_code_hash
+            # add update_code
+            update_code_hash = self.scheduler.add(self.update_code,
+                                                  self.update_seconds)
+            _update_code_hashes['{}-update-code'.format(
+                self.url)] = update_code_hash
 
         # adding start_pending
         start_pending_hash = self.scheduler.add(
