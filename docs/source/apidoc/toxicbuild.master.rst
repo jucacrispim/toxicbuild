@@ -36,14 +36,6 @@ toxicbuild.master.consumers module
     :undoc-members:
     :show-inheritance:
 
-toxicbuild.master.coordination module
--------------------------------------
-
-.. automodule:: toxicbuild.master.coordination
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 toxicbuild.master.document module
 ---------------------------------
 
@@ -60,26 +52,10 @@ toxicbuild.master.exceptions module
     :undoc-members:
     :show-inheritance:
 
-toxicbuild.master.exchanges module
-----------------------------------
-
-.. automodule:: toxicbuild.master.exchanges
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 toxicbuild.master.hole module
 -----------------------------
 
 .. automodule:: toxicbuild.master.hole
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-toxicbuild.master.pollers module
---------------------------------
-
-.. automodule:: toxicbuild.master.pollers
     :members:
     :undoc-members:
     :show-inheritance:

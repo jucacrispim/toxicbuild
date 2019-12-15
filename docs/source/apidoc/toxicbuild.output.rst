@@ -1,24 +1,15 @@
 toxicbuild.output package
 =========================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    toxicbuild.output.notifications
+
 Submodules
 ----------
-
-toxicbuild.output.exchanges module
-----------------------------------
-
-.. automodule:: toxicbuild.output.exchanges
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-toxicbuild.output.notifications module
---------------------------------------
-
-.. automodule:: toxicbuild.output.notifications
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 toxicbuild.output.server module
 -------------------------------

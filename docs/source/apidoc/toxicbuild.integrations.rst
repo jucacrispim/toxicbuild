@@ -12,6 +12,14 @@ toxicbuild.integrations.base module
     :undoc-members:
     :show-inheritance:
 
+toxicbuild.integrations.bitbucket module
+----------------------------------------
+
+.. automodule:: toxicbuild.integrations.bitbucket
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 toxicbuild.integrations.exceptions module
 -----------------------------------------
 

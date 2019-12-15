@@ -27,6 +27,7 @@ from toxicbuild.integrations import create as create_integrations
 from toxicbuild.master import create as create_master
 from toxicbuild.master import create_user
 from toxicbuild.output import create as create_output, create_auth_token
+from toxicbuild.poller import create as create_poller
 from toxicbuild.slave import create as create_slave
 from toxicbuild.ui import create as create_ui
 
@@ -44,6 +45,7 @@ def create(root_dir):  # pragma no cover
 
     slave_root = os.path.join(root_dir, 'slave')
     master_root = os.path.join(root_dir, 'master')
+    poller_root = os.path.join(root_dir, 'poller')
     integrations_root = os.path.join(root_dir, 'integrations')
     output_root = os.path.join(root_dir, 'output')
     ui_root = os.path.join(root_dir, 'ui')
@@ -54,8 +56,10 @@ def create(root_dir):  # pragma no cover
     # output
     create_output(output_root)
     output_token = loop.run_until_complete(create_auth_token(output_root))
+    # poller
+    poller_token = create_poller(poller_root)
     # master
-    master_token = create_master(master_root, output_token)
+    master_token = create_master(master_root, output_token, poller_token)
     cookie_secret = token_urlsafe()
     # integrations
     create_integrations(integrations_root, output_token, cookie_secret)

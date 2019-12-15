@@ -86,6 +86,7 @@ Create a new environment using the command ``toxicbuild create``.
    $ toxicbuild create ~/ci
    Creating root_dir `ci/slave` for toxicslave
    Toxicslave environment created with access token: mI4AHDl0LjzTrD1RieX64xp1xWrXhoiGgdedFJ5IRvg
+   Creating root_dir `ci/poller` for toxicpoller
    Creating root_dir `ci/output` for toxicoutput
    Creating root_dir `ci/master` for toxicmaster
    email: a@a.com
@@ -105,7 +106,6 @@ And now you can start toxicbuild with the command ``toxicbuild start``:
    Starting toxicslave
    Starting toxicmaster
    Starting toxicpoller
-   Starting toxicscheduler
    Starting output web api on port 9432
    Starting integrations on port 9999
 

@@ -44,22 +44,6 @@ toxicbuild.core.exceptions module
     :undoc-members:
     :show-inheritance:
 
-toxicbuild.core.exchange module
--------------------------------
-
-.. automodule:: toxicbuild.core.exchange
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-toxicbuild.core.exchanges module
---------------------------------
-
-.. automodule:: toxicbuild.core.exchanges
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 toxicbuild.core.mail module
 ---------------------------
 
@@ -88,6 +72,14 @@ toxicbuild.core.requests module
 -------------------------------
 
 .. automodule:: toxicbuild.core.requests
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+toxicbuild.core.server module
+-----------------------------
+
+.. automodule:: toxicbuild.core.server
     :members:
     :undoc-members:
     :show-inheritance:

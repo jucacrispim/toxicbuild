@@ -62,6 +62,18 @@ To use secure connections, you must set the following environment variables:
 * ``MASTER_KEYFILE`` - Path for a key file
 
 
+Poller
+~~~~~~
+
+Configure the poller connection using the following variables:
+
+* ``POLLER_HOST``
+* ``POLLER_PORT``
+* ``POLLER_USES_SSL`` - Possible values are `0` or `1`
+* ``VALIDATE_CERT_POLLER`` - Possible values are `0` or `1`
+* ``POLLER_TOKEN``
+
+
 Notifications
 ~~~~~~~~~~~~~
 
@@ -76,12 +88,56 @@ Other config values
 
 The following config values usually don't need to be changed.
 
-* ``HOLE_PORT`` - The port in which master listen to connections.
-* ``SOURCE_CODE_DIR`` - The directory where the source code is cloned.
+* ``HOLE_PORT`` - The port in which master listen to connections. Defaults
+  to 6666
+
+
+.. _toxicpoller-config:
+Toxicpoller config values
+-------------------------
+
+General configurations
+~~~~~~~~~~~~~~~~~~~~~~
+
+* ``POLLER_PORT`` - Defaults to `9922`
+* ``POLLER_USE_SSL``
+* ``POLLER_CERTFILE``
+* ``POLLER_KEYFILE``
+
+
+Queue Manager
+~~~~~~~~~~~~~
+
+The queue manager is configured by the following environment variables:
+
+* ``AMQPHOST`` - Defaults to `localhost`
+* ``AMQPPORT`` - Defaults to `5672`
+* ``AMQPLOGIN``
+* ``AMQPPASSWORD``
+* ``AMQPVIRTUALHOST``
+
+
+Coordination
+~~~~~~~~~~~~
+
+The coordination of all the stuff in ToxicBuild in done using ZooKeeper.
+The environment variables are:
+
+* ``ZK_SERVERS`` - User a string like `host:port`. Multiple servers
+  can be passed using a comma, eg: `host1:1234,host2:4321`
+* ``ZK_KWARGS`` - A json with arguments to aiozk.ZKClient, eg:
+  `"{'chroot': '/somewhere'}"`. The valid arguments are:
+
+  - chroot
+  - session_timeout=10,
+  - default_acl
+  - retry_policy
+  - allow_read_only
+  - read_timeout
+
 
 
 .. _toxicoutput-config:
-
 Toxicoutput config values
 -------------------------
 
@@ -205,7 +261,6 @@ Other config values
 * ``INTEGRATIONS_WEB_PORT``
 * ``PARALLEL_IMPORTS`` - how many repos will be imported at the same time by
   the same user
-
 
 
 Toxicweb config values

@@ -1,16 +1,15 @@
 toxicbuild.ui package
 =====================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    toxicbuild.ui.console
+
 Submodules
 ----------
-
-toxicbuild.ui.cli module
-------------------------
-
-.. automodule:: toxicbuild.ui.cli
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 toxicbuild.ui.connectors module
 -------------------------------

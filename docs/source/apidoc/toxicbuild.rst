@@ -11,6 +11,7 @@ Subpackages
     toxicbuild.integrations
     toxicbuild.master
     toxicbuild.output
+    toxicbuild.poller
     toxicbuild.slave
     toxicbuild.ui
 

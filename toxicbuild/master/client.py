@@ -196,7 +196,7 @@ def get_poller_client(repo):
     host = settings.POLLER_HOST
     port = settings.POLLER_PORT
     use_ssl = settings.POLLER_USES_SSL
-    validate_cert = settings.POLLER_VALIDATES_CERT
+    validate_cert = settings.VALIDATE_CERT_POLLER
     client = PollerClient(repo, host, port, use_ssl=use_ssl,
                           validate_cert=validate_cert)
     return client

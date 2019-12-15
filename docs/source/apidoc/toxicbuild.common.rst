@@ -12,10 +12,42 @@ toxicbuild.common.client module
     :undoc-members:
     :show-inheritance:
 
+toxicbuild.common.coordination module
+-------------------------------------
+
+.. automodule:: toxicbuild.common.coordination
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 toxicbuild.common.exceptions module
 -----------------------------------
 
 .. automodule:: toxicbuild.common.exceptions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+toxicbuild.common.exchange module
+---------------------------------
+
+.. automodule:: toxicbuild.common.exchange
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+toxicbuild.common.exchanges module
+----------------------------------
+
+.. automodule:: toxicbuild.common.exchanges
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+toxicbuild.common.fields module
+-------------------------------
+
+.. automodule:: toxicbuild.common.fields
     :members:
     :undoc-members:
     :show-inheritance:

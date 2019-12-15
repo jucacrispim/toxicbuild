@@ -349,6 +349,8 @@ class PollerClientTest(TestCase):
 
         self.assertIsInstance(called['branches_conf'], dict)
 
+    @mock.patch.object(client, 'settings', mock.Mock(
+        VALIDATE_CERT_POLLER=False))
     @async_test
     async def test_get_poller_client(self):
         repo = mock.Mock()
