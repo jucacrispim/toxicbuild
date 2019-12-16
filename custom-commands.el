@@ -31,9 +31,6 @@
 (defcustom toxic:master-buffer-name "toxicmaster"
   "Toxicmaster buffer's name")
 
-(defcustom toxic:scheduler-buffer-name "toxicscheduler"
-  "Toxicmaster scheduler buffer's name")
-
 (defcustom toxic:poller-buffer-name "toxicpoller"
   "Toxicmaster poller buffer's name")
 
@@ -95,6 +92,10 @@
     (format "ln -s %sscripts/toxicmaster %stoxicmaster"
 	    pdj:project-directory toxic:test-env-dir))
 
+  (setq toxic:--ln-toxicpoller
+    (format "ln -s %sscripts/toxicpoller %stoxicpoller"
+	    pdj:project-directory toxic:test-env-dir))
+
   (setq toxic:--ln-toxicintegrations
     (format "ln -s %sscripts/toxicintegrations %stoxicintegrations"
 	    pdj:project-directory toxic:test-env-dir))
@@ -119,7 +120,7 @@
     (concat toxic:--ln-toxicslave " && " toxic:--ln-toxicmaster " && "
 	    toxic:--ln-toxicbuild-script " && " toxic:--ln-toxicbuild
 	    " && " toxic:--ln-toxicweb " && " toxic:--ln-toxicintegrations
-	    " && " toxic:--ln-toxicoutput))
+	    " && " toxic:--ln-toxicoutput " && " toxic:--ln-toxicpoller))
 
   (pdj:run-in-term-on-project-directory toxic:--link-everything
 					toxic:bootstrap-buffer-name))
@@ -348,11 +349,11 @@
 
   (interactive)
 
-  (defvar toxic:--master-path nil)
-  (setq toxic:--master-path (concat toxic:test-env-path "master/"))
+  (defvar toxic:--poller-path nil)
+  (setq toxic:--poller-path (concat toxic:test-env-path "poller/"))
   (defvar toxic:--start-poller-cmd
-    (format "%s %stoxicmaster start_poller %s --loglevel=debug"
-	    toxic:py-venv-exec toxic:test-env-dir toxic:--master-path))
+    (format "%s %stoxicpoller start %s --loglevel=debug"
+	    toxic:py-venv-exec toxic:test-env-dir toxic:--poller-path))
 
   (defvar toxic:--poller-buffer-name "toxicpoller")
 
@@ -382,45 +383,6 @@
       (lambda ()
 	(toxic:start-poller)))))
 
-
-(defun toxic:start-scheduler ()
-  "Starts a master's scheduler instance in the test env"
-
-  (interactive)
-
-  (defvar toxic:--master-path nil)
-  (setq toxic:--master-path (concat toxic:test-env-path "master/"))
-  (defvar toxic:--start-scheduler-cmd
-    (format "%s %stoxicmaster start_scheduler %s --loglevel=debug"
-	    toxic:py-venv-exec toxic:test-env-dir toxic:--master-path))
-
-  (defvar toxic:--scheduler-buffer-name "toxicscheduler")
-
-  (toxic:--run-in-env-on-test-dir
-   toxic:--start-scheduler-cmd toxic:--scheduler-buffer-name))
-
-
-(defun toxic:stop-scheduler ()
-  "Stops the scheduler test instance"
-
-  (interactive)
-
-  (toxic:--kill-buffer-shell-process toxic:--scheduler-buffer-name))
-
-
-(defun toxic:restart-scheduler ()
-  "Restarts the master' scheduler test instance"
-
-  (interactive)
-
-  (deferred:$
-    (deferred:next
-      (lambda ()
-	(toxic:stop-scheduler)))
-
-    (deferred:nextc it
-      (lambda ()
-	(toxic:start-scheduler)))))
 
 
 (defun toxic:start-webui ()
@@ -469,10 +431,9 @@
 
   (toxic:start-slave)
   (toxic:start-poller)
-  (toxic:start-scheduler)
   (toxic:start-master)
   (toxic:start-integrations)
-  (toxic:stop-output)
+  (toxic:start-output)
   (toxic:start-webui))
 
 
@@ -483,7 +444,6 @@
 
   (toxic:stop-slave)
   (toxic:stop-poller)
-  (toxic:stop-scheduler)
   (toxic:stop-master)
   (toxic:stop-integrations)
   (toxic:stop-output)
@@ -498,7 +458,6 @@
   (toxic:restart-slave)
   (toxic:restart-master)
   (toxic:restart-poller)
-  (toxic:restart-scheduler)
   (toxic:restart-integrations)
   (toxic:restart-output)
   (toxic:restart-webui))
@@ -516,22 +475,22 @@
   (if (eq toxic:--event-type 'changed)
       (if (string-match-p (regexp-quote "toxicbuild/master")
 			  toxic:--event-file)
-	  (progn
-	    (toxic:restart-master)
+	  (toxic:restart-master)
+	(if (string-match-p (regexp-quote "toxicbuild/poller")
+			  toxic:--event-file)
 	    (toxic:restart-poller)
-	    (toxic:restart-scheduler))
-	(if (string-match-p (regexp-quote "toxicbuild/slave")
-			    toxic:--event-file)
-	    (toxic:restart-slave)
-	  (if (string-match-p (regexp-quote "toxicbuild/ui")
+	  (if (string-match-p (regexp-quote "toxicbuild/slave")
 			      toxic:--event-file)
-	      (toxic:restart-webui)
-	    (if (string-match-p (regexp-quote "toxicbuild/integrations")
+	      (toxic:restart-slave)
+	    (if (string-match-p (regexp-quote "toxicbuild/ui")
 				toxic:--event-file)
-		(toxic:restart-integrations)
-	      (if (string-match-p (regexp-quote "toxicbuild/output")
+		(toxic:restart-webui)
+	      (if (string-match-p (regexp-quote "toxicbuild/integrations")
 				  toxic:--event-file)
-		  (toxic:restart-output))))))))
+		  (toxic:restart-integrations)
+		(if (string-match-p (regexp-quote "toxicbuild/output")
+				    toxic:--event-file)
+		    (toxic:restart-output)))))))))
 
 
 (defun toxic:add-watcher ()
@@ -684,26 +643,9 @@
 		:visible (progn (not (toxic:--buffer-has-process
 				      toxic:master-buffer-name)))))
 
-  (define-key global-map [menu-bar toxic-menu toxic-second-separator]
+  (define-key global-map [menu-bar toxic-menu toxic-second-minus-minus-separator]
     '(menu-item "--"))
 
-  (define-key global-map [menu-bar toxic-menu toxic-restart-scheduler]
-    '(menu-item "Restart toxicscheduler" toxic:restart-scheduler
-		:visible (progn (toxic:--buffer-has-process
-				 toxic:scheduler-buffer-name))))
-
-  (define-key global-map [menu-bar toxic-menu toxic-stop-scheduler]
-    '(menu-item "Stop toxicscheduler" toxic:stop-scheduler
-		:visible (progn (toxic:--buffer-has-process
-				 toxic:scheduler-buffer-name))))
-
-  (define-key global-map [menu-bar toxic-menu toxic-start-scheduler]
-    '(menu-item "Start toxicscheduler" toxic:start-scheduler
-		:visible (progn (not (toxic:--buffer-has-process
-				      toxic:scheduler-buffer-name)))))
-
-  (define-key global-map [menu-bar toxic-menu toxic-second-minus-separator]
-    '(menu-item "--"))
 
   (define-key global-map [menu-bar toxic-menu toxic-restart-poller]
     '(menu-item "Restart toxicpoller" toxic:restart-poller
@@ -720,7 +662,7 @@
 		:visible (progn (not (toxic:--buffer-has-process
 				      toxic:poller-buffer-name)))))
 
-  (define-key global-map [menu-bar toxic-menu toxic-second-minus-minus-separator]
+  (define-key global-map [menu-bar toxic-menu toxic-second-other-minus-minus-separator]
     '(menu-item "--"))
 
   (define-key global-map [menu-bar toxic-menu toxic-restart-slave]
