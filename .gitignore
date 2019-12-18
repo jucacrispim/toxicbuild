@@ -34,3 +34,4 @@ artifacts/
 /ops/docker/slave.env
 /ops/docker/web.env
 tests/functional/data/poller/src/
+docs/source/apidoc/

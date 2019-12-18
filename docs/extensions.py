@@ -62,5 +62,6 @@ def get_coro_attr(cls, name, *defargs):
 
 
 def setup(app):
-    app.add_autodoc_attrgetter(type, get_coro_attr)
-    app.connect("doctree-read", process_nodes)
+    # app.add_autodoc_attrgetter(type, get_coro_attr)
+    # app.connect("doctree-read", process_nodes)
+    pass
