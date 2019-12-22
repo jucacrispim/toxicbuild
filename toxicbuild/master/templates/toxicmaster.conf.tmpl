@@ -51,7 +51,7 @@ HOLE_PORT = int(os.environ.get('HOLE_PORT', 6666))
 ACCESS_TOKEN = os.environ.get('MASTER_ENCRYPTED_TOKEN', '{{ACCESS_TOKEN}}')
 
 NOTIFICATIONS_API_URL = os.environ.get('NOTIFICATIONS_API_URL',
-                                       'http://localhost:9432/')
+                                       'http://localhost:9432')
 NOTIFICATIONS_API_TOKEN = os.environ.get('NOTIFICATIONS_API_TOKEN', '')
 
 USE_SSL = os.environ.get('MASTER_USE_SSL', '0') == '1'

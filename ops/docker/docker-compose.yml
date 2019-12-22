@@ -9,6 +9,7 @@ services:
 
     environment:
       HOLE_HOST: master
+      NOTIFICATIONS_API_URL: "http://output:9432"
 
     depends_on:
       - master
@@ -29,23 +30,9 @@ services:
        DBHOST: mongo
        AMQPHOST: rabbitmq
 
-  scheduler:
-    image: jucacrispim/toxicbuild:scheduler
-    env_file: ./master.env
-
-    environment:
-       AMQPHOST: rabbitmq
-       DBHOST: mongo
-       ZK_SERVERS: "zookeeper:2181"
-
-    depends_on:
-      - rabbitmq
-      - mongo
-      - zookeeper
-
   poller:
     image: jucacrispim/toxicbuild:poller
-    env_file: ./master.env
+    env_file: ./poller.env
 
     environment:
        DBHOST: mongo
@@ -53,13 +40,9 @@ services:
        ZK_SERVERS: "zookeeper:2181"
 
     depends_on:
-      - volumes-provisioner
       - rabbitmq
       - mongo
       - zookeeper
-
-    volumes:
-      - src-data:/home/toxicuser/ci/master/src/
 
   integrations:
     image: jucacrispim/toxicbuild:integrations
@@ -78,13 +61,11 @@ services:
     env_file: ./master.env
 
     depends_on:
-      - volumes-provisioner
       - rabbitmq
       - mongo
       - zookeeper
       - output
       - poller
-      - scheduler
       - integrations
       - slave
 
@@ -93,10 +74,8 @@ services:
        AMQPHOST: rabbitmq
        ZK_SERVERS: "zookeeper:2181"
        NOTIFICATIONS_API_URL: "http://output:9432/"
-
-    volumes:
-      - src-data:/home/toxicuser/ci/master/src/
-
+       POLLER_HOST: poller
+       POLLER_PORT: 9922
 
   create_slave_token:
     image: jucacrispim/toxicbuild:slave
@@ -115,6 +94,13 @@ services:
   create_master_token:
     image: jucacrispim/toxicbuild:master
     command: toxicmaster create_token /home/toxicuser/ci/master/toxicmaster.conf --show-encrypted
+
+    depends_on:
+      - mongo
+
+  create_poller_token:
+    image: jucacrispim/toxicbuild:poller
+    command: toxicpoller create_token /home/toxicuser/ci/poller/toxicpoller.conf --show-encrypted
 
     depends_on:
       - mongo

@@ -34,6 +34,7 @@ create_dist(){
     # files may be here from tests
     find . -iname '*.log' | xargs rm &> /dev/null
     rm -rf "tests/functional/data/master/src/"
+    rm -rf "tests/functional/data/poller/src/"
     rm -rf "tests/functional/data/slave/src/"
 
     cp pylintrc $TEST_DIST_DIR
@@ -60,7 +61,6 @@ pull_imgs(){
 	docker pull jucacrispim/toxicbuild:output
 	docker pull jucacrispim/toxicbuild:integrations
 	docker pull jucacrispim/toxicbuild:master
-	docker pull jucacrispim/toxicbuild:scheduler
 	docker pull jucacrispim/toxicbuild:poller
 	docker pull jucacrispim/toxicbuild:web
     fi
@@ -96,10 +96,6 @@ create_master_img(){
     docker tag toxicmaster jucacrispim/toxicbuild:master
 }
 
-create_scheduler_img(){
-    docker build -f $DOCKER_DIR/Dockerfile-scheduler -t toxicscheduler $DOCKER_DIR
-    docker tag toxicscheduler jucacrispim/toxicbuild:scheduler
-}
 
 create_poller_img(){
     docker build -f $DOCKER_DIR/Dockerfile-poller -t toxicpoller $DOCKER_DIR
@@ -123,7 +119,6 @@ create_imgs(){
     create_slave_img
     create_output_img
     create_master_img
-    create_scheduler_img
     create_poller_img
     create_integrations_img
     create_web_img
@@ -136,8 +131,6 @@ upload_images(){
     docker push jucacrispim/toxicbuild:output
     echo "Uploading master"
     docker push jucacrispim/toxicbuild:master
-    echo "Uploading scheduler"
-    docker push jucacrispim/toxicbuild:scheduler
     echo "Uploading poller"
     docker push jucacrispim/toxicbuild:poller
     echo "Uploading integrations"
@@ -230,6 +223,15 @@ create_master_token(){
     echo $token
 }
 
+create_poller_token(){
+    out=`docker-compose -f $DOCKER_DIR/docker-compose.yml run create_poller_token 2> /dev/null`
+    enc_token=`echo $out | cut -d':' -f2 | cut -d' ' -f1`
+    token=`echo $out | cut -d':' -f3 | cut -d' ' -f1`
+    echo "POLLER_ENCRYPTED_TOKEN=$enc_token" > $DOCKER_DIR/poller.env
+    docker-compose -f $DOCKER_DIR/docker-compose.yml stop create_poller_token &> /dev/null
+    echo $token
+}
+
 
 create_user(){
     email=$1
@@ -252,6 +254,7 @@ update_envfiles(){
     root_user_id=$2
     cookie_secret=$3
     output_token=$4
+    poller_token=$5
     echo "HOLE_TOKEN=$master_token" > $DOCKER_DIR/web.env
     echo "HOLE_TOKEN=$master_token" >> $DOCKER_DIR/integrations.env
     echo "NOTIFICATIONS_API_TOKEN=$output_token" >> $DOCKER_DIR/web.env
@@ -259,12 +262,22 @@ update_envfiles(){
     echo "WEB_ROOT_USER_ID=$root_user_id" >> $DOCKER_DIR/web.env
     echo "WEB_ROOT_USER_ID=$root_user_id" >> $DOCKER_DIR/integrations.env
     echo "COOKIE_SECRET=$cookie_secret" >> $DOCKER_DIR/web.env
-
+    echo "COOKIE_SECRET=$cookie_secret" >> $DOCKER_DIR/integrations.env
+    echo "POLLER_TOKEN=$poller_token" >> $DOCKER_DIR/master.env
 }
 
 
 start_local(){
     docker-compose -f ops/docker/docker-compose.yml up web 2> /dev/null
+}
+
+stop_local(){
+    docker-compose -f ops/docker/docker-compose.yml stop web 2> /dev/null
+    docker-compose -f ops/docker/docker-compose.yml stop master 2> /dev/null
+    docker-compose -f ops/docker/docker-compose.yml stop output 2> /dev/null
+    docker-compose -f ops/docker/docker-compose.yml stop poller 2> /dev/null
+    docker-compose -f ops/docker/docker-compose.yml stop integrations 2> /dev/null
+    docker-compose -f ops/docker/docker-compose.yml stop slave 2> /dev/null
 }
 
 
@@ -287,14 +300,17 @@ create_local_install(){
     slave_token=`create_slave_token`
     output_token=`create_output_token`
     master_token=`create_master_token`
+    poller_token=`create_poller_token`
+
     echo -n "  email: "
     read email
     echo -n "  password: "
     read password
+
     user_id=`create_user $email $password`
-    add_slave $slave_token $user_id
+    add_slave "$slave_token" "$user_id"
     cookie_secret=`python -c 'import secrets; print(secrets.token_urlsafe(), end="")'`
-    update_envfiles  $master_token $user_id $cookie_secret $output_token
+    update_envfiles "$master_token" "$user_id" "$cookie_secret" "$output_token" "$poller_token"
 
 }
 
@@ -325,7 +341,6 @@ clean_images(){
     docker rmi toxicslave
     docker rmi toxicoutput
     docker rmi toxicmaster
-    docker rmi toxicscheduler
     docker rmi toxicpoller
     docker rmi toxicintegrations
     docker rmi toxicweb
@@ -352,6 +367,10 @@ case "$1" in
 
     start-local)
 	start_local
+	;;
+
+    stop-local)
+	stop_local
 	;;
 
     create-images)
@@ -394,6 +413,7 @@ case "$1" in
 	echo " - create-local"
 	echo " - clean-local"
 	echo " - start-local"
+	echo " - stop-local"
 	echo " - create-images"
 	echo " - upload-images"
 	echo " - create-build-images"

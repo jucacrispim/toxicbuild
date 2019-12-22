@@ -1,3 +1,5 @@
-FROM toxicmaster
+FROM toxicbase
 
-CMD ["toxicmaster", "start_poller", "/home/toxicuser/ci/master"]
+RUN toxicpoller create /home/toxicuser/ci/poller --no-token
+
+CMD ["toxicpoller", "start", "/home/toxicuser/ci/poller", "--loglevel=debug"]

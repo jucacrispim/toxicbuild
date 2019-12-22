@@ -65,6 +65,7 @@ setup(name='toxicbuild',
               'toxicbuild=toxicbuild.script:main',
               'toxicmaster=toxicbuild.master:main',
               'toxicslave=toxicbuild.slave:main',
+              'toxicpoller=toxicbuild.poller:main',
               'toxicweb=toxicbuild.ui:main',
               'toxicintegrations=toxicbuild.integrations:main',
               'toxicoutput=toxicbuild.output:main']

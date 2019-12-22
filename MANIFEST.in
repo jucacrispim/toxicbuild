@@ -3,12 +3,14 @@ recursive-include toxicbuild/slave/templates *
 recursive-include toxicbuild/output/templates *
 recursive-include toxicbuild/integrations/templates *
 recursive-include toxicbuild/ui/templates *
+recursive-include toxicbuild/poller/templates *
 recursive-include toxicbuild/ui/translations *
 recursive-include toxicbuild/ui/static *
 
 recursive-exclude toxicbuild/master/templates *~
 recursive-exclude toxicbuild/slave/templates *~
 recursive-exclude toxicbuild/output/templates *~
+recursive-exclude toxicbuild/poller/templates *~
 recursive-exclude toxicbuild/integrations/templates *~
 recursive-exclude toxicbuild/ui/templates *~
 recursive-exclude toxicbuild/ui/translations *~
