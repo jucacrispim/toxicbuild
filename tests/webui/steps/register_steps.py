@@ -11,7 +11,8 @@ from tests.webui.steps.base_steps import (  # noqa f811
 def user_is_in_login_page(context):
     browser = context.browser
 
-    base_url = 'http://localhost:{}/'.format(settings.TORNADO_PORT)
+    base_url = 'http://{}:{}/'.format(settings.TEST_WEB_HOST,
+                                      settings.TORNADO_PORT)
     url = base_url + 'register'
     browser.get(url)
 

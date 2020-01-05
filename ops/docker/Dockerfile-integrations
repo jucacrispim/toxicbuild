@@ -1,4 +1,4 @@
-FROM toxicbase
+FROM toxicruntime
 
 RUN toxicintegrations create /home/toxicuser/ci/integrations
 

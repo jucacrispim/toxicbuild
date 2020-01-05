@@ -180,16 +180,27 @@ services:
   selenium-tests:
     image: toxictest-selenium
     command: ./build-scripts/run_selenium_tests.sh
+    env_file: web.env
 
     environment:
        DBHOST: mongo
+       DBNAME: toxicbuild
        AMQPHOST: rabbitmq
        ZK_SERVERS: "zookeeper:2181"
+       HOLE_HOST: master
+       HOLE_PORT: 6666
+       TEST_SLAVE_HOST: slave
+       TEST_WEB_HOST: web
+       TEST_NOTIFICATIONS_HOST: output
+       UI_WEB_PORT: 8888
+       TEST_DOCKER_IMAGES: 1
+       ENV: ci
 
     depends_on:
       - mongo
       - zookeeper
       - rabbitmq
+      - web
 
   selenium-integration-tests:
     image: toxictest-selenium
@@ -197,23 +208,23 @@ services:
 
     environment:
        DBHOST: mongo
+       DBNAME: toxicbuild
        AMQPHOST: rabbitmq
        ZK_SERVERS: "zookeeper:2181"
+       HOLE_HOST: master
+       HOLE_PORT: 6666
+       TEST_SLAVE_HOST: slave
+       TEST_WEB_HOST: web
+       TEST_NOTIFICATIONS_HOST: output
+       UI_WEB_PORT: 8888
+       TEST_DOCKER_IMAGES: 1
+       ENV: ci
 
     depends_on:
       - mongo
       - zookeeper
       - rabbitmq
-
-  volumes-provisioner:
-      image: hasnat/volumes-provisioner
-      environment:
-        PROVISION_DIRECTORIES: "1000:1000:0755:/home/toxicuser/ci/master/src"
-
-      volumes:
-        - src-data:/home/toxicuser/ci/master/src/
-      network_mode: none
-
+      - web
 
   mongo:
     image: mongo:4.0
@@ -226,7 +237,3 @@ services:
   zookeeper:
     image: zookeeper:3.5
     restart: always
-
-
-volumes:
-  src-data:

@@ -1,4 +1,4 @@
-FROM toxicbase
+FROM toxicruntime
 
 RUN toxicmaster create /home/toxicuser/ci/master --no-token
 

@@ -14,7 +14,9 @@ from tests.webui.steps.base_steps import (  # noqa f811
 @given('is in the waterfall')
 def is_in_waterfall(context):
     browser = context.browser
-    base_url = 'http://localhost:{}/'.format(settings.TORNADO_PORT)
+    base_url = 'http://{}:{}/'.format(settings.TEST_WEB_HOST,
+                                      settings.TORNADO_PORT)
+
     waterfall_url = '{}someguy/repo-bla/waterfall'.format(base_url)
     browser.get(waterfall_url)
     time.sleep(0.5)

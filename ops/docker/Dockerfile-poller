@@ -1,4 +1,4 @@
-FROM toxicbase
+FROM toxicruntime
 
 RUN toxicpoller create /home/toxicuser/ci/poller --no-token
 

@@ -1,0 +1,12 @@
+# In this dockerfile we copy the code to the image and
+# install the aplication
+FROM toxicbase
+
+USER root
+COPY dist/ /tmp/src/
+RUN cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/
+RUN chown -R toxicuser:toxicuser /home/toxicuser/.toxic-venv/src/
+
+USER toxicuser
+
+RUN python setup.py install

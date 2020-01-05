@@ -1,4 +1,4 @@
-FROM toxicbase
+FROM toxicruntime
 
 RUN toxicweb create /home/toxicuser/ci/web
 

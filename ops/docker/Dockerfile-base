@@ -1,6 +1,11 @@
+# In this dockerfile we install de runtime dependencies and create
+# a normal user
 FROM python:3.7.4-slim-buster
 
-RUN apt-get update && apt-get install -y git libyaml-dev
+RUN apt-get update && apt-get install -y git libyaml-dev locales
+RUN sed -i '/^#.* en_US.* /s/^#//' /etc/locale.gen
+RUN sed -i '/^#.* pt_BR.* /s/^#//' /etc/locale.gen
+RUN locale-gen
 
 RUN useradd -ms /bin/bash toxicuser
 
@@ -11,21 +16,16 @@ WORKDIR /home/toxicuser
 RUN python3.7 -m venv /home/toxicuser/.toxic-venv
 ENV PATH="/home/toxicuser/.toxic-venv/bin:$PATH"
 
-# The ideia here is to install the dependencies only if the requirements
+# The ideia here is to install the dependencies only if the setup.py
 # file has changed. So first we copy only it and install the deps.
-RUN mkdir -p /home/toxicuser/.toxic-venv/src/toxicbuild
-COPY dist/toxicbuild/requirements.txt /home/toxicuser/.toxic-venv/src/toxicbuild
+RUN mkdir -p /home/toxicuser/.toxic-venv/src/toxicbuild/toxicbuild
+COPY dist/toxicbuild/toxicbuild/__init__.py /home/toxicuser/.toxic-venv/src/toxicbuild/toxicbuild
+COPY dist/toxicbuild/README /home/toxicuser/.toxic-venv/src/toxicbuild
+COPY dist/toxicbuild/setup.py /home/toxicuser/.toxic-venv/src/toxicbuild
 WORKDIR /home/toxicuser/.toxic-venv/src/toxicbuild
-RUN pip install -r requirements.txt
-RUN rm /home/toxicuser/.toxic-venv/src/toxicbuild/requirements.txt
+# Install the runtime dependencies
+RUN pip install -e .
 
-# After the deps are installed we copy the source files
-USER root
-COPY dist/ /tmp/src/
-RUN cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/
-RUN chown -R toxicuser:toxicuser /home/toxicuser/.toxic-venv/src/
-
-USER toxicuser
-
-# And install the stuff.
-RUN python setup.py install
+# Uninstall the code (unlink from site-packages) so we can use the 'real' code
+# in the test image
+RUN pip uninstall -y toxicbuild

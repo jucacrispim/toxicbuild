@@ -9,7 +9,8 @@ from tests.webui import take_screenshot
 @take_screenshot
 def logged_in_webui(context):
     browser = context.browser
-    base_url = 'http://localhost:{}/'.format(settings.TORNADO_PORT)
+    base_url = 'http://{}:{}/'.format(settings.TEST_WEB_HOST,
+                                      settings.TORNADO_PORT)
     url = base_url + 'login'
     browser.get(url)
 

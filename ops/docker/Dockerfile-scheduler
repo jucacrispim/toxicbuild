@@ -1,3 +1,0 @@
-FROM toxicmaster
-
-CMD ["toxicmaster", "start_scheduler", "/home/toxicuser/ci/master"]

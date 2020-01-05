@@ -1,2 +1,5 @@
-These are very simple Dockerfiles suited for a local. Don't use them directly,
-use the build-scripts/toxicinstall.sh script instead.
+This plethora of Dockefiles here is a way to reduce the amount of stuff
+that is need to download.
+
+Don't use them directly use `build-scripts/toxicinstall.sh create_images`
+instead.

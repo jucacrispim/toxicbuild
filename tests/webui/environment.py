@@ -57,6 +57,9 @@ from tests.webui import SeleniumBrowser  # noqa 402
 
 BaseInterface.settings = settings
 
+HERE = os.path.dirname(__file__)
+BUILD_SCRIPTS_DIR = os.path.join(HERE, '..', '..', 'build-scripts')
+
 
 def create_browser(context):
     """Creates a new selenium browser using Chrome driver and
@@ -77,13 +80,18 @@ def quit_browser(context):
 def create_slave(context):
     """Creates a slave to be used in repo tests"""
 
+    from toxicbuild.ui import settings
+
+    print('creating slave...')
+    print(context.user.id)
     yield from SlaveInterface.add(
-        context.user, name='repo-slave', host='localhost',
+        context.user, name='repo-slave', host=settings.TEST_SLAVE_HOST,
         owner=context.user,
         port=2222,
         token='123',
         use_ssl=True,
         validate_cert=False)
+    print('slave created!')
 
 
 @asyncio.coroutine
@@ -158,11 +166,12 @@ async def create_root_user(context):
 
 
 def before_all(context):
-    start_slave()
-    start_new_poller()
-    start_output()
-    start_master()
-    start_webui()
+    if not os.environ.get('TEST_DOCKER_IMAGES'):
+        start_slave()
+        start_new_poller()
+        start_output()
+        start_master()
+        start_webui()
 
     create_browser(context)
 
@@ -234,11 +243,12 @@ def after_scenario(context, scenario):
 
 def after_all(context):
 
-    stop_webui()
-    stop_output()
-    stop_new_poller()
-    stop_master()
-    stop_slave()
+    if not os.environ.get('TEST_DOCKER_IMAGES'):
+        stop_webui()
+        stop_output()
+        stop_new_poller()
+        stop_master()
+        stop_slave()
 
     async def delete(context):
         await del_user(context)

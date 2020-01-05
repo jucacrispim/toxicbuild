@@ -84,7 +84,7 @@ builders:
         timeout: 45
 
       - name: Selenium integration tests
-        command: docker-compose -f ops/docker/docker-compose.yml run -e ENV=ci -e GCRYPTKEY=$GCRYPTKEY selenium-integration-tests
+        command: docker-compose -f ops/docker/docker-compose.yml run selenium-integration-tests
         timeout: 45
 
       - name: Clean old images

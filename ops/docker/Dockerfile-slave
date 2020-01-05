@@ -1,4 +1,4 @@
-FROM toxicbase
+FROM toxicruntime
 
 RUN toxicslave create /home/toxicuser/ci/slave --no-token
 

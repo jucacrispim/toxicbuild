@@ -49,11 +49,10 @@ create_dist(){
 pull_imgs(){
     create_images=$1
     # pull the required docker images
-    docker pull mongo:4.0
-    docker pull rabbitmq:3.7-alpine
-    docker pull zookeeper:3.5
+    docker pull mongo:4.2.1
+    docker pull rabbitmq:3.7.23-alpine
+    docker pull zookeeper:3.5.6
     docker pull python:3.7.4-slim-buster
-    docker pull hasnat/volumes-provisioner
 
     if [ $create_images -eq "1" ]
     then
@@ -70,6 +69,15 @@ pull_imgs(){
 create_base_img(){
     # Creates the base Docker image
     docker build -f $DOCKER_DIR/Dockerfile-base -t toxicbase $DOCKER_DIR
+}
+
+create_runtime_img(){
+    # Creates the base Docker image
+    docker build -f $DOCKER_DIR/Dockerfile-runtime -t toxicruntime $DOCKER_DIR
+}
+
+create_base_test_img(){
+    docker build -f $DOCKER_DIR/Dockerfile-testbase -t toxictestbase $DOCKER_DIR
 }
 
 create_test_img(){
@@ -116,6 +124,7 @@ create_web_img(){
 
 create_imgs(){
     create_base_img
+    create_runtime_img
     create_slave_img
     create_output_img
     create_master_img
@@ -183,6 +192,8 @@ upload_build_images(){
 create_test_env(){
     echo "Creating test environment"
 
+    create_base_img
+    create_base_test_img
     create_test_img
     docker-compose -f $DOCKER_DIR/docker-compose.yml up --no-color --exit-code-from setup-env setup-env
 }
@@ -191,6 +202,9 @@ create_test_env(){
 create_test_selenium_env(){
     echo "Creating selenium test environment"
 
+    create_base_img
+    create_base_test_img
+    create_test_img
     create_test_selenium_img
     docker-compose -f $DOCKER_DIR/docker-compose.yml up --no-color --exit-code-from setup-env setup-env
 }
@@ -255,7 +269,7 @@ update_envfiles(){
     cookie_secret=$3
     output_token=$4
     poller_token=$5
-    echo "HOLE_TOKEN=$master_token" > $DOCKER_DIR/web.env
+    echo "HOLE_TOKEN=$master_token" >> $DOCKER_DIR/web.env
     echo "HOLE_TOKEN=$master_token" >> $DOCKER_DIR/integrations.env
     echo "NOTIFICATIONS_API_TOKEN=$output_token" >> $DOCKER_DIR/web.env
     echo "NOTIFICATIONS_API_TOKEN=$output_token" >> $DOCKER_DIR/integrations.env
@@ -268,7 +282,7 @@ update_envfiles(){
 
 
 start_local(){
-    docker-compose -f ops/docker/docker-compose.yml up web 2> /dev/null
+    docker-compose -f ops/docker/docker-compose.yml up -d web 2> /dev/null
 }
 
 stop_local(){
@@ -285,14 +299,14 @@ create_local_install(){
     create_images=$1
 
     echo '- Pulling required images'
-    pull_imgs $create_images
+    pull_imgs $create_images # &> /dev/null
 
     if [ $create_images -eq "0" ]
     then
 	echo '- Creating docker images'
-	create_dist
-	create_imgs
-	clean
+	create_dist &> /dev/null
+	create_imgs &> /dev/null
+	clean &> /dev/null
     fi
 
     echo '- Creating environment. Be patient...'
@@ -321,11 +335,11 @@ clean(){
 }
 
 create_empty_envs(){
-    echo '' > $DOCKER_DIR/web.env
-    echo '' > $DOCKER_DIR/output.env
-    echo '' > $DOCKER_DIR/master.env
-    echo '' > $DOCKER_DIR/slave.env
-    echo '' > $DOCKER_DIR/integrations.env
+    [ ! -f $DOCKER_DIR/web.env ] && echo '' > $DOCKER_DIR/web.env
+    [ ! -f $DOCKER_DIR/output.env ] && echo '' > $DOCKER_DIR/output.env
+    [ ! -f $DOCKER_DIR/master.env ] && echo '' > $DOCKER_DIR/master.env
+    [ ! -f $DOCKER_DIR/slave.env ] && echo '' > $DOCKER_DIR/slave.env
+    [ ! -f $DOCKER_DIR/integrations.env ] && echo '' > $DOCKER_DIR/integrations.env
 }
 
 drop_db(){
@@ -346,8 +360,8 @@ clean_images(){
     docker rmi toxicweb
     docker rmi toxictest
     docker rmi toxictest-selenium
+    docker rmi toxicruntime
     docker rmi toxicbase
-    docker volume rm docker_src-data
     drop_db
 }
 

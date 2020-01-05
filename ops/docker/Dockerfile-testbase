@@ -1,0 +1,13 @@
+# In this dockerfile we install the test depencencies. Do not copy
+# the source code so we can use the cache of the dependencies
+FROM toxicbase
+
+USER root
+
+RUN apt-get update && apt-get install -y procps
+
+USER toxicuser
+
+COPY dist/toxicbuild/requirements.txt /home/toxicuser/.toxic-venv/src/toxicbuild
+WORKDIR /home/toxicuser/.toxic-venv/src/toxicbuild
+RUN pip install -r requirements.txt

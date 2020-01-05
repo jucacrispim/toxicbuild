@@ -12,8 +12,11 @@ from tests.webui.steps.base_steps import (  # noqa f811
 @when('someone tries to access a waterfall url without being logged')
 def step_impl(context):
     browser = context.browser
-    url = 'http://localhost:{}/waterfall/some-repo'.format(
-        settings.TORNADO_PORT)
+    base_url = 'http://{}:{}/'.format(settings.TEST_WEB_HOST,
+                                      settings.TORNADO_PORT)
+
+    url = base_url + 'waterfall/some-repo'
+
     browser.get(url)
 
 
@@ -29,7 +32,10 @@ def step_impl(context):
 @given('the user is in the login page')  # noqa f401
 def step_impl(context):
     browser = context.browser
-    url = 'http://localhost:{}/login'.format(settings.TORNADO_PORT)
+    base_url = 'http://{}:{}/'.format(settings.TEST_WEB_HOST,
+                                      settings.TORNADO_PORT)
+
+    url = base_url + 'login'
     browser.get(url)
 
 
