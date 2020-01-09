@@ -62,11 +62,12 @@ class RepositoryTest(TestCase):
         await self.repo.request_code_update()
         self.GOT_MSG = False
         async with await repository.notifications.consume(
-                routing_key='update-code-requested', timeout=5) as consumer:
+                routing_key='update-code-requested', timeout=5000) as consumer:
             try:
                 async for msg in consumer:
                     await msg.acknowledge()
                     self.GOT_MSG = True
+                    break
             except ConsumerTimeout:
                 pass
         self.assertTrue(self.GOT_MSG)

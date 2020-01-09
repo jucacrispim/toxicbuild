@@ -381,9 +381,10 @@ class GithubWebhookReceiverTest(AsyncTestCase):
     def test_get_pull_request_source(self):
         body = {
             'pull_request': {
-                'head': {'repo': {'id': 'some-id'},
-                         'label': 'someone:repo', 'ref': 'some-branch',
-                         'clone_url': 'http://somewhere.com/repo.git'}}
+                'head': {'repo': {
+                    'id': 'some-id',
+                    'clone_url': 'http://somewhere.com/repo.git'},
+                    'label': 'someone:repo', 'ref': 'some-branch'}}
         }
 
         self.webhook_receiver.body = body

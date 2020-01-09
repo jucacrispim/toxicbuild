@@ -308,7 +308,7 @@ class GithubWebhookReceiver(BaseWebhookReceiver):
     def get_pull_request_source(self):
         head = self.body['pull_request']['head']
         source = {'id': head['repo']['id'],
-                  'url': head['clone_url'],
+                  'url': head['repo']['clone_url'],
                   'name': head['label'],
                   'branch': head['ref']}
         return source
