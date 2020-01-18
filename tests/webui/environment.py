@@ -82,8 +82,6 @@ def create_slave(context):
 
     from toxicbuild.ui import settings
 
-    print('creating slave...')
-    print(context.user.id)
     yield from SlaveInterface.add(
         context.user, name='repo-slave', host=settings.TEST_SLAVE_HOST,
         owner=context.user,
@@ -91,7 +89,6 @@ def create_slave(context):
         token='123',
         use_ssl=True,
         validate_cert=False)
-    print('slave created!')
 
 
 @asyncio.coroutine
