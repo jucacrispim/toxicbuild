@@ -135,8 +135,8 @@ class PollerTest(TestCase):
         self.assertFalse(r['with_clone'])
         self.assertEqual(len(self.poller.log.call_args_list), 1)
 
-    @patch.object(poller, 'read_file', AsyncMagicMock(spec=poller.read_file,
-                                                      return_value='config'))
+    @patch.object(poller, 'read_file', AsyncMagicMock(
+        spec=poller.read_file, side_effect=['config', FileNotFoundError]))
     @patch('toxicbuild.core.vcs.Git.checkout', AsyncMagicMock())
     @async_test
     async def test_process_changes(self):
@@ -158,6 +158,7 @@ class PollerTest(TestCase):
         r = await self.poller.process_changes()
         self.assertTrue(r)
         self.assertTrue(r[0]['config'])
+        self.assertFalse(r[1]['config'])
 
     @async_test
     async def test_process_changes_no_revisions(self):
