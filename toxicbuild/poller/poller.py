@@ -224,5 +224,11 @@ class Poller(LoggerMixin):
     async def _get_config(self, commit):
         await self.vcs.checkout(commit)
         path = os.path.join(self.vcs.workdir, self.conffile)
-        config = await read_file(path)
-        return config
+        try:
+            config = await read_file(path)
+        except FileNotFoundError:
+            r = ''
+        else:
+            r = config
+
+        return r
