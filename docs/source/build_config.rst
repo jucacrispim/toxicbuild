@@ -9,7 +9,7 @@ your project.
 .. note::
 
    If you want that a specific buildset does't create any builds,
-   in the build of your commit message put ``ci: skip``
+   in the body of your commit message put ``ci: skip``
 
 .. _build-simple-config:
 
@@ -64,6 +64,24 @@ and then we install what is needed using the ``system_packages`` parameter.
 
    The installation of system packages depends on system plugins. See
    :ref:`system-plugins`
+
+
+If you use docker in your build process you can use the	``docker`` parameter in
+order to have docker in your build environment.
+
+.. code-block:: yaml
+
+   language: generic
+   docker: true
+   system_packages:
+     - gcc
+     - make
+
+   steps:
+     - make
+     - make test
+     - docker build .
+
 
 
 An example

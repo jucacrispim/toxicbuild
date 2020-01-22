@@ -182,6 +182,17 @@ class LanguageConfigTest(TestCase):
 
         self.assertEqual(expected, r)
 
+    def test_get_platforms_docker(self):
+        self.conf['os'] = ['redhat', 'debian']
+        self.conf['docker'] = True
+        conf = build_config.LanguageConfig(self.conf)
+        expected = [('some-lang', 'redhat', 'docker-some-lang-redhat'),
+                    ('some-lang', 'debian', 'docker-some-lang')]
+        lang_vers = conf._get_lang_versions()
+        r = conf._get_platforms(lang_vers)
+
+        self.assertEqual(expected, r)
+
     def test_get_plugins_bad_os(self):
         os_name = 'a-bad-one'
         self.conf['system_packages'] = ['a-package']

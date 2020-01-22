@@ -200,6 +200,7 @@ class LanguageConfig:
         self.oses = self.conf.get('os', [self.DEFAULT_OS])
         self.branches = self.conf.get('branches', [])
         self.versions = self.conf.get('versions', [])
+        self.use_docker = self.conf.get('docker', False)
         self._builders = None
 
     def _get_lang_versions(self):
@@ -212,12 +213,14 @@ class LanguageConfig:
 
     def _get_platforms(self, lang_vers):
         plats = []
+        prefix = 'docker-' if self.use_docker else ''
         for opsys in self.oses:
             for l in lang_vers:
                 if opsys == self.DEFAULT_OS:
-                    plats.append((l, opsys, l))
+                    plats.append((l, opsys, '{}{}'.format(prefix, l)))
                 else:
-                    plats.append((l, opsys, '{}-{}'.format(l, opsys)))
+                    plats.append((l, opsys, '{}{}-{}'.format(
+                        prefix, l, opsys)))
         return plats
 
     def _get_plugins(self, os_name, lang_ver):
