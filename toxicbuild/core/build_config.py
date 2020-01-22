@@ -251,7 +251,8 @@ class LanguageConfig:
         envvars = self.conf.get('envvars', {})
         branches = self.conf.get('branches', [])
         for lang_ver, os_name, plat in platforms:
-            builder = {'name': plat,
+            name = plat.replace('docker-', '')
+            builder = {'name': name,
                        'platform': plat,
                        'steps': steps,
                        'envvars': envvars,
