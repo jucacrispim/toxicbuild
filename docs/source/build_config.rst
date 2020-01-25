@@ -66,12 +66,29 @@ and then we install what is needed using the ``system_packages`` parameter.
    :ref:`system-plugins`
 
 
+Environment variables
+---------------------
+
+You can set environment variables in your build using the ``envvars`` option
+
+.. code-block::
+
+   # ...
+   envvars:
+       A_VAR: 'the-value'
+
+   # ...
+
+Docker
+------
+
 If you use docker in your build process you can use the	``docker`` parameter in
 order to have docker in your build environment.
 
 .. code-block:: yaml
 
    language: generic
+   # your build environment will have docker installed on it.
    docker: true
    system_packages:
      - gcc
@@ -96,6 +113,10 @@ The following configuration
      - '3.5'
      - '3.6'
      - '3.7'
+     - '3.8'
+
+   envvars:
+       - PYTHONPATH: '.'
 
    steps:
      - name: Run pylint
