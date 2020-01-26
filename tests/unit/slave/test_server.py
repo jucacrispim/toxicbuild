@@ -20,7 +20,7 @@
 import asyncio
 import unittest
 from unittest.mock import MagicMock, patch
-from toxicbuild.slave import protocols, server
+from toxicbuild.slave import server
 from tests import async_test, AsyncMagicMock
 
 

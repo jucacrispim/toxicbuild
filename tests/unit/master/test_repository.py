@@ -204,7 +204,7 @@ class RepositoryTest(TestCase):
                  'branch': 'master',
                  'commit_date': '4 04 25 23:49:19 2019 +0000',
                  'author': 'me',
-                 'title':  'zhe-commit'}],
+                 'title': 'zhe-commit'}],
                 'clone_status': 'success',
                 'with_clone': False}))))
     @patch.object(repository.BuildManager, 'add_builds', AsyncMagicMock(
@@ -239,7 +239,7 @@ class RepositoryTest(TestCase):
                  'branch': 'master',
                  'commit_date': '4 04 25 23:49:19 2019 +0000',
                  'author': 'me',
-                 'title':  'zhe-commit'}],
+                 'title': 'zhe-commit'}],
                 'clone_status': 'success',
                 'with_clone': True}))))
     @patch.object(repository.BuildManager, 'add_builds', AsyncMagicMock(

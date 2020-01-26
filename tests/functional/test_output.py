@@ -134,7 +134,7 @@ class NotificationTest(TestCase):
             count = await WebHookMessage.objects.count()
             try:
                 self.assertGreater(count, 0)
-            except:
+            except Exception:
                 pass
 
             else:

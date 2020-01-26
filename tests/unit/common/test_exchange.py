@@ -296,7 +296,7 @@ class ExchangeTest(TestCase):
                 exclusive=False,
                 passive=True)
             exists = True
-        except ChannelClosed as e:
+        except ChannelClosed:
             exists = False
 
         self.assertFalse(exists)
