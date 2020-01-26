@@ -154,6 +154,7 @@ class BuilderTest(TestCase):
         def send_info(msg):
             send_mock(msg)
 
+        self.builder.STEP_OUTPUT_BUFF_LEN = 512
         self.builder.manager.send_info = send_info
         yield from self.builder._send_step_output_info(step_info,
                                                        0, 'some line')
