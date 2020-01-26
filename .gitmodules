@@ -2,3 +2,6 @@
 	path = tests/functional/data/repo
 	url = https://gitlab.com/jucacrispim/toxictest.git
 
+[submodule "tests/functional/data/fork-repo"]
+	path = tests/functional/data/repo
+	url = https://gitlab.com/toxicbuild/toxictest.git
