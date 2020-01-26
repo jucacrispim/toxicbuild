@@ -338,6 +338,7 @@ create_empty_envs(){
     [ ! -f $DOCKER_DIR/web.env ] && echo '' > $DOCKER_DIR/web.env
     [ ! -f $DOCKER_DIR/output.env ] && echo '' > $DOCKER_DIR/output.env
     [ ! -f $DOCKER_DIR/master.env ] && echo '' > $DOCKER_DIR/master.env
+    [ ! -f $DOCKER_DIR/poller.env ] && echo '' > $DOCKER_DIR/poller.env
     [ ! -f $DOCKER_DIR/slave.env ] && echo '' > $DOCKER_DIR/slave.env
     [ ! -f $DOCKER_DIR/integrations.env ] && echo '' > $DOCKER_DIR/integrations.env
 }
