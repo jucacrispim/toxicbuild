@@ -3,7 +3,10 @@ FROM toxictestbase
 
 USER root
 
-RUN apt-get update && apt-get install -y chromium-driver xvfb git-crypt
+RUN apt-get update && apt-get install -y chromium-driver xvfb git-crypt sudo
+
+COPY sudoers /etc/sudoers
+RUN addgroup toxicuser sudo
 
 COPY dist/ /tmp/src/
 RUN cp -r /tmp/src/* /home/toxicuser/.toxic-venv/src/
