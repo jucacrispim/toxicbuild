@@ -18,7 +18,7 @@ Babel==2.7.0
 backports.functools-lru-cache==1.6.1
 bcrypt==3.1.7
 behave==1.2.6
-bleach==3.1.0
+bleach==3.1.1
 blinker==1.4
 botocore==1.13.14
 certifi==2019.11.28
