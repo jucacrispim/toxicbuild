@@ -190,7 +190,6 @@ def before_feature(context, feature):
 
     async def create(context):
         await create_slave(context)
-
         create_repo_features = ['waterfall.feature', 'notifications.feature',
                                 'buildset.feature', 'build.feature']
         if fname in create_repo_features:

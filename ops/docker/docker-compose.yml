@@ -13,6 +13,7 @@ services:
 
     depends_on:
       - master
+      - output
 
   slave:
     image: jucacrispim/toxicbuild:slave

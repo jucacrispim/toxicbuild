@@ -80,11 +80,11 @@ builders:
         command: docker-compose -f ops/docker/docker-compose.yml run js-unit-tests
 
       - name: Selenium tests
-        command: docker-compose -f ops/docker/docker-compose.yml run selenium-tests
+        command: docker-compose -f ops/docker/docker-compose.yml up --no-color selenium-tests
         timeout: 45
 
       - name: Selenium integration tests
-        command: docker-compose -f ops/docker/docker-compose.yml run selenium-integration-tests
+        command: docker-compose -f ops/docker/docker-compose.yml up --no-color selenium-integration-tests
         timeout: 45
 
       - name: Clean old images

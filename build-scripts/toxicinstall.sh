@@ -206,6 +206,7 @@ create_test_selenium_env(){
     create_base_test_img
     create_test_img
     create_test_selenium_img
+    create_local_install "0" "test@bla.com" "123"
     docker-compose -f $DOCKER_DIR/docker-compose.yml up --no-color --exit-code-from setup-env setup-env
 }
 
@@ -297,6 +298,8 @@ stop_local(){
 
 create_local_install(){
     create_images=$1
+    user_email=$2
+    user_password=$3
 
     echo '- Pulling required images'
     pull_imgs $create_images # &> /dev/null
@@ -316,10 +319,21 @@ create_local_install(){
     master_token=`create_master_token`
     poller_token=`create_poller_token`
 
-    echo -n "  email: "
-    read email
-    echo -n "  password: "
-    read password
+    if [ "$user_email" == "" ]
+    then
+	echo -n "  email: "
+	read email
+    else
+	email=$user_email
+    fi
+
+    if [ "$user_password" == "" ]
+    then
+	echo -n "  password: "
+	read password
+    else
+	password=$user_password
+    fi
 
     user_id=`create_user $email $password`
     add_slave "$slave_token" "$user_id"
