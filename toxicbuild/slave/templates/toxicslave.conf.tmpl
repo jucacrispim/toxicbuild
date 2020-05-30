@@ -17,6 +17,14 @@ default_images = {
     'python3.5': 'jucacrispim/toxiccontainers:debian-python3.5',
     'python3.6': 'jucacrispim/toxiccontainers:debian-python3.6',
     'python3.7': 'jucacrispim/toxiccontainers:debian-python3.7',
+    'python3.8': 'jucacrispim/toxiccontainers:debian-python3.7',
+    'go1.14': 'jucacrispim/toxiccontainers:debian-go1.14',
+    'docker-linux-generic': 'jucacrispim/toxiccontainers:debian-generic-docker',
+    'docker-python3.5': 'jucacrispim/toxiccontainers:debian-python3.5-docker',
+    'docker-python3.6': 'jucacrispim/toxiccontainers:debian-python3.6-docker',
+    'docker-python3.7': 'jucacrispim/toxiccontainers:debian-python3.7-docker',
+    'docker-python3.8': 'jucacrispim/toxiccontainers:debian-python3.7-docker',
+    'docker-go1.14': 'jucacrispim/toxiccontainers:debian-go1.14-docker',
 }
 DOCKER_IMAGES = json.loads(os.environ.get('SLAVE_DOCKER_IMAGES', '{}'))
 DOCKER_IMAGES = DOCKER_IMAGES or default_images
