@@ -499,6 +499,7 @@ class HoleHandlerTest(TestCase):
 
         self.assertEqual(len(repo_list), 2)
         self.assertIn('status', repo_list[0].keys())
+        self.assertNotIn('slaves', repo_list[0].keys())
 
     @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

@@ -215,21 +215,25 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         r = await super().save(*args, **kwargs)
         return r
 
-    async def to_dict(self):
-        """Returns a dict representation of the object."""
-        slaves = await self.slaves
+    async def to_dict(self, short=False):
+        """Returns a dict representation of the object.
+
+        :param short: Indicates if the returned dict has only basic information
+        """
         my_dict = {'id': str(self.id), 'name': self.name, 'url': self.url,
                    'full_name': self.full_name,
-                   'external_full_name': self.external_full_name,
-                   'update_seconds': self.update_seconds,
                    'vcs_type': self.vcs_type,
-                   'fetch_url': self.fetch_url,
-                   'branches': [b.to_dict() for b in self.branches],
-                   'slaves': [s.to_dict(True) for s in slaves],
                    'enabled': self.enabled,
-                   'parallel_builds': self.parallel_builds,
-                   'clone_status': self.clone_status,
-                   'envvars': self.envvars}
+                   'clone_status': self.clone_status}
+        if not short:
+            slaves = await self.slaves
+            my_dict.update({'external_full_name': self.external_full_name,
+                            'update_seconds': self.update_seconds,
+                            'fetch_url': self.fetch_url,
+                            'branches': [b.to_dict() for b in self.branches],
+                            'slaves': [s.to_dict(id_as_str=True) for s in slaves],
+                            'parallel_builds': self.parallel_builds,
+                            'envvars': self.envvars})
 
         return my_dict
 

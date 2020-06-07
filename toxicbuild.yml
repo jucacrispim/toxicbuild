@@ -10,6 +10,7 @@ builders:
       - master
       - 'feature-*'
       - 'bug-*'
+      - 'refactor-*'
 
     envvars:
       ENV: ci
@@ -56,6 +57,7 @@ builders:
       - master
       - 'feature-*'
       - 'bug-*'
+      - 'refactor-*'
 
     triggered_by:
       - builder_name: python

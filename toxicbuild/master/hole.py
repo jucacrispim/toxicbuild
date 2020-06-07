@@ -417,7 +417,7 @@ class HoleHandler:
         repo_list = []
         async for repo in repos:
 
-            repo_dict = await self._get_repo_dict(repo)
+            repo_dict = await self._get_repo_dict(repo, short=True)
             repo_list.append(repo_dict)
 
         return {'repo-list': repo_list}
@@ -853,10 +853,10 @@ class HoleHandler:
 
         return last_buildset_dict
 
-    async def _get_repo_dict(self, repo):
+    async def _get_repo_dict(self, repo, short=False):
         """Returns a dictionary for a given repository"""
 
-        repo_dict = await repo.to_dict()
+        repo_dict = await repo.to_dict(short=short)
         last_buildset_dict = await self._get_last_buildset_info(repo)
         repo_dict['last_buildset'] = last_buildset_dict
 

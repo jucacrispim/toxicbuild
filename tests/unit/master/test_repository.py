@@ -49,6 +49,13 @@ class RepositoryTest(TestCase):
     async def test_to_dict(self):
         d = await self.repo.to_dict()
         self.assertTrue(d['id'])
+        self.assertIn('slaves', d)
+
+    @async_test
+    async def test_to_dict_short(self):
+        d = await self.repo.to_dict(short=True)
+        self.assertTrue(d['id'])
+        self.assertNotIn('slaves', d)
 
     @patch.object(repository, 'notifications', AsyncMagicMock(
         spec=repository.notifications))
