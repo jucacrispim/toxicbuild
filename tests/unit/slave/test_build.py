@@ -287,3 +287,11 @@ class BuildStepTest(TestCase):
         status = yield from step.execute(cwd='.')
         self.assertEqual(status['status'], 'exception')
         yield from asyncio.sleep(1)
+
+    @async_test
+    def test_step_timeout_warning_on_fail(self):
+        step = build.BuildStep(name='test', command='sleep 1', timeout=0.5,
+                               warning_on_fail=True)
+        status = yield from step.execute(cwd='.')
+        self.assertEqual(status['status'], 'warning')
+        yield from asyncio.sleep(1)

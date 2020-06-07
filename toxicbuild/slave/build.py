@@ -330,15 +330,15 @@ class BuildStep:
                                               out_fn=out_fn, **envvars)
             status = 'success'
         except ExecCmdError as e:
+            status = 'fail'
             output = e.args[0]
-            if self.warning_on_fail:
-                status = 'warning'
-            else:
-                status = 'fail'
         except asyncio.TimeoutError:
             status = 'exception'
             output = '{} has timed out in {} seconds'.format(self.command,
                                                              self.timeout)
+
+        if self.warning_on_fail and status in ['fail', 'exception']:
+            status = 'warning'
 
         step_status['status'] = status
         step_status['output'] = output
