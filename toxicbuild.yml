@@ -82,6 +82,7 @@ builders:
       - name: Selenium tests
         command: docker-compose -f ops/docker/docker-compose.yml up --no-color selenium-tests
         timeout: 45
+        warning_on_fail: true
 
       - name: Selenium integration tests
         command: docker-compose -f ops/docker/docker-compose.yml up --no-color selenium-integration-tests
