@@ -23,7 +23,17 @@ def step_impl(context):
 @then('he sees the login page')  # noqa f401
 def step_impl(context):
     browser = context.browser
-    el = browser.find_element_by_id('inputUsername')
+
+    def fn():
+        try:
+            el = browser.find_element_by_id('inputUsername')
+        except Exception:
+            el = None
+
+        return el
+
+    el = browser.wait_element_become_present(fn)
+
     assert el
 
 
