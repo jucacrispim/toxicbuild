@@ -34,6 +34,7 @@
       - "toxicbuild/js/notification.js"
       - "toxicbuild/js/ui_settings.js"
       - "toxicbuild/js/user.js"
+      - "toxicbuild/js/terminal.js"
 
     # stylesheets
     #

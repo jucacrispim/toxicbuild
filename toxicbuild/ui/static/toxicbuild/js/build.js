@@ -164,7 +164,6 @@ class BuildStepDetailsView extends Backbone.View{
     let self = this;
 
     this.directive = {'.step-status': 'status',
-		      '.step-output': 'output',
 		      '.step-started': 'started',
 		      '.step-total-time': 'total_time',
 		      '.step-command': 'command'};
@@ -176,6 +175,7 @@ class BuildStepDetailsView extends Backbone.View{
     this.container_selector = '.step-details-container';
     this.container = null;
     this._compiled_html = null;
+    this.term = null;
 
     this._scroll = false;
 
@@ -196,7 +196,6 @@ class BuildStepDetailsView extends Backbone.View{
       status: status_translation,
       original_status: status,
       started: this.model.get('started'),
-      output: this.model.get('output'),
       total_time: this.model.get('total_time'),
       command: this.model.get('command'),
     };
@@ -217,7 +216,7 @@ class BuildStepDetailsView extends Backbone.View{
     }
 
     this.setSetpOutput(data.output);
-    $('.step-output', this._compiled_html).append(data.output);
+    this.term.write(data.output);
 
     if (this._scroll){
       utils.scrollToBottom();
@@ -265,6 +264,14 @@ class BuildStepDetailsView extends Backbone.View{
       self._scroll = true;
     });
 
+    this.renderTerminal();
+  }
+
+  renderTerminal(){
+    let el = document.getElementsByClassName('step-output')[0];
+    this.term = new Terminal(el);
+    let output = this.model.get('output');
+    this.term.write(output);
   }
 
 
@@ -284,7 +291,6 @@ class BuildDetailsView extends BaseBuildDetailsView{
     let self = this;
 
     this.directive = {'.build-status': 'status',
-		      '.build-output': 'output',
 		      '.build-started': 'started',
 		      '.builder-name': 'builder_name',
 		      '.repo-name': 'repo_name',
@@ -300,6 +306,7 @@ class BuildDetailsView extends BaseBuildDetailsView{
     this.compiled_template = null;
     this.container_selector = '.build-details-container';
     this.container = null;
+    this.term = null;
 
     this._scroll = false;
 
@@ -379,12 +386,11 @@ class BuildDetailsView extends BaseBuildDetailsView{
       return false;
     }
 
-    let output_el = $('.build-output');
     let output = output_queue.shift();
     while (output){
       let output_line = output.output;
       this.setOutput(output_line);
-      output_el.append(output_line);
+      this.term.write(output_line);
       output = output_queue.shift();
     }
 
@@ -410,7 +416,6 @@ class BuildDetailsView extends BaseBuildDetailsView{
     let command = this.model.escape('command');
     let status = this.model.escape('status');
     let status_translation = i18n(status);
-    let output = this.model.escape('output');
     let started = this.model.get('started');
     let total_time = this.model.get('total_time');
     let repo_name = _.escape(this.model.get('repository').name);
@@ -419,7 +424,7 @@ class BuildDetailsView extends BaseBuildDetailsView{
     let commit_branch = this.model.escape('commit_branch');
     let build_number = this.model.get('number');
     let commit_author = this.model.escape('commit_author');
-    return {command: command, status: status_translation, output: output,
+    return {command: command, status: status_translation,
 	    'original_status': status,
 	    started: started, total_time: total_time,
 	    build_number: build_number,
@@ -477,6 +482,14 @@ class BuildDetailsView extends BaseBuildDetailsView{
     $('.obj-details-buttons-container', compiled).show();
     this.container = $(this.container_selector);
     this.container.html(compiled);
+    this.renderTerminal();
+  }
+
+  renderTerminal(){
+    let el = document.getElementsByClassName('build-output')[0];
+    this.term = new Terminal(el);
+    let output = this.model.get('output');
+    this.term.write(output);
   }
 
 }

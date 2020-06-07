@@ -131,11 +131,12 @@ describe('BuildStepDetailsView', function(){
     spyOn($.fn, 'append');
     spyOn(utils, 'scrollToBottom');
     let data = {'uuid': 'a-uuid'};
+    this.view.renderTerminal();
     this.view.step_uuid = 'a-uuid';
     this.view._scroll = false;
     let r = this.view._addStepOutput(data);
     expect(r).toBe(true);
-    expect($.fn.append).toHaveBeenCalled();
+    expect(this.view.term.readAll().length > 0).toBe(true);
     expect(utils.scrollToBottom).not.toHaveBeenCalled();
   });
 
@@ -144,10 +145,11 @@ describe('BuildStepDetailsView', function(){
     spyOn(utils, 'scrollToBottom');
     let data = {'uuid': 'a-uuid'};
     this.view.step_uuid = 'a-uuid';
+    this.view.renderTerminal();
     this.view._scroll = true;
     let r = this.view._addStepOutput(data);
+    expect(this.view.term.readAll().length > 0).toBe(true);
     expect(r).toBe(true);
-    expect($.fn.append).toHaveBeenCalled();
     expect(utils.scrollToBottom).toHaveBeenCalled();
   });
 
@@ -269,6 +271,7 @@ describe('BuildDetailsViewTest', function(){
 
   it('test-addStepOutput-ok', function(){
     let step_uuid = 'some-uuid';
+    this.view.renderTerminal();
     this.view._output_queue['some-uuid'] = [{output: 'some thing'}];
     this.view._started_steps.push(step_uuid);
     let r = this.view._addStepOutput(step_uuid);
