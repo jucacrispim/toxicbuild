@@ -336,6 +336,7 @@ class PollerClientTest(TestCase):
 
     @async_test
     async def test_poll_repo_no_branches_conf(self):
+        self.client.request2server.return_value = {}
         await self.client.poll_repo()
         called = self.client.request2server.call_args[0][1]
 
@@ -343,6 +344,7 @@ class PollerClientTest(TestCase):
 
     @async_test
     async def test_poll_repo(self):
+        self.client.request2server.return_value = {}
         await self.client.poll_repo(
             branches_conf={'master': {'notify_only_latest': True}})
         called = self.client.request2server.call_args[0][1]

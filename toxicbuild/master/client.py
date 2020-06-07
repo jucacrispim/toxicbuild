@@ -182,10 +182,12 @@ class PollerClient(BaseToxicClient):
             'external': external,
             'conffile': self.repo.config_filename,
         }
-        self.log('Updating code with url {}'.format(self.repo.get_url()),
+        url = self.repo.get_url()
+        self.log('Updating code with url {}'.format(url),
                  level='debug')
         token = settings.POLLER_TOKEN
         r = await self.request2server('poll', body, token)
+        self.log(f'Update for {url} finished with {r}', level='debug')
         return r
 
 

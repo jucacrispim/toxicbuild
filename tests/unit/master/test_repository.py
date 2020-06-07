@@ -240,7 +240,7 @@ class RepositoryTest(TestCase):
                  'commit_date': '4 04 25 23:49:19 2019 +0000',
                  'author': 'me',
                  'title': 'zhe-commit'}],
-                'clone_status': 'success',
+                'clone_status': 'clone-exception',
                 'with_clone': True}))))
     @patch.object(repository.BuildManager, 'add_builds', AsyncMagicMock(
         spec=repository.BuildManager.add_builds))
@@ -249,6 +249,8 @@ class RepositoryTest(TestCase):
     @async_test
     async def test_update_code_with_clone(self):
         await self.repo.update_code()
+        await self.repo.reload()
+        self.assertEqual(self.repo.clone_status, 'clone-exception')
         self.assertTrue(repository.BuildManager.add_builds.called)
         self.assertTrue(repository.ui_notifications.publish.called)
 

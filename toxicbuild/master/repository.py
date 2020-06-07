@@ -386,7 +386,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             ret = await client.poll_repo(branches_conf=repo_branches,
                                          external=external)
 
-        self.clone_status = ret['clone_status']
         if ret['revisions']:
             revs = []
             for rinfo in ret['revisions']:
@@ -399,10 +398,11 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             await self.build_manager.add_builds(revs)
 
         if ret['with_clone']:
+            self.clone_status = ret['clone_status']
+            await self.save()
             status_msg = {'repository_id': str(self.id),
                           'old_status': 'cloning',
                           'new_status': self.clone_status}
-
             await self._notify_status_changed(status_msg)
 
     async def add_slave(self, slave):
