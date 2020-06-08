@@ -227,13 +227,15 @@ class Repository(OwnedDocument, utils.LoggerMixin):
                    'clone_status': self.clone_status}
         if not short:
             slaves = await self.slaves
-            my_dict.update({'external_full_name': self.external_full_name,
-                            'update_seconds': self.update_seconds,
-                            'fetch_url': self.fetch_url,
-                            'branches': [b.to_dict() for b in self.branches],
-                            'slaves': [s.to_dict(id_as_str=True) for s in slaves],
-                            'parallel_builds': self.parallel_builds,
-                            'envvars': self.envvars})
+            my_dict.update(
+                {'external_full_name': self.external_full_name,
+                 'update_seconds': self.update_seconds,
+                 'fetch_url': self.fetch_url,
+                 'branches': [b.to_dict() for b in self.branches],
+                 'slaves': [s.to_dict(id_as_str=True) for s in slaves],
+                 'parallel_builds': self.parallel_builds,
+                 'envvars': self.envvars}
+            )
 
         return my_dict
 

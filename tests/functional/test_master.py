@@ -177,7 +177,7 @@ class ToxicMasterTest(BaseFunctionalTest):
             repos = yield from client.request2server('repo-list', {})
 
         self.assertEqual(len(repos), 1)
-        self.assertEqual(len(repos[0]['slaves']), 1)
+        self.assertTrue(repos[0]['url'])
 
     @async_test
     def test_05_repo_add_slave(self):
