@@ -835,19 +835,16 @@ class HoleHandler:
             started = datetime2string(last_buildset.started) \
                 if last_buildset.started else ''
 
-            totaltime = format_timedelta(
-                timedelta(seconds=last_buildset.total_time)) \
-                if last_buildset.finished else ''
-
             commit_date = datetime2string(last_buildset.commit_date)
 
             last_buildset_dict = {
                 'status': status,
-                'total_time': totaltime,
-                'started': started,
                 'commit': last_buildset.commit,
-                'commit_date': commit_date,
-                'title': last_buildset.title}
+                'title': last_buildset.title,
+                'total_time': last_buildset.total_time,
+                'started': started,
+                'commit_date': commit_date
+            }
         else:
             last_buildset_dict = {}
 

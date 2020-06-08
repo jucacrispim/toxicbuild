@@ -86,6 +86,15 @@ class LatestBuildSet(EmbeddedDocument):
     title = StringField()
     """The commit title"""
 
+    started = DateTimeField()
+    """When the buildset started"""
+
+    total_time = IntField()
+    """Total time in seconds spent by the buildset"""
+
+    commit_date = DateTimeField()
+    """Date of the commit"""
+
 
 class Repository(OwnedDocument, utils.LoggerMixin):
     """Repository is where you store your code and where toxicbuild
@@ -493,7 +502,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
     async def set_latest_buildset(self, buildset):
         lb = LatestBuildSet(status=buildset.status, commit=buildset.commit,
-                            title=buildset.title)
+                            title=buildset.title, started=buildset.started,
+                            total_time=buildset.total_time,
+                            commit_date=buildset.commit_date)
         self.latest_buildset = lb
         await self.save()
 
