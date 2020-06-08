@@ -24,7 +24,6 @@
 
 import asyncio
 from asyncio import ensure_future
-from datetime import timedelta
 import inspect
 import signal
 import ssl
@@ -35,7 +34,7 @@ from mongoengine.errors import NotUniqueError
 from toxicbuild.common.exchanges import ui_notifications
 from toxicbuild.core import BaseToxicProtocol
 from toxicbuild.core.utils import (LoggerMixin, datetime2string,
-                                   format_timedelta, now, localtime2utc)
+                                   now, localtime2utc)
 from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder, Build, BuildStep
 from toxicbuild.master.consumers import RepositoryMessageConsumer
