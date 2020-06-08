@@ -1129,6 +1129,7 @@ class BuildManager(LoggerMixin):
             buildset_started.send(str(self.repository.id), buildset=buildset)
             await buildset.save()
             await buildset.notify('buildset-started', status='running')
+            await self.repository.set_latest_buildset(buildset)
 
     async def _set_finished_for_buildset(self, buildset):
         # reload it so we get the right info about builds and status
@@ -1144,6 +1145,7 @@ class BuildManager(LoggerMixin):
             await buildset.update_status()
             buildset_finished.send(str(self.repository.id), buildset=buildset)
             await buildset.notify('buildset-finished')
+            await self.repository.set_latest_buildset(buildset)
             self.log('Buildset {} finished'.format(buildset.id))
 
     async def _set_slave(self, build):

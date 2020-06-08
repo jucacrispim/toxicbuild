@@ -1263,9 +1263,11 @@ class BuildManagerTest(TestCase):
         buildset.save = asyncio.coroutine(lambda *a, **kw: save_mock())
         buildset.started = None
         buildset.notify = AsyncMagicMock()
+        self.manager.repository.set_latest_buildset = AsyncMagicMock()
         await self.manager._set_started_for_buildset(buildset)
         self.assertTrue(buildset.started)
         self.assertTrue(save_mock.called)
+        self.assertTrue(self.manager.repository.set_latest_buildset.called)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -1297,9 +1299,11 @@ class BuildManagerTest(TestCase):
         await self._create_test_data()
         self.buildset.started = now()
         await self.buildset.save()
+        self.manager.repository.set_latest_buildset = AsyncMagicMock()
         await self.manager._set_finished_for_buildset(self.buildset)
         bs = await type(self.buildset).objects.get(id=self.buildset.id)
         self.assertTrue(bs.finished)
+        self.assertTrue(self.manager.repository.set_latest_buildset.called)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -1316,8 +1320,10 @@ class BuildManagerTest(TestCase):
         self.buildset.finished = finished
         self.buildset.started = started
         await self.buildset.save()
+        self.manager.repository.set_latest_buildset = AsyncMagicMock()
         await self.manager._set_finished_for_buildset(self.buildset)
         self.assertTrue(self.buildset.finished is finished)
+        self.assertFalse(self.manager.repository.set_latest_buildset.called)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))
@@ -1334,9 +1340,11 @@ class BuildManagerTest(TestCase):
         await self._create_test_data()
         self.buildset.started = build.localtime2utc(just_now)
         await self.buildset.save()
+        self.manager.repository.set_latest_buildset = AsyncMagicMock()
         await self.manager._set_finished_for_buildset(self.buildset)
         bs = await type(self.buildset).objects.get(id=self.buildset.id)
         self.assertEqual(bs.total_time, 10)
+        self.assertTrue(self.manager.repository.set_latest_buildset.called)
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
         spec=build.BuildSet.notify))

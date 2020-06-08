@@ -828,7 +828,7 @@ class HoleHandler:
         return funcs
 
     async def _get_last_buildset_info(self, repo):
-        last_buildset = await repo.get_last_buildset()
+        last_buildset = await repo.get_lastest_buildset()
         if last_buildset:
             status = last_buildset.status
 

@@ -74,6 +74,19 @@ class RepositoryBranch(EmbeddedDocument):
                 'notify_only_latest': self.notify_only_latest}
 
 
+class LatestBuildSet(EmbeddedDocument):
+    """The most recent buildset in the repository."""
+
+    status = StringField()
+    """The buildset status"""
+
+    commit = StringField()
+    """The commit sha"""
+
+    title = StringField()
+    """The commit title"""
+
+
 class Repository(OwnedDocument, utils.LoggerMixin):
     """Repository is where you store your code and where toxicbuild
     looks for incomming changes."""
@@ -128,6 +141,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
     """Environment variables that are used in every build in this
     repository. It is a dictionary {'VAR': 'VAL', ...}
     """
+
+    latest_buildset = EmbeddedDocumentField(LatestBuildSet)
+    """The most recent buildset for a repository."""
 
     meta = {
         'ordering': ['name'],
@@ -244,7 +260,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         status of the last buildset created for this repository that is
         not pending."""
 
-        last_buildset = await self.get_last_buildset()
+        last_buildset = await self.get_lastest_buildset()
 
         clone_statuses = ['cloning', 'clone-exception']
         if not last_buildset and self.clone_status in clone_statuses:
@@ -463,13 +479,23 @@ class Repository(OwnedDocument, utils.LoggerMixin):
 
         await self.update(pull__branches__name=branch_name)
 
-    async def get_last_buildset(self):
+    async def get_lastest_buildset(self):
+        if self.latest_buildset:
+            return self.latest_buildset
         bad_statuses = [BuildSet.PENDING, BuildSet.NO_BUILDS,
                         BuildSet.NO_CONFIG]
         last_buildset = await BuildSet.objects(
             repository=self, status__not__in=bad_statuses).order_by(
             '-created').first()
+        if last_buildset:
+            await self.set_latest_buildset(last_buildset)
         return last_buildset
+
+    async def set_latest_buildset(self, buildset):
+        lb = LatestBuildSet(status=buildset.status, commit=buildset.commit,
+                            title=buildset.title)
+        self.latest_buildset = lb
+        await self.save()
 
     async def get_latest_revision_for_branch(self, branch):
         """ Returns the latest revision for a given branch
