@@ -489,16 +489,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await self.update(pull__branches__name=branch_name)
 
     async def get_lastest_buildset(self):
-        if self.latest_buildset:
-            return self.latest_buildset
-        bad_statuses = [BuildSet.PENDING, BuildSet.NO_BUILDS,
-                        BuildSet.NO_CONFIG]
-        last_buildset = await BuildSet.objects(
-            repository=self, status__not__in=bad_statuses).order_by(
-            '-created').first()
-        if last_buildset:
-            await self.set_latest_buildset(last_buildset)
-        return last_buildset
+        return self.latest_buildset
 
     async def set_latest_buildset(self, buildset):
         lb = LatestBuildSet(status=buildset.status, commit=buildset.commit,

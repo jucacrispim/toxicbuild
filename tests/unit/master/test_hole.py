@@ -1173,6 +1173,7 @@ class HoleHandlerTest(TestCase):
         self.repo.slaves = [self.slave]
 
         handler = hole.HoleHandler({}, 'action', MagicMock())
+        await self.repo.set_latest_buildset(self.buildset)
         repo_dict = await handler._get_repo_dict(self.repo)
 
         self.assertIn('id', repo_dict)
