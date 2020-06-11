@@ -564,6 +564,19 @@ class RepositoryRestHandler(ModelRestHandler):
         await repo.replace_envvars(**envvars)
         return {'repo-replace-envvars': 'replaced'}
 
+    @get('')
+    async def get_or_list(self):
+        if 'full_name' in self.query.keys():
+            self.query['repo_name_or_id'] = self.query['full_name']
+            del self.query['full_name']
+
+        r = await super().get_or_list()
+        return r
+
+    def _query_has_pk(self):
+        keys = self.query.keys()
+        return 'id' in keys or 'repo_name_or_id' in keys
+
 
 class NotificationRestHandler(ReadOnlyRestHandler):
     """Handler for enable/disable/update notifications for

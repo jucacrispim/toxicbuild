@@ -719,6 +719,31 @@ class RepositoryRestHandlerTest(TestCase):
         r = await self.handler.replace_envvars()
         self.assertTrue(r)
 
+    def test_query_has_pk(self):
+        self.handler.query = {'repo_name_or_id': 'bla/ble'}
+        has_pk = self.handler._query_has_pk()
+        self.assertTrue(has_pk)
+
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get, return_value=MagicMock()))
+    @async_test
+    async def test_get_or_list_full_name(self):
+        self.handler.query = {'full_name': 'bla'}
+        await self.handler.get_or_list()
+
+        self.assertIn('repo_name_or_id', self.handler.query)
+        self.assertTrue(self.handler.model.get.called)
+
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get, return_value=MagicMock()))
+    @async_test
+    async def test_get_or_list(self):
+        self.handler.query = {'id': 'bla'}
+        await self.handler.get_or_list()
+
+        self.assertNotIn('repo_name_or_id', self.handler.query)
+        self.assertTrue(self.handler.model.get.called)
+
 
 class SlaveRestHandlerTest(TestCase):
 
