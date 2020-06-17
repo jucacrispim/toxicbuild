@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-
+import asyncio
 from .build import BuildSet, Builder
 
 
@@ -48,8 +48,11 @@ class Waterfall:
         self.buildsets = await self.buildsets[0:10].to_list()
         ids = [b._data['builder'].id for bs in self.buildsets
                for b in bs.builds]
-        self.builders = await Builder.objects.filter(id__in=ids).to_list()
-        self.branches = await self.repo.get_known_branches()
+        futs = [Builder.objects.filter(id__in=ids).to_list(),
+                self.repo.get_known_branches()]
+        r = await asyncio.gather(*futs)
+        self.builders = r[0]
+        self.branches = r[1]
 
     async def to_dict(self):
         r = {
