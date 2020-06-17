@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2020 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -38,9 +38,11 @@ from toxicbuild.core.utils import (LoggerMixin, datetime2string,
 from toxicbuild.master import settings
 from toxicbuild.master.build import BuildSet, Builder, Build, BuildStep
 from toxicbuild.master.consumers import RepositoryMessageConsumer
-from toxicbuild.master.repository import Repository
 from toxicbuild.master.exceptions import (UIFunctionNotFound,
                                           OwnerDoesNotExist, NotEnoughPerms)
+from toxicbuild.master.repository import Repository
+from toxicbuild.master.waterfall import Waterfall
+
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.signals import (step_started, step_finished,
                                        build_started, build_finished,
@@ -801,10 +803,15 @@ class HoleHandler:
                 bdict['builds'].append(build_dict)
 
             buildsets_list.append(bdict)
-
         builder_dict = await builder.to_dict()
         builder_dict['buildsets'] = buildsets_list
         return {'builder-show': builder_dict}
+
+    async def waterfall_get(self, repo_name_or_id, branch=None):
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        w = await Waterfall.get(repo, branch=branch)
+        return {'waterfall-get': await w.to_dict()}
 
     def list_funcs(self):
         """ Lists the functions available for user interfaces. """

@@ -537,7 +537,7 @@ class WaterfallRestHandlerTest(TestCase):
 
     @async_test
     async def setUp(self):
-        self.model = web.BuildSetInterface
+        self.model = web.WaterfallInterface
         application, request = MagicMock(), MagicMock()
         request.body = web.json.dumps({})
         application.ui_methods = {}
@@ -547,18 +547,12 @@ class WaterfallRestHandlerTest(TestCase):
         self.handler._get_user_from_cookie = MagicMock()
         await self.handler.async_prepare()
 
-    @patch.object(web.BuildSetInterface, 'list',
-                  AsyncMagicMock(spec=web.BuildSetInterface.list))
-    @patch.object(web.RepositoryInterface, 'list_branches',
-                  AsyncMagicMock(spec=web.RepositoryInterface.list_branches))
-    @patch.object(web.WaterfallRestHandler, '_get_builders', AsyncMagicMock(
-        spec=web.WaterfallRestHandler._get_builders))
+    @patch.object(web.WaterfallInterface, 'get',
+                  AsyncMagicMock(spec=web.WaterfallInterface.get))
     @async_test
     async def test_get_waterfall(self):
-        web.BuildSetInterface.list.return_value = [
-            web.BuildSetInterface(MagicMock(), {})]
-        web.WaterfallRestHandler._get_builders.return_value = [
-            web.BuilderInterface(MagicMock(), {})]
+        web.WaterfallInterface.get.return_value = web.WaterfallInterface(
+            MagicMock(), {})
         self.handler.query = {'repo_name': 'some/repo'}
         r = await self.handler.get_waterfall()
         self.assertTrue(r)
@@ -567,21 +561,6 @@ class WaterfallRestHandlerTest(TestCase):
     async def test_get_waterfall_no_repo_name(self):
         with self.assertRaises(web.HTTPError):
             await self.handler.get_waterfall()
-
-    @patch.object(web.BuilderInterface, 'list', AsyncMagicMock(
-        spec=web.BuilderInterface.list))
-    @async_test
-    async def test_get_builders(self):
-        buildsets = [web.BuildSetInterface(
-            MagicMock(), ordered_kwargs={'id': 'someid',
-                                         'builds': [
-                                             {'builder': {'id': 'some-id'}}]})]
-
-        await self.handler._get_builders(buildsets)
-
-        called = web.BuilderInterface.list.call_args[1]
-        expected = {'id__in': ['some-id']}
-        self.assertEqual(called, expected)
 
 
 class RepositoryRestHandlerTest(TestCase):

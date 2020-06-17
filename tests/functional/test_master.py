@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2020 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 from unittest.mock import patch, Mock
 from toxicbuild.common.exchanges import scheduler_action, conn
 from toxicbuild.master import settings
@@ -55,25 +54,23 @@ class DummyUIClient(DummyMasterHoleClient):
         resp = await self.request2server(action, body)
         return resp
 
-    @asyncio.coroutine
-    def get_stream(self):
+    async def get_stream(self):
 
         action = 'stream'
         self.write({'action': action,
                     'body': {'event_types': STREAM_EVENT_TYPES}})
 
-        resp = yield from self.get_response()
+        resp = await self.get_response()
         while resp:
             yield resp
-            resp = yield from self.get_response()
+            resp = await self.get_response()
 
-    @asyncio.coroutine
-    def wait_clone(self):
-        yield from self.write({'action': 'stream', 'token': '123',
-                               'body': {'event_types': STREAM_EVENT_TYPES},
-                               'user_id': str(self.user.id)})
+    async def wait_clone(self):
+        await self.write({'action': 'stream', 'token': '123',
+                          'body': {'event_types': STREAM_EVENT_TYPES},
+                          'user_id': str(self.user.id)})
         while True:
-            r = yield from self.get_response()
+            r = await self.get_response()
             body = r['body'] if r else {}
             try:
                 event = body['event_type']
@@ -82,8 +79,7 @@ class DummyUIClient(DummyMasterHoleClient):
             except KeyError:
                 pass
 
-    @asyncio.coroutine
-    def enable_plugin(self):
+    async def enable_plugin(self):
         action = 'repo-enable-plugin'
         body = {'repo_name_or_id': 'toxic/test-repo',
                 'plugin_name': 'custom-webhook',
@@ -92,23 +88,21 @@ class DummyUIClient(DummyMasterHoleClient):
                 'branches': ['master'],
                 'statuses': ['running', 'fail', 'success']}
 
-        resp = yield from self.request2server(action, body)
+        resp = await self.request2server(action, body)
         return resp
 
-    @asyncio.coroutine
-    def disable_plugin(self):
+    async def disable_plugin(self):
         action = 'repo-disable-plugin'
         body = {'repo_name_or_id': 'toxic/test-repo',
                 'plugin_name': 'slack-notification'}
 
-        resp = yield from self.request2server(action, body)
+        resp = await self.request2server(action, body)
         return resp
 
 
-@asyncio.coroutine
-def get_dummy_client(user):
+async def get_dummy_client(user):
     dc = DummyUIClient(user, settings.HOLE_ADDR, settings.HOLE_PORT)
-    yield from dc.connect()
+    await dc.connect()
     return dc
 
 
@@ -149,107 +143,107 @@ class ToxicMasterTest(BaseFunctionalTest):
         await Repository.objects(url=None).delete()
 
     @async_test
-    def test_01_create_slave(self):
-        with (yield from get_dummy_client(self.user)) as client:
-            response = yield from client.create_slave()
+    async def test_01_create_slave(self):
+        with (await get_dummy_client(self.user)) as client:
+            response = await client.create_slave()
         self.assertTrue(response)
 
     @async_test
-    def test_02_list_slaves(self):
-        with (yield from get_dummy_client(self.user)) as client:
-            slaves = yield from client.request2server('slave-list', {})
+    async def test_02_list_slaves(self):
+        with (await get_dummy_client(self.user)) as client:
+            slaves = await client.request2server('slave-list', {})
 
         self.assertEqual(len(slaves), 1)
 
     @async_test
-    def test_03_create_repo(self):
-        with (yield from get_dummy_client(self.user)) as client:
-            response = yield from client.create_repo()
+    async def test_03_create_repo(self):
+        with (await get_dummy_client(self.user)) as client:
+            response = await client.create_repo()
 
-        with (yield from get_dummy_client(self.user)) as client:
-            yield from client.wait_clone()
+        with (await get_dummy_client(self.user)) as client:
+            await client.wait_clone()
 
         self.assertTrue(response)
 
     @async_test
-    def test_04_list_repos(self):
-        with (yield from get_dummy_client(self.user)) as client:
-            repos = yield from client.request2server('repo-list', {})
+    async def test_04_list_repos(self):
+        with (await get_dummy_client(self.user)) as client:
+            repos = await client.request2server('repo-list', {})
 
         self.assertEqual(len(repos), 1)
         self.assertTrue(repos[0]['url'])
 
     @async_test
-    def test_05_repo_add_slave(self):
-        with (yield from get_dummy_client(self.user)) as client:
-            yield from client.request2server('slave-add',
-                                             {'slave_name': 'test-slave2',
-                                              'slave_host': 'localhost',
-                                              'slave_port': 1234,
-                                              'owner_id': str(self.user.id),
-                                              'slave_token': '123'})
-        with (yield from get_dummy_client(self.user)) as client:
-            resp = yield from client.request2server(
+    async def test_05_repo_add_slave(self):
+        with (await get_dummy_client(self.user)) as client:
+            await client.request2server('slave-add',
+                                        {'slave_name': 'test-slave2',
+                                         'slave_host': 'localhost',
+                                         'slave_port': 1234,
+                                         'owner_id': str(self.user.id),
+                                         'slave_token': '123'})
+        with (await get_dummy_client(self.user)) as client:
+            resp = await client.request2server(
                 'repo-add-slave',
                 {'repo_name_or_id': 'toxic/test-repo',
                  'slave_name_or_id': 'toxic/test-slave2'})
         self.assertTrue(resp)
 
     @async_test
-    def test_06_repo_remove_slave(self):
-        with (yield from get_dummy_client(self.user)) as client:
-            resp = yield from client.request2server(
+    async def test_06_repo_remove_slave(self):
+        with (await get_dummy_client(self.user)) as client:
+            resp = await client.request2server(
                 'repo-remove-slave',
                 {'repo_name_or_id': 'toxic/test-repo',
                  'slave_name_or_id': 'toxic/test-slave2'})
         self.assertTrue(resp)
 
     @async_test
-    def test_07_slave_get(self):
-        with (yield from get_dummy_client(self.user)) as client:
-            resp = yield from client.request2server('slave-get',
-                                                    {'slave_name_or_id':
-                                                     'toxic/test-slave2'})
+    async def test_07_slave_get(self):
+        with (await get_dummy_client(self.user)) as client:
+            resp = await client.request2server('slave-get',
+                                               {'slave_name_or_id':
+                                                'toxic/test-slave2'})
         self.assertTrue(resp)
 
     @async_test
-    def test_08_repo_get(self):
-        with (yield from get_dummy_client(self.user)) as client:
-            resp = yield from client.request2server('repo-get',
-                                                    {'repo_name_or_id':
-                                                     'toxic/test-repo'})
+    async def test_08_repo_get(self):
+        with (await get_dummy_client(self.user)) as client:
+            resp = await client.request2server('repo-get',
+                                               {'repo_name_or_id':
+                                                'toxic/test-repo'})
         self.assertTrue(resp)
 
     @async_test
-    def test_09_slave_remove(self):
-        with (yield from get_dummy_client(self.user)) as client:
-            resp = yield from client.request2server('slave-remove',
-                                                    {'slave_name_or_id':
-                                                     'toxic/test-slave2'})
+    async def test_09_slave_remove(self):
+        with (await get_dummy_client(self.user)) as client:
+            resp = await client.request2server('slave-remove',
+                                               {'slave_name_or_id':
+                                                'toxic/test-slave2'})
         self.assertTrue(resp)
 
     @async_test
-    def test_10_repo_start_build(self):
+    async def test_10_repo_start_build(self):
         # we need to wait so we have time to clone and create revs
-        with (yield from get_dummy_client(self.user)) as client:
-            yield from client.start_build()
+        with (await get_dummy_client(self.user)) as client:
+            await client.start_build()
 
-        with (yield from get_dummy_client(self.user)) as client:
-            response = yield from client.wait_build_complete()
+        with (await get_dummy_client(self.user)) as client:
+            response = await client.wait_build_complete()
 
         self.assertTrue(response['body']['finished'])
 
     @async_test
-    def test_11_stream_step_output(self):
+    async def test_11_stream_step_output(self):
 
-        with (yield from get_dummy_client(self.user)) as client:
-            yield from client.write({
+        with (await get_dummy_client(self.user)) as client:
+            await client.write({
                 'action': 'stream', 'token': '123',
                 'body': {'event_types': STREAM_EVENT_TYPES},
                 'user_id': str(self.user.id)})
 
-            with (yield from get_dummy_client(self.user)) as bclient:
-                yield from bclient.start_build()
+            with (await get_dummy_client(self.user)) as bclient:
+                await bclient.start_build()
 
             steps = []
             # this ugly part here it to wait for the right message
@@ -257,7 +251,7 @@ class ToxicMasterTest(BaseFunctionalTest):
             # the test will fail.
 
             while True:
-                response = yield from client.get_response()
+                response = await client.get_response()
                 body = response['body'] if response else {}
                 if body.get('event_type') == 'step_output_info':
                     steps.append(body)
@@ -286,14 +280,23 @@ class ToxicMasterTest(BaseFunctionalTest):
             r = await client.remove_user()
         self.assertEqual(r, 'ok')
 
+    @async_test
+    async def test_15_waterfall_get(self):
+        data = {'repo_name_or_id': 'toxic/test-repo'}
+        with (await get_dummy_client(self.user)) as client:
+            resp = await client.request2server('waterfall-get', data)
+        self.assertTrue(resp)
+        self.assertTrue(resp['buildsets'])
+        self.assertTrue(resp['builders'])
+        self.assertTrue(resp['branches'])
+
     @classmethod
-    @asyncio.coroutine
-    def _delete_test_data(cls):
-        with (yield from get_dummy_client(cls.user)) as client:
-            yield from client.request2server('slave-remove',
-                                             {'slave_name_or_id':
-                                              'toxic/test-slave'})
-            yield from client.connect()
-            yield from client.request2server('repo-remove',
-                                             {'repo_name_or_id':
-                                              'toxic/test-repo'})
+    async def _delete_test_data(cls):
+        with (await get_dummy_client(cls.user)) as client:
+            await client.request2server('slave-remove',
+                                        {'slave_name_or_id':
+                                         'toxic/test-slave'})
+            await client.connect()
+            await client.request2server('repo-remove',
+                                        {'repo_name_or_id':
+                                         'toxic/test-repo'})

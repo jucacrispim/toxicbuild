@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2020 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -23,10 +23,12 @@ from unittest.mock import Mock, MagicMock, patch
 from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core import utils
 from toxicbuild.master import (repository, build, slave, users)
+
 from tests import async_test, AsyncMagicMock, create_autospec
+from .utils import RepoTestData
 
 
-class RepositoryTest(TestCase):
+class RepositoryTest(TestCase, RepoTestData):
 
     @async_test
     async def setUp(self):
@@ -716,70 +718,6 @@ class RepositoryTest(TestCase):
         await self.repo.reload()
 
         self.assertEqual(self.repo.envvars, {'BLE': 'OI'})
-
-    async def _create_db_revisions(self):
-        self.owner = users.User(email='zezinho@nada.co', password='123')
-        await self.owner.save()
-        self.repo = repository.Repository(
-            name='reponame', url="git@somewhere.com/project.git",
-            vcs_type='git', update_seconds=100, clone_status='ready',
-            owner=self.owner)
-        await self.repo.save()
-
-        await self.repo.save()
-        rep = self.repo
-        now = datetime.datetime.now()
-        self.builder = await build.Builder.create(name='builder0',
-                                                       repository=self.repo)
-        self.slave = await slave.Slave.create(name='slave',
-                                              host='localhost',
-                                              port=1234,
-                                              token='asdf',
-                                              owner=self.owner)
-        self.revs = []
-        self.repo.slaves = [self.slave]
-        await self.repo.save()
-        for r in range(2):
-            for branch in ['master', 'dev']:
-                rev = repository.RepositoryRevision(
-                    repository=rep, commit='123asdf{}'.format(str(r)),
-                    branch=branch,
-                    author='ze',
-                    title='commit {}'.format(r),
-                    config='language: python',
-                    commit_date=now + datetime.timedelta(r))
-
-                await rev.save()
-                self.revs.append(rev)
-
-        self.revision = repository.RepositoryRevision(
-            repository=self.repo,
-            branch='master',
-            commit='asdf',
-            author='j@d.com',
-            title='bla',
-            config='language: python',
-            commit_date=now)
-        await self.revision.save()
-        # creating another repo just to test the known branches stuff.
-        self.other_repo = repository.Repository(name='bla', url='/bla/bla',
-                                                update_seconds=300,
-                                                vcs_type='git',
-                                                owner=self.owner)
-        await self.other_repo.save()
-
-        for r in range(2):
-            for branch in ['b1', 'b2']:
-                rev = repository.RepositoryRevision(
-                    author='ze',
-                    title='commit {}'.format(r),
-                    repository=self.other_repo,
-                    commit='123asdf{}'.format(str(r)),
-                    branch=branch,
-                    config='language: python',
-                    commit_date=now + datetime.timedelta(r))
-
-                await rev.save()
 
 
 class RepositoryBranchTest(TestCase):

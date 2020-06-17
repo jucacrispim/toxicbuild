@@ -37,11 +37,17 @@ from toxicbuild.core.utils import (LoggerMixin, string2datetime,
                                    create_validation_string)
 from toxicbuild.ui import settings
 from toxicbuild.ui.connectors import StreamConnector
-from toxicbuild.common.interfaces import (RepositoryInterface, SlaveInterface,
-                                          UserInterface, BuildSetInterface,
-                                          BuilderInterface, BuildInterface,
-                                          BaseInterface, NotificationInterface,
-                                          StepInterface)
+from toxicbuild.common.interfaces import (
+    RepositoryInterface,
+    SlaveInterface,
+    UserInterface,
+    BuildSetInterface,
+    BuildInterface,
+    BaseInterface,
+    NotificationInterface,
+    StepInterface,
+    WaterfallInterface
+)
 from toxicbuild.common.utils import format_datetime
 from toxicbuild.ui.utils import (get_defaulte_locale_morsel,
                                  get_default_timezone_morsel)
@@ -448,25 +454,9 @@ class WaterfallRestHandler(ReadOnlyRestHandler):
             raise HTTPError(400)
 
         branch = self.query.get('branch')
-        repo = RepositoryInterface(
-            self.user, {'id': '', 'full_name': repo_name})
-        branches = await repo.list_branches()
-        buildsets = await self.model.list(self.user, repo_name_or_id=repo_name,
-                                          summary=False, branch=branch)
-        builders = await self._get_builders(buildsets)
-        r = {'builders': [b.to_dict(dtformat=self._dtformat,
-                                    tzname=self._tzname)
-                          for b in builders],
-             'buildsets': [b.to_dict(dtformat=self._dtformat,
-                                     tzname=self._tzname)
-                           for b in buildsets],
-             'branches': branches}
+        waterfall = await self.model.get(self.user, repo_name, branch)
+        r = waterfall.to_dict(dtformat=self._dtformat, tzname=self._tzname)
         return r
-
-    async def _get_builders(self, buildsets):
-        bids = [b.builder.id for bs in buildsets for b in bs.builds]
-        builders = await BuilderInterface.list(self.user, id__in=bids)
-        return builders
 
 
 class CookieAuthWaterfallHandler(CookieAuthHandlerMixin, WaterfallRestHandler):
@@ -1116,7 +1106,7 @@ step_api = URLSpec('/api/step/(.*)$',
 
 waterfall_api = URLSpec('/api/waterfall/(.*)$',
                         CookieAuthWaterfallHandler,
-                        {'model': BuildSetInterface,
+                        {'model': WaterfallInterface,
                          'cors_origins': cors_origins})
 
 api_app = PyroApplication(

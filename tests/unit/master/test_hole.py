@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2020 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -1139,6 +1139,12 @@ class HoleHandlerTest(TestCase):
 
         self.assertEqual(len(builder['buildsets']), 0)
 
+    @async_test
+    async def test_waterfall_get(self):
+        await self._create_test_data()
+        r = await self.handler.waterfall_get(str(self.repo.id))
+        self.assertTrue(r['waterfall-get'])
+
     def test_get_method_signature(self):
 
         def target(a, b='bla', c=None):
@@ -1260,8 +1266,6 @@ class HoleHandlerTest(TestCase):
 
             self.buildset.builds = builds
             await self.buildset.save()
-
-        await asyncio.sleep(0)
 
 
 @patch.object(repository, 'ui_notifications', AsyncMagicMock())

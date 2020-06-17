@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019-2020 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -782,7 +782,7 @@ class BuildSetInterface(BaseHoleInterface):
 
     @classmethod
     async def get(cls, requester, buildset_id):
-        """Returns an instance of BuildSet.
+        """Returns an instance of BuildSetInterface.
 
         :param buildset_id: The id of the buildset to get.
         """
@@ -791,3 +791,38 @@ class BuildSetInterface(BaseHoleInterface):
             buildset = await client.buildset_get(buildset_id=buildset_id)
 
         return cls(requester, buildset)
+
+
+class WaterfallInterface(BaseHoleInterface):
+
+    references = {'buildsets': BuildSetInterface,
+                  'builders': BuilderInterface}
+
+    @classmethod
+    async def get(cls, requester, repo_name_or_id, branch=None):
+        """Returns an instance of WaterfallInterface.
+
+        :param buildset_id: The name or id of a repository
+        :param branch: A branch name to filter the waterfall
+        """
+
+        with await cls.get_client(requester) as client:
+            waterfall = await client.waterfall_get(
+                repo_name_or_id=repo_name_or_id, branch=branch)
+
+        return cls(requester, waterfall)
+
+    def to_dict(self, *args, **kwargs):
+        """Returns a dictionary based in a WaterfallInterface object.
+
+        :param args: Positional arguments passed to
+          :meth:`~toxicbuild.common.interfaces.BaseInterface.to_dict`.
+        :param kwargs: Named arguments passed to
+          :meth:`~toxicbuild.common.interfaces.BaseInterface.to_dict`.
+        """
+        d = super().to_dict(*args, **kwargs)
+        d['buildsets'] = [b.to_dict(*args, **kwargs)
+                          for b in d.get('buildsets', [])]
+        d['builders'] = [b.to_dict(*args, **kwargs)
+                         for b in d.get('builders', [])]
+        return d

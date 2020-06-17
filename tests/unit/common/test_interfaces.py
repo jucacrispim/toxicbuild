@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019-2020 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -729,3 +729,48 @@ class StepInterfaceTest(TestCase):
         step = await interfaces.StepInterface.get(requester, 'a-uuid')
         self.assertTrue(client.buildstep_get.called)
         self.assertTrue(step)
+
+
+class WaterfallInterfaceTest(TestCase):
+
+    @patch.object(
+        interfaces.WaterfallInterface, 'get_client', lambda requester:
+        get_client_mock(
+            requester,
+            {'buildsets': [
+                {'id': 'sasdfasf',
+                 'started': '3 9 25 08:53:38 2017 -0000',
+                 'builds': [{'steps': [{'name': 'unit'}],
+                             'builder': {'name': 'some'}}]},
+                {'id': 'paopofe', 'builds': [{}]}],
+             'branches': ['master', 'dev'],
+             'builders': [{'id': 'sasdfasf', 'name': 'b0',
+                           'status': 'running'}]}))
+    @async_test
+    async def test_get(self):
+        requester = MagicMock()
+        waterfall = await interfaces.WaterfallInterface.get(
+            requester, 'some-repo-id')
+        self.assertTrue(waterfall.buildsets)
+
+    @patch.object(
+        interfaces.WaterfallInterface, 'get_client', lambda requester:
+        get_client_mock(
+            requester,
+            {'buildsets': [
+                {'id': 'sasdfasf',
+                 'started': '3 9 25 08:53:38 2017 -0000',
+                 'builds': [{'steps': [{'name': 'unit'}],
+                             'builder': {'name': 'some'}}]},
+                {'id': 'paopofe', 'builds': []}],
+             'branches': ['master', 'dev'],
+             'builders': [{'id': 'sasdfasf', 'name': 'b0',
+                           'status': 'running'}]}))
+    @async_test
+    async def test_to_dict(self):
+        requester = MagicMock()
+        waterfall = await interfaces.WaterfallInterface.get(
+            requester, 'some-repo-id')
+        d = waterfall.to_dict('%s')
+        self.assertTrue(d['builders'])
+        self.assertTrue(d['buildsets'])
