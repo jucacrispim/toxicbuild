@@ -18,7 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
-from .build import BuildSet
+from .build import BuildSet, Builder
 
 
 class Waterfall:
@@ -46,8 +46,9 @@ class Waterfall:
             self.buildsets = self.buildsets.filter(branch=self.branch)
 
         self.buildsets = await self.buildsets[0:10].to_list()
-        self.builders = [await b.builder for bs in self.buildsets
-                         for b in bs.builds]
+        ids = [b._data['builder'].id for bs in self.buildsets
+               for b in bs.builds]
+        self.builders = await Builder.objects.filter(id__in=ids).to_list()
         self.branches = await self.repo.get_known_branches()
 
     async def to_dict(self):
