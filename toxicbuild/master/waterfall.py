@@ -40,7 +40,8 @@ class Waterfall:
         return waterfall
 
     async def load(self):
-        self.buildsets = BuildSet.objects.filter(repository=self.repo)
+        self.buildsets = BuildSet.objects.filter(
+            repository=self.repo).order_by('-created')
         if self.branch:
             self.buildsets = self.buildsets.filter(branch=self.branch)
 

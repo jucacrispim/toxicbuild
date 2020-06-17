@@ -19,7 +19,7 @@
 from unittest import TestCase
 from unittest.mock import patch
 
-from toxicbuild.master import waterfall
+from toxicbuild.master import waterfall, hole, build
 from toxicbuild.master.build import BuildSet, Build
 
 from tests import async_test, AsyncMagicMock
@@ -32,6 +32,14 @@ class WaterfallTest(TestCase, RepoTestData):
     @async_test
     async def setUp(self):
         await self._create_db_revisions()
+
+    @async_test
+    async def tearDown(self):
+        await hole.Slave.drop_collection()
+        await hole.Repository.drop_collection()
+        await build.BuildSet.drop_collection()
+        await build.Builder.drop_collection()
+        await hole.User.drop_collection()
 
     @async_test
     async def test_load(self):
