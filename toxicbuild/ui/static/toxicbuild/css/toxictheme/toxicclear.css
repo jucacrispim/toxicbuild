@@ -218,7 +218,7 @@ body{
 }
 
 .badge-warning{
-    background-color: var(--orange);
+    background-color: #fc8f34;
     color: #fff;
 }
 
@@ -517,7 +517,7 @@ body{
 }
 
 .repo-status-warning{
-    border-left: 5px solid var(--orange);
+    border-left: 5px solid #fc8f34;
 }
 
 .repo-status-cloning{
@@ -1153,7 +1153,7 @@ body{
 .step-warning a.step-details-link,
 .build-warning a.build-details-link,
 .builder-warning{
-    background-color: var(--orange);
+    background-color: #fc8f34;
     color: #fff;
 }
 
