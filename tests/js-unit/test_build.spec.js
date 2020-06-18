@@ -97,7 +97,8 @@ describe('BuildStepDetailsView', function(){
     container.affix('.step-output');
     container.affix('.step-started');
     container.affix('.step-total-time');
-    this.view = new BuildStepDetailsView({step_uuid: 'some-uuid'});
+    let page = new BuildStepDetailsPage({});
+    this.view = new BuildStepDetailsView({step_uuid: 'some-uuid', page: page});
   });
 
   it('test-render', async function(){
@@ -189,7 +190,8 @@ describe('BuildDetailsViewTest', function(){
     container.affix('.commit-branch');
     container.affix('.repo-name');
     container.affix('.build-total-time');
-    this.view = new BuildDetailsView({build_uuid: 'some-uuid'});
+    let page = new  BuildDetailsPage({});
+    this.view = new BuildDetailsView({build_uuid: 'some-uuid', page: page});
   });
 
   it('test-render', async function(){
