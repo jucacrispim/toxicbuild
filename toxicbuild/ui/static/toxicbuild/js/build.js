@@ -170,6 +170,7 @@ class BuildStepDetailsView extends Backbone.View{
 
     this.model = this.step = options.model;
     this.step_uuid = options.step_uuid;
+    this.page = options.page;
     this.template_selector = '#step-details';
     this.compiled_template = null;
     this.container_selector = '.step-details-container';
@@ -264,6 +265,10 @@ class BuildStepDetailsView extends Backbone.View{
       self._scroll = true;
     });
 
+    if (!fetch){
+      this.page._listen2events();
+    }
+
     this.renderTerminal();
   }
 
@@ -273,8 +278,6 @@ class BuildStepDetailsView extends Backbone.View{
     let output = this.model.get('output');
     this.term.write(output);
   }
-
-
 }
 
 
@@ -302,11 +305,13 @@ class BuildDetailsView extends BaseBuildDetailsView{
 
     this.model = this.build = options.model;
     this.build_uuid = options.build_uuid;
+    this.page = options.page;
     this.template_selector = '#build-details';
     this.compiled_template = null;
     this.container_selector = '.build-details-container';
     this.container = null;
     this.term = null;
+
 
     this._scroll = false;
 
@@ -482,6 +487,9 @@ class BuildDetailsView extends BaseBuildDetailsView{
     $('.obj-details-buttons-container', compiled).show();
     this.container = $(this.container_selector);
     this.container.html(compiled);
+    if (!fetch){
+      this.page._listen2events();
+    }
     this.renderTerminal();
   }
 

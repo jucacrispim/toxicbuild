@@ -321,7 +321,8 @@ class BuildDetailsPage extends BaseOneSideFloatingPage{
     super(options);
     this.build_uuid = options ? options.build_uuid : '';
     this.template_url = '/templates/build/' + this.build_uuid;
-    this.view = new BuildDetailsView({build_uuid: this.build_uuid});
+    this.view = new BuildDetailsView({build_uuid: this.build_uuid,
+				      page: this});
   }
 
 }
@@ -332,7 +333,8 @@ class BuildStepDetailsPage extends BaseOneSideFloatingPage{
     super(options);
     this.step_uuid = options ? options.step_uuid : '';
     this.template_url = '/templates/step/' + this.step_uuid;
-    this.view = new BuildStepDetailsView({step_uuid: this.step_uuid});
+    this.view = new BuildStepDetailsView({step_uuid: this.step_uuid,
+					  page: this});
   }
 
   close_page(){
