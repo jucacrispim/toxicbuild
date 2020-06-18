@@ -1181,7 +1181,7 @@ body{
 .badge-preparing,
 .build-preparing a.build-details-link,
 .builder-preparing{
-    background-color: var(#31b0d5);
+    background-color: #31b0d5;
     color: #fff;
 }
 
