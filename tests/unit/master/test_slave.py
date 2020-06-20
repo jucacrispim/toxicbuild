@@ -669,17 +669,44 @@ class SlaveTest(TestCase):
         self.assertFalse(self.slave.host == 'a-host-that-shouldnt-be')
 
     @async_test
-    async def test_increment_queue(self):
+    async def test_enqueue_build(self):
         await self.slave.save()
-        await self.slave.increment_queue()
-        self.assertTrue(self.slave.queue_count)
+        build = Mock(uuid='asdf')
+        r = await self.slave.enqueue_build(build)
+        await self.slave.reload()
+        self.assertTrue(r)
+        self.assertEqual(len(self.slave.enqueued_builds), 1)
+        self.assertEqual(self.slave.queue_count, 1)
 
     @async_test
-    async def test_decrement_queue(self):
+    async def test_enqueue_build_already_enqueued(self):
         await self.slave.save()
-        await self.slave.increment_queue()
-        await self.slave.decrement_queue()
-        self.assertFalse(self.slave.queue_count)
+        build = Mock(uuid='asdf')
+        await self.slave.enqueue_build(build)
+        await self.slave.reload()
+        r = await self.slave.enqueue_build(build)
+        self.assertFalse(r)
+        self.assertEqual(len(self.slave.enqueued_builds), 1)
+        self.assertEqual(self.slave.queue_count, 1)
+
+    @async_test
+    async def test_dequeue_build(self):
+        await self.slave.save()
+        build = Mock(uuid='asdf')
+        await self.slave.enqueue_build(build)
+        r = await self.slave.dequeue_build(build)
+        self.assertTrue(r)
+        self.assertEqual(len(self.slave.enqueued_builds), 0)
+        self.assertEqual(self.slave.queue_count, 0)
+
+    @async_test
+    async def test_dequeue_build_not_enqueued(self):
+        await self.slave.save()
+        build = Mock(uuid='asdf')
+        r = await self.slave.dequeue_build(build)
+        self.assertFalse(r)
+        self.assertEqual(len(self.slave.enqueued_builds), 0)
+        self.assertEqual(self.slave.queue_count, 0)
 
     async def _create_test_data(self):
         await self.slave.save()

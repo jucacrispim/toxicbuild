@@ -88,6 +88,9 @@ class Slave(OwnedDocument, LoggerMixin):
     queue_count = IntField(default=0)
     """How many builds are waiting to run in this repository."""
 
+    enqueued_builds = ListField(StringField())
+    """Uuids of builds enqueued to run in this slave."""
+
     running_count = IntField(default=0)
     """How many builds are running in this slave."""
 
@@ -156,17 +159,36 @@ class Slave(OwnedDocument, LoggerMixin):
         cls = self.INSTANCE_CLS[self.instance_type]
         return cls(**self.instance_confs)
 
-    async def increment_queue(self):
-        """Increments the queue's count in this slave."""
+    async def enqueue_build(self, build):
+        """Marks a build as enqueued in this slave. It does not enqueue
+        two times the same build, if the build is already enqueued simply
+        skip it returning False
+        """
+        buuid = str(build.uuid)
+        if buuid in self.enqueued_builds:
+            return False
 
-        self.queue_count += 1
-        await self.update(inc__queue_count=1)
+        self.enqueued_builds.append(buuid)
+        await self.update(
+            inc__queue_count=1,
+            enqueued_builds=self.enqueued_builds)
 
-    async def decrement_queue(self):
-        """Decrements the queue's count in this slave."""
+        return True
 
-        self.queue_count -= 1
-        await self.update(dec__queue_count=1)
+    async def dequeue_build(self, build):
+        """Unmark a build as enqueued. If the build is not enqueued returns
+        False.
+        """
+
+        try:
+            i = self.enqueued_builds.index(str(build.uuid))
+            self.enqueued_builds.pop(i)
+        except ValueError:
+            return False
+
+        await self.update(dec__queue_count=1,
+                          enqueued_builds=self.enqueued_builds)
+        return True
 
     async def add_running_repo(self, repo_id):
         """Increments the number of running builds in this slave and

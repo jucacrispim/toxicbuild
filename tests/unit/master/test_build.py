@@ -290,7 +290,7 @@ class BuildTest(TestCase):
         await self._create_test_data()
         build_inst = self.buildset.builds[0]
         slave = await build_inst.slave
-        slave.queue_count += 1
+        await slave.enqueue_build(build_inst)
         await slave.save()
         await build_inst.cancel()
         self.assertEqual(build_inst.status, 'cancelled')
@@ -329,7 +329,7 @@ class BuildTest(TestCase):
         await self._create_test_data()
         build = self.buildset.builds[0]
         await build.set_slave(self.slave)
-
+        await self.slave.reload()
         self.assertTrue(self.slave.queue_count)
 
     @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(

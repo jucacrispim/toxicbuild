@@ -473,7 +473,7 @@ class Build(EmbeddedDocument, LoggerMixin):
         repo = await self.repository
         slave = await self.slave
         if slave:
-            await slave.decrement_queue()
+            await slave.dequeue_build(self)
         await self.update()
         build_cancelled.send(str(repo.id), build=self)
 
@@ -487,7 +487,7 @@ class Build(EmbeddedDocument, LoggerMixin):
             level='debug')
         self.slave = slave
         await self.update()
-        await slave.increment_queue()
+        await slave.enqueue_build(self)
 
     async def is_ready2run(self):
         """Checks if all trigger conditions are met. If not triggered_by
