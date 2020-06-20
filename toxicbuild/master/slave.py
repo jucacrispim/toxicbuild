@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016-2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016-2020 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -318,38 +318,41 @@ class Slave(OwnedDocument, LoggerMixin):
         """
         repo = await build.repository
         await self.add_running_repo(repo.id)
-        build.status = build.PREPARING
-        await build.update()
-        repo = await build.repository
-        build_preparing.send(str(repo.id), build=build)
-
         try:
-            await self.start_instance()
-        except Exception as e:
-            await self._finish_build_start_exception(build, repo, str(e))
-            return False
-
-        with (await self.get_client()) as client:
+            build.status = build.PREPARING
+            await build.update()
+            repo = await build.repository
+            build_preparing.send(str(repo.id), build=build)
 
             try:
-                build_info = await client.build(
-                    build, envvars=envvars, process_coro=self._process_info)
-            except (ToxicClientException, BadJsonData):
-                output = traceback.format_exc()
-                build.status = 'exception'
-                build.started = build.started or localtime2utc(now())
-                build.finished = build.finished or localtime2utc(now())
-                exception_step = BuildStep(repository=repo, output=output,
-                                           started=localtime2utc(now()),
-                                           finished=localtime2utc(now()),
-                                           status='exception',
-                                           command='', name='exception')
-                build.steps.append(exception_step)
+                await self.start_instance()
+            except Exception as e:
+                await self._finish_build_start_exception(build, repo, str(e))
+                return False
 
-                await build.update()
-                build_info = build.to_dict()
-            finally:
-                await self.rm_running_repo(repo.id)
+            with (await self.get_client()) as client:
+
+                try:
+                    build_info = await client.build(
+                        build,
+                        envvars=envvars,
+                        process_coro=self._process_info)
+                except (ToxicClientException, BadJsonData):
+                    output = traceback.format_exc()
+                    build.status = 'exception'
+                    build.started = build.started or localtime2utc(now())
+                    build.finished = build.finished or localtime2utc(now())
+                    exception_step = BuildStep(repository=repo, output=output,
+                                               started=localtime2utc(now()),
+                                               finished=localtime2utc(now()),
+                                               status='exception',
+                                               command='', name='exception')
+                    build.steps.append(exception_step)
+
+                    await build.update()
+                    build_info = build.to_dict()
+        finally:
+            await self.rm_running_repo(repo.id)
 
         return build_info
 
