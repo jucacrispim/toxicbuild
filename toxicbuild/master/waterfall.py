@@ -45,7 +45,8 @@ class Waterfall:
         if self.branch:
             self.buildsets = self.buildsets.filter(branch=self.branch)
 
-        self.buildsets = await self.buildsets[0:10].to_list()
+        self.buildsets = await self.buildsets[0:10].exclude(
+            'builds__output').to_list()
         ids = [b._data['builder'].id for bs in self.buildsets
                for b in bs.builds]
         futs = [Builder.objects.filter(id__in=ids).to_list(),
