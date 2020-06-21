@@ -340,6 +340,7 @@ class Slave(OwnedDocument, LoggerMixin):
         """
         repo = await build.repository
         await self.add_running_repo(repo.id)
+        await self.dequeue_build(build)
         try:
             build.status = build.PREPARING
             await build.update()
