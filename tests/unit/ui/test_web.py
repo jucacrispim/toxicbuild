@@ -344,7 +344,8 @@ class UserPublicRestHandler(TestCase):
         self.assertTrue(web.UserInterface.add.called)
 
     @patch.object(web.UserInterface, 'request_password_reset',
-                  AsyncMagicMock())
+                  AsyncMagicMock(
+                      spec=web.UserInterface.request_password_reset))
     @async_test
     async def test_request_password_reset(self):
         email = 'a@a.com'
@@ -354,8 +355,7 @@ class UserPublicRestHandler(TestCase):
             'reset_password_url': url}
         await self.handler.request_password_reset()
 
-        self.assertTrue(self.model.request_password_reset.called_with(
-            email, url))
+        self.assertTrue(self.model.request_password_reset.called)
 
     @patch.object(web.UserInterface, 'request_password_reset', AsyncMagicMock(
         side_effect=web.UserDoesNotExist))
@@ -371,7 +371,8 @@ class UserPublicRestHandler(TestCase):
             await self.handler.request_password_reset()
 
     @patch.object(web.UserInterface, 'change_password_with_token',
-                  AsyncMagicMock())
+                  AsyncMagicMock(
+                      spec=web.UserInterface.change_password_with_token))
     @async_test
     async def test_change_password_with_token(self):
         token = 'asdf'
@@ -380,8 +381,7 @@ class UserPublicRestHandler(TestCase):
                              'password': password}
         await self.handler.change_password_with_token()
 
-        self.assertTrue(self.model.change_password_with_token.called_with(
-            token, password))
+        self.assertTrue(self.model.change_password_with_token.called)
 
     @patch.object(web.UserInterface, 'change_password_with_token',
                   AsyncMagicMock(side_effect=web.BadResetPasswordToken))
@@ -1110,7 +1110,9 @@ class DashboardHandlerTest(TestCase):
         called_template = called[0][0]
         called_context = called[0][2]
         self.assertEqual(called_template, self.handler.repository_template)
-        self.assertEqual(called_context, {'repo_full_name': ''})
+        self.assertEqual(called_context, {'repo_full_name': '',
+                                          'repo_id': '',
+                                          'action': ''})
 
     @patch.object(web, 'render_template', MagicMock(return_value='asdf',
                                                     spec=web.render_template))
@@ -1221,36 +1223,21 @@ class DashboardHandlerTest(TestCase):
         self.assertTrue(self.handler._get_settings_main_template.called)
         self.assertTrue(self.handler.write.called)
 
-    def test_show_repository_details(self):
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get, return_value=MagicMock(id='fadsf')))
+    @async_test
+    async def test_show_repository_details(self):
         self.handler._get_repository_template = MagicMock(
             spec=self.handler._get_repository_template)
         self.handler.render_template = MagicMock(
             spec=self.handler.render_template)
 
-        self.handler.show_repository_details(b'some/repo')
+        await self.handler.show_repository_details(b'some/repo', 'settings')
 
         expected_keys = ['content']
         called_template = self.handler.render_template.call_args[0][0]
         called_context = self.handler.render_template.call_args[0][1]
         self.assertTrue(self.handler._get_repository_template.called)
-        self.assertEqual(called_template, self.handler.skeleton_template)
-        self.assertEqual(expected_keys, sorted(list(called_context.keys())))
-
-    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
-        spec=web.RepositoryInterface.get, return_value=MagicMock()))
-    @async_test
-    async def test_show_repository_notifications(self):
-        self.handler._get_notifications_template = MagicMock(
-            spec=self.handler._get_notifications_template)
-        self.handler.render_template = MagicMock(
-            spec=self.handler.render_template)
-
-        await self.handler.show_repository_notifications(b'some/repo')
-
-        expected_keys = ['content']
-        called_template = self.handler.render_template.call_args[0][0]
-        called_context = self.handler.render_template.call_args[0][1]
-        self.assertTrue(self.handler._get_notifications_template.called)
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 
@@ -1355,25 +1342,16 @@ class DashboardHandlerTest(TestCase):
         self.assertEqual(called_template, self.handler.skeleton_template)
         self.assertEqual(expected_keys, sorted(list(called_context.keys())))
 
-    def test_show_repository_details_template(self):
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get, return_value=MagicMock(id='fadsf')))
+    @async_test
+    async def test_show_repository_details_template(self):
         self.handler._get_repository_template = MagicMock(
             spec=self.handler._get_repository_template)
         self.handler.write = MagicMock(spec=self.handler.write)
 
-        self.handler.show_repository_details_template(b'full/name')
+        await self.handler.show_repository_details_template(b'full/name')
         self.assertTrue(self.handler._get_repository_template.called)
-        self.assertTrue(self.handler.write.called)
-
-    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
-        spec=web.RepositoryInterface.get, return_value=MagicMock()))
-    @async_test
-    async def test_show_repository_notifications_template(self):
-        self.handler._get_notifications_template = MagicMock(
-            spec=self.handler._get_notifications_template)
-        self.handler.write = MagicMock(spec=self.handler.write)
-
-        await self.handler.show_repository_notifications_template(b'full/name')
-        self.assertTrue(self.handler._get_notifications_template.called)
         self.assertTrue(self.handler.write.called)
 
     def test_show_slave_details_template(self):

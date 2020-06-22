@@ -755,15 +755,24 @@ body{
     border-color: #dee2e6 #dee2e6 #fff;
 }
 
+
+.notifications-left-side,
 .settings-left-side{
     float:left;
     position: relative;
     padding-top: 7px;
 }
 
+.notifications-right-side,
 .settings-right-side{
     float:right;
-    display: none;o
+    display: none;
+}
+
+
+.notifications-left-side,
+.notifications-right-side{
+    display: none
 }
 
 .settings-right-side{
@@ -778,6 +787,7 @@ body{
 
 .details-main-container,
 .slave-details-main-container,
+.notifications-main-container
 .repo-details-main-container{
     position: absolute;
     top: 0;

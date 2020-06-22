@@ -420,11 +420,14 @@ class RepositoryAddPage extends BaseRepositoryPage{
 
 class RepositoryDetailsPage extends BaseRepositoryPage{
 
-  constructor(router, full_name){
+  constructor(router, full_name, action){
     super(router);
+    this.action = action;
     this.repo_details_view = new RepositoryDetailsView(full_name);
     this.nav_pills = null;
     this.template_url = '/templates/repo-details/' + full_name;
+    this.notifications = new NotificationListView($('#repo_id').val());
+    this._notif_rendered = false;
   }
 
   _toggleAdvanced(){
@@ -447,9 +450,36 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
   }
 
   _getContainerInner(){
-    this._container = $('.details-main-container');
+    this._container = $('.repo-details-main-container');
     this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
       '.advanced-help-container').not('.add-repo-message-container');
+  }
+
+  async _displayNotifications(){
+    $('.repo-details-main-container').hide();
+    $('.notifications-main-container').show();
+    $('.notifications-main-container .nav-container').show();
+    $('.notifications-left-side').fadeIn();
+    $('.notifications-right-side').fadeIn();
+
+    $('.settings-left-side').hide();
+    $('.settings-right-side').hide();
+
+    if (!this._notif_rendered){
+      await this.notifications.render_all();
+      this._notif_rendered = true;
+    }
+
+  }
+
+
+  _displayRepoSettings(){
+    $('.repo-details-main-container').show();
+    $('.notifications-main-container').hide();
+    $('.notifications-left-side').hide();
+    $('.notifications-right-side').hide();
+    $('.settings-left-side').fadeIn();
+    $('.settings-right-side').fadeIn();
   }
 
   _listen2events(){
@@ -459,6 +489,14 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
     $('.repo-config-advanced-span').on('click', function(e){
       self._toggleAdvanced();
     });
+
+    $('.notif-nav-btn').on('click', async function(e){
+      await self._displayNotifications();
+    });
+
+    $('.repo-nav-btn').on('click', function(e){
+      self._displayRepoSettings();
+    });
   }
 
   async render(){
@@ -466,13 +504,16 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
     this.right_sidebar = $('.settings-right-side');
     this._prepareOpenAnimation();
     await this.repo_details_view.render_details();
-
     this._listen2events();
     this._animateOpen();
+    if (this.action == 'notifications') {
+      await this._displayNotifications();
+    }
+
   }
 
   close_page(){
-    let regex = /\/repository\/add$/;
+    let regex = /(\/repository\/add$|.*\/settings|.*\/notifications)/;
     super.close_page(regex);
   }
 
@@ -492,7 +533,6 @@ class RepositoryNotificationsPage extends BaseFloatingPage{
     this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
       '.advanced-help-container').not('.add-repo-message-container');
   }
-
 
   async render(){
     let repo_id = $('#repo-id').val();

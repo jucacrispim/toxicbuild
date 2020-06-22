@@ -81,8 +81,8 @@
 </div>
 
 
-<!-- main settings container -->
-<div class="repo-details-main-container details-main-container box-shadow-gray">
+<!-- main notif container -->
+<div class="notifications-main-container details-main-container box-shadow-gray">
   <div class="close-btn">&times;</div>
 
   <!-- loading spinner -->
@@ -96,13 +96,15 @@
   <div class="nav-container">
     <ul class="nav nav-pills">
       <li class="nav-item">
-	<a class="nav-link" href="{{ '/' + repo_full_name + '/settings' }}">
+	<a class="nav-link" href="{{ '/' + repo_full_name + '/settings' }}"
+	   data-notrigger="true">
 	  {{translate('General configurations')}}
 	</a>
       </li>
       <li class="nav-item ">
 	<a class="nav-link active box-shadow"
-	   href="{{ '/' + repo_full_name + '/notifications' }}">
+	   href="{{ '/' + repo_full_name + '/notifications' }}"
+	   data-notrigger="true">
 	  {{translate('Notifications')}}
 	</a>
       </li>
@@ -127,7 +129,7 @@
   <!-- end notifications message -->
 
   <!-- left side -->
-  <div class="settings-left-side col-sm-9">
+  <div class="notifications-left-side col-sm-9">
 
     <div id="repo-notifications-container"></div>
 
@@ -136,7 +138,7 @@
   <!-- end left side -->
 
   <!-- righ  side -->
-  <div class="settings-right-side col-sm-3">
+  <div class="notifications-right-side col-sm-3">
     <div>
       <span>
 	<h5>{{translate('Notifications')}}</h5>
@@ -154,8 +156,6 @@
 
 </div>
 
-
-<input type="hidden" value="{{repo_id}}" id="repo-id">
 
 <script>
   async function init(){

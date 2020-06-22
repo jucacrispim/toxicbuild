@@ -861,9 +861,11 @@ class DashboardHandler(LoggedTemplateHandler):
         rendered = render_template(template, self.request, context)
         return rendered
 
-    def _get_repository_template(self, full_name=''):
+    def _get_repository_template(self, full_name='', repo_id='', action=''):
         rendered = render_template(self.repository_template, self.request,
-                                   {'repo_full_name': full_name})
+                                   {'repo_full_name': full_name,
+                                    'repo_id': repo_id,
+                                    'action': action})
         return rendered
 
     def _get_slave_template(self, full_name=''):
@@ -944,19 +946,13 @@ class DashboardHandler(LoggedTemplateHandler):
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
-    @get('{}/settings'.format(FULL_NAME_REGEX))
-    def show_repository_details(self, full_name):
-        full_name = full_name.decode()
-        content = self._get_repository_template(full_name)
-        context = {'content': content}
-        self.render_template(self.skeleton_template, context)
-
-    @get('{}/notifications'.format(FULL_NAME_REGEX))
-    async def show_repository_notifications(self, full_name):
+    @get('{}/(settings|notifications)'.format(FULL_NAME_REGEX))
+    async def show_repository_details(self, full_name, action):
         full_name = full_name.decode()
         repo = await RepositoryInterface.get(self.user,
                                              repo_name_or_id=full_name)
-        content = self._get_notifications_template(full_name, str(repo.id))
+        content = self._get_repository_template(full_name, str(repo.id),
+                                                action)
         context = {'content': content}
         self.render_template(self.skeleton_template, context)
 
@@ -991,17 +987,12 @@ class DashboardHandler(LoggedTemplateHandler):
 
     @get('templates/repo-details')
     @get('templates/repo-details/{}'.format(FULL_NAME_REGEX))
-    def show_repository_details_template(self, full_name=b''):
-        full_name = full_name.decode()
-        content = self._get_repository_template(full_name)
-        self.write(content)
-
-    @get('templates/repo-notifications/{}'.format(FULL_NAME_REGEX))
-    async def show_repository_notifications_template(self, full_name):
+    async def show_repository_details_template(self, full_name=b''):
         full_name = full_name.decode()
         repo = await RepositoryInterface.get(self.user,
                                              repo_name_or_id=full_name)
-        content = self._get_notifications_template(full_name, str(repo.id))
+
+        content = self._get_repository_template(full_name, str(repo.id))
         self.write(content)
 
     @get('templates/slave-details')
