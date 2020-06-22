@@ -76,13 +76,12 @@ def quit_browser(context):
     context.browser.quit()
 
 
-@asyncio.coroutine
-def create_slave(context):
+async def create_slave(context):
     """Creates a slave to be used in repo tests"""
 
     from toxicbuild.ui import settings
 
-    yield from SlaveInterface.add(
+    await SlaveInterface.add(
         context.user, name='repo-slave', host=settings.TEST_SLAVE_HOST,
         owner=context.user,
         port=2222,
@@ -91,14 +90,13 @@ def create_slave(context):
         validate_cert=False)
 
 
-@asyncio.coroutine
-def del_slave(context):
+async def del_slave(context):
     """Deletes the slaves created in the tests"""
 
-    slaves = yield from SlaveInterface.list(context.user)
+    slaves = await SlaveInterface.list(context.user)
     for slave in slaves:
         try:
-            yield from slave.delete()
+            await slave.delete()
         except Exception as e:
             log('Error deleting slave ' + str(e), level='warning')
 
@@ -107,22 +105,21 @@ async def del_auth_token(context):
     await AccessToken.drop_collection()
 
 
-@asyncio.coroutine
-def create_repo(context):
+async def create_repo(context):
     """Creates a new repo to be used in tests"""
 
     from toxicbuild.master import settings as master_settings
-    yield from conn.connect(**master_settings.RABBITMQ_CONNECTION)
-    yield from scheduler_action.declare()
+    await conn.connect(**master_settings.RABBITMQ_CONNECTION)
+    await scheduler_action.declare()
 
-    repo = yield from RepositoryInterface.add(
+    repo = await RepositoryInterface.add(
         context.user,
         name='repo-bla', update_seconds=1,
         owner=context.user,
         vcs_type='git', url=REPO_DIR,
         slaves=['repo-slave'])
 
-    yield from repo.add_branch('master', False)
+    await repo.add_branch('master', False)
 
 
 async def create_user(context):
@@ -137,23 +134,22 @@ async def del_user(context):
     await context.user.delete()
 
 
-@asyncio.coroutine
-def del_repo(context):
+async def del_repo(context):
     """Deletes the repositories created in tests."""
 
-    repos = yield from RepositoryInterface.list(context.user)
+    repos = await RepositoryInterface.list(context.user)
     for repo in repos:
         try:
-            yield from repo.delete()
-            # yield from scheduler_action.declare()
-            # yield from scheduler_action.queue_delete()
-            # yield from scheduler_action.connection.disconnect()
+            await repo.delete()
+            # await scheduler_action.declare()
+            # await scheduler_action.queue_delete()
+            # await scheduler_action.connection.disconnect()
         except Exception as e:
             log('Error deleting repo ' + str(e), level='warning')
 
     from toxicbuild.master.repository import Repository as RepoModel
 
-    yield from RepoModel.drop_collection()
+    await RepoModel.drop_collection()
 
 
 async def create_root_user(context):

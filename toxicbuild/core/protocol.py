@@ -99,32 +99,31 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
             self.log('Executing connection_lost_cb', level='debug')
             self.connection_lost_cb(exc)
 
-    @asyncio.coroutine
-    def check_data(self):
+    async def check_data(self):
         """ Checks if the data is valid, it means, checks if has some data,
         checks if it is a valid json and checks if it has a ``action`` key
         """
 
-        self.data = yield from self.get_json_data()
+        self.data = await self.get_json_data()
 
         if not self.data:
             self.log('Bada data', level='warning')
             self.log(self.raw_data, level='debug')
             msg = 'Something wrong with your data {!r}'.format(self.raw_data)
-            yield from self.send_response(code=1, body={'error': msg})
+            await self.send_response(code=1, body={'error': msg})
             return self.close_connection()
 
         token = self.data.get('token')
         if not token:
             msg = 'No auth token'
             self.log(msg, level='warning')
-            yield from self.send_response(code=2, body={'error': msg})
+            await self.send_response(code=2, body={'error': msg})
             return self.close_connection()
 
         if not utils.compare_bcrypt_string(token, self.encrypted_token):
             msg = 'Bad auth token'
             self.log(msg, level='warning')
-            yield from self.send_response(code=3, body={'error': msg})
+            await self.send_response(code=3, body={'error': msg})
             return self.close_connection()
 
         self.action = self.data.get('action')
@@ -132,11 +131,10 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         if not self.action:
             msg = 'No action found!'
             self.log(msg, level='warning')
-            yield from self.send_response(code=1, body=msg)
+            await self.send_response(code=1, body=msg)
             return self.close_connection()
 
-    @asyncio.coroutine
-    def client_connected(self):  # pragma no cover
+    async def client_connected(self):  # pragma no cover
         """ Coroutine that handles connections. You must implement this
         in your sub-classes. When this method is called, ``self.data``,
         containing a dictionary with the data passed in the request and
@@ -152,8 +150,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         self._stream_writer.close()
         self._connected = False
 
-    @asyncio.coroutine
-    def send_response(self, code, body):
+    async def send_response(self, code, body):
         """ Send a response to client formated by the (unknown) toxicbuild
         remote build specs.
 
@@ -171,20 +168,20 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         # http://bugs.python.org/issue29930. Remove this lock when no
         # version of Python where this bugs exists is supported anymore.
         # patch by @RemiCardona for websockets on github.
-        with (yield from self._writer_lock):
-            yield from utils.write_stream(self._stream_writer, data)
+        with (await self._writer_lock):
+            await utils.write_stream(self._stream_writer, data)
 
-    @asyncio.coroutine
-    def get_raw_data(self):
+    async def get_raw_data(self):
         """ Returns the raw data sent by the client
         """
-        return utils.read_stream(self._stream_reader)
+        r = await utils.read_stream(self._stream_reader)
+        return r
 
-    @asyncio.coroutine
-    def get_json_data(self):
+    async def get_json_data(self):
         """Returns the json sent by the client."""
 
-        data = (yield from self.get_raw_data()).decode()
+        data = await self.get_raw_data()
+        data = data.decode()
 
         try:
             data = json.loads(data)
@@ -203,11 +200,10 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
             return
 
         # wrapping it to log it.
-        @asyncio.coroutine
-        def logged_cb():
+        async def logged_cb():
             init = (time.time() * 1e3)
             try:
-                status = yield from self.client_connected()
+                status = await self.client_connected()
             except ConnectionResetError:
                 status = 1
                 msg = 'Connection reset'

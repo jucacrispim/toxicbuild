@@ -55,57 +55,53 @@ class BuildClientTest(TestCase):
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @async_test
-    def test_enter(self):
+    async def test_enter(self):
 
-        @asyncio.coroutine
-        def oc(*a, **kw):
+        async def oc(*a, **kw):
             return mock.MagicMock(), mock.MagicMock()
 
         client.asyncio.open_connection = oc
 
-        yield from self.client.connect()
+        await self.client.connect()
         with self.client as client_inst:
             self.assertTrue(client_inst._connected)
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @async_test
-    def test_connect(self):
+    async def test_connect(self):
 
-        @asyncio.coroutine
-        def oc(*a, **kw):
+        async def oc(*a, **kw):
             return mock.MagicMock(), mock.MagicMock()
 
         client.asyncio.open_connection = oc
 
-        yield from self.client.connect()
+        await self.client.connect()
         self.assertTrue(self.client._connected)
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @async_test
-    def test_connect_ssl(self):
+    async def test_connect_ssl(self):
 
         self.has_ssl = False
 
-        @asyncio.coroutine
-        def oc(*a, **kw):
+        async def oc(*a, **kw):
             self.has_ssl = 'ssl' in kw
             return mock.MagicMock(), mock.MagicMock()
 
         client.asyncio.open_connection = oc
 
         self.client.use_ssl = True
-        yield from self.client.connect()
+        await self.client.connect()
         self.assertTrue(self.client._connected)
         self.assertTrue(self.has_ssl)
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @async_test
-    def test_connect_ssl_no_validate(self):
+    async def test_connect_ssl_no_validate(self):
 
         self.ssl_context = None
 
-        @asyncio.coroutine
-        def oc(*a, **kw):
+        async def oc(*a, **kw):
             self.ssl_context = kw.get('ssl')
             return mock.MagicMock(), mock.MagicMock()
 
@@ -113,46 +109,44 @@ class BuildClientTest(TestCase):
 
         self.client.use_ssl = True
         self.client.validate_cert = False
-        yield from self.client.connect()
+        await self.client.connect()
         self.assertTrue(self.client._connected)
         self.assertEqual(self.ssl_context.verify_mode, client.ssl.CERT_NONE)
 
     @mock.patch.object(client.asyncio, 'open_connection', mock.MagicMock())
     @async_test
-    def test_disconnect(self):
+    async def test_disconnect(self):
 
-        @asyncio.coroutine
-        def oc(*a, **kw):
+        async def oc(*a, **kw):
             return mock.MagicMock(), mock.MagicMock()
 
         client.asyncio.open_connection = oc
 
-        yield from self.client.connect()
+        await self.client.connect()
         self.client.disconnect()
         self.assertFalse(self.client._connected)
 
     @async_test
-    def test_write(self):
-        self.client.writer = mock.MagicMock()
+    async def test_write(self):
+        self.client.writer = mock.MagicMock(drain=AsyncMagicMock())
 
         data = {"some": "json"}
         msg = '16\n{"some": "json"}'.encode('utf-8')
 
-        yield from self.client.write(data)
+        await self.client.write(data)
 
         called_arg = self.client.writer.write.call_args[0][0].decode()
 
         self.assertEqual(called_arg, msg.decode())
 
     @async_test
-    def test_read(self):
+    async def test_read(self):
 
         msg = '16\n{"some": "json"}'.encode('utf-8')
 
         self._rlimit = 0
 
-        @asyncio.coroutine
-        def read(nbytes):
+        async def read(nbytes):
             part = msg[self._rlimit: self._rlimit + nbytes]
             self._rlimit += nbytes
             return part
@@ -161,20 +155,19 @@ class BuildClientTest(TestCase):
         self.client.reader.read = read
 
         expected = client.OrderedDict({'some': 'json'})
-        returned = yield from self.client.read()
+        returned = await self.client.read()
 
         self.assertEqual(expected, returned)
 
     @mock.patch.object(client.BaseToxicClient, 'log', mock.Mock())
     @async_test
-    def test_read_with_bad_json(self):
+    async def test_read_with_bad_json(self):
 
         msg = '19\n{"some": "json"}{sd'.encode('utf-8')
 
         self._rlimit = 0
 
-        @asyncio.coroutine
-        def read(nbytes):
+        async def read(nbytes):
             part = msg[self._rlimit: self._rlimit + nbytes]
             self._rlimit += nbytes
             return part
@@ -183,34 +176,32 @@ class BuildClientTest(TestCase):
         self.client.reader.read = read
 
         with self.assertRaises(client.BadJsonData):
-            yield from self.client.read()
+            await self.client.read()
 
     @async_test
-    def test_get_response(self):
+    async def test_get_response(self):
         expected = {'code': 0}
 
-        @asyncio.coroutine
-        def read():
+        async def read():
             return expected
 
         self.client.read = read
 
-        response = yield from self.client.get_response()
+        response = await self.client.get_response()
 
         self.assertEqual(response, expected)
 
     @async_test
-    def test_get_response_with_error(self):
+    async def test_get_response_with_error(self):
 
-        @asyncio.coroutine
-        def read():
+        async def read():
             return {'code': 1,
                     'body': {'error': 'wrong thing!'}}
 
         self.client.read = read
 
         with self.assertRaises(client.ToxicClientException):
-            yield from self.client.get_response()
+            await self.client.get_response()
 
     @async_test
     async def test_request2server(self):

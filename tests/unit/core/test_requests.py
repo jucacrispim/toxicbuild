@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 from toxicbuild.core import requests
@@ -40,108 +39,103 @@ class MockResponse:
     status = 200
     headers = {}
 
-    @asyncio.coroutine
-    def text(self):
+    async def text(self):
         return 'some text'
 
-    @asyncio.coroutine
-    def release(self):
+    async def release(self):
         pass
 
 
 class RequestsTest(TestCase):
 
-    @patch.object(requests.aiohttp, 'ClientSession', MagicMock())
+    @patch.object(requests.aiohttp, 'ClientSession', MagicMock(
+        return_value=MagicMock(close=AsyncMagicMock())))
     @async_test
-    def test_request(self):
+    async def test_request(self):
         method = 'GET'
         url = 'http://somewhere.com'
 
-        @asyncio.coroutine
-        def req(method, url, **kwargs):
+        async def req(method, url, **kwargs):
             return MockResponse()
 
         requests.aiohttp.ClientSession.return_value.request = req
-        r = yield from requests._request(method, url)
+        r = await requests._request(method, url)
         self.assertEqual(r.text, 'some text')
 
-    @patch.object(requests.aiohttp, 'ClientSession', MagicMock())
+    @patch.object(requests.aiohttp, 'ClientSession', MagicMock(
+        return_value=MagicMock(close=AsyncMagicMock())))
     @async_test
     async def test_request_sesskw(self):
         method = 'GET'
         url = 'http://somewhere.com'
 
         requests.aiohttp.ClientSession.return_value.request = AsyncMagicMock(
-            return_value=MagicMock())
+            return_value=AsyncMagicMock(status=200, headers={}))
         await requests._request(method, url, sesskw={'a': 'thing',
                                                      'loop': MagicMock()})
         called_kw = requests.aiohttp.ClientSession.call_args[1]
         self.assertEqual(sorted(list(called_kw.keys())), ['a', 'loop'])
 
-    @patch.object(requests, '_request', MagicMock())
+    @patch.object(requests, '_request', AsyncMagicMock())
     @async_test
-    def test_get(self):
+    async def test_get(self):
         url = 'http://somewhere.com'
         self.req_type = None
 
-        @asyncio.coroutine
-        def req(method, url, **kw):
+        async def req(method, url, **kw):
             self.req_type = method
             return requests.Response(200, 'some text')
 
         requests._request = req
 
-        resp = yield from requests.get(url)
+        resp = await requests.get(url)
         self.assertEqual(self.req_type, 'GET')
         self.assertEqual(resp.text, 'some text')
 
-    @patch.object(requests, '_request', MagicMock())
+    @patch.object(requests, '_request', AsyncMagicMock())
     @async_test
-    def test_post(self):
+    async def test_post(self):
         url = 'http://somewhere.com'
         self.req_type = None
 
-        @asyncio.coroutine
-        def req(method, url, **kw):
+        async def req(method, url, **kw):
             self.req_type = method
             return requests.Response(200, 'some text')
 
         requests._request = req
 
-        resp = yield from requests.post(url)
+        resp = await requests.post(url)
         self.assertEqual(self.req_type, 'POST')
         self.assertEqual(resp.text, 'some text')
 
-    @patch.object(requests, '_request', MagicMock())
+    @patch.object(requests, '_request', AsyncMagicMock())
     @async_test
-    def test_put(self):
+    async def test_put(self):
         url = 'http://somewhere.com'
         self.req_type = None
 
-        @asyncio.coroutine
-        def req(method, url, **kw):
+        async def req(method, url, **kw):
             self.req_type = method
             return requests.Response(200, 'some text')
 
         requests._request = req
 
-        resp = yield from requests.put(url)
+        resp = await requests.put(url)
         self.assertEqual(self.req_type, 'PUT')
         self.assertEqual(resp.text, 'some text')
 
-    @patch.object(requests, '_request', MagicMock())
+    @patch.object(requests, '_request', AsyncMagicMock())
     @async_test
-    def test_delete(self):
+    async def test_delete(self):
         url = 'http://somewhere.com'
         self.req_type = None
 
-        @asyncio.coroutine
-        def req(method, url, **kw):
+        async def req(method, url, **kw):
             self.req_type = method
             return requests.Response(200, 'some text')
 
         requests._request = req
 
-        resp = yield from requests.delete(url)
+        resp = await requests.delete(url)
         self.assertEqual(self.req_type, 'DELETE')
         self.assertEqual(resp.text, 'some text')

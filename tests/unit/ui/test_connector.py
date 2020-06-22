@@ -21,7 +21,7 @@ import asyncio
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 from toxicbuild.ui import connectors
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class StreamConnectorTest(TestCase):
@@ -31,39 +31,37 @@ class StreamConnectorTest(TestCase):
 
     @patch.object(connectors.StreamConnector, '_listen', MagicMock())
     @async_test
-    def test_prepare_instance_new(self):
+    async def test_prepare_instance_new(self):
 
         listen = MagicMock()
         user = MagicMock()
 
-        @asyncio.coroutine
-        def _listen(self):
+        async def _listen(self):
             listen()
 
         connectors.StreamConnector._listen = _listen
-        inst = yield from connectors.StreamConnector._prepare_instance(
+        inst = await connectors.StreamConnector._prepare_instance(
             user, 'repo-id', [])
-        yield from asyncio.sleep(0)
+        await asyncio.sleep(0)
         self.assertEqual(inst.clients_connected, 1)
         self.assertTrue(listen.called)
 
     @patch.object(connectors.StreamConnector, '_listen', MagicMock())
     @async_test
-    def test_prepare_instance_new_no_id(self):
+    async def test_prepare_instance_new_no_id(self):
 
         listen = MagicMock()
         user = MagicMock()
         user.id = 'some-id'
 
-        @asyncio.coroutine
-        def _listen(self):
+        async def _listen(self):
             listen()
 
         connectors.StreamConnector._listen = _listen
-        inst = yield from connectors.StreamConnector._prepare_instance(user,
-                                                                       None,
-                                                                       [])
-        yield from asyncio.sleep(0)
+        inst = await connectors.StreamConnector._prepare_instance(user,
+                                                                  None,
+                                                                  [])
+        await asyncio.sleep(0)
         self.assertEqual(inst.clients_connected, 1)
         self.assertTrue(listen.called)
         key = ('some-id', connectors.StreamConnector.NONE_REPO_ID,
@@ -71,7 +69,7 @@ class StreamConnectorTest(TestCase):
         self.assertIn(key, connectors.StreamConnector._instances)
 
     @async_test
-    def test_prepare_instance(self):
+    async def test_prepare_instance(self):
         repo_id = 'some-repo-id'
         user = MagicMock()
         user.id = 'some-id'
@@ -79,9 +77,9 @@ class StreamConnectorTest(TestCase):
         connector.clients_connected += 1
         connectors.StreamConnector._instances = {
             (user.id, repo_id, ''): connector}
-        inst = yield from connectors.StreamConnector._prepare_instance(user,
-                                                                       repo_id,
-                                                                       [])
+        inst = await connectors.StreamConnector._prepare_instance(user,
+                                                                  repo_id,
+                                                                  [])
         self.assertIs(inst, connector)
         self.assertEqual(connector.clients_connected, 2)
 
@@ -128,32 +126,31 @@ class StreamConnectorTest(TestCase):
 
     @patch.object(connectors, 'get_hole_client', MagicMock())
     @async_test
-    def test_connect(self):
+    async def test_connect(self):
 
         user = MagicMock()
         user.id = 'some-id'
-        client = MagicMock()
+        client = MagicMock(connect2stream=AsyncMagicMock())
 
-        @asyncio.coroutine
-        def get_hole_client(requester, host, port, use_ssl=True,
-                            hole_token=None, validate_cert=True):
+        async def get_hole_client(requester, host, port, use_ssl=True,
+                                  hole_token=None, validate_cert=True):
             return client
 
         connectors.get_hole_client = get_hole_client
         c = connectors.StreamConnector(user, 'http://bla.com/repo.git', [])
-        yield from c._connect()
+        await c._connect()
         self.assertTrue(client.connect2stream.called)
         self.assertTrue(c._connected)
 
     @async_test
-    def test_connect_connected(self):
+    async def test_connect_connected(self):
         user = MagicMock()
         user.id = 'some-id'
 
         c = connectors.StreamConnector(user, 'http://bla.com/repo.git', [])
         c.log = MagicMock()
         c._connected = True
-        yield from c._connect()
+        await c._connect()
         self.assertTrue(c.log.called)
 
     def test_disconnect(self):
@@ -186,33 +183,32 @@ class StreamConnectorTest(TestCase):
 
     @patch.object(connectors, 'message_arrived', MagicMock())
     @async_test
-    def test_listen_bad_data(self):
+    async def test_listen_bad_data(self):
         user = MagicMock()
         user.id = 'some-id'
 
         inst = connectors.StreamConnector(user, 'some-repo', [])
-        inst._connect = MagicMock()
-        inst.log = MagicMock()
+        inst._connect = AsyncMagicMock()
+        inst.log = AsyncMagicMock()
         inst._connected = True
         inst.client = MagicMock()
 
-        @asyncio.coroutine
-        def get_response():
+        async def get_response():
             return {}
 
         inst.client.get_response = get_response
-        yield from inst._listen()
+        await inst._listen()
         self.assertFalse(connectors.message_arrived.send.called)
 
     @patch.object(connectors, 'message_arrived', MagicMock())
     @async_test
-    def test_listen(self):
+    async def test_listen(self):
         user = MagicMock()
         user.id = 'some-id'
 
         try:
             inst = connectors.StreamConnector(user, 'some-repo', [])
-            inst._connect = MagicMock()
+            inst._connect = AsyncMagicMock()
             inst.client = MagicMock()
 
             def _c(self):
@@ -221,26 +217,25 @@ class StreamConnectorTest(TestCase):
 
             connectors.StreamConnector._connected = property(_c)
 
-            @asyncio.coroutine
-            def get_response():
+            async def get_response():
                 return {'body': {'repository': {'id': 'some-repo'}}}
 
             inst.client.get_response = get_response
             inst.index = -1
-            yield from inst._listen()
+            await inst._listen()
             self.assertTrue(connectors.message_arrived.send.called)
         finally:
             delattr(connectors.StreamConnector, '_connected')
 
     @patch.object(connectors, 'message_arrived', MagicMock())
     @async_test
-    def test_listen_wrong_repo(self):
+    async def test_listen_wrong_repo(self):
         user = MagicMock()
         user.id = 'some-id'
 
         try:
             inst = connectors.StreamConnector(user, 'other-repo', [])
-            inst._connect = MagicMock()
+            inst._connect = AsyncMagicMock()
             inst.client = MagicMock()
 
             def _c(self):
@@ -249,27 +244,26 @@ class StreamConnectorTest(TestCase):
 
             connectors.StreamConnector._connected = property(_c)
 
-            @asyncio.coroutine
-            def get_response():
+            async def get_response():
                 return {'body': {'repository': {'id': 'some-repo'}}}
 
             inst.client.get_response = get_response
             inst.index = -1
-            yield from inst._listen()
+            await inst._listen()
             self.assertFalse(connectors.message_arrived.send.called)
         finally:
             delattr(connectors.StreamConnector, '_connected')
 
     @patch.object(connectors, 'message_arrived', MagicMock())
     @async_test
-    def test_listen_wrong_repo_repo_status_changed(self):
+    async def test_listen_wrong_repo_repo_status_changed(self):
         user = MagicMock()
         user.id = 'some-id'
 
         try:
             inst = connectors.StreamConnector(
                 user, connectors.StreamConnector.NONE_REPO_ID, [])
-            inst._connect = MagicMock()
+            inst._connect = AsyncMagicMock()
             inst.client = MagicMock()
 
             def _c(self):
@@ -278,22 +272,22 @@ class StreamConnectorTest(TestCase):
 
             connectors.StreamConnector._connected = property(_c)
 
-            @asyncio.coroutine
-            def get_response():
+            async def get_response():
                 return {'body': {'repository': {'id': 'some-repo'},
                                  'event_type': 'repo_status_changed'}}
 
             inst.client.get_response = get_response
             inst.index = -1
-            yield from inst._listen()
+            await inst._listen()
             self.assertTrue(connectors.message_arrived.send.called)
         finally:
             delattr(connectors.StreamConnector, '_connected')
 
     @patch.object(connectors, 'message_arrived', MagicMock())
-    @patch.object(connectors.StreamConnector, '_prepare_instance', MagicMock())
+    @patch.object(connectors.StreamConnector, '_prepare_instance',
+                  AsyncMagicMock())
     @async_test
-    def test_plug(self):
+    async def test_plug(self):
         user = MagicMock()
         user.id = 'some-id'
 
@@ -302,16 +296,17 @@ class StreamConnectorTest(TestCase):
         def callback(msg):
             return None
 
-        yield from connectors.StreamConnector.plug(user, repo_id,
-                                                   ['some-event', 'other'],
-                                                   callback)
+        await connectors.StreamConnector.plug(user, repo_id,
+                                              ['some-event', 'other'],
+                                              callback)
         self.assertTrue(connectors.message_arrived.connect.called)
         self.assertTrue(connectors.StreamConnector._prepare_instance.called)
 
     @patch.object(connectors, 'message_arrived', MagicMock())
-    @patch.object(connectors.StreamConnector, '_prepare_instance', MagicMock())
+    @patch.object(connectors.StreamConnector, '_prepare_instance',
+                  AsyncMagicMock())
     @async_test
-    def test_plug_without_repo_id(self):
+    async def test_plug_without_repo_id(self):
         user = MagicMock()
         user.id = 'some-id'
 
@@ -320,8 +315,8 @@ class StreamConnectorTest(TestCase):
         def callback(msg):
             return None
 
-        yield from connectors.StreamConnector.plug(user, repo_id, ['event'],
-                                                   callback)
+        await connectors.StreamConnector.plug(user, repo_id, ['event'],
+                                              callback)
         called_kw = connectors.message_arrived.connect.call_args[1]
         self.assertFalse(called_kw)
         self.assertTrue(connectors.message_arrived.connect.called)

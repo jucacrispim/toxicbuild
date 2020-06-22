@@ -24,7 +24,6 @@ from pyrocumulus.web.applications import PyroApplication
 from pyrocumulus.web.decorators import post, get
 from pyrocumulus.web.handlers import BasePyroHandler, PyroRequest
 from pyrocumulus.web.urlmappers import URLSpec
-from tornado import gen
 from tornado.web import HTTPError
 from toxicbuild.common.interfaces import UserInterface
 from toxicbuild.core.utils import LoggerMixin, validate_string
@@ -136,9 +135,8 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
                                             repo_branches=repo_branches)
 
     @get('setup')
-    @gen.coroutine
-    def setup(self):
-        user = yield from self._get_user_from_cookie()
+    async def setup(self):
+        user = await self._get_user_from_cookie()
         if not user:
             url = '{}?redirect={}'.format(
                 settings.TOXICUI_LOGIN_URL, self.request.full_url())

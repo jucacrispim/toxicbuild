@@ -57,8 +57,7 @@ class BuildClientTest(TestCase):
         write = mock.MagicMock()
         self.client.write = asyncio.coroutine(lambda *a, **kw: write(*a, **kw))
 
-        @asyncio.coroutine
-        def gr(*a, **kw):
+        async def gr(*a, **kw):
             return 1
 
         self.client.get_response = gr
@@ -71,8 +70,7 @@ class BuildClientTest(TestCase):
         write = mock.MagicMock()
         self.client.write = asyncio.coroutine(lambda *a, **kw: write(*a, **kw))
 
-        @asyncio.coroutine
-        def gr(*a, **kw):
+        async def gr(*a, **kw):
             return ''
 
         self.client.get_response = gr
@@ -84,8 +82,7 @@ class BuildClientTest(TestCase):
         write = mock.MagicMock()
         self.client.write = asyncio.coroutine(lambda *a, **kw: write(*a, **kw))
 
-        @asyncio.coroutine
-        def gr():
+        async def gr():
             return {'code': 0,
                     'body': {'builders': ['b1', 'b2']}}
 

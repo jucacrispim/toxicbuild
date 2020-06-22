@@ -8,7 +8,7 @@ Usage:
 .. code-block:: python
 
     from toxicbuild.core import requests
-    response = yield from requests.get('http://google.com/')
+    response = await requests.get('http://google.com/')
     print(response.text)
 """
 
@@ -52,8 +52,7 @@ class Response:
         return json.loads(self.text)
 
 
-@asyncio.coroutine
-def _request(method, url, sesskw=None, **kwargs):
+async def _request(method, url, sesskw=None, **kwargs):
     """Performs a http request and returns an instance of
     :class:`toxicbuild.core.requests.Response`
 
@@ -70,19 +69,18 @@ def _request(method, url, sesskw=None, **kwargs):
         sesskw['loop'] = loop
     client = aiohttp.ClientSession(**sesskw)
     try:
-        resp = yield from client.request(method, url, **kwargs)
+        resp = await client.request(method, url, **kwargs)
         status = resp.status
-        text = yield from resp.text()
+        text = await resp.text()
         headers = resp.headers
-        yield from resp.release()
+        await resp.release()
     finally:
-        yield from client.close()
+        await client.close()
 
     return Response(status, text, headers)
 
 
-@asyncio.coroutine
-def get(url, **kwargs):
+async def get(url, **kwargs):
     """Performs a http GET request
 
     :param url: Request's url.
@@ -90,12 +88,11 @@ def get(url, **kwargs):
     """
 
     method = 'GET'
-    resp = yield from _request(method, url, **kwargs)
+    resp = await _request(method, url, **kwargs)
     return resp
 
 
-@asyncio.coroutine
-def post(url, **kwargs):
+async def post(url, **kwargs):
     """Performs a http POST request
 
     :param url: Request's url.
@@ -103,12 +100,11 @@ def post(url, **kwargs):
     """
 
     method = 'POST'
-    resp = yield from _request(method, url, **kwargs)
+    resp = await _request(method, url, **kwargs)
     return resp
 
 
-@asyncio.coroutine
-def put(url, **kwargs):
+async def put(url, **kwargs):
     """Performs a http PUT request
 
     :param url: Request's url.
@@ -116,12 +112,11 @@ def put(url, **kwargs):
     """
 
     method = 'PUT'
-    resp = yield from _request(method, url, **kwargs)
+    resp = await _request(method, url, **kwargs)
     return resp
 
 
-@asyncio.coroutine
-def delete(url, **kwargs):
+async def delete(url, **kwargs):
     """Performs a http DELETE request
 
     :param url: Request's url.
@@ -129,5 +124,5 @@ def delete(url, **kwargs):
     """
 
     method = 'DELETE'
-    resp = yield from _request(method, url, **kwargs)
+    resp = await _request(method, url, **kwargs)
     return resp

@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 import os
 from unittest import TestCase
 from unittest.mock import patch, MagicMock, Mock
@@ -50,8 +49,7 @@ class BuilderManagerTest(TestCase):
         super().setUp()
         protocol = MagicMock()
 
-        @asyncio.coroutine
-        def s(*a, **kw):
+        async def s(*a, **kw):
             pass
 
         protocol.send_response = s
@@ -167,7 +165,7 @@ class BuilderManagerTest(TestCase):
             self.assertEqual(m.current_build, 'v0.1')
 
     @async_test
-    def test_wait_clone(self):
+    async def test_wait_clone(self):
         class TBM(managers.BuildManager):
             clone_called = False
             call_count = -1
@@ -180,12 +178,12 @@ class BuilderManagerTest(TestCase):
 
         manager = TBM(MagicMock(), 'repo-id', 'git@repo.git', 'git', 'master',
                       'v0.1')
-        yield from manager.wait_clone()
+        await manager.wait_clone()
 
         self.assertTrue(manager.clone_called)
 
     @async_test
-    def test_wait_update(self):
+    async def test_wait_update(self):
         class TBM(managers.BuildManager):
             update_called = False
             call_count = -1
@@ -198,12 +196,12 @@ class BuilderManagerTest(TestCase):
 
         manager = TBM(MagicMock(), 'repo-id', 'git@repo.git', 'git', 'master',
                       'v0.1')
-        yield from manager.wait_update()
+        await manager.wait_update()
 
         self.assertTrue(manager.update_called)
 
     @async_test
-    def test_wait_all(self):
+    async def test_wait_all(self):
         class TBM(managers.BuildManager):
             working_called = False
             call_count = -1
@@ -216,33 +214,39 @@ class BuilderManagerTest(TestCase):
 
         manager = TBM(MagicMock(), 'repo-id', 'git@repo.git', 'git', 'master',
                       'v0.1')
-        yield from manager.wait_all()
+        await manager.wait_all()
 
         self.assertTrue(manager.working_called)
 
     @async_test
-    def test_update_and_checkout_with_clone(self):
+    async def test_update_and_checkout_with_clone(self):
         self.manager.vcs.workdir_exists.return_value = False
-        self.manager.vcs.checkout = MagicMock()
+        self.manager.vcs.checkout = AsyncMagicMock()
+        self.manager.vcs.clone = AsyncMagicMock(spec=self.manager.vcs.clone)
+        self.manager.vcs.update_submodule = AsyncMagicMock(
+            spec=self.manager.vcs.update_submodule)
+
         self.manager.vcs.try_set_remote = AsyncMagicMock()
-        yield from self.manager.update_and_checkout()
+        await self.manager.update_and_checkout()
 
         self.assertTrue(self.manager.vcs.clone.called)
         self.assertTrue(self.manager.vcs.checkout.called)
         self.assertTrue(self.manager.vcs.try_set_remote.called)
 
     @async_test
-    def test_update_and_checkout_external(self):
+    async def test_update_and_checkout_external(self):
         self.manager.vcs.workdir_exists.return_value = True
-        self.manager.vcs.checkout = MagicMock()
         self.manager.vcs.try_set_remote = AsyncMagicMock()
         self.manager.vcs.import_external_branch = AsyncMagicMock(
             spec=self.manager.vcs.import_external_branch)
+        self.manager.vcs.checkout = AsyncMagicMock()
+        self.manager.vcs.update_submodule = AsyncMagicMock(
+            spec=self.manager.vcs.update_submodule)
 
         external = {'url': 'http://bla.com/bla.git',
                     'name': 'remote', 'branch': 'master',
                     'into': 'into'}
-        yield from self.manager.update_and_checkout(external=external)
+        await self.manager.update_and_checkout(external=external)
 
         self.assertFalse(self.manager.vcs.clone.called)
         self.assertTrue(self.manager.vcs.checkout.called)
@@ -250,52 +254,66 @@ class BuilderManagerTest(TestCase):
         self.assertTrue(self.manager.vcs.import_external_branch.called)
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
-    @patch.object(managers.BuildManager, 'wait_all', MagicMock())
+    @patch.object(managers.BuildManager, 'wait_all', AsyncMagicMock())
     @async_test
-    def test_update_and_checkout_working(self):
-        yield from self.manager.update_and_checkout()
+    async def test_update_and_checkout_working(self):
+        await self.manager.update_and_checkout()
 
         self.assertTrue(self.manager.wait_all.called)
 
     @async_test
-    def test_update_and_checkout_without_clone(self):
+    async def test_update_and_checkout_without_clone(self):
         self.manager.vcs.clone = MagicMock()
-        self.manager.vcs.checkout = MagicMock()
         self.manager.vcs.workdir_exists.return_value = True
+        self.manager.vcs.try_set_remote = AsyncMagicMock(
+            spec=self.manager.vcs.try_set_remote)
+        self.manager.vcs.checkout = AsyncMagicMock()
+        self.manager.vcs.update_submodule = AsyncMagicMock(
+            spec=self.manager.vcs.update_submodule)
 
-        yield from self.manager.update_and_checkout()
+        await self.manager.update_and_checkout()
 
         self.assertFalse(self.manager.vcs.clone.called)
         self.assertTrue(self.manager.vcs.checkout.called)
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
-    @patch.object(managers.BuildManager, 'wait_all', MagicMock())
+    @patch.object(managers.BuildManager, 'wait_all', AsyncMagicMock())
     @async_test
-    def test_update_and_checkout_working_not_wait(self):
+    async def test_update_and_checkout_working_not_wait(self):
         self.manager.vcs.checkout = Mock()
-        yield from self.manager.update_and_checkout(work_after_wait=False)
+        await self.manager.update_and_checkout(work_after_wait=False)
 
         self.assertTrue(self.manager.wait_all.called)
         self.assertFalse(self.manager.vcs.checkout.called)
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
-    @patch.object(managers.BuildManager, 'wait_all', MagicMock())
+    @patch.object(managers.BuildManager, 'wait_all', AsyncMagicMock())
     @async_test
-    def test_update_and_checkout_new_named_tree(self):
-        self.manager.vcs.checkout = MagicMock(side_effect=[
-            managers.ExecCmdError, MagicMock(), MagicMock()])
+    async def test_update_and_checkout_new_named_tree(self):
         self.manager.vcs.get_remote_branches = AsyncMagicMock()
-        yield from self.manager.update_and_checkout()
+        self.manager.vcs.try_set_remote = AsyncMagicMock(
+            spec=self.manager.vcs.try_set_remote)
+        self.manager.vcs.checkout = AsyncMagicMock(side_effect=[
+            managers.ExecCmdError, MagicMock(), MagicMock()])
+        self.manager.vcs.pull = AsyncMagicMock(spec=self.manager.vcs.pull)
+        self.manager.vcs.update_submodule = AsyncMagicMock(
+            spec=self.manager.vcs.update_submodule)
+        await self.manager.update_and_checkout()
 
         self.assertEqual(len(self.manager.vcs.checkout.call_args_list), 3)
         self.assertTrue(self.manager.vcs.get_remote_branches.called)
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
-    @patch.object(managers.BuildManager, 'wait_all', MagicMock())
+    @patch.object(managers.BuildManager, 'wait_all', AsyncMagicMock())
     @async_test
-    def test_update_and_checkout_known_named_tree(self):
-        self.manager.vcs.checkout = MagicMock()
-        yield from self.manager.update_and_checkout()
+    async def test_update_and_checkout_known_named_tree(self):
+        self.manager.vcs.checkout = AsyncMagicMock(
+            spec=self.manager.vcs.checkout)
+        self.manager.vcs.update_submodule = AsyncMagicMock(
+            spec=self.manager.vcs.update_submodule)
+        self.manager.vcs.try_set_remote = AsyncMagicMock(
+            spec=self.manager.vcs.try_set_remote)
+        await self.manager.update_and_checkout()
 
         self.assertEqual(len(self.manager.vcs.checkout.call_args_list), 1)
 

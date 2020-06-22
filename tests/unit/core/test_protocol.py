@@ -17,11 +17,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 import json
 from unittest import mock, TestCase
 from toxicbuild.core import protocol
-from tests import async_test
+from tests import async_test, AsyncMagicMock
 
 
 class BaseToxicProtocolTest(TestCase):
@@ -30,8 +29,12 @@ class BaseToxicProtocolTest(TestCase):
         super().setUp()
         loop = mock.Mock()
         self.protocol = protocol.BaseToxicProtocol(loop)
-        self.protocol._stream_reader = mock.MagicMock()
-        self.protocol._stream_writer = mock.MagicMock()
+        self.protocol._stream_reader = AsyncMagicMock(
+            return_value=mock.MagicMock())
+        self.protocol._stream_writer = AsyncMagicMock(
+            return_value=mock.MagicMock())
+        self.protocol._stream_writer.close = mock.MagicMock()
+        self.protocol._stream_reader.set_exception = mock.MagicMock()
         self.protocol.salt = protocol.utils.bcrypt.gensalt(4)
         self.protocol.encrypted_token = protocol.utils.bcrypt_string(
             '123sd', self.protocol.salt)
@@ -62,8 +65,7 @@ class BaseToxicProtocolTest(TestCase):
 
         self._rlimit = 0
 
-        @asyncio.coroutine
-        def r(limit):
+        async def r(limit):
             part = self.full_message[self._rlimit:limit + self._rlimit]
             self._rlimit += limit
             return part
@@ -74,10 +76,12 @@ class BaseToxicProtocolTest(TestCase):
 
         self.assertEqual(type(self.protocol()), type(self.protocol))
 
-    @mock.patch.object(protocol.asyncio, 'StreamReader', mock.Mock())
-    @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
+    @mock.patch.object(protocol.asyncio, 'StreamReader', mock.MagicMock(
+        spec=protocol.asyncio.StreamReader))
+    @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock(
+        spec=protocol.asyncio.StreamWriter))
     @async_test
-    def test_connection_made(self):
+    async def test_connection_made(self):
         # what it does is to ensure that the client_connected method,
         # that is the callback called when a connection is made, is
         # calle correctly
@@ -89,22 +93,23 @@ class BaseToxicProtocolTest(TestCase):
         transport = mock.Mock()
         cc_mock = mock.Mock()
 
-        @asyncio.coroutine
-        def cc():
+        async def cc():
             cc_mock()
 
         prot.client_connected = cc
         prot.salt = self.protocol.salt
         prot.encrypted_token = self.protocol.encrypted_token
         prot.connection_made(transport)
-        yield from prot._check_data_future
-        yield from prot._client_connected_future
+        await prot._check_data_future
+        await prot._client_connected_future
         self.assertTrue(cc_mock.called)
 
-    @mock.patch.object(protocol.asyncio, 'StreamReader', mock.Mock())
-    @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
+    @mock.patch.object(protocol.asyncio, 'StreamReader', mock.MagicMock(
+        spec=protocol.asyncio.StreamReader))
+    @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock(
+        spec=protocol.asyncio.StreamWriter))
     @async_test
-    def test_connection_made_with_connection_reset(self):
+    async def test_connection_made_with_connection_reset(self):
         # this one ensures that we handle ConnectionResetError properly
         loop = mock.Mock()
         prot = protocol.BaseToxicProtocol(loop)
@@ -113,8 +118,7 @@ class BaseToxicProtocolTest(TestCase):
         prot._stream_reader.read = self.protocol._stream_reader.read
         transport = mock.Mock()
 
-        @asyncio.coroutine
-        def cc():
+        async def cc():
             raise ConnectionResetError
 
         prot.client_connected = cc
@@ -122,8 +126,8 @@ class BaseToxicProtocolTest(TestCase):
         prot.encrypted_token = self.protocol.encrypted_token
         prot.log = mock.Mock()
         prot.connection_made(transport)
-        yield from prot._check_data_future
-        yield from prot._client_connected_future
+        await prot._check_data_future
+        await prot._client_connected_future
         # here we look for the debug message saying that the connection
         # was reset
         msg = prot.log.call_args_list[0][0][0]
@@ -133,7 +137,8 @@ class BaseToxicProtocolTest(TestCase):
         self.protocol.connection_lost(mock.Mock())
         self.assertIsNone(self.protocol._stream_writer)
 
-    @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock())
+    @mock.patch.object(protocol.asyncio, 'StreamWriter', mock.MagicMock(
+        spec=protocol.asyncio.StreamWriter))
     def test_connection_lost_with_cb(self):
         self.protocol.connection_lost_cb = mock.Mock()
         self.protocol.connection_lost(mock.Mock())
@@ -142,26 +147,26 @@ class BaseToxicProtocolTest(TestCase):
 
     @mock.patch.object(protocol.utils, 'log', mock.Mock())
     @async_test
-    def test_check_data_without_data(self):
+    async def test_check_data_without_data(self):
         self.full_message = b''
 
-        yield from self.protocol.check_data()
+        await self.protocol.check_data()
 
         self.assertEqual(self.response['code'], 1)
 
     @mock.patch.object(protocol.utils, 'log', mock.Mock())
     @async_test
-    def test_check_data_without_token(self):
+    async def test_check_data_without_token(self):
         message = '{"salci": "fufu"}'
         self.full_message = '{}\n'.format(len(message)) + message
         self.full_message = self.full_message.encode('utf-8')
 
-        yield from self.protocol.check_data()
+        await self.protocol.check_data()
         self.assertEqual(self.response['code'], 2)
 
     @mock.patch.object(protocol.utils, 'log', mock.Mock())
     @async_test
-    def test_check_data_with_bad_token(self):
+    async def test_check_data_with_bad_token(self):
         message = '{"salci": "fufu", "token": "123sdf"}'
         self.protocol.salt = protocol.utils.bcrypt.gensalt(4)
         self.protocol.encrypted_token = protocol.utils.bcrypt_string(
@@ -169,45 +174,46 @@ class BaseToxicProtocolTest(TestCase):
         self.full_message = '{}\n'.format(len(message)) + message
         self.full_message = self.full_message.encode('utf-8')
 
-        yield from self.protocol.check_data()
+        await self.protocol.check_data()
         self.assertEqual(self.response['code'], 3)
 
+    @mock.patch.object(protocol.utils.LoggerMixin, 'log', mock.Mock())
     @async_test
-    def test_check_data_without_action(self):
+    async def test_check_data_without_action(self):
         message = '{"salci": "fufu", "token": "123sd"}'
         self.full_message = '{}\n'.format(len(message)) + message
         self.full_message = self.full_message.encode('utf-8')
 
-        yield from self.protocol.check_data()
+        await self.protocol.check_data()
         self.assertEqual(self.response['code'], 1)
 
     @async_test
-    def test_check_data(self):
+    async def test_check_data(self):
         message = '{"action": "hack!", "token": "123sd"}'
         self.full_message = '{}\n'.format(len(message)) + message
         self.full_message = self.full_message.encode('utf-8')
 
-        yield from self.protocol.check_data()
+        await self.protocol.check_data()
 
         self.assertEqual(self.protocol.action, 'hack!')
 
     @async_test
-    def test_send_response(self):
+    async def test_send_response(self):
         expected = protocol.OrderedDict({'code': 0,
                                          'body': 'something!'})
 
-        yield from self.protocol.send_response(code=0, body='something!')
+        await self.protocol.send_response(code=0, body='something!')
 
         self.assertEqual(expected, self.response)
 
     @async_test
-    def test_get_raw_data(self):
-        raw = yield from self.protocol.get_raw_data()
+    async def test_get_raw_data(self):
+        raw = await self.protocol.get_raw_data()
         self.assertEqual(raw, self.message)
 
     @async_test
-    def test_get_json_data(self):
-        json_data = yield from self.protocol.get_json_data()
+    async def test_get_json_data(self):
+        json_data = await self.protocol.get_json_data()
 
         self.assertEqual(json_data, json.loads(self.message.decode()))
 

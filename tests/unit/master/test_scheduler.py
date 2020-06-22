@@ -50,8 +50,7 @@ class SchedulerTest(TestCase):
         self.assertEqual(self.scheduler.consumption_table[task], 0)
 
     def test_add_with_coro(self):
-        @asyncio.coroutine
-        def coro():
+        async def coro():
             return True
 
         self.scheduler.add(coro, interval=10)
@@ -82,8 +81,7 @@ class SchedulerTest(TestCase):
         self.TASK_CORO_CONSUMED = False
         self.TASK_CALL_CONSUMED = False
 
-        @asyncio.coroutine
-        def task_coro():
+        async def task_coro():
             self.TASK_CORO_CONSUMED = True
 
         def task_call():
@@ -100,6 +98,5 @@ class SchedulerTest(TestCase):
     def _method2scheduler(self):
         return True
 
-    @asyncio.coroutine
-    def _coromethod2scheduler(self):
+    async def _coromethod2scheduler(self):
         return True

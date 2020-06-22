@@ -64,20 +64,20 @@ class PythonCreateVenvStepTest(TestCase):
 
     @patch.object(plugins.os.path, 'exists', Mock())
     @async_test
-    def test_execute_with_existing_venv(self):
-        step_info = yield from self.step.execute('some/dir')
+    async def test_execute_with_existing_venv(self):
+        step_info = await self.step.execute('some/dir')
         self.assertIn('venv exists', step_info['output'])
         self.assertEqual(plugins.os.path.exists.call_args[0][0],
                          'some/dir/bla/venv/bin/python')
 
     @patch.object(build, 'exec_cmd', MagicMock())
     @async_test
-    def test_execute_with_new_venv(self):
+    async def test_execute_with_new_venv(self):
         execute_mock = Mock(spec=plugins.BuildStep.execute)
         build.exec_cmd = asyncio.coroutine(
             lambda *a, **kw: execute_mock(*a, **kw))
 
-        yield from self.step.execute('.')
+        await self.step.execute('.')
         self.assertTrue(execute_mock.called)
 
 

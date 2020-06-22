@@ -53,8 +53,7 @@ def create_scheduler():
     ensure_future(scheduler.start())
 
 
-@asyncio.coroutine
-def toxicinit(server):
+async def toxicinit(server):
     """ Initialize services. """
 
     # importing here to avoid circular imports
@@ -68,10 +67,10 @@ def toxicinit(server):
 
     create_scheduler()
 
-    yield from common_setup(settings)
+    await common_setup(settings)
 
     log('[init] Boostrap for everyone', level='debug')
-    yield from Repository.bootstrap_all()
+    await Repository.bootstrap_all()
     if settings.ENABLE_HOLE:
         log('[init] Serving UIHole at {}'.format(settings.HOLE_PORT))
         server.serve()

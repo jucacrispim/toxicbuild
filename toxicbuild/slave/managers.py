@@ -137,29 +137,25 @@ class BuildManager(LoggerMixin):
         self._config = await get_toxicbuildconf_yaml(self.workdir,
                                                      self.config_filename)
 
-    @asyncio.coroutine
-    def wait_clone(self):
+    async def wait_clone(self):
         """Wait until the repository clone is complete."""
 
         while self.is_cloning:
-            yield from asyncio.sleep(1)
+            await asyncio.sleep(1)
 
-    @asyncio.coroutine
-    def wait_update(self):
+    async def wait_update(self):
         """Wait until the repository update is complete."""
 
         while self.is_updating:
-            yield from asyncio.sleep(1)
+            await asyncio.sleep(1)
 
-    @asyncio.coroutine
-    def wait_all(self):
+    async def wait_all(self):
         """Wait until clone and update are done."""
 
         while self.is_working:
-            yield from asyncio.sleep(1)
+            await asyncio.sleep(1)
 
-    @asyncio.coroutine
-    def update_and_checkout(self, work_after_wait=True, external=None):
+    async def update_and_checkout(self, work_after_wait=True, external=None):
         """ Updates ``self.branch`` and checkout to ``self.named_tree``.
 
         :param work_after_wait: Indicates if we should update and checkout
@@ -169,56 +165,56 @@ class BuildManager(LoggerMixin):
         """
 
         if self.is_working:
-            yield from self.wait_all()
+            await self.wait_all()
             if not work_after_wait:
-                yield from self.load_config()
+                await self.load_config()
                 return
 
         try:
             self.is_updating = True
             if not self.vcs.workdir_exists():
                 self.log('cloning {}'.format(self.repo_url))
-                yield from self.vcs.clone(self.repo_url)
+                await self.vcs.clone(self.repo_url)
 
             if hasattr(self.vcs, 'update_submodule'):  # pragma no branch
                 self.log('updating submodule', level='debug')
-                yield from self.vcs.update_submodule()
+                await self.vcs.update_submodule()
 
             if external:
                 url = external['url']
                 name = external['name']
                 branch = external['branch']
                 into = external['into']
-                yield from self.vcs.import_external_branch(url, name, branch,
+                await self.vcs.import_external_branch(url, name, branch,
                                                            into)
             else:
                 # we need to try_set_remote so if the url has changed, we
                 # change it before trying fetch/checkout stuff
-                yield from self.vcs.try_set_remote(self.repo_url)
+                await self.vcs.try_set_remote(self.repo_url)
 
             # first we try to checkout to the named_tree because if if
             # already exists here we don't need to update the code.
             try:
                 self.log('checking out to named_tree {}'.format(
                     self.named_tree), level='debug')
-                yield from self.vcs.checkout(self.named_tree)
+                await self.vcs.checkout(self.named_tree)
             except ExecCmdError:
                 # this is executed when the named_tree does not  exist
                 # so we upate the code and then checkout again.
                 self.log('named_tree does not exist. updating...')
-                yield from self.vcs.get_remote_branches()
+                await self.vcs.get_remote_branches()
                 self.log('checking out to branch {}'.format(self.branch),
                          level='debug')
-                yield from self.vcs.checkout(self.branch)
-                yield from self.vcs.pull(self.branch)
+                await self.vcs.checkout(self.branch)
+                await self.vcs.pull(self.branch)
                 self.log('checking out to named_tree {}'.format(
                     self.named_tree), level='debug')
-                yield from self.vcs.checkout(self.named_tree)
+                await self.vcs.checkout(self.named_tree)
 
         finally:
             self.is_updating = False
 
-        yield from self.load_config()
+        await self.load_config()
 
     def _branch_match(self, builder):
         return builder.get('branch') is None or match_string(
@@ -287,9 +283,8 @@ class BuildManager(LoggerMixin):
         return builder
 
     # kind of wierd place for this thing
-    @asyncio.coroutine
-    def send_info(self, info):
-        yield from self.protocol.send_response(code=0, body=info)
+    async def send_info(self, info):
+        await self.protocol.send_response(code=0, body=info)
 
     def log(self, msg, level='info'):
         msg = '[{}]{}'.format(self.repo_url, msg)

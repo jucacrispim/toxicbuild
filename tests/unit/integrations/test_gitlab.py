@@ -56,7 +56,7 @@ class GitlabAppTest(TestCase):
 class GitlabIntegrationTest(TestCase):
 
     @async_test
-    def setUp(self):
+    async def setUp(self):
         self.integration = gitlab.GitlabIntegration(access_token='asdf')
 
     @async_test

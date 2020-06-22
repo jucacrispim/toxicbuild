@@ -127,20 +127,19 @@ class Builder(LoggerMixin):
             build_info = await self._do_build()
         return build_info
 
-    @asyncio.coroutine
-    def _do_build(self):
+    async def _do_build(self):
         build_status = None
         build_info = {'steps': [], 'status': 'running',
                       'started': datetime2string(localtime2utc(now())),
                       'finished': None, 'info_type': 'build_info'}
 
-        yield from self.manager.send_info(build_info)
+        await self.manager.send_info(build_info)
         last_step_status = None
         last_step_output = None
         last_step_finished = None
         for index, step in enumerate(self.steps):
             self._clear_step_output_buff()
-            cmd = yield from step.get_command()
+            cmd = await step.get_command()
             msg = 'Executing %s' % cmd
             self.log(msg, level='debug')
             local_now = localtime2utc(now())
@@ -155,18 +154,18 @@ class Builder(LoggerMixin):
                          else None,
                          'last_step_status': last_step_status}
 
-            yield from self.manager.send_info(step_info)
+            await self.manager.send_info(step_info)
 
             envvars = self._get_env_vars()
 
             out_fn = functools.partial(self._send_step_output_info, step_info)
 
-            step_exec_output = yield from step.execute(
+            step_exec_output = await step.execute(
                 cwd=self._get_tmp_dir(), out_fn=out_fn,
                 last_step_status=last_step_status,
                 last_step_output=last_step_output, **envvars)
             step_info.update(step_exec_output)
-            yield from self._flush_step_output_buff(step_info['uuid'])
+            await self._flush_step_output_buff(step_info['uuid'])
 
             status = step_info['status']
             msg = 'Finished {} with status {}'.format(cmd, status)
@@ -181,7 +180,7 @@ class Builder(LoggerMixin):
             step_info['total_time'] = (
                 finished - string2datetime(step_info['started'])).seconds
 
-            yield from self.manager.send_info(step_info)
+            await self.manager.send_info(step_info)
 
             # here is: if build_status is something other than None
             # or success (ie failed) we don't change it anymore, the build
@@ -206,18 +205,16 @@ class Builder(LoggerMixin):
         self._current_step_output_index = None
         self._current_step_output_buff_len = 0
 
-    @asyncio.coroutine
-    def _send_step_output_info(self, step_info, line_index, line):
+    async def _send_step_output_info(self, step_info, line_index, line):
         self._step_output_buff.append(line)
         self._current_step_output_buff_len += len(line)
 
         if not self._current_step_output_buff_len > self.STEP_OUTPUT_BUFF_LEN:
             return
 
-        yield from self._flush_step_output_buff(step_info['uuid'])
+        await self._flush_step_output_buff(step_info['uuid'])
 
-    @asyncio.coroutine
-    def _flush_step_output_buff(self, step_uuid):
+    async def _flush_step_output_buff(self, step_uuid):
 
         if self._current_step_output_index is None:
             self._current_step_output_index = 0
@@ -229,7 +226,7 @@ class Builder(LoggerMixin):
                'output_index': self._current_step_output_index,
                'output': ''.join(self._step_output_buff).strip('\n')}
 
-        yield from self.manager.send_info(msg)
+        await self.manager.send_info(msg)
         self._step_output_buff = []
         self._current_step_output_buff_len = 0
 
@@ -242,28 +239,26 @@ class Builder(LoggerMixin):
     def _get_tmp_dir(self):
         return '{}-{}'.format(os.path.abspath(self.workdir), self.name)
 
-    @asyncio.coroutine
-    def _copy_workdir(self):
+    async def _copy_workdir(self):
         """Copy a workdir to a temp dir to run the tests"""
 
         tmp_dir = self._get_tmp_dir()
         self.log('Copying workdir to {}'.format(tmp_dir), level='debug')
 
         mkdir_cmd = 'mkdir -p {}'.format(tmp_dir)
-        yield from exec_cmd(mkdir_cmd, cwd='.')
+        await exec_cmd(mkdir_cmd, cwd='.')
         cp_cmd = 'cp -R {}/* {}'.format(self.workdir, tmp_dir)
 
         self.log('Executing {}'.format(cp_cmd), level='debug')
-        yield from exec_cmd(cp_cmd, cwd='.')
+        await exec_cmd(cp_cmd, cwd='.')
 
-    @asyncio.coroutine
-    def _remove_tmp_dir(self):
+    async def _remove_tmp_dir(self):
         """Removes the temporary dir"""
 
         self.log('Removing tmp-dir', level='debug')
         rm_cmd = 'rm -rf {}'.format(self._get_tmp_dir())
         self.log('Executing {}'.format(rm_cmd), level='debug')
-        yield from exec_cmd(rm_cmd, cwd='.')
+        await exec_cmd(rm_cmd, cwd='.')
 
 
 class BuildStep:
@@ -300,8 +295,7 @@ class BuildStep:
                                 out_fn=out_fn, **envvars)
         return output
 
-    @asyncio.coroutine
-    def execute(self, cwd, out_fn=None, last_step_status=None,
+    async def execute(self, cwd, out_fn=None, last_step_status=None,
                 last_step_output=None, **envvars):
         """Executes the step command.
 
@@ -324,8 +318,8 @@ class BuildStep:
 
         step_status = {}
         try:
-            cmd = yield from self.get_command()
-            output = yield from self.exec_cmd(cmd, cwd=cwd,
+            cmd = await self.get_command()
+            output = await self.exec_cmd(cmd, cwd=cwd,
                                               timeout=self.timeout,
                                               out_fn=out_fn, **envvars)
             status = 'success'

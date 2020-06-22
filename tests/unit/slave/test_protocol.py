@@ -55,15 +55,13 @@ class ProtocolTest(TestCase):
                             'vcs_type': 'git',
                             'builder_name': 'bla'}}
 
-        @asyncio.coroutine
-        def w(code, body):
+        async def w(code, body):
             self.response = {'code': code,
                              'body': body}
 
         self.protocol.send_response = w
 
-        @asyncio.coroutine
-        def r():
+        async def r():
             return self.message
 
         self.protocol.get_json_data = r
@@ -72,55 +70,55 @@ class ProtocolTest(TestCase):
         self.assertEqual(type(self.protocol()), type(self.protocol))
 
     @async_test
-    def test_healthcheck(self):
+    async def test_healthcheck(self):
         expected = {'code': 0,
                     'body': 'I\'m alive!'}
 
         self.message = {'action': 'healthcheck', 'token': '123'}
 
         self.protocol.connection_made(self.transport)
-        yield from self._wait_futures()
+        await self._wait_futures()
 
         self.assertEqual(expected, self.response)
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @async_test
-    def test_get_buildmanager(self):
-        self.protocol.data = yield from self.protocol.get_json_data()
-        builder = yield from self.protocol.get_buildmanager()
+    async def test_get_buildmanager(self):
+        self.protocol.data = await self.protocol.get_json_data()
+        builder = await self.protocol.get_buildmanager()
         self.assertTrue(builder)
 
     @async_test
-    def test_get_buildmanager_with_bad_data(self):
-        self.protocol.data = yield from self.protocol.get_json_data()
+    async def test_get_buildmanager_with_bad_data(self):
+        self.protocol.data = await self.protocol.get_json_data()
         del self.protocol.data['body']
 
         with self.assertRaises(protocols.BadData):
-            yield from self.protocol.get_buildmanager()
+            await self.protocol.get_buildmanager()
 
     @mock.patch.object(protocols, 'settings', mock.Mock())
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @async_test
-    def test_build(self):
+    async def test_build(self):
         protocols.settings.USE_DOCKER = False
         manager = protocols.BuildManager.return_value
         manager.update_and_checkout = AsyncMagicMock()
         manager.build = AsyncMagicMock()
         manager.load_config = AsyncMagicMock()
-        self.protocol.data = yield from self.protocol.get_json_data()
+        self.protocol.data = await self.protocol.get_json_data()
         protocols.BuildManager.return_value.current_build = None
 
         manager.load_builder = AsyncMagicMock()
-        yield from self.protocol.build()
+        await self.protocol.build()
         self.assertTrue(manager.load_builder.called)
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @async_test
-    def test_build_with_bad_data(self):
-        self.protocol.data = yield from self.protocol.get_json_data()
+    async def test_build_with_bad_data(self):
+        self.protocol.data = await self.protocol.get_json_data()
         del self.protocol.data['body']['builder_name']
         manager = protocols.BuildManager.return_value
         manager.load_config = AsyncMagicMock()
@@ -128,31 +126,31 @@ class ProtocolTest(TestCase):
         manager.update_and_checkout = AsyncMagicMock()
 
         with self.assertRaises(protocols.BadData):
-            yield from self.protocol.build()
+            await self.protocol.build()
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @async_test
-    def test_build_with_bad_builder_config(self):
+    async def test_build_with_bad_builder_config(self):
         manager = protocols.BuildManager.return_value
         manager.update_and_checkout = AsyncMagicMock()
         manager.load_config = AsyncMagicMock()
         manager.load_builder = AsyncMagicMock(
             side_effect=protocols.BadBuilderConfig)
         protocols.BuildManager.return_value.current_build = None
-        self.protocol.data = yield from self.protocol.get_json_data()
+        self.protocol.data = await self.protocol.get_json_data()
 
-        build_info = yield from self.protocol.build()
+        build_info = await self.protocol.build()
         self.assertEqual(build_info['status'], 'exception')
 
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @async_test
-    def test_list_builders(self):
+    async def test_list_builders(self):
         expected = {'code': 0,
                     'body': {'builders': ['b1', 'b2']}}
 
-        self.protocol.data = yield from self.protocol.get_json_data()
+        self.protocol.data = await self.protocol.get_json_data()
         manager = protocols.BuildManager.return_value
         manager.load_config = AsyncMagicMock()
 
@@ -160,35 +158,34 @@ class ProtocolTest(TestCase):
         manager.update_and_checkout = AsyncMagicMock()
         manager.list_builders.return_value = ['b1', 'b2']
 
-        yield from self.protocol.list_builders()
+        await self.protocol.list_builders()
 
         self.assertEqual(self.response, expected)
 
     @mock.patch.object(protocols, 'log', mock.Mock())
     @async_test
-    def test_client_connected_with_bad_data(self):
+    async def test_client_connected_with_bad_data(self):
         self.message = {"action": "build", 'token': '123'}
 
         self.protocol.connection_made(self.transport)
-        yield from self._wait_futures()
+        await self._wait_futures()
 
         self.assertEqual(self.response['code'], 1)
 
     @mock.patch.object(protocols, 'log', mock.Mock())
     @async_test
-    def test_client_connected_with_exception(self):
+    async def test_client_connected_with_exception(self):
         self.message = {"action": "build", 'token': '123'}
 
-        @asyncio.coroutine
-        def build(*a, **kw):
+        async def build(*a, **kw):
             raise Exception('sauci fufu!')
 
         self.protocol.build = build
 
         self.protocol.connection_made(self.transport)
-        yield from self._wait_futures()
+        await self._wait_futures()
 
-        yield from self.protocol.client_connected()
+        await self.protocol.client_connected()
 
         self.assertEqual(self.response['code'], 1)
 
@@ -204,7 +201,7 @@ class ProtocolTest(TestCase):
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @async_test
-    def test_client_connected_list_builders(self):
+    async def test_client_connected_list_builders(self):
         self.message.update({'token': '123'})
         manager = protocols.BuildManager.return_value
         manager.load_config = AsyncMagicMock()
@@ -213,16 +210,16 @@ class ProtocolTest(TestCase):
         manager.list_builders.return_value = ['b1', 'b2']
         manager.update_and_checkout = AsyncMagicMock()
         self.protocol.connection_made(self.transport)
-        yield from self._wait_futures()
+        await self._wait_futures()
 
         self.assertEqual(self.response['body']['builders'], ['b1', 'b2'])
 
     @async_test
-    def test_client_connected_heathcheck(self):
+    async def test_client_connected_heathcheck(self):
         self.message = {'action': 'healthcheck', 'token': '123'}
 
         self.protocol.connection_made(self.transport)
-        yield from self._wait_futures()
+        await self._wait_futures()
 
         self.assertEqual(self.response['body'], 'I\'m alive!')
 
@@ -230,7 +227,7 @@ class ProtocolTest(TestCase):
     @mock.patch.object(protocols, 'BuildManager',
                        mock.MagicMock(spec=protocols.BuildManager))
     @async_test
-    def test_client_connected_build(self):
+    async def test_client_connected_build(self):
         protocols.settings.USE_DOCKER = False
         manager = protocols.BuildManager.return_value
         self.message = {'action': 'build',
@@ -247,27 +244,26 @@ class ProtocolTest(TestCase):
         manager.load_builder = AsyncMagicMock()
         manager.update_and_checkout = AsyncMagicMock()
         self.protocol.connection_made(self.transport)
-        yield from self._wait_futures()
+        await self._wait_futures()
         builder = manager.load_builder.return_value
         self.assertTrue(builder.build.called)
 
     @mock.patch.object(protocols, 'log', mock.Mock())
     @async_test
-    def test_client_connected_with_wrong_action(self):
+    async def test_client_connected_with_wrong_action(self):
         self.message = {'action': 'bla', 'token': '123'}
 
         self.protocol.connection_made(self.transport)
 
-        yield from self._wait_futures()
+        await self._wait_futures()
 
         self.assertTrue(self.response['code'], 1)
 
-    @asyncio.coroutine
-    def _wait_futures(self):
-        yield from self.protocol._check_data_future
+    async def _wait_futures(self):
+        await self.protocol._check_data_future
         total = 10
         i = 0
         while not self.protocol._client_connected_future and i < total:
             i += 1
-            yield from asyncio.sleep(0.5)
-        yield from self.protocol._client_connected_future
+            await asyncio.sleep(0.5)
+        await self.protocol._client_connected_future

@@ -108,12 +108,10 @@ class SlaveTest(TestCase):
     @async_test
     async def test_healthcheck(self):
 
-        @asyncio.coroutine
-        def gc():
+        async def gc():
             client = MagicMock()
 
-            @asyncio.coroutine
-            def hc():  # x no pé!
+            async def hc():  # x no pé!
                 return True
 
             client.__enter__.return_value.healthcheck = hc
@@ -152,12 +150,10 @@ class SlaveTest(TestCase):
     async def test_list_builders(self):
         await self._create_test_data()
 
-        @asyncio.coroutine
-        def gc():
+        async def gc():
             client = MagicMock()
 
-            @asyncio.coroutine
-            def lb(repo_url, vcs_type, branch, named_tree):
+            async def lb(repo_url, vcs_type, branch, named_tree):
                 return ['builder-1', 'builder-2']
 
             client.__enter__.return_value.list_builders = lb
@@ -195,11 +191,9 @@ class SlaveTest(TestCase):
         await self._create_test_data()
         client = MagicMock()
 
-        @asyncio.coroutine
-        def gc():
+        async def gc():
 
-            @asyncio.coroutine
-            def b(build, envvars, process_coro):
+            async def b(build, envvars, process_coro):
                 client.build()
                 return []
 
@@ -217,11 +211,9 @@ class SlaveTest(TestCase):
         await self._create_test_data()
         client = MagicMock()
 
-        @asyncio.coroutine
-        def gc():
+        async def gc():
 
-            @asyncio.coroutine
-            def b(build, envvars, process_coro):
+            async def b(build, envvars, process_coro):
                 raise slave.ToxicClientException
 
             client.__enter__.return_value.build = b

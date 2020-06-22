@@ -215,9 +215,9 @@ class BaseHoleInterfaceTest(TestCase):
         spec=interfaces.get_hole_client))
     @patch.object(interfaces.BaseHoleInterface, 'settings', MagicMock())
     @async_test
-    def test_get_client(self):
+    async def test_get_client(self):
         requester = MagicMock()
-        yield from interfaces.BaseHoleInterface.get_client(requester)
+        await interfaces.BaseHoleInterface.get_client(requester)
         self.assertTrue(interfaces.get_hole_client.called)
 
     @patch.object(interfaces, 'get_hole_client', MagicMock(

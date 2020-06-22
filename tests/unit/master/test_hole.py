@@ -141,8 +141,7 @@ class UIHoleTest(TestCase):
         hole.BaseToxicProtocol.send_response = asyncio.coroutine(
             lambda *a, **kw: send_response(*a, **kw))
 
-        @asyncio.coroutine
-        def handle(*a, **kw):
+        async def handle(*a, **kw):
             raise Exception('bla')
 
         user = hole.User(email='ze@ndad.con', password='asdf')
@@ -166,8 +165,7 @@ class UIHoleTest(TestCase):
         hole.BaseToxicProtocol.send_response = asyncio.coroutine(
             lambda *a, **kw: send_response(*a, **kw))
 
-        @asyncio.coroutine
-        def handle(*a, **kw):
+        async def handle(*a, **kw):
             raise hole.NotEnoughPerms
 
         user = hole.User(email='ze@ndad.con', password='asdf')
@@ -234,8 +232,7 @@ class HoleHandlerTest(TestCase):
 
     @async_test
     async def test_handle_with_coro(self):
-        @asyncio.coroutine
-        def my_action(*a, ** kw):
+        async def my_action(*a, ** kw):
             return True
 
         self.handler.my_action = my_action
@@ -703,8 +700,7 @@ class HoleHandlerTest(TestCase):
 
         get_mock = MagicMock()
 
-        @asyncio.coroutine
-        def first(*a, **kw):
+        async def first(*a, **kw):
             get_mock()
             return self.revision
 
@@ -1588,8 +1584,7 @@ class UIStreamHandlerTest(TestCase):
         self.CODE = None
         self.BODY = None
 
-        @asyncio.coroutine
-        def sr(code, body):
+        async def sr(code, body):
             self.CODE = code
             self.BODY = body
 
@@ -1641,8 +1636,7 @@ class UIStreamHandlerTest(TestCase):
         self.CODE = None
         self.BODY = None
 
-        @asyncio.coroutine
-        def sr(code, body):
+        async def sr(code, body):
             self.CODE = code
             self.BODY = body
 
@@ -1677,8 +1671,7 @@ class UIStreamHandlerTest(TestCase):
         self.CODE = None
         self.BODY = None
 
-        @asyncio.coroutine
-        def sr(code, body):
+        async def sr(code, body):
             self.CODE = code
             self.BODY = body
 
@@ -1714,8 +1707,7 @@ class UIStreamHandlerTest(TestCase):
         self.CODE = None
         self.BODY = None
 
-        @asyncio.coroutine
-        def sr(code, body):
+        async def sr(code, body):
             self.CODE = code
             self.BODY = body
 
@@ -1732,8 +1724,7 @@ class UIStreamHandlerTest(TestCase):
     async def test_send_response(self):
         sr_mock = MagicMock()
 
-        @asyncio.coroutine
-        def sr(code, body):
+        async def sr(code, body):
             sr_mock()
 
         self.handler.protocol.send_response = sr
@@ -1743,8 +1734,7 @@ class UIStreamHandlerTest(TestCase):
     @async_test
     async def test_send_response_exception(self):
 
-        @asyncio.coroutine
-        def sr(code, body):
+        async def sr(code, body):
             raise ConnectionResetError
 
         self.handler.protocol.send_response = sr

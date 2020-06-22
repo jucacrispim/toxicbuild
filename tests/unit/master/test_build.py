@@ -995,8 +995,7 @@ class BuildManagerTest(TestCase):
         self.manager.repository = self.repo
         self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
 
-        @asyncio.coroutine
-        def gb(branch, slave):
+        async def gb(branch, slave):
             return [self.builder], 'master'
 
         self.manager.get_builders = gb
@@ -1358,8 +1357,7 @@ class BuildManagerTest(TestCase):
 
         _eb_mock = mock.Mock()
 
-        @asyncio.coroutine
-        def _eb():
+        async def _eb():
             _eb_mock()
 
         self.repo.build_manager._execute_builds = _eb
@@ -1380,8 +1378,7 @@ class BuildManagerTest(TestCase):
 
         _eb_mock = mock.Mock()
 
-        @asyncio.coroutine
-        def _eb():
+        async def _eb():
             _eb_mock()
 
         self.repo.build_manager._execute_builds = _eb
@@ -1404,8 +1401,7 @@ class BuildManagerTest(TestCase):
 
         _eb_mock = mock.Mock()
 
-        @asyncio.coroutine
-        def _eb():
+        async def _eb():
             _eb_mock()
 
         self.repo.build_manager._execute_builds = _eb

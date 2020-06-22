@@ -18,7 +18,6 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
-import asyncio
 import datetime
 import os
 from unittest import mock, TestCase
@@ -26,7 +25,7 @@ from toxicbuild.core import vcs, utils
 from tests import async_test, AsyncMagicMock
 
 
-@mock.patch.object(vcs, 'exec_cmd', mock.MagicMock())
+@mock.patch.object(vcs, 'exec_cmd', AsyncMagicMock())
 class VCSTest(TestCase):
 
     def setUp(self):
@@ -85,14 +84,14 @@ class VCSTest(TestCase):
         self.vcs = DummyVcs('/some/workdir')
 
     @async_test
-    def test_exec_cmd(self):
-        yield from self.vcs.exec_cmd('ls')
+    async def test_exec_cmd(self):
+        await self.vcs.exec_cmd('ls')
 
         call_args = vcs.exec_cmd.call_args[0]
         self.assertEqual(call_args, ('ls', self.vcs.workdir))
 
     @async_test
-    def test_workdir_exists(self):
+    async def test_workdir_exists(self):
         # sure this exists
         self.vcs.workdir = os.path.expanduser('~')
 
@@ -121,7 +120,7 @@ class VCSTest(TestCase):
         self.assertEqual(returned, expected)
 
 
-@mock.patch.object(vcs, 'exec_cmd', mock.MagicMock())
+@mock.patch.object(vcs, 'exec_cmd', AsyncMagicMock())
 class GitTest(TestCase):
 
     def setUp(self):
@@ -135,10 +134,10 @@ class GitTest(TestCase):
         self.assertTrue(called_cmd.startswith('git config remote.origin'))
 
     @async_test
-    def test_clone(self):
+    async def test_clone(self):
         url = 'git@somewhere.org/myproject.git'
         self.vcs._set_remote_origin_config = AsyncMagicMock()
-        yield from self.vcs.clone(url)
+        await self.vcs.clone(url)
 
         called_cmd = vcs.exec_cmd.call_args[0][0]
         self.assertEqual(
@@ -146,18 +145,18 @@ class GitTest(TestCase):
             'git clone --depth=2 %s %s --recursive' % (url, self.vcs.workdir))
 
     @async_test
-    def test_set_remote(self):
+    async def test_set_remote(self):
         url = 'git@otherplace.com/myproject.git'
-        yield from self.vcs.set_remote(url)
+        await self.vcs.set_remote(url)
         called_cmd = vcs.exec_cmd.call_args[0][0]
         self.assertEqual(called_cmd, 'git remote set-url origin {}'.format(
             url))
 
     @async_test
-    def test_get_remote(self):
+    async def test_get_remote(self):
         expected = "git remote -v | grep -m1 origin | "
         expected += "sed -e 's/origin\s*//g' -e 's/(.*)//g'"
-        yield from self.vcs.get_remote()
+        await self.vcs.get_remote()
         called_cmd = vcs.exec_cmd.call_args[0][0]
         self.assertEqual(called_cmd, expected)
 
@@ -182,9 +181,9 @@ class GitTest(TestCase):
     @mock.patch.object(vcs.Git, 'set_remote', AsyncMagicMock(
         spec=vcs.Git.set_remote))
     @async_test
-    def test_try_set_remote_same_url(self):
+    async def test_try_set_remote_same_url(self):
         url = 'git@bla.com/bla.git'
-        yield from self.vcs.try_set_remote(url)
+        await self.vcs.try_set_remote(url)
         self.assertFalse(self.vcs.set_remote.called)
 
     @mock.patch.object(vcs.Git, 'get_remote', AsyncMagicMock(
@@ -192,77 +191,72 @@ class GitTest(TestCase):
     @mock.patch.object(vcs.Git, 'set_remote', AsyncMagicMock(
         spec=vcs.Git.set_remote))
     @async_test
-    def test_try_set_remote_other_url(self):
+    async def test_try_set_remote_other_url(self):
         url = 'git@bla.com/other.git'
-        yield from self.vcs.try_set_remote(url)
+        await self.vcs.try_set_remote(url)
         self.assertTrue(self.vcs.set_remote.called)
 
     @async_test
-    def test_fetch(self):
+    async def test_fetch(self):
         expected_cmd = 'git fetch'
 
-        @asyncio.coroutine
-        def e(cmd, cwd):
+        async def e(cmd, cwd):
             return cmd
 
         vcs.exec_cmd = e
 
-        cmd = yield from self.vcs.fetch()
+        cmd = await self.vcs.fetch()
         self.assertEqual(cmd, expected_cmd)
 
     @async_test
-    def test_create_local_branch(self):
+    async def test_create_local_branch(self):
         expected_cmd = 'git branch new-branch'
 
-        @asyncio.coroutine
-        def e(cmd, cwd):
+        async def e(cmd, cwd):
             return cmd
 
         vcs.exec_cmd = e
 
         self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
-        cmd = yield from self.vcs.create_local_branch('new-branch', 'master')
+        cmd = await self.vcs.create_local_branch('new-branch', 'master')
         self.assertEqual(cmd, expected_cmd)
         self.assertTrue(self.vcs.checkout.called)
 
     @async_test
-    def test_delete_local_branch(self):
+    async def test_delete_local_branch(self):
         expected_cmd = 'git branch -D new-branch'
 
-        @asyncio.coroutine
-        def e(cmd, cwd):
+        async def e(cmd, cwd):
             return cmd
 
         vcs.exec_cmd = e
 
         self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
-        cmd = yield from self.vcs.delete_local_branch('new-branch')
+        cmd = await self.vcs.delete_local_branch('new-branch')
         self.assertEqual(cmd, expected_cmd)
         self.assertTrue(self.vcs.checkout.called)
 
     @async_test
-    def test_checkout(self):
+    async def test_checkout(self):
         expected_cmd = 'git checkout master'
 
-        @asyncio.coroutine
-        def e(cmd, cwd):
+        async def e(cmd, cwd):
             assert cmd == expected_cmd
 
         vcs.exec_cmd = e
 
-        yield from self.vcs.checkout('master')
+        await self.vcs.checkout('master')
 
     @async_test
-    def test_pull(self):
+    async def test_pull(self):
         expected_cmd = 'git pull --no-edit origin master'
 
-        @asyncio.coroutine
-        def e(cmd, cwd):
+        async def e(cmd, cwd):
             assert cmd == expected_cmd
 
         vcs.exec_cmd = e
 
-        yield from self.vcs.pull('master')
+        await self.vcs.pull('master')
 
     @async_test
     async def test_branch_exists(self):
@@ -335,54 +329,50 @@ class GitTest(TestCase):
         self.assertEqual(pull, pull_expected)
 
     @async_test
-    def test_has_changes(self):
-        @asyncio.coroutine
-        def e(cmd, cwd):
+    async def test_has_changes(self):
+        async def e(cmd, cwd):
             return 'has changes!'
 
         vcs.exec_cmd = e
 
-        has_changes = yield from self.vcs.has_changes()
+        has_changes = await self.vcs.has_changes()
 
         self.assertTrue(has_changes)
 
     @async_test
-    def test_update_submodule(self):
+    async def test_update_submodule(self):
         expected_cmd = ['git submodule init',
                         'git submodule update']
         self.COUNT = 0
 
-        @asyncio.coroutine
-        def e(cmd, cwd):
+        async def e(cmd, cwd):
             assert cmd == expected_cmd[self.COUNT]
             self.COUNT += 1
 
         vcs.exec_cmd = e
 
-        yield from self.vcs.update_submodule()
+        await self.vcs.update_submodule()
 
     @async_test
-    def test_get_remote_branches(self):
+    async def test_get_remote_branches(self):
         expected = 'git branch -r'
 
         emock = mock.Mock()
 
-        @asyncio.coroutine
-        def e(*a, **kw):
+        async def e(*a, **kw):
             emock(a[0])
             return 'origin/HEAD  -> origin/master\norigin/dev\norigin/master'
 
         fetch_mock = mock.Mock()
 
-        @asyncio.coroutine
-        def fetch():
+        async def fetch():
             fetch_mock()
 
         expected_branches = set(['dev', 'master'])
         vcs.exec_cmd = e
         self.vcs.fetch = fetch
         self.vcs._update_remote_prune = AsyncMagicMock()
-        branches = yield from self.vcs.get_remote_branches()
+        branches = await self.vcs.get_remote_branches()
         called_cmd = emock.call_args[0][0]
         self.assertEqual(expected, called_cmd)
         self.assertEqual(expected_branches, branches)
@@ -390,7 +380,7 @@ class GitTest(TestCase):
         self.assertTrue(fetch_mock.called)
 
     @async_test
-    def test_get_revisions_for_branch(self):
+    async def test_get_revisions_for_branch(self):
         now = utils.now()
         local = utils.utc2localtime(now)
 
@@ -406,8 +396,7 @@ class GitTest(TestCase):
         body = '\n\nObrigado deus dos maronitas.\nFadul Abdala\n'
         body += 'O Grão-turco das putas.'
 
-        @asyncio.coroutine
-        def e(*a, **kw):
+        async def e(*a, **kw):
             assert a[0] == expected_cmd, a[0]
             log = '0sdflf093 | Thu Oct 20 16:30:23 2014 '
             log += '| zezinha do butiá | some good commit | <end-toxiccommit>'
@@ -420,15 +409,15 @@ class GitTest(TestCase):
             return log
 
         vcs.exec_cmd = e
-        revisions = yield from self.vcs.get_revisions_for_branch('master',
-                                                                 since=now)
+        revisions = await self.vcs.get_revisions_for_branch('master',
+                                                            since=now)
         # The first revision is the older one
         self.assertEqual(revisions[0]['author'], 'seu fadu')
         self.assertEqual(revisions[0]['body'], body)
         self.assertEqual(revisions[1]['commit'], '0sdflf093')
 
     @async_test
-    def test_get_revisions_for_branch_without_since(self):
+    async def test_get_revisions_for_branch_without_since(self):
         commit_fmt = "%H | %ad | %an | %s | %+b {}".format(
             self.vcs._commit_separator)
 
@@ -438,8 +427,7 @@ class GitTest(TestCase):
         body = '\n\nObrigado deus dos maronitas.\nFadul Abdala\n'
         body += 'O Grão-turco das putas.'
 
-        @asyncio.coroutine
-        def e(*a, **kw):
+        async def e(*a, **kw):
             assert a[0] == expected_cmd, a[0]
             log = '0sdflf093 | Thu Oct 20 16:30:23 2014 '
             log += '| zezinha do butiá | some good commit | <end-toxiccommit>'
@@ -452,7 +440,7 @@ class GitTest(TestCase):
             return log
 
         vcs.exec_cmd = e
-        revisions = yield from self.vcs.get_revisions_for_branch('master')
+        revisions = await self.vcs.get_revisions_for_branch('master')
         self.assertEqual(revisions[0]['commit'], '0sdflf095')
 
     @async_test
@@ -461,8 +449,7 @@ class GitTest(TestCase):
         since = {'master': now,
                  'dev': now}
 
-        @asyncio.coroutine
-        def branch_revisions(*a, **kw):
+        async def branch_revisions(*a, **kw):
             return [{'123adsf': now}, {'asdf123': now}]
 
         self.vcs.get_revisions_for_branch = branch_revisions
@@ -478,8 +465,7 @@ class GitTest(TestCase):
         since = {'master': now,
                  'dev': now}
 
-        @asyncio.coroutine
-        def branch_revisions(*a, **kw):
+        async def branch_revisions(*a, **kw):
             return []
 
         self.vcs.get_revisions_for_branch = branch_revisions
@@ -496,8 +482,7 @@ class GitTest(TestCase):
         since = {'master': now,
                  'dev': now}
 
-        @asyncio.coroutine
-        def branch_revisions(*a, **kw):
+        async def branch_revisions(*a, **kw):
             raise Exception
 
         self.vcs.get_revisions_for_branch = branch_revisions
@@ -508,35 +493,32 @@ class GitTest(TestCase):
         self.assertNotIn('a-branch', revisions)
 
     @async_test
-    def test_get_revision(self):
+    async def test_get_revision(self):
         now = datetime.datetime.now()
         since = {'master': now,
                  'dev': now}
 
-        @asyncio.coroutine
-        def remote_branches(*a, **kw):
+        async def remote_branches(*a, **kw):
             return ['origin/dev', 'origin/master']
 
-        @asyncio.coroutine
-        def branch_revisions(*a, **kw):
+        async def branch_revisions(*a, **kw):
             return [{'123adsf': now}, {'asdf123': now}]
 
         self.vcs.get_remote_branches = remote_branches
         self.vcs.get_revisions_for_branch = branch_revisions
 
-        revisions = yield from self.vcs.get_revisions(since=since)
+        revisions = await self.vcs.get_revisions(since=since)
 
         self.assertEqual(len(revisions['origin/master']), 2)
         self.assertEqual(len(revisions['origin/dev']), 2)
 
     @async_test
-    def test_get_revision_no_revs_for_branch(self):
+    async def test_get_revision_no_revs_for_branch(self):
         now = datetime.datetime.now()
         since = {'master': now,
                  'dev': now}
 
-        @asyncio.coroutine
-        def remote_branches(*a, **kw):
+        async def remote_branches(*a, **kw):
             return ['origin/dev', 'origin/master']
 
         branch_revisions = AsyncMagicMock(
@@ -546,54 +528,50 @@ class GitTest(TestCase):
         self.vcs.get_remote_branches = remote_branches
         self.vcs.get_revisions_for_branch = branch_revisions
 
-        revisions = yield from self.vcs.get_revisions(since=since)
+        revisions = await self.vcs.get_revisions(since=since)
 
         self.assertNotIn('origin/master', revisions)
         self.assertEqual(len(revisions['origin/dev']), 2)
 
     @async_test
-    def test_get_revision_with_branches(self):
+    async def test_get_revision_with_branches(self):
         now = datetime.datetime.now()
         since = {'master': now,
                  'dev': now}
 
         rb_mock = mock.Mock()
 
-        @asyncio.coroutine
-        def remote_branches(*a, **kw):
+        async def remote_branches(*a, **kw):
             rb_mock()
             return ['master', 'some-feature']
 
-        @asyncio.coroutine
-        def branch_revisions(*a, **kw):
+        async def branch_revisions(*a, **kw):
             return [{'123adsf': now}, {'asdf123': now}]
 
         self.vcs.get_remote_branches = remote_branches
         self.vcs.get_revisions_for_branch = branch_revisions
 
         branches = ['master', 'some-feature']
-        revisions = yield from self.vcs.get_revisions(since=since,
-                                                      branches=branches)
+        revisions = await self.vcs.get_revisions(since=since,
+                                                 branches=branches)
 
         self.assertEqual(len(revisions['master']), 2)
         self.assertEqual(len(revisions['some-feature']), 2)
         self.assertTrue(rb_mock.called)
 
     @async_test
-    def test_get_revisions_with_exception(self):
+    async def test_get_revisions_with_exception(self):
         now = datetime.datetime.now()
         since = {'master': now,
                  'dev': now}
 
         rb_mock = mock.Mock()
 
-        @asyncio.coroutine
-        def remote_branches(*a, **kw):
+        async def remote_branches(*a, **kw):
             rb_mock()
             return ['master', 'some-feature']
 
-        @asyncio.coroutine
-        def branch_revisions(*a, **kw):
+        async def branch_revisions(*a, **kw):
             if a[0] == 'some-feature':
                 raise Exception
 
@@ -603,15 +581,15 @@ class GitTest(TestCase):
         self.vcs.get_revisions_for_branch = branch_revisions
 
         branches = ['master', 'some-feature']
-        revisions = yield from self.vcs.get_revisions(since=since,
-                                                      branches=branches)
+        revisions = await self.vcs.get_revisions(since=since,
+                                                 branches=branches)
 
         self.assertEqual(len(revisions['master']), 2)
         self.assertFalse(revisions.get('some-feature'))
 
     @async_test
-    def test_update_remote_prune(self):
+    async def test_update_remote_prune(self):
         expected = 'git remote update --prune'
-        yield from self.vcs._update_remote_prune()
+        await self.vcs._update_remote_prune()
         called = vcs.exec_cmd.call_args[0][0]
         self.assertEqual(expected, called)

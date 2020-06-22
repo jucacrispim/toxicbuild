@@ -30,7 +30,6 @@ from pyrocumulus.web.applications import PyroApplication
 from pyrocumulus.web.decorators import post
 from pyrocumulus.web.handlers import RestHandler
 from pyrocumulus.web.urlmappers import URLSpec
-from tornado import gen
 from toxicbuild.core.utils import changedir
 from tests.functional import MASTER_ROOT_DIR
 
@@ -44,10 +43,9 @@ class WebHookMessage(Document):
 class CustomWebHook(RestHandler):
 
     @post('')
-    @gen.coroutine
-    def income_webhook(self, **kw):
+    async def income_webhook(self, **kw):
         m = self.model(message=self.request.body)
-        yield from m.save()
+        await m.save()
 
 
 url = URLSpec('/webhookmessage/(.*)', CustomWebHook, {'model': WebHookMessage})

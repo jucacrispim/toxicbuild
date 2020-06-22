@@ -81,32 +81,32 @@ class UtilsTest(TestCase):
             await utils._readline(stream)
 
     @async_test
-    def test_exec_cmd(self):
-        out = yield from utils.exec_cmd('ls', cwd='.')
+    async def test_exec_cmd(self):
+        out = await utils.exec_cmd('ls', cwd='.')
         self.assertTrue(out)
 
     @async_test
-    def test_exec_cmd_with_error(self):
+    async def test_exec_cmd_with_error(self):
         with self.assertRaises(utils.ExecCmdError):
             # please, don't tell me you have a lsz command on your system.
-            yield from utils.exec_cmd('lsz', cwd='.')
+            await utils.exec_cmd('lsz', cwd='.')
 
     @async_test
-    def test_exec_cmd_with_timeout(self, *args, **kwargs):
+    async def test_exec_cmd_with_timeout(self, *args, **kwargs):
         with self.assertRaises(asyncio.TimeoutError):
-            yield from utils.exec_cmd('sleep 2', cwd='.', timeout=1)
+            await utils.exec_cmd('sleep 2', cwd='.', timeout=1)
 
         # wait here to avoid runtime error saying the loop is closed
         # when the process try to send its message to the caller
         time.sleep(1)
 
     @async_test
-    def test_kill_group(self):
+    async def test_kill_group(self):
         cmd = 'sleep 55'
-        proc = yield from utils._create_cmd_proc(cmd, cwd='.')
+        proc = await utils._create_cmd_proc(cmd, cwd='.')
         try:
             f = proc.stdout.readline()
-            yield from asyncio.wait_for(f, 1)
+            await asyncio.wait_for(f, 1)
         except futures.TimeoutError:
             pass
 
@@ -115,18 +115,18 @@ class UtilsTest(TestCase):
         self.assertNotIn(cmd, procs)
 
     @async_test
-    def test_exec_cmd_with_envvars(self):
+    async def test_exec_cmd_with_envvars(self):
         envvars = {'PATH': 'PATH:venv/bin',
                    'MYPROGRAMVAR': 'something'}
 
         cmd = 'echo $MYPROGRAMVAR'
 
-        returned = yield from utils.exec_cmd(cmd, cwd='.', **envvars)
+        returned = await utils.exec_cmd(cmd, cwd='.', **envvars)
 
         self.assertEqual(returned, 'something')
 
     @async_test
-    def test_exec_cmd_with_out_fn(self):
+    async def test_exec_cmd_with_out_fn(self):
         envvars = {'PATH': 'PATH:venv/bin',
                    'MYPROGRAMVAR': 'something'}
 
@@ -135,9 +135,9 @@ class UtilsTest(TestCase):
         lines = Mock()
 
         out_fn = asyncio.coroutine(lambda i, l: lines((i, l)))
-        yield from utils.exec_cmd(cmd, cwd='.',
-                                  out_fn=out_fn,
-                                  **envvars)
+        await utils.exec_cmd(cmd, cwd='.',
+                             out_fn=out_fn,
+                             **envvars)
         yield
         self.assertTrue(lines.called)
         self.assertTrue(isinstance(
@@ -217,16 +217,14 @@ class UtilsTest(TestCase):
 
         class A:
 
-            @asyncio.coroutine
-            def m():
+            async def m():
                 """ some doc"""
                 return True
 
         @utils.inherit_docs
         class B(A):
 
-            @asyncio.coroutine
-            def m():
+            async def m():
                 return False
 
         self.assertEqual(B.m.__doc__, A.m.__doc__)
@@ -369,9 +367,9 @@ class UtilsTest(TestCase):
 
     @patch.object(utils, '_THREAD_EXECUTOR', MagicMock())
     @async_test
-    def test_run_in_thread(self):
+    async def test_run_in_thread(self):
         fn = Mock()
-        yield from utils.run_in_thread(fn, 1, a=2)
+        await utils.run_in_thread(fn, 1, a=2)
         called = utils._THREAD_EXECUTOR.submit.call_args
         expected = ((fn, 1), {'a': 2})
         self.assertEqual(called, expected)
@@ -414,62 +412,58 @@ class StreamUtilsTest(TestCase):
         self.data = b'{"action": "bla"}'
 
     @async_test
-    def test_read_stream_without_data(self):
+    async def test_read_stream_without_data(self):
         reader = Mock()
 
-        @asyncio.coroutine
-        def read(limit):
+        async def read(limit):
             return self.bad_data
         reader.read = read
 
-        ret = yield from utils.read_stream(reader)
+        ret = await utils.read_stream(reader)
 
         self.assertFalse(ret)
 
     @async_test
-    def test_read_stream_good_data(self):
+    async def test_read_stream_good_data(self):
         reader = Mock()
 
         self._rlimit = 0
 
-        @asyncio.coroutine
-        def read(limit):
+        async def read(limit):
             part = self.good_data[self._rlimit: limit + self._rlimit]
             self._rlimit += limit
             return part
 
         reader.read = read
 
-        ret = yield from utils.read_stream(reader)
+        ret = await utils.read_stream(reader)
 
         self.assertEqual(ret, self.data)
 
     @async_test
-    def test_read_stream_with_giant_data(self):
+    async def test_read_stream_with_giant_data(self):
         reader = Mock()
 
         self._rlimit = 0
 
-        @asyncio.coroutine
-        def read(limit):
+        async def read(limit):
             part = self.giant_data[self._rlimit: limit + self._rlimit]
             self._rlimit += limit
             return part
 
         reader.read = read
 
-        ret = yield from utils.read_stream(reader)
+        ret = await utils.read_stream(reader)
 
         self.assertEqual(ret, self.giant)
 
     @async_test
-    def test_read_stream_with_good_data_in_parts(self):
+    async def test_read_stream_with_good_data_in_parts(self):
         reader = Mock()
 
         self._rlimit = 0
 
-        @asyncio.coroutine
-        def read(limit):
+        async def read(limit):
             if limit != 1:
                 limit = 10
 
@@ -478,18 +472,17 @@ class StreamUtilsTest(TestCase):
             return part
 
         reader.read = read
-        ret = yield from utils.read_stream(reader)
+        ret = await utils.read_stream(reader)
 
         self.assertEqual(ret, self.data)
 
     @async_test
-    def test_read_stream_with_giant_data_with_more(self):
+    async def test_read_stream_with_giant_data_with_more(self):
         reader = Mock()
 
         self._rlimit = 0
 
-        @asyncio.coroutine
-        def read(limit):
+        async def read(limit):
             part = self.giant_data_with_more[
                 self._rlimit: limit + self._rlimit]
             self._rlimit += limit
@@ -497,14 +490,14 @@ class StreamUtilsTest(TestCase):
 
         reader.read = read
 
-        ret = yield from utils.read_stream(reader)
+        ret = await utils.read_stream(reader)
 
         self.assertEqual(ret, self.giant)
 
     @async_test
-    def test_write_stream(self):
-        writer = MagicMock()
-        yield from utils.write_stream(writer, self.data.decode())
+    async def test_write_stream(self):
+        writer = MagicMock(drain=AsyncMagicMock())
+        await utils.write_stream(writer, self.data.decode())
 
         called_arg = writer.write.call_args[0][0]
 
@@ -516,7 +509,7 @@ class StreamUtilsTest(TestCase):
     #     import json
     #     output = json.dumps(output)
     #     writer = MagicMock()
-    #     yield from utils.write_stream(writer, output)
+    #     await utils.write_stream(writer, output)
 
     #     called_arg = writer.write.call_args[0][0]
     #     import ipdb;ipdb.set_trace()

@@ -176,8 +176,7 @@ async def _readline(stream):
     return line
 
 
-@asyncio.coroutine
-def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
+async def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
     """ Executes a shell command. Raises with the command output
     if return code > 0.
 
@@ -191,12 +190,12 @@ def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
     :param envvars: Environment variables to be used in the command.
     """
 
-    proc = yield from _create_cmd_proc(cmd, cwd, **envvars)
+    proc = await _create_cmd_proc(cmd, cwd, **envvars)
     out = []
 
     line_index = 0
     while proc.returncode is None or not out:
-        outline = yield from asyncio.wait_for(_readline(proc.stdout), timeout)
+        outline = await asyncio.wait_for(_readline(proc.stdout), timeout)
         outline = outline.decode()
         if out_fn:
             ensure_future(out_fn(line_index, outline))
@@ -394,44 +393,42 @@ def inherit_docs(cls):
     return cls
 
 
-@asyncio.coroutine
-def read_stream(reader):
+async def read_stream(reader):
     """ Reads the input stream. First reads the bytes until the first "\\n".
     These first bytes are the length of the full message.
 
     :param reader: An instance of :class:`asyncio.StreamReader`
     """
 
-    data = yield from reader.read(1)
+    data = await reader.read(1)
     if not data or data == b'\n':
         raw_data = b''
         raw_data_list = [b'']
     else:
         char = None
         while char != b'\n' and char != b'':
-            char = yield from reader.read(1)
+            char = await reader.read(1)
             data += char
 
         len_data = int(data)
         if len_data <= READ_CHUNK_LEN:
-            raw_data = yield from reader.read(len_data)
+            raw_data = await reader.read(len_data)
         else:
-            raw_data = yield from reader.read(READ_CHUNK_LEN)
+            raw_data = await reader.read(READ_CHUNK_LEN)
 
         raw_data_len = len(raw_data)
         raw_data_list = [raw_data]
         while raw_data_len < len_data:
             left = len_data - raw_data_len
             next_chunk = left if left < READ_CHUNK_LEN else READ_CHUNK_LEN
-            new_data = yield from reader.read(next_chunk)
+            new_data = await reader.read(next_chunk)
             raw_data_len += len(new_data)
             raw_data_list.append(new_data)
 
     return b''.join(raw_data_list)
 
 
-@asyncio.coroutine
-def write_stream(writer, data):
+async def write_stream(writer, data):
     """ Writes ``data`` to output. Encodes data to utf-8 and prepend the
     lenth of the data before sending it.
 
@@ -445,7 +442,7 @@ def write_stream(writer, data):
     chunk = data[:WRITE_CHUNK_LEN]
     while chunk:
         writer.write(chunk)
-        yield from writer.drain()
+        await writer.drain()
         init += WRITE_CHUNK_LEN
         chunk = data[init: init + WRITE_CHUNK_LEN]
 
@@ -566,8 +563,7 @@ class MatchKeysDict(dict):
         return r
 
 
-@asyncio.coroutine
-def run_in_thread(fn, *args, **kwargs):
+async def run_in_thread(fn, *args, **kwargs):
     """Runs a callable in a background thread.
 
     :param fn: A callable to be executed in a thread.
@@ -578,7 +574,7 @@ def run_in_thread(fn, *args, **kwargs):
 
     .. code-block:: python
 
-        r = yield from run_in_thread(call, 1, bla='a')
+        r = await run_in_thread(call, 1, bla='a')
 """
     f = _THREAD_EXECUTOR.submit(fn, *args, **kwargs)
     return f

@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 import os
 from toxicbuild.core.plugins import Plugin
 from toxicbuild.core.utils import exec_cmd
@@ -81,14 +80,13 @@ class PythonCreateVenvStep(BuildStep):
 
         super().__init__(name, command, stop_on_fail=True)
 
-    @asyncio.coroutine
-    def execute(self, cwd, **envvars):
+    async def execute(self, cwd, **envvars):
         pyexec = os.path.join(self.venv_dir, os.path.join('bin', 'python'))
         if os.path.exists(os.path.join(cwd, pyexec)):
             step_info = {'status': 'success',
                          'output': 'venv exists. Skipping...'}
         else:
-            step_info = yield from super().execute(cwd, **envvars)
+            step_info = await super().execute(cwd, **envvars)
 
         return step_info
 

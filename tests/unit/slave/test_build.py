@@ -33,8 +33,7 @@ class BuilderTest(TestCase):
         super().setUp()
         protocol = mock.MagicMock()
 
-        @asyncio.coroutine
-        def s(*a, **kw):
+        async def s(*a, **kw):
             pass
 
         protocol.send_response = s
@@ -53,7 +52,7 @@ class BuilderTest(TestCase):
                                                'steps': []}, '.')
 
     @async_test
-    def test_build_success(self):
+    async def test_build_success(self):
         s1 = build.BuildStep(name='s1', command='ls')
         s2 = build.BuildStep(name='s2', command='echo "uhu!"')
         self.builder.steps = [s1, s2]
@@ -62,12 +61,12 @@ class BuilderTest(TestCase):
         self.builder._remove_tmp_dir = AsyncMagicMock()
         self.builder._get_tmp_dir = mock.Mock(return_value='.')
 
-        build_info = yield from self.builder.build()
+        build_info = await self.builder.build()
         self.assertEqual(build_info['status'], 'success')
         self.assertIn('total_time', build_info['steps'][0].keys())
 
     @async_test
-    def test_build_fail(self):
+    async def test_build_fail(self):
         s1 = build.BuildStep(name='s1', command='ls')
         s2 = build.BuildStep(name='s2', command='exit 1')
         s3 = build.BuildStep(name='s3', command='echo "oi"')
@@ -76,11 +75,11 @@ class BuilderTest(TestCase):
         self.builder._remove_tmp_dir = AsyncMagicMock()
         self.builder._get_tmp_dir = mock.Mock(return_value='.')
         self.builder.steps = [s1, s2, s3]
-        build_info = yield from self.builder.build()
+        build_info = await self.builder.build()
         self.assertEqual(build_info['status'], 'fail')
 
     @async_test
-    def test_build_fail_stop_on_fail(self):
+    async def test_build_fail_stop_on_fail(self):
         s1 = build.BuildStep(name='s1', command='ls')
         s2 = build.BuildStep(name='s2', command='exit 1', stop_on_fail=True)
         s3 = build.BuildStep(name='s3', command='echo "oi"')
@@ -91,14 +90,14 @@ class BuilderTest(TestCase):
         self.builder._remove_tmp_dir = AsyncMagicMock()
         self.builder._get_tmp_dir = mock.Mock(return_value='.')
 
-        build_info = yield from self.builder.build()
+        build_info = await self.builder.build()
         self.assertEqual(build_info['status'], 'fail')
         self.assertEqual(len(build_info['steps']), 2)
 
     @mock.patch.object(build, 'exec_cmd', AsyncMagicMock(
         side_effect=asyncio.TimeoutError))
     @async_test
-    def test_build_fail_stop_on_fail_exception(self):
+    async def test_build_fail_stop_on_fail_exception(self):
         s1 = build.BuildStep(name='s1', command='ls')
         s2 = build.BuildStep(name='s2', command='exit 1', stop_on_fail=True)
         s3 = build.BuildStep(name='s3', command='echo "oi"')
@@ -109,54 +108,51 @@ class BuilderTest(TestCase):
         self.builder._remove_tmp_dir = AsyncMagicMock()
         self.builder._get_tmp_dir = mock.Mock(return_value='.')
 
-        build_info = yield from self.builder.build()
+        build_info = await self.builder.build()
         self.assertEqual(build_info['status'], 'exception')
         self.assertEqual(len(build_info['steps']), 2)
 
     @async_test
-    def test_send_step_output_info_step_index(self):
+    async def test_send_step_output_info_step_index(self):
         step_info = {'uuid': 'some-uuid'}
 
         send_mock = mock.Mock()
 
-        @asyncio.coroutine
-        def send_info(msg):
+        async def send_info(msg):
             send_mock(msg)
 
         self.builder.manager.send_info = send_info
         self.builder._current_step_output_index = 1
-        yield from self.builder._send_step_output_info(step_info,
+        await self.builder._send_step_output_info(step_info,
                                                        0, 'some line' * 1024)
         self.assertTrue(send_mock.called)
 
     @async_test
-    def test_send_step_output_info(self):
+    async def test_send_step_output_info(self):
         step_info = {'uuid': 'some-uuid'}
 
         send_mock = mock.Mock()
 
-        @asyncio.coroutine
-        def send_info(msg):
+        async def send_info(msg):
             send_mock(msg)
 
         self.builder.manager.send_info = send_info
-        yield from self.builder._send_step_output_info(step_info,
+        await self.builder._send_step_output_info(step_info,
                                                        0, 'some line' * 1024)
         self.assertTrue(send_mock.called)
 
     @async_test
-    def test_send_step_output_info_short(self):
+    async def test_send_step_output_info_short(self):
         step_info = {'uuid': 'some-uuid'}
 
         send_mock = mock.Mock()
 
-        @asyncio.coroutine
-        def send_info(msg):
+        async def send_info(msg):
             send_mock(msg)
 
         self.builder.STEP_OUTPUT_BUFF_LEN = 512
         self.builder.manager.send_info = send_info
-        yield from self.builder._send_step_output_info(step_info,
+        await self.builder._send_step_output_info(step_info,
                                                        0, 'some line')
         self.assertFalse(send_mock.called)
 
@@ -188,8 +184,8 @@ class BuilderTest(TestCase):
 
     @mock.patch.object(build, 'exec_cmd', AsyncMagicMock())
     @async_test
-    def test_copy_workdir(self):
-        yield from self.builder._copy_workdir()
+    async def test_copy_workdir(self):
+        await self.builder._copy_workdir()
         self.assertEqual(len(build.exec_cmd.call_args_list), 2)
         expected0 = 'mkdir -p {}'.format(self.builder._get_tmp_dir())
         expected1 = 'cp -R {}/* {}'.format(self.builder.workdir,
@@ -201,9 +197,9 @@ class BuilderTest(TestCase):
 
     @mock.patch.object(build, 'exec_cmd', AsyncMagicMock())
     @async_test
-    def test_remove_dir(self):
+    async def test_remove_dir(self):
         expected = 'rm -rf {}'.format(self.builder._get_tmp_dir())
-        yield from self.builder._remove_tmp_dir()
+        await self.builder._remove_tmp_dir()
         called = build.exec_cmd.call_args[0][0]
         self.assertEqual(expected, called)
 
@@ -257,22 +253,22 @@ class BuilderTest(TestCase):
 class BuildStepTest(TestCase):
 
     @async_test
-    def test_step_success(self):
+    async def test_step_success(self):
         step = build.BuildStep(name='test', command='ls')
-        status = yield from step.execute(cwd='.')
+        status = await step.execute(cwd='.')
         self.assertEqual(status['status'], 'success')
 
     @async_test
-    def test_step_fail(self):
+    async def test_step_fail(self):
         step = build.BuildStep(name='test', command='lsz')
-        status = yield from step.execute(cwd='.')
+        status = await step.execute(cwd='.')
         self.assertEqual(status['status'], 'fail')
 
     @async_test
-    def test_step_warning_on_fail(self):
+    async def test_step_warning_on_fail(self):
         step = build.BuildStep(
             name='test', command='lsz', warning_on_fail=True)
-        status = yield from step.execute(cwd='.')
+        status = await step.execute(cwd='.')
         self.assertEqual(status['status'], 'warning')
 
     def test_equal_with_other_object(self):
@@ -282,16 +278,16 @@ class BuildStepTest(TestCase):
         self.assertNotEqual(step, {})
 
     @async_test
-    def test_step_timeout(self):
+    async def test_step_timeout(self):
         step = build.BuildStep(name='test', command='sleep 1', timeout=0.5)
-        status = yield from step.execute(cwd='.')
+        status = await step.execute(cwd='.')
         self.assertEqual(status['status'], 'exception')
-        yield from asyncio.sleep(1)
+        await asyncio.sleep(1)
 
     @async_test
-    def test_step_timeout_warning_on_fail(self):
+    async def test_step_timeout_warning_on_fail(self):
         step = build.BuildStep(name='test', command='sleep 1', timeout=0.5,
                                warning_on_fail=True)
-        status = yield from step.execute(cwd='.')
+        status = await step.execute(cwd='.')
         self.assertEqual(status['status'], 'warning')
-        yield from asyncio.sleep(1)
+        await asyncio.sleep(1)

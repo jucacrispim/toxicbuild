@@ -38,8 +38,7 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
         """
         self.workdir = workdir
 
-    @asyncio.coroutine
-    def exec_cmd(self, cmd, cwd=None):
+    async def exec_cmd(self, cmd, cwd=None):
         """ Executes a shell command. If ``cwd`` is None ``self.workdir``
         will be used.
 
@@ -48,7 +47,7 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
         if cwd is None:
             cwd = self.workdir
 
-        ret = yield from exec_cmd(cmd, cwd)
+        ret = await exec_cmd(cmd, cwd)
         return ret
 
     def workdir_exists(self):
@@ -57,74 +56,64 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
         return os.path.exists(self.workdir)
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def clone(self, url):
+    async def clone(self, url):
         """ Clones a repository into ``self.workdir``
         :param url: repository url
         """
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def fetch(self):
+    async def fetch(self):
         """ Fetch changes from remote repository
         """
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def create_local_branch(self, branch_name, base_name):
+    async def create_local_branch(self, branch_name, base_name):
         """Creates a branch new in the local repository
 
         :param branch_name: The name for the new branch
         :param base_name: The name of the base branch."""
 
     @abstractmethod
-    @asyncio.coroutine
-    def delete_local_branch(self, branch_name):
+    async def delete_local_branch(self, branch_name):
         """Deletes a local branch.
 
         :param branch_name: The name of the branch to be deleted."""
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def set_remote(self, url, remote_name):
+    async def set_remote(self, url, remote_name):
         """Sets the remote url of the repository.
 
         :param url: The new remote url.
         :param remote_name: The name of the remote url to change."""
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def get_remote(self, remote_name):
+    async def get_remote(self, remote_name):
         """Returns the remote url used in the repo.
 
         :param remote_name: The name of the remote url to change."""
 
     @abstractmethod
-    @asyncio.coroutine
-    def try_set_remote(self, url, remote_name):  # pragma no branch
+    async def try_set_remote(self, url, remote_name):  # pragma no branch
         """Sets the remote url if the remote is not equal as url.
 
         :param url: The new url for the remote.
         :param remote_name: The name of the remote url to change."""
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def add_remote(self, remote_url, remote_name):
+    async def add_remote(self, remote_url, remote_name):
         """Adds a new remote to the repository.
 
         :param remote_url: The url of the remote repository.
         :param remote_name: The name of the remote."""
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def checkout(self, named_tree):
+    async def checkout(self, named_tree):
         """ Checkout to ``named_tree``
         :param named_tree: A commit, branch, tag...
         """
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def pull(self, branch_name, remote_name='origin'):
+    async def pull(self, branch_name, remote_name='origin'):
         """ Pull changes from ``branch_name`` on remote repo.
 
         :param branch_name: A branch name, like 'master'.
@@ -132,8 +121,7 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
         """
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def has_changes(self):
+    async def has_changes(self):
         """ Informs if there are new revisions in the repository
         """
 
@@ -150,15 +138,13 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
         :param into: The name of the local branch."""
 
     @classmethod  # pragma no branch
-    @asyncio.coroutine
-    def branch_exists(self, branch_name):
+    async def branch_exists(self, branch_name):
         """Checks if a local branch exists.
 
         :param branch_name: The name of the branch to check."""
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def get_revisions(self, since=None, branches=None):
+    async def get_revisions(self, since=None, branches=None):
         """Returns the newer revisions ``since`` for ``branches`` from
         the default remote repository.
 
@@ -170,8 +156,7 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
         """
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def get_local_revisions(self, since=None, branches=None):
+    async def get_local_revisions(self, since=None, branches=None):
         """Returns the newer revisions ``since`` for ``branches`` in the
         local repository
 
@@ -183,8 +168,7 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
         """
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def get_revisions_for_branch(self, branch, since=None):
+    async def get_revisions_for_branch(self, branch, since=None):
         """ Returns the revisions for ``branch`` since ``since``.
         If ``since`` is None, all revisions will be returned.
 
@@ -193,8 +177,7 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
         """
 
     @abstractmethod  # pragma no branch
-    @asyncio.coroutine
-    def get_remote_branches(self):
+    async def get_remote_branches(self):
         """ Returns a list of the remote branches available.
         """
 
@@ -226,33 +209,29 @@ class Git(VCS):
                                                         remote)
         await self.exec_cmd(cmd, cwd=self.workdir)
 
-    @asyncio.coroutine
-    def clone(self, url):
+    async def clone(self, url):
 
         cmd = '%s clone --depth=2 %s %s --recursive' % (
             self.vcsbin, url, self.workdir)
         # we can't go to self.workdir while we do not clone the repo
-        yield from self.exec_cmd(cmd, cwd='.')
-        yield from self._set_remote_origin_config()
+        await self.exec_cmd(cmd, cwd='.')
+        await self._set_remote_origin_config()
 
-    @asyncio.coroutine
-    def set_remote(self, url, remote_name='origin'):
+    async def set_remote(self, url, remote_name='origin'):
         cmd = '{} remote set-url {} {}'.format(self.vcsbin, remote_name, url)
-        yield from self.exec_cmd(cmd)
+        await self.exec_cmd(cmd)
 
-    @asyncio.coroutine
-    def get_remote(self, remote_name='origin'):
+    async def get_remote(self, remote_name='origin'):
         cmd = '{} remote -v | grep -m1 {} | sed -e \'s/{}\s*//g\' '
         cmd += '-e \'s/(.*)//g\''
         cmd = cmd.format(self.vcsbin, remote_name, remote_name)
-        remote = yield from self.exec_cmd(cmd)
+        remote = await self.exec_cmd(cmd)
         return remote
 
-    @asyncio.coroutine
-    def add_remote(self, remote_url, remote_name):
+    async def add_remote(self, remote_url, remote_name):
         cmd = '{} remote add {} {}'.format(self.vcsbin,
                                            remote_name, remote_url)
-        r = yield from self.exec_cmd(cmd)
+        r = await self.exec_cmd(cmd)
         return r
 
     async def rm_remote(self, remote_name):
@@ -260,57 +239,49 @@ class Git(VCS):
         r = await self.exec_cmd(cmd)
         return r
 
-    @asyncio.coroutine
-    def try_set_remote(self, url, remote_name='origin'):
-        current_remote = yield from self.get_remote(remote_name)
+    async def try_set_remote(self, url, remote_name='origin'):
+        current_remote = await self.get_remote(remote_name)
         if current_remote != url:
             self.log('Changing remote from {} to {}'.format(
                 current_remote, url), level='debug')
-            yield from self.set_remote(url, remote_name)
+            await self.set_remote(url, remote_name)
 
-    @asyncio.coroutine
-    def fetch(self):
+    async def fetch(self):
         cmd = '%s %s' % (self.vcsbin, 'fetch')
 
-        fetched = yield from self.exec_cmd(cmd)
+        fetched = await self.exec_cmd(cmd)
         return fetched
 
-    @asyncio.coroutine
-    def create_local_branch(self, branch_name, base_name):
+    async def create_local_branch(self, branch_name, base_name):
 
-        yield from self.checkout(base_name)
+        await self.checkout(base_name)
         cmd = '{} branch {}'.format(self.vcsbin, branch_name)
-        r = yield from self.exec_cmd(cmd)
+        r = await self.exec_cmd(cmd)
         return r
 
-    @asyncio.coroutine
-    def delete_local_branch(self, branch_name):
-        yield from self.checkout('master')
+    async def delete_local_branch(self, branch_name):
+        await self.checkout('master')
         cmd = '{} branch -D {}'.format(self.vcsbin, branch_name)
-        r = yield from self.exec_cmd(cmd)
+        r = await self.exec_cmd(cmd)
         return r
 
-    @asyncio.coroutine
-    def checkout(self, named_tree):
+    async def checkout(self, named_tree):
 
         cmd = '{} checkout {}'.format(self.vcsbin, named_tree)
-        yield from self.exec_cmd(cmd)
+        await self.exec_cmd(cmd)
 
-    @asyncio.coroutine
-    def pull(self, branch_name, remote_name='origin'):
+    async def pull(self, branch_name, remote_name='origin'):
 
         cmd = '{} pull --no-edit {} {}'.format(self.vcsbin, remote_name,
                                                branch_name)
 
-        ret = yield from self.exec_cmd(cmd)
+        ret = await self.exec_cmd(cmd)
         return ret
 
-    @asyncio.coroutine
-    def has_changes(self):
-        ret = yield from self.fetch()
+    async def has_changes(self):
+        ret = await self.fetch()
         return bool(ret)
 
-    @asyncio.coroutine
     async def import_external_branch(self, external_url, external_name,
                                      external_branch, into):
         exists = await self.branch_exists(into)
@@ -322,23 +293,21 @@ class Git(VCS):
         await self.pull(external_branch, external_name)
         await self.rm_remote(external_name)
 
-    @asyncio.coroutine
-    def branch_exists(self, branch_name):
+    async def branch_exists(self, branch_name):
         cmd = '{} rev-parse --verify {}'.format(self.vcsbin, branch_name)
         try:
-            yield from self.exec_cmd(cmd)
+            await self.exec_cmd(cmd)
             exists = True
         except ExecCmdError:
             exists = False
 
         return exists
 
-    @asyncio.coroutine
-    def update_submodule(self):
+    async def update_submodule(self):
         cmd = '{} submodule init'.format(self.vcsbin)
-        yield from self.exec_cmd(cmd)
+        await self.exec_cmd(cmd)
         cmd = '{} submodule update'.format(self.vcsbin)
-        ret = yield from self.exec_cmd(cmd)
+        ret = await self.exec_cmd(cmd)
         return ret
 
     async def get_local_revisions(self, since=None, branches=None):
@@ -358,14 +327,13 @@ class Git(VCS):
                 self.log(msg, level='error')
         return revisions
 
-    @asyncio.coroutine
-    def get_revisions(self, since=None, branches=None):
+    async def get_revisions(self, since=None, branches=None):
 
         since = since or {}
         # this must be called everytime so we sync our repo
         # with the remote repo and then we can see new branches
-        yield from self.fetch()
-        remote_branches = yield from self.get_remote_branches()
+        await self.fetch()
+        remote_branches = await self.get_remote_branches()
         if branches:
             remote_branches = self._filter_remote_branches(
                 remote_branches, branches)
@@ -373,11 +341,11 @@ class Git(VCS):
         revisions = {}
         for branch in remote_branches:
             try:
-                yield from self.checkout(branch)
-                yield from self.pull(branch)
+                await self.checkout(branch)
+                await self.pull(branch)
                 since_date = since.get(branch)
 
-                revs = yield from self.get_revisions_for_branch(branch,
+                revs = await self.get_revisions_for_branch(branch,
                                                                 since_date)
                 if revs:
                     revisions[branch] = revs
@@ -388,8 +356,7 @@ class Git(VCS):
 
         return revisions
 
-    @asyncio.coroutine
-    def get_revisions_for_branch(self, branch, since=None):
+    async def get_revisions_for_branch(self, branch, since=None):
         # hash | commit date | author | title
         commit_fmt = "%H | %ad | %an | %s | %+b {}".format(
             self._commit_separator)
@@ -409,7 +376,7 @@ class Git(VCS):
         msg = 'Getting revisions for branch {} with command {}'.format(
             branch, cmd)
         self.log(msg, level='debug')
-        last_revs = [r for r in (yield from self.exec_cmd(cmd)).split(
+        last_revs = [r for r in (await self.exec_cmd(cmd)).split(
             self._commit_separator + '\n') if r]
         last_revs.reverse()
         self.log('Got {}'.format(last_revs), level='debug')
@@ -428,13 +395,12 @@ class Git(VCS):
         # is the last one consumed on last time
         return revisions[1:]
 
-    @asyncio.coroutine
-    def get_remote_branches(self):
-        yield from self.fetch()
-        yield from self._update_remote_prune()
+    async def get_remote_branches(self):
+        await self.fetch()
+        await self._update_remote_prune()
         cmd = '%s branch -r' % self.vcsbin
 
-        out = yield from self.exec_cmd(cmd)
+        out = await self.exec_cmd(cmd)
         msg = 'Remote branches: {}'.format(out)
         self.log(msg, level='debug')
         remote_branches = out.split('\n')
@@ -442,14 +408,13 @@ class Git(VCS):
         remote_branches[0] = remote_branches[0].split('->')[1].strip()
         return set([b.strip().split('/')[1] for b in remote_branches])
 
-    @asyncio.coroutine
-    def _update_remote_prune(self):
+    async def _update_remote_prune(self):
         """Updates remote branches list, prunning deleted branches."""
 
         cmd = '{} remote update --prune'.format(self.vcsbin)
         msg = 'Updating --prune remote'
         self.log(msg, level='debug')
-        yield from self.exec_cmd(cmd)
+        await self.exec_cmd(cmd)
 
 
 VCS_TYPES = {'git': Git}

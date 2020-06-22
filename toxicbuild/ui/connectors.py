@@ -22,7 +22,6 @@
 # It must be removed.
 # !!!!!!
 
-import asyncio
 from asyncio import ensure_future
 
 from asyncblink import signal
@@ -45,7 +44,7 @@ class StreamConnector(LoggerMixin):
     .. code-block:: python
 
        from toxicbuild.ui.models import Repository
-       repo = yield from Repository.get(id='some-id')
+       repo = await Repository.get(id='some-id')
 
        def callback(sender, **message):
            print(message)
@@ -73,17 +72,16 @@ class StreamConnector(LoggerMixin):
         self.events = events
         self._connected = False
 
-    @asyncio.coroutine
-    def _connect(self):
+    async def _connect(self):
         if self._connected:
             self.log('Client already connected', level='warning')
             return
 
         client_settings = get_client_settings()
 
-        client = yield from get_hole_client(self.user, **client_settings)
+        client = await get_hole_client(self.user, **client_settings)
 
-        yield from client.connect2stream({'event_types': self.events})
+        await client.connect2stream({'event_types': self.events})
         self.client = client
         self._connected = True
 
@@ -96,11 +94,10 @@ class StreamConnector(LoggerMixin):
             return body.get('build').get('repository').get('id')
         return body.get('repository', {}).get('id') or self.NONE_REPO_ID
 
-    @asyncio.coroutine
-    def _listen(self):
-        yield from self._connect()
+    async def _listen(self):
+        await self._connect()
         while self._connected:
-            response = yield from self.client.get_response()
+            response = await self.client.get_response()
             body = response.get('body')
             if body is None:
                 self.log('Bad data from stream. Skipping',
@@ -121,8 +118,7 @@ class StreamConnector(LoggerMixin):
                 message_arrived.send(repo_id, **body)
 
     @classmethod
-    @asyncio.coroutine
-    def _prepare_instance(cls, user, repo_id, events):
+    async def _prepare_instance(cls, user, repo_id, events):
         """Returns an instance of
         :class:`toxicbuild.ui.connectors.StreamConnector` that will
         notify about messages from a specific repository.
@@ -163,8 +159,7 @@ class StreamConnector(LoggerMixin):
             cls._instances.pop(instance_key)
 
     @classmethod
-    @asyncio.coroutine
-    def plug(cls, user, repo_id, events, callback):
+    async def plug(cls, user, repo_id, events, callback):
         """Connects ``callback`` to events sent by a repository.
 
         :param user: The requester user.
@@ -176,7 +171,7 @@ class StreamConnector(LoggerMixin):
           a repository.
         """
 
-        yield from cls._prepare_instance(user, repo_id, events)
+        await cls._prepare_instance(user, repo_id, events)
         kw = {}
         if repo_id is not None:
             kw = {'sender': repo_id}
