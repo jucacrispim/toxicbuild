@@ -28,7 +28,7 @@ def async_test(f):
 def close_loop():
     try:
         asyncio.get_event_loop().close()
-    except (AttributeError, RuntimeError, SystemError):
+    except Exception:
         pass
 
 

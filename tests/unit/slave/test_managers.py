@@ -30,13 +30,13 @@ TOXICCONF_FILE = os.path.join(TEST_DATA_DIR, 'toxicbuild.yml')
 with open(TOXICCONF_FILE) as fd:
     conf = fd.read()
 
-TOXICCONF = yaml.load(conf)
+TOXICCONF = yaml.load(conf, Loader=yaml.FullLoader)
 
 BADTOXICCONF_FILE = os.path.join(TEST_DATA_DIR, 'badtoxicbuild.yml')
 with open(BADTOXICCONF_FILE) as fd:
     conf = fd.read()
 
-BADTOXICCONF = yaml.load(conf)
+BADTOXICCONF = yaml.load(conf, Loader=yaml.FullLoader)
 
 
 @patch.object(managers, 'get_toxicbuildconf_yaml',

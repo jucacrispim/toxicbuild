@@ -25,9 +25,15 @@ from toxicbuild.common.coordination import ToxicZKClient  # noqa: F402
 
 def clean():
     if ToxicZKClient._zk_client:
-        loop.run_until_complete(ToxicZKClient._zk_client.close())
+        try:
+            loop.run_until_complete(ToxicZKClient._zk_client.close())
+        except Exception:
+            pass
 
-    loop.run_until_complete(exchanges.conn.disconnect())
+    try:
+        loop.run_until_complete(exchanges.conn.disconnect())
+    except Exception:
+        pass
 
 
 atexit.register(clean)

@@ -52,6 +52,7 @@ class UIHoleTest(TestCase):
 
     @patch.object(hole.HoleHandler, 'handle', MagicMock())
     @patch.object(hole.BaseToxicProtocol, 'close_connection', MagicMock())
+    @patch.object(hole.BaseToxicProtocol, 'log', MagicMock())
     @async_test
     async def test_client_connected_shutting_down(self):
         handle = MagicMock()
@@ -68,6 +69,7 @@ class UIHoleTest(TestCase):
 
     @patch.object(hole.HoleHandler, 'handle', MagicMock())
     @patch.object(hole.BaseToxicProtocol, 'send_response', MagicMock())
+    @patch.object(hole.BaseToxicProtocol, 'log', MagicMock())
     @async_test
     async def test_client_connected_user_does_not_exist(self):
         send_response = MagicMock()
@@ -330,7 +332,7 @@ class HoleHandlerTest(TestCase):
         await self.handler.user_send_reset_password_email(email, subject,
                                                           message)
         obj = hole.ResetUserPasswordToken.create.return_value
-        self.assertTrue(obj.send_reset_email.called_with('subject, message'))
+        self.assertTrue(obj.send_reset_email.called)
 
     @patch.object(hole.ResetUserPasswordToken, 'objects', AsyncMagicMock())
     @async_test
