@@ -58,6 +58,7 @@ class SettingsPage extends BasePage{
   }
 
   async _reRender(){
+    $('.wait-toxic-spinner').show();
     await this.fetch_template();
     await this.render();
   }
