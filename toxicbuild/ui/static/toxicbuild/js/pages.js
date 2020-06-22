@@ -58,7 +58,6 @@ class SettingsPage extends BasePage{
   }
 
   async _reRender(){
-    $('.wait-toxic-spinner').show();
     await this.fetch_template();
     await this.render();
   }
@@ -149,8 +148,10 @@ class SettingsPage extends BasePage{
     this.template_url = this._get_template_url(settings_type);
     this.main_template_url = this._get_main_template_url(settings_type);
     this.main_template_container = this._get_main_template_container();
-    await this.fetch_main_template();
     $('.wait-toxic-spinner').show();
+    $('.settings-left-side').hide();
+    $('.settings-right-side').hide();
+    await this.fetch_main_template();
     this._set_list_view(settings_type);
     await this.render();
     this.router.setUpLinks();
