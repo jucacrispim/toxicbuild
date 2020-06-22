@@ -124,7 +124,7 @@ class BuilderTest(TestCase):
         self.builder.manager.send_info = send_info
         self.builder._current_step_output_index = 1
         await self.builder._send_step_output_info(step_info,
-                                                       0, 'some line' * 1024)
+                                                  0, 'some line' * 1024)
         self.assertTrue(send_mock.called)
 
     @async_test
@@ -138,7 +138,7 @@ class BuilderTest(TestCase):
 
         self.builder.manager.send_info = send_info
         await self.builder._send_step_output_info(step_info,
-                                                       0, 'some line' * 1024)
+                                                  0, 'some line' * 1024)
         self.assertTrue(send_mock.called)
 
     @async_test
@@ -153,7 +153,7 @@ class BuilderTest(TestCase):
         self.builder.STEP_OUTPUT_BUFF_LEN = 512
         self.builder.manager.send_info = send_info
         await self.builder._send_step_output_info(step_info,
-                                                       0, 'some line')
+                                                  0, 'some line')
         self.assertFalse(send_mock.called)
 
     @async_test

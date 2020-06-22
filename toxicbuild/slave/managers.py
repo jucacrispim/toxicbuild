@@ -186,7 +186,7 @@ class BuildManager(LoggerMixin):
                 branch = external['branch']
                 into = external['into']
                 await self.vcs.import_external_branch(url, name, branch,
-                                                           into)
+                                                      into)
             else:
                 # we need to try_set_remote so if the url has changed, we
                 # change it before trying fetch/checkout stuff

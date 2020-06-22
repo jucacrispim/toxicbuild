@@ -68,9 +68,9 @@ class SlaveTest(BaseUITest):
     async def test_add(self):
         try:
             self.slave = await SlaveInterface.add(self.user,
-                                                       'test-slave-add',
-                                                       123, '123', self.user,
-                                                       host='localhost')
+                                                  'test-slave-add',
+                                                  123, '123', self.user,
+                                                  host='localhost')
             self.assertTrue(self.slave.id)
         finally:
             await self.slave.delete()
@@ -79,9 +79,9 @@ class SlaveTest(BaseUITest):
     async def test_get(self):
         try:
             self.slave = await SlaveInterface.add(self.user,
-                                                       'test-slave-get',
-                                                       123, '123', self.user,
-                                                       host='localhost')
+                                                  'test-slave-get',
+                                                  123, '123', self.user,
+                                                  host='localhost')
             get_slave = await SlaveInterface.get(
                 self.user, slave_name_or_id='asdf/test-slave-get')
             self.assertEqual(self.slave.id, get_slave.id)
@@ -92,9 +92,9 @@ class SlaveTest(BaseUITest):
     async def test_list(self):
         try:
             self.slave = await SlaveInterface.add(self.user,
-                                                       'test-slave-list',
-                                                       123, '123', self.user,
-                                                       host='localhost')
+                                                  'test-slave-list',
+                                                  123, '123', self.user,
+                                                  host='localhost')
             slave_list = await SlaveInterface.list(self.user)
             self.assertEqual(len(slave_list), 1, slave_list)
         finally:
@@ -104,9 +104,9 @@ class SlaveTest(BaseUITest):
     async def test_update(self):
         try:
             self.slave = await SlaveInterface.add(self.user,
-                                                       'test-slave-update',
-                                                       123, '123', self.user,
-                                                       host='localhost')
+                                                  'test-slave-update',
+                                                  123, '123', self.user,
+                                                  host='localhost')
             await self.slave.update(host='192.168.0.1')
             get_slave = await SlaveInterface.get(
                 self.user, slave_name_or_id='asdf/test-slave-update')
@@ -138,9 +138,9 @@ class RepositoryTest(BaseUITest):
     @async_test
     async def test_add(self):
         self.slave = await SlaveInterface.add(self.user,
-                                                   'test-slave', 1234,
-                                                   '23', self.user,
-                                                   host='localhost')
+                                              'test-slave', 1234,
+                                              '23', self.user,
+                                              host='localhost')
         self.repo = await RepositoryInterface.add(
             self.user, name='asdf/some-repo',
             url='bla@gla.com',
@@ -157,7 +157,7 @@ class RepositoryTest(BaseUITest):
             owner=self.user, vcs_type='git',
             update_seconds=200)
         get_repo = await RepositoryInterface.get(self.user,
-                                                      name='asdf/some-repo')
+                                                 name='asdf/some-repo')
         self.assertEqual(self.repo.id, get_repo.id)
 
     @async_test
@@ -190,11 +190,11 @@ class RepositoryTest(BaseUITest):
             '123', self.user, host='localhost')
 
         self.repo = await RepositoryInterface.add(self.user,
-                                                       name='some-repo',
-                                                       url='bla@gla.com',
-                                                       owner=self.user,
-                                                       vcs_type='git',
-                                                       update_seconds=200)
+                                                  name='some-repo',
+                                                  url='bla@gla.com',
+                                                  owner=self.user,
+                                                  vcs_type='git',
+                                                  update_seconds=200)
         await self.repo.add_slave(self.slave)
         repo = await RepositoryInterface.get(
             self.user, name='asdf/' + self.repo.name)
@@ -203,17 +203,17 @@ class RepositoryTest(BaseUITest):
     @async_test
     async def test_remove_slave(self):
         self.slave = await SlaveInterface.add(self.user,
-                                                   'test-slave', 1234,
-                                                   '2123', self.user,
-                                                   host='localhost')
+                                              'test-slave', 1234,
+                                              '2123', self.user,
+                                              host='localhost')
         self.repo = await RepositoryInterface.add(self.user,
-                                                       name='some-repo',
-                                                       url='bla@gla.com',
-                                                       owner=self.user,
-                                                       vcs_type='git',
-                                                       update_seconds=200,
-                                                       slaves=[self.slave.name]
-                                                       )
+                                                  name='some-repo',
+                                                  url='bla@gla.com',
+                                                  owner=self.user,
+                                                  vcs_type='git',
+                                                  update_seconds=200,
+                                                  slaves=[self.slave.name]
+                                                  )
         await self.repo.remove_slave(self.slave)
         repo = await RepositoryInterface.get(
             self.user, name='asdf/' + self.repo.name)
@@ -222,11 +222,11 @@ class RepositoryTest(BaseUITest):
     @async_test
     async def test_add_branch(self):
         self.repo = await RepositoryInterface.add(self.user,
-                                                       name='some-repo',
-                                                       url='bla@gla.com',
-                                                       owner=self.user,
-                                                       vcs_type='git',
-                                                       update_seconds=200)
+                                                  name='some-repo',
+                                                  url='bla@gla.com',
+                                                  owner=self.user,
+                                                  vcs_type='git',
+                                                  update_seconds=200)
         await self.repo.add_branch('master', True)
         repo = await RepositoryInterface.get(
             self.user, name='asdf/' + self.repo.name)
@@ -235,11 +235,11 @@ class RepositoryTest(BaseUITest):
     @async_test
     async def test_remove_branch(self):
         self.repo = await RepositoryInterface.add(self.user,
-                                                       name='some-repo',
-                                                       url='bla@gla.com',
-                                                       owner=self.user,
-                                                       vcs_type='git',
-                                                       update_seconds=200)
+                                                  name='some-repo',
+                                                  url='bla@gla.com',
+                                                  owner=self.user,
+                                                  vcs_type='git',
+                                                  update_seconds=200)
         await self.repo.add_branch('master', True)
         await self.repo.remove_branch('master')
         repo = await RepositoryInterface.get(
@@ -262,9 +262,9 @@ class BuildsetTest(BaseUITest):
     @async_test
     async def test_list(self):
         self.slave = await SlaveInterface.add(self.user,
-                                                   'test-slave', 1234,
-                                                   '1234', self.user,
-                                                   host='localhost')
+                                              'test-slave', 1234,
+                                              '1234', self.user,
+                                              host='localhost')
         self.repo = await RepositoryInterface.add(
             self.user, name='some-repo',
             url='bla@gla.com',

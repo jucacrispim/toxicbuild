@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 from unittest import mock, TestCase
 from toxicbuild.core import client
 from tests import async_test, AsyncMagicMock

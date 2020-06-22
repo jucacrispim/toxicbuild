@@ -296,7 +296,7 @@ class BuildStep:
         return output
 
     async def execute(self, cwd, out_fn=None, last_step_status=None,
-                last_step_output=None, **envvars):
+                      last_step_output=None, **envvars):
         """Executes the step command.
 
         :param cwd: Directory where the command will be executed.
@@ -320,8 +320,8 @@ class BuildStep:
         try:
             cmd = await self.get_command()
             output = await self.exec_cmd(cmd, cwd=cwd,
-                                              timeout=self.timeout,
-                                              out_fn=out_fn, **envvars)
+                                         timeout=self.timeout,
+                                         out_fn=out_fn, **envvars)
             status = 'success'
         except ExecCmdError as e:
             status = 'fail'
