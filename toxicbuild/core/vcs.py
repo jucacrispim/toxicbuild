@@ -346,7 +346,7 @@ class Git(VCS):
                 since_date = since.get(branch)
 
                 revs = await self.get_revisions_for_branch(branch,
-                                                                since_date)
+                                                           since_date)
                 if revs:
                     revisions[branch] = revs
             except Exception as e:
