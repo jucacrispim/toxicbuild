@@ -1351,6 +1351,22 @@ class DashboardHandlerTest(TestCase):
         self.handler.write = MagicMock(spec=self.handler.write)
 
         await self.handler.show_repository_details_template(b'full/name')
+
+        self.assertTrue(web.RepositoryInterface.get.called)
+        self.assertTrue(self.handler._get_repository_template.called)
+        self.assertTrue(self.handler.write.called)
+
+    @patch.object(web.RepositoryInterface, 'get', AsyncMagicMock(
+        spec=web.RepositoryInterface.get, return_value=MagicMock(id='fadsf')))
+    @async_test
+    async def test_show_repository_details_template_no_repo_name(self):
+        self.handler._get_repository_template = MagicMock(
+            spec=self.handler._get_repository_template)
+        self.handler.write = MagicMock(spec=self.handler.write)
+
+        await self.handler.show_repository_details_template()
+
+        self.assertFalse(web.RepositoryInterface.get.called)
         self.assertTrue(self.handler._get_repository_template.called)
         self.assertTrue(self.handler.write.called)
 

@@ -383,11 +383,11 @@ class RepositoryAddPage extends BaseRepositoryPage{
   }
 
   _getContainerInner(){
-    this._container = $('.details-main-container');
+    this._container = $('.details-main-container').not(
+	'.notifications-main-container');
     this._inner = $('div', this._container).not('.wait-toxic-spinner').not(
       '.advanced-help-container').not('.nav-container');
   }
-
 
   async render(){
     this.add_message_container = $('.add-repo-message-container');

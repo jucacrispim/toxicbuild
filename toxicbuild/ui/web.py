@@ -989,10 +989,14 @@ class DashboardHandler(LoggedTemplateHandler):
     @get('templates/repo-details/{}'.format(FULL_NAME_REGEX))
     async def show_repository_details_template(self, full_name=b''):
         full_name = full_name.decode()
-        repo = await RepositoryInterface.get(self.user,
-                                             repo_name_or_id=full_name)
+        if full_name:
+            repo = await RepositoryInterface.get(self.user,
+                                                 repo_name_or_id=full_name)
+            repo_id = str(repo.id)
+        else:
+            repo_id = ''
 
-        content = self._get_repository_template(full_name, str(repo.id))
+        content = self._get_repository_template(full_name, repo_id)
         self.write(content)
 
     @get('templates/slave-details')
