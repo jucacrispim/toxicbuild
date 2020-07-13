@@ -147,7 +147,7 @@ class NotificationConfigView extends Backbone.View{
 
   async saveNotification(){
     let data = this._getSaveData();
-    let repo_id = $('#repo-id').val();
+    let repo_id = $('#repo_id').val();
     let enabled = this.model.get('enabled');
     let modal = $('#notificationModal');
     let name = this.model.get('name');
@@ -173,7 +173,7 @@ class NotificationConfigView extends Backbone.View{
   }
 
   async disableNotification(){
-    let repo_id = $('#repo-id').val();
+    let repo_id = $('#repo_id').val();
     let modal = $('#notificationModal');
     let name = this.model.get('name');
     try{
@@ -234,8 +234,9 @@ class NotificationConfigView extends Backbone.View{
 
   _listen2disable(template){
     let self = this;
-    let btn = $('#btn-remove-obj');
+    let btn = $('#btn-disable-notif');
     btn.unbind('click');
+    console.log(btn);
     btn.on('click', async function(){
       await self.disableNotification();
     });

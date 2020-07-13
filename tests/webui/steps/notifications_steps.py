@@ -143,7 +143,7 @@ def click_disable_notif_btn(context):
 
     def fn():
         try:
-            el = browser.find_element_by_id('btn-remove-obj')
+            el = browser.find_element_by_id('btn-disable-notif')
             el = el if el.is_displayed() else None
         except Exception:
             el = None
