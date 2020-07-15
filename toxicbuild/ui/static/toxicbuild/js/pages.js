@@ -458,6 +458,8 @@ class RepositoryDetailsPage extends BaseRepositoryPage{
   }
 
   async _displayNotifications(){
+    let repo_id = $('#repo_id').val();
+    this.notifications.repo_id = repo_id;
     $('.repo-details-main-container').hide();
     $('.notifications-main-container').show();
     $('.notifications-main-container .nav-container').show();
@@ -537,7 +539,7 @@ class RepositoryNotificationsPage extends BaseFloatingPage{
   }
 
   async render(){
-    let repo_id = $('#repo-id').val();
+    let repo_id = $('#repo_id').val();
     this.view = new NotificationListView(repo_id);
     this.nav_pills = $('.nav-container');
     this.right_sidebar = $('.settings-right-side');
