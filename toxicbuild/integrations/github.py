@@ -154,7 +154,7 @@ class GithubApp(BaseIntegrationApp):
         """Creates a auth token for a given github installation
 
         :param installation: An instance of
-          :class:`~toxicbuild.master.integrations.github.GitHubInstallation`
+          :class:`~toxicbuild.integrations.github.GitHubInstallation`
         """
 
         app = await cls.get_app()
@@ -198,7 +198,8 @@ class GithubIntegration(BaseIntegration):
         """URL used to retrieve an access token for this installation."""
 
         url = settings.GITHUB_API_URL
-        return url + 'installations/{}/access_tokens'.format(self.github_id)
+        return url + 'app/installations/{}/access_tokens'.format(
+            self.github_id)
 
     async def get_header(
             self, accept='application/vnd.github.machine-man-preview+json'):

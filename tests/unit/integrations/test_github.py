@@ -265,8 +265,8 @@ class GithubIntegrationTest(TestCase):
         await github.GithubIntegration.drop_collection()
 
     def test_access_token_url(self):
-        url = 'https://api.github.com/installations/{}/access_tokens'.format(
-            str(self.installation.github_id))
+        url = 'https://api.github.com/app/installations/{}/access_tokens'.\
+            format(str(self.installation.github_id))
         self.assertEqual(self.installation.access_token_url, url)
 
     @patch.object(github.GithubApp, 'create_installation_token',
