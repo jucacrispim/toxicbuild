@@ -451,6 +451,10 @@ class BaseIntegration(LoggerMixin, Document):
                 'Repository {} does not exist here'.format(github_repo_id),
                 level='debug')
 
+        self.repositories = [r for r in self.repositories
+                             if r.external_id != github_repo_id]
+        await self.save()
+
     async def request2api(self, method, *args, statuses=None, **kwargs):
         """Does a request to a 3rd party service. Returns a response object.
 
