@@ -421,7 +421,7 @@ class BaseIntegrationTest(TestCase):
         self.assertTrue(repo.delete.called)
 
     @patch.object(base.RepositoryInterface, 'delete', AsyncMagicMock(
-        spe=base.RepositoryInterface.delete))
+        spec=base.RepositoryInterface.delete))
     @async_test
     async def test_remove_repository(self):
         install_repo = base.ExternalInstallationRepository(
@@ -429,6 +429,18 @@ class BaseIntegrationTest(TestCase):
         self.integration.repositories.append(install_repo)
         await self.integration.remove_repository(1234)
         self.assertTrue(base.RepositoryInterface.delete.called)
+
+    @patch.object(base.RepositoryInterface, 'delete', AsyncMagicMock(
+        spec=base.RepositoryInterface.delete,
+        side_effect=base.RepositoryDoesNotExist))
+    @patch.object(base.BaseIntegration, 'log', Mock(spec=base.BaseIntegration))
+    @async_test
+    async def test_remove_repository_does_not_exist(self):
+        install_repo = base.ExternalInstallationRepository(
+            external_id=1234, repository_id='repo-id', full_name='a/b')
+        self.integration.repositories.append(install_repo)
+        await self.integration.remove_repository(1234)
+        self.assertTrue(base.BaseIntegration.log.called)
 
     def test_get_notif_config(self):
         c = self.integration.get_notif_config()

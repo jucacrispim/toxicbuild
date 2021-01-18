@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017, 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2021 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,8 +20,13 @@
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.core.utils import LoggerMixin
-from .exceptions import (UserDoesNotExist, NotEnoughPerms,
-                         BadResetPasswordToken, AlreadyExists)
+from .exceptions import (
+    UserDoesNotExist,
+    NotEnoughPerms,
+    BadResetPasswordToken,
+    AlreadyExists,
+    RepositoryDoesNotExist,
+)
 
 
 class HoleClient(BaseToxicClient, LoggerMixin):
@@ -84,7 +89,8 @@ class HoleClient(BaseToxicClient, LoggerMixin):
                 2: UserDoesNotExist,
                 3: NotEnoughPerms,
                 4: BadResetPasswordToken,
-                5: AlreadyExists}
+                5: AlreadyExists,
+                6: RepositoryDoesNotExist}
 
         if 'code' not in response:
             return response

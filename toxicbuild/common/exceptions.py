@@ -36,3 +36,7 @@ class BadResetPasswordToken(Exception):
 
 class AlreadyExists(Exception):
     pass
+
+
+class RepositoryDoesNotExist(Exception):
+    pass

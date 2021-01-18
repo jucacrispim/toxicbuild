@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2020 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2021 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -85,7 +85,8 @@ class UIHole(BaseToxicProtocol, LoggerMixin):
         statuses = {User.DoesNotExist: 2,
                     NotEnoughPerms: 3,
                     ResetUserPasswordToken.DoesNotExist: 4,
-                    NotUniqueError: 5}
+                    NotUniqueError: 5,
+                    Repository.DoesNotExist: 6}
 
         if self.action != 'user-authenticate':
             # when we are authenticating we don't need (and we can't have)

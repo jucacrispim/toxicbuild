@@ -28,7 +28,10 @@ from mongomotor.fields import (
     DynamicField,
     DateTimeField,
 )
-from toxicbuild.common.exceptions import AlreadyExists
+from toxicbuild.common.exceptions import (
+    AlreadyExists,
+    RepositoryDoesNotExist,
+)
 from toxicbuild.common.interfaces import (
     NotificationInterface,
     RepositoryInterface,
@@ -441,7 +444,12 @@ class BaseIntegration(LoggerMixin, Document):
         :param github_repo_id: The id of the repository in github."""
 
         repo = await self._get_repo_by_external_id(github_repo_id)
-        await repo.delete()
+        try:
+            await repo.delete()
+        except RepositoryDoesNotExist:
+            self.log(
+                'Repository {} does not exist here'.format(github_repo_id),
+                level='debug')
 
     async def request2api(self, method, *args, statuses=None, **kwargs):
         """Does a request to a 3rd party service. Returns a response object.
