@@ -154,11 +154,6 @@ class BaseIntegrationTest(TestCase):
             await self.integration.request_user_id()
 
     @async_test
-    async def test_create_webhook(self):
-        with self.assertRaises(NotImplementedError):
-            await self.integration.create_webhook('the-external-repo-id')
-
-    @async_test
     async def test_get_auth_url(self):
         self.integration.access_token = 'my-token'
         self.integration.url_user = 'oauth2'

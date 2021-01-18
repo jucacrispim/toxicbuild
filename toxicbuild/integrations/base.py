@@ -189,8 +189,6 @@ class BaseIntegration(LoggerMixin, Document):
         about events.
         """
 
-        raise NotImplementedError
-
     @property
     def user(self):
         """The user who owns this installation.
