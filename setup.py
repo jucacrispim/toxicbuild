@@ -46,7 +46,7 @@ setup(name='toxicbuild',
                         'pyrocumulus==0.12.2', 'pytz==2019.03',
                         'aiohttp==3.6.2', 'aiosmtplib==1.1.2',
                         'asyncamqp==0.1.5', 'pyyaml==5.1',
-                        'PyJWT==1.7.1', 'aiozk==0.16.0',
+                        'PyJWT==2.4.0', 'aiozk==0.16.0',
                         'aiobotocore==0.11.0', 'awscli==1.16.278',
                         'bcrypt==3.1.7', 'mongoengine==0.19.1'],
       classifiers=[
