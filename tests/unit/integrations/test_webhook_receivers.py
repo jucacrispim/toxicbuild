@@ -29,9 +29,6 @@ from tests import async_test, create_autospec
 
 class BaseWebhookReceiverTest(AsyncTestCase):
 
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
-
     def setUp(self):
         super().setUp()
         body = webhook_receivers.json.dumps({"some": "thing"})

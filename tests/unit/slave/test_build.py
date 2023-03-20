@@ -44,7 +44,7 @@ class BuilderTest(TestCase):
         with open(toxicconf) as fd:
             conf = fd.read()
 
-        toxicconf = yaml.load(conf)
+        toxicconf = yaml.safe_load(conf)
 
         managers.get_toxicbuildconf_yaml.return_value = toxicconf
 

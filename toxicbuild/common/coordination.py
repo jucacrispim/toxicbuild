@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-# Copyright toxicbuild Juca Crispim <juca@poraodojuca.net>
+# Copyright 2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
-# This file is part of 2018.
+# This file is part of toxicbuild.
 
-# 2018 is free software: you can redistribute it and/or modify
+# toxicbuild is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
-# 2018 is distributed in the hope that it will be useful,
+# toxicbuild is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 
 # You should have received a copy of the GNU Affero General Public License
-# along with 2018. If not, see <http://www.gnu.org/licenses/>.
+# along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
 from aiozk import ZKClient
@@ -65,6 +65,30 @@ class ToxicZKClient(LoggerMixin):
     _client = property(_get_client, _set_client)
 
 
+class LockContext:
+
+    def __init__(self, lock, timeout=None):
+        self.lock = lock
+        self.timeout = timeout
+        self._acquired = False
+
+    async def __aenter__(self):
+        if not self._acquired:
+            await self.acquire()  # pragma no cover
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.lock.release()
+
+    async def acquire(self):
+        if self.timeout:
+            lock = await self.lock.acquire(timeout=self.timeout)
+        else:
+            lock = await self.lock.__aenter__()
+
+        self._acquired = True
+        return lock
+
+
 class Lock(LoggerMixin):
 
     def __init__(self, path):
@@ -73,8 +97,12 @@ class Lock(LoggerMixin):
 
     async def acquire_read(self, timeout=None):
         lock_inst = await self.client.get_lock(self.path)
-        return await lock_inst.acquire_read(timeout=timeout)
+        ctx = LockContext(lock_inst.reader_lock, timeout)
+        await ctx.acquire()
+        return ctx
 
     async def acquire_write(self, timeout=None):
         lock_inst = await self.client.get_lock(self.path)
-        return await lock_inst.acquire_write(timeout=timeout)
+        ctx = LockContext(lock_inst.writer_lock, timeout)
+        await ctx.acquire()
+        return ctx

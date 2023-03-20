@@ -20,7 +20,7 @@
 
 import asyncio
 
-import aiobotocore
+from aiobotocore.session import get_session
 
 from toxicbuild.common.coordination import Lock
 from toxicbuild.core.utils import LoggerMixin
@@ -43,7 +43,7 @@ class EC2Instance(LoggerMixin):
 
     def _get_session(self):
         loop = asyncio.get_event_loop()
-        return aiobotocore.get_session(loop=loop)
+        return get_session(loop=loop)
 
     def _get_client(self):
         session = self._get_session()

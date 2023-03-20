@@ -19,10 +19,7 @@
 import os
 
 import yaml
-try:
-    from yaml import CLoader as Loader
-except ImportError:
-    from yaml import Loader
+from yaml import CLoader as Loader
 
 from toxicbuild.core.exceptions import ConfigError
 from toxicbuild.core.utils import (

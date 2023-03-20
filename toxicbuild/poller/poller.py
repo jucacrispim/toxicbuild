@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -102,8 +102,7 @@ class Poller(LoggerMixin):
         return r
 
     async def poll(self):
-        """ Check for changes in a repository and if there are changes, notify
-        about it.
+        """ Check for changes in a repository
         """
 
         ret = {'with_clone': False,

@@ -30,10 +30,10 @@ class EC2InstanceTest(TestCase):
     def setUp(self):
         self.instance = aws.EC2Instance('some-id', 'a-region')
 
-    @patch.object(aws.aiobotocore, 'get_session', Mock())
+    @patch.object(aws, 'get_session', Mock())
     def test_get_session(self):
         self.instance._get_session()
-        self.assertTrue(aws.aiobotocore.get_session.called)
+        self.assertTrue(aws.get_session.called)
 
     def test_get_client(self):
         session = Mock()
