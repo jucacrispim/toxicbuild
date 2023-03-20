@@ -19,8 +19,7 @@ def async_test(f):
 
     def wrapper(*args, **kwargs):
         loop = asyncio.get_event_loop()
-        coro = asyncio.coroutine(f)
-        loop.run_until_complete(coro(*args, **kwargs))
+        loop.run_until_complete(f(*args, **kwargs))
 
     return wrapper
 

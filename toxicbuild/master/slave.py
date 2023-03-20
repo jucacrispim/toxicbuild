@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016-2020 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016-2020, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -210,7 +210,6 @@ class Slave(OwnedDocument, LoggerMixin):
 
         :param repo_id: An id of a repository.
         """
-
         self.running_repos.remove(str(repo_id))
         self.running_count -= 1
         await self.update(
@@ -354,7 +353,6 @@ class Slave(OwnedDocument, LoggerMixin):
                 return False
 
             with (await self.get_client()) as client:
-
                 try:
                     build_info = await client.build(
                         build,
@@ -374,6 +372,8 @@ class Slave(OwnedDocument, LoggerMixin):
 
                     await build.update()
                     build_info = build.to_dict()
+                finally:
+                    self.log('build finished !!')
         finally:
             await self.rm_running_repo(repo.id)
 
@@ -388,7 +388,6 @@ class Slave(OwnedDocument, LoggerMixin):
         :param info: A dictionary. The information sent by the
           slave that is executing the build.
         """
-
         # if we need one more conditional here is better to use
         # a map...
         if info['info_type'] == 'build_info':
@@ -401,6 +400,7 @@ class Slave(OwnedDocument, LoggerMixin):
             await self._process_step_output_info(build, repo, info)
 
     async def _process_build_info(self, build, repo, build_info):
+
         build.status = build_info['status']
         build.started = string2datetime(build_info['started'])
         finished = build_info['finished']
@@ -427,7 +427,6 @@ class Slave(OwnedDocument, LoggerMixin):
             await build.notify('build-finished')
 
     async def _process_step_info(self, build, repo, step_info):
-
         cmd = step_info['cmd']
         name = step_info['name']
         status = step_info['status']

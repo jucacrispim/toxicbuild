@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,13 +17,13 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 from bson.objectid import ObjectId
 
 from toxicbuild.output.notifications import custom_webhook
 
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class CustomWebhookNotificationTest(TestCase):
@@ -36,7 +36,7 @@ class CustomWebhookNotificationTest(TestCase):
             repository_id=obj_id)
         await self.notification.save()
 
-    @patch.object(custom_webhook.requests, 'post', AsyncMagicMock(
+    @patch.object(custom_webhook.requests, 'post', AsyncMock(
         spec=custom_webhook.requests.post, return_value=MagicMock()))
     @async_test
     async def test_send_message(self):
@@ -46,14 +46,14 @@ class CustomWebhookNotificationTest(TestCase):
 
     @async_test
     async def test_send_started_message(self):
-        self.notification._send_message = AsyncMagicMock(
+        self.notification._send_message = AsyncMock(
             spec=self.notification._send_message)
         await self.notification.send_started_message({})
         self.assertTrue(self.notification._send_message.called)
 
     @async_test
     async def test_send_finished_message(self):
-        self.notification._send_message = AsyncMagicMock(
+        self.notification._send_message = AsyncMock(
             spec=self.notification._send_message)
         await self.notification.send_finished_message({})
         self.assertTrue(self.notification._send_message.called)

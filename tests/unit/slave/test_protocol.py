@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -40,7 +40,7 @@ class ProtocolTest(TestCase):
         type(self.protocol)._is_shuting_down = False
         self.transport = mock.Mock()
         # self.protocol.connection_made(transport)
-        self.protocol._stream_reader = mock.MagicMock()
+        self.protocol._stream_reader_wr = mock.MagicMock()
         self.protocol._stream_writer = mock.MagicMock()
 
         self.response = None

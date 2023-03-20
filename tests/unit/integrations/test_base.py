@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,11 +18,11 @@
 
 import datetime
 from unittest import TestCase
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock, MagicMock, AsyncMock
 
 from toxicbuild.core.utils import localtime2utc
 from toxicbuild.integrations import base
-from tests import AsyncMagicMock, async_test, create_autospec
+from tests import async_test, create_autospec
 
 
 class BaseIntegrationApp(TestCase):
@@ -46,10 +46,10 @@ class BaseIntegrationApp(TestCase):
         self.assertTrue(r)
 
     @patch.object(base.BaseIntegrationApp, 'objects', Mock())
-    @patch.object(base.BaseIntegrationApp, 'create_app', AsyncMagicMock())
+    @patch.object(base.BaseIntegrationApp, 'create_app', AsyncMock())
     @async_test
     async def test_get_app_exists(self):
-        base.BaseIntegrationApp.objects.first = AsyncMagicMock(
+        base.BaseIntegrationApp.objects.first = AsyncMock(
             return_value=Mock())
         r = await base.BaseIntegrationApp.get_app()
 
@@ -57,11 +57,11 @@ class BaseIntegrationApp(TestCase):
         self.assertFalse(base.BaseIntegrationApp.create_app.called)
 
     @patch.object(base.BaseIntegrationApp, 'objects', Mock())
-    @patch.object(base.BaseIntegrationApp, 'create_app', AsyncMagicMock(
+    @patch.object(base.BaseIntegrationApp, 'create_app', AsyncMock(
         return_value=Mock()))
     @async_test
     async def test_get_app_doesnt_exist(self):
-        base.BaseIntegrationApp.objects.first = AsyncMagicMock(
+        base.BaseIntegrationApp.objects.first = AsyncMock(
             return_value=None)
         r = await base.BaseIntegrationApp.get_app()
 
@@ -70,9 +70,9 @@ class BaseIntegrationApp(TestCase):
 
 
 @patch('toxicbuild.common.client.HoleClient.connect',
-       AsyncMagicMock())
+       AsyncMock())
 @patch('toxicbuild.common.client.HoleClient.request2server',
-       AsyncMagicMock(return_value={'id': 'asdf'}))
+       AsyncMock(return_value={'id': 'asdf'}))
 @patch('toxicbuild.common.client.HoleClient.is_connected', MagicMock(
     return_value=True))
 @patch('toxicbuild.common.client.HoleClient.__exit__', MagicMock())
@@ -95,13 +95,13 @@ class BaseIntegrationTest(TestCase):
         await base.BaseIntegration.drop_collection()
 
     @patch.object(base.BaseIntegration, 'import_repositories',
-                  AsyncMagicMock())
-    @patch.object(base.BaseIntegration, 'save', AsyncMagicMock())
+                  AsyncMock())
+    @patch.object(base.BaseIntegration, 'save', AsyncMock())
     @patch.object(base.BaseIntegration, 'create_access_token',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.BaseIntegration.create_access_token))
     @patch.object(base.BaseIntegration, 'get_user_id',
-                  AsyncMagicMock(spec=base.BaseIntegration.get_user_id))
+                  AsyncMock(spec=base.BaseIntegration.get_user_id))
     @patch.object(base.LoggerMixin, 'log_cls', Mock())
     @async_test
     async def test_create(self):
@@ -113,15 +113,15 @@ class BaseIntegrationTest(TestCase):
         self.assertTrue(install.create_access_token.called)
         self.assertTrue(install.get_user_id.called)
 
-    @patch.object(base.BaseIntegration, 'save', AsyncMagicMock())
+    @patch.object(base.BaseIntegration, 'save', AsyncMock())
     @patch.object(base.BaseIntegration, 'objects', Mock())
     @patch.object(base.LoggerMixin, 'log_cls', Mock())
     @async_test
     async def test_create_install_already_exists(self):
         install = Mock()
-        install.import_repositories = AsyncMagicMock()
+        install.import_repositories = AsyncMock()
         base.BaseIntegration.objects.filter.\
-            return_value.first = AsyncMagicMock(return_value=install)
+            return_value.first = AsyncMock(return_value=install)
         await base.BaseIntegration.create(self.user)
         install = await base.BaseIntegration.create(self.user)
         self.assertFalse(install.save.called)
@@ -166,7 +166,7 @@ class BaseIntegrationTest(TestCase):
     async def test_get_auth_url_no_access_token(self):
         self.integration.access_token = None
         self.integration.url_user = 'oauth2'
-        self.integration.create_access_token = AsyncMagicMock()
+        self.integration.create_access_token = AsyncMock()
         url = 'https://gitlab.com/me/somerepo.git'
         expected = 'https://oauth2:None@gitlab.com/me/somerepo.git'
         returned = await self.integration.get_auth_url(url)
@@ -180,12 +180,12 @@ class BaseIntegrationTest(TestCase):
         with self.assertRaises(base.BadRequestToExternalAPI):
             await self.integration.get_auth_url(url)
 
-    @patch.object(base.RepositoryInterface, 'get', AsyncMagicMock(
+    @patch.object(base.RepositoryInterface, 'get', AsyncMock(
         spec=base.RepositoryInterface.get,
         side_effect=[
             base.RepositoryInterface(None, {'status': 'cloning', 'id': 'i'}),
             base.RepositoryInterface(None, {'status': 'ready', 'id': 'i'})]))
-    @patch.object(base, 'sleep', AsyncMagicMock())
+    @patch.object(base, 'sleep', AsyncMock())
     @async_test
     async def test_wait_clone(self):
         repo = Mock()
@@ -196,32 +196,32 @@ class BaseIntegrationTest(TestCase):
         self.assertTrue(base.sleep.called)
 
     @patch.object(base.BaseIntegration, '_wait_clone',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.BaseIntegration._wait_clone))
     @async_test
     async def test_import_repositories(self):
-        self.integration.list_repos = AsyncMagicMock(return_value=[
+        self.integration.list_repos = AsyncMock(return_value=[
             Mock(), Mock()])
 
         repo = Mock(spec=base.RepositoryInterface(None, {}))
-        repo.request_code_update = AsyncMagicMock()
-        self.integration.import_repository = AsyncMagicMock(return_value=repo)
+        repo.request_code_update = AsyncMock()
+        self.integration.import_repository = AsyncMock(return_value=repo)
         await self.integration.import_repositories()
         self.assertEqual(
             len(self.integration.import_repository.call_args_list), 2)
 
     @patch.object(base.BaseIntegration, '_wait_clone',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.BaseIntegration._wait_clone))
     @patch.object(base.BaseIntegration, 'log', Mock())
     @async_test
     async def test_import_repositories_error(self):
-        self.integration.list_repos = AsyncMagicMock(return_value=[
+        self.integration.list_repos = AsyncMock(return_value=[
             {'name': 'bla'}, {'name': 'ble'}])
         repo = Mock()
-        repo.request_code_update = AsyncMagicMock()
-        repo._wait_update = AsyncMagicMock()
-        self.integration.import_repository = AsyncMagicMock(
+        repo.request_code_update = AsyncMock()
+        repo._wait_update = AsyncMock()
+        self.integration.import_repository = AsyncMock(
             side_effect=[repo, Exception, False, Exception])
         repos = await self.integration.import_repositories()
         self.assertEqual(
@@ -229,22 +229,22 @@ class BaseIntegrationTest(TestCase):
         self.assertEqual(len(repos), 1)
 
     @patch.object(base.RepositoryInterface, 'request_code_update',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.RepositoryInterface.request_code_update))
     @patch.object(base.SlaveInterface, 'list',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.RepositoryInterface.request_code_update,
                       return_value=[]))
     @patch.object(base.BaseIntegration, 'post_import_hooks',
-                  AsyncMagicMock(spec=base.BaseIntegration.post_import_hooks))
+                  AsyncMock(spec=base.BaseIntegration.post_import_hooks))
     @async_test
     async def test_import_repository(self):
         repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
                      'id': 1234, 'full_name': 'ze/my-repo'}
-        self.integration.get_auth_url = AsyncMagicMock(
+        self.integration.get_auth_url = AsyncMock(
             return_value='https://some-url')
 
-        self.integration.enable_notification = AsyncMagicMock()
+        self.integration.enable_notification = AsyncMock()
         repo = await self.integration.import_repository(repo_info)
         self.assertTrue(repo.id)
         self.assertTrue(repo.request_code_update.called)
@@ -254,21 +254,21 @@ class BaseIntegrationTest(TestCase):
         self.assertTrue(install.post_import_hooks)
 
     @patch.object(base.SlaveInterface, 'list',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.SlaveInterface.list,
                       return_value=[]))
     @patch.object(base.RepositoryInterface, 'request_code_update',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.RepositoryInterface.request_code_update))
     @patch.object(base.BaseIntegration, 'create_webhook',
-                  AsyncMagicMock(spec=base.BaseIntegration.create_webhook))
+                  AsyncMock(spec=base.BaseIntegration.create_webhook))
     @async_test
     async def test_import_repository_no_clone(self):
         repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
                      'id': 1234, 'full_name': 'ze/my-repo'}
-        self.integration.get_auth_url = AsyncMagicMock(
+        self.integration.get_auth_url = AsyncMock(
             return_value='https://some-url')
-        self.integration.enable_notification = AsyncMagicMock()
+        self.integration.enable_notification = AsyncMock()
 
         repo = await self.integration.import_repository(repo_info,
                                                         clone=False)
@@ -278,28 +278,28 @@ class BaseIntegrationTest(TestCase):
             id=self.integration.id)
         self.assertTrue(install.repositories)
 
-    @patch.object(base.RepositoryInterface, 'add', AsyncMagicMock(
+    @patch.object(base.RepositoryInterface, 'add', AsyncMock(
         side_effect=base.AlreadyExists, spec=base.RepositoryInterface.add))
-    @patch.object(base.SlaveInterface, 'list', AsyncMagicMock(return_value=[]))
+    @patch.object(base.SlaveInterface, 'list', AsyncMock(return_value=[]))
     @patch.object(base.BaseIntegration, 'log', MagicMock())
     @async_test
     async def test_import_repository_not_unique(self):
         repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
                      'id': 1234, 'full_name': 'ze/my-repo'}
-        self.integration.get_auth_url = AsyncMagicMock(
+        self.integration.get_auth_url = AsyncMock(
             return_value='https://some-url')
 
         repo = await self.integration.import_repository(repo_info,
                                                         clone=False)
         self.assertIs(repo, False)
 
-    @patch.object(base.RepositoryInterface, 'add', AsyncMagicMock(
+    @patch.object(base.RepositoryInterface, 'add', AsyncMock(
         spec=base.RepositoryInterface.add, return_value=Mock()))
-    @patch.object(base.SlaveInterface, 'list', AsyncMagicMock(return_value=[]))
+    @patch.object(base.SlaveInterface, 'list', AsyncMock(return_value=[]))
     @patch.object(base.BaseIntegration, 'post_import_hooks',
-                  AsyncMagicMock(spec=base.BaseIntegration.post_import_hooks))
+                  AsyncMock(spec=base.BaseIntegration.post_import_hooks))
     @patch.object(base.BaseIntegration, 'enable_notification',
-                  AsyncMagicMock(
+                  AsyncMock(
                       side_effect=Exception,
                       spec=base.BaseIntegration.enable_notification))
     @patch.object(base.BaseIntegration, 'log', MagicMock())
@@ -307,7 +307,7 @@ class BaseIntegrationTest(TestCase):
     async def test_import_repository_bad_notification(self):
         repo_info = {'name': 'my-repo', 'clone_url': 'git@github.com/bla',
                      'id': 1234, 'full_name': 'ze/my-repo'}
-        self.integration.get_auth_url = AsyncMagicMock(
+        self.integration.get_auth_url = AsyncMock(
             return_value='https://some-url')
 
         repo = await self.integration.import_repository(repo_info,
@@ -321,22 +321,22 @@ class BaseIntegrationTest(TestCase):
             await self.integration._get_repo_by_external_id(123)
 
     @patch.object(base.RepositoryInterface, 'request_code_update',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.RepositoryInterface.request_code_update))
     @patch.object(base.BaseIntegration, 'get_auth_url',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.BaseIntegration.get_auth_url,
                       return_value='https://someurl.bla/bla.git'))
     @patch.object(
         base.BaseIntegration, '_get_repo_by_external_id',
-        AsyncMagicMock(
+        AsyncMock(
             spec=base.BaseIntegration._get_repo_by_external_id,
             return_value=base.RepositoryInterface(
                 None, {'url': 'https://someurl.bla/bla.git',
                        'fetch_url': 'https://auth@someurl.bla/bla.git'}))
     )
     @patch.object(base.RepositoryInterface, 'update',
-                  AsyncMagicMock(spec=base.RepositoryInterface.update))
+                  AsyncMock(spec=base.RepositoryInterface.update))
     @async_test
     async def test_update_repository(self):
         install_repo = base.ExternalInstallationRepository(
@@ -346,15 +346,15 @@ class BaseIntegrationTest(TestCase):
         self.assertTrue(base.RepositoryInterface.request_code_update.called)
 
     @patch.object(base.RepositoryInterface, 'request_code_update',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.RepositoryInterface.request_code_update))
     @patch.object(base.BaseIntegration, 'get_auth_url',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.BaseIntegration.get_auth_url,
                       return_value='https://someurl.bla/bla.git'))
     @patch.object(
         base.BaseIntegration, '_get_repo_by_external_id',
-        AsyncMagicMock(
+        AsyncMock(
             spec=base.BaseIntegration._get_repo_by_external_id,
             return_value=base.RepositoryInterface(
                 None, {'url': 'https://someurl.bla/bla.git',
@@ -364,37 +364,39 @@ class BaseIntegrationTest(TestCase):
     async def test_update_repository_same_url(self):
         install_repo = base.ExternalInstallationRepository(
             external_id=12345, repository_id='repo-id', full_name='a/b')
-        install_repo = base.ExternalInstallationRepository(
-            external_id=1234, repository_id='repo-id', full_name='a/b')
         self.integration.repositories.append(install_repo)
         await self.integration.update_repository(1234)
         self.assertTrue(base.RepositoryInterface.request_code_update.called)
 
+    @patch.object(
+        base.BaseIntegration, '_get_repo_by_external_id',
+        AsyncMock(
+            spec=base.BaseIntegration._get_repo_by_external_id,
+            return_value=base.RepositoryInterface(
+                None, {'url': 'https://someurl.bla/bla.git',
+                       'fetch_url': 'https://someurl.bla/bla.git'}))
+    )
     @async_test
     async def test_repo_request_build(self):
         external_repo_id = 'some-repo'
         branch = 'master'
         named_tree = '123adf'
-        repo = AsyncMagicMock(spec=base.RepositoryInterface)
-        repo.start_build = create_autospec(
-            spec=base.RepositoryInterface(None, {}).start_build,
-            mock_cls=AsyncMagicMock)
-        self.integration._get_repo_by_external_id = create_autospec(
-            spec=self.integration._get_repo_by_external_id,
-            mock_cls=AsyncMagicMock)
+        repo = AsyncMock(spec=base.RepositoryInterface)
+        repo.start_build = AsyncMock(
+            spec=base.RepositoryInterface(None, {}).start_build)
         self.integration._get_repo_by_external_id.return_value = repo
         await self.integration.repo_request_build(external_repo_id, branch,
                                                   named_tree)
 
         self.assertTrue(repo.start_build.called)
 
-    @patch.object(base.RepositoryInterface, 'get', AsyncMagicMock())
+    @patch.object(base.RepositoryInterface, 'get', AsyncMock())
     @async_test
     async def test_delete(self):
         await self.integration.save()
 
         repo = create_autospec(spec=base.RepositoryInterface,
-                               mock_cls=AsyncMagicMock)
+                               mock_cls=AsyncMock)
         repo.id = 'asdf'
         gh_repo = base.ExternalInstallationRepository(
             external_id=123,
@@ -415,7 +417,7 @@ class BaseIntegrationTest(TestCase):
         await self.integration.delete(MagicMock())
         self.assertTrue(repo.delete.called)
 
-    @patch.object(base.RepositoryInterface, 'delete', AsyncMagicMock(
+    @patch.object(base.RepositoryInterface, 'delete', AsyncMock(
         spec=base.RepositoryInterface.delete))
     @async_test
     async def test_remove_repository(self):
@@ -425,7 +427,7 @@ class BaseIntegrationTest(TestCase):
         await self.integration.remove_repository(1234)
         self.assertTrue(base.RepositoryInterface.delete.called)
 
-    @patch.object(base.RepositoryInterface, 'delete', AsyncMagicMock(
+    @patch.object(base.RepositoryInterface, 'delete', AsyncMock(
         spec=base.RepositoryInterface.delete,
         side_effect=base.RepositoryDoesNotExist))
     @patch.object(base.BaseIntegration, 'log', Mock(spec=base.BaseIntegration))
@@ -442,7 +444,7 @@ class BaseIntegrationTest(TestCase):
 
         self.assertEqual(c['installation'], str(self.integration.id))
 
-    @patch.object(base.NotificationInterface, 'enable', AsyncMagicMock())
+    @patch.object(base.NotificationInterface, 'enable', AsyncMock())
     @async_test
     async def test_enable_notification(self):
         repo = Mock()
@@ -460,7 +462,7 @@ class BaseIntegrationTest(TestCase):
 
         self.assertEqual(r, expected)
 
-    @patch.object(base.requests, 'post', AsyncMagicMock(
+    @patch.object(base.requests, 'post', AsyncMock(
         return_value=MagicMock(status=500)))
     @async_test
     async def test_request2api_bad(self):
@@ -471,7 +473,7 @@ class BaseIntegrationTest(TestCase):
         with self.assertRaises(base.BadRequestToExternalAPI):
             await self.integration.request2api(meth, url, bla)
 
-    @patch.object(base.requests, 'post', AsyncMagicMock(
+    @patch.object(base.requests, 'post', AsyncMock(
         return_value=MagicMock(status=200)))
     @async_test
     async def test_request2api(self):
@@ -484,8 +486,8 @@ class BaseIntegrationTest(TestCase):
 
     @async_test
     async def test_create_access_token(self):
-        self.integration.get_user_id = AsyncMagicMock()
-        self.integration.request_access_token = AsyncMagicMock(
+        self.integration.get_user_id = AsyncMock()
+        self.integration.request_access_token = AsyncMock(
             spec=self.integration.request_access_token,
             return_value={'access_token': 'token',
                           'refresh_token': 'refresh',
@@ -494,7 +496,7 @@ class BaseIntegrationTest(TestCase):
         self.assertEqual(self.integration.access_token, 'token')
 
     @patch.object(base.BaseIntegration, 'request_user_id',
-                  AsyncMagicMock(spec=base.BaseIntegration.request_user_id,
+                  AsyncMock(spec=base.BaseIntegration.request_user_id,
                                  return_value='a-user-id'))
     @async_test
     async def test_get_user_id(self):
@@ -509,7 +511,7 @@ class BaseIntegrationTest(TestCase):
         self.assertEqual(self.integration.webhook_url, expected)
 
     @patch.object(base.BaseIntegration, 'create_webhook',
-                  AsyncMagicMock(spec=base.BaseIntegration.create_webhook))
+                  AsyncMock(spec=base.BaseIntegration.create_webhook))
     @async_test
     async def test_post_import_hooks(self):
         await self.integration.post_import_hooks({'some': 'thing'})
@@ -535,7 +537,7 @@ class BaseIntegrationTest(TestCase):
         self.assertTrue(self.integration.token_is_expired)
 
     @patch.object(base.BaseIntegration, 'create_access_token',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.BaseIntegration.create_access_token))
     @async_test
     async def test_get_access_token_doesnt_exist(self):
@@ -545,7 +547,7 @@ class BaseIntegrationTest(TestCase):
         self.assertTrue(self.integration.create_access_token.called)
 
     @patch.object(base.BaseIntegration, 'refresh_access_token',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.BaseIntegration.create_access_token))
     @patch.object(base.BaseIntegration, 'token_is_expired', True)
     @async_test
@@ -556,7 +558,7 @@ class BaseIntegrationTest(TestCase):
         self.assertTrue(self.integration.refresh_access_token.called)
 
     @patch.object(base.BaseIntegration, 'refresh_access_token',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=base.BaseIntegration.create_access_token))
     @patch.object(base.BaseIntegration, 'token_is_expired', False)
     @async_test

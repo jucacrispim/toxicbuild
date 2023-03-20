@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,7 +19,7 @@
 
 from unittest import mock, TestCase
 from toxicbuild.core import client
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class BuildClientTest(TestCase):
@@ -38,14 +38,14 @@ class BuildClientTest(TestCase):
 
     @async_test
     async def test_aenter(self):
-        self.client.connect = AsyncMagicMock()
+        self.client.connect = mock.AsyncMock()
         self.client.disconnect = mock.Mock()
         async with self.client:
             self.assertTrue(self.client.connect.called)
 
     @async_test
     async def test_aexit(self):
-        self.client.connect = AsyncMagicMock()
+        self.client.connect = mock.AsyncMock()
         self.client.disconnect = mock.Mock()
         async with self.client:
             pass
@@ -127,7 +127,7 @@ class BuildClientTest(TestCase):
 
     @async_test
     async def test_write(self):
-        self.client.writer = mock.MagicMock(drain=AsyncMagicMock())
+        self.client.writer = mock.MagicMock(drain=mock.AsyncMock())
 
         data = {"some": "json"}
         msg = '16\n{"some": "json"}'.encode('utf-8')
@@ -204,8 +204,8 @@ class BuildClientTest(TestCase):
 
     @async_test
     async def test_request2server(self):
-        self.client.write = AsyncMagicMock(spec=self.client.write)
-        self.client.read = AsyncMagicMock(
+        self.client.write = mock.AsyncMock(spec=self.client.write)
+        self.client.read = mock.AsyncMock(
             spec=self.client.read,
             return_value={'body': {'action': 'ok'}})
 

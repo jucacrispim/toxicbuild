@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,9 +17,9 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 from toxicbuild.master import consumers
-from tests import async_test, AsyncMagicMock, create_autospec
+from tests import async_test
 
 
 class BaseConsumerTest(TestCase):
@@ -30,8 +30,8 @@ class BaseConsumerTest(TestCase):
         self.handle = handle
         self.msg = Mock()
         self.msg.body = {'repo_id': 'someid'}
-        self.msg.acknowledge = AsyncMagicMock()
-        self.exchange = AsyncMagicMock()
+        self.msg.acknowledge = AsyncMock()
+        self.exchange = AsyncMock()
         self.consumer = self.exchange.consume.return_value
         self.consumer.fetch_message.return_value = self.msg
 
@@ -40,7 +40,7 @@ class BaseConsumerTest(TestCase):
             def handle_update_request(self, msg):
                 self.stop()
                 handle()
-                return AsyncMagicMock()()
+                return AsyncMock()()
 
         self.srv_class = Srv
 
@@ -63,40 +63,40 @@ class BaseConsumerTest(TestCase):
 
     @async_test
     async def test_run_timeout(self):
-        server = self.srv_class(self.exchange, lambda: None)
+        server = self.srv_class(self.exchange, AsyncMock())
 
         async def fm(cancel_on_timeout=True):
             server.stop()
             raise consumers.ConsumerTimeout
 
-        consumer = self.exchange.consume.return_value
+        consumer = self.exchange.consume.return_value.__aenter__.return_value
         consumer.fetch_message = fm
         await server.run()
         self.assertFalse(self.handle.called)
 
     @patch.object(consumers.LoggerMixin, 'log', Mock())
     @patch.object(consumers.BaseConsumer, 'reconnect_exchanges',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=consumers.BaseConsumer.reconnect_exchanges))
     @async_test
     async def test_run_connection_closed(self):
-        server = self.srv_class(self.exchange, lambda: None)
+        server = self.srv_class(self.exchange, AsyncMock())
 
         async def fm(cancel_on_timeout=True):
             server.stop()
             raise consumers.AmqpClosedConnection
 
-        consumer = self.exchange.consume.return_value
+        consumer = self.exchange.consume.return_value.__aenter__.return_value
         consumer.fetch_message = fm
         await server.run()
         self.assertFalse(self.handle.called)
         self.assertTrue(consumers.BaseConsumer.reconnect_exchanges.called)
 
-    @patch.object(consumers.asyncio, 'sleep', AsyncMagicMock())
+    @patch.object(consumers.asyncio, 'sleep', AsyncMock())
     @async_test
     async def test_shutdown(self):
 
-        exchange = AsyncMagicMock()
+        exchange = AsyncMock()
         server = consumers.BaseConsumer(exchange, lambda: None)
         server._running_tasks = 1
         sleep_mock = Mock()
@@ -104,25 +104,25 @@ class BaseConsumerTest(TestCase):
         def sleep(t):
             sleep_mock()
             server._running_tasks -= 1
-            return AsyncMagicMock()()
+            return AsyncMock()()
 
         consumers.asyncio.sleep = sleep
         await server.shutdown()
         self.assertTrue(sleep_mock.called)
 
-    @patch.object(consumers.BaseConsumer, 'shutdown', AsyncMagicMock(
+    @patch.object(consumers.BaseConsumer, 'shutdown', AsyncMock(
         spec=consumers.BaseConsumer.shutdown))
     def test_sync_shutdown(self):
-        exchange = AsyncMagicMock()
+        exchange = AsyncMock()
         server = consumers.BaseConsumer(exchange, lambda: None)
         server.sync_shutdown()
         self.assertTrue(server.shutdown.called)
 
-    @patch.object(consumers.conn, 'reconnect', AsyncMagicMock(
+    @patch.object(consumers.conn, 'reconnect', AsyncMock(
         spec=consumers.conn.reconnect))
     @async_test
     async def test_reconnect_exchanges(self):
-        server = consumers.BaseConsumer(AsyncMagicMock(), lambda: None)
+        server = consumers.BaseConsumer(AsyncMock(), lambda: None)
         await server.reconnect_exchanges()
 
         self.assertTrue(consumers.conn.reconnect.called)
@@ -133,36 +133,35 @@ class RepositoryMessageConsumerTest(TestCase):
     def tearDown(self):
         consumers.RepositoryMessageConsumer._stop_consuming_messages = False
 
-    @patch.object(consumers.Repository, 'get', AsyncMagicMock())
+    @patch.object(consumers.Repository, 'get', AsyncMock())
     @patch.object(consumers.RepositoryRevision, 'objects', Mock())
     @async_test
     async def test_add_builds(self):
-        repo = create_autospec(spec=consumers.Repository,
-                               mock_cls=AsyncMagicMock)
-        repo.build_manager = AsyncMagicMock()
+        repo = AsyncMock()
+        repo.build_manager = AsyncMock()
         consumers.Repository.get.return_value = repo
-        msg = AsyncMagicMock()
+        msg = AsyncMock()
         msg.body = {'repository_id': 'asdf',
                     'revisions_ids': []}
-        to_list = AsyncMagicMock()
+        to_list = AsyncMock()
         consumers.RepositoryRevision\
             .objects.filter.return_value.to_list = to_list
         message_consumer = consumers.RepositoryMessageConsumer()
+
         await message_consumer.add_builds(msg)
         self.assertTrue(consumers.Repository.get.called)
         self.assertTrue(to_list.called)
 
-    @patch.object(consumers.Repository, 'get', AsyncMagicMock())
+    @patch.object(consumers.Repository, 'get', AsyncMock())
     @patch.object(consumers.RepositoryRevision, 'objects', Mock())
     @patch.object(consumers.LoggerMixin, 'log', Mock())
     @async_test
     async def test_add_builds_exception(self):
-        repo = create_autospec(spec=consumers.Repository,
-                               mock_cls=AsyncMagicMock)
+        repo = AsyncMock()
         consumers.Repository.get.return_value = repo
-        msg = AsyncMagicMock()
+        msg = AsyncMock()
         msg.body = {'repository_id': 'asdf', 'revisions_ids': []}
-        to_list = AsyncMagicMock(side_effect=Exception)
+        to_list = AsyncMock(side_effect=Exception)
         consumers.RepositoryRevision\
             .objects.filter.return_value.to_list = to_list
         message_consumer = consumers.RepositoryMessageConsumer()
@@ -170,15 +169,15 @@ class RepositoryMessageConsumerTest(TestCase):
         self.assertTrue(consumers.Repository.get.called)
         self.assertTrue(to_list.called)
 
-    @patch.object(consumers.Repository, 'get', AsyncMagicMock(
+    @patch.object(consumers.Repository, 'get', AsyncMock(
         side_effect=consumers.Repository.DoesNotExist))
     @patch.object(consumers.LoggerMixin, 'log', Mock())
     @patch.object(consumers.RepositoryRevision, 'objects', Mock())
     @async_test
     async def test_add_builds_repo_dont_exist(self):
-        msg = AsyncMagicMock()
+        msg = AsyncMock()
         msg.body = {'repository_id': 'asdf'}
-        to_list = AsyncMagicMock()
+        to_list = AsyncMock()
         consumers.RepositoryRevision\
             .objects.filter.return_value.to_list = to_list
         message_consumer = consumers.RepositoryMessageConsumer()
@@ -186,37 +185,35 @@ class RepositoryMessageConsumerTest(TestCase):
         self.assertTrue(consumers.Repository.get.called)
         self.assertFalse(to_list.called)
 
-    @patch.object(consumers.Repository, 'get', AsyncMagicMock())
+    @patch.object(consumers.Repository, 'get', AsyncMock())
     @async_test
     async def test_add_requested_build(self):
-        repo = create_autospec(spec=consumers.Repository,
-                               mock_cls=AsyncMagicMock)
+        repo = AsyncMock()
         consumers.Repository.get.return_value = repo
-        msg = AsyncMagicMock()
+        msg = AsyncMock()
         msg.body = {'repository_id': 'asdf',
                     'branch': 'master'}
         message_consumer = consumers.RepositoryMessageConsumer()
         await message_consumer.add_requested_build(msg)
         self.assertTrue(repo.start_build.called)
 
-    @patch.object(consumers.Repository, 'get', AsyncMagicMock(
+    @patch.object(consumers.Repository, 'get', AsyncMock(
         return_value=None))
     @async_test
     async def test_add_requested_build_no_repo(self):
-        msg = AsyncMagicMock()
+        msg = AsyncMock()
         msg.body = {'repository_id': 'asdf',
                     'branch': 'master'}
         message_consumer = consumers.RepositoryMessageConsumer()
         await message_consumer.add_requested_build(msg)
 
-    @patch.object(consumers.Repository, 'get', AsyncMagicMock())
+    @patch.object(consumers.Repository, 'get', AsyncMock())
     @patch.object(consumers.LoggerMixin, 'log', Mock())
     @async_test
     async def test_add_requested_build_exception(self):
-        repo = create_autospec(spec=consumers.Repository,
-                               mock_cls=AsyncMagicMock)
+        repo = AsyncMock()
         consumers.Repository.get.return_value = repo
-        msg = AsyncMagicMock()
+        msg = AsyncMock()
         msg.body = {'repository_id': 'asdf'}
         message_consumer = consumers.RepositoryMessageConsumer()
         await message_consumer.add_requested_build(msg)
@@ -224,24 +221,21 @@ class RepositoryMessageConsumerTest(TestCase):
         self.assertTrue(consumers.LoggerMixin.log.called)
 
     @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
-                  AsyncMagicMock(return_value=None))
+                  AsyncMock(return_value=None))
     @async_test
     async def test_remove_repo_no_repo(self):
-        msg = AsyncMagicMock()
+        msg = AsyncMock()
         msg.body = {'repository_id': 'some-id'}
         message_consumer = consumers.RepositoryMessageConsumer()
         r = await message_consumer.remove_repo(msg)
         self.assertFalse(r)
 
     @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
-                  AsyncMagicMock(spec=consumers.RepositoryMessageConsumer.
-                                 _get_repo_from_msg,
-                                 return_value=create_autospec(
-                                     spec=consumers.Repository,
-                                     mock_cls=AsyncMagicMock)))
+                  AsyncMock(spec=consumers.RepositoryMessageConsumer.
+                            _get_repo_from_msg))
     @async_test
     async def test_remove_repo(self):
-        msg = AsyncMagicMock()
+        msg = AsyncMock()
         msg.body = {'repository_id': 'some-id'}
         message_consumer = consumers.RepositoryMessageConsumer()
         r = await message_consumer.remove_repo(msg)
@@ -251,18 +245,15 @@ class RepositoryMessageConsumerTest(TestCase):
         self.assertTrue(r)
 
     @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
-                  AsyncMagicMock(spec=consumers.RepositoryMessageConsumer.
-                                 _get_repo_from_msg,
-                                 return_value=create_autospec(
-                                     spec=consumers.Repository,
-                                     mock_cls=AsyncMagicMock)))
+                  AsyncMock(spec=consumers.RepositoryMessageConsumer.
+                            _get_repo_from_msg))
     @patch.object(consumers.LoggerMixin, 'log', Mock())
     @async_test
     async def test_remove_repo_exception(self):
         repo = consumers.RepositoryMessageConsumer._get_repo_from_msg.\
             return_value
         repo.remove.side_effect = Exception
-        msg = AsyncMagicMock()
+        msg = AsyncMock()
         msg.body = {'repository_id': 'some-id'}
         message_consumer = consumers.RepositoryMessageConsumer()
         r = await message_consumer.remove_repo(msg)
@@ -271,18 +262,15 @@ class RepositoryMessageConsumerTest(TestCase):
         self.assertTrue(r)
 
     @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
-                  AsyncMagicMock(spec=consumers.RepositoryMessageConsumer.
-                                 _get_repo_from_msg,
-                                 return_value=create_autospec(
-                                     spec=consumers.Repository,
-                                     mock_cls=AsyncMagicMock)))
-    @patch.object(consumers.Repository, 'update_code', AsyncMagicMock(
+                  AsyncMock(spec=consumers.RepositoryMessageConsumer.
+                            _get_repo_from_msg))
+    @patch.object(consumers.Repository, 'update_code', AsyncMock(
         spec=consumers.Repository.update_code))
     @async_test
     async def test_update_repo(self):
         repo = consumers.RepositoryMessageConsumer.\
             _get_repo_from_msg.return_value
-        msg = AsyncMagicMock()
+        msg = AsyncMock()
         msg.body = {'repository_id': 'some-id'}
         message_consumer = consumers.RepositoryMessageConsumer()
         r = await message_consumer.update_repo(msg)
@@ -290,12 +278,9 @@ class RepositoryMessageConsumerTest(TestCase):
         self.assertTrue(repo.update_code.called)
 
     @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
-                  AsyncMagicMock(spec=consumers.RepositoryMessageConsumer.
-                                 _get_repo_from_msg,
-                                 return_value=create_autospec(
-                                     spec=consumers.Repository,
-                                     mock_cls=AsyncMagicMock)))
-    @patch.object(consumers.Repository, 'update_code', AsyncMagicMock(
+                  AsyncMock(spec=consumers.RepositoryMessageConsumer.
+                            _get_repo_from_msg))
+    @patch.object(consumers.Repository, 'update_code', AsyncMock(
         spec=consumers.Repository.update_code))
     @patch.object(consumers.LoggerMixin, 'log', Mock())
     @async_test
@@ -303,7 +288,7 @@ class RepositoryMessageConsumerTest(TestCase):
         repo = consumers.RepositoryMessageConsumer._get_repo_from_msg.\
             return_value
         repo.update_code.side_effect = Exception
-        msg = AsyncMagicMock()
+        msg = AsyncMock()
         msg.body = {'repository_id': 'some-id'}
         message_consumer = consumers.RepositoryMessageConsumer()
         r = await message_consumer.update_repo(msg)
@@ -312,20 +297,20 @@ class RepositoryMessageConsumerTest(TestCase):
         self.assertTrue(consumers.LoggerMixin.log.called)
 
     @patch.object(consumers.RepositoryMessageConsumer, '_get_repo_from_msg',
-                  AsyncMagicMock(spec=consumers.RepositoryMessageConsumer.
-                                 _get_repo_from_msg,
-                                 return_value=None))
-    @patch.object(consumers.Repository, 'update_code', AsyncMagicMock(
+                  AsyncMock(spec=consumers.RepositoryMessageConsumer.
+                            _get_repo_from_msg,
+                            return_value=None))
+    @patch.object(consumers.Repository, 'update_code', AsyncMock(
         spec=consumers.Repository.update_code))
     @async_test
     async def test_update_repo_no_repo(self):
-        msg = AsyncMagicMock()
+        msg = AsyncMock()
         msg.body = {'repository_id': 'some-id'}
         message_consumer = consumers.RepositoryMessageConsumer()
         r = await message_consumer.update_repo(msg)
         self.assertFalse(r)
 
-    @patch.object(consumers.BaseConsumer, 'run', AsyncMagicMock())
+    @patch.object(consumers.BaseConsumer, 'run', AsyncMock())
     def test_run(self):
         message_consumer = consumers.RepositoryMessageConsumer()
 

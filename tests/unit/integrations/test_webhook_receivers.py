@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,11 +20,11 @@
 import asyncio
 import base64
 import json
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.integrations import webhook_receivers
-from tests import async_test, AsyncMagicMock, create_autospec
+from tests import async_test, create_autospec
 
 
 class BaseWebhookReceiverTest(AsyncTestCase):
@@ -56,13 +56,14 @@ class BaseWebhookReceiverTest(AsyncTestCase):
 
     @patch.object(webhook_receivers, 'settings', Mock())
     @patch.object(webhook_receivers.UserInterface, 'get',
-                  AsyncMagicMock(spec=webhook_receivers.UserInterface.get))
+                  AsyncMock(spec=webhook_receivers.UserInterface.get))
     @async_test
     async def test_get_user_from_cookie(self):
         user = webhook_receivers.UserInterface(
             None, dict(email='bla@bla.com', id='some-id', name='bla'))
         cookie = base64.encodebytes(
             json.dumps({'id': str(user.id)}).encode('utf-8'))
+        webhook_receivers.UserInterface.get.return_value = user
         self.webhook_receiver.get_secure_cookie = Mock(return_value=cookie)
         ret_user = await self.webhook_receiver._get_user_from_cookie()
         self.assertEqual(user.id, ret_user.id)
@@ -89,10 +90,10 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     @async_test
     async def test_validate_webhook_error(self):
         app_cls = Mock()
-        app = AsyncMagicMock()
-        app.validate_token = AsyncMagicMock(
+        app = AsyncMock()
+        app.validate_token = AsyncMock(
             side_effect=webhook_receivers.BadSignature)
-        app_cls.get_app = AsyncMagicMock(return_value=app)
+        app_cls.get_app = AsyncMock(return_value=app)
 
         self.webhook_receiver.APP_CLS = app_cls
 
@@ -105,9 +106,9 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     @async_test
     async def test_validate_webhook(self):
         app_cls = Mock()
-        app = AsyncMagicMock()
-        app.validate_token = AsyncMagicMock()
-        app_cls.get_app = AsyncMagicMock(return_value=app)
+        app = AsyncMock()
+        app.validate_token = AsyncMock()
+        app_cls.get_app = AsyncMock(return_value=app)
 
         self.webhook_receiver.APP_CLS = app_cls
 
@@ -122,7 +123,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     @patch.object(webhook_receivers.LoggerMixin, 'log', Mock())
     @async_test
     async def test_receive_webhook(self):
-        self.webhook_receiver.validate_webhook = AsyncMagicMock()
+        self.webhook_receiver.validate_webhook = AsyncMock()
         self.webhook_receiver.check_event_type = Mock(
             return_value='some-event')
 
@@ -137,7 +138,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     @patch.object(webhook_receivers.LoggerMixin, 'log', Mock())
     @async_test
     async def test_receive_webhook_bad_event(self):
-        self.webhook_receiver.validate_webhook = AsyncMagicMock()
+        self.webhook_receiver.validate_webhook = AsyncMock()
         self.webhook_receiver.check_event_type = Mock()
         self.webhook_receiver.prepare()
         with self.assertRaises(webhook_receivers.HTTPError):
@@ -148,7 +149,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     def test_setup_without_user(self):
         # if trying to setup wihtout a user, we should be redireced
         # to the login page of the webui.
-        self.webhook_receiver._get_user_from_cookie = AsyncMagicMock(
+        self.webhook_receiver._get_user_from_cookie = AsyncMock(
             return_value=None)
         self.webhook_receiver.redirect = Mock()
         yield self.webhook_receiver.setup()
@@ -159,7 +160,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     @patch.object(webhook_receivers, 'settings', Mock())
     @gen_test
     def test_setup_ok(self):
-        self.webhook_receiver._get_user_from_cookie = AsyncMagicMock(
+        self.webhook_receiver._get_user_from_cookie = AsyncMock(
             return_value=Mock())
         self.webhook_receiver.redirect = Mock()
         self.webhook_receiver.create_installation = Mock()
@@ -174,7 +175,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     @async_test
     async def test_handle_push(self):
         self.webhook_receiver.get_repo_external_id = Mock()
-        self.webhook_receiver.get_install = AsyncMagicMock()
+        self.webhook_receiver.get_install = AsyncMock()
         await self.webhook_receiver.handle_push()
 
         install = self.webhook_receiver.get_install.return_value
@@ -190,13 +191,13 @@ class BaseWebhookReceiverTest(AsyncTestCase):
 
     @patch.object(
         webhook_receivers.BaseWebhookReceiver, 'get_install',
-        AsyncMagicMock(
+        AsyncMock(
             spec=webhook_receivers.BaseWebhookReceiver.get_install))
     @async_test
     async def test_handle_pull_request_different_repos(self):
         install = create_autospec(
             spec=webhook_receivers.GithubIntegration,
-            mock_cls=AsyncMagicMock)
+            mock_cls=AsyncMock)
 
         self.webhook_receiver.get_install.return_value = install
         self.webhook_receiver.get_pull_request_source = Mock(
@@ -219,13 +220,13 @@ class BaseWebhookReceiverTest(AsyncTestCase):
 
     @patch.object(
         webhook_receivers.BaseWebhookReceiver, 'get_install',
-        AsyncMagicMock(
+        AsyncMock(
             spec=webhook_receivers.BaseWebhookReceiver.get_install))
     @async_test
     async def test_handle_pull_request_opended_same_repo(self):
         install = create_autospec(
             spec=webhook_receivers.GithubIntegration,
-            mock_cls=AsyncMagicMock)
+            mock_cls=AsyncMock)
 
         self.webhook_receiver.get_install.return_value = install
 
@@ -260,7 +261,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     async def test_create_installation(self):
         user = Mock()
         self.webhook_receiver.INSTALL_CLS = Mock()
-        self.webhook_receiver.INSTALL_CLS.create = AsyncMagicMock()
+        self.webhook_receiver.INSTALL_CLS.create = AsyncMock()
         self.webhook_receiver.params = {'code': 'some-code',
                                         'state': 'some-state'}
         await self.webhook_receiver.create_installation(user)
@@ -269,7 +270,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
     @async_test
     async def test_get_install(self):
         self.webhook_receiver.params = {'installation_id': 'asf'}
-        self.webhook_receiver.INSTALL_CLS = AsyncMagicMock()
+        self.webhook_receiver.INSTALL_CLS = AsyncMock()
         await self.webhook_receiver.get_install()
         self.assertTrue(self.webhook_receiver.INSTALL_CLS.objects.get.called)
 
@@ -323,7 +324,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
             yield self.webhook_receiver.create_installation(user)
 
     @patch.object(
-        webhook_receivers.GithubIntegration, 'create', AsyncMagicMock())
+        webhook_receivers.GithubIntegration, 'create', AsyncMock())
     @patch.object(webhook_receivers, 'settings', Mock())
     @gen_test
     def test_create_installation_ok(self):
@@ -356,7 +357,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         self.assertIsNone(r)
 
     @patch.object(webhook_receivers.GithubIntegration, 'objects',
-                  AsyncMagicMock())
+                  AsyncMock())
     @async_test
     async def test_handle_install_repo_added(self):
         body = {'installation': {'id': '123'},
@@ -368,7 +369,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         self.assertTrue(install.import_repository.called)
 
     @patch.object(webhook_receivers.GithubIntegration, 'objects',
-                  AsyncMagicMock())
+                  AsyncMock())
     @async_test
     async def test_handle_install_repo_removed(self):
         body = {'installation': {'id': '123'},
@@ -407,13 +408,13 @@ class GithubWebhookReceiverTest(AsyncTestCase):
 
     @patch.object(
         webhook_receivers.GithubWebhookReceiver, 'get_install',
-        AsyncMagicMock(
+        AsyncMock(
             spec=webhook_receivers.GithubWebhookReceiver.get_install))
     @async_test
     async def test_handle_check_run_rerequested(self):
         install = create_autospec(
             spec=webhook_receivers.GithubIntegration,
-            mock_cls=AsyncMagicMock)
+            mock_cls=AsyncMock)
 
         self.webhook_receiver.get_install.return_value = install
 
@@ -427,7 +428,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
 
     @patch.object(
         webhook_receivers.GithubWebhookReceiver, 'get_install',
-        AsyncMagicMock(
+        AsyncMock(
             spec=webhook_receivers.GithubWebhookReceiver.get_install))
     @async_test
     async def test_handle_install_deleted(self):
@@ -435,11 +436,11 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         install = self.webhook_receiver.get_install.return_value
         self.assertTrue(install.delete.called)
 
-    @patch.object(webhook_receivers.GithubApp, 'get_app', AsyncMagicMock(
+    @patch.object(webhook_receivers.GithubApp, 'get_app', AsyncMock(
         spec=webhook_receivers.GithubApp.get_app,
         return_value=create_autospec(
             spec=webhook_receivers.GithubApp,
-            mock_cls=AsyncMagicMock)))
+            mock_cls=AsyncMock)))
     @async_test
     async def test_validate_webhook(self):
         app = webhook_receivers.GithubApp.get_app.return_value
@@ -448,11 +449,9 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         await self.webhook_receiver.validate_webhook()
         self.assertTrue(app.validate_token.called)
 
-    @patch.object(webhook_receivers.GithubApp, 'get_app', AsyncMagicMock(
+    @patch.object(webhook_receivers.GithubApp, 'get_app', AsyncMock(
         spec=webhook_receivers.GithubApp.get_app,
-        return_value=create_autospec(
-            spec=webhook_receivers.GithubApp,
-            mock_cls=AsyncMagicMock)))
+        return_value=Mock()))
     @async_test
     async def test_validate_bad(self):
         app = webhook_receivers.GithubApp.get_app.return_value
@@ -604,7 +603,7 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
 
     @patch.object(
         webhook_receivers.BaseWebhookReceiver, 'validate_webhook',
-        AsyncMagicMock(
+        AsyncMock(
             spec=webhook_receivers.BaseWebhookReceiver.validate_webhook))
     @async_test
     async def test_validate_webhook(self):

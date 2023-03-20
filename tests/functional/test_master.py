@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2020 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2020, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -112,7 +112,7 @@ class ToxicMasterTest(BaseFunctionalTest):
     @async_test
     async def setUpClass(cls):
         super().setUpClass()
-
+        await User.objects.all().delete()
         user = User(email='toxic@test.com', is_superuser=True)
         user.set_password('1234')
         await user.save()
@@ -162,6 +162,9 @@ class ToxicMasterTest(BaseFunctionalTest):
 
         with (await get_dummy_client(self.user)) as client:
             await client.wait_clone()
+
+        with (await get_dummy_client(self.user)) as client:
+            await client.wait_build_complete()
 
         self.assertTrue(response)
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2020 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2020, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -823,6 +823,8 @@ class BuildExecuter(LoggerMixin):
         self.builds = builds
         self._queue = copy.copy(self.builds)
         self._running = 0
+        # keep references to avoid the tasks to be garbage colected
+        self._tasks = set()
 
     async def _run_build(self, build):
         self._running += 1
@@ -843,7 +845,10 @@ class BuildExecuter(LoggerMixin):
             parallel = self.repository.parallel_builds
             limit_ok = self._running < parallel if parallel else True
             if ready and limit_ok:
-                asyncio.ensure_future(self._run_build(build))
+                t = asyncio.ensure_future(self._run_build(build))
+                self._tasks.add(t)
+                t.add_done_callback(lambda t: self._tasks.remove(t))
+
             elif ready is None:
                 await build.cancel()
                 self._queue.remove(build)
@@ -1096,7 +1101,7 @@ class BuildManager(LoggerMixin):
             repository=repo, branch=buildset.branch,
             builds__status=Build.PENDING, created__lt=buildset.created)
 
-        async for buildset in to_cancel:
+        async for buildset in to_cancel:  # pragma no branch stupid coverage
             for build in buildset.builds:
                 try:
                     await build.cancel()

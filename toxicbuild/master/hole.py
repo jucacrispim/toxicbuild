@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2021 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2021, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -417,7 +417,8 @@ class HoleHandler:
         repos = await Repository.list_for_user(self.protocol.user,
                                                **kwargs)
         repo_list = []
-        async for repo in repos:
+
+        async for repo in repos:  # pragma no branch stupid coverage
 
             repo_dict = await self._get_repo_dict(repo, short=True)
             repo_list.append(repo_dict)
@@ -652,7 +653,7 @@ class HoleHandler:
         slaves = await Slave.list_for_user(self.protocol.user)
         slave_list = []
 
-        async for slave in slaves:
+        async for slave in slaves:  # pragma no branch stupid coverage
             slave_dict = self._get_slave_dict(slave)
             slave_list.append(slave_dict)
 
@@ -939,7 +940,7 @@ class UIStreamHandler(LoggerMixin):
                     pass
 
         repos = await Repository.list_for_user(self.protocol.user)
-        async for repo in repos:
+        async for repo in repos:  # pragma no branch stupid coverage
             self._connect_repo(repo, event_types)
 
     def _connect_repo(self, repo, event_types):

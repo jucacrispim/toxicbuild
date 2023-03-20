@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,11 +18,11 @@
 
 import datetime
 from unittest import TestCase
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, AsyncMock
 
 from toxicbuild.poller import poller
 
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 @patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
@@ -50,9 +50,9 @@ class PollerTest(TestCase):
 
     @async_test
     async def test_external_poll(self):
-        self.poller.vcs.import_external_branch = AsyncMagicMock(
+        self.poller.vcs.import_external_branch = AsyncMock(
             spec=self.poller.vcs.import_external_branch)
-        self.poller.poll = AsyncMagicMock(spec=self.poller.poll)
+        self.poller.poll = AsyncMock(spec=self.poller.poll)
 
         external_url = 'http://ext.url'
         external_name = 'the-name'
@@ -76,8 +76,8 @@ class PollerTest(TestCase):
     @patch.object(poller.Poller, 'log', Mock(spec=poller.Poller.log))
     @async_test
     async def test_poll_clone_exception(self):
-        self.poller.vcs.clone = AsyncMagicMock(spec=self.poller.vcs.clone,
-                                               side_effect=Exception)
+        self.poller.vcs.clone = AsyncMock(spec=self.poller.vcs.clone,
+                                          side_effect=Exception)
         self.poller.vcs.workdir_exists = Mock(
             spec=self.poller.vcs.workdir_exists, return_value=False)
 
@@ -85,16 +85,16 @@ class PollerTest(TestCase):
         self.assertTrue(r['clone_error'])
 
     @patch.object(poller.Poller, 'log', Mock(spec=poller.Poller.log))
-    @patch.object(poller.Poller, 'process_changes', AsyncMagicMock(
+    @patch.object(poller.Poller, 'process_changes', AsyncMock(
         spec=poller.Poller.process_changes, return_value=[Mock(), Mock()]))
     @async_test
     async def test_poll_clone_ok(self):
-        self.poller.vcs.clone = AsyncMagicMock(spec=self.poller.vcs.clone)
+        self.poller.vcs.clone = AsyncMock(spec=self.poller.vcs.clone)
         self.poller.vcs.workdir_exists = Mock(
             spec=self.poller.vcs.workdir_exists, return_value=False)
-        self.poller.vcs.try_set_remote = AsyncMagicMock(
+        self.poller.vcs.try_set_remote = AsyncMock(
             spec=self.poller.vcs.try_set_remote)
-        self.poller.vcs.update_submodule = AsyncMagicMock(
+        self.poller.vcs.update_submodule = AsyncMock(
             spec=self.poller.vcs.update_submodule)
 
         r = await self.poller.poll()
@@ -102,15 +102,15 @@ class PollerTest(TestCase):
         self.assertTrue(r['with_clone'])
 
     @patch.object(poller.Poller, 'log', Mock(spec=poller.Poller.log))
-    @patch.object(poller.Poller, 'process_changes', AsyncMagicMock(
+    @patch.object(poller.Poller, 'process_changes', AsyncMock(
         spec=poller.Poller.process_changes, side_effect=Exception))
     @async_test
     async def test_poll_process_changes_exception(self):
         self.poller.vcs.workdir_exists = Mock(
             spec=self.poller.vcs.workdir_exists, return_value=True)
-        self.poller.vcs.try_set_remote = AsyncMagicMock(
+        self.poller.vcs.try_set_remote = AsyncMock(
             spec=self.poller.vcs.try_set_remote)
-        self.poller.vcs.update_submodule = AsyncMagicMock(
+        self.poller.vcs.update_submodule = AsyncMock(
             spec=self.poller.vcs.update_submodule)
 
         r = await self.poller.poll()
@@ -119,15 +119,15 @@ class PollerTest(TestCase):
         self.assertEqual(len(self.poller.log.call_args_list), 2)
 
     @patch.object(poller.Poller, 'log', Mock(spec=poller.Poller.log))
-    @patch.object(poller.Poller, 'process_changes', AsyncMagicMock(
+    @patch.object(poller.Poller, 'process_changes', AsyncMock(
         spec=poller.Poller.process_changes, return_value=[Mock(), Mock()]))
     @async_test
     async def test_poll_process_changes_ok(self):
         self.poller.vcs.workdir_exists = Mock(
             spec=self.poller.vcs.workdir_exists, return_value=True)
-        self.poller.vcs.try_set_remote = AsyncMagicMock(
+        self.poller.vcs.try_set_remote = AsyncMock(
             spec=self.poller.vcs.try_set_remote)
-        self.poller.vcs.update_submodule = AsyncMagicMock(
+        self.poller.vcs.update_submodule = AsyncMock(
             spec=self.poller.vcs.update_submodule)
 
         r = await self.poller.poll()
@@ -135,9 +135,9 @@ class PollerTest(TestCase):
         self.assertFalse(r['with_clone'])
         self.assertEqual(len(self.poller.log.call_args_list), 1)
 
-    @patch.object(poller, 'read_file', AsyncMagicMock(
+    @patch.object(poller, 'read_file', AsyncMock(
         spec=poller.read_file, side_effect=['config', FileNotFoundError]))
-    @patch('toxicbuild.core.vcs.Git.checkout', AsyncMagicMock())
+    @patch('toxicbuild.core.vcs.Git.checkout', AsyncMock())
     @async_test
     async def test_process_changes(self):
         # now in the future, of course!a
@@ -154,7 +154,7 @@ class PollerTest(TestCase):
                         {'commit': 'sdlfjslfer3', 'commit_date': now,
                          'author': 'jc', 'title': 'Our lord John Cleese'}]}
 
-        self.poller.vcs.get_revisions = AsyncMagicMock(return_value=revs)
+        self.poller.vcs.get_revisions = AsyncMock(return_value=revs)
         r = await self.poller.process_changes()
         self.assertTrue(r)
         self.assertTrue(r[0]['config'])
@@ -166,15 +166,15 @@ class PollerTest(TestCase):
                     'dev': {'notify_only_latest': False}}
         self.poller.branches_conf = branches
 
-        self.poller.vcs.get_revisions = AsyncMagicMock(return_value={})
+        self.poller.vcs.get_revisions = AsyncMock(return_value={})
 
         r = await self.poller.process_changes()
 
         self.assertFalse(r)
 
-    @patch.object(poller, 'read_file', AsyncMagicMock(spec=poller.read_file,
-                                                      return_value='config'))
-    @patch('toxicbuild.core.vcs.Git.checkout', AsyncMagicMock())
+    @patch.object(poller, 'read_file', AsyncMock(spec=poller.read_file,
+                                                 return_value='config'))
+    @patch('toxicbuild.core.vcs.Git.checkout', AsyncMock())
     @async_test
     async def test_process_changes_local_branch(self):
         now = datetime.datetime.now() + datetime.timedelta(100)
@@ -191,7 +191,7 @@ class PollerTest(TestCase):
                         {'commit': 'sdlfjslfer3', 'commit_date': now,
                          'author': 'jc', 'title': 'Our lord John Cleese'}]}
 
-        self.poller.vcs.get_local_revisions = AsyncMagicMock(return_value=revs)
+        self.poller.vcs.get_local_revisions = AsyncMock(return_value=revs)
         r = await self.poller.process_changes()
         self.assertTrue(r)
         self.assertTrue(r[0]['config'])

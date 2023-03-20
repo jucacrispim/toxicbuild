@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,11 +19,11 @@
 import json
 import os
 from unittest import TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 
 from toxicbuild.integrations import bitbucket
 
-from tests import AsyncMagicMock, async_test
+from tests import async_test
 from tests.unit.integrations import INTEGRATIONS_DATA_PATH
 
 
@@ -87,7 +87,7 @@ class BitbucketIntegrationTest(TestCase):
         ret.json.return_value = {'access_token': 'asdf',
                                  'expires_in': 7200}
 
-        self.integration.request2api = AsyncMagicMock(
+        self.integration.request2api = AsyncMock(
             spec=self.integration.request2api,
             return_value=ret
         )
@@ -96,7 +96,7 @@ class BitbucketIntegrationTest(TestCase):
         r = await self.integration.request_access_token()
         self.assertEqual(r['access_token'], 'asdf')
 
-    @patch.object(bitbucket.BitbucketIntegration, 'save', AsyncMagicMock())
+    @patch.object(bitbucket.BitbucketIntegration, 'save', AsyncMock())
     @async_test
     async def test_refresh_access_token(self):
         ret = Mock()
@@ -105,7 +105,7 @@ class BitbucketIntegrationTest(TestCase):
         ret.json.return_value = {'access_token': 'new-token',
                                  'expires_in': 7200}
 
-        self.integration.request2api = AsyncMagicMock(
+        self.integration.request2api = AsyncMock(
             spec=self.integration.request2api,
             return_value=ret
         )
@@ -114,10 +114,10 @@ class BitbucketIntegrationTest(TestCase):
         self.assertEqual(self.integration.access_token, 'new-token')
 
     @patch.object(bitbucket.BitbucketIntegration, 'request2api',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=bitbucket.BitbucketIntegration.request2api))
     @patch.object(bitbucket.BitbucketIntegration, 'create_access_token',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=bitbucket.BitbucketIntegration.create_access_token))
     @async_test
     async def test_request_user_id(self):
@@ -135,10 +135,10 @@ class BitbucketIntegrationTest(TestCase):
         self.assertEqual(url, expected_url)
 
     @patch.object(bitbucket.BitbucketIntegration, 'request2api',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=bitbucket.BitbucketIntegration.request2api))
     @patch.object(bitbucket.BitbucketIntegration, 'create_access_token',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=bitbucket.BitbucketIntegration.create_access_token))
     @patch.object(bitbucket.BitbucketIntegration, 'log',
                   Mock(spec=bitbucket.BitbucketIntegration.log))
@@ -167,14 +167,14 @@ class BitbucketIntegrationTest(TestCase):
         self.assertEqual(len(repos), 4)
 
     @patch.object(bitbucket.BitbucketApp, 'get_app',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=bitbucket.BitbucketApp.get_app,
                       return_value=bitbucket.BitbucketApp()))
     @patch.object(bitbucket.BitbucketIntegration, 'request2api',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=bitbucket.BitbucketIntegration.request2api))
     @patch.object(bitbucket.BitbucketIntegration, 'get_headers',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=bitbucket.BitbucketIntegration.get_headers,
                       return_value={}))
     @async_test

@@ -371,7 +371,6 @@ class DummyMasterHoleClient(BaseToxicClient):
                 'owner_id': str(self.user.id),
                 'use_ssl': True,
                 'validate_cert': False}
-
         resp = await self.request2server(action, body)
         return resp
 

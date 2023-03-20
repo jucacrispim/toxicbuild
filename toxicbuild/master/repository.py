@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2020 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2020, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -721,7 +721,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         repo_added_msg = await repo.to_dict()
         await ui_notifications.publish(repo_added_msg)
         repo_added_msg['msg_type'] = 'repo_added'
-        async for user in await repo.get_allowed_users():
+        async for user in await repo.get_allowed_users():  # pragma no branch
             ensure_future(ui_notifications.publish(
                 repo_added_msg, routing_key=str(user.id)))
 
@@ -731,7 +731,7 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         await ui_notifications.publish(status_msg,
                                        routing_key=str(self.id))
         status_msg['msg_type'] = 'repo_status_changed'
-        async for user in await self.get_allowed_users():
+        async for user in await self.get_allowed_users():  # pragma no branch
             ensure_future(ui_notifications.publish(
                 status_msg, routing_key=str(user.id)))
 

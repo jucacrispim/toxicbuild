@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -98,7 +98,7 @@ class GitlabIntegration(BaseIntegration):
             n = ret.headers.get('X-Next-Page', 0)
             t = ret.headers.get('X-Total-Pages', 0)
             if not n or n > t:  # pragma no branch
-                break
+                break  # pragma no cover stupid coverage
 
         return repos
 

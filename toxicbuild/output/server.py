@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -90,7 +90,8 @@ class OutputMessageHandler(LoggerMixin):
         self.log('Running notifications for event_type {}'.format(event_type),
                  level='debug')
 
-        async for notification in notifications:
+        async for notification in notifications:  # pragma no branchs
+            # stupid coverage
             self.add_running_task()
             t = ensure_future(notification.run(msg))
             t.add_done_callback(lambda r: self.remove_running_task())

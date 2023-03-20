@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2020 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2020, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,12 +19,12 @@
 
 import datetime
 from unittest import TestCase
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, MagicMock, patch, AsyncMock
 from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.core import utils
 from toxicbuild.master import (repository, build, slave, users)
 
-from tests import async_test, AsyncMagicMock, create_autospec
+from tests import async_test
 from .utils import RepoTestData
 
 
@@ -59,7 +59,7 @@ class RepositoryTest(TestCase, RepoTestData):
         self.assertTrue(d['id'])
         self.assertNotIn('slaves', d)
 
-    @patch.object(repository, 'notifications', AsyncMagicMock(
+    @patch.object(repository, 'notifications', AsyncMock(
         spec=repository.notifications))
     @async_test
     async def test_request_removal(self):
@@ -81,7 +81,7 @@ class RepositoryTest(TestCase, RepoTestData):
                 pass
         self.assertTrue(self.GOT_MSG)
 
-    @patch.object(repository, 'ui_notifications', AsyncMagicMock())
+    @patch.object(repository, 'ui_notifications', AsyncMock())
     @patch.object(repository.Repository, 'log', Mock())
     @patch.object(repository.Repository, 'schedule', Mock(
         spec=repository.Repository.schedule))
@@ -100,7 +100,7 @@ class RepositoryTest(TestCase, RepoTestData):
         self.assertEqual(slaves[0], slave_inst)
         self.assertTrue(repository.Repository.schedule.called)
 
-    @patch.object(repository, 'ui_notifications', AsyncMagicMock())
+    @patch.object(repository, 'ui_notifications', AsyncMock())
     @patch.object(repository.Repository, 'log', Mock())
     @patch.object(repository.Repository, 'schedule', Mock(
         spec=repository.Repository.schedule))
@@ -122,7 +122,7 @@ class RepositoryTest(TestCase, RepoTestData):
         self.assertTrue(repository.Repository.schedule.called)
         self.assertEqual(len(repo.branches), 3)
 
-    @patch.object(repository, 'ui_notifications', AsyncMagicMock())
+    @patch.object(repository, 'ui_notifications', AsyncMock())
     @patch.object(repository.Repository, 'log', Mock())
     @patch.object(repository.Repository, 'schedule', Mock(
         spec=repository.Repository.schedule))
@@ -162,8 +162,8 @@ class RepositoryTest(TestCase, RepoTestData):
         await repo.save()
         self.assertEqual(repo.full_name, 'huguinho/reponame')
 
-    @patch.object(repository, 'ui_notifications', AsyncMagicMock())
-    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @patch.object(repository, 'ui_notifications', AsyncMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMock())
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
     async def test_remove(self):
@@ -189,7 +189,7 @@ class RepositoryTest(TestCase, RepoTestData):
             '{}-start-pending'.format(repo.url)))
         self.assertTrue(repository.scheduler_action.publish.called)
 
-    @patch.object(repository, 'ui_notifications', AsyncMagicMock())
+    @patch.object(repository, 'ui_notifications', AsyncMock())
     @patch.object(repository.Repository, 'log', Mock())
     @async_test
     async def test_get(self):
@@ -206,57 +206,61 @@ class RepositoryTest(TestCase, RepoTestData):
         self.assertEqual(old_repo, new_repo)
         self.assertEqual(slaves[0], slave_inst)
 
-    @patch.object(repository, 'get_poller_client', Mock(
-        return_value=AsyncMagicMock(poll_repo=AsyncMagicMock(
-            return_value={'revisions': [
-                {'commit': 'adsf',
-                 'branch': 'master',
-                 'commit_date': '4 04 25 23:49:19 2019 +0000',
-                 'author': 'me',
-                 'title': 'zhe-commit'}],
-                'clone_status': 'success',
-                'with_clone': False}))))
-    @patch.object(repository.BuildManager, 'add_builds', AsyncMagicMock(
+    @patch.object(repository, 'get_poller_client', MagicMock())
+    @patch.object(repository.BuildManager, 'add_builds', AsyncMock(
         spec=repository.BuildManager.add_builds))
-    @patch.object(repository.ui_notifications, 'publish', AsyncMagicMock(
+    @patch.object(repository.ui_notifications, 'publish', AsyncMock(
         spec=repository.ui_notifications.publish))
     @async_test
     async def test_update_code(self):
+        repository.get_poller_client.return_value.__aenter__.return_value = \
+            AsyncMock(poll_repo=AsyncMock(
+                return_value={'revisions': [
+                    {'commit': 'adsf',
+                     'branch': 'master',
+                     'commit_date': '4 04 25 23:49:19 2019 +0000',
+                     'author': 'me',
+                     'title': 'zhe-commit'}],
+                              'clone_status': 'success',
+                              'with_clone': False}))
         await self.repo.update_code()
         self.assertTrue(repository.BuildManager.add_builds.called)
         self.assertFalse(repository.ui_notifications.publish.called)
 
-    @patch.object(repository, 'get_poller_client', Mock(
-        return_value=AsyncMagicMock(poll_repo=AsyncMagicMock(
-            return_value={'revisions': [],
-                          'clone_status': 'success',
-                          'with_clone': False}))))
-    @patch.object(repository.BuildManager, 'add_builds', AsyncMagicMock(
+    @patch.object(repository, 'get_poller_client', MagicMock())
+    @patch.object(repository.BuildManager, 'add_builds', AsyncMock(
         spec=repository.BuildManager.add_builds))
-    @patch.object(repository.ui_notifications, 'publish', AsyncMagicMock(
+    @patch.object(repository.ui_notifications, 'publish', AsyncMock(
         spec=repository.ui_notifications.publish))
     @async_test
     async def test_update_code_without_revisions(self):
+        repository.get_poller_client.return_value.__aenter__.return_value = \
+            AsyncMock(poll_repo=AsyncMock(
+                return_value={'revisions': [],
+                              'clone_status': 'success',
+                              'with_clone': False}))
+
         await self.repo.update_code()
         self.assertFalse(repository.BuildManager.add_builds.called)
         self.assertFalse(repository.ui_notifications.publish.called)
 
-    @patch.object(repository, 'get_poller_client', Mock(
-        return_value=AsyncMagicMock(poll_repo=AsyncMagicMock(
-            return_value={'revisions': [
-                {'commit': 'adsf',
-                 'branch': 'master',
-                 'commit_date': '4 04 25 23:49:19 2019 +0000',
-                 'author': 'me',
-                 'title': 'zhe-commit'}],
-                'clone_status': 'clone-exception',
-                'with_clone': True}))))
-    @patch.object(repository.BuildManager, 'add_builds', AsyncMagicMock(
+    @patch.object(repository, 'get_poller_client', MagicMock())
+    @patch.object(repository.BuildManager, 'add_builds', AsyncMock(
         spec=repository.BuildManager.add_builds))
-    @patch.object(repository.ui_notifications, 'publish', AsyncMagicMock(
+    @patch.object(repository.ui_notifications, 'publish', AsyncMock(
         spec=repository.ui_notifications.publish))
     @async_test
     async def test_update_code_with_clone(self):
+        repository.get_poller_client.return_value.__aenter__.return_value = \
+            AsyncMock(poll_repo=AsyncMock(
+                return_value={'revisions': [
+                    {'commit': 'adsf',
+                     'branch': 'master',
+                     'commit_date': '4 04 25 23:49:19 2019 +0000',
+                     'author': 'me',
+                     'title': 'zhe-commit'}],
+                              'clone_status': 'clone-exception',
+                              'with_clone': True}))
         await self.repo.update_code()
         await self.repo.reload()
         self.assertEqual(self.repo.clone_status, 'clone-exception')
@@ -269,14 +273,14 @@ class RepositoryTest(TestCase, RepoTestData):
         await self.repo.bootstrap()
         self.assertTrue(self.repo.schedule.called)
 
-    @patch.object(repository.Repository, 'bootstrap', AsyncMagicMock())
+    @patch.object(repository.Repository, 'bootstrap', AsyncMock())
     @async_test
     async def test_bootstrap_all(self):
         await repository.Repository.bootstrap_all()
         self.assertTrue(repository.Repository.bootstrap.called)
 
     @patch.object(repository.utils, 'log', Mock())
-    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMock())
     def test_schedule(self):
         self.repo.scheduler = Mock(spec=self.repo.scheduler)
         self.repo.schedule()
@@ -285,7 +289,7 @@ class RepositoryTest(TestCase, RepoTestData):
         self.assertTrue(repository._update_code_hashes)
 
     @patch.object(repository.utils, 'log', Mock())
-    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMock())
     def test_schedule_no_poller(self):
         self.repo.scheduler = Mock(spec=self.repo.scheduler)
         self.repo.schedule_poller = False
@@ -295,7 +299,7 @@ class RepositoryTest(TestCase, RepoTestData):
         self.assertFalse(repository._update_code_hashes)
 
     @patch.object(repository.utils, 'log', Mock())
-    @patch.object(repository.scheduler_action, 'publish', AsyncMagicMock())
+    @patch.object(repository.scheduler_action, 'publish', AsyncMock())
     @patch('toxicbuild.master.scheduler')
     @async_test
     async def test_schedule_all(self, *a, **kw):
@@ -408,7 +412,7 @@ class RepositoryTest(TestCase, RepoTestData):
     @async_test
     async def test_add_builds_for_buildset(self):
         await self.repo.save()
-        add_builds_for = AsyncMagicMock(
+        add_builds_for = AsyncMock(
             spec=self.repo.build_manager.add_builds_for_buildset)
         self.repo.build_manager.add_builds_for_buildset = add_builds_for
 
@@ -425,7 +429,7 @@ class RepositoryTest(TestCase, RepoTestData):
         called_kw = add_builds_for.call_args[1]
         self.assertEqual(called_kw['builders'], builders)
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_with_running_build(self):
@@ -442,7 +446,7 @@ class RepositoryTest(TestCase, RepoTestData):
         await self.repo.set_latest_buildset(buildset)
         self.assertEqual((await self.repo.get_status()), 'running')
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_with_success_build(self):
@@ -464,7 +468,7 @@ class RepositoryTest(TestCase, RepoTestData):
         status = await self.repo.get_status()
         self.assertEqual(status, 'success')
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_with_fail_build(self):
@@ -499,7 +503,7 @@ class RepositoryTest(TestCase, RepoTestData):
 
         self.assertEqual((await self.repo.get_status()), 'ready')
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_only_pending(self):
@@ -522,7 +526,7 @@ class RepositoryTest(TestCase, RepoTestData):
 
         self.assertEqual((await self.repo.get_status()), 'ready')
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_only_no_config(self):
@@ -549,7 +553,7 @@ class RepositoryTest(TestCase, RepoTestData):
     @async_test
     async def test_get_builders(self):
         await self._create_db_revisions()
-        self.repo.build_manager.get_builders = AsyncMagicMock(
+        self.repo.build_manager.get_builders = AsyncMock(
             spec=self.repo.build_manager.get_builders, autospec=True)
         self.repo.build_manager.get_builders.return_value = [self.builder], \
             'master'
@@ -581,13 +585,12 @@ class RepositoryTest(TestCase, RepoTestData):
 
         self.repo.get_config_for = MagicMock(
             spec=self.repo.get_config_for)
-        self.repo.add_builds_for_buildset = create_autospec(
-            spec=self.repo.add_builds_for_buildset, mock_cls=AsyncMagicMock)
-        self.repo.get_latest_revision_for_branch = create_autospec(
-            spec=self.repo.get_latest_revision_for_branch,
-            mock_cls=AsyncMagicMock)
+        self.repo.add_builds_for_buildset = AsyncMock(
+            spec=self.repo.add_builds_for_buildset)
+        self.repo.get_latest_revision_for_branch = AsyncMock(
+            spec=self.repo.get_latest_revision_for_branch)
         self.repo.get_latest_revision_for_branch.return_value = self.revision
-        self.repo._get_builders = AsyncMagicMock(spec=self.repo._get_builders)
+        self.repo._get_builders = AsyncMock(spec=self.repo._get_builders)
         self.repo._get_builders.return_value = {self.slave: ['bla']}, 'master'
 
         await self.repo.start_build('master')
@@ -602,14 +605,13 @@ class RepositoryTest(TestCase, RepoTestData):
 
         self.repo.get_config_for = MagicMock(
             spec=self.repo.get_config_for)
-        self.repo.add_builds_for_buildset = create_autospec(
-            spec=self.repo.add_builds_for_buildset, mock_cls=AsyncMagicMock)
-        self.repo.get_latest_revision_for_branch = create_autospec(
-            spec=self.repo.get_latest_revision_for_branch,
-            mock_cls=AsyncMagicMock)
+        self.repo.add_builds_for_buildset = AsyncMock(
+            spec=self.repo.add_builds_for_buildset)
+        self.repo.get_latest_revision_for_branch = AsyncMock(
+            spec=self.repo.get_latest_revision_for_branch)
         self.repo.get_latest_revision_for_branch.return_value = self.revision
-        self.repo._get_builders = create_autospec(
-            spec=self.repo._get_builders, mock_cls=AsyncMagicMock)
+        self.repo._get_builders = AsyncMock(
+            spec=self.repo._get_builders)
 
         await self.repo.start_build('master', builder_name_or_id='builder0',
                                     named_tree='asdf')
@@ -625,8 +627,8 @@ class RepositoryTest(TestCase, RepoTestData):
         await self._create_db_revisions()
         self.revs[0].config = None
         await self.revs[0].save()
-        self.repo.add_builds_for_buildset = create_autospec(
-            spec=self.repo.add_builds_for_buildset, mock_cls=AsyncMagicMock)
+        self.repo.add_builds_for_buildset = AsyncMock(
+            spec=self.repo.add_builds_for_buildset)
 
         await repository.RepositoryRevision.objects.update(set__config=None)
 
@@ -636,7 +638,7 @@ class RepositoryTest(TestCase, RepoTestData):
         self.assertFalse(self.repo.add_builds_for_buildset.called)
         self.assertTrue(repository.buildset_added.send.called)
 
-    @patch.object(repository, 'notifications', AsyncMagicMock(
+    @patch.object(repository, 'notifications', AsyncMock(
         spec=repository.notifications))
     @async_test
     async def test_request_build(self):
@@ -657,7 +659,7 @@ class RepositoryTest(TestCase, RepoTestData):
 
     @async_test
     async def test_cancel_build(self):
-        self.repo.build_manager.cancel_build = AsyncMagicMock(
+        self.repo.build_manager.cancel_build = AsyncMock(
             spec=self.repo.build_manager.cancel_build)
         await self.repo.cancel_build('some-uuid')
         self.assertTrue(self.repo.build_manager.cancel_build.called)

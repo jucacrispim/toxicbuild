@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019-2020, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -163,7 +163,8 @@ class NotificationInterface(BaseInterface):
         headers = cls._get_headers()
         r = await requests.get(url, headers=headers)
         notifications = r.json()['notifications']
-        return [cls(n) for n in notifications]
+        ret = [cls(n) for n in notifications]
+        return ret
 
     @classmethod
     async def enable(cls, repo_id, notif_name, **config):

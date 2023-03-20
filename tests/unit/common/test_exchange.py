@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,11 +20,11 @@
 import asyncio
 import os
 from unittest import TestCase
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, AsyncMock, MagicMock
 from aioamqp.exceptions import ChannelClosed
 from asyncamqp.exceptions import ConsumerTimeout
 from toxicbuild.common import exchange
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class AmqpConnectionTest(TestCase):
@@ -33,14 +33,14 @@ class AmqpConnectionTest(TestCase):
     def setUp(self):
         self.conn = exchange.AmqpConnection()
         self.conn.transport = Mock()
-        self.conn.protocol = AsyncMagicMock()
-        self.conn.reconn_lock.acquire_write = AsyncMagicMock(
+        self.conn.protocol = AsyncMock()
+        self.conn.reconn_lock.acquire_write = MagicMock(
             spec=self.conn.reconn_lock.acquire_write,
-            return_value=AsyncMagicMock())
+            return_value=AsyncMock())
 
     @patch.object(exchange.asyncamqp, 'connect',
-                  AsyncMagicMock(return_value=(AsyncMagicMock(),
-                                               AsyncMagicMock())))
+                  AsyncMock(return_value=(AsyncMock(),
+                                          AsyncMock())))
     @async_test
     async def test_connect(self):
         await self.conn.connect()
@@ -53,10 +53,10 @@ class AmqpConnectionTest(TestCase):
 
     @async_test
     async def test_reconnect_exception(self):
-        self.conn.disconnect = AsyncMagicMock(spec=self.conn.disconnect,
-                                              side_effect=Exception)
+        self.conn.disconnect = AsyncMock(spec=self.conn.disconnect,
+                                         side_effect=Exception)
         self.conn.log = Mock(spec=self.conn.log)
-        self.conn.connect = AsyncMagicMock(spec=self.conn.connect)
+        self.conn.connect = AsyncMock(spec=self.conn.connect)
         await self.conn.reconnect()
 
         self.assertTrue(self.conn.log.called)
@@ -64,9 +64,9 @@ class AmqpConnectionTest(TestCase):
 
     @async_test
     async def test_reconnect(self):
-        self.conn.disconnect = AsyncMagicMock(spec=self.conn.disconnect)
+        self.conn.disconnect = AsyncMock(spec=self.conn.disconnect)
         self.conn.log = Mock(spec=self.conn.log)
-        self.conn.connect = AsyncMagicMock(spec=self.conn.connect)
+        self.conn.connect = AsyncMock(spec=self.conn.connect)
         await self.conn.reconnect()
 
         self.assertFalse(self.conn.log.called)
@@ -78,18 +78,18 @@ class JsonAckMessageTest(TestCase):
     @async_test
     async def test_acknowledge(self):
         b = exchange.json.dumps({}).encode('utf-8')
-        channel, envelope, properties = AsyncMagicMock(), Mock(), {}
+        channel, envelope, properties = AsyncMock(), Mock(), {}
         msg = exchange.JsonAckMessage(channel, b, envelope, properties)
-        msg.channel = AsyncMagicMock()
+        msg.channel = AsyncMock()
         await msg.acknowledge()
         self.assertTrue(msg.channel.basic_client_ack.called)
 
     @async_test
     async def test_reject(self):
         b = exchange.json.dumps({}).encode('utf-8')
-        channel, envelope, properties = AsyncMagicMock(), Mock(), {}
+        channel, envelope, properties = AsyncMock(), Mock(), {}
         msg = exchange.JsonAckMessage(channel, b, envelope, properties)
-        msg.channel = AsyncMagicMock()
+        msg.channel = AsyncMock()
         await msg.reject()
         self.assertTrue(msg.channel.basic_reject.called)
 
@@ -199,11 +199,11 @@ class ExchangeTest(TestCase):
         try:
             self.exchange.durable = True
             old_pchannel = self.exchange.connection.protocol.channel
-            self.exchange.connection.protocol.channel = AsyncMagicMock()
+            self.exchange.connection.protocol.channel = AsyncMock()
             channel = self.exchange.connection.protocol.channel.return_value
 
             old_channel = self.exchange.channel
-            self.exchange.channel = AsyncMagicMock()
+            self.exchange.channel = AsyncMock()
             await self.exchange.consume(timeout=100)
             self.assertTrue(channel.basic_qos.called)
         finally:
@@ -247,8 +247,8 @@ class ExchangeTest(TestCase):
         await type(self).exchange.declare(self.exchange.queue_name)
 
         channel = Mock()
-        channel.queue_unbind = AsyncMagicMock()
-        channel.close = AsyncMagicMock()
+        channel.queue_unbind = AsyncMock()
+        channel.close = AsyncMock()
         self.exchange._bound_rt.add('routing-key')
         await self.exchange.unbind('routing-key', channel)
         self.assertTrue(channel.queue_unbind.called)
@@ -307,7 +307,7 @@ class ExchangeTest(TestCase):
                                                 'direct', bind_publisher=True)
         await type(self).exchange.declare()
         consumer = await self.exchange.consume(timeout=100)
-        consumer.cancel = AsyncMagicMock(spec=consumer.cancel)
+        consumer.cancel = AsyncMock(spec=consumer.cancel)
         asserted = False
         async with consumer:
             try:
@@ -325,7 +325,7 @@ class ExchangeTest(TestCase):
                                                 'direct', bind_publisher=True)
         await type(self).exchange.declare()
         consumer = await self.exchange.consume(timeout=100)
-        consumer.cancel = AsyncMagicMock(spec=consumer.cancel)
+        consumer.cancel = AsyncMock(spec=consumer.cancel)
         asserted = False
         consumer.nowait = True
         async with consumer:
@@ -343,7 +343,7 @@ class ExchangeTest(TestCase):
         await self.conn.connect()
         exch = exchange.Exchange('test-exc', self.conn,
                                  'direct', bind_publisher=True)
-        exch.connection.protocol.channel = AsyncMagicMock(
+        exch.connection.protocol.channel = AsyncMock(
             spec=exch.connection.protocol.channel,
             return_value=Mock())
 
@@ -360,10 +360,10 @@ class ExchangeTest(TestCase):
 
         exch = exchange.Exchange('test-exc', self.conn,
                                  'direct', bind_publisher=True)
-        exch.connection.protocol.channel = AsyncMagicMock(
+        exch.connection.protocol.channel = AsyncMock(
             spec=exch.connection.protocol.channel,
             side_effect=[exchange.AmqpClosedConnection, Mock()])
-        exch.connection.reconnect = AsyncMagicMock(
+        exch.connection.reconnect = AsyncMock(
             spec=exch.connection.reconnect)
 
         r = await exch._get_channel()

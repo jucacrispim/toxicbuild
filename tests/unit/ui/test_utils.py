@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2017, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,7 +18,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime
 from toxicbuild.master.build import Build, BuildSet, Builder
 from toxicbuild.master.repository import Repository, RepositoryRevision
@@ -26,7 +26,7 @@ from toxicbuild.master.slave import Slave
 from toxicbuild.master.users import User
 from toxicbuild.common import interfaces
 from toxicbuild.ui import utils
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class UtilsDateTimeTest(TestCase):
@@ -84,7 +84,7 @@ class BuildsetUtilsTest(TestCase):
         await Repository.drop_collection()
         await User.drop_collection()
 
-    @patch.object(interfaces.BuilderInterface, 'list', AsyncMagicMock(
+    @patch.object(interfaces.BuilderInterface, 'list', AsyncMock(
         spec=interfaces.BuilderInterface.list))
     @async_test
     async def test_get_builders_for_buildset(self):

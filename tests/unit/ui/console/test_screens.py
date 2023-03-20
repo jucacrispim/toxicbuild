@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,11 +17,11 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 from toxicbuild.ui.console import screens
 
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 # urwid changes the locale and this makes a test on vcs fail
 # so, changing it back here
@@ -208,7 +208,7 @@ class ToxicConsoleTest(TestCase):
         self.assertIsNone(r)
 
     @patch.object(screens.ToxicConsole, 'handle_input',
-                  AsyncMagicMock(spec=screens.ToxicConsole.handle_input))
+                  AsyncMock(spec=screens.ToxicConsole.handle_input))
     @async_test
     async def test_keypress(self):
         self.console.user_input.set_edit_text('bla')
@@ -237,7 +237,7 @@ class ToxicConsoleTest(TestCase):
         self.assertIsInstance(screen, screens.CommandHelpScreen)
 
     @patch.object(screens.RepoListCommand, 'execute',
-                  AsyncMagicMock(spec=screens.RepoListCommand.execute,
+                  AsyncMock(spec=screens.RepoListCommand.execute,
                                  return_value=[]))
     @async_test
     async def test_show_repo_list(self):
@@ -274,7 +274,7 @@ class ToxicConsoleTest(TestCase):
 
     @async_test
     async def test_handle_input_coro(self):
-        fn_mock = AsyncMagicMock()
+        fn_mock = AsyncMock()
 
         async def coro(*a, **kw):
             await fn_mock()

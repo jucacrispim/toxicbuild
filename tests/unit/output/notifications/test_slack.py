@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,13 +17,13 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 from bson.objectid import ObjectId
 
 from toxicbuild.output.notifications import slack
 
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class SlackNotificationTest(TestCase):
@@ -44,7 +44,7 @@ class SlackNotificationTest(TestCase):
     async def tearDown(self):
         await slack.Notification.drop_collection()
 
-    @patch.object(slack.requests, 'post', AsyncMagicMock(
+    @patch.object(slack.requests, 'post', AsyncMock(
         spec=slack.requests.post, return_value=MagicMock()))
     @async_test
     async def test_send_message(self):
@@ -56,7 +56,7 @@ class SlackNotificationTest(TestCase):
     async def test_send_started_message(self):
 
         buildset_info = {'started': '01/01/1970 00:00:00'}
-        self.notification._send_message = AsyncMagicMock(
+        self.notification._send_message = AsyncMock(
             self.notification._send_message)
         await self.notification.send_started_message(buildset_info)
         self.assertTrue(self.notification._send_message.called)
@@ -65,7 +65,7 @@ class SlackNotificationTest(TestCase):
     async def test_send_finished_message(self):
         buildset_info = {'finished': '01/01/1970 00:00:00',
                          'status': 'success'}
-        self.notification._send_message = AsyncMagicMock(
+        self.notification._send_message = AsyncMock(
             self.notification._send_message)
         await self.notification.send_finished_message(buildset_info)
         self.assertTrue(self.notification._send_message.called)

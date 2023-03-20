@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,60 +20,59 @@
 
 import asyncio
 import datetime
-from concurrent import futures
 import os
 import subprocess
 import time
 from unittest import TestCase
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock, MagicMock, AsyncMock
 from toxicbuild.core import utils
 from tests.unit.core import TEST_DATA_DIR
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class UtilsTest(TestCase):
 
     @async_test
     async def test_try_readline_lf(self):
-        stream = AsyncMagicMock()
+        stream = AsyncMock()
         await utils._try_readline(stream)
 
         assert stream.readuntil.call_args[0][0] == b'\n'
 
     @async_test
     async def test_try_readline_cr(self):
-        stream = AsyncMagicMock()
+        stream = AsyncMock()
         stream.readuntil.side_effect = [
             utils.LimitOverrunError('msg', False), '']
         await utils._try_readline(stream)
 
         assert stream.readuntil.call_args[0][0] == b'\r'
 
-    @patch.object(utils, '_try_readline', AsyncMagicMock(
+    @patch.object(utils, '_try_readline', AsyncMock(
         side_effect=utils.IncompleteReadError('partial', 'exp')))
     @async_test
     async def test_readline_incomplete(self):
-        stream = AsyncMagicMock()
+        stream = AsyncMock()
         r = await utils._readline(stream)
 
         self.assertEqual(r, 'partial')
 
-    @patch.object(utils, '_try_readline', AsyncMagicMock(
+    @patch.object(utils, '_try_readline', AsyncMock(
         side_effect=utils.LimitOverrunError('msg', 0)))
     @async_test
     async def test_readline_limit_overrun(self):
-        stream = AsyncMagicMock()
+        stream = AsyncMock()
         stream._buffer = bytearray()
         stream._maybe_resume_transport = Mock()
         stream._buffer.extend(b'\nblerg')
         with self.assertRaises(ValueError):
             await utils._readline(stream)
 
-    @patch.object(utils, '_try_readline', AsyncMagicMock(
+    @patch.object(utils, '_try_readline', AsyncMock(
         side_effect=utils.LimitOverrunError('msg', 0)))
     @async_test
     async def test_readline_limit_overrun_clear(self):
-        stream = AsyncMagicMock()
+        stream = AsyncMock()
         stream._buffer = bytearray()
         stream._maybe_resume_transport = Mock()
         await stream.extend(b'blerg')
@@ -107,7 +106,7 @@ class UtilsTest(TestCase):
         try:
             f = proc.stdout.readline()
             await asyncio.wait_for(f, 1)
-        except futures.TimeoutError:
+        except asyncio.exceptions.TimeoutError:
             pass
 
         utils._kill_group(proc)
@@ -132,16 +131,18 @@ class UtilsTest(TestCase):
 
         cmd = 'echo $MYPROGRAMVAR'
 
-        lines = Mock()
-
-        out_fn = asyncio.coroutine(lambda i, l: lines((i, l)))
+        out_fn = AsyncMock()
         await utils.exec_cmd(cmd, cwd='.',
                              out_fn=out_fn,
                              **envvars)
-        yield
-        self.assertTrue(lines.called)
+
+        async def wait():
+            return
+
+        await wait()
+        self.assertTrue(out_fn.called)
         self.assertTrue(isinstance(
-            lines.call_args[0][0][1], str), lines.call_args)
+            out_fn.call_args[0][1], str), out_fn.call_args)
 
     def test_get_envvars(self):
         envvars = {'PATH': 'PATH:venv/bin',
@@ -496,7 +497,7 @@ class StreamUtilsTest(TestCase):
 
     @async_test
     async def test_write_stream(self):
-        writer = MagicMock(drain=AsyncMagicMock())
+        writer = MagicMock(drain=AsyncMock())
         await utils.write_stream(writer, self.data.decode())
 
         called_arg = writer.write.call_args[0][0]

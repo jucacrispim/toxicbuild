@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -82,11 +82,11 @@ class BuildClient(BaseToxicClient, LoggerMixin):
         :param process_coro: A coroutine to process the intermediate
           build information sent by the build server."""
 
-        self.log('Starting build {}'.format(build.uuid), level='debug')
-
         repository = await build.repository
         builder_name = (await build.builder).name
         slave = await build.slave
+        self.log('Starting build {} on {}'.format(build.uuid, slave.name),
+                 level='debug')
         data = {'action': 'build',
                 'token': slave.token,
                 'body': {'repo_url': repository.get_url(),
@@ -107,7 +107,6 @@ class BuildClient(BaseToxicClient, LoggerMixin):
         build_info = None
         while True:
             r = await self.get_response()
-
             if not r:
                 break
 

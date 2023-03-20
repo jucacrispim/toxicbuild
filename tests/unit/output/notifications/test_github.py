@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,7 +17,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 from toxicbuild.core.utils import localtime2utc, datetime2string, now
 from toxicbuild.integrations.github import GithubIntegration
@@ -25,7 +25,7 @@ from toxicbuild.master.users import User
 
 from toxicbuild.output.notifications import github
 
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class GithubCheckRunNotificationTest(TestCase):
@@ -52,7 +52,7 @@ class GithubCheckRunNotificationTest(TestCase):
     async def test_run(self):
         info = {'status': 'fail', 'id': 'some-id',
                 'repository': {'id': 'some-repo-id'}}
-        self.check_run._send_message = AsyncMagicMock(
+        self.check_run._send_message = AsyncMock(
             spec=self.check_run._send_message)
 
         await self.check_run.run(info)
@@ -98,9 +98,9 @@ class GithubCheckRunNotificationTest(TestCase):
                                               conclusion)
         self.assertEqual(payload, expected)
 
-    @patch.object(github.requests, 'post', AsyncMagicMock(
+    @patch.object(github.requests, 'post', AsyncMock(
         spec=github.requests.post))
-    @patch.object(GithubIntegration, 'get_header', AsyncMagicMock(
+    @patch.object(GithubIntegration, 'get_header', AsyncMock(
         spec=GithubIntegration.get_header))
     @async_test
     async def test_send_message(self):

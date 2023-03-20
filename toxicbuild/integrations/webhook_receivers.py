@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -333,6 +333,7 @@ class GithubWebhookReceiver(BaseWebhookReceiver):
     async def validate_webhook(self):
         signature = self.request.headers.get('X-Hub-Signature')
         app = await GithubApp.get_app()
+
         try:
             app.validate_token(signature, self.request.body)
         except BadSignature:

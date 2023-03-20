@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2017, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,7 +20,7 @@
 import json
 from unittest import mock, TestCase
 from toxicbuild.core import protocol
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class BaseToxicProtocolTest(TestCase):
@@ -29,9 +29,9 @@ class BaseToxicProtocolTest(TestCase):
         super().setUp()
         loop = mock.Mock()
         self.protocol = protocol.BaseToxicProtocol(loop)
-        self.protocol._stream_reader = AsyncMagicMock(
+        self.protocol._stream_reader_wr = mock.Mock(
             return_value=mock.MagicMock())
-        self.protocol._stream_writer = AsyncMagicMock(
+        self.protocol._stream_writer = mock.AsyncMock(
             return_value=mock.MagicMock())
         self.protocol._stream_writer.close = mock.MagicMock()
         self.protocol._stream_reader.set_exception = mock.MagicMock()
@@ -87,7 +87,7 @@ class BaseToxicProtocolTest(TestCase):
         # calle correctly
         loop = mock.Mock()
         prot = protocol.BaseToxicProtocol(loop)
-        prot._stream_reader = mock.MagicMock()
+        prot._stream_reader_wr = mock.MagicMock()
         prot._stream_writer = mock.MagicMock()
         prot._stream_reader.read = self.protocol._stream_reader.read
         transport = mock.Mock()
@@ -113,7 +113,7 @@ class BaseToxicProtocolTest(TestCase):
         # this one ensures that we handle ConnectionResetError properly
         loop = mock.Mock()
         prot = protocol.BaseToxicProtocol(loop)
-        prot._stream_reader = mock.MagicMock()
+        prot._stream_reader_wr = mock.MagicMock()
         prot._stream_writer = mock.MagicMock()
         prot._stream_reader.read = self.protocol._stream_reader.read
         transport = mock.Mock()

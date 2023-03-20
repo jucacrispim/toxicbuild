@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019-2020, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -21,9 +21,9 @@ from collections import OrderedDict
 import datetime
 import json
 from unittest import TestCase
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from toxicbuild.common import interfaces, client
-from tests import AsyncMagicMock, async_test
+from tests import async_test
 
 
 class BaseInterfaceTest(TestCase):
@@ -128,7 +128,7 @@ class NotificationTest(TestCase):
         returned = self.notification._get_headers()
         self.assertEqual(expected, returned)
 
-    @patch.object(interfaces.requests, 'get', AsyncMagicMock(
+    @patch.object(interfaces.requests, 'get', AsyncMock(
         spec=interfaces.requests.get))
     @async_test
     async def test_list_no_repo(self):
@@ -139,7 +139,7 @@ class NotificationTest(TestCase):
         r = await self.notification.list()
         self.assertEqual(r[0].name, 'bla')
 
-    @patch.object(interfaces.requests, 'get', AsyncMagicMock(
+    @patch.object(interfaces.requests, 'get', AsyncMock(
         spec=interfaces.requests.get))
     @async_test
     async def test_list_for_repo(self):
@@ -151,7 +151,7 @@ class NotificationTest(TestCase):
         r = await self.notification.list(obj_id)
         self.assertEqual(r[0].name, 'bla')
 
-    @patch.object(interfaces.requests, 'post', AsyncMagicMock(
+    @patch.object(interfaces.requests, 'post', AsyncMock(
         spec=interfaces.requests.post))
     @async_test
     async def test_enable(self):
@@ -170,7 +170,7 @@ class NotificationTest(TestCase):
         self.assertEqual(expected_url, called_url)
         self.assertEqual(expected_config, called_config)
 
-    @patch.object(interfaces.requests, 'delete', AsyncMagicMock(
+    @patch.object(interfaces.requests, 'delete', AsyncMock(
         spec=interfaces.requests.delete))
     @async_test
     async def test_disable(self):
@@ -187,7 +187,7 @@ class NotificationTest(TestCase):
         self.assertEqual(expected_url, called_url)
         self.assertEqual(expected_config, called_config)
 
-    @patch.object(interfaces.requests, 'put', AsyncMagicMock(
+    @patch.object(interfaces.requests, 'put', AsyncMock(
         spec=interfaces.requests.put))
     @async_test
     async def test_update(self):
@@ -211,7 +211,7 @@ class NotificationTest(TestCase):
 
 class BaseHoleInterfaceTest(TestCase):
 
-    @patch.object(interfaces, 'get_hole_client', AsyncMagicMock(
+    @patch.object(interfaces, 'get_hole_client', AsyncMock(
         spec=interfaces.get_hole_client))
     @patch.object(interfaces.BaseHoleInterface, 'settings', MagicMock())
     @async_test
@@ -227,7 +227,7 @@ class BaseHoleInterfaceTest(TestCase):
         try:
             requester = MagicMock()
             client = MagicMock()
-            client.connect = AsyncMagicMock()
+            client.connect = AsyncMock()
             interfaces.BaseHoleInterface._client = client
             client = await interfaces.BaseHoleInterface.get_client(requester)
             self.assertEqual(client, interfaces.BaseHoleInterface._client)
@@ -242,7 +242,7 @@ class BaseHoleInterfaceTest(TestCase):
         try:
             requester = MagicMock()
             client = MagicMock()
-            client.connect = AsyncMagicMock()
+            client.connect = AsyncMock()
             interfaces.BaseHoleInterface._client = client
             interfaces.BaseHoleInterface._client._connected = False
             client = await interfaces.BaseHoleInterface.get_client(requester)
@@ -622,14 +622,14 @@ class SlaveTest(TestCase):
 
 class BuildSetTest(TestCase):
 
-    @patch.object(interfaces.BuildSetInterface, 'get_client', AsyncMagicMock(
+    @patch.object(interfaces.BuildSetInterface, 'get_client', AsyncMock(
         spec=interfaces.BuildSetInterface.get_client))
     @async_test
     async def test_list(self):
         requester = MagicMock()
         client = MagicMock()
         client.__enter__.return_value = client
-        client.buildset_list = AsyncMagicMock()
+        client.buildset_list = AsyncMock()
         client.buildset_list.return_value = [
             {'id': 'sasdfasf',
              'started': '3 9 25 08:53:38 2017 -0000',
@@ -719,12 +719,12 @@ class BuildTest(TestCase):
 class StepInterfaceTest(TestCase):
 
     @patch.object(interfaces.StepInterface, 'get_client',
-                  AsyncMagicMock(return_value=MagicMock()))
+                  AsyncMock(return_value=MagicMock()))
     @async_test
     async def test_get(self):
         client = interfaces.StepInterface.get_client.return_value.\
             __enter__.return_value
-        client.buildstep_get = AsyncMagicMock(return_value={})
+        client.buildstep_get = AsyncMock(return_value={})
         requester = MagicMock()
         step = await interfaces.StepInterface.get(requester, 'a-uuid')
         self.assertTrue(client.buildstep_get.called)

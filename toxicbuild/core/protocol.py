@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2017, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -36,7 +36,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
 
     class MyServer(BaseToxicProtocol):
 
-        async def client_connectec(self):
+        async def client_connected(self):
             assert self.action
              r = await fn(**self.data)
              self.send_response({'some': 'thing'})
@@ -64,8 +64,8 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         self._transport = None
         self._writer_lock = asyncio.Lock(loop=loop)
 
-        reader = asyncio.StreamReader(loop=loop)
-        super().__init__(reader, loop=loop)
+        self._reader = asyncio.StreamReader(loop=loop)
+        super().__init__(self._reader, loop=loop)
 
     def __call__(self):
         return self
@@ -76,7 +76,9 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         :param transport: transport for asyncio.StreamReader and
           asyncio.StreamWriter.
         """
+
         self._transport = transport
+        self._over_ssl = transport.get_extra_info('sslcontext') is not None
         self._stream_reader.set_transport(transport)
         self._stream_writer = asyncio.StreamWriter(transport, self,
                                                    self._stream_reader,
@@ -91,6 +93,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         """Called once, when the connection is lost.
 
         :param exc: The exception, if some."""
+        self._reader = None
         self.close_connection()
         super().connection_lost(exc)
         self.log('Connection lost', level='debug')
@@ -103,11 +106,10 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         """ Checks if the data is valid, it means, checks if has some data,
         checks if it is a valid json and checks if it has a ``action`` key
         """
-
         self.data = await self.get_json_data()
 
         if not self.data:
-            self.log('Bada data', level='warning')
+            self.log('Bad data', level='warning')
             self.log(self.raw_data, level='debug')
             msg = 'Something wrong with your data {!r}'.format(self.raw_data)
             await self.send_response(code=1, body={'error': msg})
@@ -168,7 +170,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         # http://bugs.python.org/issue29930. Remove this lock when no
         # version of Python where this bugs exists is supported anymore.
         # patch by @RemiCardona for websockets on github.
-        with (await self._writer_lock):
+        async with self._writer_lock:
             await utils.write_stream(self._stream_writer, data)
 
     async def get_raw_data(self):

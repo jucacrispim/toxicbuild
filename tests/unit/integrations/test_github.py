@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018-2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2018-2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -22,9 +22,9 @@ import datetime
 import json
 import os
 from unittest import TestCase
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from toxicbuild.integrations import github, base
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 from tests.unit.integrations import INTEGRATIONS_DATA_PATH
 
 
@@ -62,7 +62,7 @@ class GitHubAppTest(TestCase):
 
     @patch.object(github, 'settings', Mock())
     @patch.object(github, 'open', MagicMock())
-    @patch.object(github.requests, 'post', AsyncMagicMock(return_value=Mock()))
+    @patch.object(github.requests, 'post', AsyncMock(return_value=Mock()))
     @async_test
     async def test_create_app(self):
         github.settings.GITHUB_APP_ID = 123
@@ -75,11 +75,11 @@ class GitHubAppTest(TestCase):
 
         self.assertTrue(app.id)
 
-    @patch.object(github.GithubApp, 'get_jwt_token', AsyncMagicMock(
+    @patch.object(github.GithubApp, 'get_jwt_token', AsyncMock(
         return_value='myjwt'))
     @patch.object(github, 'settings', Mock())
     @patch.object(github, 'open', MagicMock())
-    @patch.object(github.requests, 'post', AsyncMagicMock(return_value=Mock()))
+    @patch.object(github.requests, 'post', AsyncMock(return_value=Mock()))
     @async_test
     async def test_create_installation_token(self):
         github.requests.post.return_value.status = 201
@@ -93,7 +93,7 @@ class GitHubAppTest(TestCase):
             'Authorization': 'Bearer myjwt',
             'Accept': 'application/vnd.github.machine-man-preview+json'}
 
-        installation = AsyncMagicMock()
+        installation = AsyncMock()
         installation.id = 'someid'
         installation.github_id = 1234
         read = github.open.return_value.__enter__.return_value.read
@@ -103,13 +103,13 @@ class GitHubAppTest(TestCase):
             installation)
         called_header = github.requests.post.call_args[1]['headers']
         self.assertEqual(expected_header, called_header)
-        self.assertEqual(installation.token, rdict['token'])
+        self.assertEqual(installation.access_token, rdict['token'])
 
-    @patch.object(github.GithubApp, 'get_jwt_token', AsyncMagicMock(
+    @patch.object(github.GithubApp, 'get_jwt_token', AsyncMock(
         return_value='myjwt'))
     @patch.object(github, 'settings', Mock())
     @patch.object(github, 'open', MagicMock())
-    @patch.object(github.requests, 'post', AsyncMagicMock(return_value=Mock()))
+    @patch.object(github.requests, 'post', AsyncMock(return_value=Mock()))
     @async_test
     async def test_create_installation_token_bad_response(self):
         github.requests.post.return_value.status = 400
@@ -119,7 +119,7 @@ class GitHubAppTest(TestCase):
         rdict = {"token": "v1.1f699f1069f60xxx",
                  "expires_at": "2016-07-11T22:14:10Z"}
         github.requests.post.return_value.json.return_value = rdict
-        installation = AsyncMagicMock()
+        installation = AsyncMock()
         read = github.open.return_value.__enter__.return_value.read
         read.return_value = 'token'
         installation.id = 'someid'
@@ -157,7 +157,7 @@ class GitHubAppTest(TestCase):
         token = await app.get_jwt_token()
         self.assertEqual(token, 'something')
 
-    @patch.object(github.GithubApp, 'create_token', AsyncMagicMock(
+    @patch.object(github.GithubApp, 'create_token', AsyncMock(
         spec=github.GithubApp.create_token))
     @async_test
     async def test_get_jwt_token_create(self):
@@ -208,9 +208,9 @@ class GitHubAppTest(TestCase):
         self.assertEqual(app.get_api_url(),
                          'https://api.github.com/app')
 
-    @patch.object(github.GithubApp, '_create_jwt', AsyncMagicMock(
+    @patch.object(github.GithubApp, '_create_jwt', AsyncMock(
         return_value='somejwt', spec=github.GithubApp._create_jwt))
-    @patch.object(github.requests, 'post', AsyncMagicMock(
+    @patch.object(github.requests, 'post', AsyncMock(
         spec=github.requests.post))
     @async_test
     async def test_create_token(self):
@@ -270,7 +270,7 @@ class GithubIntegrationTest(TestCase):
         self.assertEqual(self.installation.access_token_url, url)
 
     @patch.object(github.GithubApp, 'create_installation_token',
-                  AsyncMagicMock())
+                  AsyncMock())
     @async_test
     async def test_get_header_no_token(self):
 
@@ -284,7 +284,7 @@ class GithubIntegrationTest(TestCase):
         self.assertEqual(header['Authorization'], expected)
 
     @patch.object(github.GithubApp, 'create_installation_token',
-                  AsyncMagicMock())
+                  AsyncMock())
     @patch.object(github.GithubIntegration, 'token_is_expired', True)
     @async_test
     async def test_get_header_token_expired(self):
@@ -299,7 +299,7 @@ class GithubIntegrationTest(TestCase):
         self.assertEqual(header['Authorization'], expected)
 
     @patch.object(github.GithubApp, 'create_installation_token',
-                  AsyncMagicMock())
+                  AsyncMock())
     @patch.object(github.GithubIntegration, 'token_is_expired', False)
     @async_test
     async def test_get_header(self):
@@ -310,7 +310,7 @@ class GithubIntegrationTest(TestCase):
         self.assertFalse(github.GithubApp.create_installation_token.called)
 
     @patch.object(github.GithubApp, 'create_installation_token',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=github.GithubApp.create_installation_token))
     @patch.object(github.GithubIntegration, 'token_is_expired', True)
     @async_test
@@ -323,7 +323,7 @@ class GithubIntegrationTest(TestCase):
         self.assertEqual(expected, returned)
 
     @patch.object(github.GithubApp, 'create_installation_token',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=github.GithubApp.create_installation_token))
     @patch.object(github.GithubIntegration, 'token_is_expired', False)
     @async_test
@@ -336,9 +336,9 @@ class GithubIntegrationTest(TestCase):
             self.installation.app.create_installation_token.called)
         self.assertEqual(expected, returned)
 
-    @patch.object(github.GithubIntegration, 'get_header', AsyncMagicMock(
+    @patch.object(github.GithubIntegration, 'get_header', AsyncMock(
         return_value={}))
-    @patch.object(github.requests, 'get', AsyncMagicMock())
+    @patch.object(github.requests, 'get', AsyncMock())
     @async_test
     async def test_list_repos(self):
         ret = github.requests.get.return_value
@@ -353,9 +353,9 @@ class GithubIntegrationTest(TestCase):
         repos = await self.installation.list_repos()
         self.assertEqual(len(repos), 1)
 
-    @patch.object(github.GithubIntegration, 'get_header', AsyncMagicMock(
+    @patch.object(github.GithubIntegration, 'get_header', AsyncMock(
         return_value={}))
-    @patch.object(github.requests, 'get', AsyncMagicMock())
+    @patch.object(github.requests, 'get', AsyncMock())
     @async_test
     async def test_list_repos_bad_request(self):
         ret = github.requests.get.return_value
@@ -370,9 +370,9 @@ class GithubIntegrationTest(TestCase):
         with self.assertRaises(github.BadRequestToExternalAPI):
             await self.installation.list_repos()
 
-    @patch.object(github.GithubIntegration, 'get_header', AsyncMagicMock(
+    @patch.object(github.GithubIntegration, 'get_header', AsyncMock(
         return_value={}))
-    @patch.object(github.requests, 'get', AsyncMagicMock())
+    @patch.object(github.requests, 'get', AsyncMock())
     @async_test
     async def test_get_repo(self):
         ret = github.requests.get.return_value
@@ -387,9 +387,9 @@ class GithubIntegrationTest(TestCase):
         repo = await self.installation.get_repo(1234)
         self.assertEqual(repo['name'], 'Hello-World')
 
-    @patch.object(github.GithubIntegration, 'get_header', AsyncMagicMock(
+    @patch.object(github.GithubIntegration, 'get_header', AsyncMock(
         return_value={}))
-    @patch.object(github.requests, 'get', AsyncMagicMock())
+    @patch.object(github.requests, 'get', AsyncMock())
     @async_test
     async def test_get_repo_bad_request(self):
         ret = github.requests.get.return_value

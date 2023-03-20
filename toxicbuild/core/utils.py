@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,7 +20,7 @@
 
 import asyncio
 from asyncio import ensure_future
-from asyncio.streams import LimitOverrunError, IncompleteReadError
+from asyncio.exceptions import LimitOverrunError, IncompleteReadError
 import base64
 from concurrent.futures import ThreadPoolExecutor
 import copy

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,9 +19,9 @@
 import os
 import json
 from unittest import TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 from toxicbuild.integrations import gitlab
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 from tests.unit.integrations import INTEGRATIONS_DATA_PATH
 
 
@@ -64,10 +64,10 @@ class GitlabIntegrationTest(TestCase):
         gitlab.GitlabApp.drop_collection()
         gitlab.GitlabIntegration.drop_collection()
 
-    @patch.object(gitlab.GitlabIntegration, 'get_headers', AsyncMagicMock(
+    @patch.object(gitlab.GitlabIntegration, 'get_headers', AsyncMock(
         return_value={}))
     @patch.object(gitlab.GitlabIntegration, 'request2api',
-                  AsyncMagicMock(spec=gitlab.GitlabIntegration.request2api))
+                  AsyncMock(spec=gitlab.GitlabIntegration.request2api))
     @async_test
     async def test_list_repos(self):
         ret = Mock()
@@ -87,10 +87,10 @@ class GitlabIntegrationTest(TestCase):
         self.assertTrue(' ' not in repos[0]['full_name'])
         self.assertEqual(len(repos), 20)
 
-    @patch.object(gitlab.GitlabIntegration, 'get_headers', AsyncMagicMock(
+    @patch.object(gitlab.GitlabIntegration, 'get_headers', AsyncMock(
         return_value={}))
     @patch.object(gitlab.GitlabIntegration, 'request2api',
-                  AsyncMagicMock(spec=gitlab.GitlabIntegration.request2api))
+                  AsyncMock(spec=gitlab.GitlabIntegration.request2api))
     @async_test
     async def test_create_webhook(self):
         ret = Mock()
@@ -101,7 +101,7 @@ class GitlabIntegrationTest(TestCase):
         self.assertTrue(ret)
 
     @patch.object(gitlab.GitlabIntegration, 'request2api',
-                  AsyncMagicMock(spec=gitlab.GitlabIntegration.request2api))
+                  AsyncMock(spec=gitlab.GitlabIntegration.request2api))
     @async_test
     async def test_request_access_token(self):
         ret = Mock()
@@ -111,13 +111,13 @@ class GitlabIntegrationTest(TestCase):
         ret.json.return_value = {'access_token': 'asdf',
                                  'expires_in': 7200}
         gitlab.GitlabIntegration.request2api.return_value = ret
-        self.integration.get_user_id = AsyncMagicMock()
+        self.integration.get_user_id = AsyncMock()
         r = await self.integration.request_access_token()
         self.assertEqual(r['access_token'], 'asdf')
         self.assertIn('expires', r)
 
     @patch.object(gitlab.GitlabIntegration, 'request2api',
-                  AsyncMagicMock(spec=gitlab.GitlabIntegration.request2api))
+                  AsyncMock(spec=gitlab.GitlabIntegration.request2api))
     @async_test
     async def test_request_user_id(self):
         ret = Mock()

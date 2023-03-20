@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,13 +17,13 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 from toxicbuild.integrations.gitlab import GitlabIntegration
 from toxicbuild.master.users import User
 from toxicbuild.output.notifications import gitlab
 
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class GitlabCommitStatusNotificationTest(TestCase):
@@ -50,15 +50,15 @@ class GitlabCommitStatusNotificationTest(TestCase):
     async def test_run(self):
         info = {'status': 'fail', 'id': 'some-id',
                 'repository': {'id': 'some-repo-id'}}
-        self.notif._send_message = AsyncMagicMock(
+        self.notif._send_message = AsyncMock(
             spec=self.notif._send_message)
 
         await self.notif.run(info)
         self.assertTrue(self.notif._send_message.called)
 
-    @patch.object(GitlabIntegration, 'get_headers', AsyncMagicMock(
+    @patch.object(GitlabIntegration, 'get_headers', AsyncMock(
         spec=GitlabIntegration.get_headers))
-    @patch.object(gitlab.requests, 'post', AsyncMagicMock(
+    @patch.object(gitlab.requests, 'post', AsyncMock(
         spec=gitlab.requests.post))
     @async_test
     async def test_send_message(self):

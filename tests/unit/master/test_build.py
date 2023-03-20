@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -21,9 +21,10 @@ import asyncio
 from collections import defaultdict, deque
 import datetime
 from unittest import TestCase, mock
+from unittest.mock import AsyncMock
 from toxicbuild.core.utils import now
 from toxicbuild.master import build, repository, slave, users
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class BuildStepTest(TestCase):
@@ -69,7 +70,7 @@ class BuildStepTest(TestCase):
         bsd = build.json.loads(bs.to_json())
         self.assertIn('finished', bsd.keys())
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get(self):
@@ -79,7 +80,7 @@ class BuildStepTest(TestCase):
 
         self.assertEqual(step.uuid, step_uuid)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_str_uuid(self):
@@ -89,7 +90,7 @@ class BuildStepTest(TestCase):
 
         self.assertEqual(step.uuid, step_uuid)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_does_not_exist(self):
@@ -143,7 +144,7 @@ class BuildTest(TestCase):
         await repository.Repository.drop_collection()
         await users.User.drop_collection()
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_to_json(self):
@@ -156,7 +157,7 @@ class BuildTest(TestCase):
         self.assertIn('finished', bd['steps'][0].keys())
         self.assertTrue(bd['builder']['id'])
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_to_dict(self):
@@ -174,7 +175,7 @@ class BuildTest(TestCase):
         self.assertTrue(bd['status'])
         self.assertTrue(bd['output'])
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_to_dict_external(self):
@@ -196,7 +197,7 @@ class BuildTest(TestCase):
         self.assertEqual(bd['total_time'], '0:00:01')
         self.assertTrue(bd.get('external'))
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_to_dict_builder_name(self):
@@ -206,7 +207,7 @@ class BuildTest(TestCase):
         d = build.to_dict()
         self.assertTrue(d['builder']['name'])
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_to_dict_no_builder_name(self):
@@ -216,7 +217,7 @@ class BuildTest(TestCase):
         d = build_inst.to_dict()
         self.assertIsNone(d['builder'].get('name'))
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_update(self):
@@ -228,7 +229,7 @@ class BuildTest(TestCase):
         buildset = await build.BuildSet.objects.get(id=self.buildset.id)
         self.assertEqual(buildset.builds[0].status, 'fail')
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_update_without_save(self):
@@ -241,7 +242,7 @@ class BuildTest(TestCase):
         with self.assertRaises(build.DBError):
             await b.update()
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_buildset(self):
@@ -250,7 +251,7 @@ class BuildTest(TestCase):
         buildset = await b.get_buildset()
         self.assertEqual(buildset, self.buildset)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_output(self):
@@ -259,7 +260,7 @@ class BuildTest(TestCase):
         expected = 'some command\nsome output\n\n'
         self.assertEqual(expected, build.output)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get(self):
@@ -274,7 +275,7 @@ class BuildTest(TestCase):
         with self.assertRaises(build.Build.DoesNotExist):
             await build.Build.get(build.uuid4())
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
     @async_test
     async def test_notify(self):
@@ -283,7 +284,7 @@ class BuildTest(TestCase):
         await build_inst.notify('build-added')
         self.assertTrue(build.notifications.publish.called)
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
     @async_test
     async def test_cancel(self):
@@ -297,7 +298,7 @@ class BuildTest(TestCase):
         await slave.reload()
         self.assertEqual(slave.queue_count, 0)
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
     @async_test
     async def test_cancel_no_slave(self):
@@ -308,9 +309,9 @@ class BuildTest(TestCase):
         await build_inst.cancel()
         self.assertEqual(build_inst.status, 'cancelled')
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_cancel_impossible(self):
@@ -320,9 +321,9 @@ class BuildTest(TestCase):
         with self.assertRaises(build.ImpossibleCancellation):
             await build_inst.cancel()
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_set_slave(self):
@@ -332,9 +333,9 @@ class BuildTest(TestCase):
         await self.slave.reload()
         self.assertTrue(self.slave.queue_count)
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_is_ready2run_no_trigger(self):
@@ -344,9 +345,9 @@ class BuildTest(TestCase):
 
         self.assertTrue(r)
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_is_ready2run_not_pending(self):
@@ -358,9 +359,9 @@ class BuildTest(TestCase):
 
         self.assertFalse(r)
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_is_ready2run_false(self):
@@ -391,9 +392,9 @@ class BuildTest(TestCase):
 
         self.assertFalse(r)
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_is_ready2run_none(self):
@@ -424,9 +425,9 @@ class BuildTest(TestCase):
 
         self.assertIsNone(r)
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_is_ready2run_true(self):
@@ -457,7 +458,7 @@ class BuildTest(TestCase):
 
         self.assertTrue(r)
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
     @mock.patch.object(build.build_added, 'send', mock.MagicMock(
         spec=build.buildset_added.send))
@@ -511,7 +512,7 @@ class BuildSetTest(TestCase):
         await repository.Repository.drop_collection()
         await users.User.drop_collection()
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock())
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock())
     @async_test
     async def test_notify(self):
         await self._create_test_data()
@@ -534,7 +535,7 @@ class BuildSetTest(TestCase):
         n = await build.BuildSet._get_next_number(self.repo)
         self.assertEqual(n, 3)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_create(self):
@@ -544,7 +545,7 @@ class BuildSetTest(TestCase):
         self.assertTrue(buildset.id)
         self.assertTrue(buildset.author)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_to_dict(self):
@@ -554,7 +555,7 @@ class BuildSetTest(TestCase):
         self.assertTrue(objdict['commit_date'])
         self.assertIn('commit_body', objdict)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_to_dict_no_builds(self):
@@ -563,7 +564,7 @@ class BuildSetTest(TestCase):
         self.assertEqual(len(objdict['builds']), 0)
         self.assertTrue(objdict['commit_date'])
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_to_dict_total_time(self):
@@ -572,7 +573,7 @@ class BuildSetTest(TestCase):
         objdict = self.buildset.to_dict()
         self.assertEqual(objdict['total_time'], '0:00:01')
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_to_json(self):
@@ -581,13 +582,13 @@ class BuildSetTest(TestCase):
         objdict = build.json.loads(self.buildset.to_json())
         self.assertTrue(objdict['id'])
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_running(self):
         buildset = build.BuildSet()
-        buildset.reload = AsyncMagicMock()
-        buildset.save = AsyncMagicMock(spec=buildset.save)
+        buildset.reload = mock.AsyncMock()
+        buildset.save = mock.AsyncMock(spec=buildset.save)
         statuses = ['running', 'exception', 'fail',
                     'warning', 'success', 'pending']
         for i in range(5):
@@ -598,13 +599,13 @@ class BuildSetTest(TestCase):
         status = buildset.status
         self.assertEqual(status, 'running')
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_exception(self):
         buildset = build.BuildSet()
-        buildset.reload = AsyncMagicMock()
-        buildset.save = AsyncMagicMock(spec=buildset.save)
+        buildset.reload = mock.AsyncMock()
+        buildset.save = mock.AsyncMock(spec=buildset.save)
         statuses = ['running', 'exception', 'fail',
                     'warning', 'success', 'pending']
 
@@ -617,13 +618,13 @@ class BuildSetTest(TestCase):
         status = buildset.status
         self.assertEqual(status, 'exception')
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_fail(self):
         buildset = build.BuildSet()
-        buildset.save = AsyncMagicMock(spec=buildset.save)
-        buildset.reload = AsyncMagicMock()
+        buildset.save = mock.AsyncMock(spec=buildset.save)
+        buildset.reload = mock.AsyncMock()
 
         statuses = ['running', 'exception', 'fail',
                     'warning', 'success', 'pending']
@@ -639,8 +640,8 @@ class BuildSetTest(TestCase):
     @async_test
     async def test_get_status_no_builds(self):
         buildset = build.BuildSet()
-        buildset.save = AsyncMagicMock(spec=buildset.save)
-        buildset.reload = AsyncMagicMock()
+        buildset.save = mock.AsyncMock(spec=buildset.save)
+        buildset.reload = mock.AsyncMock()
         await buildset.update_status()
         status = buildset.status
         self.assertEqual(status, 'no builds')
@@ -669,7 +670,7 @@ class BuildSetTest(TestCase):
         self.assertTrue(build_inst._data.get('builder').name)
         self.assertTrue(buildset.commit_body)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_builds_for_branch(self):
@@ -681,7 +682,7 @@ class BuildSetTest(TestCase):
         builds = await self.buildset.get_builds_for(branch='other')
         self.assertEqual(len(builds), 1)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_builds_for_builder(self):
@@ -698,7 +699,7 @@ class BuildSetTest(TestCase):
         builds = await self.buildset.get_builds_for(builder=self.builder)
         self.assertEqual(len(builds), 2)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_builds_for_builder_and_branch(self):
@@ -762,13 +763,13 @@ class BuildExecuterTest(TestCase):
 
     @mock.patch.object(repository.Repository, 'add_running_build', mock.Mock())
     @mock.patch.object(slave.Slave, 'build',
-                       AsyncMagicMock(spec=slave.Slave.build))
+                       mock.AsyncMock(spec=slave.Slave.build))
     @mock.patch.object(repository.Repository, 'remove_running_build',
                        mock.Mock())
     @async_test
     async def test_run_build(self):
         build = self.executer.builds[0]
-        self.executer._execute_builds = AsyncMagicMock()
+        self.executer._execute_builds = mock.AsyncMock()
         await self.executer._run_build(build)
 
         self.assertTrue(
@@ -778,14 +779,14 @@ class BuildExecuterTest(TestCase):
         self.assertEqual(len(self.executer._queue), 1)
         self.assertTrue(self.executer._execute_builds.called)
 
-    @mock.patch.object(build.Build, 'is_ready2run', AsyncMagicMock(
+    @mock.patch.object(build.Build, 'is_ready2run', mock.AsyncMock(
         return_value=False))
     @mock.patch.object(build.BuildExecuter, '_run_build',
-                       AsyncMagicMock(spec=build.BuildExecuter._run_build))
+                       mock.AsyncMock(spec=build.BuildExecuter._run_build))
     @mock.patch.object(build.Build, 'cancel',
-                       AsyncMagicMock(spec=build.Build.cancel))
+                       mock.AsyncMock(spec=build.Build.cancel))
     @mock.patch.object(build.BuildExecuter, '_handle_queue_changes',
-                       AsyncMagicMock(
+                       mock.AsyncMock(
                            spec=build.BuildExecuter._handle_queue_changes))
     @async_test
     async def test_execute_builds_not_ready(self):
@@ -794,14 +795,14 @@ class BuildExecuterTest(TestCase):
         self.assertFalse(self.executer._run_build.called)
         self.assertEqual(len(self.executer._queue), 2)
 
-    @mock.patch.object(build.Build, 'is_ready2run', AsyncMagicMock(
+    @mock.patch.object(build.Build, 'is_ready2run', mock.AsyncMock(
         return_value=True))
     @mock.patch.object(build.BuildExecuter, '_run_build',
-                       AsyncMagicMock(spec=build.BuildExecuter._run_build))
+                       mock.AsyncMock(spec=build.BuildExecuter._run_build))
     @mock.patch.object(build.Build, 'cancel',
-                       AsyncMagicMock(spec=build.Build.cancel))
+                       mock.AsyncMock(spec=build.Build.cancel))
     @mock.patch.object(build.BuildExecuter, '_handle_queue_changes',
-                       AsyncMagicMock(
+                       mock.AsyncMock(
                            spec=build.BuildExecuter._handle_queue_changes))
     @async_test
     async def test_execute_builds_repo_paralell_builds_limit(self):
@@ -812,14 +813,14 @@ class BuildExecuterTest(TestCase):
         self.assertFalse(self.executer._run_build.called)
         self.assertEqual(len(self.executer._queue), 2)
 
-    @mock.patch.object(build.Build, 'is_ready2run', AsyncMagicMock(
+    @mock.patch.object(build.Build, 'is_ready2run', mock.AsyncMock(
         return_value=None))
     @mock.patch.object(build.BuildExecuter, '_run_build',
-                       AsyncMagicMock(spec=build.BuildExecuter._run_build))
+                       mock.AsyncMock(spec=build.BuildExecuter._run_build))
     @mock.patch.object(build.Build, 'cancel',
-                       AsyncMagicMock(spec=build.Build.cancel))
+                       mock.AsyncMock(spec=build.Build.cancel))
     @mock.patch.object(build.BuildExecuter, '_handle_queue_changes',
-                       AsyncMagicMock(
+                       mock.AsyncMock(
                            spec=build.BuildExecuter._handle_queue_changes))
     @async_test
     async def test_execute_builds_cancel_build(self):
@@ -828,14 +829,14 @@ class BuildExecuterTest(TestCase):
         self.assertFalse(self.executer._run_build.called)
         self.assertEqual(len(self.executer._queue), 0)
 
-    @mock.patch.object(build.Build, 'is_ready2run', AsyncMagicMock(
+    @mock.patch.object(build.Build, 'is_ready2run', mock.AsyncMock(
         return_value=True))
     @mock.patch.object(build.BuildExecuter, '_run_build',
-                       AsyncMagicMock(spec=build.BuildExecuter._run_build))
+                       mock.AsyncMock(spec=build.BuildExecuter._run_build))
     @mock.patch.object(build.Build, 'cancel',
-                       AsyncMagicMock(spec=build.Build.cancel))
+                       mock.AsyncMock(spec=build.Build.cancel))
     @mock.patch.object(build.BuildExecuter, '_handle_queue_changes',
-                       AsyncMagicMock(
+                       mock.AsyncMock(
                            spec=build.BuildExecuter._handle_queue_changes))
     @async_test
     async def test_execute_builds_run(self):
@@ -843,10 +844,10 @@ class BuildExecuterTest(TestCase):
 
         self.assertTrue(self.executer._run_build.called)
 
-    @mock.patch.object(build.asyncio, 'sleep', AsyncMagicMock())
+    @mock.patch.object(build.asyncio, 'sleep', mock.AsyncMock())
     @mock.patch.object(
         build.BuildExecuter, '_execute_builds',
-        AsyncMagicMock(spec=build.BuildExecuter._execute_builds))
+        mock.AsyncMock(spec=build.BuildExecuter._execute_builds))
     @async_test
     async def test_execute(self):
 
@@ -862,7 +863,7 @@ class BuildExecuterTest(TestCase):
         self.assertFalse(self.executer._queue)
 
     @mock.patch.object(build.Build, 'get_buildset',
-                       AsyncMagicMock(spec=build.Build.get_buildset))
+                       mock.AsyncMock(spec=build.Build.get_buildset))
     @async_test
     async def test_handle_queue_changes(self):
         buildset = mock.Mock()
@@ -877,7 +878,7 @@ class BuildExecuterTest(TestCase):
 
 @mock.patch.object(repository.Repository, 'schedule', mock.Mock())
 @mock.patch.object(repository.Repository, '_notify_repo_creation',
-                   AsyncMagicMock())
+                   mock.AsyncMock())
 class BuildManagerTest(TestCase):
 
     def setUp(self):
@@ -908,12 +909,12 @@ class BuildManagerTest(TestCase):
         self.assertTrue(hasattr(build.BuildManager, '_build_queues'))
         self.assertTrue(hasattr(build.BuildManager, '_is_building'))
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @async_test
     async def test_get_highest_build_number(self):
         await self._create_test_data()
@@ -933,12 +934,12 @@ class BuildManagerTest(TestCase):
         highest = await self.manager._get_highest_build_number()
         self.assertEqual(highest, 0)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @mock.patch.object(build.buildset_added, 'send', mock.Mock(
         spec=build.buildset_added.send))
     @async_test
@@ -950,7 +951,7 @@ class BuildManagerTest(TestCase):
         await b.save()
         self.manager.repository = self.repo
         self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
-        self.manager.get_builders = AsyncMagicMock(
+        self.manager.get_builders = mock.AsyncMock(
             return_value=([b, self.builder], 'master'))
         conf = {'builders': []}
         await self.manager.add_builds_for_buildset(self.buildset, conf)
@@ -961,21 +962,21 @@ class BuildManagerTest(TestCase):
         self.assertEqual(len(buildset.builds), 4)
         self.assertTrue(build.buildset_added.send.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @async_test
     async def test_add_builds(self):
         await self._create_test_data()
         self.manager.repository = self.repo
-        self.manager.repository.get_config_for = AsyncMagicMock(
+        self.manager.repository.get_config_for = mock.AsyncMock(
             spec=self.manager.repository.get_config_for)
-        self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
+        self.manager._execute_builds = mock.AsyncMock()
 
-        self.manager.get_builders = AsyncMagicMock(
+        self.manager.get_builders = mock.AsyncMock(
             spec=self.manager.get_builders,
             return_value=([self.builder], self.revision.branch))
 
@@ -983,12 +984,12 @@ class BuildManagerTest(TestCase):
 
         self.assertEqual(len(self.manager.build_queues), 1)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @async_test
     async def test_add_builds_revision_dont_create(self):
         await self._create_test_data()
@@ -1006,27 +1007,27 @@ class BuildManagerTest(TestCase):
 
     @async_test
     async def test_add_builds_no_last_bs(self):
-        self.manager.cancel_previous_pending = AsyncMagicMock(
+        self.manager.cancel_previous_pending = mock.AsyncMock(
             spec=self.manager.cancel_previous_pending)
         await self.manager.add_builds([])
         self.assertFalse(self.manager.cancel_previous_pending.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @async_test
     async def test_add_builds_not_only_latest(self):
         await self._create_test_data()
-        self.manager._execute_builds = AsyncMagicMock(
+        self.manager._execute_builds = mock.AsyncMock(
             spec=self.manager._execute_builds)
 
-        self.manager.get_builders = AsyncMagicMock(
+        self.manager.get_builders = mock.AsyncMock(
             spec=self.manager.get_builders,
             return_value=([self.builder], self.revision.branch))
-        self.manager.cancel_previous_pending = AsyncMagicMock(
+        self.manager.cancel_previous_pending = mock.AsyncMock(
             spec=self.manager.cancel_previous_pending)
         self.manager.repository = self.repo
 
@@ -1035,22 +1036,22 @@ class BuildManagerTest(TestCase):
         await self.manager.add_builds([self.revision])
         self.assertFalse(self.manager.cancel_previous_pending.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @async_test
     async def test_add_builds_no_revision_conf(self):
         await self._create_test_data()
-        self.manager._execute_builds = AsyncMagicMock(
+        self.manager._execute_builds = mock.AsyncMock(
             spec=self.manager._execute_builds)
 
-        self.manager.get_builders = AsyncMagicMock(
+        self.manager.get_builders = mock.AsyncMock(
             spec=self.manager.get_builders,
             return_value=([self.builder], self.revision.branch))
-        self.manager.cancel_previous_pending = AsyncMagicMock(
+        self.manager.cancel_previous_pending = mock.AsyncMock(
             spec=self.manager.cancel_previous_pending)
         self.manager.repository = self.repo
         self.manager.repository.get_config_for = mock.Mock()
@@ -1061,12 +1062,12 @@ class BuildManagerTest(TestCase):
         await self.manager.add_builds([self.revision])
         self.assertFalse(self.manager.repository.get_config_for.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @mock.patch.object(build, 'list_builders_from_config',
                        mock.Mock(return_value=[{'name': 'builder-0'},
                                                {'name': 'builder-1'}]))
@@ -1086,12 +1087,12 @@ class BuildManagerTest(TestCase):
 
         self.assertEqual(len(builders), 2)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @mock.patch.object(build, 'list_builders_from_config',
                        mock.Mock(side_effect=[[], [{'name': 'builder-0'},
                                                    {'name': 'builder-1'}]]))
@@ -1114,12 +1115,12 @@ class BuildManagerTest(TestCase):
         self.assertEqual(origin, 'master')
         self.assertEqual(len(builders), 2)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @mock.patch.object(build, 'list_builders_from_config',
                        mock.Mock(side_effect=AttributeError))
     @async_test
@@ -1136,12 +1137,12 @@ class BuildManagerTest(TestCase):
         self.assertFalse(builders)
         self.assertTrue(self.manager.log.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @mock.patch.object(build, 'list_builders_from_config',
                        mock.Mock(return_value=[{'name': 'builder-0'},
                                                {'name': 'builder-1'}]))
@@ -1162,12 +1163,12 @@ class BuildManagerTest(TestCase):
 
         self.assertEqual(len(builders), 1)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @mock.patch.object(build, 'list_builders_from_config',
                        mock.Mock(return_value=[{'name': 'builder-0'},
                                                {'name': 'builder-1'}]))
@@ -1188,12 +1189,12 @@ class BuildManagerTest(TestCase):
 
         self.assertEqual(len(builders), 1)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @async_test
     async def test_execute_build_no_slaves(self):
         await self._create_test_data()
@@ -1205,12 +1206,12 @@ class BuildManagerTest(TestCase):
 
         self.assertFalse(r)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @async_test
     async def test_execute_build_without_build(self):
         await self._create_test_data()
@@ -1222,21 +1223,21 @@ class BuildManagerTest(TestCase):
             [self.buildset])
         slave = mock.Mock()
         slave.name = self.slave.name
-        slave.stop_instance = AsyncMagicMock()
+        slave.stop_instance = mock.AsyncMock()
         self.manager.repository = self.repo
 
         await self.manager._execute_builds()
         self.assertFalse(self.manager._execute_in_parallel.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(build.BuildSet, 'reload', AsyncMagicMock())
+                       mock.AsyncMock())
+    @mock.patch.object(build.BuildSet, 'reload', mock.AsyncMock())
     @mock.patch.object(build.BuildExecuter, 'execute',
-                       AsyncMagicMock(spec=build.BuildExecuter.execute))
+                       mock.AsyncMock(spec=build.BuildExecuter.execute))
     @async_test
     async def test_execute_build(self):
         await self._create_test_data()
@@ -1248,12 +1249,12 @@ class BuildManagerTest(TestCase):
         self.assertTrue(build.BuildExecuter.execute.called)
         self.assertTrue(r)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @async_test
     async def test_set_started_for_buildset(self):
         await self._create_test_data()
@@ -1261,19 +1262,19 @@ class BuildManagerTest(TestCase):
         save_mock = mock.MagicMock()
         buildset.save = asyncio.coroutine(lambda *a, **kw: save_mock())
         buildset.started = None
-        buildset.notify = AsyncMagicMock()
-        self.manager.repository.set_latest_buildset = AsyncMagicMock()
+        buildset.notify = mock.AsyncMock()
+        self.manager.repository.set_latest_buildset = mock.AsyncMock()
         await self.manager._set_started_for_buildset(buildset)
         self.assertTrue(buildset.started)
         self.assertTrue(save_mock.called)
         self.assertTrue(self.manager.repository.set_latest_buildset.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @async_test
     async def test_set_started_for_buildset_already_started(self):
         await self._create_test_data()
@@ -1286,31 +1287,31 @@ class BuildManagerTest(TestCase):
         self.assertTrue(buildset.started is just_now)
         self.assertFalse(save_mock.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(build.BuildSet, 'reload', AsyncMagicMock())
+                       mock.AsyncMock())
+    @mock.patch.object(build.BuildSet, 'reload', mock.AsyncMock())
     @async_test
     async def test_set_finished_for_buildset(self):
         await self._create_test_data()
         self.buildset.started = now()
         await self.buildset.save()
-        self.manager.repository.set_latest_buildset = AsyncMagicMock()
+        self.manager.repository.set_latest_buildset = mock.AsyncMock()
         await self.manager._set_finished_for_buildset(self.buildset)
         bs = await type(self.buildset).objects.get(id=self.buildset.id)
         self.assertTrue(bs.finished)
         self.assertTrue(self.manager.repository.set_latest_buildset.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
-    @mock.patch.object(build.BuildSet.objects, 'get', AsyncMagicMock())
+                       mock.AsyncMock())
+    @mock.patch.object(build.BuildSet.objects, 'get', mock.AsyncMock())
     @async_test
     async def test_set_finished_for_buildset_already_finished(self):
         await self._create_test_data()
@@ -1319,19 +1320,19 @@ class BuildManagerTest(TestCase):
         self.buildset.finished = finished
         self.buildset.started = started
         await self.buildset.save()
-        self.manager.repository.set_latest_buildset = AsyncMagicMock()
+        self.manager.repository.set_latest_buildset = mock.AsyncMock()
         await self.manager._set_finished_for_buildset(self.buildset)
         self.assertTrue(self.buildset.finished is finished)
         self.assertFalse(self.manager.repository.set_latest_buildset.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @mock.patch.object(build, 'now', mock.Mock())
-    @mock.patch.object(build.BuildSet, 'reload', AsyncMagicMock())
+    @mock.patch.object(build.BuildSet, 'reload', mock.AsyncMock())
     @async_test
     async def test_set_finished_for_buildset_total_time(self):
         just_now = now()
@@ -1339,18 +1340,18 @@ class BuildManagerTest(TestCase):
         await self._create_test_data()
         self.buildset.started = build.localtime2utc(just_now)
         await self.buildset.save()
-        self.manager.repository.set_latest_buildset = AsyncMagicMock()
+        self.manager.repository.set_latest_buildset = mock.AsyncMock()
         await self.manager._set_finished_for_buildset(self.buildset)
         bs = await type(self.buildset).objects.get(id=self.buildset.id)
         self.assertEqual(bs.total_time, 10)
         self.assertTrue(self.manager.repository.set_latest_buildset.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @async_test
     async def test_start_pending(self):
         await self._create_test_data()
@@ -1368,9 +1369,9 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(build.BuildSet, 'notify', mock.MagicMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @mock.patch.object(build, 'ensure_future', mock.Mock)
     @async_test
     async def test_start_pending_with_queue(self):
@@ -1391,9 +1392,9 @@ class BuildManagerTest(TestCase):
     @mock.patch.object(build.BuildSet, 'notify', mock.MagicMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
-        repository.ui_notifications, 'publish', AsyncMagicMock())
+        repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
-                       AsyncMagicMock())
+                       mock.AsyncMock())
     @mock.patch.object(build, 'ensure_future', mock.Mock)
     @async_test
     async def test_start_pending_with_working_slave(self):
@@ -1410,9 +1411,9 @@ class BuildManagerTest(TestCase):
         await self.repo.build_manager.start_pending()
         self.assertFalse(build.ensure_future.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(build.Build, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.Build, 'notify', mock.AsyncMock(
         spec=build.Build.notify))
     @async_test
     async def test_cancel_build(self):
@@ -1422,9 +1423,9 @@ class BuildManagerTest(TestCase):
         bs = await type(self.buildset).objects.get(id=self.buildset.id)
         self.assertEqual(bs.builds[0].status, 'cancelled')
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(build.Build, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.Build, 'notify', mock.AsyncMock(
         spec=build.Build.notify))
     @async_test
     async def test_cancel_build_impossible(self):
@@ -1436,7 +1437,7 @@ class BuildManagerTest(TestCase):
         await self.repo.build_manager.cancel_build(build.uuid)
         self.assertTrue(self.repo.build_manager.log.called)
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
     @async_test
     async def test_notify(self):
@@ -1445,7 +1446,7 @@ class BuildManagerTest(TestCase):
         await build_inst.notify('build-added')
         self.assertTrue(build.notifications.publish.called)
 
-    @mock.patch.object(build.notifications, 'publish', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
     @async_test
     async def test_cancel_previous_pending(self):
@@ -1457,9 +1458,21 @@ class BuildManagerTest(TestCase):
         self.assertEqual(old_bs.builds[0].status, 'cancelled')
         self.assertEqual(old_bs.get_status(), 'running')
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
+        spec=build.notifications.publish))
+    @async_test
+    async def test_cancel_previous_pending_no_previous(self):
+        await self._create_test_data()
+        await build.BuildSet.objects.all().delete()
+        bs = await build.BuildSet.create(repository=self.repo,
+                                         revision=self.revision)
+        await self.repo.build_manager.cancel_previous_pending(bs)
+        c = await build.BuildSet.objects.count()
+        self.assertEqual(c, 1)
+
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(build.Build, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.Build, 'notify', mock.AsyncMock(
         spec=build.Build.notify))
     @async_test
     async def test_set_slave(self):
@@ -1468,9 +1481,9 @@ class BuildManagerTest(TestCase):
         s = await self.build.slave
         self.assertTrue(s.id)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
-    @mock.patch.object(build.Build, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.Build, 'notify', mock.AsyncMock(
         spec=build.Build.notify))
     @async_test
     async def test_handle_build_triggered_by(self):
@@ -1487,7 +1500,7 @@ class BuildManagerTest(TestCase):
         await self.owner.save()
         self.slave = slave.Slave(host='127.0.0.1', port=7777, name='slave',
                                  token='123', owner=self.owner)
-        self.slave.build = asyncio.coroutine(lambda x: None)
+        self.slave.build = AsyncMock(return_value=None)
         await self.slave.save()
 
         self.repo = await repository.Repository.create(
@@ -1538,7 +1551,7 @@ class BuilderTest(TestCase):
         await build.BuildSet.drop_collection()
         await repository.Slave.drop_collection()
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_create(self):
@@ -1552,7 +1565,7 @@ class BuilderTest(TestCase):
         builder = await build.Builder.create(repository=repo, name='b1')
         self.assertTrue(builder.id)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get(self):
@@ -1569,7 +1582,7 @@ class BuilderTest(TestCase):
 
         self.assertEqual(returned, builder)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(build.Builder, 'create', mock.MagicMock())
     @async_test
@@ -1581,7 +1594,7 @@ class BuilderTest(TestCase):
 
         self.assertTrue(create.called)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(build.Builder, 'create', mock.MagicMock())
     @async_test
@@ -1602,7 +1615,7 @@ class BuilderTest(TestCase):
 
         self.assertEqual(returned, builder)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_status_without_build(self):
@@ -1618,7 +1631,7 @@ class BuilderTest(TestCase):
 
         self.assertEqual(status, 'idle')
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_get_status(self):
@@ -1652,7 +1665,7 @@ class BuilderTest(TestCase):
 
         self.assertEqual(status, 'success')
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_to_dict(self):
@@ -1671,7 +1684,7 @@ class BuilderTest(TestCase):
         self.assertEqual(objdict['id'], str(builder.id))
         self.assertTrue(objdict['status'])
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_to_json(self):

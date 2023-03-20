@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 2016, 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015 2016, 2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -22,10 +22,10 @@ import datetime
 import os
 from unittest import mock, TestCase
 from toxicbuild.core import vcs, utils
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
-@mock.patch.object(vcs, 'exec_cmd', AsyncMagicMock())
+@mock.patch.object(vcs, 'exec_cmd', mock.AsyncMock())
 class VCSTest(TestCase):
 
     def setUp(self):
@@ -120,7 +120,7 @@ class VCSTest(TestCase):
         self.assertEqual(returned, expected)
 
 
-@mock.patch.object(vcs, 'exec_cmd', AsyncMagicMock())
+@mock.patch.object(vcs, 'exec_cmd', mock.AsyncMock())
 class GitTest(TestCase):
 
     def setUp(self):
@@ -136,7 +136,7 @@ class GitTest(TestCase):
     @async_test
     async def test_clone(self):
         url = 'git@somewhere.org/myproject.git'
-        self.vcs._set_remote_origin_config = AsyncMagicMock()
+        self.vcs._set_remote_origin_config = mock.AsyncMock()
         await self.vcs.clone(url)
 
         called_cmd = vcs.exec_cmd.call_args[0][0]
@@ -163,7 +163,7 @@ class GitTest(TestCase):
     @async_test
     async def test_add_remote(self):
         expected = 'git remote add new-origin http://someurl.net/bla.git'
-        self.vcs.exec_cmd = AsyncMagicMock(spec=self.vcs.exec_cmd)
+        self.vcs.exec_cmd = mock.AsyncMock(spec=self.vcs.exec_cmd)
         await self.vcs.add_remote('http://someurl.net/bla.git', 'new-origin')
         called = self.vcs.exec_cmd.call_args[0][0]
         self.assertEqual(expected, called)
@@ -171,14 +171,14 @@ class GitTest(TestCase):
     @async_test
     async def test_rm_remote(self):
         expected = 'git remote rm new-origin'
-        self.vcs.exec_cmd = AsyncMagicMock(spec=self.vcs.exec_cmd)
+        self.vcs.exec_cmd = mock.AsyncMock(spec=self.vcs.exec_cmd)
         await self.vcs.rm_remote('new-origin')
         called = self.vcs.exec_cmd.call_args[0][0]
         self.assertEqual(expected, called)
 
-    @mock.patch.object(vcs.Git, 'get_remote', AsyncMagicMock(
+    @mock.patch.object(vcs.Git, 'get_remote', mock.AsyncMock(
         spec=vcs.Git.get_remote, return_value='git@bla.com/bla.git'))
-    @mock.patch.object(vcs.Git, 'set_remote', AsyncMagicMock(
+    @mock.patch.object(vcs.Git, 'set_remote', mock.AsyncMock(
         spec=vcs.Git.set_remote))
     @async_test
     async def test_try_set_remote_same_url(self):
@@ -186,9 +186,9 @@ class GitTest(TestCase):
         await self.vcs.try_set_remote(url)
         self.assertFalse(self.vcs.set_remote.called)
 
-    @mock.patch.object(vcs.Git, 'get_remote', AsyncMagicMock(
+    @mock.patch.object(vcs.Git, 'get_remote', mock.AsyncMock(
         spec=vcs.Git.get_remote, return_value='git@bla.com/bla.git'))
-    @mock.patch.object(vcs.Git, 'set_remote', AsyncMagicMock(
+    @mock.patch.object(vcs.Git, 'set_remote', mock.AsyncMock(
         spec=vcs.Git.set_remote))
     @async_test
     async def test_try_set_remote_other_url(self):
@@ -217,7 +217,7 @@ class GitTest(TestCase):
 
         vcs.exec_cmd = e
 
-        self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
+        self.vcs.checkout = mock.AsyncMock(spec=self.vcs.checkout)
         cmd = await self.vcs.create_local_branch('new-branch', 'master')
         self.assertEqual(cmd, expected_cmd)
         self.assertTrue(self.vcs.checkout.called)
@@ -231,7 +231,7 @@ class GitTest(TestCase):
 
         vcs.exec_cmd = e
 
-        self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
+        self.vcs.checkout = mock.AsyncMock(spec=self.vcs.checkout)
         cmd = await self.vcs.delete_local_branch('new-branch')
         self.assertEqual(cmd, expected_cmd)
         self.assertTrue(self.vcs.checkout.called)
@@ -260,13 +260,13 @@ class GitTest(TestCase):
 
     @async_test
     async def test_branch_exists(self):
-        self.vcs.exec_cmd = AsyncMagicMock(spec=self.vcs.exec_cmd)
+        self.vcs.exec_cmd = mock.AsyncMock(spec=self.vcs.exec_cmd)
         r = await self.vcs.branch_exists('some-branch')
         self.assertTrue(r)
 
     @async_test
     async def test_branch_exists_doenst_exist(self):
-        self.vcs.exec_cmd = AsyncMagicMock(spec=self.vcs.exec_cmd,
+        self.vcs.exec_cmd = mock.AsyncMock(spec=self.vcs.exec_cmd,
                                            side_effect=vcs.ExecCmdError)
         r = await self.vcs.branch_exists('some-branch')
         self.assertFalse(r)
@@ -277,12 +277,12 @@ class GitTest(TestCase):
         external_name = 'other-repo'
         external_branch = 'master'
         into = 'other-repo:master'
-        self.vcs.branch_exists = AsyncMagicMock(spec=self.vcs.branch_exists,
+        self.vcs.branch_exists = mock.AsyncMock(spec=self.vcs.branch_exists,
                                                 return_value=True)
-        self.vcs.add_remote = AsyncMagicMock(spec=self.vcs.add_remote)
-        self.vcs.rm_remote = AsyncMagicMock(spec=self.vcs.rm_remote)
-        self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
-        self.vcs.pull = AsyncMagicMock(spec=self.vcs.pull)
+        self.vcs.add_remote = mock.AsyncMock(spec=self.vcs.add_remote)
+        self.vcs.rm_remote = mock.AsyncMock(spec=self.vcs.rm_remote)
+        self.vcs.checkout = mock.AsyncMock(spec=self.vcs.checkout)
+        self.vcs.pull = mock.AsyncMock(spec=self.vcs.pull)
         await self.vcs.import_external_branch(external_url, external_name,
                                               external_branch, into)
         remote_added = self.vcs.add_remote.call_args[0]
@@ -304,13 +304,13 @@ class GitTest(TestCase):
         external_name = 'other-repo'
         external_branch = 'master'
         into = 'other-repo:master'
-        self.vcs.branch_exists = AsyncMagicMock(spec=self.vcs.branch_exists,
+        self.vcs.branch_exists = mock.AsyncMock(spec=self.vcs.branch_exists,
                                                 return_value=False)
-        self.vcs.create_local_branch = AsyncMagicMock(
+        self.vcs.create_local_branch = mock.AsyncMock(
             spec=self.vcs.create_local_branch)
-        self.vcs.add_remote = AsyncMagicMock(spec=self.vcs.add_remote)
-        self.vcs.checkout = AsyncMagicMock(spec=self.vcs.checkout)
-        self.vcs.pull = AsyncMagicMock(spec=self.vcs.pull)
+        self.vcs.add_remote = mock.AsyncMock(spec=self.vcs.add_remote)
+        self.vcs.checkout = mock.AsyncMock(spec=self.vcs.checkout)
+        self.vcs.pull = mock.AsyncMock(spec=self.vcs.pull)
         await self.vcs.import_external_branch(external_url, external_name,
                                               external_branch, into)
 
@@ -371,7 +371,7 @@ class GitTest(TestCase):
         expected_branches = set(['dev', 'master'])
         vcs.exec_cmd = e
         self.vcs.fetch = fetch
-        self.vcs._update_remote_prune = AsyncMagicMock()
+        self.vcs._update_remote_prune = mock.AsyncMock()
         branches = await self.vcs.get_remote_branches()
         called_cmd = emock.call_args[0][0]
         self.assertEqual(expected, called_cmd)
@@ -521,7 +521,7 @@ class GitTest(TestCase):
         async def remote_branches(*a, **kw):
             return ['origin/dev', 'origin/master']
 
-        branch_revisions = AsyncMagicMock(
+        branch_revisions = mock.AsyncMock(
             side_effect=[[{'123adsf': now}, {'asdf123': now}], []]
         )
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,11 +17,11 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 
 from toxicbuild.master import aws
 
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class EC2InstanceTest(TestCase):
@@ -45,7 +45,7 @@ class EC2InstanceTest(TestCase):
 
     @async_test
     async def test_get_description(self):
-        client = AsyncMagicMock()
+        client = AsyncMock()
         client.describe_instances.return_value = {
             'Reservations': [{'Instances': [{'some': 'value'}]}]}
 
@@ -58,7 +58,7 @@ class EC2InstanceTest(TestCase):
 
     @async_test
     async def test_get_status(self):
-        self.instance.get_description = AsyncMagicMock(
+        self.instance.get_description = AsyncMock(
             return_value={'State': {'Name': 'running'}})
 
         status = await self.instance.get_status()
@@ -67,7 +67,7 @@ class EC2InstanceTest(TestCase):
 
     @async_test
     async def test_is_running(self):
-        self.instance.get_status = AsyncMagicMock(return_value='running')
+        self.instance.get_status = AsyncMock(return_value='running')
 
         r = await self.instance.is_running()
 
@@ -75,7 +75,7 @@ class EC2InstanceTest(TestCase):
 
     @async_test
     async def test_is_stopped(self):
-        self.instance.get_status = AsyncMagicMock(return_value='running')
+        self.instance.get_status = AsyncMock(return_value='running')
 
         r = await self.instance.is_stopped()
 
@@ -83,24 +83,24 @@ class EC2InstanceTest(TestCase):
 
     @async_test
     async def test_wait_for_status_ok(self):
-        self.instance.get_status = AsyncMagicMock(return_value='running')
+        self.instance.get_status = AsyncMock(return_value='running')
         r = await self.instance._wait_for_status('running')
 
         self.assertTrue(r)
 
-    @patch.object(aws.asyncio, 'sleep', AsyncMagicMock())
+    @patch.object(aws.asyncio, 'sleep', AsyncMock())
     @async_test
     async def test_wait_for_status_timeout(self):
-        self.instance.get_status = AsyncMagicMock(return_value='running')
+        self.instance.get_status = AsyncMock(return_value='running')
         with self.assertRaises(TimeoutError):
             await self.instance._wait_for_status('stopped')
 
-    @patch.object(aws.Lock, 'acquire_write', AsyncMagicMock(
-        spec=aws.Lock.acquire_write, return_value=AsyncMagicMock()))
+    @patch.object(aws.Lock, 'acquire_write', AsyncMock(
+        spec=aws.Lock.acquire_write, return_value=AsyncMock()))
     @async_test
     async def test_start(self):
-        self.instance._run_method = AsyncMagicMock()
-        self.instance._wait_for_status = AsyncMagicMock()
+        self.instance._run_method = AsyncMock()
+        self.instance._wait_for_status = AsyncMock()
         await self.instance.start()
 
         expected_call_args = (
@@ -113,12 +113,12 @@ class EC2InstanceTest(TestCase):
         self.assertEqual(self.instance._wait_for_status.call_args[0][0],
                          'running')
 
-    @patch.object(aws.Lock, 'acquire_write', AsyncMagicMock(
-        spec=aws.Lock.acquire_write, return_value=AsyncMagicMock()))
+    @patch.object(aws.Lock, 'acquire_write', AsyncMock(
+        spec=aws.Lock.acquire_write, return_value=AsyncMock()))
     @async_test
     async def test_stop(self):
-        self.instance._run_method = AsyncMagicMock()
-        self.instance._wait_for_status = AsyncMagicMock()
+        self.instance._run_method = AsyncMock()
+        self.instance._wait_for_status = AsyncMock()
         await self.instance.stop()
 
         expected_call_args = (
@@ -133,7 +133,7 @@ class EC2InstanceTest(TestCase):
 
     @async_test
     async def test_get_ip(self):
-        self.instance.get_description = AsyncMagicMock(
+        self.instance.get_description = AsyncMock(
             return_value={'PublicIpAddress': '192.168.0.1'})
 
         ip = await self.instance.get_ip()
