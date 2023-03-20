@@ -126,7 +126,7 @@ class LoggedTemplateHandlerTest(TestCase):
 
     @patch.object(web.CookieAuthHandlerMixin, 'async_prepare',
                   AsyncMock(spec=web.CookieAuthHandlerMixin.async_prepare,
-                                 side_effect=web.HTTPError))
+                            side_effect=web.HTTPError))
     @async_test
     async def test_async_preprare_not_logged(self):
         self.handler.redirect = MagicMock()
@@ -322,7 +322,7 @@ class UserPublicRestHandler(TestCase):
 
     @patch.object(web.UserInterface, 'exists',
                   AsyncMock(return_value=True,
-                                 spec=web.UserInterface.exists))
+                            spec=web.UserInterface.exists))
     @async_test
     async def test_check_exists(self):
         r = await self.handler.check_exists()

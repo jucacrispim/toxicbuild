@@ -238,7 +238,7 @@ class ToxicConsoleTest(TestCase):
 
     @patch.object(screens.RepoListCommand, 'execute',
                   AsyncMock(spec=screens.RepoListCommand.execute,
-                                 return_value=[]))
+                            return_value=[]))
     @async_test
     async def test_show_repo_list(self):
         await self.console.show_repo_list()

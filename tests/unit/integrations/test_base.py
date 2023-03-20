@@ -497,7 +497,7 @@ class BaseIntegrationTest(TestCase):
 
     @patch.object(base.BaseIntegration, 'request_user_id',
                   AsyncMock(spec=base.BaseIntegration.request_user_id,
-                                 return_value='a-user-id'))
+                            return_value='a-user-id'))
     @async_test
     async def test_get_user_id(self):
         await self.integration.get_user_id()

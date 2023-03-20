@@ -215,14 +215,16 @@ class RepositoryTest(TestCase, RepoTestData):
     async def test_update_code(self):
         repository.get_poller_client.return_value.__aenter__.return_value = \
             AsyncMock(poll_repo=AsyncMock(
-                return_value={'revisions': [
-                    {'commit': 'adsf',
-                     'branch': 'master',
-                     'commit_date': '4 04 25 23:49:19 2019 +0000',
-                     'author': 'me',
-                     'title': 'zhe-commit'}],
-                              'clone_status': 'success',
-                              'with_clone': False}))
+                return_value={
+                    'revisions': [
+                        {
+                            'commit': 'adsf',
+                            'branch': 'master',
+                            'commit_date': '4 04 25 23:49:19 2019 +0000',
+                            'author': 'me',
+                            'title': 'zhe-commit'}],
+                    'clone_status': 'success',
+                    'with_clone': False}))
         await self.repo.update_code()
         self.assertTrue(repository.BuildManager.add_builds.called)
         self.assertFalse(repository.ui_notifications.publish.called)
@@ -253,14 +255,16 @@ class RepositoryTest(TestCase, RepoTestData):
     async def test_update_code_with_clone(self):
         repository.get_poller_client.return_value.__aenter__.return_value = \
             AsyncMock(poll_repo=AsyncMock(
-                return_value={'revisions': [
-                    {'commit': 'adsf',
-                     'branch': 'master',
-                     'commit_date': '4 04 25 23:49:19 2019 +0000',
-                     'author': 'me',
-                     'title': 'zhe-commit'}],
-                              'clone_status': 'clone-exception',
-                              'with_clone': True}))
+                return_value={
+                    'revisions': [
+                        {
+                            'commit': 'adsf',
+                            'branch': 'master',
+                            'commit_date': '4 04 25 23:49:19 2019 +0000',
+                            'author': 'me',
+                            'title': 'zhe-commit'}],
+                    'clone_status': 'clone-exception',
+                    'with_clone': True}))
         await self.repo.update_code()
         await self.repo.reload()
         self.assertEqual(self.repo.clone_status, 'clone-exception')
