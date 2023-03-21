@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,14 +18,14 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 from toxicbuild.master import utils
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class SendEmailTest(TestCase):
 
-    @patch.object(utils.requests, 'post', AsyncMagicMock(
+    @patch.object(utils.requests, 'post', AsyncMock(
         spec=utils.requests.post))
     @async_test
     async def test_send_email(self):

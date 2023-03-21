@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,11 +19,11 @@
 from bson.objectid import ObjectId
 
 from unittest import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 from toxicbuild.output.notifications import email
 
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class EmailNotificationTest(TestCase):
@@ -37,11 +37,11 @@ class EmailNotificationTest(TestCase):
         self.notification.sender = {'id': 'some-id', 'name': 'some-name'}
         await self.notification.save()
 
-    @patch.object(email.MailSender, 'send', AsyncMagicMock(
+    @patch.object(email.MailSender, 'send', AsyncMock(
         spec=email.MailSender.send))
-    @patch.object(email.MailSender, 'connect', AsyncMagicMock(
+    @patch.object(email.MailSender, 'connect', AsyncMock(
         spec=email.MailSender.connect))
-    @patch.object(email.MailSender, 'disconnect', AsyncMagicMock(
+    @patch.object(email.MailSender, 'disconnect', AsyncMock(
         spec=email.MailSender.disconnect))
     @patch.object(email, 'settings', MagicMock())
     @async_test
@@ -51,11 +51,11 @@ class EmailNotificationTest(TestCase):
         await self.notification.send_started_message(buildset_info)
         self.assertTrue(email.MailSender.send.called)
 
-    @patch.object(email.MailSender, 'send', AsyncMagicMock(
+    @patch.object(email.MailSender, 'send', AsyncMock(
         spec=email.MailSender.send))
-    @patch.object(email.MailSender, 'connect', AsyncMagicMock(
+    @patch.object(email.MailSender, 'connect', AsyncMock(
         spec=email.MailSender.connect))
-    @patch.object(email.MailSender, 'disconnect', AsyncMagicMock(
+    @patch.object(email.MailSender, 'disconnect', AsyncMock(
         spec=email.MailSender.disconnect))
     @patch.object(email, 'settings', MagicMock())
     @async_test

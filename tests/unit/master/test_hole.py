@@ -675,7 +675,7 @@ class HoleHandlerTest(TestCase):
     @patch.object(repository.scheduler_action, 'publish', AsyncMock())
     @patch.object(hole.Repository, 'add_builds_for_buildset', MagicMock(
         spec=repository.Repository.add_builds_for_buildset))
-    @patch.object(hole.Repository, 'get_config_for', AsyncMock(
+    @patch.object(hole.Repository, 'get_config_for', Mock(
         spec=hole.Repository.get_config_for))
     @async_test
     async def test_repo_start_build_with_builder_name(self):
@@ -700,7 +700,7 @@ class HoleHandlerTest(TestCase):
     @patch.object(repository.RepositoryRevision, 'objects', MagicMock())
     @patch.object(hole.Repository, 'add_builds_for_buildset', MagicMock(
         spec=repository.Repository.add_builds_for_buildset))
-    @patch.object(hole.Repository, 'get_config_for', AsyncMock(
+    @patch.object(hole.Repository, 'get_config_for', Mock(
         spec=hole.Repository.get_config_for))
     @async_test
     async def test_repo_start_build_with_named_tree(self):
@@ -714,13 +714,9 @@ class HoleHandlerTest(TestCase):
         add_builds_for_buildset = AsyncMock()
         hole.Repository.add_builds_for_buildset = add_builds_for_buildset
 
-        get_mock = MagicMock()
+        get_mock = AsyncMock(return_value=self.revision)
 
-        async def first(*a, **kw):
-            get_mock()
-            return self.revision
-
-        repository.RepositoryRevision.objects.return_value.first = first
+        repository.RepositoryRevision.objects.return_value.first = get_mock
 
         protocol = MagicMock()
         protocol.user = self.owner
@@ -1775,18 +1771,18 @@ class HoleServerTest(TestCase):
         self.assertEqual(hole.UIHole, type(prot))
 
     @patch.object(hole.asyncio, 'get_event_loop', Mock())
-    @patch.object(hole, 'ensure_future', Mock())
     def test_serve(self):
         self.server.serve()
-
-        self.assertTrue(hole.ensure_future.called)
+        loop = MagicMock(create_server=AsyncMock())
+        self.server.loop = loop
+        self.server.serve()
+        self.assertTrue(loop.create_server.called)
 
     @patch.object(hole.ssl, 'create_default_context', MagicMock(
         spec=hole.ssl.create_default_context))
     @patch.object(hole.asyncio, 'get_event_loop', Mock())
-    @patch.object(hole, 'ensure_future', Mock())
     def test_serve_ssl(self):
-        loop = MagicMock()
+        loop = MagicMock(create_server=AsyncMock())
         self.server.use_ssl = True
         self.server.loop = loop
         self.server.serve()
@@ -1794,7 +1790,7 @@ class HoleServerTest(TestCase):
         ssl_context = hole.ssl.create_default_context.return_value
         self.assertTrue(ssl_context.load_cert_chain.called)
         self.assertIn('ssl', kw.keys())
-        self.assertTrue(hole.ensure_future.called)
+        self.assertTrue(loop.create_server.called)
 
     @patch.object(hole.asyncio, 'sleep',
                   AsyncMock(spec=hole.asyncio.sleep))

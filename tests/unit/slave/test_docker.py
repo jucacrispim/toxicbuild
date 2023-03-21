@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017, 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2017, 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,9 +18,9 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, AsyncMock
 from toxicbuild.slave import docker
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 DOCKER_ENV = """
@@ -76,23 +76,23 @@ class DockerContainerBuilderManagerTest(TestCase):
 
     @async_test
     async def test_aenter(self):
-        self.container.wait_service = AsyncMagicMock()
-        self.container.start_container = AsyncMagicMock()
-        self.container.kill_container = AsyncMagicMock()
-        self.container.rm_container = AsyncMagicMock()
-        self.container.rm_from_container = AsyncMagicMock()
-        self.container.copy2container = AsyncMagicMock()
+        self.container.wait_service = AsyncMock()
+        self.container.start_container = AsyncMock()
+        self.container.kill_container = AsyncMock()
+        self.container.rm_container = AsyncMock()
+        self.container.rm_from_container = AsyncMock()
+        self.container.copy2container = AsyncMock()
         async with self.container:
             self.assertTrue(self.container.start_container.called)
 
     @async_test
     async def test_aexit(self):
-        self.container.wait_service = AsyncMagicMock()
-        self.container.start_container = AsyncMagicMock()
-        self.container.kill_container = AsyncMagicMock()
-        self.container.rm_container = AsyncMagicMock()
-        self.container.rm_from_container = AsyncMagicMock()
-        self.container.copy2container = AsyncMagicMock()
+        self.container.wait_service = AsyncMock()
+        self.container.start_container = AsyncMock()
+        self.container.kill_container = AsyncMock()
+        self.container.rm_container = AsyncMock()
+        self.container.rm_from_container = AsyncMock()
+        self.container.copy2container = AsyncMock()
         async with self.container:
             pass
         self.assertTrue(self.container.kill_container.called)
@@ -100,12 +100,12 @@ class DockerContainerBuilderManagerTest(TestCase):
 
     @async_test
     async def test_aexit_no_remove(self):
-        self.container.wait_service = AsyncMagicMock()
-        self.container.start_container = AsyncMagicMock()
-        self.container.kill_container = AsyncMagicMock()
-        self.container.rm_container = AsyncMagicMock()
-        self.container.copy2container = AsyncMagicMock()
-        self.container.rm_from_container = AsyncMagicMock()
+        self.container.wait_service = AsyncMock()
+        self.container.start_container = AsyncMock()
+        self.container.kill_container = AsyncMock()
+        self.container.rm_container = AsyncMock()
+        self.container.copy2container = AsyncMock()
+        self.container.rm_from_container = AsyncMock()
         self.container.remove_env = False
         async with self.container:
             pass
@@ -113,13 +113,13 @@ class DockerContainerBuilderManagerTest(TestCase):
         self.assertFalse(self.container.rm_container.called)
         self.assertTrue(self.container.rm_from_container.called)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock(return_value='1'))
+    @patch.object(docker, 'exec_cmd', AsyncMock(return_value='1'))
     @async_test
     async def test_container_exisits_do_not_exist(self):
         exists = await self.container.container_exists()
         self.assertFalse(exists)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock(return_value='2'))
+    @patch.object(docker, 'exec_cmd', AsyncMock(return_value='2'))
     @async_test
     async def test_container_exisits(self):
         exists = await self.container.container_exists()
@@ -127,34 +127,34 @@ class DockerContainerBuilderManagerTest(TestCase):
 
     @async_test
     async def test_is_running(self):
-        self.container.container_exists = AsyncMagicMock(return_value=True)
+        self.container.container_exists = AsyncMock(return_value=True)
         r = await self.container.is_running()
         self.assertTrue(r)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock(side_effect=Exception))
+    @patch.object(docker, 'exec_cmd', AsyncMock(side_effect=Exception))
     @async_test
     async def test_service_is_up_false(self):
         r = await self.container.service_is_up()
         self.assertIs(r, False)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock())
+    @patch.object(docker, 'exec_cmd', AsyncMock())
     @async_test
     async def test_service_is_up_true(self):
         r = await self.container.service_is_up()
         self.assertIs(r, True)
 
-    @patch.object(docker.asyncio, 'sleep', AsyncMagicMock())
+    @patch.object(docker.asyncio, 'sleep', AsyncMock())
     @async_test
     async def test_wait_service(self):
-        self.container.service_is_up = AsyncMagicMock(
+        self.container.service_is_up = AsyncMock(
             side_effect=[False, True])
         await self.container.wait_service()
         self.assertTrue(docker.asyncio.sleep.called)
 
-    @patch.object(docker.asyncio, 'sleep', AsyncMagicMock())
+    @patch.object(docker.asyncio, 'sleep', AsyncMock())
     @async_test
     async def test_wait_start(self):
-        self.container.is_running = AsyncMagicMock(
+        self.container.is_running = AsyncMock(
             side_effect=[False, True])
         await self.container.wait_start()
         self.assertTrue(docker.asyncio.sleep.called)
@@ -180,11 +180,11 @@ class DockerContainerBuilderManagerTest(TestCase):
             'destination=/var/lib/docker/'
         self.assertEqual(opts, e)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock())
+    @patch.object(docker, 'exec_cmd', AsyncMock())
     @async_test
     async def test_start_container_dont_exists(self):
-        self.container.wait_start = AsyncMagicMock()
-        self.container.container_exists = AsyncMagicMock(return_value=False)
+        self.container.wait_start = AsyncMock()
+        self.container.container_exists = AsyncMock(return_value=False)
         expected = 'docker run -d -t   --name {} my-image'.format(
             self.container.cname)
         await self.container.start_container()
@@ -193,14 +193,14 @@ class DockerContainerBuilderManagerTest(TestCase):
         self.assertEqual(expected, called)
         self.assertTrue(self.container.wait_start.called)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock())
+    @patch.object(docker, 'exec_cmd', AsyncMock())
     @async_test
     async def test_start_container_dont_exists_privileged(self):
-        self.container.wait_start = AsyncMagicMock()
+        self.container.wait_start = AsyncMock()
         self.container.cname = 'b'
         self.container._is_dind = True
         self.container.manager.repo_id = 'repo_id'
-        self.container.container_exists = AsyncMagicMock(return_value=False)
+        self.container.container_exists = AsyncMock(return_value=False)
         mount = '--mount source=repo_id-b1-volume,destination=/var/lib/docker/'
         exp = 'docker run -d -t --privileged {} --name {} my-image'.format(
             mount, self.container.cname)
@@ -210,11 +210,11 @@ class DockerContainerBuilderManagerTest(TestCase):
         self.assertEqual(exp, called)
         self.assertTrue(self.container.wait_start.called)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock())
+    @patch.object(docker, 'exec_cmd', AsyncMock())
     @async_test
     async def test_start_container(self):
-        self.container.container_exists = AsyncMagicMock(return_value=True)
-        self.container.wait_start = AsyncMagicMock()
+        self.container.container_exists = AsyncMock(return_value=True)
+        self.container.wait_start = AsyncMock()
         expected = 'docker start {}'.format(self.container.cname)
         await self.container.start_container()
         called = docker.exec_cmd.call_args[0][0]
@@ -222,7 +222,7 @@ class DockerContainerBuilderManagerTest(TestCase):
         self.assertEqual(expected, called)
         self.assertTrue(self.container.wait_start.called)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock())
+    @patch.object(docker, 'exec_cmd', AsyncMock())
     @async_test
     async def test_kill_container(self):
         expected = 'docker kill {}'.format(self.container.cname)
@@ -231,7 +231,7 @@ class DockerContainerBuilderManagerTest(TestCase):
 
         self.assertEqual(expected, called)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock())
+    @patch.object(docker, 'exec_cmd', AsyncMock())
     @async_test
     async def test_copy2container(self):
         expected = 'docker cp source {}:/home/bla/src'.format(
@@ -248,7 +248,7 @@ class DockerContainerBuilderManagerTest(TestCase):
         self.assertEqual(expected, called)
         self.assertEqual(exp_chown, called_chown)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock())
+    @patch.object(docker, 'exec_cmd', AsyncMock())
     @async_test
     async def test_rm_from_container(self):
         src_dir = '/home/bla/src'
@@ -260,7 +260,7 @@ class DockerContainerBuilderManagerTest(TestCase):
 
         self.assertEqual(expected_source, called_source)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock())
+    @patch.object(docker, 'exec_cmd', AsyncMock())
     @async_test
     async def test_rm_container(self):
         expected = 'docker rm {}'.format(self.container.cname)
@@ -285,7 +285,7 @@ class BuildStepDockerTest(TestCase):
         self.step = docker.BuildStepDocker('cmd', 'sh cmd.sh',
                                            container_name='container')
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock(return_value=DOCKER_ENV))
+    @patch.object(docker, 'exec_cmd', AsyncMock(return_value=DOCKER_ENV))
     @async_test
     async def test_get_cmd_line_envvars(self):
         expected = '-e "VAR=bla"'
@@ -296,9 +296,9 @@ class BuildStepDockerTest(TestCase):
         self.assertIn(expected, r)
         self.assertIn('PATH=', r)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock())
+    @patch.object(docker, 'exec_cmd', AsyncMock())
     @patch.object(docker.BuildStepDocker, '_get_docker_env',
-                  AsyncMagicMock(return_value={}))
+                  AsyncMock(return_value={}))
     @async_test
     async def test_exec_cmd(self):
         src_dir = '/home/bla/src'
@@ -322,7 +322,7 @@ class BuildStepDockerTest(TestCase):
 
         self.assertEqual(docker_step.command, step.command)
 
-    @patch.object(docker, 'exec_cmd', AsyncMagicMock(return_value=DOCKER_ENV))
+    @patch.object(docker, 'exec_cmd', AsyncMock(return_value=DOCKER_ENV))
     @async_test
     async def test_get_docker_env(self):
         env = await self.step._get_docker_env()

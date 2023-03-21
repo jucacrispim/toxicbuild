@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,12 +17,13 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
+from unittest.mock import AsyncMock
 
 from bson.objectid import ObjectId
 
 from toxicbuild.output.notifications import base
 
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class MetaNotificationTest(TestCase):
@@ -92,9 +93,9 @@ class NotificationTest(TestCase):
         buildset_info = {'status': 'fail', 'branch': 'master',
                          'repository': {'id': 'some-id'}}
 
-        self.notification.send_started_message = AsyncMagicMock(
+        self.notification.send_started_message = AsyncMock(
             spec=self.notification.send_started_message)
-        self.notification.send_finished_message = AsyncMagicMock(
+        self.notification.send_finished_message = AsyncMock(
             spec=self.notification.send_finished_message)
 
         await self.notification.run(buildset_info)
@@ -108,9 +109,9 @@ class NotificationTest(TestCase):
         buildset_info = {'status': 'fail', 'branch': 'master',
                          'repository': {'id': 'some-id'}}
 
-        self.notification.send_started_message = AsyncMagicMock(
+        self.notification.send_started_message = AsyncMock(
             spec=self.notification.send_started_message)
-        self.notification.send_finished_message = AsyncMagicMock(
+        self.notification.send_finished_message = AsyncMock(
             spec=self.notification.send_finished_message)
 
         await self.notification.run(buildset_info)
@@ -124,9 +125,9 @@ class NotificationTest(TestCase):
         buildset_info = {'status': 'running', 'branch': 'master',
                          'repository': {'id': 'some-id'}}
 
-        self.notification.send_started_message = AsyncMagicMock(
+        self.notification.send_started_message = AsyncMock(
             spec=self.notification.send_started_message)
-        self.notification.send_finished_message = AsyncMagicMock(
+        self.notification.send_finished_message = AsyncMock(
             spec=self.notification.send_finished_message)
 
         await self.notification.run(buildset_info)
@@ -139,12 +140,12 @@ class NotificationTest(TestCase):
         self.notification.statuses = []
         buildset_info = {'status': 'success', 'branch': 'master',
                          'repository': {'id': 'some-id'}}
-        sender = AsyncMagicMock()
+        sender = AsyncMock()
         sender.id = 'some-id'
 
-        self.notification.send_started_message = AsyncMagicMock(
+        self.notification.send_started_message = AsyncMock(
             spec=self.notification.send_started_message)
-        self.notification.send_finished_message = AsyncMagicMock(
+        self.notification.send_finished_message = AsyncMock(
             spec=self.notification.send_finished_message)
 
         await self.notification.run(buildset_info)

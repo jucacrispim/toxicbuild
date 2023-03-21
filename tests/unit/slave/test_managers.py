@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,12 +19,12 @@
 
 import os
 from unittest import TestCase
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch, MagicMock, Mock, AsyncMock
 import tornado
 import yaml
 from toxicbuild.slave import managers
 from tests.unit.slave import TEST_DATA_DIR
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 TOXICCONF_FILE = os.path.join(TEST_DATA_DIR, 'toxicbuild.yml')
 with open(TOXICCONF_FILE) as fd:
@@ -40,7 +40,7 @@ BADTOXICCONF = yaml.load(conf, Loader=yaml.FullLoader)
 
 
 @patch.object(managers, 'get_toxicbuildconf_yaml',
-              AsyncMagicMock(return_value=TOXICCONF))
+              AsyncMock(return_value=TOXICCONF))
 class BuilderManagerTest(TestCase):
 
     @patch.object(managers, 'get_vcs', MagicMock())
@@ -221,12 +221,12 @@ class BuilderManagerTest(TestCase):
     @async_test
     async def test_update_and_checkout_with_clone(self):
         self.manager.vcs.workdir_exists.return_value = False
-        self.manager.vcs.checkout = AsyncMagicMock()
-        self.manager.vcs.clone = AsyncMagicMock(spec=self.manager.vcs.clone)
-        self.manager.vcs.update_submodule = AsyncMagicMock(
+        self.manager.vcs.checkout = AsyncMock()
+        self.manager.vcs.clone = AsyncMock(spec=self.manager.vcs.clone)
+        self.manager.vcs.update_submodule = AsyncMock(
             spec=self.manager.vcs.update_submodule)
 
-        self.manager.vcs.try_set_remote = AsyncMagicMock()
+        self.manager.vcs.try_set_remote = AsyncMock()
         await self.manager.update_and_checkout()
 
         self.assertTrue(self.manager.vcs.clone.called)
@@ -236,11 +236,11 @@ class BuilderManagerTest(TestCase):
     @async_test
     async def test_update_and_checkout_external(self):
         self.manager.vcs.workdir_exists.return_value = True
-        self.manager.vcs.try_set_remote = AsyncMagicMock()
-        self.manager.vcs.import_external_branch = AsyncMagicMock(
+        self.manager.vcs.try_set_remote = AsyncMock()
+        self.manager.vcs.import_external_branch = AsyncMock(
             spec=self.manager.vcs.import_external_branch)
-        self.manager.vcs.checkout = AsyncMagicMock()
-        self.manager.vcs.update_submodule = AsyncMagicMock(
+        self.manager.vcs.checkout = AsyncMock()
+        self.manager.vcs.update_submodule = AsyncMock(
             spec=self.manager.vcs.update_submodule)
 
         external = {'url': 'http://bla.com/bla.git',
@@ -254,7 +254,7 @@ class BuilderManagerTest(TestCase):
         self.assertTrue(self.manager.vcs.import_external_branch.called)
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
-    @patch.object(managers.BuildManager, 'wait_all', AsyncMagicMock())
+    @patch.object(managers.BuildManager, 'wait_all', AsyncMock())
     @async_test
     async def test_update_and_checkout_working(self):
         await self.manager.update_and_checkout()
@@ -265,10 +265,10 @@ class BuilderManagerTest(TestCase):
     async def test_update_and_checkout_without_clone(self):
         self.manager.vcs.clone = MagicMock()
         self.manager.vcs.workdir_exists.return_value = True
-        self.manager.vcs.try_set_remote = AsyncMagicMock(
+        self.manager.vcs.try_set_remote = AsyncMock(
             spec=self.manager.vcs.try_set_remote)
-        self.manager.vcs.checkout = AsyncMagicMock()
-        self.manager.vcs.update_submodule = AsyncMagicMock(
+        self.manager.vcs.checkout = AsyncMock()
+        self.manager.vcs.update_submodule = AsyncMock(
             spec=self.manager.vcs.update_submodule)
 
         await self.manager.update_and_checkout()
@@ -277,7 +277,7 @@ class BuilderManagerTest(TestCase):
         self.assertTrue(self.manager.vcs.checkout.called)
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
-    @patch.object(managers.BuildManager, 'wait_all', AsyncMagicMock())
+    @patch.object(managers.BuildManager, 'wait_all', AsyncMock())
     @async_test
     async def test_update_and_checkout_working_not_wait(self):
         self.manager.vcs.checkout = Mock()
@@ -287,16 +287,16 @@ class BuilderManagerTest(TestCase):
         self.assertFalse(self.manager.vcs.checkout.called)
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
-    @patch.object(managers.BuildManager, 'wait_all', AsyncMagicMock())
+    @patch.object(managers.BuildManager, 'wait_all', AsyncMock())
     @async_test
     async def test_update_and_checkout_new_named_tree(self):
-        self.manager.vcs.get_remote_branches = AsyncMagicMock()
-        self.manager.vcs.try_set_remote = AsyncMagicMock(
+        self.manager.vcs.get_remote_branches = AsyncMock()
+        self.manager.vcs.try_set_remote = AsyncMock(
             spec=self.manager.vcs.try_set_remote)
-        self.manager.vcs.checkout = AsyncMagicMock(side_effect=[
+        self.manager.vcs.checkout = AsyncMock(side_effect=[
             managers.ExecCmdError, MagicMock(), MagicMock()])
-        self.manager.vcs.pull = AsyncMagicMock(spec=self.manager.vcs.pull)
-        self.manager.vcs.update_submodule = AsyncMagicMock(
+        self.manager.vcs.pull = AsyncMock(spec=self.manager.vcs.pull)
+        self.manager.vcs.update_submodule = AsyncMock(
             spec=self.manager.vcs.update_submodule)
         await self.manager.update_and_checkout()
 
@@ -304,14 +304,14 @@ class BuilderManagerTest(TestCase):
         self.assertTrue(self.manager.vcs.get_remote_branches.called)
 
     @patch.object(managers.BuildManager, 'is_working', MagicMock())
-    @patch.object(managers.BuildManager, 'wait_all', AsyncMagicMock())
+    @patch.object(managers.BuildManager, 'wait_all', AsyncMock())
     @async_test
     async def test_update_and_checkout_known_named_tree(self):
-        self.manager.vcs.checkout = AsyncMagicMock(
+        self.manager.vcs.checkout = AsyncMock(
             spec=self.manager.vcs.checkout)
-        self.manager.vcs.update_submodule = AsyncMagicMock(
+        self.manager.vcs.update_submodule = AsyncMock(
             spec=self.manager.vcs.update_submodule)
-        self.manager.vcs.try_set_remote = AsyncMagicMock(
+        self.manager.vcs.try_set_remote = AsyncMock(
             spec=self.manager.vcs.try_set_remote)
         await self.manager.update_and_checkout()
 
@@ -398,7 +398,7 @@ class BuilderManagerTest(TestCase):
         self.assertTrue(builder.envvars)
 
     @patch.object(managers, 'get_toxicbuildconf_yaml',
-                  AsyncMagicMock(spec=managers.get_toxicbuildconf_yaml))
+                  AsyncMock(spec=managers.get_toxicbuildconf_yaml))
     @async_test
     async def test_load_config_yaml(self):
         self.manager.config_type = 'yaml'

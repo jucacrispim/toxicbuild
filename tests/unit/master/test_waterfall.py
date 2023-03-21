@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2020, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,18 +17,18 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 
 from toxicbuild.master import waterfall, hole, build
 from toxicbuild.master.build import BuildSet, Build
 
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 from .utils import RepoTestData
 
 
 class WaterfallTest(TestCase, RepoTestData):
 
-    @patch.object(BuildSet, 'notify', AsyncMagicMock(spec=BuildSet.notify))
+    @patch.object(BuildSet, 'notify', AsyncMock(spec=BuildSet.notify))
     @async_test
     async def setUp(self):
         await self._create_db_revisions()

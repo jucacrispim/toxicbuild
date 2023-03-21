@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017, 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017, 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,12 +18,12 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from toxicbuild.common.client import (HoleClient, get_hole_client,
                                       ToxicClientException, UserDoesNotExist,
                                       NotEnoughPerms, BadResetPasswordToken,
                                       AlreadyExists)
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class HoleClientTest(TestCase):
@@ -41,11 +41,11 @@ class HoleClientTest(TestCase):
                             hole_token='some-token')
         self.assertEqual(client.hole_token, 'some-token')
 
-    @patch.object(HoleClient, 'get_response', AsyncMagicMock())
-    @patch.object(HoleClient, 'write', AsyncMagicMock())
+    @patch.object(HoleClient, 'get_response', AsyncMock())
+    @patch.object(HoleClient, 'write', AsyncMock())
     @async_test
     async def test_request2server(self):
-        self.client.get_response = AsyncMagicMock(
+        self.client.get_response = AsyncMock(
             return_value={'body': {'action': 'uhu!'}}
         )
 
@@ -54,11 +54,11 @@ class HoleClientTest(TestCase):
         self.assertIn('user_id', called.keys())
         self.assertEqual(response, 'uhu!')
 
-    @patch.object(HoleClient, 'get_response', AsyncMagicMock())
-    @patch.object(HoleClient, 'write', AsyncMagicMock())
+    @patch.object(HoleClient, 'get_response', AsyncMock())
+    @patch.object(HoleClient, 'write', AsyncMock())
     @async_test
     async def test_request2server_user_authenticate(self):
-        self.client.get_response = AsyncMagicMock(
+        self.client.get_response = AsyncMock(
             return_value={'body': {'user-authenticate': 'uhu!'}}
         )
 
@@ -66,7 +66,7 @@ class HoleClientTest(TestCase):
         called = self.client.write.call_args[0][0]
         self.assertNotIn('user_id', called.keys())
 
-    @patch.object(HoleClient, 'request2server', AsyncMagicMock())
+    @patch.object(HoleClient, 'request2server', AsyncMock())
     @async_test
     async def test_connect2stream(self):
         await self.client.connect2stream({'event_types': []})
@@ -74,14 +74,14 @@ class HoleClientTest(TestCase):
         expected = ('stream', {'user_id': 'some-id', 'event_types': []})
         self.assertEqual(called, expected)
 
-    @patch.object(HoleClient, 'request2server', AsyncMagicMock())
+    @patch.object(HoleClient, 'request2server', AsyncMock())
     @async_test
     async def test_getattr(self):
         await self.client.test()
 
         self.assertTrue(self.client.request2server.called)
 
-    @patch.object(HoleClient, 'connect', AsyncMagicMock())
+    @patch.object(HoleClient, 'connect', AsyncMock())
     @async_test
     async def test_get_hole_client(self):
         requester = MagicMock()
@@ -90,49 +90,49 @@ class HoleClientTest(TestCase):
                                        hole_token='asdf')
         self.assertTrue(client.connect.called)
 
-    @patch.object(HoleClient, 'read', AsyncMagicMock(
+    @patch.object(HoleClient, 'read', AsyncMock(
         return_value={'code': '1', 'body': {'error': 'bla'}}))
     @async_test
     async def test_get_response_server_error(self):
         with self.assertRaises(ToxicClientException):
             await self.client.get_response()
 
-    @patch.object(HoleClient, 'read', AsyncMagicMock(
+    @patch.object(HoleClient, 'read', AsyncMock(
         return_value={'code': '2', 'body': {'error': 'bla'}}))
     @async_test
     async def test_get_response_user_does_not_exist(self):
         with self.assertRaises(UserDoesNotExist):
             await self.client.get_response()
 
-    @patch.object(HoleClient, 'read', AsyncMagicMock(
+    @patch.object(HoleClient, 'read', AsyncMock(
         return_value={'code': '3', 'body': {'error': 'bla'}}))
     @async_test
     async def test_get_response_not_enough_perms(self):
         with self.assertRaises(NotEnoughPerms):
             await self.client.get_response()
 
-    @patch.object(HoleClient, 'read', AsyncMagicMock(
+    @patch.object(HoleClient, 'read', AsyncMock(
         return_value={'code': '4', 'body': {'error': 'bla'}}))
     @async_test
     async def test_get_response_bad_reset_token(self):
         with self.assertRaises(BadResetPasswordToken):
             await self.client.get_response()
 
-    @patch.object(HoleClient, 'read', AsyncMagicMock(
+    @patch.object(HoleClient, 'read', AsyncMock(
         return_value={'code': '5', 'body': {'error': 'bla'}}))
     @async_test
     async def test_get_response_already_exists(self):
         with self.assertRaises(AlreadyExists):
             await self.client.get_response()
 
-    @patch.object(HoleClient, 'read', AsyncMagicMock(
+    @patch.object(HoleClient, 'read', AsyncMock(
         return_value={'code': '0', 'body': {'bla': 'ble'}}))
     @async_test
     async def test_get_response_ok(self):
         r = await self.client.get_response()
         self.assertEqual(r['body']['bla'], 'ble')
 
-    @patch.object(HoleClient, 'read', AsyncMagicMock(
+    @patch.object(HoleClient, 'read', AsyncMock(
         return_value={'body': {'bla': 'ble'}}))
     @async_test
     async def test_get_response_no_code(self):

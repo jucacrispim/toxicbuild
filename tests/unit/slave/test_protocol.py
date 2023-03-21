@@ -19,8 +19,9 @@
 
 import asyncio
 from unittest import mock, TestCase
+from unittest.mock import AsyncMock
 from toxicbuild.slave import protocols
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 @mock.patch.object(asyncio, 'StreamReader', mock.Mock())
@@ -104,13 +105,13 @@ class ProtocolTest(TestCase):
     async def test_build(self):
         protocols.settings.USE_DOCKER = False
         manager = protocols.BuildManager.return_value
-        manager.update_and_checkout = AsyncMagicMock()
-        manager.build = AsyncMagicMock()
-        manager.load_config = AsyncMagicMock()
+        manager.update_and_checkout = AsyncMock()
+        manager.build = AsyncMock()
+        manager.load_config = AsyncMock()
         self.protocol.data = await self.protocol.get_json_data()
         protocols.BuildManager.return_value.current_build = None
 
-        manager.load_builder = AsyncMagicMock()
+        manager.load_builder = AsyncMock()
         await self.protocol.build()
         self.assertTrue(manager.load_builder.called)
 
@@ -121,9 +122,9 @@ class ProtocolTest(TestCase):
         self.protocol.data = await self.protocol.get_json_data()
         del self.protocol.data['body']['builder_name']
         manager = protocols.BuildManager.return_value
-        manager.load_config = AsyncMagicMock()
+        manager.load_config = AsyncMock()
         manager.current_build = None
-        manager.update_and_checkout = AsyncMagicMock()
+        manager.update_and_checkout = AsyncMock()
 
         with self.assertRaises(protocols.BadData):
             await self.protocol.build()
@@ -133,9 +134,9 @@ class ProtocolTest(TestCase):
     @async_test
     async def test_build_with_bad_builder_config(self):
         manager = protocols.BuildManager.return_value
-        manager.update_and_checkout = AsyncMagicMock()
-        manager.load_config = AsyncMagicMock()
-        manager.load_builder = AsyncMagicMock(
+        manager.update_and_checkout = AsyncMock()
+        manager.load_config = AsyncMock()
+        manager.load_builder = AsyncMock(
             side_effect=protocols.BadBuilderConfig)
         protocols.BuildManager.return_value.current_build = None
         self.protocol.data = await self.protocol.get_json_data()
@@ -152,10 +153,10 @@ class ProtocolTest(TestCase):
 
         self.protocol.data = await self.protocol.get_json_data()
         manager = protocols.BuildManager.return_value
-        manager.load_config = AsyncMagicMock()
+        manager.load_config = AsyncMock()
 
         manager.current_build = None
-        manager.update_and_checkout = AsyncMagicMock()
+        manager.update_and_checkout = AsyncMock()
         manager.list_builders.return_value = ['b1', 'b2']
 
         await self.protocol.list_builders()
@@ -204,11 +205,11 @@ class ProtocolTest(TestCase):
     async def test_client_connected_list_builders(self):
         self.message.update({'token': '123'})
         manager = protocols.BuildManager.return_value
-        manager.load_config = AsyncMagicMock()
+        manager.load_config = AsyncMock()
         protocols.BuildManager.return_value.current_build = None
 
         manager.list_builders.return_value = ['b1', 'b2']
-        manager.update_and_checkout = AsyncMagicMock()
+        manager.update_and_checkout = AsyncMock()
         self.protocol.connection_made(self.transport)
         await self._wait_futures()
 
@@ -239,10 +240,10 @@ class ProtocolTest(TestCase):
                             'named_tree': 'v0.1',
                             'vcs_type': 'git',
                             'builder_name': 'bla'}}
-        manager.load_config = AsyncMagicMock()
+        manager.load_config = AsyncMock()
         manager.current_build = None
-        manager.load_builder = AsyncMagicMock()
-        manager.update_and_checkout = AsyncMagicMock()
+        manager.load_builder = AsyncMock()
+        manager.update_and_checkout = AsyncMock()
         self.protocol.connection_made(self.transport)
         await self._wait_futures()
         builder = manager.load_builder.return_value

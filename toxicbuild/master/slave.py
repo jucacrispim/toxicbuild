@@ -401,7 +401,7 @@ class Slave(OwnedDocument, LoggerMixin):
         return r
 
     async def _process_build_info(self, build, repo, build_info):
-        if build.steps and not build_info['steps']:
+        if build.finished and not build_info['steps']:
             # this handles cases when the build is too fast
             # and the build started msg arrives after the build
             # step info
@@ -416,7 +416,7 @@ class Slave(OwnedDocument, LoggerMixin):
 
         await build.update()
 
-        if not build.finished:
+        if not finished:
             msg = 'build started at {}'.format(build_info['started'])
             self.log(msg)
             build_started.send(str(repo.id), build=build)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,9 +19,9 @@
 
 import asyncio
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from toxicbuild.slave import server
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class BuildServerTest(unittest.TestCase):
@@ -30,7 +30,7 @@ class BuildServerTest(unittest.TestCase):
     def setUp(self):
         self.buildserver = server.BuildServer(addr='127.0.0.1', port=1234)
 
-    @patch.object(server.asyncio, 'sleep', AsyncMagicMock(
+    @patch.object(server.asyncio, 'sleep', AsyncMock(
         spec=server.asyncio.sleep))
     @async_test
     async def test_shutdown(self):

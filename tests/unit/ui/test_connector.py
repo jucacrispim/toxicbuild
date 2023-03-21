@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2017, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,9 +19,9 @@
 
 import asyncio
 from unittest import TestCase
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from toxicbuild.ui import connectors
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class StreamConnectorTest(TestCase):
@@ -130,7 +130,7 @@ class StreamConnectorTest(TestCase):
 
         user = MagicMock()
         user.id = 'some-id'
-        client = MagicMock(connect2stream=AsyncMagicMock())
+        client = MagicMock(connect2stream=AsyncMock())
 
         async def get_hole_client(requester, host, port, use_ssl=True,
                                   hole_token=None, validate_cert=True):
@@ -188,15 +188,12 @@ class StreamConnectorTest(TestCase):
         user.id = 'some-id'
 
         inst = connectors.StreamConnector(user, 'some-repo', [])
-        inst._connect = AsyncMagicMock()
-        inst.log = AsyncMagicMock()
+        inst._connect = AsyncMock()
+        inst.log = MagicMock()
         inst._connected = True
         inst.client = MagicMock()
 
-        async def get_response():
-            return {}
-
-        inst.client.get_response = get_response
+        inst.client.get_response = AsyncMock(return_value={})
         await inst._listen()
         self.assertFalse(connectors.message_arrived.send.called)
 
@@ -208,7 +205,7 @@ class StreamConnectorTest(TestCase):
 
         try:
             inst = connectors.StreamConnector(user, 'some-repo', [])
-            inst._connect = AsyncMagicMock()
+            inst._connect = AsyncMock()
             inst.client = MagicMock()
 
             def _c(self):
@@ -235,7 +232,7 @@ class StreamConnectorTest(TestCase):
 
         try:
             inst = connectors.StreamConnector(user, 'other-repo', [])
-            inst._connect = AsyncMagicMock()
+            inst._connect = AsyncMock()
             inst.client = MagicMock()
 
             def _c(self):
@@ -263,7 +260,7 @@ class StreamConnectorTest(TestCase):
         try:
             inst = connectors.StreamConnector(
                 user, connectors.StreamConnector.NONE_REPO_ID, [])
-            inst._connect = AsyncMagicMock()
+            inst._connect = AsyncMock()
             inst.client = MagicMock()
 
             def _c(self):
@@ -285,7 +282,7 @@ class StreamConnectorTest(TestCase):
 
     @patch.object(connectors, 'message_arrived', MagicMock())
     @patch.object(connectors.StreamConnector, '_prepare_instance',
-                  AsyncMagicMock())
+                  AsyncMock())
     @async_test
     async def test_plug(self):
         user = MagicMock()
@@ -304,7 +301,7 @@ class StreamConnectorTest(TestCase):
 
     @patch.object(connectors, 'message_arrived', MagicMock())
     @patch.object(connectors.StreamConnector, '_prepare_instance',
-                  AsyncMagicMock())
+                  AsyncMock())
     @async_test
     async def test_plug_without_repo_id(self):
         user = MagicMock()

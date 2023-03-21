@@ -62,7 +62,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         self.data = None
         self.peername = None
         self._transport = None
-        self._writer_lock = asyncio.Lock(loop=loop)
+        self._writer_lock = asyncio.Lock()
 
         self._reader = asyncio.StreamReader(loop=loop)
         super().__init__(self._reader, loop=loop)

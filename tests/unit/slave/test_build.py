@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -20,10 +20,11 @@
 import asyncio
 import os
 from unittest import mock, TestCase
+from unittest.mock import AsyncMock
 import yaml
 from toxicbuild.slave import build, managers, plugins
 from tests.unit.slave import TEST_DATA_DIR
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class BuilderTest(TestCase):
@@ -56,9 +57,9 @@ class BuilderTest(TestCase):
         s1 = build.BuildStep(name='s1', command='ls')
         s2 = build.BuildStep(name='s2', command='echo "uhu!"')
         self.builder.steps = [s1, s2]
-        self.builder._copy_workdir = AsyncMagicMock(
+        self.builder._copy_workdir = AsyncMock(
             spec=self.builder._copy_workdir)
-        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._remove_tmp_dir = AsyncMock()
         self.builder._get_tmp_dir = mock.Mock(return_value='.')
 
         build_info = await self.builder.build()
@@ -70,9 +71,9 @@ class BuilderTest(TestCase):
         s1 = build.BuildStep(name='s1', command='ls')
         s2 = build.BuildStep(name='s2', command='exit 1')
         s3 = build.BuildStep(name='s3', command='echo "oi"')
-        self.builder._copy_workdir = AsyncMagicMock(
+        self.builder._copy_workdir = AsyncMock(
             spec=self.builder._copy_workdir)
-        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._remove_tmp_dir = AsyncMock()
         self.builder._get_tmp_dir = mock.Mock(return_value='.')
         self.builder.steps = [s1, s2, s3]
         build_info = await self.builder.build()
@@ -84,17 +85,17 @@ class BuilderTest(TestCase):
         s2 = build.BuildStep(name='s2', command='exit 1', stop_on_fail=True)
         s3 = build.BuildStep(name='s3', command='echo "oi"')
         self.builder.steps = [s1, s2, s3]
-        self.builder._copy_workdir = AsyncMagicMock(
+        self.builder._copy_workdir = AsyncMock(
             spec=self.builder._copy_workdir)
 
-        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._remove_tmp_dir = AsyncMock()
         self.builder._get_tmp_dir = mock.Mock(return_value='.')
 
         build_info = await self.builder.build()
         self.assertEqual(build_info['status'], 'fail')
         self.assertEqual(len(build_info['steps']), 2)
 
-    @mock.patch.object(build, 'exec_cmd', AsyncMagicMock(
+    @mock.patch.object(build, 'exec_cmd', AsyncMock(
         side_effect=asyncio.TimeoutError))
     @async_test
     async def test_build_fail_stop_on_fail_exception(self):
@@ -102,10 +103,10 @@ class BuilderTest(TestCase):
         s2 = build.BuildStep(name='s2', command='exit 1', stop_on_fail=True)
         s3 = build.BuildStep(name='s3', command='echo "oi"')
         self.builder.steps = [s1, s2, s3]
-        self.builder._copy_workdir = AsyncMagicMock(
+        self.builder._copy_workdir = AsyncMock(
             spec=self.builder._copy_workdir)
 
-        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._remove_tmp_dir = AsyncMock()
         self.builder._get_tmp_dir = mock.Mock(return_value='.')
 
         build_info = await self.builder.build()
@@ -182,7 +183,7 @@ class BuilderTest(TestCase):
             self.builder.workdir), self.builder.name)
         self.assertEqual(expected, self.builder._get_tmp_dir())
 
-    @mock.patch.object(build, 'exec_cmd', AsyncMagicMock())
+    @mock.patch.object(build, 'exec_cmd', AsyncMock())
     @async_test
     async def test_copy_workdir(self):
         await self.builder._copy_workdir()
@@ -195,7 +196,7 @@ class BuilderTest(TestCase):
         self.assertEqual(expected0, called0)
         self.assertEqual(expected1, called1)
 
-    @mock.patch.object(build, 'exec_cmd', AsyncMagicMock())
+    @mock.patch.object(build, 'exec_cmd', AsyncMock())
     @async_test
     async def test_remove_dir(self):
         expected = 'rm -rf {}'.format(self.builder._get_tmp_dir())
@@ -205,15 +206,15 @@ class BuilderTest(TestCase):
 
     @async_test
     async def test_test_aenter(self):
-        self.builder._copy_workdir = AsyncMagicMock()
-        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._copy_workdir = AsyncMock()
+        self.builder._remove_tmp_dir = AsyncMock()
         async with self.builder._run_in_build_env():
             self.assertTrue(self.builder._copy_workdir.called)
 
     @async_test
     async def test_aexit(self):
-        self.builder._copy_workdir = AsyncMagicMock()
-        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._copy_workdir = AsyncMock()
+        self.builder._remove_tmp_dir = AsyncMock()
         async with self.builder._run_in_build_env():
             pass
 
@@ -222,8 +223,8 @@ class BuilderTest(TestCase):
     @async_test
     async def test_aexit_no_remove(self):
         self.builder.remove_env = False
-        self.builder._copy_workdir = AsyncMagicMock()
-        self.builder._remove_tmp_dir = AsyncMagicMock()
+        self.builder._copy_workdir = AsyncMock()
+        self.builder._remove_tmp_dir = AsyncMock()
         async with self.builder._run_in_build_env():
             pass
 

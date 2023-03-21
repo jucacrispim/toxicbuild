@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016-2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016-2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 import datetime
 from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch, AsyncMock
@@ -290,6 +289,7 @@ class SlaveTest(TestCase):
             'started': None, 'finished': None,
             'info_type': 'build_info',
             'total_time': 2}
+        self.build.finished = datetime.datetime.now()
 
         r = await self.slave._process_info(self.build, self.repo, build_info)
         self.assertFalse(r)
@@ -306,11 +306,10 @@ class SlaveTest(TestCase):
                       'started': now, 'finished': None, 'output': '',
                       'index': 0, 'info_type': 'step_info'}
 
-        process_step_info = MagicMock(spec=self.slave._process_step_info)
-        self.slave._process_step_info = asyncio.coroutine(
-            lambda *a, **kw: process_step_info())
+        self.slave._process_step_info = AsyncMock(
+            spec=self.slave._process_step_info)
         await self.slave._process_info(self.build, self.repo, build_info)
-        self.assertTrue(process_step_info.called)
+        self.assertTrue(self.slave._process_step_info.called)
 
     @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
@@ -319,12 +318,11 @@ class SlaveTest(TestCase):
         await self._create_test_data()
         info = {'info_type': 'step_output_info'}
 
-        process_step_info = MagicMock(spec=self.slave._process_step_info)
-        self.slave._process_step_output_info = asyncio.coroutine(
-            lambda *a, **kw: process_step_info())
+        self.slave._process_step_output_info = AsyncMock(
+            spec=self.slave._process_step_info)
 
         await self.slave._process_info(self.build, self.repo, info)
-        self.assertTrue(process_step_info.called)
+        self.assertTrue(self.slave._process_step_output_info.called)
 
     @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))

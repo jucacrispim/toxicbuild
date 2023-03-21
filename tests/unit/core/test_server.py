@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,16 +18,14 @@
 
 import asyncio
 from unittest import TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 
 from toxicbuild.core import server
-
-from tests import AsyncMagicMock
 
 
 class ToxicServerTest(TestCase):
 
-    @patch('asyncio.events.AbstractEventLoop.create_server', AsyncMagicMock())
+    @patch('asyncio.events.AbstractEventLoop.create_server', AsyncMock())
     def setUp(self):
         loop = Mock()
         self.server = server.ToxicServer('0.0.0.0', 8888, loop=loop)
@@ -49,7 +47,7 @@ class ToxicServerTest(TestCase):
                                                      .run_until_complete
         self.server.server = Mock(spec=self.server.server,
                                   close=Mock(),
-                                  wait_closed=AsyncMagicMock())
+                                  wait_closed=AsyncMock())
 
         with self.server:
             pass

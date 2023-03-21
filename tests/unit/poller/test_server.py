@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,12 +19,12 @@
 import asyncio
 from datetime import datetime
 from unittest import TestCase
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, AsyncMock
 
 from toxicbuild.core.utils import datetime2string
 from toxicbuild.poller import server
 
-from tests import AsyncMagicMock, async_test
+from tests import async_test
 
 
 class PollerProtocolTest(TestCase):
@@ -43,9 +43,9 @@ class PollerProtocolTest(TestCase):
     @async_test
     async def test_client_connected(self):
         self.poller_server.action = 'poll'
-        self.poller_server.poll_repo = AsyncMagicMock(
+        self.poller_server.poll_repo = AsyncMock(
             spec=self.poller_server.poll_repo, return_value={'a': 'dict'})
-        self.poller_server.send_response = AsyncMagicMock(
+        self.poller_server.send_response = AsyncMock(
             spec=self.poller_server.send_response)
         self.poller_server.close_connection = Mock(
             spec=self.poller_server.close_connection)
@@ -56,7 +56,7 @@ class PollerProtocolTest(TestCase):
         self.assertTrue(self.poller_server.send_response.called)
         self.assertTrue(self.poller_server.close_connection.called)
 
-    @patch.object(server.Poller, 'poll', AsyncMagicMock(
+    @patch.object(server.Poller, 'poll', AsyncMock(
         spec=server.Poller.poll))
     @patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
     @patch('toxicbuild.poller.server.PollerProtocol.log', Mock())
@@ -79,7 +79,7 @@ class PollerProtocolTest(TestCase):
 
         self.assertTrue(server.Poller.poll.called)
 
-    @patch.object(server.Poller, 'poll', AsyncMagicMock(
+    @patch.object(server.Poller, 'poll', AsyncMock(
         spec=server.Poller.poll))
     @patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
     @patch('toxicbuild.poller.server.PollerProtocol.log', Mock())
@@ -101,7 +101,7 @@ class PollerProtocolTest(TestCase):
 
         self.assertTrue(server.Poller.poll.called)
 
-    @patch.object(server.Poller, 'external_poll', AsyncMagicMock(
+    @patch.object(server.Poller, 'external_poll', AsyncMock(
         spec=server.Poller.external_poll))
     @patch('toxicbuild.poller.poller.settings', Mock(SOURCE_CODE_DIR='.'))
     @patch('toxicbuild.poller.server.PollerProtocol.log', Mock())

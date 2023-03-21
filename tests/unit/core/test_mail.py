@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,9 +17,9 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from toxicbuild.core import mail
-from tests import async_test, AsyncMagicMock, create_autospec
+from tests import async_test, create_autospec
 
 
 class MailSenderTest(TestCase):
@@ -33,7 +33,7 @@ class MailSenderTest(TestCase):
 
     @patch.object(mail.MailSender, 'log', MagicMock(spec=mail.MailSender.log))
     @patch.object(mail, 'aiosmtplib', create_autospec(spec=mail.aiosmtplib,
-                                                      mock_cls=AsyncMagicMock))
+                                                      mock_cls=AsyncMock))
     @async_test
     async def test_connect_already_connected(self):
         self.sender._connected = True
@@ -42,11 +42,11 @@ class MailSenderTest(TestCase):
         self.assertEqual('warning', log_level)
         self.assertFalse(mail.aiosmtplib.SMTP.called)
 
-    @patch.object(mail.aiosmtplib.SMTP, 'connect', AsyncMagicMock(
+    @patch.object(mail.aiosmtplib.SMTP, 'connect', AsyncMock(
         spec=mail.aiosmtplib.SMTP.connect))
-    @patch.object(mail.aiosmtplib.SMTP, 'login', AsyncMagicMock(
+    @patch.object(mail.aiosmtplib.SMTP, 'login', AsyncMock(
         spec=mail.aiosmtplib.SMTP.login))
-    @patch.object(mail.aiosmtplib.SMTP, 'starttls', AsyncMagicMock(
+    @patch.object(mail.aiosmtplib.SMTP, 'starttls', AsyncMock(
         spec=mail.aiosmtplib.SMTP.starttls))
     @async_test
     async def test_connect_starttls(self):
@@ -58,11 +58,11 @@ class MailSenderTest(TestCase):
         expected_kw = {'use_tls': False}
         self.assertEqual(kw, expected_kw)
 
-    @patch.object(mail.aiosmtplib.SMTP, 'connect', AsyncMagicMock(
+    @patch.object(mail.aiosmtplib.SMTP, 'connect', AsyncMock(
         spec=mail.aiosmtplib.SMTP.connect))
-    @patch.object(mail.aiosmtplib.SMTP, 'login', AsyncMagicMock(
+    @patch.object(mail.aiosmtplib.SMTP, 'login', AsyncMock(
         spec=mail.aiosmtplib.SMTP.login))
-    @patch.object(mail.aiosmtplib.SMTP, 'starttls', AsyncMagicMock(
+    @patch.object(mail.aiosmtplib.SMTP, 'starttls', AsyncMock(
         spec=mail.aiosmtplib.SMTP.starttls))
     @async_test
     async def test_connect(self):
@@ -76,7 +76,7 @@ class MailSenderTest(TestCase):
 
     @async_test
     async def test_disconnect(self):
-        m_quit = AsyncMagicMock()
+        m_quit = AsyncMock()
         m_close = MagicMock()
 
         self.sender.smtp = MagicMock()
@@ -95,7 +95,7 @@ class MailSenderTest(TestCase):
     @async_test
     async def test_send(self):
         self.sender.smtp = MagicMock()
-        m_send_message = AsyncMagicMock()
+        m_send_message = AsyncMock()
         self.sender.smtp.send_message = m_send_message
         self.sender._connected = True
         await self.sender.send('subject', 'body')

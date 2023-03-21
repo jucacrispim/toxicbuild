@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2016, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,9 +18,9 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from toxicbuild.core import requests
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class ResponseTest(TestCase):
@@ -49,7 +49,7 @@ class MockResponse:
 class RequestsTest(TestCase):
 
     @patch.object(requests.aiohttp, 'ClientSession', MagicMock(
-        return_value=MagicMock(close=AsyncMagicMock())))
+        return_value=MagicMock(close=AsyncMock())))
     @async_test
     async def test_request(self):
         method = 'GET'
@@ -63,20 +63,20 @@ class RequestsTest(TestCase):
         self.assertEqual(r.text, 'some text')
 
     @patch.object(requests.aiohttp, 'ClientSession', MagicMock(
-        return_value=MagicMock(close=AsyncMagicMock())))
+        return_value=MagicMock(close=AsyncMock())))
     @async_test
     async def test_request_sesskw(self):
         method = 'GET'
         url = 'http://somewhere.com'
 
-        requests.aiohttp.ClientSession.return_value.request = AsyncMagicMock(
-            return_value=AsyncMagicMock(status=200, headers={}))
+        requests.aiohttp.ClientSession.return_value.request = AsyncMock(
+            return_value=AsyncMock(status=200, headers={}))
         await requests._request(method, url, sesskw={'a': 'thing',
                                                      'loop': MagicMock()})
         called_kw = requests.aiohttp.ClientSession.call_args[1]
         self.assertEqual(sorted(list(called_kw.keys())), ['a', 'loop'])
 
-    @patch.object(requests, '_request', AsyncMagicMock())
+    @patch.object(requests, '_request', AsyncMock())
     @async_test
     async def test_get(self):
         url = 'http://somewhere.com'
@@ -92,7 +92,7 @@ class RequestsTest(TestCase):
         self.assertEqual(self.req_type, 'GET')
         self.assertEqual(resp.text, 'some text')
 
-    @patch.object(requests, '_request', AsyncMagicMock())
+    @patch.object(requests, '_request', AsyncMock())
     @async_test
     async def test_post(self):
         url = 'http://somewhere.com'
@@ -108,7 +108,7 @@ class RequestsTest(TestCase):
         self.assertEqual(self.req_type, 'POST')
         self.assertEqual(resp.text, 'some text')
 
-    @patch.object(requests, '_request', AsyncMagicMock())
+    @patch.object(requests, '_request', AsyncMock())
     @async_test
     async def test_put(self):
         url = 'http://somewhere.com'
@@ -124,7 +124,7 @@ class RequestsTest(TestCase):
         self.assertEqual(self.req_type, 'PUT')
         self.assertEqual(resp.text, 'some text')
 
-    @patch.object(requests, '_request', AsyncMagicMock())
+    @patch.object(requests, '_request', AsyncMock())
     @async_test
     async def test_delete(self):
         url = 'http://somewhere.com'

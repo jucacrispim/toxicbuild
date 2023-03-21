@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,11 +17,11 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
 from toxicbuild.ui.console import commands
 
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class ConsoleCommandTest(TestCase):
@@ -56,7 +56,7 @@ class RepoListCommandTest(TestCase):
         self.command = commands.RepoListCommand(MagicMock())
 
     @patch.object(commands.RepositoryInterface, 'list',
-                  AsyncMagicMock(spec=commands.RepositoryInterface.list))
+                  AsyncMock(spec=commands.RepositoryInterface.list))
     @async_test
     async def test_execute(self):
         await self.command.execute()

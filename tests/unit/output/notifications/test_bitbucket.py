@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,11 +17,11 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, AsyncMock
 
 from toxicbuild.output.notifications import bitbucket
 
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 @patch.object(bitbucket, 'settings', Mock(
@@ -34,9 +34,9 @@ class BitbucketCommitStatusNotificationTest(TestCase):
             installation=install)
 
     @patch.object(bitbucket.BitbucketIntegration, 'get_headers',
-                  AsyncMagicMock(
+                  AsyncMock(
                       spec=bitbucket.BitbucketIntegration.get_headers))
-    @patch.object(bitbucket.requests, 'post', AsyncMagicMock(
+    @patch.object(bitbucket.requests, 'post', AsyncMock(
         spec=bitbucket.requests.post))
     @async_test
     async def test_run(self):

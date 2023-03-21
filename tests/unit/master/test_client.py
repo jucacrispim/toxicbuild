@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2016 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2016, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,9 +19,10 @@
 
 import asyncio
 from unittest import mock, TestCase
+from unittest.mock import AsyncMock
 from toxicbuild.core.utils import now
 from toxicbuild.master import client, build, repository, slave, users
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class BuildClientTest(TestCase):
@@ -55,7 +56,7 @@ class BuildClientTest(TestCase):
     @async_test
     async def test_healthcheck_alive(self):
         write = mock.MagicMock()
-        self.client.write = asyncio.coroutine(lambda *a, **kw: write(*a, **kw))
+        self.client.write = AsyncMock(return_value=write())
 
         async def gr(*a, **kw):
             return 1
@@ -68,7 +69,7 @@ class BuildClientTest(TestCase):
     @async_test
     async def test_healthcheck_bad_request(self):
         write = mock.MagicMock()
-        self.client.write = asyncio.coroutine(lambda *a, **kw: write(*a, **kw))
+        self.client.write = AsyncMock(return_value=write())
 
         async def gr(*a, **kw):
             return ''
@@ -80,7 +81,7 @@ class BuildClientTest(TestCase):
     @async_test
     async def test_list_builders(self):
         write = mock.MagicMock()
-        self.client.write = asyncio.coroutine(lambda *a, **kw: write(*a, **kw))
+        self.client.write = AsyncMock(return_value=write())
 
         async def gr():
             return {'code': 0,
@@ -95,12 +96,12 @@ class BuildClientTest(TestCase):
 
         self.assertEqual(expected, builders)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_build(self):
         write = mock.MagicMock()
-        self.client.write = asyncio.coroutine(lambda *a, **kw: write(*a, **kw))
+        self.client.write = AsyncMock(return_value=write())
 
         self.GR_COUNT = -1
 
@@ -138,8 +139,8 @@ class BuildClientTest(TestCase):
         await slave_inst.save()
         process = mock.Mock()
 
-        process_coro = asyncio.coroutine(
-            lambda build, repo, build_info: process())
+        async def process_coro(build, repo, build_info):
+            process()
 
         repo = repository.Repository(name='repo', url='git@somewhere.com',
                                      slaves=[slave_inst], update_seconds=300,
@@ -164,12 +165,12 @@ class BuildClientTest(TestCase):
         await self.client.build(buildinstance, process_coro=process_coro)
         self.assertEqual(len(process.call_args_list), 3)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_build_without_out_fn(self):
         write = mock.MagicMock()
-        self.client.write = asyncio.coroutine(lambda *a, **kw: write(*a, **kw))
+        self.client.write = AsyncMock(return_value=write())
 
         self.GR_COUNT = -1
 
@@ -230,12 +231,12 @@ class BuildClientTest(TestCase):
         await self.client.build(buildinstance, process_coro=None)
         self.assertEqual(len(process.call_args_list), 0)
 
-    @mock.patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_build_without_out_fn_external(self):
         write = mock.MagicMock()
-        self.client.write = asyncio.coroutine(lambda *a, **kw: write(*a, **kw))
+        self.client.write = AsyncMock(return_value=write())
 
         self.GR_COUNT = -1
 
@@ -301,7 +302,7 @@ class BuildClientTest(TestCase):
         await self.client.build(buildinstance, process_coro=None)
         self.assertEqual(len(process.call_args_list), 0)
 
-    @mock.patch.object(client.BuildClient, 'connect', AsyncMagicMock(
+    @mock.patch.object(client.BuildClient, 'connect', AsyncMock(
         spec=client.BuildClient.connect))
     @async_test
     async def test_get_build_client(self):
@@ -323,7 +324,7 @@ class PollerClientTest(TestCase):
             update_seconds=10, owner=self.user)
         await self.repo.save()
         self.client = client.PollerClient(self.repo, 'host', 1235)
-        self.client.request2server = AsyncMagicMock(
+        self.client.request2server = AsyncMock(
             spec=self.client.request2server)
 
     @async_test

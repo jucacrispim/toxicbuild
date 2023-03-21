@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2017, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,12 +18,12 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 
 import mongomotor
 
 from toxicbuild.master import users
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class OrganizationTest(TestCase):
@@ -198,7 +198,7 @@ class ResetUserPasswordTokenTest(TestCase):
         obj = await users.ResetUserPasswordToken.create(user)
         self.assertTrue(obj.id)
 
-    @patch.object(users, 'send_email', AsyncMagicMock(spec=users.send_email))
+    @patch.object(users, 'send_email', AsyncMock(spec=users.send_email))
     @async_test
     async def test_send_reset_email(self):
 

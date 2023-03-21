@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -17,9 +17,9 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, AsyncMock
 from toxicbuild.core import build_config
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 from tests.unit.core import TEST_DATA_DIR
 
 
@@ -51,8 +51,8 @@ class BuildConfigTest(TestCase):
         self.assertTrue(conf)
 
     @patch.object(build_config, 'get_toxicbuildconf_yaml',
-                  AsyncMagicMock(spec=build_config.get_toxicbuildconf_yaml,
-                                 return_value=True))
+                  AsyncMock(spec=build_config.get_toxicbuildconf_yaml,
+                            return_value=True))
     @async_test
     async def test_get_config_yaml(self):
         conf = await build_config.get_config('/some/workdir', 'yaml',

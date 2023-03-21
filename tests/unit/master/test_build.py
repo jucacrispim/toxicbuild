@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
 from collections import defaultdict, deque
 import datetime
 from unittest import TestCase, mock
@@ -133,6 +132,8 @@ class BuildStepTest(TestCase):
         await self.buildset.save()
 
 
+@mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
+    spec=build.BuildSet.notify))
 class BuildTest(TestCase):
 
     @async_test
@@ -950,7 +951,7 @@ class BuildManagerTest(TestCase):
         b.name = 'blabla'
         await b.save()
         self.manager.repository = self.repo
-        self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
+        self.manager._execute_builds = mock.AsyncMock(return_value=None)
         self.manager.get_builders = mock.AsyncMock(
             return_value=([b, self.builder], 'master'))
         conf = {'builders': []}
@@ -972,7 +973,7 @@ class BuildManagerTest(TestCase):
     async def test_add_builds(self):
         await self._create_test_data()
         self.manager.repository = self.repo
-        self.manager.repository.get_config_for = mock.AsyncMock(
+        self.manager.repository.get_config_for = mock.Mock(
             spec=self.manager.repository.get_config_for)
         self.manager._execute_builds = mock.AsyncMock()
 
@@ -994,7 +995,7 @@ class BuildManagerTest(TestCase):
     async def test_add_builds_revision_dont_create(self):
         await self._create_test_data()
         self.manager.repository = self.repo
-        self.manager._execute_builds = asyncio.coroutine(lambda *a, **kw: None)
+        self.manager._execute_builds = mock.AsyncMock(return_value=None)
 
         async def gb(branch, slave):
             return [self.builder], 'master'
@@ -1260,7 +1261,7 @@ class BuildManagerTest(TestCase):
         await self._create_test_data()
         buildset = mock.MagicMock()
         save_mock = mock.MagicMock()
-        buildset.save = asyncio.coroutine(lambda *a, **kw: save_mock())
+        buildset.save = mock.AsyncMock(return_value=save_mock())
         buildset.started = None
         buildset.notify = mock.AsyncMock()
         self.manager.repository.set_latest_buildset = mock.AsyncMock()
@@ -1281,7 +1282,7 @@ class BuildManagerTest(TestCase):
         buildset = mock.MagicMock()
         save_mock = mock.MagicMock()
         just_now = mock.MagicMock()
-        buildset.save = asyncio.coroutine(lambda *a, **kw: save_mock())
+        buildset.save = mock.AsyncMock(return_value=None)
         buildset.started = just_now
         await self.manager._set_started_for_buildset(buildset)
         self.assertTrue(buildset.started is just_now)
@@ -1356,38 +1357,30 @@ class BuildManagerTest(TestCase):
     async def test_start_pending(self):
         await self._create_test_data()
 
-        _eb_mock = mock.Mock()
+        _eb_mock = mock.AsyncMock()
 
-        async def _eb():
-            _eb_mock()
-
-        self.repo.build_manager._execute_builds = _eb
+        self.repo.build_manager._execute_builds = _eb_mock
         await self.repo.build_manager.start_pending()
         await self.other_repo.build_manager.start_pending()
         self.assertEqual(_eb_mock.call_count, 1)
 
-    @mock.patch.object(build.BuildSet, 'notify', mock.MagicMock(
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @mock.patch.object(
         repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        mock.AsyncMock())
-    @mock.patch.object(build, 'ensure_future', mock.Mock)
     @async_test
     async def test_start_pending_with_queue(self):
         await self._create_test_data()
 
-        _eb_mock = mock.Mock()
+        _eb_mock = mock.AsyncMock()
 
-        async def _eb():
-            _eb_mock()
-
-        self.repo.build_manager._execute_builds = _eb
+        self.repo.build_manager._execute_builds = _eb_mock
         self.repo.build_manager._build_queues = defaultdict(deque)
         self.repo.build_manager.build_queues.append(mock.Mock())
-        build.ensure_future = mock.Mock()
         await self.repo.build_manager.start_pending()
-        self.assertFalse(build.ensure_future.called)
+        self.assertFalse(_eb_mock.called)
 
     @mock.patch.object(build.BuildSet, 'notify', mock.MagicMock(
         spec=build.BuildSet.notify))
@@ -1395,21 +1388,16 @@ class BuildManagerTest(TestCase):
         repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
                        mock.AsyncMock())
-    @mock.patch.object(build, 'ensure_future', mock.Mock)
     @async_test
     async def test_start_pending_with_working_slave(self):
         await self._create_test_data()
 
-        _eb_mock = mock.Mock()
+        _eb_mock = mock.AsyncMock()
 
-        async def _eb():
-            _eb_mock()
-
-        self.repo.build_manager._execute_builds = _eb
+        self.repo.build_manager._execute_builds = _eb_mock
         self.repo.build_manager._is_building[self.repo.id] = True
-        build.ensure_future = mock.Mock()
         await self.repo.build_manager.start_pending()
-        self.assertFalse(build.ensure_future.called)
+        self.assertFalse(_eb_mock.called)
 
     @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
@@ -1589,7 +1577,7 @@ class BuilderTest(TestCase):
     async def test_get_or_create_with_create(self):
 
         create = mock.MagicMock()
-        build.Builder.create = asyncio.coroutine(lambda * a, **kw: create())
+        build.Builder.create = mock.AsyncMock(return_value=create())
         await build.Builder.get_or_create(name='bla')
 
         self.assertTrue(create.called)
@@ -1600,7 +1588,7 @@ class BuilderTest(TestCase):
     @async_test
     async def test_get_or_create_with_get(self):
         create = mock.MagicMock()
-        build.Builder.create = asyncio.coroutine(lambda *a, **kw: create())
+        build.Builder.create = mock.AsyncMock(return_value=create())
         self.owner = users.User(email='a@a.com', password='asdf')
         await self.owner.save()
 

@@ -95,6 +95,7 @@ class StreamConnector(LoggerMixin):
         return body.get('repository', {}).get('id') or self.NONE_REPO_ID
 
     async def _listen(self):
+
         await self._connect()
         while self._connected:
             response = await self.client.get_response()

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2016, 2018-2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2016, 2018-2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,9 +19,9 @@
 
 import asyncio
 from unittest import TestCase
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch, AsyncMock
 from toxicbuild.slave import plugins, build
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 class MyPlugin(plugins.SlavePlugin):
@@ -153,7 +153,7 @@ class AptInstallStepTest(TestCase):
     def setUp(self):
         self.step = plugins.AptInstallStep(['somepkg', 'otherpkg'])
 
-    @patch.object(plugins, 'exec_cmd', AsyncMagicMock(return_value='2'))
+    @patch.object(plugins, 'exec_cmd', AsyncMock(return_value='2'))
     @async_test
     async def test_is_everything_installed(self):
         expected = 'sudo dpkg -l | egrep \'somepkg|otherpkg\' | wc -l'
@@ -161,17 +161,17 @@ class AptInstallStepTest(TestCase):
         called = plugins.exec_cmd.call_args[0][0]
         self.assertEqual(called, expected)
 
-    @patch.object(build, 'exec_cmd', AsyncMagicMock())
+    @patch.object(build, 'exec_cmd', AsyncMock())
     @async_test
     async def test_execute_everything_installed(self):
-        self.step._is_everything_installed = AsyncMagicMock(return_value=True)
+        self.step._is_everything_installed = AsyncMock(return_value=True)
         await self.step.execute('.')
         self.assertEqual(self.step.command,
                          'sudo dpkg-reconfigure somepkg otherpkg')
 
-    @patch.object(build, 'exec_cmd', AsyncMagicMock())
+    @patch.object(build, 'exec_cmd', AsyncMock())
     @async_test
     async def test_execute(self):
-        self.step._is_everything_installed = AsyncMagicMock(return_value=False)
+        self.step._is_everything_installed = AsyncMock(return_value=False)
         await self.step.execute('.')
         self.assertEqual(self.step.command, self.step.install_cmd)

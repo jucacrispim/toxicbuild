@@ -25,6 +25,8 @@ import copy
 from datetime import timedelta
 import json
 from uuid import uuid4, UUID
+
+from bson.json_util import CANONICAL_JSON_OPTIONS
 from mongoengine.queryset import queryset_manager
 from mongomotor import Document, EmbeddedDocument
 from mongomotor.fields import (StringField, ListField, EmbeddedDocumentField,
@@ -59,7 +61,8 @@ class SerializeMixin:
         :param id_as_str: If true, transforms the id field into a string.
         """
 
-        objdict = json.loads(super().to_json())
+        objdict = json.loads(super().to_json(
+            json_options=CANONICAL_JSON_OPTIONS))
         objdict['id'] = str(self.id) if id_as_str else self.id
         return objdict
 
@@ -252,7 +255,7 @@ class BuildStep(EmbeddedDocument):
             }},
         ]
 
-        r = await BuildSet.objects().aggregate(*pipeline).to_list(1)
+        r = await BuildSet.objects().aggregate(pipeline).to_list(1)
 
         try:
             step_doc = r[0]['steps'][0]
@@ -439,7 +442,7 @@ class Build(EmbeddedDocument, LoggerMixin):
             }}
         ]
 
-        r = await BuildSet.objects().aggregate(*pipeline).to_list(1)
+        r = await BuildSet.objects().aggregate(pipeline).to_list(1)
         try:
             build_doc = r[0]['builds'][0]
         except IndexError:
@@ -605,6 +608,8 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         ]
     }
 
+    _running_tasks = set()
+
     @queryset_manager
     def objects(doc_cls, queryset):  # pylint: disable=no-self-argument
         """The default querymanager for BuildSet"""
@@ -653,7 +658,9 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
                        title=revision.title, number=number,
                        commit_body=revision.body)
         await buildset.save()
-        ensure_future(buildset.notify('buildset-added'))
+        t = ensure_future(buildset.notify('buildset-added'))
+        cls._running_tasks.add(t)
+        t.add_done_callback(lambda t: cls._running_tasks.remove(t))
         return buildset
 
     def to_dict(self, builds=True):
@@ -777,7 +784,7 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
 
         ]
         buildset_doc = (await cls.objects(**kwargs).aggregate(
-            *pipeline).to_list(1))[0]
+            pipeline).to_list(1))[0]
         buildset = cls._from_aggregate(buildset_doc)
         return buildset
 
@@ -895,6 +902,7 @@ class BuildManager(LoggerMixin):
     # to keep track of which repository is already working
     # on consume its queue
     _is_building = defaultdict(lambda: False)
+    _running_tasks = set()
 
     def __init__(self, repository):
         """:param repository: An instance of
@@ -1015,7 +1023,9 @@ class BuildManager(LoggerMixin):
         # information about builds.
         buildset_added.send(str(self.repository.id), buildset=buildset)
         if not self.is_building:  # pragma: no branch
-            ensure_future(self._execute_builds())
+            t = ensure_future(self._execute_builds())
+            type(self)._running_tasks.add(t)
+            t.add_done_callback(lambda t: type(self)._running_tasks.remove(t))
 
     def _filter_builders(self, builders_conf, include, exclude):
         if include:
@@ -1125,7 +1135,10 @@ class BuildManager(LoggerMixin):
                     buildset.id)), level='debug')
 
                 self.build_queues.append(buildset)
-                ensure_future(self._execute_builds())
+                t = ensure_future(self._execute_builds())
+                type(self)._running_tasks.add(t)
+                t.add_done_callback(
+                    lambda t: type(self)._running_tasks.remove(t))
 
     async def _set_started_for_buildset(self, buildset):
         if not buildset.started:
