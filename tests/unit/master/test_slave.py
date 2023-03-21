@@ -20,11 +20,11 @@
 import asyncio
 import datetime
 from unittest import TestCase
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, MagicMock, patch, AsyncMock
 from uuid import uuid4
 from toxicbuild.core.utils import datetime2string
 from toxicbuild.master import slave, build, repository, users
-from tests import async_test, AsyncMagicMock
+from tests import async_test
 
 
 @patch.object(slave, 'build_started', Mock())
@@ -98,7 +98,7 @@ class SlaveTest(TestCase):
         self.assertEqual(slave_id, slave_inst.id)
 
     @patch('toxicbuild.master.client.BuildClient.connect',
-           AsyncMagicMock(spec='toxicbuild.master.client.BuildClient.connect'))
+           AsyncMock(spec='toxicbuild.master.client.BuildClient.connect'))
     @async_test
     async def test_get_client(self, *a, **kw):
 
@@ -123,28 +123,28 @@ class SlaveTest(TestCase):
 
         self.assertTrue(r)
 
-    @patch.object(slave.asyncio, 'sleep', AsyncMagicMock())
-    @patch.object(slave.Slave, 'healthcheck', AsyncMagicMock(
+    @patch.object(slave.asyncio, 'sleep', AsyncMock())
+    @patch.object(slave.Slave, 'healthcheck', AsyncMock(
         side_effect=ConnectionRefusedError))
     @async_test
     async def test_wait_service_start_timeout(self):
         with self.assertRaises(TimeoutError):
             await self.slave.wait_service_start()
 
-    @patch.object(slave.Slave, 'healthcheck', AsyncMagicMock())
+    @patch.object(slave.Slave, 'healthcheck', AsyncMock())
     @async_test
     async def test_wait_service_start(self):
         r = await self.slave.wait_service_start()
         self.assertIs(r, True)
 
     @patch.object(slave.Slave, 'healthcheck',
-                  AsyncMagicMock(side_effect=slave.ToxicClientException))
+                  AsyncMock(side_effect=slave.ToxicClientException))
     @async_test
     async def test_wait_service_client_exception(self):
         with self.assertRaises(slave.ToxicClientException):
             await self.slave.wait_service_start()
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_list_builders(self):
@@ -165,7 +165,7 @@ class SlaveTest(TestCase):
 
         self.assertEqual(builders, [self.builder, self.other_builder])
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_finish_build_start_exception(self):
@@ -174,17 +174,17 @@ class SlaveTest(TestCase):
             self.build, self.repo, '')
         self.assertEqual(self.build.status, 'exception')
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_build_bad_start(self):
         await self._create_test_data()
-        self.slave.start_instance = AsyncMagicMock(side_effect=Exception)
+        self.slave.start_instance = AsyncMock(side_effect=Exception)
         r = await self.slave.build(self.build)
 
         self.assertIs(r, False)
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_build(self):
@@ -204,7 +204,7 @@ class SlaveTest(TestCase):
         await self.slave.build(self.build)
         self.assertTrue(client.build.called)
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_build_with_exception(self):
@@ -225,10 +225,10 @@ class SlaveTest(TestCase):
         self.assertTrue(self.build.finished)
         self.assertEqual(len(build_info['steps']), 1)
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @patch.object(slave, 'build_started', Mock())
-    @patch.object(slave.notifications, 'publish', AsyncMagicMock(
+    @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
     async def test_process_info_with_build_started(self):
@@ -244,10 +244,10 @@ class SlaveTest(TestCase):
         self.assertTrue(slave.build_started.send.called)
         self.assertTrue(slave.notifications.publish.called)
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @patch.object(slave, 'build_finished', Mock())
-    @patch.object(slave.notifications, 'publish', AsyncMagicMock(
+    @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
     async def test_process_info_with_build_finished(self):
@@ -268,12 +268,33 @@ class SlaveTest(TestCase):
             'info_type': 'build_info',
             'total_time': 2}
 
-        await self.slave._process_info(self.build, self.repo, build_info)
+        r = await self.slave._process_info(self.build, self.repo, build_info)
         self.assertEqual(self.build.total_time, 2)
         self.assertTrue(slave.build_finished.send.called)
         self.assertTrue(slave.notifications.publish.called)
+        self.assertTrue(r)
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
+        spec=build.BuildSet.notify))
+    @patch.object(slave, 'build_finished', Mock())
+    @patch.object(slave.notifications, 'publish', AsyncMock(
+        spec=slave.notifications.publish))
+    @async_test
+    async def test_process_info_with_build_finished_late_started_msg(self):
+        await self._create_test_data()
+
+        self.build.steps = [
+            build.BuildStep(repository=self.repo, command='ls', name='ls')]
+        build_info = {
+            'status': 'running', 'steps': [],
+            'started': None, 'finished': None,
+            'info_type': 'build_info',
+            'total_time': 2}
+
+        r = await self.slave._process_info(self.build, self.repo, build_info)
+        self.assertFalse(r)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_process_info_with_step(self):
@@ -291,7 +312,7 @@ class SlaveTest(TestCase):
         await self.slave._process_info(self.build, self.repo, build_info)
         self.assertTrue(process_step_info.called)
 
-    @patch.object(build.BuildSet, 'notify', AsyncMagicMock(
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
     async def test_process_info_with_step_output(self):
@@ -305,7 +326,7 @@ class SlaveTest(TestCase):
         await self.slave._process_info(self.build, self.repo, info)
         self.assertTrue(process_step_info.called)
 
-    @patch.object(slave.notifications, 'publish', AsyncMagicMock(
+    @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
     async def test_process_step_info_new(self):
@@ -322,7 +343,7 @@ class SlaveTest(TestCase):
         self.assertEqual(len(self.build.steps), 1)
         self.assertTrue(slave.notifications.publish.called)
 
-    @patch.object(slave.notifications, 'publish', AsyncMagicMock(
+    @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
     async def test_process_step_info(self):
@@ -366,7 +387,7 @@ class SlaveTest(TestCase):
         self.assertTrue(build.steps[1].total_time)
         self.assertTrue(slave.notifications.publish.called)
 
-    @patch.object(slave.notifications, 'publish', AsyncMagicMock(
+    @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
     async def test_process_step_info_exception(self):
@@ -395,7 +416,7 @@ class SlaveTest(TestCase):
         self.assertEqual(build.steps[0].status, 'exception')
         self.assertEqual(build.steps[0].output, 'some-outputshit happens')
 
-    @patch.object(slave.notifications, 'publish', AsyncMagicMock(
+    @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
     async def test_process_step_info_exception_no_output(self):
@@ -424,7 +445,7 @@ class SlaveTest(TestCase):
         self.assertEqual(build.steps[0].status, 'exception')
         self.assertEqual(build.steps[0].output, 'shit happens')
 
-    @patch.object(slave.notifications, 'publish', AsyncMagicMock(
+    @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
     async def test_update_build_step_less_than_cache(self):
@@ -434,7 +455,7 @@ class SlaveTest(TestCase):
 
         self.assertFalse(r)
 
-    @patch.object(slave.notifications, 'publish', AsyncMagicMock(
+    @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
     async def test_update_build_step_already_updating(self):
@@ -446,7 +467,7 @@ class SlaveTest(TestCase):
 
         self.assertFalse(r)
 
-    @patch.object(slave.notifications, 'publish', AsyncMagicMock(
+    @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
     async def test_process_step_output_info(self):
@@ -470,7 +491,7 @@ class SlaveTest(TestCase):
         self.assertTrue(slave.notifications.publish.called)
         self.assertFalse(self.slave._step_output_is_updating[a_uuid])
 
-    @patch.object(slave.notifications, 'publish', AsyncMagicMock(
+    @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
     async def test_process_step_output_info_step_finished(self):
@@ -490,11 +511,11 @@ class SlaveTest(TestCase):
         await self.slave._process_step_info(self.build, self.repo, info)
 
         info = {'uuid': a_uuid, 'output': 'somefile.txt\n'}
-        slave.notifications.publish = AsyncMagicMock()
+        slave.notifications.publish = AsyncMock()
         await self.slave._process_step_output_info(self.build, self.repo, info)
         self.assertFalse(slave.notifications.publish.called)
 
-    @patch.object(slave.notifications, 'publish', AsyncMagicMock(
+    @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
     async def test_get_step_wait(self):
@@ -503,7 +524,7 @@ class SlaveTest(TestCase):
         step = await self.slave._get_step(build, 'dont-exist', wait=True)
         self.assertIsNone(step)
 
-    @patch.object(slave.notifications, 'publish', AsyncMagicMock(
+    @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
     async def test_fix_last_step_output(self):
@@ -551,12 +572,12 @@ class SlaveTest(TestCase):
         r = await self.slave.start_instance()
         self.assertFalse(r)
 
-    @patch.object(slave.EC2Instance, 'start', AsyncMagicMock())
-    @patch.object(slave.EC2Instance, 'is_running', AsyncMagicMock(
+    @patch.object(slave.EC2Instance, 'start', AsyncMock())
+    @patch.object(slave.EC2Instance, 'is_running', AsyncMock(
         return_value=True))
-    @patch.object(slave.EC2Instance, 'get_ip', AsyncMagicMock(
+    @patch.object(slave.EC2Instance, 'get_ip', AsyncMock(
         return_value='192.168.0.1'))
-    @patch.object(slave.Slave, 'wait_service_start', AsyncMagicMock())
+    @patch.object(slave.Slave, 'wait_service_start', AsyncMock())
     @patch('toxicbuild.master.aws.settings')
     @async_test
     async def test_start_instance_already_running(self, *a, **kw):
@@ -568,12 +589,12 @@ class SlaveTest(TestCase):
         self.assertEqual(r, '192.168.0.1')
         self.assertFalse(slave.EC2Instance.start.called)
 
-    @patch.object(slave.EC2Instance, 'is_running', AsyncMagicMock(
+    @patch.object(slave.EC2Instance, 'is_running', AsyncMock(
         return_value=False))
-    @patch.object(slave.EC2Instance, 'start', AsyncMagicMock())
-    @patch.object(slave.EC2Instance, 'get_ip', AsyncMagicMock(
+    @patch.object(slave.EC2Instance, 'start', AsyncMock())
+    @patch.object(slave.EC2Instance, 'get_ip', AsyncMock(
         return_value='192.168.0.1'))
-    @patch.object(slave.Slave, 'wait_service_start', AsyncMagicMock())
+    @patch.object(slave.Slave, 'wait_service_start', AsyncMock())
     @patch('toxicbuild.master.aws.settings')
     @async_test
     async def test_start_instance_ok(self, *a, **kw):
@@ -591,7 +612,7 @@ class SlaveTest(TestCase):
         r = await self.slave.stop_instance()
         self.assertFalse(r)
 
-    @patch.object(slave.EC2Instance, 'is_running', AsyncMagicMock(
+    @patch.object(slave.EC2Instance, 'is_running', AsyncMock(
         return_value=False))
     @patch('toxicbuild.master.aws.settings')
     @async_test
@@ -618,9 +639,9 @@ class SlaveTest(TestCase):
         r = await self.slave.stop_instance()
         self.assertFalse(r)
 
-    @patch.object(slave.EC2Instance, 'is_running', AsyncMagicMock(
+    @patch.object(slave.EC2Instance, 'is_running', AsyncMock(
         return_value=True))
-    @patch.object(slave.EC2Instance, 'stop', AsyncMagicMock())
+    @patch.object(slave.EC2Instance, 'stop', AsyncMock())
     @patch('toxicbuild.master.aws.settings')
     @async_test
     async def test_stop_instance_ok(self, *a, **kw):

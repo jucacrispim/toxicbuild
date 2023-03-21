@@ -372,8 +372,7 @@ class Slave(OwnedDocument, LoggerMixin):
 
                     await build.update()
                     build_info = build.to_dict()
-                finally:
-                    self.log('build finished !!')
+
         finally:
             await self.rm_running_repo(repo.id)
 
@@ -391,15 +390,22 @@ class Slave(OwnedDocument, LoggerMixin):
         # if we need one more conditional here is better to use
         # a map...
         if info['info_type'] == 'build_info':
-            await self._process_build_info(build, repo, info)
+            r = await self._process_build_info(build, repo, info)
 
         elif info['info_type'] == 'step_info':
-            await self._process_step_info(build, repo, info)
+            r = await self._process_step_info(build, repo, info)
 
         else:
-            await self._process_step_output_info(build, repo, info)
+            r = await self._process_step_output_info(build, repo, info)
+
+        return r
 
     async def _process_build_info(self, build, repo, build_info):
+        if build.steps and not build_info['steps']:
+            # this handles cases when the build is too fast
+            # and the build started msg arrives after the build
+            # step info
+            return False
 
         build.status = build_info['status']
         build.started = string2datetime(build_info['started'])
@@ -425,6 +431,8 @@ class Slave(OwnedDocument, LoggerMixin):
             finished = build_info['steps'][-1]['finished']
             await self._fix_last_step_status(build, step, status, finished)
             await build.notify('build-finished')
+
+        return True
 
     async def _process_step_info(self, build, repo, step_info):
         cmd = step_info['cmd']
