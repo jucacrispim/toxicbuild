@@ -1,6 +1,6 @@
 # In this dockerfile we install de runtime dependencies and create
 # a normal user
-FROM python:3.7.4-slim-buster
+FROM python:3.9.16-slim-buster
 
 RUN apt-get update && apt-get install -y git libyaml-dev locales
 RUN sed -i '/^#.* en_US.* /s/^#//' /etc/locale.gen
@@ -13,7 +13,7 @@ USER toxicuser
 WORKDIR /home/toxicuser
 
 # create a virtualenv
-RUN python3.7 -m venv /home/toxicuser/.toxic-venv
+RUN python3.9 -m venv /home/toxicuser/.toxic-venv
 ENV PATH="/home/toxicuser/.toxic-venv/bin:$PATH"
 
 # The ideia here is to install the dependencies only if the setup.py

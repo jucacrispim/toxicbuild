@@ -52,7 +52,7 @@ pull_imgs(){
     docker pull mongo:4.2.1
     docker pull rabbitmq:3.7.23-alpine
     docker pull zookeeper:3.5.6
-    docker pull python:3.7.4-slim-buster
+    docker pull python:3.9.16-slim-buster
 
     if [ $create_images -eq "1" ]
     then
