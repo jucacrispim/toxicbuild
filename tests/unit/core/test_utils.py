@@ -109,7 +109,7 @@ class UtilsTest(TestCase):
         except asyncio.exceptions.TimeoutError:
             pass
 
-        utils._kill_group(proc)
+        await utils._kill_group(proc)
         procs = subprocess.check_output(['ps', 'aux']).decode()
         self.assertNotIn(cmd, procs)
 

@@ -127,16 +127,20 @@ async def _create_cmd_proc(cmd, cwd, **envvars):
     return proc
 
 
-def _kill_group(process):
+async def _kill_group(process):
     """Kills all processes of the group which a process belong.
 
     :param process: A process that belongs to the group you want to kill.
     """
-    try:
-        pgid = os.getpgid(process.pid)
-        os.killpg(pgid, 9)
-    except ProcessLookupError:
-        pass
+
+    def fn():
+        try:
+            pgid = os.getpgid(process.pid)
+            os.killpg(pgid, 9)
+        except ProcessLookupError:  # pragma no cover
+            pass
+
+    await run_in_thread(fn)
 
 
 async def _try_readline(stream):
@@ -206,7 +210,7 @@ async def exec_cmd(cmd, cwd, timeout=3600, out_fn=None, **envvars):
     output = ''.join(out).strip('\n')
     # we must ensure that all process started by our command are
     # dead.
-    _kill_group(proc)
+    await _kill_group(proc)
     if int(proc.returncode) > 0:
         raise ExecCmdError(output)
 
