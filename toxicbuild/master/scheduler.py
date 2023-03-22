@@ -46,6 +46,8 @@ class TaskScheduler(LoggerMixin):
     """ A simple scheduler for periodic tasks.
     """
 
+    _running_tasks = set()
+
     def __init__(self):
         # self.tasks has the format {hash(task_call_or_coro): task}
         self.tasks = {}
@@ -98,7 +100,9 @@ class TaskScheduler(LoggerMixin):
             self.log(msg, level='debug')
             ret = task.call_or_coro()
             if asyncio.coroutines.iscoroutine(ret):
-                ensure_future(ret)
+                t = ensure_future(ret)
+                type(self)._running_tasks.add(t)
+                t.add_done_callback(lambda t: type(self)._running_tasks.remove(t))
 
     async def start(self):
         if self._started:  # pragma: no cover
