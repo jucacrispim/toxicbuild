@@ -12,7 +12,7 @@ from time import sleep
 
 from mando import main, command
 
-from toxicbuild.common import common_setup
+from toxicbuild.common import ToxicZKClient, BaseInterface
 from toxicbuild.core.conf import Settings
 from toxicbuild.core.utils import (
     set_loglevel,
@@ -20,9 +20,6 @@ from toxicbuild.core.utils import (
     bcrypt_string,
     daemonize as daemon
 )
-
-PIDFILE = 'toxicpoller.pid'
-LOGFILE = 'toxicpoller.log'
 
 ENVVAR = 'TOXICPOLLER_SETTINGS'
 DEFAULT_SETTINGS = 'toxicpoller.conf'
@@ -90,6 +87,14 @@ def _kill_thing(workdir, pidfile, kill=True):
         os.remove(pidfile)
 
 
+def poller_init(addr, port, use_ssl, certfile, keyfile, loglevel):
+
+    from toxicbuild.poller.server import run_server
+    set_loglevel(loglevel)
+    run_server(addr, port, use_ssl=use_ssl,
+               certfile=certfile, keyfile=keyfile)
+
+
 @command
 def create_token(conffile, show_encrypted=False):
     """Creates the access token to the master.
@@ -155,12 +160,12 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
       ``toxicpoller.pid``
     """
 
-    loop = asyncio.get_event_loop()
+    print('Starting toxicpoller')
+
     _set_toxicpoller_conf(conffile, workdir)
     create_settings()
-    loop.run_until_complete(common_setup(settings))
-
-    from toxicbuild.poller.server import run_server
+    ToxicZKClient.settings = settings
+    BaseInterface.settings = settings
 
     addr = settings.ADDR
     port = settings.PORT
@@ -180,16 +185,14 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         keyfile = None
 
     if daemonize:
-        daemon(call=run_server, cargs=(addr, port),
+        daemon(call=poller_init, cargs=(addr, port),
                ckwargs={'use_ssl': use_ssl, 'certfile': certfile,
-                        'keyfile': keyfile},
+                        'keyfile': keyfile, 'loglevel': loglevel},
                stdout=stdout, stderr=stderr, workdir=workdir, pidfile=pidfile)
     else:
-        set_loglevel(loglevel)
-
         with changedir(workdir):
-            run_server(addr, port, use_ssl=use_ssl,
-                       certfile=certfile, keyfile=keyfile)
+            poller_init(addr, port, use_ssl=use_ssl,
+                        certfile=certfile, keyfile=keyfile)
 
 
 @command

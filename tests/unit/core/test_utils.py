@@ -513,7 +513,6 @@ class StreamUtilsTest(TestCase):
     #     await utils.write_stream(writer, output)
 
     #     called_arg = writer.write.call_args[0][0]
-    #     import ipdb;ipdb.set_trace()
     #     called_len = int(called_arg.split('\n')[0])
     #     self.assertEqual(called_len, 204)
 

@@ -28,6 +28,14 @@ def create_settings():
     settings = Settings(ENVVAR, DEFAULT_SETTINGS)
 
 
+def slave_init(addr, port, use_ssl, certfile, keyfile, loglevel):
+    from toxicbuild.slave.server import run_server
+
+    set_loglevel(loglevel)
+    run_server(addr, port, use_ssl=use_ssl,
+               certfile=certfile, keyfile=keyfile)
+
+
 @command
 def start(workdir, daemonize=False, stdout=LOGFILE,
           stderr=LOGFILE, conffile=None, loglevel='info',
@@ -64,7 +72,6 @@ def start(workdir, daemonize=False, stdout=LOGFILE,
     create_settings()
     # These toxicbuild.slave imports must be here so I can
     # change the settings file before settings are instanciated.
-    from toxicbuild.slave.server import run_server
     global settings
 
     addr = settings.ADDR
@@ -85,16 +92,15 @@ def start(workdir, daemonize=False, stdout=LOGFILE,
         keyfile = None
 
     if daemonize:
-        daemon(call=run_server, cargs=(addr, port),
+        daemon(call=slave_init, cargs=(addr, port),
                ckwargs={'use_ssl': use_ssl, 'certfile': certfile,
-                        'keyfile': keyfile},
+                        'keyfile': keyfile, 'loglevel': loglevel},
                stdout=stdout, stderr=stderr, workdir=workdir, pidfile=pidfile)
     else:
-        set_loglevel(loglevel)
-
         with changedir(workdir):
-            run_server(addr, port, use_ssl=use_ssl,
-                       certfile=certfile, keyfile=keyfile)
+            slave_init(addr, port, use_ssl=use_ssl,
+                       certfile=certfile, keyfile=keyfile,
+                       loglevel=loglevel)
 
 
 def _process_exist(pid):
