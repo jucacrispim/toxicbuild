@@ -73,48 +73,50 @@
 
 (defun toxic:--create-venv ()
 
+  (pdj:print "Installing dependencies first.\n")
+  (pdj:print "This is going to take a while. Be patient.")
   (pdj:venv-mkvirtualenv toxic:py-exec toxic:test-venv-name)
-  (let ((pdj:py-requirements-file "requirements_dev.txt"))
-    (pdj:py-install-requirements))
+  (let ((pdj:py-requirements-file "requirements.txt")
+	(pdj:py-bootstrap-buffer-name (concat "*" toxic:bootstrap-buffer-name "*"))
+	(pdj:py-pip-command "pip"))
+    (pdj:py-install-requirements-blocking))
   (venv-workon toxic:original-venv-name))
 
 (defun toxic:--link-stuff ()
   "Creates symlinks to the toxicbuild scripts and lib so
    we can use the dev version in our test instance"
 
-  (hack-local-variables)
-
   (setq toxic:--ln-toxicslave
     (format "ln -s %sscripts/toxicslave %stoxicslave"
-	    pdj:project-directory toxic:test-env-dir))
+	    toxic:--project-dir toxic:test-env-dir))
 
   (setq toxic:--ln-toxicmaster
     (format "ln -s %sscripts/toxicmaster %stoxicmaster"
-	    pdj:project-directory toxic:test-env-dir))
+	    toxic:--project-dir toxic:test-env-dir))
 
   (setq toxic:--ln-toxicpoller
     (format "ln -s %sscripts/toxicpoller %stoxicpoller"
-	    pdj:project-directory toxic:test-env-dir))
+	    toxic:--project-dir toxic:test-env-dir))
 
   (setq toxic:--ln-toxicintegrations
     (format "ln -s %sscripts/toxicintegrations %stoxicintegrations"
-	    pdj:project-directory toxic:test-env-dir))
+	    toxic:--project-dir toxic:test-env-dir))
 
   (setq toxic:--ln-toxicoutput
     (format "ln -s %sscripts/toxicoutput %stoxicoutput"
-	    pdj:project-directory toxic:test-env-dir))
+	    toxic:--project-dir toxic:test-env-dir))
 
   (setq toxic:--ln-toxicweb
     (format "ln -s %sscripts/toxicweb %stoxicweb"
-	    pdj:project-directory toxic:test-env-dir))
+	    toxic:--project-dir toxic:test-env-dir))
 
   (setq toxic:--ln-toxicbuild-script
     (format "ln -s %sscripts/toxicbuild %stoxicbuild-script"
-	    pdj:project-directory toxic:test-env-dir))
+	    toxic:--project-dir toxic:test-env-dir))
 
   (setq toxic:--ln-toxicbuild
     (format "ln -s %stoxicbuild %stoxicbuild"
-	    pdj:project-directory toxic:test-env-dir))
+	    toxic:--project-dir toxic:test-env-dir))
 
   (setq toxic:--link-everything
     (concat toxic:--ln-toxicslave " && " toxic:--ln-toxicmaster " && "
@@ -122,8 +124,8 @@
 	    " && " toxic:--ln-toxicweb " && " toxic:--ln-toxicintegrations
 	    " && " toxic:--ln-toxicoutput " && " toxic:--ln-toxicpoller))
 
-  (pdj:run-in-term-on-project-directory toxic:--link-everything
-					toxic:bootstrap-buffer-name))
+  (pdj:shell-command-on-project-directory toxic:--link-everything
+					  (concat "*" "no-output" "*")))
 
 
 (defun toxic:create-test-env ()
@@ -137,6 +139,11 @@
   (unless (file-exists-p toxic:test-env-dir)
     (make-directory toxic:test-env-dir))
 
+  (setq toxic:--project-dir pdj:project-directory)
+
+  (switch-to-buffer (get-buffer-create (concat "*" toxic:bootstrap-buffer-name "*")))
+  (pdj:print "Hi, there!\n")
+  (pdj:print " I'm gonna create a new toxicbuild installation for dev purposes.\n\n")
   (if (file-exists-p toxic:test-env-path)
       (message "toxic-env-path exists. Skipping it.")
     (progn
@@ -147,15 +154,18 @@
 
 	(deferred:nextc it
 	  (lambda ()
-	    (defvar old-path (getenv "PYTHONPATH"))
-	    (setenv "PYTHONPATH" pdj:project-directory)
-	    (pdj:run-in-term-on-project-directory toxic:--create-cmd
-						  toxic:bootstrap-buffer-name)
-	    (setenv "PYTHONPATH" old-path)))
+	    (toxic:--create-venv)))
 
 	(deferred:nextc it
 	  (lambda ()
-	    (toxic:--create-venv)))))))
+	    (goto-char (point-max))
+	    (pdj:print "\n\n\nNow let's create a new dev instance.\n\n")
+	    (let ((pdj:project-directory toxic:--project-dir))
+	      (defvar old-path (getenv "PYTHONPATH"))
+	      (setenv "PYTHONPATH" pdj:project-directory)
+	      (pdj:run-in-term-on-project-directory toxic:--create-cmd
+						    toxic:bootstrap-buffer-name)
+	      (setenv "PYTHONPATH" old-path))))))))
 
 (defun toxic:--run-in-env-on-test-dir (toxic-cmd buffer-name)
 
@@ -533,8 +543,7 @@
 			 'toxic:fs-watcher))
 
 
-
-
+;; menu
 (defun toxic:create-menu ()
 
   (interactive)
