@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -102,7 +102,8 @@ class TaskScheduler(LoggerMixin):
             if asyncio.coroutines.iscoroutine(ret):
                 t = ensure_future(ret)
                 type(self)._running_tasks.add(t)
-                t.add_done_callback(lambda t: type(self)._running_tasks.remove(t))
+                t.add_done_callback(
+                    lambda t: type(self)._running_tasks.remove(t))
 
     async def start(self):
         if self._started:  # pragma: no cover
