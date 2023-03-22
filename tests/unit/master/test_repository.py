@@ -225,9 +225,13 @@ class RepositoryTest(TestCase, RepoTestData):
                             'title': 'zhe-commit'}],
                     'clone_status': 'success',
                     'with_clone': False}))
+        repo = await type(self.repo).objects.get(id=self.repo.id)
+        repo.url = 'https://new-url.com/bla'
+        await repo.save()
         await self.repo.update_code()
         self.assertTrue(repository.BuildManager.add_builds.called)
         self.assertFalse(repository.ui_notifications.publish.called)
+        self.assertEqual(self.repo.url, repo.url)
 
     @patch.object(repository, 'get_poller_client', MagicMock())
     @patch.object(repository.BuildManager, 'add_builds', AsyncMock(

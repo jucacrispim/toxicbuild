@@ -412,7 +412,9 @@ class Repository(OwnedDocument, utils.LoggerMixin):
           (not the origin) repository, `external` is the information about
           this remote repo.
         """
-
+        # we must reload here to check if there was a config change
+        # since the last update
+        await self.reload()
         async with get_poller_client(self) as client:
             ret = await client.poll_repo(branches_conf=repo_branches,
                                          external=external)
