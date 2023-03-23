@@ -440,6 +440,9 @@ async def write_stream(writer, data):
     :param data: String data to be sent.
     """
 
+    if writer is None:
+        return False
+
     data = data.encode('utf-8')
     data = '{}\n'.format(len(data)).encode('utf-8') + data
     init = 0
@@ -449,6 +452,8 @@ async def write_stream(writer, data):
         await writer.drain()
         init += WRITE_CHUNK_LEN
         chunk = data[init: init + WRITE_CHUNK_LEN]
+
+    return True
 
 
 def bcrypt_string(src_string, salt=None):

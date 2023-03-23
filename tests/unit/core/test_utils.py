@@ -498,11 +498,18 @@ class StreamUtilsTest(TestCase):
     @async_test
     async def test_write_stream(self):
         writer = MagicMock(drain=AsyncMock())
-        await utils.write_stream(writer, self.data.decode())
+        r = await utils.write_stream(writer, self.data.decode())
 
         called_arg = writer.write.call_args[0][0]
 
         self.assertEqual(called_arg, self.good_data)
+        self.assertTrue(r)
+
+    @async_test
+    async def test_write_stream_no_writer(self):
+        writer = None
+        r = await utils.write_stream(writer, self.data.decode())
+        self.assertFalse(r)
 
     # @async_test
     # def test_write_step_output(self):
