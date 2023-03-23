@@ -192,7 +192,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
     else:
         with changedir(workdir):
             poller_init(addr, port, use_ssl=use_ssl,
-                        certfile=certfile, keyfile=keyfile)
+                        certfile=certfile, keyfile=keyfile, loglevel=loglevel)
 
 
 @command
