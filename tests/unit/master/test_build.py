@@ -339,7 +339,7 @@ class BuildTest(TestCase):
     @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
-    async def test_is_ready2run_no_trigger(self):
+    async def test_is_ready2run_not_triggererd_by(self):
         await self._create_test_data()
         build = self.buildset.builds[0]
         r = await build.is_ready2run()
@@ -357,6 +357,19 @@ class BuildTest(TestCase):
         build.status = 'cancelled'
         await build.update()
         r = await build.is_ready2run()
+
+        self.assertFalse(r)
+
+    @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
+        spec=build.notifications.publish))
+    @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
+        spec=build.BuildSet.notify))
+    @mock.patch.object(build.Build, 'log', mock.Mock())
+    @async_test
+    async def test_is_ready2run_does_not_exit(self):
+        b = build.Build()
+        b.uuid = build.uuid4()
+        r = await b.is_ready2run()
 
         self.assertFalse(r)
 

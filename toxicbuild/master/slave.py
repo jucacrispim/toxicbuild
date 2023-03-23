@@ -34,6 +34,7 @@ from toxicbuild.master.document import OwnedDocument
 from toxicbuild.master.signals import (build_started, build_finished,
                                        step_started, step_finished,
                                        step_output_arrived, build_preparing)
+from .exceptions import DBError
 
 
 class Slave(OwnedDocument, LoggerMixin):
@@ -41,7 +42,6 @@ class Slave(OwnedDocument, LoggerMixin):
     """ Slaves are the entities that actualy do the work
     of execute steps. The comunication to slaves is through
     the network (using :class:`toxicbuild.master.client.BuildClient`).
-    The steps are actually decided by the slave.
     """
 
     INSTANCE_TYPES = ('ec2',)
@@ -414,7 +414,12 @@ class Slave(OwnedDocument, LoggerMixin):
             build.finished = string2datetime(finished)
             build.total_time = (build.finished - build.started).seconds
 
-        await build.update()
+        try:
+            await build.update()
+        except DBError:
+            self.log(f'process build {build.uuid} does not exist',
+                     level='warning')
+            return False
 
         if not finished:
             msg = 'build started at {}'.format(build_info['started'])
@@ -451,6 +456,12 @@ class Slave(OwnedDocument, LoggerMixin):
             self.log(msg, level='debug')
 
             requested_step = await self._get_step(build, uuid)
+            if not requested_step:
+                self.log(f'requested step {uuid} does not exist',
+                         level='warning')
+                self._step_finished[uuid] = False
+                return False
+
             requested_step.status = status
             if requested_step.status == 'exception':
                 requested_step.output = output if not requested_step.output \
@@ -472,7 +483,12 @@ class Slave(OwnedDocument, LoggerMixin):
                                        started=string2datetime(started),
                                        index=index, uuid=uuid)
             build.steps.append(requested_step)
-            await build.update()
+            try:
+                await build.update()
+            except DBError:
+                self.log(f'skipping build.steps.append to {step_info}',
+                         level='warning')
+                return False
             msg = 'step {} started at {}'.format(requested_step.command,
                                                  started)
             self.log(msg, level='debug')
@@ -487,6 +503,8 @@ class Slave(OwnedDocument, LoggerMixin):
                 finished = step_info.get('last_step_finished')
                 await self._fix_last_step_status(build, last_step,
                                                  status, finished)
+
+        return True
 
     async def _fix_last_step_status(self, build, step, status, finished):
         # this fixes the bug with the status of the step that
@@ -557,7 +575,13 @@ class Slave(OwnedDocument, LoggerMixin):
 
         async def _get():
 
-            build = await type(build_inst).get(build_inst.uuid)
+            try:
+                build = await type(build_inst).get(build_inst.uuid)
+            except type(build_inst).DoesNotExist:
+                self.log(f'build _get_step {build_inst.uuid} does not exist.',
+                         level='warning')
+                return
+
             build_steps = build.steps
             for i, step in enumerate(build_steps):
                 if str(step.uuid) == str(step_uuid):

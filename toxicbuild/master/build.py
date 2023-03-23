@@ -497,7 +497,13 @@ class Build(EmbeddedDocument, LoggerMixin):
         the build is ready. If the return value is None it means that
         the build must be cancelled because trigger conditions can't be met.
         """
-        b = await type(self).get(self.uuid)
+        try:
+            b = await type(self).get(self.uuid)
+        except type(self).DoesNotExist:
+            self.log(f'build {self.uuid} does not exist. not ready2run',
+                     level='warning')
+            return False
+
         self.status = b.status
         if self.status != type(self).PENDING:
             return False

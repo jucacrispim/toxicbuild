@@ -296,6 +296,35 @@ class SlaveTest(TestCase):
 
     @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
+    @patch.object(slave, 'build_finished', Mock())
+    @patch.object(slave.notifications, 'publish', AsyncMock(
+        spec=slave.notifications.publish))
+    @patch.object(slave.Slave, 'log', Mock())
+    @async_test
+    async def test_process_info_with_build_update_error(self):
+        await self._create_test_data()
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+        formate_now = datetime2string(now)
+        future_now = now + datetime.timedelta(seconds=2)
+        future_formated_now = datetime2string(future_now)
+
+        self.build.steps = [
+            build.BuildStep(repository=self.repo, command='ls', name='ls')]
+        build_info = {
+            'status': 'running', 'steps': [
+                {'status': 'success',
+                 'finished': future_formated_now}],
+            'started': formate_now, 'finished': future_formated_now,
+            'info_type': 'build_info',
+            'total_time': 2}
+
+        self.build.update = AsyncMock(side_effect=slave.DBError)
+        r = await self.slave._process_info(self.build, self.repo, build_info)
+        self.assertFalse(r)
+
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_process_info_with_step(self):
         await self._create_test_data()
@@ -384,6 +413,46 @@ class SlaveTest(TestCase):
         self.assertEqual(len(build.steps), 2)
         self.assertTrue(build.steps[1].total_time)
         self.assertTrue(slave.notifications.publish.called)
+
+    @patch.object(slave.notifications, 'publish', AsyncMock(
+        spec=slave.notifications.publish))
+    @patch.object(slave.Slave, 'log', Mock())
+    @async_test
+    async def test_process_step_info_bad_requested_step(self):
+        await self._create_test_data()
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+        started = now.strftime('%w %m %d %H:%M:%S %Y %z')
+        finished = (now + datetime.timedelta(seconds=2)).strftime(
+            '%w %m %d %H:%M:%S %Y %z')
+        a_uuid = str(uuid4())
+        self.build.uuid = build.uuid4()
+        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
+                'output': '', 'started': started, 'finished': finished,
+                'index': 0, 'uuid': a_uuid}
+
+        r = await self.slave._process_step_info(self.build, self.repo, info)
+        self.assertFalse(r)
+
+    @patch.object(slave.notifications, 'publish', AsyncMock(
+        spec=slave.notifications.publish))
+    @patch.object(slave.Slave, 'log', Mock())
+    @async_test
+    async def test_process_step_info_bad_build_new_step(self):
+        tz = datetime.timezone(-datetime.timedelta(hours=3))
+        now = datetime.datetime.now(tz=tz)
+        started = now.strftime('%w %m %d %H:%M:%S %Y %z')
+        a_uuid = str(uuid4())
+
+        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
+                'output': '', 'started': started, 'finished': None,
+                'index': 0, 'uuid': a_uuid}
+
+        build = Mock()
+        build.update = AsyncMock(side_effect=slave.DBError)
+        repo = Mock()
+        r = await self.slave._process_step_info(build, repo, info)
+        self.assertFalse(r)
 
     @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
