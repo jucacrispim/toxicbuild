@@ -47,6 +47,9 @@
   "sh ./build-scripts/run_all_tests.sh --with-integrations"
   "The command used to run all tests in toxicubuild.")
 
+(defcustom toxic:loglevel "debug"
+  "Log level for toxicbuild servers")
+
 (defvar toxic:bootstrap-buffer-name "toxic-bootstrap")
 
 
@@ -204,8 +207,8 @@
   (defvar toxic:--slave-path nil)
   (setq toxic:--slave-path (concat toxic:test-env-path "slave/"))
   (defvar toxic:--start-slave-cmd
-    (format "%s %stoxicslave start %s --loglevel=debug"
-	    toxic:py-venv-exec toxic:test-env-dir toxic:--slave-path))
+    (format "%s %stoxicslave start %s --loglevel=%s"
+	    toxic:py-venv-exec toxic:test-env-dir toxic:--slave-path toxic:loglevel))
 
   (toxic:--run-in-env-on-test-dir
    toxic:--start-slave-cmd toxic:slave-buffer-name))
@@ -242,8 +245,8 @@
   (defvar toxic:--master-path nil)
   (setq toxic:--master-path (concat toxic:test-env-path "master/"))
   (defvar toxic:--start-master-cmd
-    (format "%s %stoxicmaster start %s --loglevel=debug"
-	    toxic:py-venv-exec toxic:test-env-dir toxic:--master-path))
+    (format "%s %stoxicmaster start %s --loglevel=%s"
+	    toxic:py-venv-exec toxic:test-env-dir toxic:--master-path toxic:loglevel))
 
   (defvar toxic:--master-buffer-name "toxicmaster")
 
@@ -282,8 +285,8 @@
   (defvar toxic:--output-path nil)
   (setq toxic:--output-path (concat toxic:test-env-path "output/"))
   (defvar toxic:--start-output-cmd
-    (format "%s %stoxicoutput start %s --loglevel=debug"
-	    toxic:py-venv-exec toxic:test-env-dir toxic:--output-path))
+    (format "%s %stoxicoutput start %s --loglevel=%s"
+	    toxic:py-venv-exec toxic:test-env-dir toxic:--output-path toxic:loglevel))
 
   (defvar toxic:--output-buffer-name "toxicoutput")
 
@@ -322,8 +325,8 @@
   (defvar toxic:--integrations-path nil)
   (setq toxic:--integrations-path (concat toxic:test-env-path "integrations/"))
   (defvar toxic:--start-integrations-cmd
-    (format "%s %stoxicintegrations start %s --loglevel=debug"
-	    toxic:py-venv-exec toxic:test-env-dir toxic:--integrations-path))
+    (format "%s %stoxicintegrations start %s --loglevel=%s"
+	    toxic:py-venv-exec toxic:test-env-dir toxic:--integrations-path toxic:loglevel))
 
   (defvar toxic:--integrations-buffer-name "toxicintegrations")
 
@@ -362,8 +365,8 @@
   (defvar toxic:--poller-path nil)
   (setq toxic:--poller-path (concat toxic:test-env-path "poller/"))
   (defvar toxic:--start-poller-cmd
-    (format "%s %stoxicpoller start %s --loglevel=debug"
-	    toxic:py-venv-exec toxic:test-env-dir toxic:--poller-path))
+    (format "%s %stoxicpoller start %s --loglevel=%s"
+	    toxic:py-venv-exec toxic:test-env-dir toxic:--poller-path toxic:loglevel))
 
   (defvar toxic:--poller-buffer-name "toxicpoller")
 
@@ -403,8 +406,8 @@
   (defvar toxic:--webui-path nil)
   (setq toxic:--webui-path (concat toxic:test-env-path "ui/"))
   (defvar toxic:--start-webui-cmd
-    (format "%s %stoxicweb start %s --loglevel=debug"
-	    toxic:py-venv-exec toxic:test-env-dir toxic:--webui-path))
+    (format "%s %stoxicweb start %s --loglevel=%s"
+	    toxic:py-venv-exec toxic:test-env-dir toxic:--webui-path toxic:loglevel))
 
   (defvar toxic:--webui-buffer-name "webui")
   (toxic:--run-in-env-on-test-dir
