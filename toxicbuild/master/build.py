@@ -1154,6 +1154,7 @@ class BuildManager(LoggerMixin):
             await buildset.save()
             await buildset.notify('buildset-started', status='running')
             await self.repository.set_latest_buildset(buildset)
+            self.log('Buildset {} started'.format(buildset.id))
 
     async def _set_finished_for_buildset(self, buildset):
         # reload it so we get the right info about builds and status

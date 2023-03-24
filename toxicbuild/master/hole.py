@@ -957,7 +957,8 @@ class UIStreamHandler(LoggerMixin):
                 self.protocol.user.id)) as consumer:
             while True:
                 msg = await consumer.fetch_message()
-                self.log('Got msg type {}'.format(msg.body['msg_type']))
+                self.log('Got msg type {}'.format(msg.body['msg_type']),
+                         level='debug')
                 if msg.body['msg_type'] == 'stop_consumption':
                     await msg.acknowledge()
                     self.log('stop consumption', level='debug')
@@ -1081,8 +1082,7 @@ class UIStreamHandler(LoggerMixin):
     async def send_response(self, code, body):
         try:
             await self.protocol.send_response(code=code, body=body)
-        except (ConnectionResetError, AttributeError):
-            self.log('Error sending response', level='warning')
+        except ConnectionResetError:
             if self.protocol._transport:
                 self.protocol._transport.close()
             self._disconnectfromsignals()

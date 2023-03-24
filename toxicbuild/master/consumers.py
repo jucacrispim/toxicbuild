@@ -124,13 +124,13 @@ class RepositoryMessageConsumer(LoggerMixin):
     def run(self):
         """Starts the repository message consumer.
         """
-        self.log('[init] Waiting revisions')
+        self.log('[init] Waiting revisions', level='debug')
         asyncio.ensure_future(type(self).revision_consumer.run())
-        self.log('[init] Waiting build requests')
+        self.log('[init] Waiting build requests', level='debug')
         asyncio.ensure_future(type(self).build_consumer.run())
-        self.log('[init] Waiting removal requests')
+        self.log('[init] Waiting removal requests', level='debug')
         asyncio.ensure_future(type(self).removal_consumer.run())
-        self.log('[init] Waiting code update requests')
+        self.log('[init] Waiting code update requests', level='debug')
         asyncio.ensure_future(type(self).update_consumer.run())
 
     async def add_builds(self, msg):

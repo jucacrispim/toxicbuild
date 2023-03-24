@@ -423,13 +423,13 @@ class Slave(OwnedDocument, LoggerMixin):
 
         if not finished:
             msg = 'build started at {}'.format(build_info['started'])
-            self.log(msg)
+            self.log(msg, level='debug')
             build_started.send(str(repo.id), build=build)
             await build.notify('build-started')
         else:
             msg = 'build finished at {} with status {}'.format(
                 build_info['finished'], build.status)
-            self.log(msg)
+            self.log(msg, level='debug')
             build_finished.send(str(repo.id), build=build)
             step = build.steps[-1]
             status = build_info['steps'][-1]['status']
