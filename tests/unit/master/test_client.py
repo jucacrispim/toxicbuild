@@ -98,6 +98,7 @@ class BuildClientTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
+    @mock.patch.object(client, 'MAX_PROCESS_TASKS', 1)
     @async_test
     async def test_build(self):
         write = mock.MagicMock()

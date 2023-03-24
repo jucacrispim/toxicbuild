@@ -27,6 +27,9 @@ from toxicbuild.master.utils import (get_build_config_type,
                                      get_build_config_filename)
 
 
+MAX_PROCESS_TASKS = 10
+
+
 class BuildClient(BaseToxicClient, LoggerMixin):
 
     """ A client to :class:`toxicbuild.slave.server.BuildServer`
@@ -117,6 +120,10 @@ class BuildClient(BaseToxicClient, LoggerMixin):
                 future = ensure_future(process_coro(
                     build, repository, build_info))
                 futures.append(future)
+
+            if len(futures) > MAX_PROCESS_TASKS:
+                await asyncio.gather(*futures)
+                futures = []
 
         if futures:
             await asyncio.gather(*futures)
