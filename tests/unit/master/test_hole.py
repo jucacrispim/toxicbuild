@@ -1758,6 +1758,19 @@ class UIStreamHandlerTest(TestCase):
         self.assertTrue(self.handler.protocol._transport.close.called)
         self.assertTrue(self.handler._disconnectfromsignals.called)
 
+    @async_test
+    async def test_send_response_exception_no_transport(self):
+
+        async def sr(code, body):
+            raise ConnectionResetError
+
+        self.handler.protocol._transport = None
+        self.handler.protocol.send_response = sr
+        self.handler.log = MagicMock()
+        self.handler._disconnectfromsignals = MagicMock()
+        await self.handler.send_response(code=0, body='bla')
+        self.assertTrue(self.handler._disconnectfromsignals.called)
+
 
 class HoleServerTest(TestCase):
 

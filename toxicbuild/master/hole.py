@@ -1083,7 +1083,8 @@ class UIStreamHandler(LoggerMixin):
             await self.protocol.send_response(code=code, body=body)
         except (ConnectionResetError, AttributeError):
             self.log('Error sending response', level='warning')
-            self.protocol._transport.close()
+            if self.protocol._transport:
+                self.protocol._transport.close()
             self._disconnectfromsignals()
 
 
