@@ -221,3 +221,9 @@ class BaseToxicProtocolTest(TestCase):
         self.protocol.close_connection()
 
         self.assertTrue(self.protocol._stream_writer.close.called)
+
+    def test_close_connection_no_writer(self):
+        self.protocol._stream_writer = None
+        self.protocol.close_connection()
+
+        self.assertFalse(self.protocol._connected)

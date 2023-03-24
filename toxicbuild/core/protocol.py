@@ -149,7 +149,8 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         """ Closes the connection with the client
         """
 
-        self._stream_writer.close()
+        if self._stream_writer:
+            self._stream_writer.close()
         self._connected = False
 
     async def send_response(self, code, body):
