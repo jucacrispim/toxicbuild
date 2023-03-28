@@ -73,12 +73,10 @@ class PythonCreateVenvStepTest(TestCase):
     @patch.object(build, 'exec_cmd', MagicMock())
     @async_test
     async def test_execute_with_new_venv(self):
-        execute_mock = Mock(spec=plugins.BuildStep.execute)
-        build.exec_cmd = asyncio.coroutine(
-            lambda *a, **kw: execute_mock(*a, **kw))
+        build.exec_cmd = AsyncMock()
 
         await self.step.execute('.')
-        self.assertTrue(execute_mock.called)
+        self.assertTrue(build.exec_cmd.called)
 
 
 class PythonVenvPluginTest(TestCase):

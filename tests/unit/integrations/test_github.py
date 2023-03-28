@@ -274,10 +274,10 @@ class GithubIntegrationTest(TestCase):
     @async_test
     async def test_get_header_no_token(self):
 
-        def cmock(installation):
+        async def cmock(installation):
             installation.access_token = 'auth-token'
 
-        github.GithubApp.create_installation_token = asyncio.coroutine(cmock)
+        github.GithubApp.create_installation_token = cmock
         self.installation.access_token = None
         expected = 'token auth-token'
         header = await self.installation.get_header()
@@ -289,10 +289,10 @@ class GithubIntegrationTest(TestCase):
     @async_test
     async def test_get_header_token_expired(self):
 
-        def cmock(installation):
+        async def cmock(installation):
             installation.access_token = 'new-auth-token'
 
-        github.GithubApp.create_installation_token = asyncio.coroutine(cmock)
+        github.GithubApp.create_installation_token = cmock
         self.installation.access_token = 'auth-token'
         expected = 'token new-auth-token'
         header = await self.installation.get_header()
