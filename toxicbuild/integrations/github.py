@@ -137,8 +137,8 @@ class GithubApp(BaseIntegrationApp):
                  level='debug')
         jwt_token = jwt.encode(payload, self.private_key, "RS256")
         await self.set_expire_time(dt_expires)
-        await self.set_jwt_token(jwt_token.decode())
-        return jwt_token.decode()
+        await self.set_jwt_token(jwt_token)
+        return jwt_token
 
     async def create_token(self):
         """Creates a new token for the github api."""

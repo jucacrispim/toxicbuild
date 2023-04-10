@@ -40,7 +40,7 @@ class GitHubAppTest(TestCase):
         await github.GithubIntegration.drop_collection()
 
     @patch.object(github.jwt, 'encode', Mock(spec=github.jwt.encode,
-                                             return_value=b'retval'))
+                                             return_value='retval'))
     @patch.object(github, 'now', Mock(spec=github.now))
     @patch.object(github, 'open', MagicMock())
     @patch.object(github, 'settings', Mock())
