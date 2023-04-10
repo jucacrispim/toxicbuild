@@ -142,25 +142,27 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         os.environ['TOXICMASTER_SETTINGS'] = os.environ[
             'TOXICINTEGRATION_SETTINGS']
 
-        from toxicbuild.master import (create_settings_and_connect,
-                                       create_scheduler)
-        create_settings_and_connect()
-        create_scheduler()
         create_settings()
         SettingsPatcher().patch_pyro_settings(settings)
 
-        from pyrocumulus.commands.base import get_command
-        from toxicbuild.common import common_setup
+        def setup_fn():
+            from toxicbuild.master import (create_settings_and_connect,
+                                           create_scheduler)
+            create_settings_and_connect()
+            create_scheduler()
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(common_setup(settings))
+            from toxicbuild.common import common_setup
 
-        ensure_indexes()
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(common_setup(settings))
+
+            ensure_indexes()
 
         print('Starting integrations on port {}'.format(settings.TORNADO_PORT))
 
         sys.argv = ['pyromanager.py', '']
 
+        from pyrocumulus.commands.base import get_command
         global pyrocommand
 
         if not pyrocommand:
@@ -168,6 +170,7 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         else:
             command = pyrocommand
 
+        from .monkey import run
         command.kill = False
         user_msg = 'Starting ToxicIntegrations. Listening on port {}'
         command.user_message = user_msg
@@ -179,7 +182,8 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
         command.stdout = stdout
         command.port = settings.TORNADO_PORT
         command.pidfile = pidfile
-        command.run()
+        command.setup_fn = setup_fn
+        run(command)
 
 
 @command
