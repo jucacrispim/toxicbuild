@@ -97,7 +97,8 @@ requests-toolbelt==0.10.1
 rsa==4.7
 s3transfer==0.6.0
 SecretStorage==3.3.3
-selenium==3.141.0
+selenium==4.0.0
+undetected-chromedriver==3.4.6
 simplegeneric==0.8.1
 six==1.16.0
 snowballstemmer==2.2.0

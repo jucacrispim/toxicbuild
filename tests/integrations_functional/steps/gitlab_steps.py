@@ -58,10 +58,22 @@ def fill_passwd(context):
     el.send_keys(settings.GITLAB_PASSWD)
 
 
+@when('clicks in the accept cookies button')
+def accept_cookies(context):
+    browser = context.browser
+
+    def fn():
+        el = browser.find_element_by_id('onetrust-accept-btn-handler')
+        return el
+
+    el = browser.wait_element_become_present(fn)
+    el.click()
+
+
 @when('clicks in the gitlab login button')
 def click_login_btn(context):
     browser = context.browser
-    el = browser.find_element_by_class_name('btn-success')
+    el = browser.find_element_by_class_name('js-sign-in-button')
     el.click()
 
 

@@ -18,6 +18,7 @@ Feature:
         Given the user is in the gitlab login page
         When he fills the gitlab username field
         And fills the gitlab password field
+        And clicks in the accept cookies button
         And clicks in the gitlab login button
         Then he sees the main page
         And his repositories beeing imported from gitlab

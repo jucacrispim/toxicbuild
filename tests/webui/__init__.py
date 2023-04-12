@@ -9,6 +9,7 @@ from selenium.common.exceptions import (
     StaleElementReferenceException
 )
 from selenium.webdriver.common.action_chains import ActionChains
+import undetected_chromedriver as uc
 from toxicbuild.core.utils import now, datetime2string
 
 
@@ -16,12 +17,17 @@ class SeleniumBrowserException(Exception):
     pass
 
 
-class SeleniumBrowser(webdriver.Chrome):
+class SeleniumBrowser(uc.Chrome):
 
     def __init__(self, *args, **kwargs):
         options = webdriver.ChromeOptions()
         options.add_argument('--start-maximized')
         options.add_argument('--no-sandbox')
+        options.add_experimental_option(
+            "excludeSwitches", ["enable-automation"])
+        options.add_experimental_option('useAutomationExtension', False)
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        kwargs['version_main'] = 102
         super().__init__(*args, chrome_options=options, **kwargs)
         # self.maximize_window()
         self.implicitly_wait(10)
