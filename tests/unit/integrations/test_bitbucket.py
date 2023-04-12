@@ -124,7 +124,9 @@ class BitbucketIntegrationTest(TestCase):
         ret = Mock()
         ret.status = 200
         ret.json = Mock()
-        ret.json.return_value = {'account_id': 'asdf'}
+        ret.json.return_value = {'account_id': 'asdf',
+                                 'links': {'repositories':
+                                           {'href': 'https://bla'}}}
         bitbucket.BitbucketIntegration.request2api.return_value = ret
 
         uuid = await self.integration.request_user_id()
@@ -161,7 +163,7 @@ class BitbucketIntegrationTest(TestCase):
         ret.json = Mock()
         ret.json.side_effect = [pg1, pg2]
         bitbucket.BitbucketIntegration.request2api.return_value = ret
-
+        self.integration.repo_list_url = 'https://bla'
         repos = await self.integration.list_repos()
 
         self.assertEqual(len(repos), 4)

@@ -46,6 +46,13 @@ class BitbucketIntegration(BaseIntegration):
     url_user = 'x-token-auth'
     notif_name = 'bitbucket-commit-status'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # the new bitbucket api does not return a list
+        # of repos based on the account_id anymore, but
+        # gives you a repository list url instead.
+        self.repo_list_url = None
+
     async def request_access_token(self):
         url = settings.BITBUCKET_URL + 'site/oauth2/access_token'
         app = await self.APP_CLS.get_app()
@@ -87,12 +94,12 @@ class BitbucketIntegration(BaseIntegration):
         url = settings.BITBUCKET_API_URL + 'user'
         headers = await self.get_headers()
         r = await self.request2api('get', url, headers=headers)
-        return r.json()['account_id']
+        rjson = r.json()
+        self.repo_list_url = rjson['links']['repositories']['href']
+        return rjson['account_id']
 
     async def list_repos(self):
-        url = settings.BITBUCKET_API_URL + 'repositories/{}'.format(
-            self.external_user_id)
-
+        url = self.repo_list_url
         headers = await self.get_headers()
         repos = []
         while url:
