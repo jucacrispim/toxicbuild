@@ -47,12 +47,10 @@ class BaseToxicClient(utils.LoggerMixin):
 
     """ Base client for communication with toxicbuild servers. """
 
-    def __init__(self, host, port, loop=None, use_ssl=False,
+    def __init__(self, host, port, use_ssl=False,
                  validate_cert=True, **ssl_kw):
         """:para host: The host to connect
         :param port: The port that the server is listening.
-        :param loop: A async loop. If None, ``asyncio.get_event_loop()``
-          will be used.
         :param use_ssl: Indicates if we should use a secure connection.
         :param validate_cert: Indicates if we should validate the ssl cert
           used by the server.
@@ -60,7 +58,6 @@ class BaseToxicClient(utils.LoggerMixin):
         """
         self.host = host
         self.port = port
-        self.loop = loop or asyncio.get_event_loop()
         self.use_ssl = use_ssl
         self.validate_cert = validate_cert
         self.ssl_kw = ssl_kw
@@ -108,7 +105,7 @@ class BaseToxicClient(utils.LoggerMixin):
             kw = {}
 
         self.reader, self.writer = await asyncio.open_connection(
-            self.host, self.port, loop=self.loop, **kw)
+            self.host, self.port, **kw)
         self._connected = True
 
     def disconnect(self):

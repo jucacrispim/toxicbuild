@@ -299,7 +299,9 @@ class ToxicMasterTest(BaseFunctionalTest):
             await client.request2server('slave-remove',
                                         {'slave_name_or_id':
                                          'toxic/test-slave'})
-            await client.connect()
+
+        with (await get_dummy_client(cls.user)) as client:
             await client.request2server('repo-remove',
                                         {'repo_name_or_id':
                                          'toxic/test-repo'})
+            client.disconnect()

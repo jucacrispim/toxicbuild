@@ -88,6 +88,10 @@ class PollerTest(TestCase):
         await self.client.connect()
 
     @async_test
+    async def tearDown(self):
+        self.client.disconnect()
+
+    @async_test
     async def test_poll(self):
         r = await self.client.poll()
         self.assertTrue(r['revisions'])
