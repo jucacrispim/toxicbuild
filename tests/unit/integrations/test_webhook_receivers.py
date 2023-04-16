@@ -274,9 +274,6 @@ class BaseWebhookReceiverTest(AsyncTestCase):
 
 class GithubWebhookReceiverTest(AsyncTestCase):
 
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
-
     def setUp(self):
         super().setUp()
         body = webhook_receivers.json.dumps({
@@ -465,9 +462,6 @@ class GithubWebhookReceiverTest(AsyncTestCase):
 
 
 class GitlabWebhookReceiverTest(AsyncTestCase):
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
 
     def setUp(self):
         super().setUp()
@@ -731,9 +725,6 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
 
 
 class BitbucketWebhookReceriverTest(AsyncTestCase):
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
 
     def setUp(self):
         super().setUp()
