@@ -35,7 +35,6 @@ class AmqpConnectionTest(TestCase):
         self.conn.transport = Mock()
         self.conn.protocol = AsyncMock()
         self.conn.reconn_lock.acquire_write = MagicMock(
-            spec=self.conn.reconn_lock.acquire_write,
             return_value=AsyncMock())
 
     @patch.object(exchange.asyncamqp, 'connect',

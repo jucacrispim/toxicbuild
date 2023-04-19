@@ -24,7 +24,7 @@ from toxicbuild.core import requests
 from toxicbuild.master.repository import Repository
 from toxicbuild.master.slave import Slave
 from toxicbuild.master.users import User
-from toxicbuild.output import create_auth_token
+from toxicbuild.output.cmds import create_auth_token
 from toxicbuild.output.notifications import Notification
 from toxicbuild.output import settings
 from tests import async_test

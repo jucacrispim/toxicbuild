@@ -21,7 +21,6 @@ import asyncio
 import base64
 import json
 from unittest.mock import Mock, patch, AsyncMock
-import tornado
 from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.integrations import webhook_receivers
 from tests import async_test, create_autospec
@@ -206,7 +205,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         )
 
         self.webhook_receiver.get_pull_request_target = Mock(
-            spec=self.webhook_receiver.get_pull_request_source,
+            spec=self.webhook_receiver.get_pull_request_target,
             return_value={'id': 'other-id',
                           'branch': 'master'}
         )
@@ -236,7 +235,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         )
 
         self.webhook_receiver.get_pull_request_target = Mock(
-            spec=self.webhook_receiver.get_pull_request_source,
+            spec=self.webhook_receiver.get_pull_request_target,
             return_value={'id': 'some-id',
                           'branch': 'master'}
         )

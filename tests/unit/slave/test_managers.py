@@ -222,9 +222,8 @@ class BuilderManagerTest(TestCase):
     async def test_update_and_checkout_with_clone(self):
         self.manager.vcs.workdir_exists.return_value = False
         self.manager.vcs.checkout = AsyncMock()
-        self.manager.vcs.clone = AsyncMock(spec=self.manager.vcs.clone)
-        self.manager.vcs.update_submodule = AsyncMock(
-            spec=self.manager.vcs.update_submodule)
+        self.manager.vcs.clone = AsyncMock()
+        self.manager.vcs.update_submodule = AsyncMock()
 
         self.manager.vcs.try_set_remote = AsyncMock()
         await self.manager.update_and_checkout()
@@ -237,11 +236,9 @@ class BuilderManagerTest(TestCase):
     async def test_update_and_checkout_external(self):
         self.manager.vcs.workdir_exists.return_value = True
         self.manager.vcs.try_set_remote = AsyncMock()
-        self.manager.vcs.import_external_branch = AsyncMock(
-            spec=self.manager.vcs.import_external_branch)
+        self.manager.vcs.import_external_branch = AsyncMock()
         self.manager.vcs.checkout = AsyncMock()
-        self.manager.vcs.update_submodule = AsyncMock(
-            spec=self.manager.vcs.update_submodule)
+        self.manager.vcs.update_submodule = AsyncMock()
 
         external = {'url': 'http://bla.com/bla.git',
                     'name': 'remote', 'branch': 'master',
@@ -265,11 +262,9 @@ class BuilderManagerTest(TestCase):
     async def test_update_and_checkout_without_clone(self):
         self.manager.vcs.clone = MagicMock()
         self.manager.vcs.workdir_exists.return_value = True
-        self.manager.vcs.try_set_remote = AsyncMock(
-            spec=self.manager.vcs.try_set_remote)
+        self.manager.vcs.try_set_remote = AsyncMock()
         self.manager.vcs.checkout = AsyncMock()
-        self.manager.vcs.update_submodule = AsyncMock(
-            spec=self.manager.vcs.update_submodule)
+        self.manager.vcs.update_submodule = AsyncMock()
 
         await self.manager.update_and_checkout()
 
@@ -291,13 +286,11 @@ class BuilderManagerTest(TestCase):
     @async_test
     async def test_update_and_checkout_new_named_tree(self):
         self.manager.vcs.get_remote_branches = AsyncMock()
-        self.manager.vcs.try_set_remote = AsyncMock(
-            spec=self.manager.vcs.try_set_remote)
+        self.manager.vcs.try_set_remote = AsyncMock()
         self.manager.vcs.checkout = AsyncMock(side_effect=[
             managers.ExecCmdError, MagicMock(), MagicMock()])
-        self.manager.vcs.pull = AsyncMock(spec=self.manager.vcs.pull)
-        self.manager.vcs.update_submodule = AsyncMock(
-            spec=self.manager.vcs.update_submodule)
+        self.manager.vcs.pull = AsyncMock()
+        self.manager.vcs.update_submodule = AsyncMock()
         await self.manager.update_and_checkout()
 
         self.assertEqual(len(self.manager.vcs.checkout.call_args_list), 3)
@@ -307,12 +300,9 @@ class BuilderManagerTest(TestCase):
     @patch.object(managers.BuildManager, 'wait_all', AsyncMock())
     @async_test
     async def test_update_and_checkout_known_named_tree(self):
-        self.manager.vcs.checkout = AsyncMock(
-            spec=self.manager.vcs.checkout)
-        self.manager.vcs.update_submodule = AsyncMock(
-            spec=self.manager.vcs.update_submodule)
-        self.manager.vcs.try_set_remote = AsyncMock(
-            spec=self.manager.vcs.try_set_remote)
+        self.manager.vcs.checkout = AsyncMock()
+        self.manager.vcs.update_submodule = AsyncMock()
+        self.manager.vcs.try_set_remote = AsyncMock()
         await self.manager.update_and_checkout()
 
         self.assertEqual(len(self.manager.vcs.checkout.call_args_list), 1)

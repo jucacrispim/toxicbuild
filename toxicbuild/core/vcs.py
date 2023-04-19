@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015, 2018 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015, 2018, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,7 +18,6 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from abc import ABCMeta, abstractmethod
-import asyncio
 import os
 from toxicbuild.core.exceptions import VCSError, ExecCmdError
 from toxicbuild.core.utils import (exec_cmd, inherit_docs, string2datetime,
@@ -126,9 +125,8 @@ class VCS(LoggerMixin, metaclass=ABCMeta):
         """
 
     @abstractmethod
-    @asyncio.coroutine  # pragma no branch
-    def import_external_branch(self, external_url, external_name,
-                               external_branch, into):
+    async def import_external_branch(self, external_url, external_name,
+                                     external_branch, into):
         """Imports a branch from an external (not the origin one)
         repository into a local branch.
 

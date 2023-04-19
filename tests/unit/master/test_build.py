@@ -1700,5 +1700,6 @@ class BuilderTest(TestCase):
                                  token='123', owner=self.owner)
         await slave_inst.save()
         builder = await build.Builder.create(repository=repo, name='b1')
-        objdict = build.json.loads((await builder.to_json()))
+        j = await builder.to_json()
+        objdict = build.json.loads(j)
         self.assertTrue(isinstance(objdict['id'], str))

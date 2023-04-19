@@ -23,13 +23,13 @@ from secrets import token_urlsafe
 import subprocess
 import sys
 from toxicbuild.core.cmd import command, main
-from toxicbuild.integrations import create as create_integrations
-from toxicbuild.master import create as create_master
-from toxicbuild.master import create_user
-from toxicbuild.output import create as create_output, create_auth_token
-from toxicbuild.poller import create as create_poller
-from toxicbuild.slave import create as create_slave
-from toxicbuild.ui import create as create_ui
+from toxicbuild.integrations.cmds import create as create_integrations
+from toxicbuild.master.cmds import create as create_master
+from toxicbuild.master.cmds import create_user
+from toxicbuild.output.cmds import create as create_output, create_auth_token
+from toxicbuild.poller.cmds import create as create_poller
+from toxicbuild.slave.cmds import create as create_slave
+from toxicbuild.ui.cmds import create as create_ui
 
 main._generate_queue = []
 

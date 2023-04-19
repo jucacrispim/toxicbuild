@@ -45,8 +45,7 @@ class ToxicServerTest(TestCase):
     def test_context_management(self):
         self.server.loop.run_until_complete = asyncio.get_event_loop()\
                                                      .run_until_complete
-        self.server.server = Mock(spec=self.server.server,
-                                  close=Mock(),
+        self.server.server = Mock(close=Mock(),
                                   wait_closed=AsyncMock())
 
         with self.server:
@@ -56,7 +55,7 @@ class ToxicServerTest(TestCase):
         self.assertTrue(self.server.server.wait_closed.called)
 
     def test_start(self):
-        self.server.loop.run_forever = Mock(spec=self.server.loop.run_forever)
+        self.server.loop.run_forever = Mock()
         self.server.sync_shutdown = Mock(spec=self.server.sync_shutdown)
 
         self.server.start()

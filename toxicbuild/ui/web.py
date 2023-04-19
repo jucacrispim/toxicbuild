@@ -633,14 +633,6 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
         self.repo_id = None
         self.body = None
         self._dtformat = None
-
-    def prepare(self):
-        self._get_user()
-        self._dtformat = _get_dtformat(self.request)
-
-    def initialize(self):
-        self.action = None
-        self.repo_id = None
         self.events = {'repo_status_changed': self._send_raw_info,
                        'repo_added': self._send_raw_info,
                        'build_preparing': self._send_build_info,
@@ -693,6 +685,10 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
                                                    'build_cancelled'],
 
                                 'step-output': ['step_output_info']}
+
+    def prepare(self):
+        self._get_user()
+        self._dtformat = _get_dtformat(self.request)
 
     async def _get_repo_id(self):
         if 'repo_id' in self.request.arguments.keys():

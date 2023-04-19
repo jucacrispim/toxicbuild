@@ -70,7 +70,7 @@ class SerializeMixin:
         """Async version of to_json. Expects a to_dict coroutine."""
 
         objdict = await self.to_dict()
-        return json.dumps(objdict)
+        return json.dumps(objdict)  # pragma no cover stupid coverage
 
 
 class Builder(SerializeMixin, Document):
@@ -148,7 +148,8 @@ class Builder(SerializeMixin, Document):
 
     async def to_json(self):
         """Returns a json for this builder."""
-        return (await self.async_to_json())
+        j = await self.async_to_json()
+        return j  # pragma no cover stupid coverage
 
 
 class BuildStep(EmbeddedDocument):

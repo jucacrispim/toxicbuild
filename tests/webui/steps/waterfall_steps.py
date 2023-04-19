@@ -9,7 +9,7 @@ from tests.webui.steps.base_steps import (  # noqa f811
 
 @when('he clicks in the waterfall button')
 @take_screenshot
-def step_impl(context):
+def clicks_waterfall_button(context):
     browser = context.browser
 
     def fn():
@@ -28,7 +28,7 @@ def step_impl(context):
 
 @then('he sees a list of builds in the waterfall')  # noqa f401
 @take_screenshot
-def step_impl(context):
+def sees_waterfall_builds_list(context):
     browser = context.browser
     elements = browser.find_elements_by_class_name(
         'waterfall-buildset-info-container')
@@ -49,7 +49,7 @@ def step_impl(context):
 
 @when('he clicks in the reschedule buildset button')  # noqa f401
 @take_screenshot
-def step_impl(context):
+def clicks_reschedule_buildset_button(context):
     browser = context.browser
 
     def fn():

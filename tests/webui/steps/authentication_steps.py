@@ -10,7 +10,7 @@ from tests.webui.steps.base_steps import (  # noqa f811
 # Scenario: Someone try to access a page without being logged.
 
 @when('someone tries to access a waterfall url without being logged')
-def step_impl(context):
+def try_get_waterfall(context):
     browser = context.browser
     base_url = 'http://{}:{}/'.format(settings.TEST_WEB_HOST,
                                       settings.TORNADO_PORT)
@@ -21,7 +21,7 @@ def step_impl(context):
 
 
 @then('he sees the login page')  # noqa f401
-def step_impl(context):
+def sees_login_page(context):
     browser = context.browser
 
     def fn():
@@ -40,7 +40,7 @@ def step_impl(context):
 # Scenario: Do login
 
 @given('the user is in the login page')  # noqa f401
-def step_impl(context):
+def user_is_in_login_page(context):
     browser = context.browser
     base_url = 'http://{}:{}/'.format(settings.TEST_WEB_HOST,
                                       settings.TORNADO_PORT)

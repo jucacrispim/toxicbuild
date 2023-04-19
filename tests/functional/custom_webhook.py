@@ -52,57 +52,55 @@ url = URLSpec('/webhookmessage/(.*)', CustomWebHook, {'model': WebHookMessage})
 app = PyroApplication([url])
 
 
-@command
-def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
-          pidfile=None, loglevel='info', conffile=None):
-
-    workdir = os.path.abspath(workdir)
-    with changedir(workdir):
-        sys.path.append(workdir)
-        module = 'tests.functional.data.master.custom_webhook'
-        os.environ['PYROCUMULUS_SETTINGS_MODULE'] = module
-
-        from pyrocumulus.conf import settings
-
-        sys.argv = ['pyromanager.py', '']
-
-        command = get_command('runtornado')()
-
-        command.kill = False
-        command.daemonize = daemonize
-        command.stderr = stderr
-        command.application = 'tests.functional.custom_webhook.app'
-        command.stdout = stdout
-        command.port = settings.TORNADO_PORT
-        command.pidfile = pidfile
-        command.run()
-
-
-@command
-def stop(workdir, pidfile=None):
-
-    if not os.path.exists(workdir):
-        print('Workdir `{}` does not exist'.format(workdir))
-        sys.exit(1)
-
-    workdir = os.path.abspath(workdir)
-    with changedir(workdir):
-        sys.path.append(workdir)
-
-        module = 'tests.functional.data.master.custom_webhook'
-        os.environ['PYROCUMULUS_SETTINGS_MODULE'] = module
-
-        sys.argv = ['pyromanager.py', '']
-
-        command = get_command('runtornado')()
-        command.application = 'tests.functional.custom_webhook.app'
-        command.pidfile = pidfile
-        command.kill = True
-        command.run()
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(WebHookMessage.drop_collection())
-
-
 if __name__ == '__main__':
+    @command
+    def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
+              pidfile=None, loglevel='info', conffile=None):
+
+        workdir = os.path.abspath(workdir)
+        with changedir(workdir):
+            sys.path.append(workdir)
+            module = 'tests.functional.data.master.custom_webhook'
+            os.environ['PYROCUMULUS_SETTINGS_MODULE'] = module
+
+            from pyrocumulus.conf import settings
+
+            sys.argv = ['pyromanager.py', '']
+
+            command = get_command('runtornado')()
+
+            command.kill = False
+            command.daemonize = daemonize
+            command.stderr = stderr
+            command.application = 'tests.functional.custom_webhook.app'
+            command.stdout = stdout
+            command.port = settings.TORNADO_PORT
+            command.pidfile = pidfile
+            command.run()
+
+    @command
+    def stop(workdir, pidfile=None):
+
+        if not os.path.exists(workdir):
+            print('Workdir `{}` does not exist'.format(workdir))
+            sys.exit(1)
+
+        workdir = os.path.abspath(workdir)
+        with changedir(workdir):
+            sys.path.append(workdir)
+
+            module = 'tests.functional.data.master.custom_webhook'
+            os.environ['PYROCUMULUS_SETTINGS_MODULE'] = module
+
+            sys.argv = ['pyromanager.py', '']
+
+            command = get_command('runtornado')()
+            command.application = 'tests.functional.custom_webhook.app'
+            command.pidfile = pidfile
+            command.kill = True
+            command.run()
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(WebHookMessage.drop_collection())
+
     main()

@@ -38,7 +38,7 @@ class ToxicProgram(Program):
         self._generate_queue.append(call)
 
         if len(args) == 1 and hasattr(args[0], '__call__'):
-            return args[0]
+            return args[0]   # pragma no cover
         else:
             def _command(func):  # pragma no cover
                 return func
