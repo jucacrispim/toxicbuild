@@ -42,8 +42,7 @@ class EC2Instance(LoggerMixin):
         return Lock(path)
 
     def _get_session(self):
-        loop = asyncio.get_event_loop()
-        return get_session(loop=loop)
+        return get_session()
 
     def _get_client(self):
         session = self._get_session()
@@ -53,12 +52,11 @@ class EC2Instance(LoggerMixin):
         return client
 
     async def _run_method(self, method_name, *args, **kwargs):
-        client = self._get_client()
-        m = getattr(client, method_name)
-        try:
+
+        async with self._get_client() as client:
+            m = getattr(client, method_name)
             r = await m(*args, **kwargs)
-        finally:
-            await client.close()
+
         return r
 
     async def get_description(self):

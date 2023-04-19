@@ -17,7 +17,7 @@
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch, AsyncMock, MagicMock
 
 from toxicbuild.master import aws
 
@@ -49,12 +49,12 @@ class EC2InstanceTest(TestCase):
         client.describe_instances.return_value = {
             'Reservations': [{'Instances': [{'some': 'value'}]}]}
 
-        self.instance._get_client = Mock(return_value=client)
+        self.instance._get_client = MagicMock()
+        self.instance._get_client.return_value.__aenter__.return_value = client
 
         r = await self.instance.get_description()
 
         self.assertEqual(r['some'], 'value')
-        self.assertTrue(client.close.called)
 
     @async_test
     async def test_get_status(self):
