@@ -21,6 +21,12 @@ describe('StreamConsumerTest', function(){
     this.consumer = new StreamConsumer();
   });
 
+  it('test-secure-ws', function(){
+    spyOn(window, 'getProto').and.returnValue('https:');
+    let consumer = new StreamConsumer();
+    expect(consumer.url.slice(0, 3)).toEqual('wss');
+  });
+
   it('test-connectTo', function(){
     spyOn(window, 'WebSocket');
     this.consumer.connectTo('repo-status');

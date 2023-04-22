@@ -16,11 +16,15 @@
 // along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
 
+function getProto(){
+  return window.location.protocol;
+}
+
 class StreamConsumer{
 
   constructor(){
     let proto;
-    if (window.location.protocol == 'https') {
+    if (getProto() == 'https:') {
       proto = 'wss://';
     }else{
       proto = 'ws://';
