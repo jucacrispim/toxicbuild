@@ -776,6 +776,7 @@ class SlaveTest(TestCase):
         await self.slave.enqueue_build(build)
         r = await self.slave.dequeue_build(build)
         self.assertTrue(r)
+        await self.slave.reload()
         self.assertEqual(len(self.slave.enqueued_builds), 0)
         self.assertEqual(self.slave.queue_count, 0)
 

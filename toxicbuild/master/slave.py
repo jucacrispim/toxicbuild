@@ -27,6 +27,7 @@ from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
 from toxicbuild.core.utils import (string2datetime, LoggerMixin, now,
                                    localtime2utc)
 from toxicbuild.common.exchanges import notifications
+from toxicbuild.common.coordination import Lock
 from toxicbuild.master.aws import EC2Instance
 from toxicbuild.master.build import BuildStep, Builder
 from toxicbuild.master.client import get_build_client
@@ -114,6 +115,11 @@ class Slave(OwnedDocument, LoggerMixin):
         self._step_output_cache_limit = 1  # seconds
         self._step_output_is_updating = defaultdict(lambda: False)
 
+    @property
+    def lock(self):
+        path = '/toxicbuild-slave-{}'.format(self.id)
+        return Lock(path)
+
     async def save(self, *args, **kwargs):
         if self.on_demand and not self.host:
             self.host = self.DYNAMIC_HOST
@@ -164,14 +170,16 @@ class Slave(OwnedDocument, LoggerMixin):
         two times the same build, if the build is already enqueued simply
         skip it returning False
         """
-        buuid = str(build.uuid)
-        if buuid in self.enqueued_builds:
-            return False
+        async with await self.lock.acquire_write():
+            await self.reload()
+            buuid = str(build.uuid)
+            if buuid in self.enqueued_builds:
+                return False
 
-        self.enqueued_builds.append(buuid)
-        await self.update(
-            inc__queue_count=1,
-            enqueued_builds=self.enqueued_builds)
+            self.enqueued_builds.append(buuid)
+            await self.update(
+                inc__queue_count=1,
+                enqueued_builds=self.enqueued_builds)
 
         return True
 
@@ -179,15 +187,17 @@ class Slave(OwnedDocument, LoggerMixin):
         """Unmark a build as enqueued. If the build is not enqueued returns
         False.
         """
+        async with await self.lock.acquire_write():
+            await self.reload()
 
-        try:
-            i = self.enqueued_builds.index(str(build.uuid))
-            self.enqueued_builds.pop(i)
-        except ValueError:
-            return False
+            try:
+                i = self.enqueued_builds.index(str(build.uuid))
+                self.enqueued_builds.pop(i)
+            except ValueError:
+                return False
 
-        await self.update(dec__queue_count=1,
-                          enqueued_builds=self.enqueued_builds)
+            await self.update(dec__queue_count=1,
+                              enqueued_builds=self.enqueued_builds)
         return True
 
     async def add_running_repo(self, repo_id):
