@@ -19,7 +19,13 @@
 class StreamConsumer{
 
   constructor(){
-    this.url = 'ws://' + window.location.host + '/api/socks/';
+    let proto;
+    if (window.location.protocol == 'https') {
+      proto = 'wss://';
+    }else{
+      proto = 'ws://';
+    }
+    this.url = proto + window.location.host + '/api/socks/';
     this.ws = null;
   }
 
