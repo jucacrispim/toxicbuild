@@ -66,9 +66,9 @@ setup(name='toxicbuild',
               'toxicmaster=toxicbuild.master.cmds:main',
               'toxicslave=toxicbuild.slave.cmds:main',
               'toxicpoller=toxicbuild.poller.cmds:main',
-              'toxicweb=toxicbuild.ui:main',
-              'toxicintegrations=toxicbuild.integrations:main',
-              'toxicoutput=toxicbuild.output:main']
+              'toxicweb=toxicbuild.ui.cmds:main',
+              'toxicintegrations=toxicbuild.integrations.cmds:main',
+              'toxicoutput=toxicbuild.output.cmds:main']
       },
       test_suite='tests',
       provides=['toxicbuild'],)
