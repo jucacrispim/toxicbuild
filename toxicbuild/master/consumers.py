@@ -38,6 +38,8 @@ class BaseConsumer(LoggerMixin):
     """A base class for the consumer that react to incomming messages
     from exchanges"""
 
+    _running_tasks = set()
+
     def __init__(self, exchange, msg_callback, routing_key=None, loop=None):
         """:param exchange: The exchange in which messages are published
           for the consumer to fetch.
@@ -74,7 +76,10 @@ class BaseConsumer(LoggerMixin):
 
                 self.log('Consuming message')
 
-                asyncio.ensure_future(self.msg_callback(msg))
+                t = asyncio.ensure_future(self.msg_callback(msg))
+                type(self)._running_tasks.add(t)
+                t.add_done_callback(
+                    lambda t: type(self)._running_tasks.remove(t))
                 await msg.acknowledge()
 
             self._stop = False
