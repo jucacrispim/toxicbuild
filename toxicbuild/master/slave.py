@@ -178,7 +178,7 @@ class Slave(OwnedDocument, LoggerMixin):
 
             self.enqueued_builds.append(buuid)
             await self.update(
-                inc__queue_count=1,
+                queue_count=len(self.enqueued_builds),
                 enqueued_builds=self.enqueued_builds)
 
         return True
@@ -196,7 +196,7 @@ class Slave(OwnedDocument, LoggerMixin):
             except ValueError:
                 return False
 
-            await self.update(dec__queue_count=1,
+            await self.update(queue_count=len(self.enqueued_builds),
                               enqueued_builds=self.enqueued_builds)
         return True
 

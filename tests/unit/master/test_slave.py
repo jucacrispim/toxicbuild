@@ -173,6 +173,8 @@ class SlaveTest(TestCase):
             self.build, self.repo, '')
         self.assertEqual(self.build.status, 'exception')
 
+    @patch.object(slave.Lock, 'acquire_write', AsyncMock(
+        spec=slave.Lock.acquire_write, return_value=AsyncMock()))
     @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
@@ -183,6 +185,8 @@ class SlaveTest(TestCase):
 
         self.assertIs(r, False)
 
+    @patch.object(slave.Lock, 'acquire_write', AsyncMock(
+        spec=slave.Lock.acquire_write, return_value=AsyncMock()))
     @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
@@ -203,6 +207,8 @@ class SlaveTest(TestCase):
         await self.slave.build(self.build)
         self.assertTrue(client.build.called)
 
+    @patch.object(slave.Lock, 'acquire_write', AsyncMock(
+        spec=slave.Lock.acquire_write, return_value=AsyncMock()))
     @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @async_test
@@ -748,6 +754,8 @@ class SlaveTest(TestCase):
         self.assertFalse(self.slave.running_count)
         self.assertFalse(self.slave.host == 'a-host-that-shouldnt-be')
 
+    @patch.object(slave.Lock, 'acquire_write', AsyncMock(
+        spec=slave.Lock.acquire_write, return_value=AsyncMock()))
     @async_test
     async def test_enqueue_build(self):
         await self.slave.save()
@@ -758,6 +766,8 @@ class SlaveTest(TestCase):
         self.assertEqual(len(self.slave.enqueued_builds), 1)
         self.assertEqual(self.slave.queue_count, 1)
 
+    @patch.object(slave.Lock, 'acquire_write', AsyncMock(
+        spec=slave.Lock.acquire_write, return_value=AsyncMock()))
     @async_test
     async def test_enqueue_build_already_enqueued(self):
         await self.slave.save()
@@ -769,6 +779,8 @@ class SlaveTest(TestCase):
         self.assertEqual(len(self.slave.enqueued_builds), 1)
         self.assertEqual(self.slave.queue_count, 1)
 
+    @patch.object(slave.Lock, 'acquire_write', AsyncMock(
+        spec=slave.Lock.acquire_write, return_value=AsyncMock()))
     @async_test
     async def test_dequeue_build(self):
         await self.slave.save()
@@ -780,6 +792,8 @@ class SlaveTest(TestCase):
         self.assertEqual(len(self.slave.enqueued_builds), 0)
         self.assertEqual(self.slave.queue_count, 0)
 
+    @patch.object(slave.Lock, 'acquire_write', AsyncMock(
+        spec=slave.Lock.acquire_write, return_value=AsyncMock()))
     @async_test
     async def test_dequeue_build_not_enqueued(self):
         await self.slave.save()
