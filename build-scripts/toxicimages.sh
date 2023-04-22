@@ -30,6 +30,23 @@ create_debian_python38(){
     docker tag toxic-debian-python38 jucacrispim/toxiccontainers:debian-python3.8
 }
 
+create_debian_python39(){
+    docker build -f build-images/debian/Dockerfile-debian-python3.9 -t toxic-debian-python39 build-images/debian
+    docker tag toxic-debian-python39 jucacrispim/toxiccontainers:debian-python3.9
+}
+
+create_debian_python310(){
+    docker build -f build-images/debian/Dockerfile-debian-python3.10 -t toxic-debian-python310 build-images/debian
+    docker tag toxic-debian-python310 jucacrispim/toxiccontainers:debian-python3.10
+}
+
+create_debian_python311(){
+    docker build -f build-images/debian/Dockerfile-debian-python3.11 -t toxic-debian-python311 build-images/debian
+    docker tag toxic-debian-python311 jucacrispim/toxiccontainers:debian-python3.11
+}
+
+
+
 create_debian_go114(){
     docker build -f build-images/debian/Dockerfile-debian-go-1.14 -t toxic-debian-go114 build-images/debian
     docker tag toxic-debian-go114 jucacrispim/toxiccontainers:debian-go1.14
@@ -55,6 +72,23 @@ create_debian_python38_docker(){
     docker tag toxic-debian-python38-docker jucacrispim/toxiccontainers:debian-python3.8-docker
 }
 
+create_debian_python39_docker(){
+    docker build -f build-images/debian/Dockerfile-debian-python3.9-docker -t toxic-debian-python39-docker build-images/debian
+    docker tag toxic-debian-python39-docker jucacrispim/toxiccontainers:debian-python3.9-docker
+}
+
+create_debian_python310_docker(){
+    docker build -f build-images/debian/Dockerfile-debian-python3.10-docker -t toxic-debian-python310-docker build-images/debian
+    docker tag toxic-debian-python310-docker jucacrispim/toxiccontainers:debian-python3.10-docker
+}
+
+create_debian_python311_docker(){
+    docker build -f build-images/debian/Dockerfile-debian-python3.11-docker -t toxic-debian-python311-docker build-images/debian
+    docker tag toxic-debian-python311-docker jucacrispim/toxiccontainers:debian-python3.11-docker
+}
+
+
+
 create_debian_go114_docker(){
     docker build -f build-images/debian/Dockerfile-debian-go-1.14-docker -t toxic-debian-go114-docker build-images/debian
     docker tag toxic-debian-go114-docker jucacrispim/toxiccontainers:debian-go1.14-docker
@@ -66,6 +100,12 @@ create_images(){
     create_debian_go114_docker
     create_debian_generic
     create_debian_generic_docker
+    create_debian_python311
+    create_debian_python311_docker
+    create_debian_python310
+    create_debian_python310_docker
+    create_debian_python39
+    create_debian_python39_docker
     create_debian_python38
     create_debian_python38_docker
     create_debian_python37
@@ -82,6 +122,12 @@ upload_images(){
     docker push jucacrispim/toxiccontainers:debian-go1.14-docker
     docker push jucacrispim/toxiccontainers:debian-generic
     docker push jucacrispim/toxiccontainers:debian-generic-docker
+    docker push jucacrispim/toxiccontainers:debian-python3.11
+    docker push jucacrispim/toxiccontainers:debian-python3.11-docker
+    docker push jucacrispim/toxiccontainers:debian-python3.10
+    docker push jucacrispim/toxiccontainers:debian-python3.10-docker
+    docker push jucacrispim/toxiccontainers:debian-python3.9
+    docker push jucacrispim/toxiccontainers:debian-python3.9-docker
     docker push jucacrispim/toxiccontainers:debian-python3.8
     docker push jucacrispim/toxiccontainers:debian-python3.8-docker
     docker push jucacrispim/toxiccontainers:debian-python3.7
@@ -91,6 +137,7 @@ upload_images(){
     docker push jucacrispim/toxiccontainers:debian-python3.5
     docker push jucacrispim/toxiccontainers:debian-python3.5-docker
 }
+
 case "$1" in
 
     create)

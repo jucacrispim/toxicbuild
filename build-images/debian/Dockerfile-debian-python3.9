@@ -1,4 +1,4 @@
-FROM debian:bullseye-slim
+FROM python:3.9-slim-bullseye
 
 RUN apt-get update && apt-get install -y sudo
 
@@ -19,6 +19,7 @@ RUN useradd -ms /bin/bash toxicuser
 RUN addgroup toxicuser sudo
 USER toxicuser
 WORKDIR /home/toxicuser
+RUN python -m venv /home/toxicuser/.venv
 
-ENV PATH="$PATH:/bin:/sbin"
+ENV PATH="/home/toxicuser/.venv/bin:$PATH:/bin:/sbin"
 ENV TERM="xterm-mono"

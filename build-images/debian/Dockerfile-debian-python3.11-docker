@@ -1,0 +1,28 @@
+FROM jucacrispim/toxiccontainers:debian-python3.11
+
+USER root
+
+RUN apt-get update && apt-get install -y apt-transport-https \
+	ca-certificates curl gnupg2 software-properties-common
+
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+RUN add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/debian \
+   $(lsb_release -cs) \
+   stable"
+
+RUN echo "exit 101" > /usr/sbin/policy-rc.d
+RUN apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io
+RUN echo "exit 0" > /usr/sbin/policy-rc.d
+
+RUN usermod -aG docker toxicuser
+
+RUN sudo mkdir -p /etc/docker/
+
+RUN echo '{"storage-driver": "overlay2"}' | sudo tee /etc/docker/daemon.json
+
+VOLUME /var/lib/docker
+
+USER toxicuser
+
+CMD ["sudo", "dockerd", "--host", "unix:///var/run/docker.sock"]
