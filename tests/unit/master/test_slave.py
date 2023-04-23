@@ -542,6 +542,19 @@ class SlaveTest(TestCase):
 
     @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
+    @patch.object(slave.Slave, 'log', Mock(spec=slave.Slave.log))
+    @async_test
+    async def test_update_build_step_no_step_on_db(self):
+        self.slave._step_output_cache_time['some-uuid'] = 10
+        b = build.Build()
+        step_info = {'uuid': 'some-uuid', 'output': 'bla'}
+        self.slave._step_output_is_updating['some-uuid'] = False
+        r = await self.slave._update_build_step_info(b, step_info)
+
+        self.assertFalse(r)
+
+    @patch.object(slave.notifications, 'publish', AsyncMock(
+        spec=slave.notifications.publish))
     @async_test
     async def test_process_step_output_info(self):
         await self._create_test_data()

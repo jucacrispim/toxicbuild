@@ -539,8 +539,12 @@ class Slave(OwnedDocument, LoggerMixin):
         if self._step_output_cache_time[uuid] >= now or is_updating:
             return False
 
-        self._step_output_is_updating[uuid] = True
         step = await self._get_step(build, uuid, wait=True)
+        if not step:
+            # not on database yet
+            return False
+
+        self._step_output_is_updating[uuid] = True
         # the thing here is that while we are waiting for the step,
         # the step may have finished, so we don'to anything in this case.
         if self._step_finished[uuid]:
@@ -597,6 +601,9 @@ class Slave(OwnedDocument, LoggerMixin):
                 if str(step.uuid) == str(step_uuid):
                     build_inst.steps[i] = step
                     return step
+
+            self.log(f'step _get_step {step_uuid} does not exist.',
+                     level='warning')
 
         step = await _get()
         limit = 20
