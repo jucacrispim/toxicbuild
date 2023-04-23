@@ -353,7 +353,6 @@ class Slave(OwnedDocument, LoggerMixin):
         try:
             build.status = build.PREPARING
             await build.update()
-            repo = await build.repository
             build_preparing.send(str(repo.id), build=build)
 
             try:
@@ -364,10 +363,9 @@ class Slave(OwnedDocument, LoggerMixin):
 
             with (await self.get_client()) as client:
                 try:
-                    build_info = await client.build(
-                        build,
-                        envvars=envvars,
-                        process_coro=self._process_info)
+                    async for build_info in client.build(
+                            build, envvars=envvars):
+                        await self._process_info(build, repo, build_info)
                 except (ToxicClientException, BadJsonData):
                     output = traceback.format_exc()
                     build.status = 'exception'
@@ -385,8 +383,6 @@ class Slave(OwnedDocument, LoggerMixin):
 
         finally:
             await self.rm_running_repo(repo.id)
-
-        return build_info
 
     async def _process_info(self, build, repo, info):
         """ Method used to process information sent by
@@ -608,7 +604,7 @@ class Slave(OwnedDocument, LoggerMixin):
         limit = 20
         n = 0
         while not step and wait:
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.01)
             step = await _get()
             n += 1
             if n >= limit:

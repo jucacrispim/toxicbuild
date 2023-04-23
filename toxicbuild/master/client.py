@@ -77,7 +77,7 @@ class BuildClient(BaseToxicClient, LoggerMixin):
         builders = response['body']['builders']
         return builders
 
-    async def build(self, build, envvars=None, process_coro=None):
+    async def build(self, build, envvars=None):
         """Requests a build for the build server.
 
         :param build: The build that will be executed.
@@ -106,28 +106,13 @@ class BuildClient(BaseToxicClient, LoggerMixin):
             data['body']['external'] = build.external.to_dict()
 
         await self.write(data)
-        futures = []
-        build_info = None
         while True:
             r = await self.get_response()
-            if not r:
+            if not r or r.get('body') is None:
                 break
 
-            build_info = r['body']
-            if build_info is None:
-                return
-            if process_coro:
-                future = ensure_future(process_coro(
-                    build, repository, build_info))
-                futures.append(future)
-
-            if len(futures) > MAX_PROCESS_TASKS:
-                await asyncio.gather(*futures)
-                futures = []
-
-        if futures:
-            await asyncio.gather(*futures)
-        return build_info
+            build_info = r.get('body')
+            yield build_info
 
 
 async def get_build_client(slave, addr, port, use_ssl=True,

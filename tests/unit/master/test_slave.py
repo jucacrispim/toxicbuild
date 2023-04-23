@@ -189,23 +189,28 @@ class SlaveTest(TestCase):
         spec=slave.Lock.acquire_write, return_value=AsyncMock()))
     @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
+    @patch.object(slave.Slave, '_process_info', AsyncMock(
+        spec=slave.Slave._process_info))
     @async_test
     async def test_build(self):
         await self._create_test_data()
         client = MagicMock()
+        client.__enter__.return_value = client
+        bmock = Mock()
 
         async def gc():
 
-            async def b(build, envvars, process_coro):
-                client.build()
-                return []
+            async def b(build, envvars=None):
+                bmock()
+                yield {'some': 'info'}
 
-            client.__enter__.return_value.build = b
+            client.build = b
             return client
 
         self.slave.get_client = gc
         await self.slave.build(self.build)
-        self.assertTrue(client.build.called)
+        self.assertTrue(bmock.called)
+        self.assertTrue(self.slave._process_info.called)
 
     @patch.object(slave.Lock, 'acquire_write', AsyncMock(
         spec=slave.Lock.acquire_write, return_value=AsyncMock()))
@@ -215,20 +220,17 @@ class SlaveTest(TestCase):
     async def test_build_with_exception(self):
         await self._create_test_data()
         client = MagicMock()
+        client.__enter__.return_value = client
+        client.build = MagicMock(side_effect=slave.ToxicClientException)
 
         async def gc():
-
-            async def b(build, envvars, process_coro):
-                raise slave.ToxicClientException
-
-            client.__enter__.return_value.build = b
             return client
 
         self.slave.get_client = gc
-        build_info = await self.slave.build(self.build)
+        await self.slave.build(self.build)
         self.assertEqual(self.build.status, 'exception')
         self.assertTrue(self.build.finished)
-        self.assertEqual(len(build_info['steps']), 1)
+        self.assertEqual(len(self.build.steps), 1)
 
     @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
