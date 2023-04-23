@@ -541,6 +541,8 @@ class Slave(OwnedDocument, LoggerMixin):
 
         step = await self._get_step(build, uuid, wait=True)
         if not step:
+            self.log(f'_get_step did not found {step_info} step.',
+                     level='warning')
             # not on database yet
             return False
 
@@ -602,14 +604,11 @@ class Slave(OwnedDocument, LoggerMixin):
                     build_inst.steps[i] = step
                     return step
 
-            self.log(f'step _get_step {step_uuid} does not exist.',
-                     level='warning')
-
         step = await _get()
         limit = 20
         n = 0
         while not step and wait:
-            await asyncio.sleep(0.001)
+            await asyncio.sleep(0.1)
             step = await _get()
             n += 1
             if n >= limit:
