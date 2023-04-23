@@ -550,14 +550,14 @@ class Slave(OwnedDocument, LoggerMixin):
         if self._step_finished[uuid]:
             self.log('Step {} already finished. Leaving...'.format(uuid),
                      level='debug')
-            del self._step_output_cache[uuid]
+            self._step_output_cache.pop(uuid, None)
             return False
 
         output = [step.output or ''] + self._step_output_cache[uuid]
         step.output = ''.join(output)
-        del self._step_output_is_updating[uuid]
-        del self._step_output_cache[uuid]
-        del self._step_output_cache_time[uuid]
+        self._step_output_is_updating.pop(uuid, None)
+        self._step_output_cache.pop(uuid, None)
+        self._step_output_cache_time.pop(uuid, None)
         await build.update()
         return True
 
