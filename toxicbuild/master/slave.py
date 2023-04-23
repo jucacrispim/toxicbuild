@@ -402,7 +402,14 @@ class Slave(OwnedDocument, LoggerMixin):
             r = await self._process_step_info(build, repo, info)
 
         else:
-            r = await self._process_step_output_info(build, repo, info)
+            try:
+                r = await self._process_step_output_info(build, repo, info)
+            except Exception:
+                tb = traceback.format_exc()
+                self.log(f'Error processing step output {info}',
+                         level='error')
+                self.log(f'tb: {tb}', level='error')
+                r = None
 
         return r
 

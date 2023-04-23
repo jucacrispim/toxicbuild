@@ -361,6 +361,21 @@ class SlaveTest(TestCase):
         await self.slave._process_info(self.build, self.repo, info)
         self.assertTrue(self.slave._process_step_output_info.called)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
+        spec=build.BuildSet.notify))
+    @patch.object(slave.Slave, 'log', Mock(spec=slave.Slave.log))
+    @async_test
+    async def test_process_info_with_step_output_error(self):
+        await self._create_test_data()
+        info = {'info_type': 'step_output_info'}
+
+        self.slave._process_step_output_info = AsyncMock(
+            spec=self.slave._process_step_output_info, side_effect=Exception)
+
+        r = await self.slave._process_info(self.build, self.repo, info)
+        self.assertTrue(self.slave._process_step_output_info.called)
+        assert r is None
+
     @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
