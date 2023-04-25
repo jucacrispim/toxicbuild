@@ -286,27 +286,6 @@ class SlaveTest(TestCase):
     @patch.object(slave, 'build_finished', Mock())
     @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
-    @async_test
-    async def test_process_info_with_build_finished_late_started_msg(self):
-        await self._create_test_data()
-
-        self.build.steps = [
-            build.BuildStep(repository=self.repo, command='ls', name='ls')]
-        build_info = {
-            'status': 'running', 'steps': [],
-            'started': None, 'finished': None,
-            'info_type': 'build_info',
-            'total_time': 2}
-        self.build.finished = datetime.datetime.now()
-
-        r = await self.slave._process_info(self.build, self.repo, build_info)
-        self.assertFalse(r)
-
-    @patch.object(build.BuildSet, 'notify', AsyncMock(
-        spec=build.BuildSet.notify))
-    @patch.object(slave, 'build_finished', Mock())
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
     @patch.object(slave.Slave, 'log', Mock())
     @async_test
     async def test_process_info_with_build_update_error(self):
@@ -548,31 +527,6 @@ class SlaveTest(TestCase):
     @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
     @async_test
-    async def test_update_build_step_already_updating(self):
-        self.slave._step_output_cache_time['some-uuid'] = 10
-        build = Mock()
-        step_info = {'uuid': 'some-uuid', 'output': 'bla'}
-        self.slave._step_output_is_updating['some-uuid'] = True
-        r = await self.slave._update_build_step_info(build, step_info)
-
-        self.assertFalse(r)
-
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
-    @patch.object(slave.Slave, 'log', Mock(spec=slave.Slave.log))
-    @async_test
-    async def test_update_build_step_no_step_on_db(self):
-        self.slave._step_output_cache_time['some-uuid'] = 10
-        b = build.Build()
-        step_info = {'uuid': 'some-uuid', 'output': 'bla'}
-        self.slave._step_output_is_updating['some-uuid'] = False
-        r = await self.slave._update_build_step_info(b, step_info)
-
-        self.assertFalse(r)
-
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
-    @async_test
     async def test_process_step_output_info(self):
         await self._create_test_data()
 
@@ -592,31 +546,6 @@ class SlaveTest(TestCase):
         step = await self.slave._get_step(self.build, a_uuid)
         self.assertTrue(step.output)
         self.assertTrue(slave.notifications.publish.called)
-        self.assertFalse(self.slave._step_output_is_updating[a_uuid])
-
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
-    @async_test
-    async def test_process_step_output_info_step_finished(self):
-        await self._create_test_data()
-
-        tz = datetime.timezone(-datetime.timedelta(hours=3))
-        now = datetime.datetime.now(tz=tz)
-        started = now.strftime('%w %m %d %H:%M:%S %Y %z')
-        a_uuid = str(uuid4())
-
-        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
-                'output': '', 'started': started, 'finished': None,
-                'index': 0, 'uuid': a_uuid}
-
-        self.slave._step_output_cache_time[a_uuid] = 10
-        self.slave._step_finished[a_uuid] = True
-        await self.slave._process_step_info(self.build, self.repo, info)
-
-        info = {'uuid': a_uuid, 'output': 'somefile.txt\n'}
-        slave.notifications.publish = AsyncMock()
-        await self.slave._process_step_output_info(self.build, self.repo, info)
-        self.assertFalse(slave.notifications.publish.called)
 
     @patch.object(slave.notifications, 'publish', AsyncMock(
         spec=slave.notifications.publish))
@@ -626,40 +555,6 @@ class SlaveTest(TestCase):
         build = self.buildset.builds[0]
         step = await self.slave._get_step(build, 'dont-exist', wait=True)
         self.assertIsNone(step)
-
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
-    @async_test
-    async def test_fix_last_step_output(self):
-        await self._create_test_data()
-
-        tz = datetime.timezone(-datetime.timedelta(hours=3))
-        now = datetime.datetime.now(tz=tz)
-        started = now.strftime('%w %m %d %H:%M:%S %Y %z')
-        a_uuid = str(uuid4())
-        other_uuid = str(uuid4())
-
-        info = {'cmd': 'ls', 'name': 'run ls', 'status': 'running',
-                'output': '', 'started': started, 'finished': None,
-                'index': 0, 'uuid': a_uuid,
-                'last_step_status': None,
-                'last_step_finished': None}
-
-        await self.slave._process_step_info(self.build, self.repo, info)
-
-        info = {'cmd': 'echo "oi"', 'name': 'echo', 'status': 'running',
-                'output': '', 'started': started, 'finished': None,
-                'index': 1, 'uuid': other_uuid,
-                'last_step_status': 'success',
-                'last_step_finished': started}
-
-        await self.slave._process_step_info(self.build, self.repo, info)
-
-        b = await build.Build.get(self.build.uuid)
-        for step in b.steps:
-            if str(step.uuid) == a_uuid:
-                break
-        self.assertEqual(step.status, 'success')
 
     @patch('toxicbuild.master.aws.settings')
     def test_instance(self, *a, **kw):

@@ -109,11 +109,9 @@ class Slave(OwnedDocument, LoggerMixin):
         # with the last step output and the build finished messages.
         # In fact, all the build management/build server communitation already
         # is on its limits. A new implementation is needed.
-        self._step_finished = defaultdict(lambda: False)
         self._step_output_cache = defaultdict(list)
         self._step_output_cache_time = defaultdict(float)
         self._step_output_cache_limit = 1  # seconds
-        self._step_output_is_updating = defaultdict(lambda: False)
 
     @property
     def lock(self):
@@ -414,12 +412,6 @@ class Slave(OwnedDocument, LoggerMixin):
         return r
 
     async def _process_build_info(self, build, repo, build_info):
-        if build.finished and not build_info['steps']:
-            # this handles cases when the build is too fast
-            # and the build started msg arrives after the build
-            # step info
-            return False
-
         build.status = build_info['status']
         build.started = string2datetime(build_info['started'])
         finished = build_info['finished']
@@ -444,10 +436,6 @@ class Slave(OwnedDocument, LoggerMixin):
                 build_info['finished'], build.status)
             self.log(msg, level='debug')
             build_finished.send(str(repo.id), build=build)
-            step = build.steps[-1]
-            status = build_info['steps'][-1]['status']
-            finished = build_info['steps'][-1]['finished']
-            await self._fix_last_step_status(build, step, status, finished)
             await build.notify('build-finished')
 
         return True
@@ -463,7 +451,6 @@ class Slave(OwnedDocument, LoggerMixin):
         uuid = step_info['uuid']
 
         if finished:
-            self._step_finished[uuid] = True
             msg = 'step {} {} finished at {} with status {}'.format(
                 cmd, uuid, finished, status)
             self.log(msg, level='debug')
@@ -472,7 +459,6 @@ class Slave(OwnedDocument, LoggerMixin):
             if not requested_step:
                 self.log(f'requested step {uuid} does not exist',
                          level='warning')
-                self._step_finished[uuid] = False
                 return False
 
             requested_step.status = status
@@ -510,21 +496,8 @@ class Slave(OwnedDocument, LoggerMixin):
             msg.update({'repository_id': str(repo.id),
                         'event_type': 'step-started'})
             await notifications.publish(msg)
-            if step_info.get('last_step_status'):
-                last_step = build.steps[-2]
-                status = step_info.get('last_step_status')
-                finished = step_info.get('last_step_finished')
-                await self._fix_last_step_status(build, last_step,
-                                                 status, finished)
 
         return True
-
-    async def _fix_last_step_status(self, build, step, status, finished):
-        # this fixes the bug with the status of the step that
-        # in someway was getting lost here in the slave.
-        step.status = status
-        step.finished = string2datetime(finished)
-        await build.update()
 
     async def _update_build_step_info(self, build, step_info):
         # we need this cache here to avoid excessive memory consumption
@@ -538,29 +511,12 @@ class Slave(OwnedDocument, LoggerMixin):
             self._step_output_cache_time[
                 uuid] = now + self._step_output_cache_limit
 
-        is_updating = self._step_output_is_updating[uuid]
-        if self._step_output_cache_time[uuid] >= now or is_updating:
+        if self._step_output_cache_time[uuid] >= now:
             return False
 
         step = await self._get_step(build, uuid, wait=True)
-        if not step:
-            self.log(f'_get_step did not found {step_info} step.',
-                     level='warning')
-            # not on database yet
-            return False
-
-        self._step_output_is_updating[uuid] = True
-        # the thing here is that while we are waiting for the step,
-        # the step may have finished, so we don'to anything in this case.
-        if self._step_finished[uuid]:
-            self.log('Step {} already finished. Leaving...'.format(uuid),
-                     level='debug')
-            self._step_output_cache.pop(uuid, None)
-            return False
-
         output = [step.output or ''] + self._step_output_cache[uuid]
         step.output = ''.join(output)
-        self._step_output_is_updating.pop(uuid, None)
         self._step_output_cache.pop(uuid, None)
         self._step_output_cache_time.pop(uuid, None)
         await build.update()
@@ -586,35 +542,8 @@ class Slave(OwnedDocument, LoggerMixin):
         :param build: A :class:`toxicbuild.master.build.Build` instance.
         :param step_uuid: The uuid of the requested step.
         """
-
-        # this is ridiculous, but the idea of waitig for the step is
-        # that sometimes a info - ie step_output_info - may arrive here
-        # before the step started info, so we need to wait a little.
-        build_inst = build
-
-        async def _get():
-
-            try:
-                build = await type(build_inst).get(build_inst.uuid)
-            except type(build_inst).DoesNotExist:
-                self.log(f'build _get_step {build_inst.uuid} does not exist.',
-                         level='warning')
-                return
-
-            build_steps = build.steps
-            for i, step in enumerate(build_steps):
-                if str(step.uuid) == str(step_uuid):
-                    build_inst.steps[i] = step
-                    return step
-
-        step = await _get()
-        limit = 20
-        n = 0
-        while not step and wait:
-            await asyncio.sleep(0.01)
-            step = await _get()
-            n += 1
-            if n >= limit:
-                wait = False
-
-        return step
+        build_steps = build.steps
+        for i, step in enumerate(build_steps):
+            if str(step.uuid) == str(step_uuid):
+                build.steps[i] = step
+                return step

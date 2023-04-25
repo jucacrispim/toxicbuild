@@ -851,7 +851,9 @@ class BuildExecuter(LoggerMixin):
         finally:
             self._running -= 1
 
-        asyncio.ensure_future(self._execute_builds())
+        t = asyncio.ensure_future(self._execute_builds())
+        self._tasks.add(t)
+        t.add_done_callback(lambda t: self._tasks.remove(t))
 
     async def _execute_builds(self):
         for build in self.builds:
