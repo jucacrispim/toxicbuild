@@ -39,6 +39,7 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
 
     APP_CLS = None
     INSTALL_CLS = None
+    _tasks = set()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -110,7 +111,9 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
     async def handle_push(self):
         external_id = self.get_repo_external_id()
         install = await self.get_install()
-        ensure_future(install.update_repository(external_id))
+        t = ensure_future(install.update_repository(external_id))
+        type(self)._tasks.add(t)
+        t.add_done_callback(lambda t: type(self)._tasks.remove(t))
         return 'updating repo'
 
     async def handle_pull_request(self):
