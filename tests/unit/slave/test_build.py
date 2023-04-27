@@ -162,7 +162,8 @@ class BuilderTest(TestCase):
         pconfig = [{'name': 'python-venv', 'pyversion': '/usr/bin/python3.4'}]
         self.builder.conf['plugins'] = pconfig
         self.builder.plugins = self.builder._load_plugins()
-        expected = {'PATH': '.././python-venv/venv-usrbinpython3.4/bin:PATH'}
+        expected = {
+            'PATH': '$PWD/.././python-venv/venv-usrbinpython3.4/bin:PATH'}
         returned = self.builder._get_env_vars()
 
         self.assertEqual(expected, returned)
@@ -173,8 +174,9 @@ class BuilderTest(TestCase):
         self.builder.conf['plugins'] = pconfig
         self.builder.plugins = self.builder._load_plugins()
         self.builder.envvars = {'VAR1': 'someval'}
-        expected = {'PATH': '.././python-venv/venv-usrbinpython3.4/bin:PATH',
-                    'VAR1': 'someval'}
+        expected = {
+            'PATH': '$PWD/.././python-venv/venv-usrbinpython3.4/bin:PATH',
+            'VAR1': 'someval'}
         returned = self.builder._get_env_vars()
         self.assertEqual(expected, returned)
 

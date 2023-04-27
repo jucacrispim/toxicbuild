@@ -113,7 +113,8 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
         install = await self.get_install()
         t = ensure_future(install.update_repository(external_id))
         type(self)._tasks.add(t)
-        t.add_done_callback(lambda t: type(self)._tasks.remove(t))
+        t.add_done_callback(  # pragma no cover
+            lambda t: type(self)._tasks.remove(t))
         return 'updating repo'
 
     async def handle_pull_request(self):

@@ -123,7 +123,10 @@ class PythonVenvPlugin(SlavePlugin):
         return steps
 
     def get_env_vars(self):
-        return {'PATH': '{}/bin:PATH'.format(self.venv_dir)}
+        path = f'{self.venv_dir}/bin:PATH'
+        if not self.venv_dir.startswith(os.sep):
+            path = f'$PWD/{path}'
+        return {'PATH': path}
 
 
 class AptUpdateStep(BuildStep):
