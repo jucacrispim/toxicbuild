@@ -1,12 +1,12 @@
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 
 
 RUN apt-get update && apt-get install -y sudo curl make gcc
-RUN curl -O https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz
+RUN curl -O https://dl.google.com/go/go1.20.3.linux-amd64.tar.gz
 
-RUN tar -C /usr/local -xzf go1.14.2.linux-amd64.tar.gz
+RUN tar -C /usr/local -xzf go1.20.3.linux-amd64.tar.gz
 ENV PATH="$PATH:/usr/local/go/bin"
-RUN rm go1.14.2.linux-amd64.tar.gz
+RUN rm go1.20.3.linux-amd64.tar.gz
 
 # See https://github.com/debuerreotype/debuerreotype/issues/10
 RUN mkdir -p /usr/share/man/man1
