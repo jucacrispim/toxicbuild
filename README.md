@@ -3,4 +3,4 @@
 ToxicBuild is a simple, easy-to-install disbributed continuous integration
 tool.
 
-Please, read the [full documentation](http://toxicbuild.poraodojuca.net/).
+Please, read the [full documentation](https://toxicbuild.poraodojuca.dev/).
