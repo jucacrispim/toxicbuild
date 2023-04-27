@@ -272,21 +272,24 @@ class BuildStepDocker(BuildStep, LoggerMixin):
     async def _get_cmd_line_envvars(self, envvars):
         env = await self._get_docker_env()
         envvars = interpolate_dict_values({}, envvars, env)
+        if not envvars:
+            return ''
+
         var = []
 
         for k, v in envvars.items():
-            var.append('-e "{}={}"'.format(k, v))
+            var.append('export {}={}'.format(k, v))
 
-        return ' '.join(var)
+        return ' && '.join(var) + ' && '
 
     def _get_user_opts(self):
         return '-u {}'.format(self.docker_user)
 
     def _get_docker_cmd(self, cmd, envvars):
         user_opts = self._get_user_opts()
-        cmd = '{} exec {} {} {} /bin/bash -c "cd {} && {}"'.format(
-            self.docker_cmd, user_opts, envvars, self.container_name,
-            self.docker_src_dir, cmd)
+        cmd = "{} exec {} {} /bin/bash -c '{} cd {} && {}'".format(
+            self.docker_cmd, user_opts, self.container_name,
+            envvars, self.docker_src_dir, cmd)
         return cmd
 
     async def exec_cmd(self, cmd, cwd, timeout, out_fn, **envvars):

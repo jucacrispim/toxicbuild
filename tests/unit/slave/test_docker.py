@@ -288,7 +288,7 @@ class BuildStepDockerTest(TestCase):
     @patch.object(docker, 'exec_cmd', AsyncMock(return_value=DOCKER_ENV))
     @async_test
     async def test_get_cmd_line_envvars(self):
-        expected = '-e "VAR=bla"'
+        expected = 'export VAR=bla'
         envvars = {'VAR': 'bla', 'PATH': 'bla:PATH'}
 
         r = await self.step._get_cmd_line_envvars(envvars)
@@ -304,7 +304,7 @@ class BuildStepDockerTest(TestCase):
         src_dir = '/home/bla/src'
         envvars = await self.step._get_cmd_line_envvars({})
         user_opts = '-u bla'
-        exp = 'docker exec {} {} container /bin/bash -c "cd {} && ls"'.format(
+        exp = "docker exec {} container /bin/bash -c '{} cd {} && ls'".format(
             user_opts, envvars, src_dir)
 
         await self.step.exec_cmd('ls', src_dir, 10, lambda *a, **kw: None)
