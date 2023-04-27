@@ -103,13 +103,15 @@ class PythonVenvPlugin(SlavePlugin):
         self.venv_dir = os.path.join(
             self.data_dir, 'venv-{}'.format(
                 self.pyversion.replace(os.sep, '')))
+        self.pip_command = os.path.join(self.venv_dir, 'bin', 'pip')
 
     def get_steps_before(self):
         create_env = PythonCreateVenvStep(self.data_dir,
                                           self.venv_dir, self.pyversion)
 
         install_deps = BuildStep('install dependencies using pip',
-                                 'pip install -r {}'.format(
+                                 '{} install -r {}'.format(
+                                     self.pip_command,
                                      self.requirements_file),
                                  stop_on_fail=True)
 
