@@ -126,8 +126,9 @@ class Builder(SerializeMixin, Document):
         except cls.DoesNotExist:
             builder = await cls.create(**kwargs)
         else:
-            builder.position = position
-            await builder.save()
+            if builder.position != position:
+                builder.position = position
+                await builder.save()
 
         return builder
 

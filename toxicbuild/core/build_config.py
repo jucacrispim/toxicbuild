@@ -123,7 +123,7 @@ def list_builders_from_config(config, branch=None, slave=None,
     conf_builders = config.get('builders', [])
 
     if config.get('language'):
-        conf_builders += LanguageConfig(config).builders
+        conf_builders = LanguageConfig(config).builders + conf_builders
 
     for builder in conf_builders:
 
