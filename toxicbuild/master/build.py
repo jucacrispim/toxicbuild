@@ -78,12 +78,20 @@ class Builder(SerializeMixin, Document):
     """ The entity responsible for executing the build steps.
     """
 
+    # you don't have 10000 builders, right? RIGHT?
+    DEFAULT_POSITION = 10000
+
     name = StringField(required=True)
     """The name of the builder."""
 
     repository = ReferenceField('toxicbuild.master.Repository')
     """A referece to the :class:`~toxicbuild.master.repository.Repository` that
     owns the builder"""
+
+    position = IntField(required=False, default=10000)
+    """The position for the builder to be displayed in the waterfall.
+    It is acording to the order of the definition in the build config
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -111,10 +119,15 @@ class Builder(SerializeMixin, Document):
         """Returns a builder instance. If it does not exist, creates it.
 
         :param kwargs: kwargs to match the builder."""
+        no_order_kw = kwargs.copy()
+        position = no_order_kw.pop('position', cls.DEFAULT_POSITION)
         try:
-            builder = await cls.get(**kwargs)
+            builder = await cls.get(**no_order_kw)
         except cls.DoesNotExist:
             builder = await cls.create(**kwargs)
+        else:
+            builder.position = position
+            await builder.save()
 
         return builder
 
@@ -1078,11 +1091,11 @@ class BuildManager(LoggerMixin):
 
         builders = []
         builders_conf = self._filter_builders(builders_conf, include, exclude)
-        for bconf in builders_conf:
+        for i, bconf in enumerate(builders_conf):
             name = bconf['name']
             triggered_by = bconf.get('triggered_by', [])
             builder = await Builder.get_or_create(
-                name=name, repository=self.repository)
+                name=name, repository=self.repository, position=i)
             builder.triggered_by = triggered_by
             builders.append(builder)
 

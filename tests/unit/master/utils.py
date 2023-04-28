@@ -35,8 +35,10 @@ class RepoTestData:
         await self.repo.save()
         rep = self.repo
         now = datetime.datetime.now()
-        self.builder = await build.Builder.create(name='builder0',
-                                                       repository=self.repo)
+        self.builder = await build.Builder.get_or_create(
+            name='builder0',
+            repository=self.repo,
+            position=0)
         self.slave = await slave.Slave.create(name='slave',
                                               host='localhost',
                                               port=1234,

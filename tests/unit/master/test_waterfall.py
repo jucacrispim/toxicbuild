@@ -46,6 +46,7 @@ class WaterfallTest(TestCase, RepoTestData):
         w = await waterfall.Waterfall.get(self.repo)
         self.assertTrue(w.branches)
         self.assertTrue(w.builders)
+        self.assertTrue(w.builders[0].position < w.builders[1].position)
 
     @async_test
     async def test_load_with_branch(self):
@@ -63,9 +64,18 @@ class WaterfallTest(TestCase, RepoTestData):
 
     async def _create_db_revisions(self):
         await super()._create_db_revisions()
+        self.builder1 = await build.Builder.get_or_create(
+            name='builder1',
+            repository=self.repo,
+            position=1)
         self.buildset = await BuildSet.create(self.repo, self.revision)
         self.build = Build(repository=self.repo, slave=self.slave,
                            branch='master', named_tree='123',
                            builder=self.builder)
+        self.build1 = Build(repository=self.repo, slave=self.slave,
+                            branch='master', named_tree='123',
+                            builder=self.builder1)
+
         self.buildset.builds.append(self.build)
+        self.buildset.builds.append(self.build1)
         await self.buildset.save()

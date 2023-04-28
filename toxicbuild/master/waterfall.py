@@ -49,8 +49,10 @@ class Waterfall:
             'builds__output').to_list()
         ids = [b._data['builder'].id for bs in self.buildsets
                for b in bs.builds]
-        futs = [Builder.objects.filter(id__in=ids).to_list(),
-                self.repo.get_known_branches()]
+        futs = [
+            Builder.objects.filter(id__in=ids).order_by('position').to_list(),
+            self.repo.get_known_branches()
+        ]
         r = await asyncio.gather(*futs)
         self.builders = r[0]
         self.branches = r[1]
