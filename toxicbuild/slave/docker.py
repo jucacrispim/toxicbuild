@@ -51,13 +51,13 @@ class DockerContainerBuilder(Builder):
 
     def __init__(self, *args, **kwargs):
         self.cname = self._get_name(args[1]['name'], args[2], args[3])
+        self.docker_user = settings.CONTAINER_USER
         self.docker_plugin_data_dir = DOCKER_PLUGIN_DATA_DIR.format(
             user=self.docker_user)
 
         super().__init__(*args, **kwargs)
 
         self.docker_cmd = DOCKER_CMD
-        self.docker_user = settings.CONTAINER_USER
         self.docker_src_dir = DOCKER_SRC_DIR.format(user=self.docker_user)
         self.image_name = settings.DOCKER_IMAGES[self.platform]
         # Are we about to start a container that has a dockerd inside it?
