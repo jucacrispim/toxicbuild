@@ -108,7 +108,7 @@ class PythonVenvPlugin(SlavePlugin):
         self.pyversion = pyversion
         self.requirements_file = requirements_file
         self.remove_env = remove_env
-        self.pip_command = os.path.join(self.venv_dir, 'bin', 'pip')
+        self.pip_command = 'pip'
 
     @property
     def venv_dir(self):
