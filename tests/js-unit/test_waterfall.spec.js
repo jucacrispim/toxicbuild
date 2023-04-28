@@ -98,10 +98,11 @@ describe('WaterfallTest', function(){
   });
 
   it('test_getBuildsetBuilders', async function(){
-    let data = {builds: [{builder: {name: 'builder0', id: 'id0'}},
-			 {builder: {name: 'builder1', id: 'id1'}}]};
+    let data = {builds: [{builder: {name: 'builder0', id: 'id0', position: 1}},
+			 {builder: {name: 'builder1', id: 'id1', position: 0}}]};
     let builders = this.waterfall._getBuildsetBuilders(data);
     expect(builders.length).toEqual(2);
+    expect(builders[1].attributes.position).toBeGreaterThan(builders[0].attributes.position);
   });
 
   it('test-setWaterfallBuilds', function(){

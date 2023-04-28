@@ -157,6 +157,9 @@ class Waterfall{
       let builder = new Builder(build_dict.builder);
       builders.push(builder);
     }
+    builders = builders.sort((a, b) => {
+      return a.attributes.position - b.attributes.position;
+    });
     return builders;
   }
 
