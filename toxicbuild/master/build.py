@@ -157,6 +157,7 @@ class Builder(SerializeMixin, Document):
 
         objdict = super().to_dict(id_as_str=True)
         objdict['status'] = await self.get_status()
+        objdict['position'] = int(objdict['position']['$numberInt'])
         return objdict
 
     async def to_json(self):

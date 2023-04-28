@@ -1684,6 +1684,7 @@ class BuilderTest(TestCase):
         objdict = await builder.to_dict()
         self.assertEqual(objdict['id'], str(builder.id))
         self.assertTrue(objdict['status'])
+        self.assertTrue(objdict['position'], build.Builder.DEFAULT_POSITION)
 
     @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
