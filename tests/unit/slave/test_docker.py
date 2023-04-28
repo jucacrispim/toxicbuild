@@ -272,9 +272,17 @@ class DockerContainerBuilderManagerTest(TestCase):
     def test_get_steps(self):
         self.container.conf['steps'] = ['ls', {'name': 'other',
                                                'command': 'cmd2'}]
+        self.container.conf['plugins'] = [{'name': 'apt-install',
+                                           'packages': []}]
+        self.container.plugins = self.container._load_plugins()
+
         steps = self.container._get_steps()
-        self.assertEqual(len(steps), 2)
+        self.assertEqual(len(steps), 4)
         self.assertIsInstance(steps[0], docker.BuildStepDocker)
+        self.assertEqual(len(self.container.plugins), 1)
+        for plugin in self.container.plugins:
+            self.assertEqual(plugin.data_dir,
+                             self.container.docker_plugin_data_dir)
 
 
 class BuildStepDockerTest(TestCase):

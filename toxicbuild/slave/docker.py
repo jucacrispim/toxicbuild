@@ -21,6 +21,7 @@
 # mapped in the settings file) and each time we run a build we run a
 # container based in one of these images.
 
+# !!!!!!!!!!!!!!
 # The oddest part is that when the container is done we `docker cp` - this is
 # why the silly CONTAINER_SLAVE_WORKDIR settings variable exists - the
 # source code to the container instead of creating an image with the source
@@ -40,6 +41,8 @@ from toxicbuild.slave.build import BuildStep, Builder
 
 DOCKER_CMD = 'docker'
 DOCKER_SRC_DIR = os.path.join('/', 'home', '{user}', 'src')
+DOCKER_PLUGIN_DATA_DIR = os.path.join('/', 'home', '{user}',
+                                      'toxicplugins-data')
 
 
 class DockerContainerBuilder(Builder):
@@ -54,6 +57,8 @@ class DockerContainerBuilder(Builder):
         self.docker_cmd = DOCKER_CMD
         self.docker_user = settings.CONTAINER_USER
         self.docker_src_dir = DOCKER_SRC_DIR.format(user=self.docker_user)
+        self.docker_plugin_data_dir = DOCKER_PLUGIN_DATA_DIR.format(
+            user=self.docker_user)
         self.image_name = settings.DOCKER_IMAGES[self.platform]
         # Are we about to start a container that has a dockerd inside it?
         # Note that here we have a big caveat. The key in the docker images
@@ -88,6 +93,12 @@ class DockerContainerBuilder(Builder):
                 await self.rm_container()
 
     def _get_steps(self):
+        # we must set the data dir here because
+        # it is not the same as in the build running
+        # on host
+        for plugin in self.plugins:
+            plugin.data_dir = self.docker_plugin_data_dir
+
         steps = super()._get_steps()
         return [BuildStepDocker.from_buildstep(s, self.cname) for s in steps]
 
@@ -265,8 +276,14 @@ class BuildStepDocker(BuildStep, LoggerMixin):
         envvars = ''
         cmd = self._get_docker_cmd(cmd, envvars)
         output = await exec_cmd(cmd, cwd='.')
-        lines = [l for l in output.split('\n') if l]
-        env = {l.split('=')[0]: l.split('=')[1].strip('\n\r') for l in lines}
+        env = {}
+        for li in output.split('\n'):
+            if not li:
+                continue
+            k, v = li.split('=')
+            v = v.strip('\n\r')
+            env[k] = v
+
         return env
 
     async def _get_cmd_line_envvars(self, envvars):

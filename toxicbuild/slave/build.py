@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -100,9 +100,13 @@ class Builder(LoggerMixin):
 
     def _get_steps(self):
         steps = []
-
+        plugin_before = []
+        plugin_after = []
         for plugin in self.plugins:
-            steps += plugin.get_steps_before()
+            plugin_before += plugin.get_steps_before()
+            plugin_after += plugin.get_steps_after()
+
+        steps += plugin_before
 
         for sdict in self.conf['steps']:
             if isinstance(sdict, str):
@@ -111,8 +115,7 @@ class Builder(LoggerMixin):
             step = BuildStep(**sdict)
             steps.append(step)
 
-        for plugin in self.plugins:
-            steps += plugin.get_steps_after()
+        steps += plugin_after
 
         return steps
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2015-2017, 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2015-2017, 2019, 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -31,6 +31,7 @@ class SlavePlugin(Plugin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._data_dir = None
 
     # Your plugin must have an unique name
     name = 'BaseSlavePlugin'
@@ -38,13 +39,20 @@ class SlavePlugin(Plugin):
     @property
     def data_dir(self):
         """The directory where the plugin store its data."""
+        if self._data_dir:
+            return self._data_dir
 
         try:
             data_dir = settings.PLUGINS_DATA_DIR
         except AttributeError:
             data_dir = os.path.join('..', '.')
 
-        return os.path.join(data_dir, self.name)
+        self._data_dir = os.path.join(data_dir, self.name)
+        return self._data_dir
+
+    @data_dir.setter
+    def data_dir(self, data_dir):
+        self._data_dir = data_dir
 
     def get_steps_before(self):
         """Returns a list of steps to be executed before the steps provided
@@ -100,10 +108,13 @@ class PythonVenvPlugin(SlavePlugin):
         self.pyversion = pyversion
         self.requirements_file = requirements_file
         self.remove_env = remove_env
-        self.venv_dir = os.path.join(
+        self.pip_command = os.path.join(self.venv_dir, 'bin', 'pip')
+
+    @property
+    def venv_dir(self):
+        return os.path.join(
             self.data_dir, 'venv-{}'.format(
                 self.pyversion.replace(os.sep, '')))
-        self.pip_command = os.path.join(self.venv_dir, 'bin', 'pip')
 
     def get_steps_before(self):
         create_env = PythonCreateVenvStep(self.data_dir,
@@ -126,8 +137,6 @@ class PythonVenvPlugin(SlavePlugin):
 
     def get_env_vars(self):
         path = f'{self.venv_dir}/bin:PATH'
-        if not self.venv_dir.startswith(os.sep):
-            path = f'$PWD/{path}'
         return {'PATH': path}
 
 
