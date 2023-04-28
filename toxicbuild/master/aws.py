@@ -26,6 +26,8 @@ from toxicbuild.common.coordination import Lock
 from toxicbuild.core.utils import LoggerMixin
 from toxicbuild.master import settings
 
+EC2_TIMEOUT = 300
+
 
 class EC2Instance(LoggerMixin):
     """Performs operations on the ec2 api"""
@@ -77,7 +79,7 @@ class EC2Instance(LoggerMixin):
         status = await self.get_status()
         return status == 'stopped'
 
-    async def _wait_for_status(self, status, timeout=300):
+    async def _wait_for_status(self, status, timeout=EC2_TIMEOUT):
         self.log('waiting status {} for {}'.format(status, self.instance_id),
                  level='debug')
         i = 0
@@ -94,13 +96,13 @@ class EC2Instance(LoggerMixin):
                 status, timeout))
 
     async def start(self):
-        async with await self.lock.acquire_write():
+        async with await self.lock.acquire_write(timeout=EC2_TIMEOUT):
             await self._run_method(
                 'start_instances', InstanceIds=[self.instance_id])
             await self._wait_for_status('running')
 
     async def stop(self):
-        async with await self.lock.acquire_write():
+        async with await self.lock.acquire_write(timeout=EC2_TIMEOUT):
             await self._run_method(
                 'stop_instances', InstanceIds=[self.instance_id])
             await self._wait_for_status('stopped')
