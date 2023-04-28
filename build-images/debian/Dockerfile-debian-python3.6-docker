@@ -13,7 +13,7 @@ RUN add-apt-repository \
    stable"
 
 RUN echo "exit 101" > /usr/sbin/policy-rc.d
-RUN apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io
+RUN apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose
 RUN echo "exit 0" > /usr/sbin/policy-rc.d
 
 RUN usermod -aG docker toxicuser
