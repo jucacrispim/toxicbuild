@@ -102,7 +102,6 @@ describe('WaterfallTest', function(){
 			 {builder: {name: 'builder1', id: 'id1', position: 0}}]};
     let builders = this.waterfall._getBuildsetBuilders(data);
     expect(builders.length).toEqual(2);
-    expect(builders[1].attributes.position).toBeGreaterThan(builders[0].attributes.position);
   });
 
   it('test-setWaterfallBuilds', function(){
@@ -454,10 +453,12 @@ describe('WaterfallViewTest', function(){
   });
 
   it('test-renderHeader', function(){
-    this.view.model.builders.add({'name': 'bla'});
+    this.view.model.builders.add({'name': 'bla', position: 1});
+    this.view.model.builders.add({name: 'ble', position: 0});
     this.view._renderHeader();
     let header = $('#waterfall-header');
     expect(header.length).toEqual(1);
+    expect(this.view.model.builders.models[0].attributes.position).toBeLessThan(this.view.model.builders.models[1].attributes.position);
   });
 
   it('test-renderBranchesSelect', function(){

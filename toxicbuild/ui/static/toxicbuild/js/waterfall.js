@@ -157,9 +157,6 @@ class Waterfall{
       let builder = new Builder(build_dict.builder);
       builders.push(builder);
     }
-    builders = builders.sort((a, b) => {
-      return a.attributes.position - b.attributes.position;
-    });
     return builders;
   }
 
@@ -635,10 +632,18 @@ class WaterfallView extends Backbone.View{
   _renderHeader(){
     let header_container = $('#waterfall-header');
 
+    this._setBuildersOrder();
+
     this.model.builders.each(function(e){
       let view = new WaterfallBuilderView({builder: e});
       let el = view.getRendered().$el;
       header_container.append(el);
+    });
+  }
+
+  _setBuildersOrder(){
+    this.model.builders.models = this.model.builders.models.sort((a, b) => {
+      return a.attributes.position - b.attributes.position;
     });
   }
 
