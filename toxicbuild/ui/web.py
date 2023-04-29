@@ -258,7 +258,7 @@ class ModelRestHandler(LoggerMixin, BasePyroHandler):
         super().__init__(*args, **kwargs)
 
     async def async_prepare(self):
-        super().async_prepare()
+        await super().async_prepare()
 
         if self.request.body:  # pragma no branch
             self.body = json.loads(self.request.body)
@@ -726,7 +726,12 @@ class StreamHandler(CookieAuthHandlerMixin, WebSocketHandler):
         """Sends information about step output to the ws client.
 
         :param info: Message sent by the master"""
-        requested_uuid = self.request.arguments.get('uuid')[0].decode()
+        requested_uuid = self.request.arguments.get('uuid')
+        if not requested_uuid:
+            self.log(f'No uuid for {self.request.path} {info}', level='debug')
+
+            return
+        requested_uuid = requested_uuid[0].decode()
         build_uuid = info.get('build').get('uuid')
         step_uuid = info.get('uuid')
         if requested_uuid in [build_uuid, step_uuid]:
