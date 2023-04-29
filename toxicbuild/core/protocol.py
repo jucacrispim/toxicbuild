@@ -153,7 +153,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
             self._stream_writer.close()
         self._connected = False
 
-    async def send_response(self, code, body):
+    async def send_response(self, code, body, timeout=None):
         """ Send a response to client formated by the (unknown) toxicbuild
         remote build specs.
 
@@ -161,6 +161,7 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
           code > 0 is error.
 
         :param body: response body. It has to be a serializable object.
+        :param timeout: Timeout for the operation. If None there is no timeout
         """
         response = OrderedDict()
         response['code'] = code
@@ -172,18 +173,22 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
         # version of Python where this bugs exists is supported anymore.
         # patch by @RemiCardona for websockets on github.
         async with self._writer_lock:
-            await utils.write_stream(self._stream_writer, data)
+            await utils.write_stream(self._stream_writer, data,
+                                     timeout=timeout)
 
-    async def get_raw_data(self):
+    async def get_raw_data(self, timeout=None):
         """ Returns the raw data sent by the client
+        :param timeout: Timeout for the operation. If None there is no timeout
         """
-        r = await utils.read_stream(self._stream_reader)
+        r = await utils.read_stream(self._stream_reader, timeout=timeout)
         return r
 
-    async def get_json_data(self):
-        """Returns the json sent by the client."""
+    async def get_json_data(self, timeout=None):
+        """Returns the json sent by the client.
+        :param timeout: Timeout for the operation. If None there is no timeout
+        """
 
-        data = await self.get_raw_data()
+        data = await self.get_raw_data(timeout=timeout)
         data = data.decode()
 
         try:

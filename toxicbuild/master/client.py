@@ -17,8 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
-from asyncio import ensure_future
 from toxicbuild.core import BaseToxicClient
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.core.utils import LoggerMixin, datetime2string
@@ -77,13 +75,16 @@ class BuildClient(BaseToxicClient, LoggerMixin):
         builders = response['body']['builders']
         return builders
 
-    async def build(self, build, envvars=None):
+    async def build(self, build, envvars=None, unresponsive_timeout=None):
         """Requests a build for the build server.
 
         :param build: The build that will be executed.
           param evvars: Environment variables to use in the build.
         :param process_coro: A coroutine to process the intermediate
-          build information sent by the build server."""
+          build information sent by the build server.
+        :param unresponsive_timeout: Timeout for an unresponsive slave
+          during the build
+        """
 
         repository = await build.repository
         builder_name = (await build.builder).name
@@ -105,9 +106,9 @@ class BuildClient(BaseToxicClient, LoggerMixin):
         if build.external:
             data['body']['external'] = build.external.to_dict()
 
-        await self.write(data)
+        await self.write(data, timeout=unresponsive_timeout)
         while True:
-            r = await self.get_response()
+            r = await self.get_response(timeout=unresponsive_timeout)
             if not r or r.get('body') is None:
                 break
 

@@ -125,7 +125,7 @@ class BuildClientTest(TestCase):
             {},
         ]
 
-        async def gr():
+        async def gr(timeout):
             # I need this sleep here so I can test the exact
             # behavior of the get_response method. No, it does not
             # sleep, but pass the control to the select thing.
@@ -198,7 +198,7 @@ class BuildClientTest(TestCase):
             {},
         ]
 
-        async def gr():
+        async def gr(timeout):
             # I need this sleep here so I can test the exact
             # behavior of the get_response method. No, it does not
             # sleep, but pass the control to the select thing.

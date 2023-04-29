@@ -26,8 +26,7 @@ from mongomotor.fields import (StringField, IntField, BooleanField,
                                DictField, ListField)
 
 from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
-from toxicbuild.core.utils import (string2datetime, LoggerMixin, now,
-                                   localtime2utc)
+from toxicbuild.core.utils import (string2datetime, LoggerMixin)
 from toxicbuild.common.exchanges import notifications
 from toxicbuild.common.coordination import Lock
 from toxicbuild.master.aws import EC2Instance
@@ -99,6 +98,11 @@ class Slave(OwnedDocument, LoggerMixin):
 
     running_repos = ListField(StringField())
     """The ids of the repositories that have builds running in this slave.
+    """
+
+    unresponsive_timeout = IntField(required=False, default=None)
+    """Timeout for read/write operations when building. Usefull for handling
+    with unresponsive slaves
     """
 
     meta = {
@@ -364,7 +368,8 @@ class Slave(OwnedDocument, LoggerMixin):
             with (await self.get_client()) as client:
                 try:
                     async for build_info in client.build(
-                            build, envvars=envvars):
+                            build, envvars=envvars,
+                            unresponsive_timeout=self.unresponsive_timeout):
                         await self._process_info(build, repo, build_info)
                 except (ToxicClientException, BadJsonData):
                     output = traceback.format_exc()

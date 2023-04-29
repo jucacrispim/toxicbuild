@@ -114,20 +114,25 @@ class BaseToxicClient(utils.LoggerMixin):
         self.writer.close()
         self._connected = False
 
-    async def write(self, data):
+    async def write(self, data, timeout=None):
         """ Writes ``data`` to the server.
 
         :param data: Data to be sent to the server. Will be converted to
           json and enconded using utf-8.
+        :param timeout: Timeout for the write operation. If None there is
+          no timeout.
         """
         data = json.dumps(data)
-        await utils.write_stream(self.writer, data)
+        await utils.write_stream(self.writer, data, timeout=timeout)
 
-    async def read(self):
-        """Reads data from the server. Expects a json."""
+    async def read(self, timeout=None):
+        """Reads data from the server. Expects a json.
+        param timeout: Timeout for the read operation. If None there is
+          no timeout
+        """
         # '{}' is decoded as an empty dict, so in json
         # context we can consider it as being a False json
-        data = await utils.read_stream(self.reader)
+        data = await utils.read_stream(self.reader, timeout=timeout)
         data = data.decode() or '{}'
         try:
             json_data = json.loads(data, object_pairs_hook=OrderedDict)
@@ -138,16 +143,16 @@ class BaseToxicClient(utils.LoggerMixin):
 
         return json_data
 
-    async def get_response(self):
+    async def get_response(self, timeout=None):
         """Reads data from the server and raises and exception in case of
         error"""
-        response = await self.read()
+        response = await self.read(timeout=timeout)
 
         if 'code' in response and int(response['code']) != 0:
             raise ToxicClientException(response['body']['error'])
         return response
 
-    async def request2server(self, action, body, token):
+    async def request2server(self, action, body, token, timeout=None):
         """Performs a request to a toxicbuild server and
         server returns the response.
 
@@ -158,5 +163,5 @@ class BaseToxicClient(utils.LoggerMixin):
         data = {'action': action, 'body': body,
                 'token': token}
         await self.write(data)
-        response = await self.get_response()
+        response = await self.get_response(timeout=timeout)
         return response['body'][action]

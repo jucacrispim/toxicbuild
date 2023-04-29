@@ -200,7 +200,7 @@ class SlaveTest(TestCase):
 
         async def gc():
 
-            async def b(build, envvars=None):
+            async def b(build, envvars=None, unresponsive_timeout=None):
                 bmock()
                 yield {'some': 'info'}
 

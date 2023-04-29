@@ -181,7 +181,7 @@ class BuildClientTest(TestCase):
     async def test_get_response(self):
         expected = {'code': 0}
 
-        async def read():
+        async def read(timeout):
             return expected
 
         self.client.read = read
@@ -193,7 +193,7 @@ class BuildClientTest(TestCase):
     @async_test
     async def test_get_response_with_error(self):
 
-        async def read():
+        async def read(timeout):
             return {'code': 1,
                     'body': {'error': 'wrong thing!'}}
 
