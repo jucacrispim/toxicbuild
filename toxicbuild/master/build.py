@@ -24,6 +24,7 @@ from collections import defaultdict, deque
 import copy
 from datetime import timedelta
 import json
+import traceback
 from uuid import uuid4, UUID
 
 from bson.json_util import CANONICAL_JSON_OPTIONS
@@ -559,6 +560,23 @@ class Build(EmbeddedDocument, LoggerMixin):
         ready = True if len(ok) == triggered_count else False
         return ready
 
+    async def set_unknown_exception(self, output):
+        """Marks a build with exception status and appends a
+        new step also with exception status with ``traceback``
+        as its output.
+        """
+        self.status = 'exception'
+        self.started = self.started or localtime2utc(now())
+        self.finished = self.finished or localtime2utc(now())
+        repo = await self.repository
+        exception_step = BuildStep(repository=repo, output=output,
+                                   started=localtime2utc(now()),
+                                   finished=localtime2utc(now()),
+                                   status='exception',
+                                   command='', name='exception')
+        self.steps.append(exception_step)
+        await self.update()
+
 
 class BuildSet(SerializeMixin, LoggerMixin, Document):
 
@@ -857,13 +875,17 @@ class BuildExecuter(LoggerMixin):
 
     async def _run_build(self, build):
         self._running += 1
+        type(self.repository).add_running_build()
         try:
             slave = await build.slave
-            type(self.repository).add_running_build()
             await slave.build(build, **self.repository.envvars)
+        except Exception:
+            tb = traceback.format_exc()
+            await build.set_unknown_exception(tb)
+
+        finally:
             self._queue.remove(build)
             type(self.repository).remove_running_build()
-        finally:
             self._running -= 1
 
         t = asyncio.ensure_future(self._execute_builds())

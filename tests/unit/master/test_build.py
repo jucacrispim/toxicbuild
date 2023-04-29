@@ -793,6 +793,27 @@ class BuildExecuterTest(TestCase):
         self.assertEqual(len(self.executer._queue), 1)
         self.assertTrue(self.executer._execute_builds.called)
 
+    @mock.patch.object(repository.Repository, 'add_running_build', mock.Mock())
+    @mock.patch.object(slave.Slave, 'build',
+                       mock.AsyncMock(spec=slave.Slave.build,
+                                      side_effect=Exception))
+    @mock.patch.object(repository.Repository, 'remove_running_build',
+                       mock.Mock())
+    @mock.patch.object(build.Build, 'update',
+                       AsyncMock(spec=build.Build.update))
+    @async_test
+    async def test_run_build_with_exception(self):
+        build = self.executer.builds[0]
+        self.executer._execute_builds = mock.AsyncMock()
+        await self.executer._run_build(build)
+
+        self.assertTrue(
+            type(self.executer.repository).add_running_build.called)
+        self.assertTrue(
+            type(self.executer.repository).remove_running_build.called)
+        self.assertEqual(len(self.executer._queue), 1)
+        self.assertTrue(self.executer._execute_builds.called)
+
     @mock.patch.object(build.Build, 'is_ready2run', mock.AsyncMock(
         return_value=False))
     @mock.patch.object(build.BuildExecuter, '_run_build',

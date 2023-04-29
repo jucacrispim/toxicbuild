@@ -368,17 +368,7 @@ class Slave(OwnedDocument, LoggerMixin):
                         await self._process_info(build, repo, build_info)
                 except (ToxicClientException, BadJsonData):
                     output = traceback.format_exc()
-                    build.status = 'exception'
-                    build.started = build.started or localtime2utc(now())
-                    build.finished = build.finished or localtime2utc(now())
-                    exception_step = BuildStep(repository=repo, output=output,
-                                               started=localtime2utc(now()),
-                                               finished=localtime2utc(now()),
-                                               status='exception',
-                                               command='', name='exception')
-                    build.steps.append(exception_step)
-
-                    await build.update()
+                    await build.set_unknown_exception(output)
                     build_info = build.to_dict()
 
         finally:
