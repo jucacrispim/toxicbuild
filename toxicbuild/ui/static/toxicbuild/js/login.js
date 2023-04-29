@@ -207,6 +207,13 @@ jQuery('#btn-login').on('click', function(){
   doLogin();
 });
 
+jQuery('#inputPassword').on('keypress', function(e){
+  if (e.keyCode == 13) {
+    e.preventDefault();
+    doLogin();
+  }
+});
+
 
 $('#btn-request-password-reset').on('click', function(){
   requestChangePassword();
