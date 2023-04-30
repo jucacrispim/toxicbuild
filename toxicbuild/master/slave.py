@@ -361,8 +361,9 @@ class Slave(OwnedDocument, LoggerMixin):
 
             try:
                 await self.start_instance()
-            except Exception as e:
-                await self._finish_build_start_exception(build, repo, str(e))
+            except Exception:
+                tb = traceback.format_exc()
+                await self._finish_build_start_exception(build, repo, tb)
                 return False
 
             with (await self.get_client()) as client:
