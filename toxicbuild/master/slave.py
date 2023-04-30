@@ -358,14 +358,13 @@ class Slave(OwnedDocument, LoggerMixin):
         await build.update()
         build_preparing.send(str(repo.id), build=build)
         try:
+            await self.start_instance()
+        except Exception:
+            tb = traceback.format_exc()
+            await self._finish_build_start_exception(build, repo, tb)
+            return False
 
-            try:
-                await self.start_instance()
-            except Exception:
-                tb = traceback.format_exc()
-                await self._finish_build_start_exception(build, repo, tb)
-                return False
-
+        try:
             with (await self.get_client()) as client:
                 try:
                     async for build_info in client.build(

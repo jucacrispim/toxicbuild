@@ -528,6 +528,27 @@ class Build(EmbeddedDocument, LoggerMixin):
         if not self.triggered_by:
             return True
 
+        ok = await self._check_build_rules()
+        return ok
+
+    async def set_unknown_exception(self, output):
+        """Marks a build with exception status and appends a
+        new step also with exception status with ``traceback``
+        as its output.
+        """
+        self.status = 'exception'
+        self.started = self.started or localtime2utc(now())
+        self.finished = self.finished or localtime2utc(now())
+        repo = await self.repository
+        exception_step = BuildStep(repository=repo, output=output,
+                                   started=localtime2utc(now()),
+                                   finished=localtime2utc(now()),
+                                   status='exception',
+                                   command='', name='exception')
+        self.steps.append(exception_step)
+        await self.update()
+
+    async def _check_build_rules(self):
         rules = MatchKeysDict()
         for doc in self.triggered_by:
             rules[doc.builder_name] = doc.statuses
@@ -559,23 +580,6 @@ class Build(EmbeddedDocument, LoggerMixin):
         # So here if len(ok) == triggered_count means all rules are ok
         ready = True if len(ok) == triggered_count else False
         return ready
-
-    async def set_unknown_exception(self, output):
-        """Marks a build with exception status and appends a
-        new step also with exception status with ``traceback``
-        as its output.
-        """
-        self.status = 'exception'
-        self.started = self.started or localtime2utc(now())
-        self.finished = self.finished or localtime2utc(now())
-        repo = await self.repository
-        exception_step = BuildStep(repository=repo, output=output,
-                                   started=localtime2utc(now()),
-                                   finished=localtime2utc(now()),
-                                   status='exception',
-                                   command='', name='exception')
-        self.steps.append(exception_step)
-        await self.update()
 
 
 class BuildSet(SerializeMixin, LoggerMixin, Document):
