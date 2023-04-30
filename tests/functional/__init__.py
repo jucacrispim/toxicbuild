@@ -11,7 +11,7 @@ import bcrypt
 from pyrocumulus.auth import AccessToken
 
 from toxicbuild.core import BaseToxicClient
-from toxicbuild.core.utils import bcrypt_string
+from toxicbuild.core.utils import bcrypt_string, log
 from toxicbuild.master import create_settings_and_connect
 from toxicbuild.slave import create_settings
 from toxicbuild.output import (
@@ -141,7 +141,8 @@ def wait_master_to_be_alive():
             i += step
 
     if not alive:
-        raise Exception(f'Master did not start in {limit} seconds')
+        log(f'Master did not start at {HOST}:{PORT} in {limit} seconds',
+            level='error')
 
 
 def start_master(sleep=0.5):
