@@ -48,6 +48,7 @@ class GitHubAppTest(TestCase):
         github.settings.GITHUB_PRIVATE_KEY = 'some/path/to/pk'
         github.settings.GITHUB_APP_ID = 1234
         github.settings.GITHUB_WEBHOOK_TOKEN = 'secret'
+        github.settings.INTEGRATIONS_ADJUST_TIME = 0
         github.now.return_value = self.dt_now
         read = github.open.return_value.__enter__.return_value.read
         read.return_value = 'secret-key'

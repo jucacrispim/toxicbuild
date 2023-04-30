@@ -99,6 +99,7 @@ class BitbucketIntegrationTest(TestCase):
     @patch.object(bitbucket.BitbucketIntegration, 'save', AsyncMock())
     @async_test
     async def test_refresh_access_token(self):
+        bitbucket.settings.INTEGRATIONS_ADJUST_TIME = 0
         ret = Mock()
         ret.status = 200
         ret.json = Mock()
