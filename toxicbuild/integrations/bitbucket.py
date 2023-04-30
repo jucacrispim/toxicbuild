@@ -87,6 +87,7 @@ class BitbucketIntegration(BaseIntegration):
         self.access_token = r['access_token']
         # expires_in = r['expires_in']
         expires_in = 3600
+        expires_in += getattr(settings, 'INTEGRATIONS_ADJUST_TIME', 0)
         self.expires = self.get_expire_dt(expires_in)
         await self.save()
 

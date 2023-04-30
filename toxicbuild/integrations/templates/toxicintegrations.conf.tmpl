@@ -87,3 +87,5 @@ HOLE_TOKEN = os.environ.get('HOLE_TOKEN', '{{HOLE_TOKEN}}')
 ROOT_USER_ID = os.environ.get('WEB_ROOT_USER_ID', '{{ROOT_USER_ID}}')
 MASTER_USES_SSL = os.environ.get('MASTER_USES_SSL', '0') == '1'
 VALIDATE_CERT_MASTER = os.environ.get('VALIDATE_CERT_MASTER', '0') == '1'
+
+INTEGRATIONS_ADJUST_TIME = int(os.environ.get('INTEGRATIONS_ADJUST_TIME', '0'))

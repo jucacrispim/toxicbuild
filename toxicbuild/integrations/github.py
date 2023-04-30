@@ -126,13 +126,7 @@ class GithubApp(BaseIntegrationApp):
 
     async def _create_jwt(self):
         exp_time = 10 * 59
-        # This ugly shit here is a hack to run this integration
-        # in a cheap vps. These may get the datetime out of sync
-        # and you can't set the datetime in a vps like this. I run
-        # toxicbuild in a cheap vps, so what I do here is to use a
-        # config value to 'adjust' the time sent to github as it
-        # must be at most 10 minutes ahead of time
-        exp_time += getattr(settings, 'GITHUB_ADJUST_TIME', 0)
+        exp_time += getattr(settings, 'INTEGRATIONS_ADJUST_TIME', 0)
         n = now()
         dt_expires = localtime2utc(n + timedelta(seconds=exp_time))
         ts_now = int(localtime2utc(n).timestamp())
