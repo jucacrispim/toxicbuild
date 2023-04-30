@@ -352,20 +352,20 @@ class Slave(OwnedDocument, LoggerMixin):
         :param envvars: Environment variables to use in the builds.
         """
         repo = await build.repository
-        await self.add_running_repo(repo.id)
         await self.dequeue_build(build)
+        build.status = build.PREPARING
+        await build.update()
+        build_preparing.send(str(repo.id), build=build)
+        await self.add_running_repo(repo.id)
         try:
-            build.status = build.PREPARING
-            await build.update()
-            build_preparing.send(str(repo.id), build=build)
+            await self.start_instance()
+        except Exception:
+            tb = traceback.format_exc()
+            await self._finish_build_start_exception(build, repo, tb)
+            await self.rm_running_repo(repo.id)
+            return False
 
-            try:
-                await self.start_instance()
-            except Exception:
-                tb = traceback.format_exc()
-                await self._finish_build_start_exception(build, repo, tb)
-                return False
-
+        try:
             with (await self.get_client()) as client:
                 try:
                     async for build_info in client.build(
