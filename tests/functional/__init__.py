@@ -143,6 +143,8 @@ def wait_master_to_be_alive():
     if not alive:
         log(f'Master did not start at {HOST}:{PORT} in {limit} seconds',
             level='error')
+    else:
+        log(f'Master started at {HOST}:{PORT}', level='info')
 
 
 def start_master(sleep=0.5):
