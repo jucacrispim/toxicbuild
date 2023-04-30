@@ -168,6 +168,7 @@ services:
        DBHOST: mongo
        AMQPHOST: rabbitmq
        ZK_SERVERS: "zookeeper:2181"
+       FUNCTESTS_MASTER_START_TIMEOUT: 40
 
     depends_on:
       - mongo

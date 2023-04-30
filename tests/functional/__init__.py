@@ -123,7 +123,7 @@ def wait_master_to_be_alive():
     HOST = settings.HOLE_ADDR
     PORT = settings.HOLE_PORT
     alive = False
-    limit = 20
+    limit = int(os.environ('FUNCTESTS_MASTER_START_TIMEOUT', 20))
     step = 0.5
     i = 0
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -131,16 +131,17 @@ def wait_master_to_be_alive():
             try:
                 s.connect((HOST, PORT))
                 s.close()
-                alive = True
-                break
             except Exception:
                 alive = False
+            else:
+                alive = True
+                break
 
             time.sleep(step)
             i += step
 
     if not alive:
-        raise Exception('Master did not start in 20 seconds')
+        raise Exception(f'Master did not start in {limit} seconds')
 
 
 def start_master(sleep=0.5):
