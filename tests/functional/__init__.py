@@ -123,7 +123,7 @@ def wait_master_to_be_alive():
     HOST = settings.HOLE_ADDR
     PORT = settings.HOLE_PORT
     alive = False
-    limit = int(os.environ('FUNCTESTS_MASTER_START_TIMEOUT', 20))
+    limit = int(os.environ.get('FUNCTESTS_MASTER_START_TIMEOUT', 20))
     step = 0.5
     i = 0
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
