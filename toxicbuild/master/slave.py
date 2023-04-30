@@ -520,10 +520,6 @@ class Slave(OwnedDocument, LoggerMixin):
         return True
 
     async def _process_step_output_info(self, build, repo, info):
-        uuid = info['uuid']
-        msg = 'step_output_arrived for {}'.format(uuid)
-        self.log(msg, level='debug')
-
         info['repository'] = {'id': str(repo.id)}
         info['build'] = {'uuid': str(build.uuid),
                          'repository': {'id': str(repo.id)}}
