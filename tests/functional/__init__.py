@@ -131,12 +131,16 @@ def wait_master_to_be_alive():
             try:
                 s.connect((HOST, PORT))
                 s.close()
+                alive = True
                 break
             except Exception:
                 alive = False
 
             time.sleep(step)
             i += step
+
+    if not alive:
+        raise Exception('Master did not start in 20 seconds')
 
 
 def start_master(sleep=0.5):

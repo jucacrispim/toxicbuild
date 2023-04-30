@@ -144,7 +144,7 @@ services:
 
   xenon:
     image: toxictest
-    command: xenon -e "toxicbuild/master/locks.py" toxicbuild -b B
+    command: xenon toxicbuild -b B
 
   unit-tests:
     image: toxictest
