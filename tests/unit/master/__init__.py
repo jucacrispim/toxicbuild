@@ -18,7 +18,8 @@ os.environ['TOXICMASTER_SETTINGS'] = os.path.join(
 
 create_settings_and_connect()
 create_scheduler()
-from toxicbuild.master import scheduler, settings  # noqa: f402
+
+from toxicbuild.master import scheduler, settings  # noqa: E402
 scheduler.stop()
 
 

@@ -37,8 +37,8 @@ class Settings:
 
     @property
     def _filename(self):
-        """ Returns the filename to use as settings module. Returns the filename
-        on environment variable or ``self._default_filename``.
+        """ Returns the filename to use as settings module. Returns the
+        filename on environment variable or ``self._default_filename``.
         """
         return self._get_settings_file_from_envvar() or self._default_filename
 

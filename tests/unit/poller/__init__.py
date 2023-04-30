@@ -20,7 +20,7 @@ from toxicbuild.poller import settings  # noqa
 loop = asyncio.get_event_loop()
 loop.run_until_complete(common_setup(settings))
 
-from toxicbuild.common.coordination import ToxicZKClient  # noqa: F402
+from toxicbuild.common.coordination import ToxicZKClient  # noqa: E402
 
 
 def clean():

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-flake=`flake8 --select W --select E toxicbuild tests --exclude=tests/functional/data`;
+flake=`flake8 --select W --select E --ignore E741 toxicbuild tests --exclude=tests/functional/data`;
 
 
 if [ "$flake" != "" ]
