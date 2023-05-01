@@ -45,7 +45,31 @@ gitlab link:
     :alt: Adding new Gitlab repository
 
 
-The Gitlab does not have an option to select the repositories you want
+The Gitlab integratio does not have an option to select the repositories
+you want imported, so all your repositories will be imported, but you can
+enable/disable repositories at `http://localhost:8888/settings/repositories`
+
+|disable-repo-link-img|
+
+
+.. |disable-repo-link-img| image:: ./_static/disable-repo.jpg
+    :alt: Disabling repositories
+
+
+Importing repositories from Bitbucket
++++++++++++++++++++++++++++++++++++++
+
+First configure the :ref:`bitbucket-integration-config` then go to
+`http://localhost:8888/settings/repositories` and click in the
+bitbucket link:
+
+|import-from-bitbucket-link-img|
+
+
+.. |import-from-bitbucket-link-img| image:: ./_static/import-from-bitbucket.jpg
+    :alt: Adding new Bitbucket repository
+
+Bitbucket does not have an option to select the repositories you want
 imported, so all your repositories will be imported, but you can
 enable/disable repositories at `http://localhost:8888/settings/repositories`
 
@@ -54,6 +78,7 @@ enable/disable repositories at `http://localhost:8888/settings/repositories`
 
 .. |disable-repo-link-img| image:: ./_static/disable-repo.jpg
     :alt: Disabling repositories
+
 
 
 Adding repositories manually
