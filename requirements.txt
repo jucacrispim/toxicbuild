@@ -114,7 +114,7 @@ sphinxcontrib-websupport==1.2.4
 tempora==5.2.1
 terminaltables==3.1.10
 tornado==6.2
-toxicjasmine==0.2.1
+toxicjasmine==0.2.2
 tqdm==4.65.0
 traitlets==5.9.0
 twine==4.0.2
