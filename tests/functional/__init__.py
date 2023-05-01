@@ -118,7 +118,7 @@ def stop_new_poller():
     os.system(' '.join(cmd))
 
 
-def wait_master_to_be_alive():
+def wait_master_to_be_alive(root_dir):
     from toxicbuild.master import settings
     HOST = settings.HOLE_ADDR
     PORT = settings.HOLE_PORT
@@ -143,6 +143,8 @@ def wait_master_to_be_alive():
     if not alive:
         log(f'Master did not start at {HOST}:{PORT} in {limit} seconds',
             level='error')
+        logfile = os.path.join(root_dir, 'toxicmaster.log')
+        os.system(f'tail --lines 100 {logfile}')
     else:
         log(f'Master started at {HOST}:{PORT}', level='info')
 
@@ -163,7 +165,7 @@ def start_master(sleep=0.5):
 
     os.system(' '.join(cmd))
 
-    wait_master_to_be_alive()
+    wait_master_to_be_alive(MASTER_ROOT_DIR)
 
 
 def start_output(sleep=0.5):
