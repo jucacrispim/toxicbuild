@@ -49,10 +49,10 @@ The Gitlab integratio does not have an option to select the repositories
 you want imported, so all your repositories will be imported, but you can
 enable/disable repositories at `http://localhost:8888/settings/repositories`
 
-|disable-repo-link-img|
+|disable-gl-repo-link-img|
 
 
-.. |disable-repo-link-img| image:: ./_static/disable-repo.jpg
+.. |disable-gl-repo-link-img| image:: ./_static/disable-repo.jpg
     :alt: Disabling repositories
 
 
@@ -73,10 +73,10 @@ Bitbucket does not have an option to select the repositories you want
 imported, so all your repositories will be imported, but you can
 enable/disable repositories at `http://localhost:8888/settings/repositories`
 
-|disable-repo-link-img|
+|disable-bt-repo-link-img|
 
 
-.. |disable-repo-link-img| image:: ./_static/disable-repo.jpg
+.. |disable-bt-repo-link-img| image:: ./_static/disable-repo.jpg
     :alt: Disabling repositories
 
 

@@ -127,6 +127,7 @@ class BaseToxicClient(utils.LoggerMixin):
 
     async def read(self, timeout=None):
         """Reads data from the server. Expects a json.
+
         param timeout: Timeout for the read operation. If None there is
           no timeout
         """

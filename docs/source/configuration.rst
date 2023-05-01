@@ -93,8 +93,10 @@ The following config values usually don't need to be changed.
 
 
 .. _toxicpoller-config:
+
 Toxicpoller config values
 -------------------------
+
 
 General configurations
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -136,8 +138,8 @@ The environment variables are:
   - read_timeout
 
 
-
 .. _toxicoutput-config:
+
 Toxicoutput config values
 -------------------------
 

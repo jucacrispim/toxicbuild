@@ -4,6 +4,10 @@ Changelog
 * 0.8.0
 
   - Add Bitbucket integration
+  - Fix bug with on demand slave stop
+  - Handle unresponsive slaves by marking build as exception
+  - Ui fixes and improvements
+  - Add new container build images
 
 * 0.7.0
 

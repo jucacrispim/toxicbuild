@@ -31,7 +31,6 @@ class BaseToxicProtocol(asyncio.StreamReaderProtocol, utils.LoggerMixin):
     extend this class and implement the client_connected method.
 
     Example:
-    _______
 
 
     class MyServer(BaseToxicProtocol):
