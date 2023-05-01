@@ -11,7 +11,7 @@ import bcrypt
 from pyrocumulus.auth import AccessToken
 
 from toxicbuild.core import BaseToxicClient
-from toxicbuild.core.utils import bcrypt_string
+from toxicbuild.core.utils import bcrypt_string, log
 from toxicbuild.master import create_settings_and_connect
 from toxicbuild.slave import create_settings
 from toxicbuild.output import (
@@ -118,12 +118,12 @@ def stop_new_poller():
     os.system(' '.join(cmd))
 
 
-def wait_master_to_be_alive():
+def wait_master_to_be_alive(root_dir):
     from toxicbuild.master import settings
     HOST = settings.HOLE_ADDR
     PORT = settings.HOLE_PORT
     alive = False
-    limit = 20
+    limit = int(os.environ.get('FUNCTESTS_MASTER_START_TIMEOUT', 20))
     step = 0.5
     i = 0
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -131,12 +131,20 @@ def wait_master_to_be_alive():
             try:
                 s.connect((HOST, PORT))
                 s.close()
-                break
             except Exception:
                 alive = False
+            else:
+                alive = True
+                break
 
             time.sleep(step)
             i += step
+
+    if not alive:
+        log(f'Master did not start at {HOST}:{PORT} in {limit} seconds',
+            level='error')
+        logfile = os.path.join(root_dir, 'toxicmaster.log')
+        os.system(f'tail --lines 100 {logfile}')
 
 
 def start_master(sleep=0.5):
@@ -155,7 +163,7 @@ def start_master(sleep=0.5):
 
     os.system(' '.join(cmd))
 
-    wait_master_to_be_alive()
+    wait_master_to_be_alive(MASTER_ROOT_DIR)
 
 
 def start_output(sleep=0.5):
