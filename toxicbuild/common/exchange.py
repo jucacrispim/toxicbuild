@@ -178,13 +178,8 @@ class Exchange(LoggerMixin):
         if not self.connection._connected:
             await self.connection.connect()
 
-        # a default channel, mainly for tests
-        # self.channel = await self.connection.protocol.channel()
-        # but we use a new channel everytime to avoid waiter already
-        # exists stuff.
         channel = await self._get_channel()
         try:
-            # self.channel = await self.connection.protocol.channel()
             if not queue_name:
                 queue_name = self.queue_name
 
@@ -232,10 +227,6 @@ class Exchange(LoggerMixin):
 
         queue_name = self._get_queue_name_for_routing_key(routing_key,
                                                           queue_name)
-        # local_channel = False
-        # if not channel:
-        #     channel = await self._get_channel()
-        #     local_channel = True
 
         if not self.is_declared(queue_name):
             await self._declare_queue(queue_name, channel)
@@ -245,8 +236,6 @@ class Exchange(LoggerMixin):
                                      routing_key=routing_key)
 
         self._bound_rt.add(routing_key)
-        # if local_channel:
-        #     await channel.close()
         return r
 
     async def unbind(self, routing_key, channel=None):
@@ -266,7 +255,7 @@ class Exchange(LoggerMixin):
 
         :param message: The message that will be published in the
           exchange. Must be something that can be serialized into a json.
-        :param routing_key: The routing key to pdublish the message."""
+        :param routing_key: The routing key to publish the message."""
 
         channel = await self._get_channel()
         try:

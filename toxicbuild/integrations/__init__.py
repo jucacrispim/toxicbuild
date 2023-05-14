@@ -19,6 +19,17 @@
 
 # pylint: disable=all
 
+__doc__ = """This package implements toxicbuild integrations with code
+hosting services using the oauth2 protocol.
+
+To implement a new integration you must extend the following classes:
+:class:`~toxicbuild.integrations.base.BaseIntegration`,
+:class:`~toxicbuild.integrations.base.BaseIntegrationApp` and
+:class:`~toxicbuild.integrations.webhook_receivers.BaseWebhookReceiver`.
+
+Check the documentation for each class for more information.
+"""
+
 from toxicbuild.core.conf import Settings
 
 ENVVAR = 'TOXICINTEGRATIONS_SETTINGS'
@@ -35,6 +46,12 @@ def create_settings():
 
 def ensure_indexes():
     from .github import GithubApp, GithubIntegration
+    from .gitlab import GitlabApp, GitlabIntegration
+    from .bitbucket import BitbucketApp, BitbucketIntegration
 
     GithubApp.ensure_indexes()
     GithubIntegration.ensure_indexes()
+    GitlabApp.ensure_indexes()
+    GitlabIntegration.ensure_indexes()
+    BitbucketApp.ensure_indexes()
+    BitbucketIntegration.ensure_indexes()

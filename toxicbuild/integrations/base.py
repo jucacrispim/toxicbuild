@@ -54,10 +54,14 @@ BaseInterface.settings = settings
 
 
 class BaseIntegrationApp(LoggerMixin, Document):
-    """Base class for oauth2 applications. When integrating
-    with a 3rd party service like gitlab, github or bitbucket you
-    need first to create an application - called oauth client on
-    bitbucket - on their side.
+    """An integration app is an application registered in a
+    external service that uses oauth2.
+
+    To implement a new integration one must extend this class
+    and overwrite the class method ``create_app``.
+
+    At most one integration app for each service per toxicbuild
+    installation.
     """
 
     app_id = DynamicField(required=True)
@@ -76,6 +80,9 @@ class BaseIntegrationApp(LoggerMixin, Document):
 
     @classmethod
     async def create_app(cls):
+        """This method creates a new integration app instance
+        and returns it.
+        """
         raise NotImplementedError
 
     async def validate_token(self, token):
@@ -109,8 +116,13 @@ class ExternalInstallationRepository(LoggerMixin, EmbeddedDocument):
 
 
 class BaseIntegration(LoggerMixin, Document):
-    """A basic oauth2 integration with third-party services. Extend this
-    one to create integrations.
+    """We have an integration instance per user that allow us
+    to have access to their resources in a third-party service.
+
+    To implement a new integration one must extend this class and
+    overwrite the methods ``list_repos``, ``request_access_token``,
+    ``refresh_access_token`` and ``request_user_id``. Optionally
+    the method ``create_webhook`` may also be implemented.
     """
 
     APP_CLS = None
