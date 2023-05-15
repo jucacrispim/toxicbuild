@@ -241,8 +241,7 @@ def run_toxicoutput(loglevel, tornado_server):
     output_handler_init(handler)
     tornado_server.run()
     try:
-        # loop.run_forever()
-        tornado_server.run()
+        loop.run_forever()
     finally:
         handler.sync_shutdown()
 

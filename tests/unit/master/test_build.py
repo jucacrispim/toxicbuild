@@ -278,6 +278,9 @@ class BuildTest(TestCase):
 
     @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
+    @mock.patch.object(build.integrations_notifications, 'publish',
+                       mock.AsyncMock(
+                           spec=build.integrations_notifications.publish))
     @async_test
     async def test_notify(self):
         await self._create_test_data()
@@ -474,6 +477,9 @@ class BuildTest(TestCase):
 
     @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
+    @mock.patch.object(build.integrations_notifications, 'publish',
+                       mock.AsyncMock(
+                           spec=build.integrations_notifications.publish))
     @mock.patch.object(build.build_added, 'send', mock.MagicMock(
         spec=build.buildset_added.send))
     @async_test
@@ -527,6 +533,8 @@ class BuildSetTest(TestCase):
         await users.User.drop_collection()
 
     @mock.patch.object(build.notifications, 'publish', mock.AsyncMock())
+    @mock.patch.object(build.integrations_notifications, 'publish',
+                       mock.AsyncMock())
     @async_test
     async def test_notify(self):
         await self._create_test_data()
@@ -971,6 +979,8 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
+    @mock.patch.object(build.Build, 'notify', mock.AsyncMock(
+        spec=build.Build.notify))
     @mock.patch.object(
         repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
@@ -999,6 +1009,8 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
+    @mock.patch.object(build.Build, 'notify', mock.AsyncMock(
+        spec=build.Build.notify))
     @mock.patch.object(
         repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
@@ -1049,6 +1061,8 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.BuildSet, 'notify', mock.AsyncMock(
         spec=build.BuildSet.notify))
+    @mock.patch.object(build.Build, 'notify', mock.AsyncMock(
+        spec=build.Build.notify))
     @mock.patch.object(
         repository.ui_notifications, 'publish', mock.AsyncMock())
     @mock.patch.object(repository.scheduler_action, 'publish',
@@ -1461,15 +1475,22 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
+    @mock.patch.object(build.integrations_notifications, 'publish',
+                       mock.AsyncMock(
+                           spec=build.integrations_notifications.publish))
     @async_test
     async def test_notify(self):
         await self._create_test_data()
         build_inst = self.buildset.builds[0]
         await build_inst.notify('build-added')
         self.assertTrue(build.notifications.publish.called)
+        self.assertTrue(build.integrations_notifications.publish.called)
 
     @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
+    @mock.patch.object(build.integrations_notifications, 'publish',
+                       mock.AsyncMock(
+                           spec=build.integrations_notifications.publish))
     @async_test
     async def test_cancel_previous_pending(self):
         await self._create_test_data()
@@ -1482,6 +1503,9 @@ class BuildManagerTest(TestCase):
 
     @mock.patch.object(build.notifications, 'publish', mock.AsyncMock(
         spec=build.notifications.publish))
+    @mock.patch.object(build.integrations_notifications, 'publish',
+                       mock.AsyncMock(
+                           spec=build.integrations_notifications.publish))
     @async_test
     async def test_cancel_previous_pending_no_previous(self):
         await self._create_test_data()

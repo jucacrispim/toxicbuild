@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -18,11 +18,10 @@
 
 from mongomotor.fields import ReferenceField
 from toxicbuild.core import requests
+from toxicbuild.output.notifications.base import Notification
 
-from toxicbuild.integrations.bitbucket import BitbucketIntegration
-
-from toxicbuild.output import settings
-from .base import Notification
+from .. import settings
+from .. bitbucket import BitbucketIntegration
 
 
 class BitbucketCommitStatusNotification(Notification):
@@ -47,7 +46,7 @@ class BitbucketCommitStatusNotification(Notification):
         url = settings.BITBUCKET_API_URL + \
             'repositories/{}/commit/{}/statuses/build'.format(
                 sender['external_full_name'], build_info['named_tree'])
-        self.log('With url: {}'.format(url))
+        self.log('With url: {}'.format(url), level='debug')
         state_tb = {
             'running': 'INPROGRESS',
             'success': 'SUCCESSFULL',

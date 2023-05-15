@@ -134,6 +134,12 @@ def start(workdir, daemonize=False, stdout=LOGFILE, stderr=LOGFILE,
             loop = asyncio.get_event_loop()
             loop.run_until_complete(common_setup(settings))
 
+            from toxicbuild.integrations.server import (
+                IntegrationsOutputMessageHandler
+            )
+            handler = IntegrationsOutputMessageHandler()
+            asyncio.ensure_future(handler.run())
+
             ensure_indexes()
 
         print('Starting integrations on port {}'.format(settings.TORNADO_PORT))

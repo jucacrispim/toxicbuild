@@ -37,7 +37,10 @@ from toxicbuild.core.build_config import list_builders_from_config
 from toxicbuild.core.utils import (now, datetime2string, MatchKeysDict,
                                    format_timedelta, LoggerMixin,
                                    localtime2utc, set_tzinfo)
-from toxicbuild.common.exchanges import notifications
+from toxicbuild.common.exchanges import (
+    notifications,
+    integrations_notifications
+)
 from toxicbuild.master.document import ExternalRevisionIinfo
 from toxicbuild.master.exceptions import (DBError, ImpossibleCancellation)
 from toxicbuild.master.signals import (build_added, build_cancelled,
@@ -242,6 +245,13 @@ class BuildStep(EmbeddedDocument):
         objdict['total_time'] = total
 
         return objdict
+
+    async def notify(self, event_type, repo_id):
+        msg = self.to_dict()
+        msg.update({'repository_id': str(repo_id),
+                    'event_type': event_type})
+        await notifications.publish(msg)
+        await integrations_notifications.publish(msg)
 
     def to_json(self):
         """Returns a json representation of the BuildStep."""
@@ -483,6 +493,7 @@ class Build(EmbeddedDocument, LoggerMixin):
         msg.update({'repository_id': str(repo.id),
                     'event_type': event_type})
         await notifications.publish(msg)
+        await integrations_notifications.publish(msg)
 
     async def cancel(self):
         """Cancel the build if it is not started yet."""
@@ -674,6 +685,7 @@ class BuildSet(SerializeMixin, LoggerMixin, Document):
         msg['status'] = status or self.status
         msg['repository_id'] = str(repo.id)
         await notifications.publish(msg)
+        await integrations_notifications.publish(msg)
 
     @classmethod
     async def _get_next_number(cls, repository):

@@ -587,6 +587,10 @@ class RepositoryTest(TestCase, RepoTestData):
 
         self.assertEqual(r, expected)
 
+    @patch.object(build.notifications, 'publish',
+                  AsyncMock(spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @async_test
     async def test_start_build(self):
         await self._create_db_revisions()

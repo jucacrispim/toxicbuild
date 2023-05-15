@@ -43,6 +43,8 @@ from toxicbuild.core import requests
 from toxicbuild.core.exceptions import ToxicClientException
 from toxicbuild.core.utils import (LoggerMixin, now, utc2localtime,
                                    localtime2utc)
+from toxicbuild.output.notifications import Notification
+
 from toxicbuild.integrations import settings
 from toxicbuild.integrations.exceptions import (
     BadRepository,
@@ -286,8 +288,10 @@ class BaseIntegration(LoggerMixin, Document):
         :param repo: A repository instance."""
 
         conf = self.get_notif_config()
-        await NotificationInterface.enable(
-            str(repo.id), self.notif_name, **conf)
+        conf['repository_id'] = str(repo.id)
+        notification_cls = Notification.get_plugin(self.notif_name)
+        notification = notification_cls(**conf)
+        await notification.save()
 
     async def import_repository(self, repo_info, clone=True):
         """Imports a repository from an external service.

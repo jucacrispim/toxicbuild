@@ -41,10 +41,6 @@ Example:
 """
 
 from .base import Notification  # noqa
-from .bitbucket import BitbucketIntegration  # noqa
-from .github import GithubCheckRunNotification  # noqa
-from .gitlab import GitlabCommitStatusNotification  # noqa
-
 # The order of the imports here is the order the notifications will be
 # displayed in the ui.
 from .slack import SlackNotification  # noqa

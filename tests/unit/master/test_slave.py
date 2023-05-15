@@ -235,8 +235,10 @@ class SlaveTest(TestCase):
     @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @patch.object(slave, 'build_started', Mock())
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
+    @patch.object(build.notifications, 'publish', AsyncMock(
+        spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @async_test
     async def test_process_info_with_build_started(self):
         await self._create_test_data()
@@ -249,13 +251,15 @@ class SlaveTest(TestCase):
 
         await self.slave._process_info(self.build, self.repo, build_info)
         self.assertTrue(slave.build_started.send.called)
-        self.assertTrue(slave.notifications.publish.called)
+        self.assertTrue(build.notifications.publish.called)
 
     @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @patch.object(slave, 'build_finished', Mock())
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
+    @patch.object(build.notifications, 'publish', AsyncMock(
+        spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @async_test
     async def test_process_info_with_build_finished(self):
         await self._create_test_data()
@@ -278,14 +282,16 @@ class SlaveTest(TestCase):
         r = await self.slave._process_info(self.build, self.repo, build_info)
         self.assertEqual(self.build.total_time, 2)
         self.assertTrue(slave.build_finished.send.called)
-        self.assertTrue(slave.notifications.publish.called)
+        self.assertTrue(build.notifications.publish.called)
         self.assertTrue(r)
 
     @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @patch.object(slave, 'build_finished', Mock())
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
+    @patch.object(build.notifications, 'publish', AsyncMock(
+        spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @patch.object(slave.Slave, 'log', Mock())
     @async_test
     async def test_process_info_with_build_update_error(self):
@@ -355,8 +361,10 @@ class SlaveTest(TestCase):
         self.assertTrue(self.slave._process_step_output_info.called)
         assert r is None
 
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
+    @patch.object(build.notifications, 'publish', AsyncMock(
+        spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @async_test
     async def test_process_step_info_new(self):
         await self._create_test_data()
@@ -370,10 +378,12 @@ class SlaveTest(TestCase):
                      'index': 0, 'uuid': uuid4()}
         await self.slave._process_step_info(self.build, self.repo, step_info)
         self.assertEqual(len(self.build.steps), 1)
-        self.assertTrue(slave.notifications.publish.called)
+        self.assertTrue(build.notifications.publish.called)
 
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
+    @patch.object(build.notifications, 'publish', AsyncMock(
+        spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @async_test
     async def test_process_step_info(self):
         await self._create_test_data()
@@ -410,14 +420,16 @@ class SlaveTest(TestCase):
 
         await self.slave._process_step_info(self.build, self.repo, info)
 
-        build = await type(self.build).get(self.build.uuid)
-        self.assertEqual(build.steps[1].status, 'success')
-        self.assertEqual(len(build.steps), 2)
-        self.assertTrue(build.steps[1].total_time)
-        self.assertTrue(slave.notifications.publish.called)
+        b = await type(self.build).get(self.build.uuid)
+        self.assertEqual(b.steps[1].status, 'success')
+        self.assertEqual(len(b.steps), 2)
+        self.assertTrue(b.steps[1].total_time)
+        self.assertTrue(build.notifications.publish.called)
 
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
+    @patch.object(build.notifications, 'publish', AsyncMock(
+        spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @patch.object(slave.Slave, 'log', Mock())
     @async_test
     async def test_process_step_info_bad_requested_step(self):
@@ -436,8 +448,10 @@ class SlaveTest(TestCase):
         r = await self.slave._process_step_info(self.build, self.repo, info)
         self.assertFalse(r)
 
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
+    @patch.object(build.notifications, 'publish', AsyncMock(
+        spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @patch.object(slave.Slave, 'log', Mock())
     @async_test
     async def test_process_step_info_bad_build_new_step(self):
@@ -456,8 +470,10 @@ class SlaveTest(TestCase):
         r = await self.slave._process_step_info(build, repo, info)
         self.assertFalse(r)
 
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
+    @patch.object(build.notifications, 'publish', AsyncMock(
+        spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @async_test
     async def test_process_step_info_exception(self):
         await self._create_test_data()
@@ -485,8 +501,10 @@ class SlaveTest(TestCase):
         self.assertEqual(build.steps[0].status, 'exception')
         self.assertEqual(build.steps[0].output, 'some-outputshit happens')
 
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
+    @patch.object(build.notifications, 'publish', AsyncMock(
+        spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @async_test
     async def test_process_step_info_exception_no_output(self):
         await self._create_test_data()
@@ -514,8 +532,10 @@ class SlaveTest(TestCase):
         self.assertEqual(build.steps[0].status, 'exception')
         self.assertEqual(build.steps[0].output, 'shit happens')
 
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
+    @patch.object(build.notifications, 'publish', AsyncMock(
+        spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @async_test
     async def test_update_build_step_less_than_cache(self):
         build = Mock()
@@ -524,8 +544,10 @@ class SlaveTest(TestCase):
 
         self.assertFalse(r)
 
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
+    @patch.object(build.notifications, 'publish', AsyncMock(
+        spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @async_test
     async def test_process_step_output_info(self):
         await self._create_test_data()
@@ -545,10 +567,12 @@ class SlaveTest(TestCase):
         await self.slave._process_step_output_info(self.build, self.repo, info)
         step = await self.slave._get_step(self.build, a_uuid)
         self.assertTrue(step.output)
-        self.assertTrue(slave.notifications.publish.called)
+        self.assertTrue(build.notifications.publish.called)
 
-    @patch.object(slave.notifications, 'publish', AsyncMock(
-        spec=slave.notifications.publish))
+    @patch.object(build.notifications, 'publish', AsyncMock(
+        spec=build.notifications.publish))
+    @patch.object(build.integrations_notifications, 'publish',
+                  AsyncMock(spec=build.integrations_notifications.publish))
     @async_test
     async def test_get_step_wait(self):
         await self._create_test_data()

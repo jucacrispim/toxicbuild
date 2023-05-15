@@ -27,7 +27,6 @@ from mongomotor.fields import (StringField, IntField, BooleanField,
 
 from toxicbuild.core.exceptions import ToxicClientException, BadJsonData
 from toxicbuild.core.utils import (string2datetime, LoggerMixin)
-from toxicbuild.common.exchanges import notifications
 from toxicbuild.common.coordination import Lock
 from toxicbuild.master.aws import EC2Instance
 from toxicbuild.master.build import BuildStep, Builder
@@ -468,10 +467,7 @@ class Slave(OwnedDocument, LoggerMixin):
             requested_step.total_time = step_info['total_time']
             await build.update()
             step_finished.send(str(repo.id), build=build, step=requested_step)
-            msg = requested_step.to_dict()
-            msg.update({'repository_id': str(repo.id),
-                        'event_type': 'step-finished'})
-            await notifications.publish(msg)
+            await requested_step.notify('step-finished', repo.id)
 
         else:
             requested_step = BuildStep(repository=repo, name=name, command=cmd,
@@ -489,10 +485,7 @@ class Slave(OwnedDocument, LoggerMixin):
                                                  started)
             self.log(msg, level='debug')
             step_started.send(str(repo.id), build=build, step=requested_step)
-            msg = requested_step.to_dict()
-            msg.update({'repository_id': str(repo.id),
-                        'event_type': 'step-started'})
-            await notifications.publish(msg)
+            await requested_step.notify('step-started', repo.id)
 
         return True
 

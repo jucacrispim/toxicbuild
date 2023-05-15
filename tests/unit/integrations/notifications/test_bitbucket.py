@@ -19,7 +19,7 @@
 from unittest import TestCase
 from unittest.mock import patch, Mock, AsyncMock
 
-from toxicbuild.output.notifications import bitbucket
+from toxicbuild.integrations.notifications import bitbucket
 
 from tests import async_test
 

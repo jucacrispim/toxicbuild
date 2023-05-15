@@ -27,6 +27,12 @@ notifications = Exchange('toxicbuild.notifications',
                          exclusive_consumer_queue=False,
                          exchange_type='direct')
 
+integrations_notifications = Exchange('toxicbuild.integrations-notifications',
+                                      connection=conn,
+                                      bind_publisher=True,
+                                      exclusive_consumer_queue=False,
+                                      exchange_type='direct')
+
 ui_notifications = Exchange('toxicbuild.ui-notifications',
                             connection=conn,
                             bind_publisher=False,
@@ -63,6 +69,7 @@ scheduler_action = Exchange('toxicbuild.scheduler_action',
 
 async def declare():
     await notifications.declare()
+    await integrations_notifications.declare()
     await ui_notifications.declare()
     await update_code.declare()
     await poll_status.declare()

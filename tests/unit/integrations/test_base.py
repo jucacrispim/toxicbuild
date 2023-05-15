@@ -20,6 +20,8 @@ import datetime
 from unittest import TestCase
 from unittest.mock import patch, Mock, MagicMock, AsyncMock
 
+from bson.objectid import ObjectId
+
 from toxicbuild.core.utils import localtime2utc
 from toxicbuild.integrations import base
 from tests import async_test, create_autospec
@@ -85,6 +87,12 @@ class BaseIntegrationTest(TestCase):
     async def setUp(self):
         self.user = base.UserInterface(None, {'email': 'bla@bla.com',
                                               'username': 'zé'})
+
+        class TestNotification(base.Notification):
+
+            name = 'test-notification'
+            no_list = True
+
         self.user.id = 'some-id'
         self.integration = base.BaseIntegration(
             user_id=self.user.id, user_name=self.user.username)
@@ -93,6 +101,7 @@ class BaseIntegrationTest(TestCase):
     async def tearDown(self):
         await base.BaseIntegrationApp.drop_collection()
         await base.BaseIntegration.drop_collection()
+        await base.Notification.drop_collection()
 
     @patch.object(base.BaseIntegration, 'import_repositories',
                   AsyncMock())
@@ -444,14 +453,15 @@ class BaseIntegrationTest(TestCase):
 
         self.assertEqual(c['installation'], str(self.integration.id))
 
-    @patch.object(base.NotificationInterface, 'enable', AsyncMock())
     @async_test
     async def test_enable_notification(self):
-        repo = Mock()
+        repo = Mock(id=str(ObjectId()))
+        self.integration.notif_name = 'test-notification'
         self.integration.get_notif_config = Mock(return_value={})
         await self.integration.enable_notification(repo)
 
-        self.assertTrue(base.NotificationInterface.enable.called)
+        c = await base.Notification.objects.all().count()
+        self.assertEqual(c, 1)
 
     @patch.object(base.BaseIntegration, 'token_is_expired', False)
     @async_test

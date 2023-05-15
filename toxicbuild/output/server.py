@@ -36,6 +36,8 @@ class OutputMessageHandler(LoggerMixin):
     """Fetchs messages from notification queues and dispatches the
     needed output methods."""
 
+    EXCHANGE = notifications
+
     def __init__(self, loop=None):
         self._stop_consuming_messages = False
         self._running_tasks = 0
@@ -52,7 +54,7 @@ class OutputMessageHandler(LoggerMixin):
 
     async def _handle_notifications(self):
         self.log('Handling notifications', level='debug')
-        exchange = notifications
+        exchange = type(self).EXCHANGE
         async with await exchange.consume(timeout=1000) as consumer:
             while not self._stop_consuming_messages:
                 try:

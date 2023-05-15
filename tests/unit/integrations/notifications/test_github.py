@@ -20,10 +20,10 @@ from unittest import TestCase
 from unittest.mock import patch, MagicMock, AsyncMock
 
 from toxicbuild.core.utils import localtime2utc, datetime2string, now
-from toxicbuild.integrations.github import GithubIntegration
 from toxicbuild.master.users import User
 
-from toxicbuild.output.notifications import github
+from toxicbuild.integrations.github import GithubIntegration
+from toxicbuild.integrations.notifications import github
 
 from tests import async_test
 

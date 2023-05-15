@@ -60,7 +60,7 @@ class OutputMessageHandlerTest(TestCase):
         await self.server.run_notifications(msg)
         self.assertFalse(Notification.run.called)
 
-    @patch.object(server, 'notifications', AsyncMock(
+    @patch.object(server.OutputMessageHandler, 'EXCHANGE', AsyncMock(
         spec=server.notifications))
     @patch.object(server.OutputMessageHandler, 'run_notifications',
                   AsyncMock(
@@ -70,8 +70,9 @@ class OutputMessageHandlerTest(TestCase):
         msg = AsyncMock(spec=JsonAckMessage)
         msg.body = {'event_type': 'repo-added',
                     'repository_id': self.obj_id}
-        consumer = server.notifications.consume.return_value\
-                                               .__aenter__.return_value
+        consumer = server.OutputMessageHandler\
+                         .EXCHANGE.consume.return_value\
+                                          .__aenter__.return_value
 
         async def fm(cancel_on_timeout):
             self.server._stop_consuming_messages = True
@@ -82,7 +83,7 @@ class OutputMessageHandlerTest(TestCase):
         await self.server._handle_notifications()
         self.assertFalse(self.server.run_notifications.called)
 
-    @patch.object(server, 'notifications', AsyncMock(
+    @patch.object(server.OutputMessageHandler, 'EXCHANGE', AsyncMock(
         spec=server.notifications))
     @patch.object(server.OutputMessageHandler, 'run_notifications',
                   AsyncMock(
@@ -93,8 +94,9 @@ class OutputMessageHandlerTest(TestCase):
         msg.body = {'event_type': 'build-added',
                     'repository_id': self.obj_id}
 
-        consumer = server.notifications.consume.return_value\
-                                               .__aenter__.return_value
+        consumer = server.OutputMessageHandler\
+                         .EXCHANGE.consume.return_value\
+                                          .__aenter__.return_value
 
         async def fm(cancel_on_timeout):
             self.server._stop_consuming_messages = True

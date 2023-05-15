@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -22,11 +22,10 @@ from mongomotor.fields import ReferenceField
 
 from toxicbuild.core import requests
 from toxicbuild.core.utils import string2datetime, datetime2string
-from toxicbuild.integrations.github import GithubIntegration
+from toxicbuild.output.notifications.base import Notification
 
-from toxicbuild.output import settings
-
-from .base import Notification
+from .. import settings
+from .. github import GithubIntegration
 
 
 class GithubCheckRunNotification(Notification):

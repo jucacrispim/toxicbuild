@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 Juca Crispim <juca@poraodojuca.net>
+# Copyright 2023 Juca Crispim <juca@poraodojuca.net>
 
 # This file is part of toxicbuild.
 
@@ -19,11 +19,11 @@
 import urllib
 from mongomotor.fields import ReferenceField
 
-from toxicbuild.integrations.gitlab import GitlabIntegration
-
 from toxicbuild.core import requests
-from toxicbuild.output import settings
-from .base import Notification
+from toxicbuild.output.notifications.base import Notification
+
+from .. import settings
+from .. gitlab import GitlabIntegration
 
 
 class GitlabCommitStatusNotification(Notification):

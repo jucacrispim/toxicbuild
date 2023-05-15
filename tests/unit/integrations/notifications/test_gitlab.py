@@ -21,7 +21,8 @@ from unittest.mock import patch, MagicMock, AsyncMock
 
 from toxicbuild.integrations.gitlab import GitlabIntegration
 from toxicbuild.master.users import User
-from toxicbuild.output.notifications import gitlab
+
+from toxicbuild.integrations.notifications import gitlab
 
 from tests import async_test
 

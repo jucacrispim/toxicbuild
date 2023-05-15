@@ -1154,6 +1154,8 @@ class HoleHandlerTest(TestCase):
 
         self.assertEqual(len(builder['buildsets']), 0)
 
+    @patch.object(build.BuildSet, 'notify', AsyncMock(
+        spec=build.BuildSet.notify))
     @async_test
     async def test_waterfall_get(self):
         await self._create_test_data()
