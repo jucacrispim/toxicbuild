@@ -33,7 +33,6 @@ from toxicbuild.common.exceptions import (
     RepositoryDoesNotExist,
 )
 from toxicbuild.common.interfaces import (
-    NotificationInterface,
     RepositoryInterface,
     SlaveInterface,
     UserInterface,

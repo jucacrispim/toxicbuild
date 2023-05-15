@@ -20,15 +20,15 @@ from toxicbuild.common.exchanges import integrations_notifications
 from toxicbuild.output.server import OutputMessageHandler
 
 # These imports need to be here otherwise the plugins will not be found
-from .notifications.github import (
+from .notifications.github import (  # pylint: disable=unused-import
     GithubCheckRunNotification
-)  # pylint: disable=F401
-from .notifications.github import (
-    GithubCheckRunNotification
-)   # pylint: disable=F401
-from .notifications.bitbucket import (
+)
+from .notifications.gitlab import (  # pylint: disable=unused-import
+    GitlabCommitStatusNotification
+)
+from .notifications.bitbucket import (  # pylint: disable=unused-import
     BitbucketCommitStatusNotification
-)  # pylint: disable=F401
+)
 
 
 class IntegrationsOutputMessageHandler(OutputMessageHandler):
