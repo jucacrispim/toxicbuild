@@ -11,5 +11,7 @@ os.environ['TOXICSECRETS_SETTINGS'] = os.path.join(
 
 create_settings()
 
-from toxicbuild.secrets.crypto import Secret  # pylint: disable=E402
+
+# pylint: disable=E402
+from toxicbuild.secrets.crypto import Secret  # noqa: E402
 Secret.ensure_indexes()
