@@ -1,7 +1,7 @@
 #!/bin/sh
 
 echo "\nChecking coverage for Python code\n"
-OUT=`coverage run --source=toxicbuild --branch --omit=toxicbuild/script.py,toxicbuild/master/__init__.py,toxicbuild/master/cmds.py,toxicbuild/slave/__init__.py,toxicbuild/slave/cmds.py,toxicbuild/poller/cmds.py,toxicbuild/ui/__init__.py,toxicbuild/ui/cmds.py,toxicbuild/integrations/__init__.py,toxicbuild/integrations/cmds.py,toxicbuild/integrations/monkey.py,toxicbuild/output/__init__.py,toxicbuild/output/cmds.py,toxicbuild/script.py,toxicbuild/poller/__init__.py setup.py test --test-suite=tests.unit`;
+OUT=`coverage run --source=toxicbuild --branch --omit=toxicbuild/script.py,toxicbuild/master/__init__.py,toxicbuild/master/cmds.py,toxicbuild/slave/__init__.py,toxicbuild/slave/cmds.py,toxicbuild/poller/cmds.py,toxicbuild/ui/__init__.py,toxicbuild/ui/cmds.py,toxicbuild/integrations/__init__.py,toxicbuild/integrations/cmds.py,toxicbuild/integrations/monkey.py,toxicbuild/output/__init__.py,toxicbuild/output/cmds.py,toxicbuild/script.py,toxicbuild/poller/__init__.py,toxicbuild/secrets/__init__.py,toxicbuild/secrets/cmds.py setup.py test --test-suite=tests.unit`;
 ERROR=$?
 cov_threshold=100
 coverage html;

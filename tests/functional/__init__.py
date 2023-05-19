@@ -28,6 +28,7 @@ OTHER_REPO_DIR = os.path.join(DATA_DIR, 'fork-repo')
 SLAVE_ROOT_DIR = os.path.join(DATA_DIR, 'slave')
 MASTER_ROOT_DIR = os.path.join(DATA_DIR, 'master')
 POLLER_ROOT_DIR = os.path.join(DATA_DIR, 'poller')
+SECRETS_ROOT_DIR = os.path.join(DATA_DIR, 'secrets')
 UI_ROOT_DIR = os.path.join(DATA_DIR, 'ui')
 OUTPUT_ROOT_DIR = os.path.join(DATA_DIR, 'output')
 PYVERSION = ''.join([str(n) for n in sys.version_info[:2]])
@@ -113,6 +114,32 @@ def stop_new_poller():
     pidfile = 'toxicpoller{}.pid'.format(PYVERSION)
     cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
            'python', toxicpoller_cmd, 'stop', POLLER_ROOT_DIR,
+           '--pidfile', pidfile, '--kill']
+
+    os.system(' '.join(cmd))
+
+
+def start_secrets():
+
+    toxicsecrets_conf = os.environ.get('TOXICSECRETS_SETTINGS')
+    pidfile = 'toxicsecrets{}.pid'.format(PYVERSION)
+    toxicsecrets_cmd = os.path.join(SCRIPTS_DIR, 'toxicsecrets')
+    cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
+           toxicsecrets_cmd, 'start', SECRETS_ROOT_DIR, '--daemonize',
+           '--pidfile', pidfile, '--loglevel', 'debug']
+
+    if toxicsecrets_conf:
+        cmd += ['-c', toxicsecrets_conf]
+
+    os.system(' '.join(cmd))
+
+
+def stop_secrets():
+
+    toxicsecrets_cmd = os.path.join(SCRIPTS_DIR, 'toxicsecrets')
+    pidfile = 'toxicsecrets{}.pid'.format(PYVERSION)
+    cmd = ['export', 'PYTHONPATH="{}"'.format(SOURCE_DIR), '&&',
+           'python', toxicsecrets_cmd, 'stop', SECRETS_ROOT_DIR,
            '--pidfile', pidfile, '--kill']
 
     os.system(' '.join(cmd))

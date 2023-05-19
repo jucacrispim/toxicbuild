@@ -28,6 +28,7 @@ from toxicbuild.master.cmds import create as create_master
 from toxicbuild.master.cmds import create_user
 from toxicbuild.output.cmds import create as create_output, create_auth_token
 from toxicbuild.poller.cmds import create as create_poller
+from toxicbuild.secrets.cmds import create as create_secrets
 from toxicbuild.slave.cmds import create as create_slave
 from toxicbuild.ui.cmds import create as create_ui
 
@@ -46,6 +47,7 @@ def create(root_dir):  # pragma no cover
     slave_root = os.path.join(root_dir, 'slave')
     master_root = os.path.join(root_dir, 'master')
     poller_root = os.path.join(root_dir, 'poller')
+    secrets_root = os.path.join(root_dir, 'secrets')
     integrations_root = os.path.join(root_dir, 'integrations')
     output_root = os.path.join(root_dir, 'output')
     ui_root = os.path.join(root_dir, 'ui')
@@ -58,6 +60,8 @@ def create(root_dir):  # pragma no cover
     output_token = loop.run_until_complete(create_auth_token(output_root))
     # poller
     poller_token = create_poller(poller_root)
+    # secrets
+    _ = create_secrets(secrets_root)
     # master
     master_token = create_master(master_root, output_token, poller_token)
     cookie_secret = token_urlsafe()
@@ -153,13 +157,13 @@ def _run_master(workdir, loglevel, daemonize):
 
 
 def _run_poller(workdir, loglevel, daemonize):
-    master_root = os.path.join(workdir, 'master')
+    poller_root = os.path.join(workdir, 'poller')
     cmd = sys.argv[0].replace('-script', '')
-    master_cmd = cmd.replace('build', 'master')
+    poller_cmd = cmd.replace('build', 'poller')
     poller_cmd_line = sys.argv[:]
-    poller_cmd_line[0] = master_cmd
+    poller_cmd_line[0] = poller_cmd
     poller_cmd_line[1] = '{}_poller'.format(poller_cmd_line[1])
-    poller_cmd_line[2] = master_root
+    poller_cmd_line[2] = poller_root
     if daemonize:
         poller_cmd_line.append('--daemonize')
     if loglevel:
@@ -167,6 +171,23 @@ def _run_poller(workdir, loglevel, daemonize):
         poller_cmd_line.append(loglevel)
 
     subprocess.call(poller_cmd_line)
+
+
+def _run_secrets(workdir, loglevel, daemonize):
+    secrets_root = os.path.join(workdir, 'secrets')
+    cmd = sys.argv[0].replace('-script', '')
+    secrets_cmd = cmd.replace('build', 'secrets')
+    secrets_cmd_line = sys.argv[:]
+    secrets_cmd_line[0] = secrets_cmd
+    secrets_cmd_line[1] = '{}_secrets'.format(secrets_cmd_line[1])
+    secrets_cmd_line[2] = secrets_root
+    if daemonize:
+        secrets_cmd_line.append('--daemonize')
+    if loglevel:
+        secrets_cmd_line.append('--loglevel')
+        secrets_cmd_line.append(loglevel)
+
+    subprocess.call(secrets_cmd_line)
 
 
 def _run_scheduler(workdir, loglevel, daemonize):
@@ -247,6 +268,7 @@ def _call_processes(workdir, loglevel=None, daemonize=True):  # pragma no cover
     _run_slave(workdir, loglevel, daemonize)
     _run_master(workdir, loglevel, daemonize)
     _run_poller(workdir, loglevel, daemonize)
+    _run_secrets(workdir, loglevel, daemonize)
     _run_scheduler(workdir, loglevel, daemonize)
     _run_output(workdir, loglevel, daemonize)
     _run_integrations(workdir, loglevel, daemonize)
