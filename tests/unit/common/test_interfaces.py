@@ -542,6 +542,35 @@ class RepositoryTest(TestCase):
         self.assertEqual(resp, 'repo-replace-envvars')
 
     @async_test
+    async def test_add_or_update_secret(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-add-or-update-secret')
+        resp = await self.repository.add_or_update_secret(key='key',
+                                                          value='value')
+        self.assertEqual(resp, 'repo-add-or-update-secret')
+
+    @async_test
+    async def test_rm_secret(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-rm-secret')
+        resp = await self.repository.rm_secret(key='key')
+        self.assertEqual(resp, 'repo-rm-secret')
+
+    @async_test
+    async def test_get_secrets(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-get-secrets')
+        resp = await self.repository.get_secrets()
+        self.assertEqual(resp, 'repo-get-secrets')
+
+    @async_test
+    async def test_replace_secrets(self):
+        self.repository.get_client = lambda requester: get_client_mock(
+            requester, 'repo-replace-secrets')
+        resp = await self.repository.replace_secrets()
+        self.assertEqual(resp, 'repo-replace-secrets')
+
+    @async_test
     async def test_list_branches_id(self):
         self.repository.id = 'a-id'
         self.repository.get_client = lambda requester: get_client_mock(

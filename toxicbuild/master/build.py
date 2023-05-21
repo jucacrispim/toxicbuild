@@ -894,9 +894,14 @@ class BuildExecuter(LoggerMixin):
         type(self.repository).add_running_build()
         try:
             slave = await build.slave
-            await slave.build(build, **self.repository.envvars)
+            envvars = self.repository.envvars
+            if not build.external:
+                secrets = await self.repository.get_secrets()
+                envvars.update(secrets)
+            await slave.build(build, **envvars)
         except Exception:
             tb = traceback.format_exc()
+            self.log(tb, level='debug')
             await build.set_unknown_exception(tb)
 
         finally:

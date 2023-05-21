@@ -143,6 +143,9 @@ class HoleHandler:
     * `repo-add-envvars`
     * `repo-rm-envvars`
     * `repo-replace-envvars`
+    * `repo-add-or-update-secret`
+    * `repo-rm-secret`
+    * `repo-replace-secrets`
     * `repo-list-branches`
     * `slave-add`
     * `slave-get`
@@ -584,6 +587,51 @@ class HoleHandler:
         repo = await Repository.get_for_user(self.protocol.user, **kw)
         await repo.replace_envvars(**envvars)
         return {'repo-replace-envvars': 'ok'}
+
+    async def repo_add_or_update_secret(self, repo_name_or_id, key, value):
+        """Adds or updates a secret in a repository.
+
+        :param repo_name_or_id: The name or the id of the repository.
+        :param key: The key for the secret.
+        :param value: The value that will be encrypted.
+        """
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.add_or_update_secret(key, value)
+        return {'repo-add-or-update-secret': 'ok'}
+
+    async def repo_rm_secret(self, repo_name_or_id, key):
+        """Removes a secret from a repository.
+
+        :param repo_name_or_id: The name or the id of the repository.
+        :param key: The key for the secret.
+        """
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.rm_secret(key)
+        return {'repo-rm-secret': 'ok'}
+
+    async def repo_get_secrets(self, repo_name_or_id):
+        """Returns the secrets owned by a repository
+
+        :param repo_name_or_id: The name or the id of the repository.
+        """
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        r = await repo.get_secrets()
+        return {'repo-get-secrets': r}
+
+    async def repo_replace_secrets(self, repo_name_or_id, **secrets):
+        """Adds or updates a secret in a repository.
+
+        :param repo_name_or_id: The name or the id of the repository.
+        :param key: The key for the secret.
+        :param value: The value that will be encrypted.
+        """
+        kw = self._get_kw_for_name_or_id(repo_name_or_id)
+        repo = await Repository.get_for_user(self.protocol.user, **kw)
+        await repo.replace_secrets(**secrets)
+        return {'repo-replace-secrets': 'ok'}
 
     async def repo_list_branches(self, repo_name_or_id):
         """List the branches known by a repository.

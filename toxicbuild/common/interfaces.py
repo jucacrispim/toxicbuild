@@ -731,6 +731,46 @@ class RepositoryInterface(BaseHoleInterface):
 
         return resp
 
+    async def add_or_update_secret(self, key, value):
+        """Adds a new secret to be used in builds. Note that secrets are not
+        used in builds from external sources.
+        """
+
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_add_or_update_secret(
+                repo_name_or_id=self.id, key=key, value=value)
+
+        return resp
+
+    async def rm_secret(self, key):
+        """Removes a secret from the repository
+        """
+
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_rm_secret(
+                repo_name_or_id=self.id, key=key)
+
+        return resp
+
+    async def get_secrets(self):
+        """Returns the secrets owned from the repository
+        """
+
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_get_secrets(repo_name_or_id=self.id)
+
+        return resp
+
+    async def replace_secrets(self, **secrets):
+        """Replace the secrets of a repository
+        """
+
+        with await self.get_client(self.requester) as client:
+            resp = await client.repo_replace_secrets(
+                repo_name_or_id=self.id, **secrets)
+
+        return resp
+
     async def list_branches(self):
         """Lists the branches known by this repositor.
         """

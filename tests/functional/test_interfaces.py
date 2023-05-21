@@ -246,6 +246,46 @@ class RepositoryTest(BaseUITest):
             self.user, name='asdf/' + self.repo.name)
         self.assertEqual(len(repo.branches), 0)
 
+    @async_test
+    async def test_add_or_update_secret(self):
+        self.repo = await RepositoryInterface.add(self.user,
+                                                  name='some-repo',
+                                                  url='bla@gla.com',
+                                                  owner=self.user,
+                                                  vcs_type='git',
+                                                  update_seconds=200)
+        await self.repo.add_or_update_secret('something', 'very secret')
+        secrets = await self.repo.get_secrets()
+        self.assertEqual(secrets['something'], 'very secret')
+
+    @async_test
+    async def test_rm_secret(self):
+        self.repo = await RepositoryInterface.add(self.user,
+                                                  name='some-repo',
+                                                  url='bla@gla.com',
+                                                  owner=self.user,
+                                                  vcs_type='git',
+                                                  update_seconds=200)
+        await self.repo.add_or_update_secret('something', 'very secret')
+        await self.repo.rm_secret('something')
+        secrets = await self.repo.get_secrets()
+        self.assertNotIn('something', secrets)
+
+    @async_test
+    async def test_replace_secrets(self):
+        self.repo = await RepositoryInterface.add(self.user,
+                                                  name='some-repo',
+                                                  url='bla@gla.com',
+                                                  owner=self.user,
+                                                  vcs_type='git',
+                                                  update_seconds=200)
+        await self.repo.add_or_update_secret('something', 'very secret')
+        new = {'something': 'super secret', 'other': 'also secret'}
+        await self.repo.replace_secrets(**new)
+        secrets = await self.repo.get_secrets()
+        self.assertEqual(secrets['something'], 'super secret')
+        self.assertEqual(secrets['other'], 'also secret')
+
 
 class BuildsetTest(BaseUITest):
 

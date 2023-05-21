@@ -194,3 +194,65 @@ def get_poller_client(repo):
     client = PollerClient(repo, host, port, use_ssl=use_ssl,
                           validate_cert=validate_cert)
     return client
+
+
+class SecretsClient(BaseToxicClient):
+    """A client to :class:`~toxicbuild.sercrets.server.SecretsServer`.
+    """
+
+    async def add_or_update_secret(self, owner, key, value):
+        """Adds a new secret. The owner can be a repo, a user or a
+        organization.
+        """
+
+        action = 'add-or-update-secret'
+        body = {'owner': str(owner.id),
+                'key': key,
+                'value': value}
+        token = settings.SECRETS_TOKEN
+        r = await self.request2server(action, body, token)
+        return r
+
+    async def remove_secret(self, owner, key):
+        """Removes a secret.
+        """
+
+        action = 'remove-secret'
+        body = {'owner': str(owner.id),
+                'key': key}
+        token = settings.SECRETS_TOKEN
+        r = await self.request2server(action, body, token)
+        return r
+
+    async def get_secrets(self, owners):
+        """Get the secrets of a list of owners
+        """
+        action = 'get-secrets'
+        owner_ids = [str(o.id) for o in owners]
+        body = {'owners': owner_ids}
+        token = settings.SECRETS_TOKEN
+        r = await self.request2server(action, body, token)
+        secrets = {s['key']: s['value'] for s in r}
+        return secrets
+
+    async def remove_all(self, owner):
+        """Removes all secrets from a owner
+        """
+        action = 'remove-all'
+        body = {'owner': str(owner.id)}
+        token = settings.SECRETS_TOKEN
+        r = await self.request2server(action, body, token)
+        return r
+
+
+def get_secrets_client():
+    """Returns an instance of :class:`~toxicbuild.master.client.SecretsClient`.
+    """
+
+    host = settings.SECRETS_HOST
+    port = settings.SECRETS_PORT
+    use_ssl = settings.SECRETS_USES_SSL
+    validate_cert = settings.VALIDATE_CERT_SECRETS
+    client = SecretsClient(host, port, use_ssl=use_ssl,
+                           validate_cert=validate_cert)
+    return client

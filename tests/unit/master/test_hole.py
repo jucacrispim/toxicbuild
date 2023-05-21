@@ -844,6 +844,56 @@ class HoleHandlerTest(TestCase):
         await handler.repo_replace_envvars(str(self.repo.id), **{'bla': '1'})
         self.assertTrue(repository.Repository.replace_envvars.called)
 
+    @patch.object(repository.Repository, 'add_or_update_secret',
+                  AsyncMock(spec=repository.Repository.add_or_update_secret))
+    @async_test
+    async def test_repo_add_or_update_secret(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-add-or-update-secret', protocol)
+        await handler.repo_add_or_update_secret(
+            str(self.repo.id), 'key', 'value')
+        self.assertTrue(repository.Repository.add_or_update_secret.called)
+
+    @patch.object(repository.Repository, 'rm_secret',
+                  AsyncMock(spec=repository.Repository.rm_secret))
+    @async_test
+    async def test_repo_rm_secret(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-rm-secret', protocol)
+        await handler.repo_rm_secret(
+            str(self.repo.id), 'key')
+        self.assertTrue(repository.Repository.rm_secret.called)
+
+    @patch.object(repository.Repository, 'get_secrets',
+                  AsyncMock(spec=repository.Repository.get_secrets))
+    @async_test
+    async def test_repo_get_secrets(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-get-secrets', protocol)
+        r = await handler.repo_get_secrets(str(self.repo.id))
+        self.assertTrue(repository.Repository.get_secrets.called)
+        self.assertIs(
+            r['repo-get-secrets'],
+            repository.Repository.get_secrets.return_value)
+
+    @patch.object(repository.Repository, 'replace_secrets',
+                  AsyncMock(spec=repository.Repository.replace_secrets))
+    @async_test
+    async def test_repo_replace_secrets(self):
+        await self._create_test_data()
+        protocol = MagicMock()
+        protocol.user = self.owner
+        handler = hole.HoleHandler({}, 'repo-replace-secrets', protocol)
+        await handler.repo_replace_secrets(
+            str(self.repo.id), **{'some': 'thing'})
+        self.assertTrue(repository.Repository.replace_secrets.called)
+
     @patch.object(build.BuildSet, 'notify', AsyncMock(
         spec=build.BuildSet.notify))
     @patch.object(repository.scheduler_action, 'publish', AsyncMock())

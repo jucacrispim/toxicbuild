@@ -293,6 +293,15 @@ class ToxicMasterTest(BaseFunctionalTest):
         self.assertTrue(resp['builders'])
         self.assertTrue(resp['branches'])
 
+    @async_test
+    async def test_16_repo_add_secret(self):
+        data = {'repo_name_or_id': 'toxic/test-repo',
+                'key': 'something', 'value': 'secret'}
+        with (await get_dummy_client(self.user)) as client:
+            resp = await client.request2server(
+                'repo-add-or-update-secret', data)
+        self.assertTrue(resp)
+
     @classmethod
     async def _delete_test_data(cls):
         with (await get_dummy_client(cls.user)) as client:

@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
 
-from asyncio import ensure_future
+from asyncio import ensure_future, gather
 import re
 from bson.objectid import ObjectId
 from mongoengine import PULL
@@ -40,7 +40,7 @@ from toxicbuild.common.exchanges import (
 from toxicbuild.core import utils, build_config
 from toxicbuild.core.utils import string2datetime
 from toxicbuild.master.build import (BuildSet, Builder, BuildManager)
-from toxicbuild.master.client import get_poller_client
+from toxicbuild.master.client import get_poller_client, get_secrets_client
 from toxicbuild.master.document import OwnedDocument, ExternalRevisionIinfo
 from toxicbuild.master.exceptions import RepoBranchDoesNotExist
 from toxicbuild.master.utils import (get_build_config_type,
@@ -580,15 +580,6 @@ class Repository(OwnedDocument, utils.LoggerMixin):
             buildset, conf, builders=builders,
             builders_origin=builders_origin)
 
-    def _get_builder_kw(self, name_or_id):
-        kw = {'repository': self}
-        if ObjectId.is_valid(name_or_id):
-            kw['id'] = name_or_id
-        else:
-            kw['name'] = name_or_id
-
-        return kw
-
     async def start_build(self, branch, builder_name_or_id=None,
                           named_tree=None, builders_origin=None):
         """ Starts a (some) build(s) in the repository. """
@@ -712,6 +703,45 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         self.envvars = envvars
         await self.save()
 
+    async def add_or_update_secret(self, key, value):
+        """Adds a new secret owned by the repository. If it exists
+        updates the secret
+        """
+
+        async with get_secrets_client() as client:
+            await client.add_or_update_secret(self, key, value)
+
+        return True
+
+    async def rm_secret(self, key):
+        """Removes a secret owned by the repository"""
+
+        async with get_secrets_client() as client:
+            await client.remove_secret(self, key)
+
+        return True
+
+    async def get_secrets(self):
+        """Returns the secrets owned by the repository
+        """
+
+        async with get_secrets_client() as client:
+            owners = [self]
+            r = await client.get_secrets(owners)
+
+        return r
+
+    async def replace_secrets(self, **secrets):
+        """Replaces the current repository's secrets with new ones
+        """
+
+        async with get_secrets_client() as client:
+            await client.remove_all(self)
+
+        futs = [self.add_or_update_secret(k, v) for k, v in secrets.items()]
+        await gather(*futs)
+        return True
+
     async def _get_builders(self, revision, conf):
         builders, origin = await self.build_manager.get_builders(
             revision, conf)
@@ -736,6 +766,15 @@ class Repository(OwnedDocument, utils.LoggerMixin):
         async for user in await self.get_allowed_users():  # pragma no branch
             ensure_future(ui_notifications.publish(
                 status_msg, routing_key=str(user.id)))
+
+    def _get_builder_kw(self, name_or_id):
+        kw = {'repository': self}
+        if ObjectId.is_valid(name_or_id):
+            kw['id'] = name_or_id
+        else:
+            kw['name'] = name_or_id
+
+        return kw
 
 
 class RepositoryRevision(Document):

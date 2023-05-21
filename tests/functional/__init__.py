@@ -296,6 +296,7 @@ def stop_customwebserver():
 def start_all():
     start_slave()
     start_new_poller()
+    start_secrets()
     start_master()
     start_output()
     start_customwebserver()
@@ -304,6 +305,7 @@ def start_all():
 def stop_all():
     stop_customwebserver()
     stop_new_poller()
+    stop_secrets()
     stop_master()
     stop_output()
     stop_slave()
@@ -347,6 +349,14 @@ class BaseFunctionalTest(TestCase):
         stop_new_poller()
 
     @classmethod
+    def start_secrets(cls):
+        start_secrets()
+
+    @classmethod
+    def stop_secrets(cls):
+        stop_secrets()
+
+    @classmethod
     def start_output(cls):
         start_output()
 
@@ -359,6 +369,7 @@ class BaseFunctionalTest(TestCase):
         super().setUpClass()
         cls.start_slave()
         cls.start_poller()
+        cls.start_secrets()
         cls.start_master()
         cls.start_output()
         time.sleep(0.1)
@@ -367,6 +378,7 @@ class BaseFunctionalTest(TestCase):
     def tearDownClass(cls):
         super().tearDownClass()
         cls.stop_poller()
+        cls.stop_secrets()
         cls.stop_master()
         cls.stop_output()
         cls.stop_slave()

@@ -295,3 +295,65 @@ class PollerClientTest(TestCase):
         c = client.get_poller_client(repo)
 
         self.assertIsInstance(c, client.PollerClient)
+
+
+class SecretsClientTest(TestCase):
+
+    @async_test
+    async def setUp(self):
+        self.user = users.User(email='a@a.com', password='asdf')
+        await self.user.save()
+        self.repo = repository.Repository(
+            name='my-repo', url='git@bla.com', vcs_type='git',
+            update_seconds=10, owner=self.user)
+        await self.repo.save()
+        self.client = client.SecretsClient(self.repo, 'host', 1235)
+        self.client.request2server = AsyncMock(
+            spec=self.client.request2server)
+
+    @async_test
+    async def tearDown(self):
+        await repository.Repository.drop_collection()
+        await users.User.drop_collection()
+
+    @async_test
+    async def test_add_or_update_secret(self):
+        key = 'asd'
+        value = 'fgh'
+        r = await self.client.add_or_update_secret(self.repo, key, value)
+
+        assert r is self.client.request2server.return_value
+        assert self.client.request2server.call_args[0][0] \
+            == 'add-or-update-secret'
+
+    @async_test
+    async def test_remove_secret(self):
+        key = 'asd'
+        r = await self.client.remove_secret(self.repo, key)
+
+        assert r is self.client.request2server.return_value
+        assert self.client.request2server.call_args[0][0] == 'remove-secret'
+
+    @async_test
+    async def test_get_secrets(self):
+        self.client.request2server.return_value = [{'key': 'asdf',
+                                                    'value': '1234'}]
+        r = await self.client.get_secrets([self.repo])
+
+        assert r == {'asdf': '1234'}
+        assert self.client.request2server.call_args[0][0] == 'get-secrets'
+
+    @async_test
+    async def test_remove_all(self):
+        r = await self.client.remove_all(self.repo)
+
+        assert r is self.client.request2server.return_value
+        assert self.client.request2server.call_args[0][0] == 'remove-all'
+
+    @mock.patch.object(client, 'settings', mock.Mock(
+        VALIDATE_CERT_SECRETS=False))
+    @async_test
+    async def test_get_secrets_client(self):
+        c = client.get_secrets_client()
+
+        self.assertIsInstance(c, client.SecretsClient)

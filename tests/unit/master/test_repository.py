@@ -733,6 +733,43 @@ class RepositoryTest(TestCase, RepoTestData):
 
         self.assertEqual(self.repo.envvars, {'BLE': 'OI'})
 
+    @patch.object(repository, 'get_secrets_client', MagicMock())
+    @async_test
+    async def test_add_or_update_secret(self):
+        client = AsyncMock()
+        repository.get_secrets_client.return_value\
+                                     .__aenter__.return_value = client
+        await self.repo.add_or_update_secret('something', 'very secret')
+        self.assertTrue(client.add_or_update_secret.called)
+
+    @patch.object(repository, 'get_secrets_client', MagicMock())
+    @async_test
+    async def test_rm_secret(self):
+        client = AsyncMock()
+        repository.get_secrets_client.return_value\
+                                     .__aenter__.return_value = client
+        await self.repo.rm_secret('something')
+        self.assertTrue(client.remove_secret.called)
+
+    @patch.object(repository, 'get_secrets_client', MagicMock())
+    @async_test
+    async def test_get_secrets(self):
+        client = AsyncMock()
+        repository.get_secrets_client.return_value\
+                                     .__aenter__.return_value = client
+        r = await self.repo.get_secrets()
+        self.assertIs(client.get_secrets.return_value, r)
+
+    @patch.object(repository, 'get_secrets_client', MagicMock())
+    @async_test
+    async def test_replace_secrets(self):
+        client = AsyncMock()
+        repository.get_secrets_client.return_value\
+                                     .__aenter__.return_value = client
+        await self.repo.replace_secrets(**{'a': 'b', 'c': 'd'})
+        self.assertTrue(client.remove_all.called)
+        self.assertEqual(len(client.add_or_update_secret.call_args_list), 2)
+
 
 class RepositoryBranchTest(TestCase):
 

@@ -788,6 +788,8 @@ class BuildExecuterTest(TestCase):
                        mock.AsyncMock(spec=slave.Slave.build))
     @mock.patch.object(repository.Repository, 'remove_running_build',
                        mock.Mock())
+    @mock.patch.object(repository.Repository, 'get_secrets',
+                       mock.AsyncMock(return_value={}))
     @async_test
     async def test_run_build(self):
         build = self.executer.builds[0]
@@ -800,6 +802,29 @@ class BuildExecuterTest(TestCase):
             type(self.executer.repository).remove_running_build.called)
         self.assertEqual(len(self.executer._queue), 1)
         self.assertTrue(self.executer._execute_builds.called)
+        self.assertTrue(self.executer.repository.get_secrets.called)
+
+    @mock.patch.object(repository.Repository, 'add_running_build', mock.Mock())
+    @mock.patch.object(slave.Slave, 'build',
+                       mock.AsyncMock(spec=slave.Slave.build))
+    @mock.patch.object(repository.Repository, 'remove_running_build',
+                       mock.Mock())
+    @mock.patch.object(repository.Repository, 'get_secrets',
+                       mock.AsyncMock(return_value={}))
+    @async_test
+    async def test_run_build_external(self):
+        b = self.executer.builds[0]
+        b.external = build.ExternalRevisionIinfo()
+        self.executer._execute_builds = mock.AsyncMock()
+        await self.executer._run_build(b)
+
+        self.assertTrue(
+            type(self.executer.repository).add_running_build.called)
+        self.assertTrue(
+            type(self.executer.repository).remove_running_build.called)
+        self.assertEqual(len(self.executer._queue), 1)
+        self.assertTrue(self.executer._execute_builds.called)
+        self.assertFalse(self.executer.repository.get_secrets.called)
 
     @mock.patch.object(repository.Repository, 'add_running_build', mock.Mock())
     @mock.patch.object(slave.Slave, 'build',
