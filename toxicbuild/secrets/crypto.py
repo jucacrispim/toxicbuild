@@ -43,6 +43,18 @@ class Secret(Document):
         return inst
 
     @classmethod
+    async def add_or_update(cls, owner, key, value):
+        inst = await cls.objects.filter(owner=owner, key=key).first()
+        if inst:
+            encr = inst._encrypt(value)
+            inst.value = encr
+            inst.save()
+        else:
+            inst = await cls.add(owner, key, value)
+
+        return inst
+
+    @classmethod
     async def remove(cls, owner, key):
         await cls.objects.filter(owner=owner, key=key).all().delete()
 

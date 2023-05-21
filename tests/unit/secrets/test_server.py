@@ -60,8 +60,8 @@ class SecretsProtocolTest(TestCase):
     @patch.object(server.SecretsProtocol, 'send_response', AsyncMock(
         spec=server.SecretsProtocol.send_response))
     @async_test
-    async def test_add_secret(self):
-        self.protocol.action = 'add-secret'
+    async def test_add_or_update_secret_new_secret(self):
+        self.protocol.action = 'add-or-update-secret'
         self.protocol.data = {}
         self.protocol.data['body'] = {'owner': str(ObjectId()),
                                       'key': 'something',
@@ -73,6 +73,28 @@ class SecretsProtocolTest(TestCase):
 
         s = await server.Secret.objects.get(key='something')
         self.assertNotEqual(s.value, 'very secret')
+
+    @patch.object(server.SecretsProtocol, 'send_response', AsyncMock(
+        spec=server.SecretsProtocol.send_response))
+    @async_test
+    async def test_add_or_update_secret_update_secret(self):
+        self.protocol.action = 'add-or-update-secret'
+        self.protocol.data = {}
+        self.protocol.data['body'] = {'owner': str(ObjectId()),
+                                      'key': 'something',
+                                      'value': 'very secret'}
+        await self.protocol.client_connected()
+
+        self.protocol.data['body']['value'] = 'other secret'
+
+        r = await self.protocol.client_connected()
+
+        assert self.protocol.send_response.called
+        assert r is True
+
+        s = await server.Secret.objects.get(key='something')
+        plain = s.to_dict()['value']
+        self.assertEqual(plain, 'other secret')
 
     @patch.object(server.SecretsProtocol, 'send_response', AsyncMock(
         spec=server.SecretsProtocol.send_response))

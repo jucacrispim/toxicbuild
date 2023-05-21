@@ -53,8 +53,8 @@ class DummySecretsClient(BaseToxicClient):
         response = await self.get_response()
         return response['body'][action]
 
-    async def add_secret(self):
-        action = 'add-secret'
+    async def add_or_update_secret(self):
+        action = 'add-or-update-secret'
         body = {'owner': self.owner,
                 'key': 'something',
                 'value': 'very secret'}
@@ -86,8 +86,8 @@ class SecretsTest(TestCase):
         self.client.disconnect()
 
     @async_test
-    async def test_01_add_secret(self):
-        r = await self.client.add_secret()
+    async def test_01_add_or_update_secret(self):
+        r = await self.client.add_or_update_secret()
         self.assertEqual(r, 'ok')
 
     @async_test

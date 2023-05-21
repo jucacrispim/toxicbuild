@@ -28,7 +28,7 @@ from . crypto import Secret
 
 class SecretsProtocol(BaseToxicProtocol):
 
-    actions = {'add-secret',
+    actions = {'add-or-update-secret',
                'get-secrets',
                'remove-secret'}
 
@@ -52,14 +52,14 @@ class SecretsProtocol(BaseToxicProtocol):
         else:
             return True
 
-    async def add_secret(self):
+    async def add_or_update_secret(self):
         body = self.data['body']
         owner = body['owner']
         key = body['key']
         value = body['value']
 
-        await Secret.add(owner, key, value)
-        await self.send_response(body={'add-secret': 'ok'}, code=0)
+        await Secret.add_or_update(owner, key, value)
+        await self.send_response(body={'add-or-update-secret': 'ok'}, code=0)
 
     async def remove_secret(self):
         body = self.data['body']
