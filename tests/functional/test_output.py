@@ -32,7 +32,7 @@ from tests.functional import (start_master, stop_master, start_slave,
                               stop_slave, start_output, stop_output,
                               DummyMasterHoleClient, start_customwebserver,
                               stop_customwebserver, start_new_poller,
-                              stop_new_poller)
+                              stop_new_poller, start_secrets, stop_secrets)
 from tests.functional.custom_webhook import WebHookMessage
 
 
@@ -47,6 +47,7 @@ class DummyUIClient(DummyMasterHoleClient):
 def setUpModule():
     start_slave()
     start_new_poller()
+    start_secrets()
     start_master()
     start_output()
     start_customwebserver()
@@ -55,6 +56,7 @@ def setUpModule():
 def tearDownModule():
     stop_output()
     stop_master()
+    stop_secrets()
     stop_new_poller()
     stop_slave()
     stop_customwebserver()
