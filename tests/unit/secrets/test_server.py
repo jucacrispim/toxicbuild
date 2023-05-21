@@ -47,7 +47,7 @@ class SecretsProtocolTest(TestCase):
     @async_test
     async def test_client_connected_action_error(self):
         logging.disable(logging.CRITICAL)
-        self.protocol.action = 'add-secret'
+        self.protocol.action = 'add-or-update-secret'
 
         try:
             r = await self.protocol.client_connected()
@@ -124,6 +124,23 @@ class SecretsProtocolTest(TestCase):
         self.protocol.data = {}
         self.protocol.data['body'] = {'owner': owner,
                                       'key': 'something'}
+        r = await self.protocol.client_connected()
+
+        assert self.protocol.send_response.called
+        assert r is True
+
+        c = await server.Secret.objects.count()
+        self.assertEqual(c, 0)
+
+    @patch.object(server.SecretsProtocol, 'send_response', AsyncMock(
+        spec=server.SecretsProtocol.send_response))
+    @async_test
+    async def test_remove_all(self):
+        owner = str(ObjectId())
+        await server.Secret.add(owner, 'something', 'very secret')
+        self.protocol.action = 'remove-all'
+        self.protocol.data = {}
+        self.protocol.data['body'] = {'owner': owner}
         r = await self.protocol.client_connected()
 
         assert self.protocol.send_response.called

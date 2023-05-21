@@ -30,7 +30,8 @@ class SecretsProtocol(BaseToxicProtocol):
 
     actions = {'add-or-update-secret',
                'get-secrets',
-               'remove-secret'}
+               'remove-secret',
+               'remove-all'}
 
     @property
     def encrypted_token(self):  # pragma no cover
@@ -72,10 +73,16 @@ class SecretsProtocol(BaseToxicProtocol):
     async def get_secrets(self):
         body = self.data['body']
         owners = body['owners']
-        secrs = Secret.objects.filter(owner__in=owners).all()
+        secrs = await Secret.objects.filter(owner__in=owners).all().to_list()
         await self.send_response(
             body={'get-secrets': [s.to_dict() for s in secrs]},
             code=0)
+
+    async def remove_all(self):
+        body = self.data['body']
+        owner = body['owner']
+        await Secret.objects.filter(owner=owner).all().delete()
+        await self.send_response(body={'remove-all': 'ok'}, code=0)
 
 
 class SecretsServer(ToxicServer):

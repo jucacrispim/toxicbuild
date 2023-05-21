@@ -53,17 +53,23 @@ class DummySecretsClient(BaseToxicClient):
         response = await self.get_response()
         return response['body'][action]
 
-    async def add_or_update_secret(self):
+    async def add_or_update_secret(self, key='something', value='very secret'):
         action = 'add-or-update-secret'
         body = {'owner': self.owner,
-                'key': 'something',
-                'value': 'very secret'}
+                'key': key,
+                'value': value}
         r = await self.request2server(action, body)
         return r
 
     async def remove_secret(self):
         action = 'remove-secret'
         body = {'owner': self.owner, 'key': 'something'}
+        r = await self.request2server(action, body)
+        return r
+
+    async def remove_all(self):
+        action = 'remove-all'
+        body = {'owner': self.owner}
         r = await self.request2server(action, body)
         return r
 
@@ -101,4 +107,12 @@ class SecretsTest(TestCase):
     @async_test
     async def test_03_remove_secret(self):
         r = await self.client.remove_secret()
+        self.assertEqual(r, 'ok')
+
+    @async_test
+    async def test_04_remove_all(self):
+        await self.client.add_or_update_secret()
+        self.client.disconnect()
+        await self.client.connect()
+        r = await self.client.remove_all()
         self.assertEqual(r, 'ok')
