@@ -32,7 +32,10 @@
   "Toxicmaster buffer's name")
 
 (defcustom toxic:poller-buffer-name "toxicpoller"
-  "Toxicmaster poller buffer's name")
+  "Toxicpoller buffer's name")
+
+(defcustom toxic:secrets-buffer-name "toxicsecrets"
+  "Toxicsecrets buffer's name")
 
 (defcustom toxic:integrations-buffer-name "toxicintegrations"
   "Toxicbuild integrations buffer's name")
@@ -101,6 +104,10 @@
     (format "ln -s %sscripts/toxicpoller %stoxicpoller"
 	    toxic:--project-dir toxic:test-env-dir))
 
+  (setq toxic:--ln-toxicsecrets
+    (format "ln -s %sscripts/toxicsecrets %stoxicsecrets"
+	    toxic:--project-dir toxic:test-env-dir))
+
   (setq toxic:--ln-toxicintegrations
     (format "ln -s %sscripts/toxicintegrations %stoxicintegrations"
 	    toxic:--project-dir toxic:test-env-dir))
@@ -125,7 +132,8 @@
     (concat toxic:--ln-toxicslave " && " toxic:--ln-toxicmaster " && "
 	    toxic:--ln-toxicbuild-script " && " toxic:--ln-toxicbuild
 	    " && " toxic:--ln-toxicweb " && " toxic:--ln-toxicintegrations
-	    " && " toxic:--ln-toxicoutput " && " toxic:--ln-toxicpoller))
+	    " && " toxic:--ln-toxicoutput " && " toxic:--ln-toxicpoller
+	    " && " toxic:--ln-toxicsecrets))
 
   (pdj:shell-command-on-project-directory toxic:--link-everything
 					  (concat "*" "no-output" "*")))
@@ -396,6 +404,44 @@
       (lambda ()
 	(toxic:start-poller)))))
 
+(defun toxic:start-secrets ()
+  "Starts a master's secrets instance in the test env"
+
+  (interactive)
+
+  (defvar toxic:--secrets-path nil)
+  (setq toxic:--secrets-path (concat toxic:test-env-path "secrets/"))
+  (defvar toxic:--start-secrets-cmd
+    (format "%s %stoxicsecrets start %s --loglevel=%s"
+	    toxic:py-venv-exec toxic:test-env-dir toxic:--secrets-path toxic:loglevel))
+
+  (defvar toxic:--secrets-buffer-name "toxicsecrets")
+
+  (toxic:--run-in-env-on-test-dir
+   toxic:--start-secrets-cmd toxic:--secrets-buffer-name))
+
+
+(defun toxic:stop-secrets ()
+  "Stops the secrets test instance"
+
+  (interactive)
+
+  (toxic:--kill-buffer-shell-process toxic:--secrets-buffer-name))
+
+
+(defun toxic:restart-secrets ()
+  "Restarts the master' secrets test instance"
+
+  (interactive)
+
+  (deferred:$
+    (deferred:next
+      (lambda ()
+	(toxic:stop-secrets)))
+
+    (deferred:nextc it
+      (lambda ()
+	(toxic:start-secrets)))))
 
 
 (defun toxic:start-webui ()
@@ -444,6 +490,7 @@
 
   (toxic:start-slave)
   (toxic:start-poller)
+  (toxic:start-secrets)
   (toxic:start-master)
   (toxic:start-integrations)
   (toxic:start-output)
@@ -457,6 +504,7 @@
 
   (toxic:stop-slave)
   (toxic:stop-poller)
+  (toxic:stop-secrets)
   (toxic:stop-master)
   (toxic:stop-integrations)
   (toxic:stop-output)
@@ -471,6 +519,7 @@
   (toxic:restart-slave)
   (toxic:restart-master)
   (toxic:restart-poller)
+  (toxic:restart-secrets)
   (toxic:restart-integrations)
   (toxic:restart-output)
   (toxic:restart-webui))
@@ -503,7 +552,10 @@
 		  (toxic:restart-integrations)
 		(if (string-match-p (regexp-quote "toxicbuild/output")
 				    toxic:--event-file)
-		    (toxic:restart-output)))))))))
+		    (toxic:restart-output)
+		  (if (string-match-p (regexp-quote "toxicbuild/secrets")
+				    toxic:--event-file)
+		    (toxic:restart-secrets))))))))))
 
 
 (defun toxic:add-watcher ()
@@ -552,7 +604,7 @@
   (interactive)
 
   (define-key-after global-map [menu-bar toxic-menu]
-    (cons "ToxicBuild" (make-sparse-keymap "ToxicBuild")) 'Project)
+    (cons "ToxicDev" (make-sparse-keymap "ToxicDev")) 'Project)
 
   ;; Emacs menus are stupid. The order the items appear in the menu
   ;; is the oposite that they are declared here
@@ -673,6 +725,21 @@
     '(menu-item "Start toxicpoller" toxic:start-poller
 		:visible (progn (not (toxic:--buffer-has-process
 				      toxic:poller-buffer-name)))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-restart-secrets]
+    '(menu-item "Restart toxicsecrets" toxic:restart-secrets
+		:visible (progn (toxic:--buffer-has-process
+				 toxic:secrets-buffer-name))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-stop-secrets]
+    '(menu-item "Stop toxicsecrets" toxic:stop-secrets
+		:visible (progn (toxic:--buffer-has-process
+				 toxic:secrets-buffer-name))))
+
+  (define-key global-map [menu-bar toxic-menu toxic-start-secrets]
+    '(menu-item "Start toxicsecrets" toxic:start-secrets
+		:visible (progn (not (toxic:--buffer-has-process
+				      toxic:secrets-buffer-name)))))
 
   (define-key global-map [menu-bar toxic-menu toxic-second-other-minus-minus-separator]
     '(menu-item "--"))
