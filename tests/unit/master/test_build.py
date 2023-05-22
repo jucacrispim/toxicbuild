@@ -777,11 +777,21 @@ class BuildSetTest(TestCase):
 @mock.patch.object(repository.Repository, 'schedule', mock.Mock())
 class BuildExecuterTest(TestCase):
 
-    def setUp(self):
+    @async_test
+    async def setUp(self):
         slv = slave.Slave()
-        repo = repository.Repository()
+        self.owner = users.User(email='a@a.com', password='asdf')
+        await self.owner.save()
+        repo = repository.Repository(name='bla', url='git@bla.com',
+                                          owner=self.owner)
+        await repo.save()
         builds = [build.Build(slave=slv), build.Build(slave=slv)]
         self.executer = build.BuildExecuter(repo, builds)
+
+    @async_test
+    async def tearDown(self):
+        await repository.Repository.drop_collection()
+        await users.User.drop_collection()
 
     @mock.patch.object(repository.Repository, 'add_running_build', mock.Mock())
     @mock.patch.object(slave.Slave, 'build',
@@ -875,6 +885,7 @@ class BuildExecuterTest(TestCase):
     @async_test
     async def test_execute_builds_repo_paralell_builds_limit(self):
         self.executer.repository.parallel_builds = 1
+        await self.executer.repository.save()
         self.executer._running = 1
         await self.executer._execute_builds()
 

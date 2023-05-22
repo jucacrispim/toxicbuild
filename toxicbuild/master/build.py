@@ -914,6 +914,7 @@ class BuildExecuter(LoggerMixin):
         t.add_done_callback(lambda t: self._tasks.remove(t))
 
     async def _execute_builds(self):
+        await self.repository.reload()
         for build in self.builds:
             ready = await build.is_ready2run()
             parallel = self.repository.parallel_builds
