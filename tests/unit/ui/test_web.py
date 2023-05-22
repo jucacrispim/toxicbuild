@@ -740,8 +740,9 @@ class RepositoryRestHandlerTest(TestCase):
                                      mock_cls=AsyncMock)))
     @async_test
     async def test_get_secrets(self):
-        r = await self.handler.get_secrets()
         inst = web.RepositoryInterface.get.return_value
+        inst.get_secrets = AsyncMock(return_value={})
+        r = await self.handler.get_secrets()
         self.assertTrue(r)
         self.assertTrue(inst.get_secrets.called)
 
