@@ -554,6 +554,34 @@ class RepositoryRestHandler(ModelRestHandler):
         await repo.replace_envvars(**envvars)
         return {'repo-replace-envvars': 'replaced'}
 
+    @post('add-secret')
+    async def add_secret(self):
+        repo = await self.model.get(self.user, **self.query)
+        key = self.body.get('key')
+        value = self.body.get('value')
+        await repo.add_or_update_secret(key, value)
+        return {'repo-add-secret': 'ok'}
+
+    @post('rm-secret')
+    async def rm_secret(self):
+        repo = await self.model.get(self.user, **self.query)
+        key = self.body.get('key')
+        await repo.rm_secret(key)
+        return {'repo-rm-secret': 'ok'}
+
+    @post('replace-secrets')
+    async def replace_secrets(self):
+        repo = await self.model.get(self.user, **self.query)
+        secrets = self.body or {}
+        await repo.replace_secrets(**secrets)
+        return {'repo-replace-secrets': 'ok'}
+
+    @get('get-secrets')
+    async def get_secrets(self):
+        repo = await self.model.get(self.user, **self.query)
+        secrets = await repo.get_secrets()
+        return json.dumps(secrets)
+
     @get('')
     async def get_or_list(self):
         if 'full_name' in self.query.keys():

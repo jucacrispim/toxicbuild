@@ -31,6 +31,7 @@ Branches,<i>Branches</i>
 No branch configuration.,Nenhuma configuração de <i>branch</i>.
 Builds in parallel,<i>Builds</i> em paralelo
 Environment variables,Variáveis de ambiente
+Secrets,Segredos
 Slaves,Escravos
 Key,Chave
 Value,Valor
@@ -45,6 +46,7 @@ Advanced configuration,Configuração avançada
 Define which <b>branches</b> trigger builds. If no branch configuration| changes in all <b>branches</b> will trigger builds.,Defina quais <i><b>branches</b></i> disparam <i>builds</i>. Se não houver configuração de <i>branch</i>| alterações em todos os <i><b>branches</b></i> dispararão <i>builds</i>
 Determine how many <b>builds</b> can be executed <b>in parallel</b> in the repository. If no value there is no limit.,Determine quantos <i><b>builds</b></i> podem ser executados <b>em paralelo</b> no repositório. Se não houver valor não há limite.
 You can set <b>environment variables</b> to be used in the builds.,Você pode definir <b>variáveis de ambiente</b> para serem usadas nos <i>builds</i>.
+<b>Secrets</b> are available as environment variables in your build but are stored encrypted in the database and are NOT available in builds from external sources.,<b>Segredos</b> estão disponíveis como variávies de ambiente nos seus <i>builds</i>| mas ficam criptografadas no banco de dados e NÃO estão disponíveis para <i>builds</i> de fontes externas.
 <b>Slaves</b> are the ones who execute the builds. You need at least one <b>slave</b> or no builds will be created.,<b>Escravos</b> são os que executam os <i>builds</i>. Você precisa de pelo menos um <b>escravo</b> ou nenhum <i>build</i> será criado.
 Enable,Habilitar
 Disable,Desabilitar

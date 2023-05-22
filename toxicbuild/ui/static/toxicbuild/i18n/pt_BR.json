@@ -39,6 +39,8 @@
     "cancelled": "cancelado",
     "Environment variables updated": "Variáveis de ambiente atualizadas",
     "Error updating environment variables": "Erro atualizando variáveis de ambiente",
-    "all branches": "todos branches"
+    "all branches": "todos branches",
+    "Secrets updated": "Segredos atualizados",
+    "Error updating secrets": "Erro atualizando segretos"
   }
 }

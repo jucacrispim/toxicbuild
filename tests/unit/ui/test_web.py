@@ -698,6 +698,53 @@ class RepositoryRestHandlerTest(TestCase):
         r = await self.handler.replace_envvars()
         self.assertTrue(r)
 
+    @patch.object(web.RepositoryInterface, 'get', AsyncMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
+                                     mock_cls=AsyncMock)))
+    @async_test
+    async def test_add_secret(self):
+        self.handler.body = {'key': 'the key', 'value': 'val'}
+        r = await self.handler.add_secret()
+        inst = web.RepositoryInterface.get.return_value
+        self.assertTrue(r)
+        self.assertTrue(inst.add_or_update_secret.called)
+
+    @patch.object(web.RepositoryInterface, 'get', AsyncMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
+                                     mock_cls=AsyncMock)))
+    @async_test
+    async def test_rm_secret(self):
+        self.handler.body = {'key': 'the key'}
+        r = await self.handler.rm_secret()
+        inst = web.RepositoryInterface.get.return_value
+        self.assertTrue(r)
+        self.assertTrue(inst.rm_secret.called)
+
+    @patch.object(web.RepositoryInterface, 'get', AsyncMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
+                                     mock_cls=AsyncMock)))
+    @async_test
+    async def test_replace_secrets(self):
+        self.handler.body = {'key': 'the key'}
+        r = await self.handler.replace_secrets()
+        inst = web.RepositoryInterface.get.return_value
+        self.assertTrue(r)
+        self.assertTrue(inst.replace_secrets.called)
+
+    @patch.object(web.RepositoryInterface, 'get', AsyncMock(
+        spec=web.RepositoryInterface.get,
+        return_value=create_autospec(spec=web.RepositoryInterface,
+                                     mock_cls=AsyncMock)))
+    @async_test
+    async def test_get_secrets(self):
+        r = await self.handler.get_secrets()
+        inst = web.RepositoryInterface.get.return_value
+        self.assertTrue(r)
+        self.assertTrue(inst.get_secrets.called)
+
     def test_query_has_pk(self):
         self.handler.query = {'repo_name_or_id': 'bla/ble'}
         has_pk = self.handler._query_has_pk()

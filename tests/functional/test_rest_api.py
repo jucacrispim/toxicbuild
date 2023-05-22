@@ -28,10 +28,12 @@ from toxicbuild.ui import settings
 from tests import async_test
 from tests.functional import (start_master, stop_master, start_webui,
                               stop_webui, start_output, stop_output,
-                              create_output_access_token)
+                              create_output_access_token, start_secrets,
+                              stop_secrets)
 
 
 def setUpModule():
+    start_secrets()
     start_master()
     start_webui()
     start_output()
@@ -39,6 +41,7 @@ def setUpModule():
 
 def tearDownModule():
     stop_master()
+    stop_secrets()
     stop_webui()
     stop_output()
 
@@ -178,6 +181,70 @@ class RepositoryRestAPITest(TestCase):
 
         self.assertEqual(
             resp.json()['repo-remove-branch'], '1 branches removed')
+
+    def test_repo_add_secret(self):
+        url = settings.REPO_API_URL
+        data = {'name': 'somerepo', 'url': 'https://somebla.com',
+                'vcs_type': 'git'}
+        self.session.post(url, data=json.dumps(data))
+
+        branch_data = {'add_branches': [{'branch_name': 'master',
+                                         'notify_only_latest': True}]}
+        self.session.post(url + 'add-branch?name=a/somerepo',
+                          data=json.dumps(branch_data))
+
+        url = settings.REPO_API_URL + 'add-secret?name=a/somerepo'
+        data = {'key': 'the key', 'value': 'val'}
+        self.session.post(url, data=json.dumps(data))
+        url = settings.REPO_API_URL + 'get-secrets?name=a/somerepo'
+        secrets = self.session.get(url)
+        self.assertEqual(secrets.status_code, 200)
+        self.assertEqual(secrets.json()['the key'], 'val')
+
+    def test_repo_rm_secret(self):
+        url = settings.REPO_API_URL
+        data = {'name': 'somerepo', 'url': 'https://somebla.com',
+                'vcs_type': 'git'}
+        self.session.post(url, data=json.dumps(data))
+
+        branch_data = {'add_branches': [{'branch_name': 'master',
+                                         'notify_only_latest': True}]}
+        self.session.post(url + 'add-branch?name=a/somerepo',
+                          data=json.dumps(branch_data))
+
+        url = settings.REPO_API_URL + 'add-secret?name=a/somerepo'
+        data = {'key': 'the key', 'value': 'val'}
+        self.session.post(url, data=json.dumps(data))
+        url = settings.REPO_API_URL + 'rm-secret?name=a/somerepo'
+        data = {'key': 'the key'}
+        self.session.post(url, data=json.dumps(data))
+
+        url = settings.REPO_API_URL + 'get-secrets?name=a/somerepo'
+        secrets = self.session.get(url)
+        self.assertEqual(secrets.status_code, 200)
+        self.assertEqual(len(secrets.json().keys()), 0)
+
+    def test_repo_replace_secrets(self):
+        url = settings.REPO_API_URL
+        data = {'name': 'somerepo', 'url': 'https://somebla.com',
+                'vcs_type': 'git'}
+        self.session.post(url, data=json.dumps(data))
+
+        branch_data = {'add_branches': [{'branch_name': 'master',
+                                         'notify_only_latest': True}]}
+        self.session.post(url + 'add-branch?name=a/somerepo',
+                          data=json.dumps(branch_data))
+
+        url = settings.REPO_API_URL + 'add-secret?name=a/somerepo'
+        data = {'key': 'the key', 'value': 'val'}
+        self.session.post(url, data=json.dumps(data))
+        url = settings.REPO_API_URL + 'replace-secrets?name=a/somerepo'
+        data = {'the key': 'other val'}
+        self.session.post(url, data=json.dumps(data))
+        url = settings.REPO_API_URL + 'get-secrets?name=a/somerepo'
+        secrets = self.session.get(url)
+        self.assertEqual(secrets.status_code, 200)
+        self.assertEqual(secrets.json()['the key'], 'other val')
 
 
 class SlaveRestAPITest(TestCase):

@@ -169,6 +169,24 @@ describe('RepositoryTest', function(){
     expect(called_url).toEqual(expected_url);
   });
 
+  it('test-get_secrets', async function(){
+    let repo = new Repository();
+    repo._request2api = jasmine.createSpy('_request2api').and.returnValue('{}');
+    await repo.get_secrets();
+    let expected_url = repo._api_url + 'get-secrets?id=' + repo.id;
+    let called_url = repo._request2api.calls.allArgs()[0][1];
+    expect(called_url).toEqual(expected_url);
+  });
+
+  it('test-replace_secrets', async function(){
+    let repo = new Repository();
+    repo._post2api = jasmine.createSpy('_post2api');
+    await repo.replace_secrets({env: 'var'});
+    let expected_url = repo._api_url + 'replace-secrets?id=' + repo.id;
+    let called_url = repo._post2api.calls.allArgs()[0][0];
+    expect(called_url).toEqual(expected_url);
+  });
+
   it('test-is-name-available', async function(){
     let r = await Repository.is_name_available('some-name');
     expect(r).toBe(true);
@@ -715,11 +733,11 @@ describe('EnvvarRowView-test', function(){
     expect(this.view.showTimes).not.toHaveBeenCalled();
   });
 
-  it('test-hideEnvvars', function(){
+  it('test-hideRow', function(){
     affix('.envvars-row .envvar-remove .fa-times', this.view.$el);
     let el = $('.fa-times', this.view.$el);
     spyOn($.fn, 'fadeOut');
-    this.view._hideEnvvars(el);
+    this.view._hideRow(el);
 
     expect($.fn.fadeOut).toHaveBeenCalled();
   });
@@ -762,38 +780,38 @@ describe('RepositoryEnvvarsView-test', function(){
     expect($.fn.off).toHaveBeenCalled();
   });
 
-  it('test-getEnvvars', function(){
+  it('test-getData', function(){
     this.view.render();
-    let envvars = this.view._getEnvvars();
+    let envvars = this.view._getData();
     let expected = {'ONE-VAR': 'one-val',
 		    'OTHER-VAR': 'other-val'};
     expect(envvars).toEqual(expected);
   });
 
-  it('test-getEnvvars-dont-set-rows', function(){
+  it('test-getData-dont-set-rows', function(){
     this.view.render();
     this.view.rows = [];
-    let envvars = this.view._getEnvvars(false);
+    let envvars = this.view._getData(false);
     let expected = {'ONE-VAR': 'one-val',
 		    'OTHER-VAR': 'other-val'};
     expect(envvars).toEqual(expected);
     expect(this.view.rows).toEqual([]);
   });
 
-  it('test-saveEnvvars-ok', async function(){
-    this.view.repo.replace_envvars = jasmine.createSpy();
+  it('test-saveData-ok', async function(){
+    this.view.save_fn = jasmine.createSpy();
     spyOn(utils, 'showSuccessMessage');
 
-    await this.view.saveEnvvars();
+    await this.view.saveData();
 
     expect(utils.showSuccessMessage).toHaveBeenCalled();
   });
 
-  it('test-saveEnvvars-error', async function(){
+  it('test-saveData-error', async function(){
     this.view.repo.replace_envvars = jasmine.createSpy().and.throwError();
     spyOn(utils, 'showErrorMessage');
 
-    await this.view.saveEnvvars();
+    await this.view.saveData();
 
     expect(utils.showErrorMessage).toHaveBeenCalled();
   });

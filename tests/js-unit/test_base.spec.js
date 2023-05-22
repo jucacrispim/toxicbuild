@@ -34,7 +34,22 @@ describe("BaseModelTest", function(){
       called_keys.push(key);
     }
 
-    let expected = ['url', 'data', 'type', 'contentType', 'headers'];
+    let expected = ['url', 'type', 'contentType', 'headers', 'data'];
+    expect(called_keys).toEqual(expected);
+  });
+
+  it('test-request2api', async function(){
+    $.ajax.and.returnValue(JSON.stringify({'some': 'thing'}));
+    let url = 'http://bla.nada/';
+    let model = new BaseModel();
+    await model._post2api(url, null);
+    let called = $.ajax.calls.allArgs()[0][0];
+    let called_keys = [];
+    for(let key in called){
+      called_keys.push(key);
+    }
+
+    let expected = ['url', 'type', 'contentType', 'headers'];
     expect(called_keys).toEqual(expected);
   });
 

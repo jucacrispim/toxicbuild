@@ -121,6 +121,17 @@ class Repository extends BaseModel{
     return this._post2api(url, body);
   }
 
+  async get_secrets(){
+    let url = this._api_url + 'get-secrets?id=' + this.id;
+    let s = await this._request2api('get', url, null);
+    return JSON.parse(s);
+  }
+
+  async replace_secrets(secrets) {
+    let url = this._api_url + 'replace-secrets?id=' + this.id;
+    return this._post2api(url, secrets);
+  }
+
   static async is_name_available(name){
     let model = new Repository();
     let r = await is_name_available(model, name);
@@ -346,7 +357,6 @@ class RepositoryAddView extends BaseRepositoryView{
       r = await this.model.save();
       utils.showSuccessMessage(i18n('Repository added'));
     }catch(e){
-      console.error(e);
       utils.showErrorMessage(i18n('Error adding repository'));
       return;
     }
@@ -593,7 +603,7 @@ class RepositoryDetailsView extends BaseRepositoryView{
     let e = this.model.get('envvars');
     let envvars = {};
     for (let k in e){
-      envvars[k] = _.escape(e[k]);
+      envvars[_.escape(k)] = _.escape(e[k]);
     }
     this.envvars_view = new RepositoryEnvvarsView(envvars, this.model);
 
@@ -604,6 +614,24 @@ class RepositoryDetailsView extends BaseRepositoryView{
     $('#envvarsModal').on('hidden.bs.modal', function(e){
       self.envvars_view.cleanView();
     });
+
+    let secr = async function(){
+      let s = await self.model.get_secrets();
+      let secrets = {};
+      for (let k in s) {
+	secrets[_.escape(k)] = _.escape(s[k]);
+      }
+      self.secrets_view = new RepositorySecretsView(secrets, self.model);
+      $('#secretsModal').on('show.bs.modal', function(e){
+	self.secrets_view.render();
+      });
+
+      $('#secretsModal').on('hidden.bs.modal', function(e){
+	self.secrets_view.cleanView();
+      });
+
+    };
+    secr();
 
     this._setValidations();
     let has_branches = this.model.get('branches').length ? true : false;
@@ -616,87 +644,108 @@ class RepositoryDetailsView extends BaseRepositoryView{
   }
 }
 
-
-class EnvvarRowView extends Backbone.View{
+class ModalRowBaseView extends Backbone.View{
 
   constructor(key, val){
     let options = {};
     super(options);
     this.key = key;
     this.value = val;
-    this.directive = {
-      '.envvars-key@value': 'key',
-      '.envvars-value@value': 'value'
-    };
-    this.template_selector = '.template .envvars-row';
-    this.compiled_template = $p(this.template_selector).compile(
-      this.directive);
+    // over write this
+    this.directive = {};
+    // over write this
+    this.template_selector = '';
+    // over write this
+    this.compiled_template = null;
+    // over write this
+    this.key_class = '';
+    // over write this
+    this.value_class = '';
   }
 
-  showTimes(){
-    $('.fa-times', this.$el).show();
-  }
-
-  _isKey(el){
-    return el.hasClass('envvars-key');
-  }
-
-  _handleInput(el){
-    let parent = el.parent().parent();
-    let key = $('.envvars-key', parent).val();
-    let value = $('.envvars-value', parent).val();
-    this.key = key;
-    this.value = value;
-    if (this.key && this.value){
-      this.showTimes();
-    }
-  }
-
-  _hideEnvvars(el){
-    let parent = el.parent().parent();
-    parent.fadeOut();
-  }
-
-  render(){
-    let self = this;
-    let kw = {'key': this.key,
-	      'value': this.value};
-    let compiled = $(this.compiled_template(kw));
-    this.$el.html(compiled);
-    if (this.key && this.value){
-      this.showTimes();
+    showTimes(){
+      $('.fa-times', this.$el).show();
     }
 
-    let handleInput = _.debounce(function(el){self._handleInput(el);},
-				 300);
-    $('input', this.$el).on('input', function(e){
-      let el = $(e.target);
-      handleInput(el);
-    });
+    _isKey(el){
+      // return el.hasClass('envvars-key');
+      return el.hasClass(this.key_class);
+    }
 
-    $('.fa-times', this.$el).on('click', function(e){
-      let el = $(e.target);
-      self._hideEnvvars(el);
-    });
+    _handleInput(el){
+      let parent = el.parent().parent();
+      let key = $('.' + this.key_class, parent).val();
+      let value = $('.' + this.value_class, parent).val();
+      this.key = key;
+      this.value = value;
+      if (this.key && this.value){
+	this.showTimes();
+      }
+    }
 
-    return this;
-  }
+    _hideRow(el){
+      let parent = el.parent().parent();
+      parent.fadeOut();
+    }
+
+    render(){
+      let self = this;
+      let kw = {'key': this.key,
+		'value': this.value};
+      let compiled = $(this.compiled_template(kw));
+      this.$el.html(compiled);
+      if (this.key && this.value){
+	this.showTimes();
+      }
+
+      let handleInput = _.debounce(function(el){self._handleInput(el);},
+				   300);
+      $('input', this.$el).on('input', function(e){
+	let el = $(e.target);
+	handleInput(el);
+      });
+
+      $('.fa-times', this.$el).on('click', function(e){
+	let el = $(e.target);
+	self._hideRow(el);
+      });
+
+      return this;
+    }
 }
 
-
-class RepositoryEnvvarsView extends Backbone.View{
-
-  constructor(envvars, repo){
+class RepositoryModalRowBaseView extends Backbone.View{
+  constructor(data, repo, modal_row_cls){
     let options = {};
     super(options);
-    this.$el = $('.envvar-rows-container');
-    this.envvars = envvars;
+    // over write this
+    this.$el = null;
+    this.data = data;
     this.repo = repo;
     this.rows = [];
+    // overwrite this
+    this.plus_el_sel = '';
+    // overwrite this
+    this.save_btn = null;
+    // overwrite this
+    this.key_class = '';
+    // overwrite this
+    this.value_class = '';
+    this.modal_row_class = modal_row_cls;
+    // overwrite this
+    this.success_msg = '';
+    // overwrite this
+    this.error_msg = '';
+    // overwrite this
+    this.close_btn = null;
+    // overwrite this
+    this.visible_els_sel = '';
+    // overwrite this
+    this.save_fn = null;
 
-    for (let key in this.envvars){
-      let val = this.envvars[key];
-      let row = new EnvvarRowView(key, val);
+    for (let key in this.data){
+      let val = this.data[key];
+      let row = new this.modal_row_class(key, val);
       this.rows.push(row);
     }
   }
@@ -704,46 +753,46 @@ class RepositoryEnvvarsView extends Backbone.View{
   render(){
     let self = this;
     this.$el.html('');
-    for (let i in this.rows){
-      let row = this.rows[i];
+    for (let i in self.rows){
+      let row = self.rows[i];
       row.render();
       this.$el.append(row.$el);
     }
     this.addRow();
 
-    $('#envvarsModal .fa-plus').on('click', function(){
+    $(this.plus_el_sel).on('click', function(){
       self.addRow();
     });
 
-    $('#btn-update-envvars').on('click', function(){
-      self.saveEnvvars();
+    this.save_btn.on('click', function(){
+      self.saveData();
     });
     return this;
   }
 
   addRow(){
-    let row = new EnvvarRowView('', '');
+    let row = new this.modal_row_class('', '');
     row.render();
     this.$el.append(row.$el);
   }
 
   cleanView(){
-    $('#envvarsModal .fa-plus').off('click');
+    $(this.plus_el_sel).off('click');
   }
 
-  _getEnvvars(set_rows=true){
+  _getData(set_rows=true){
     let self = this;
     let rows = [];
     let envvars = {};
-    $('.envvars-row:visible').each(function(){
+    $(this.visible_els_sel).each(function(){
       let el = $(this);
-      let key = $('.envvars-key', el).val();
-      let value = $('.envvars-value', el).val();
+      let key = $('.' + self.key_class, el).val();
+      let value = $('.' + self.value_class, el).val();
       if (!key || !value){
 	// continue
 	return true;
       };
-      let row = new EnvvarRowView(key, value);
+      let row = new self.modal_row_class(key, value);
       rows.push(row);
       envvars[key] = value;
       return true;
@@ -756,17 +805,91 @@ class RepositoryEnvvarsView extends Backbone.View{
     return envvars;
   }
 
-  async saveEnvvars(){
-    let envvars = this._getEnvvars();
+  async saveData(){
+    let data = this._getData();
     try{
-      await this.repo.replace_envvars(envvars);
-      utils.showSuccessMessage(i18n('Environment variables updated'));
+      await this.save_fn(data);
+      utils.showSuccessMessage(i18n(this.success_msg));
     }catch(e){
-      utils.showErrorMessage(i18n('Error updating environment variables'));
+      utils.showErrorMessage(i18n(this.error_msg));
     }
     // close modal
-    $('#envvarsModal .close').click();
+    this.close_btn.click();
   }
+}
+
+class EnvvarRowView extends ModalRowBaseView{
+
+  constructor(key, val){
+    super(key, val);
+    this.directive = {
+      '.envvars-key@value': 'key',
+      '.envvars-value@value': 'value'
+    };
+    this.template_selector = '.template .envvars-row';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+    this.key_class = 'envvars-key';
+    this.value_class = 'envvars-value';
+  }
+}
+
+class RepositoryEnvvarsView extends RepositoryModalRowBaseView{
+
+  constructor(data, repo){
+    super(data, repo, EnvvarRowView);
+    // over write this
+    this.$el = $('.envvar-rows-container');
+    this.plus_el_sel = '#envvarsModal .fa-plus';
+    this.save_btn = $('#btn-update-envvars');
+    this.key_class = 'envvars-key';
+    this.value_class = 'envvars-value';
+    this.success_msg = 'Environment variables updated';
+    this.error_msg = 'Error updating environment variables';
+    this.close_btn = $('#envvarsModal .close');
+    this.visible_els_sel = '.envvars-row:visible';
+    this.save_fn = async function(data) {
+      await repo.replace_envvars(data);
+    };
+  }
+
+}
+
+class SecretRowView extends ModalRowBaseView{
+
+  constructor(key, val){
+    super(key, val);
+    this.directive = {
+      '.secrets-key@value': 'key',
+      '.secrets-value@value': 'value'
+    };
+    this.template_selector = '.template .secrets-row';
+    this.compiled_template = $p(this.template_selector).compile(
+      this.directive);
+    this.key_class = 'secrets-key';
+    this.value_class = 'secrets-value';
+  }
+}
+
+class RepositorySecretsView extends RepositoryModalRowBaseView{
+
+  constructor(data, repo){
+    super(data, repo, SecretRowView);
+    // over write this
+    this.$el = $('.secret-rows-container');
+    this.plus_el_sel = '#secretsModal .fa-plus';
+    this.save_btn = $('#btn-update-secrets');
+    this.key_class = 'secrets-key';
+    this.value_class = 'secrets-value';
+    this.success_msg = 'Secrets updated';
+    this.error_msg = 'Error updating secrets';
+    this.close_btn = $('#secretsModal .close');
+    this.visible_els_sel = '.secrets-row:visible';
+    this.save_fn = async function(data) {
+      await repo.replace_secrets(data);
+    };
+  }
+
 }
 
 class RepositoryInfoView extends BaseRepositoryView{

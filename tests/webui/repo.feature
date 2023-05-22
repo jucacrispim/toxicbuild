@@ -39,6 +39,15 @@ Feature:
         And clicks in the save environment variables button
         Then he sees the "Environment variables updated" message
 
+    Scenario: The user updates secrets
+
+        Given the user is in the repository settings page
+        And he sees the advanced options
+        When he clicks in the secrets button
+        And fills the secrets key and value fiels
+        And clicks in the save secrets button
+        Then he sees the "Secrets updated" message
+
     Scenario: The user adds a branch configuration to the repository
 
         Given the user is in the repository settings page

@@ -59,9 +59,12 @@ class BaseModel extends Backbone.Model{
 
   async _request2api(method, url, body){
     let headers = this._getHeaders();
-    let resp = await $.ajax(
-      {'url': url, 'data': JSON.stringify(body), 'type': method,
-       'contentType': "application/json", 'headers': headers});
+    let params = {'url': url, 'type': method,
+		  'contentType': "application/json", 'headers': headers};
+    if (body != null) {
+      params['data'] = JSON.stringify(body);
+    }
+    let resp = await $.ajax(params);
 
     return resp;
   }

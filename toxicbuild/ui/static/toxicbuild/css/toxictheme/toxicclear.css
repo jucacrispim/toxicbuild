@@ -853,6 +853,7 @@ body{
     min-height: 50px;
 }
 
+.secrets-badge,
 .envvars-badge{
     padding: 5px;
     font-size: 0.8em;
@@ -863,27 +864,32 @@ body{
 }
 
 
+.secret-remove,
 .envvar-remove{
     color: var(--danger);
     padding-right: 10px;
     min-width: 20px;
 }
 
+.secret-remove span,
 .envvar-remove span{
     cursor: pointer;
     display: none;
 }
 
+#secretsModal .modal-body,
 #envvarsModal .modal-body{
     padding-top: 0.5rem;
 }
 
+#secretsModal .fa-plus,
 #envvarsModal .fa-plus{
     color: var(--success);
     padding-bottom: 10px;
     cursor: pointer;
 }
 
+.secrets-row,
 .envvars-row{
     margin-bottom: 15px;
 }

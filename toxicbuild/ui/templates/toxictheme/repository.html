@@ -109,6 +109,59 @@
 </div>
 <!-- end envvars modal -->
 
+<!-- secrets modal -->
+<div class="modal fade" id="secretsModal" tabindex="-1" role="dialog"
+     aria-labelledby="secretsLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">
+	  {% raw translate('Secrets') %}
+	</h6>
+        <button type="button" class="close" data-dismiss="modal"
+		aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+	<span class="fas fa-plus"></span>
+	<div class="secret-rows-container"></div>
+
+      </div>
+
+      <div class="modal-footer">
+
+	  <div class="update-secrets-btn-container inner-btn-container col-sm-4">
+	    <button class="btn btn-sm btn-block btn-dark" type="submit"
+		    id="btn-update-secrets">
+	      <span class="spinner icon-spinner-2" id="add-branch-btn-spinner"
+		    style="display:none">
+	      </span>
+	      <span id="update-secrets-btn-text">
+		{% raw translate('Save') %}
+	      </span>
+	    </button>
+	  </div>
+
+	  <div class="cancel-btn-container inner-btn-container">
+	    <button class="btn btn-sm btn-light btn-block" type="submit"
+		    id="btn-cancel-update-secrets"
+		    data-dismiss="modal">
+	      <span class="spinner icon-spinner-2" id="save-repo-btn-spinner"
+		    style="display:none">
+	      </span>
+	      <span id="cancel-update-secrets-btn-text">
+		{{translate('Cancel')}}
+	      </span>
+	    </button>
+	  </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<!-- end secrets modal -->
+
 <!-- confirm delete repo modal -->
 <div class="modal fade" id="removeRepoModal" tabindex="-1" role="dialog"
      aria-labelledby="removeRepoModalLabel" aria-hidden="true">
@@ -174,6 +227,20 @@
 
   </div>
 
+  <div class="row secrets-row">
+    <div class="col">
+      <input type="text" class="form-control secrets-key"
+	     placeholder="{% raw translate('Key') %}">
+    </div>
+    <div class="col">
+      <input type="text" class="form-control secrets-value"
+	     placeholder="{% raw translate('Value') %}">
+    </div>
+    <div class="secret-remove">
+      <span class="fas fa-times"></span>
+    </div>
+
+  </div>
 
   <div id="repo-details">
     <div class="form-group repo-name-group ">
@@ -277,7 +344,7 @@
 		    title="add branch" data-toggle="modal"
 		    data-target="#addBranchModal"></span>
 	    </div>
-
+	    <!-- end branches -->
 
 	    <!-- builds in palallel -->
 	    <div class="row-container parallel-builds-container col-sm-5">
@@ -286,14 +353,22 @@
 		     data-valuefor="parallel_builds">
 	    </div>
 	    <!-- end builds in palallel -->
+	    <!-- envvars -->
 	    <span class="badge badge-dark envvars-badge"
 		  data-toggle="modal"
 		  data-target="#envvarsModal">
 	      {{translate('Environment variables')}}
 	    </span>
+	    <!-- end envvars -->
+	    <!-- secrets -->
+	    <span class="badge badge-dark secrets-badge"
+		  data-toggle="modal"
+		  data-target="#secretsModal">
+	      {{translate('Secrets')}}
+	    </span>
+	    <!-- end secrets -->
 
 	  </div>
-	  <!-- end branches -->
 
 	  <!-- slaves -->
 	  <div class="row-container">
@@ -454,6 +529,10 @@
 
 	  <p id="envvars-config-p">
 	    {% raw translate('You can set <b>environment variables</b> to be used in the builds.') %}
+	  </p>
+
+	  <p id="secrets-config-p">
+	    {% raw translate('<b>Secrets</b> are available as environment variables in your build but are stored encrypted in the database and are NOT available in builds from external sources.').replace('|', ',') %}
 	  </p>
 
 	  <p id="slaves-config-p">

@@ -59,6 +59,13 @@ def click_envvars_button(context):
     btn.click()
 
 
+@when('he clicks in the secrets button')
+def click_secrets_button(context):
+    browser = context.browser
+    btn = browser.find_elements_by_class_name('secrets-badge')[1]
+    btn.click()
+
+
 @when('fills the key and value fiels')
 def fill_envvar(context):
     browser = context.browser
@@ -71,10 +78,29 @@ def fill_envvar(context):
     val.send_keys('the-value')
 
 
+@when('fills the secrets key and value fiels')
+def fill_secret(context):
+    browser = context.browser
+    key = browser.wait_element_become_present(
+        lambda: browser.find_elements_by_class_name('secrets-key')[0])
+
+    val = browser.wait_element_become_present(
+        lambda: browser.find_elements_by_class_name('secrets-value')[0])
+    key.send_keys('the-key')
+    val.send_keys('the-value')
+
+
 @when('clicks in the save environment variables button')
 def click_save_envvars(context):
     browser = context.browser
     btn = browser.find_element_by_id('btn-update-envvars')
+    btn.click()
+
+
+@when('clicks in the save secrets button')
+def click_save_secrets(context):
+    browser = context.browser
+    btn = browser.find_element_by_id('btn-update-secrets')
     btn.click()
 
 
