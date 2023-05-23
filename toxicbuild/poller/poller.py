@@ -155,7 +155,8 @@ class Poller(LoggerMixin):
     async def process_changes(self):
         """ Process all changes since the last revision in db
         """
-        self.log('processing changes', level='debug')
+        self.log(f'processing changes for branches {self.branches_conf}',
+                 level='debug')
 
         repo_branches = MatchKeysDict(
             **{name: conf for name, conf in self.branches_conf.items()})
