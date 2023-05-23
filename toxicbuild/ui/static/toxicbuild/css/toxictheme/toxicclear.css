@@ -1482,3 +1482,16 @@ body{
     border-right: 3px solid var(--black-almost-there);
     top: 46%;
 }
+
+.secret-show {
+    position: absolute;
+    right: 8%;
+    padding-top: 9px;
+    color: #495057;
+    z-index: 10;
+    cursor: pointer;
+}
+
+.secret-show span {
+    display: none;
+}

@@ -817,3 +817,38 @@ describe('RepositoryEnvvarsView-test', function(){
   });
 
 });
+
+describe('SecretRowViewTest', function(){
+  beforeEach(function(){
+    affix('.template .secrets-row');
+    let tmpl = $('.template .secrets-row');
+    tmpl.affix('input.secrets-key');
+    tmpl.affix('input.secrets-value');
+    $('input.secrets-value').attr('type', 'password');
+    tmpl.affix('div span.fa-eye');
+    tmpl.affix('div span.fa-times');
+    $('.fa-eye').hide();
+    $('.fa-times').hide();
+    this.view = new SecretRowView('VAR', 'the-value');
+  });
+
+  it('test-showTimes', function(){
+    this.view.render();
+    this.view.showTimes();
+    let t = $('.fa-times', this.view.$el);
+    let e = $('.fa-eye', this.view.$el);
+    expect(t.attr('style').indexOf('display: inline') >= 0).toBe(true);
+    expect(e.attr('style').indexOf('display: inline') >= 0).toBe(true);
+  });
+
+  it('test-toggleVisibility', function(){
+    this.view.render();
+    this.view.toggleVisibility();
+    let el = $('.secrets-value', this.view.$el);
+    expect(el.attr('type')).toEqual('text');
+    this.view.toggleVisibility();
+    el = $('.secrets-value', this.view.$el);
+    expect(el.attr('type')).toEqual('password');
+  });
+
+});

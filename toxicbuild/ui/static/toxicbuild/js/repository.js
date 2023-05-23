@@ -869,6 +869,33 @@ class SecretRowView extends ModalRowBaseView{
     this.key_class = 'secrets-key';
     this.value_class = 'secrets-value';
   }
+  render(){
+    super.render();
+    let self = this;
+    $('.fa-eye', this.$el).on('click', function(e){
+      self.toggleVisibility();
+    });
+  }
+  showTimes(){
+    super.showTimes();
+    this.showEye();
+  }
+
+  showEye(){
+    $('.fa-eye', this.$el).show();
+  }
+
+  toggleVisibility(){
+    let el = $('.secrets-value', this.$el);
+    if (el.attr('type') == 'password') {
+      el.attr('type', 'text');
+      $('.fa-eye', this.$el).removeClass('fa-eye').addClass('fa-eye-slash');
+    } else {
+      el.attr('type', 'password');
+      $('.fa-eye-slash', this.$el).removeClass('fa-eye-slash').addClass('fa-eye');
+    }
+  }
+
 }
 
 class RepositorySecretsView extends RepositoryModalRowBaseView{
