@@ -126,15 +126,19 @@ class BaseWebhookReceiver(LoggerMixin, BasePyroHandler):
             'notify_only_latest': True,
             'builders_fallback': target['branch']}
         }
+        self.log(f'Pull request source: {source}', level='debug')
+        self.log(f'Pull request target: {target}', level='debug')
         if source['id'] != target['id']:
             external = {'url': source['url'],
                         'name': source['name'],
                         'branch': source['branch'],
                         'into': target['branch']}
 
+            self.log(f'External pull request {external}', level='debug')
             await install.update_repository(target['id'], external=external,
                                             repo_branches=repo_branches)
         else:
+            self.log('Pull request', level='debug')
             await install.update_repository(target['id'],
                                             repo_branches=repo_branches)
 
