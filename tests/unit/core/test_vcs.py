@@ -361,14 +361,16 @@ class GitTest(TestCase):
 
         async def e(*a, **kw):
             emock(a[0])
-            return 'origin/HEAD  -> origin/master\norigin/dev\norigin/master'
+            r = 'origin/HEAD  -> origin/master\norigin/dev\norigin/master'
+            r += '\norigin/a/bad/one'
+            return r
 
         fetch_mock = mock.Mock()
 
         async def fetch():
             fetch_mock()
 
-        expected_branches = set(['dev', 'master'])
+        expected_branches = set(['dev', 'master', 'a/bad/one'])
         vcs.exec_cmd = e
         self.vcs.fetch = fetch
         self.vcs._update_remote_prune = mock.AsyncMock()

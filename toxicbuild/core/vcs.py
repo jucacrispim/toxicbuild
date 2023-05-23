@@ -404,7 +404,7 @@ class Git(VCS):
         remote_branches = out.split('\n')
         # master, with some shitty arrow...
         remote_branches[0] = remote_branches[0].split('->')[1].strip()
-        return set([b.strip().split('/')[1] for b in remote_branches])
+        return set([b.strip().split('/', 1)[1] for b in remote_branches])
 
     async def _update_remote_prune(self):
         """Updates remote branches list, prunning deleted branches."""
