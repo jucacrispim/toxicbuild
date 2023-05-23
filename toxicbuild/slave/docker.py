@@ -67,7 +67,7 @@ class DockerContainerBuilder(Builder):
         self._is_dind = self.platform.startswith('docker')
         # Should we use a volume to keep the docker caches for
         # subsequent builds?
-        self._dind_volume = getattr(settings, 'USE_DIND_VOLUME', True)
+        self._dind_volume = getattr(settings, 'USE_DIND_VOLUME', False)
 
     def _get_name(self, name, workdir, platform):
         name = '{}-{}-{}'.format(
