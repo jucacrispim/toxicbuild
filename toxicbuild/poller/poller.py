@@ -31,6 +31,8 @@ from toxicbuild.core.utils import (
 )
 from toxicbuild.poller import settings
 
+POLLER_TIMEOUT = 60  # secs
+
 
 class Poller(LoggerMixin):
 
@@ -113,7 +115,8 @@ class Poller(LoggerMixin):
                'clone_status': 'ready'}
 
         try:
-            lock = await self.lock.acquire_write(timeout=0.2)
+            # if it takes too long to acquire the lock get out
+            lock = await self.lock.acquire_write(timeout=POLLER_TIMEOUT)
         except exc.TimeoutError:
             self.log('Repo {} already polling'.format(self.repo_id),
                      level='warning')

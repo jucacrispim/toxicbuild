@@ -80,7 +80,8 @@ class SecretsProtocolTest(TestCase):
     async def test_add_or_update_secret_update_secret(self):
         self.protocol.action = 'add-or-update-secret'
         self.protocol.data = {}
-        self.protocol.data['body'] = {'owner': str(ObjectId()),
+        owner = str(ObjectId())
+        self.protocol.data['body'] = {'owner': owner,
                                       'key': 'something',
                                       'value': 'very secret'}
         await self.protocol.client_connected()
@@ -92,7 +93,7 @@ class SecretsProtocolTest(TestCase):
         assert self.protocol.send_response.called
         assert r is True
 
-        s = await server.Secret.objects.get(key='something')
+        s = await server.Secret.objects.get(key='something', owner=owner)
         plain = s.to_dict()['value']
         self.assertEqual(plain, 'other secret')
 

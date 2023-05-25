@@ -66,6 +66,7 @@ class PollerTest(TestCase):
                          {'local-branch': {'notify_only_latest': True}})
 
     @patch.object(poller.LoggerMixin, 'log', Mock(spec=poller.LoggerMixin.log))
+    @patch.object(poller, 'POLLER_TIMEOUT', 0.1)
     @async_test
     async def test_poll_already_polling(self):
         async with await self.poller.lock.acquire_write():
