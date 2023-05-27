@@ -160,6 +160,20 @@ services:
       - zookeeper
       - rabbitmq
 
+  docs:
+    image: toxictest
+    command: ./build-scripts/build_docs.sh
+
+    environment:
+       DBHOST: mongo
+       AMQPHOST: rabbitmq
+       ZK_SERVERS: "zookeeper:2181"
+
+    depends_on:
+      - mongo
+      - zookeeper
+      - rabbitmq
+
   functional-tests:
     image: toxictest
     command: python setup.py test --test-suite=tests.functional

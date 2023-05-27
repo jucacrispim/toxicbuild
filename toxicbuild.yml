@@ -92,3 +92,26 @@ builders:
 
       - name: Clean old images
         command: ./build-scripts/clean_images.sh
+
+  # Docs builder
+  - name: docs
+    platform: docker
+
+    branches:
+      - release
+
+    envvars:
+      ENV: ci
+      DBHOST: mongo
+      AMQPHOST: rabbitmq
+      ZK_SERVERS: "zookeeper:2181"
+
+
+    steps:
+
+      - name: Create test environment
+        command: ./build-scripts/toxicinstall.sh create-test-env
+        stop_on_fail: true
+
+      - name: build docs
+        command: docker-compose -f ops/docker/docker-compose.yml run js-unit-tests
