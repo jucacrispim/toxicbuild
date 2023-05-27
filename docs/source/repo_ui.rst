@@ -136,5 +136,16 @@ these are the available options:
   - ``Key`` - The environment variable name
   - ``Value`` - The value of the variable
 
+
+* ``Secrets`` - Secrets are environment variables that are stored encrypted
+  in the database and are not available to builds triggered by external repos.
+  See :ref:`secrets-config`
+
+  |repo-secrets-config-img|
+
+  .. |repo-secrets-config-img| image:: ./_static/repo-secrets-config.png
+				       :alt: Repository secrets configuration
+
+
 * ``Slaves`` - Which slaves can execute builds for the repository. If a
   repository don't have any enabled slave no builds will be executed.
