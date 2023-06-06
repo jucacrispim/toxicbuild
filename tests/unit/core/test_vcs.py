@@ -382,6 +382,33 @@ class GitTest(TestCase):
         self.assertTrue(fetch_mock.called)
 
     @async_test
+    async def test_get_remote_branches_no_head(self):
+        expected = 'git branch -r'
+
+        emock = mock.Mock()
+
+        async def e(*a, **kw):
+            emock(a[0])
+            r = 'origin/master'
+            return r
+
+        fetch_mock = mock.Mock()
+
+        async def fetch():
+            fetch_mock()
+
+        expected_branches = set(['master'])
+        vcs.exec_cmd = e
+        self.vcs.fetch = fetch
+        self.vcs._update_remote_prune = mock.AsyncMock()
+        branches = await self.vcs.get_remote_branches()
+        called_cmd = emock.call_args[0][0]
+        self.assertEqual(expected, called_cmd)
+        self.assertEqual(expected_branches, branches)
+        self.assertTrue(self.vcs._update_remote_prune.called)
+        self.assertTrue(fetch_mock.called)
+
+    @async_test
     async def test_get_revisions_for_branch(self):
         now = utils.now()
         local = utils.utc2localtime(now)

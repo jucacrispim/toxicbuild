@@ -403,7 +403,12 @@ class Git(VCS):
         self.log(msg, level='debug')
         remote_branches = out.split('\n')
         # master, with some shitty arrow...
-        remote_branches[0] = remote_branches[0].split('->')[1].strip()
+        parts = remote_branches[0].split('->')
+        if len(parts) > 1:
+            remote_branches[0] = parts[1].strip()
+        else:
+            remote_branches[0] = parts[0].strip()
+
         return set([b.strip().split('/', 1)[1] for b in remote_branches])
 
     async def _update_remote_prune(self):
