@@ -33,7 +33,7 @@ coverage==7.2.2
 cryptography==41.0.0
 decorator==5.1.1
 docopt==0.6.2
-docutils==0.20.0
+docutils==0.16.0
 entrypoints==0.3
 flake8==6.0.0
 flake8-polyfill==1.0.2
@@ -50,7 +50,7 @@ jaraco.text==3.11.1
 jasmine==3.5.0
 jasmine-core==3.5.0
 jeepney==0.8.0
-Jinja2==3.1.2
+Jinja2==2.10.3
 jmespath==1.0.1
 keyring==23.13.1
 lazy-object-proxy==1.9.0
@@ -101,7 +101,7 @@ undetected-chromedriver==3.4.6
 simplegeneric==0.8.1
 six==1.16.0
 snowballstemmer==2.2.0
-Sphinx==7.0.1
+Sphinx==4.5.0
 sphinx-pdj-theme==0.4.0
 sphinxcontrib-applehelp==1.0.4
 sphinxcontrib-devhelp==1.0.2
