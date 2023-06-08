@@ -119,11 +119,11 @@ class AmqpConnection(LoggerMixin):
         self._connected = False
 
     async def reconnect(self):
-        async with self.reconn_lock.acquire_write():
+        async with await self.reconn_lock.acquire_write():
             try:
                 await self.disconnect()
             except Exception as e:
-                msg = 'Error disconnectig... {}'.format(str(e))
+                msg = 'Error disconnectig on reconnect... {}'.format(str(e))
                 self.log(msg, level='error')
             await self.connect()
 
