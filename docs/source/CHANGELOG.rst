@@ -1,6 +1,14 @@
 Changelog
 =========
 
+* 0.9.0
+
+  - Refactor to invert the dependency of integrations -> output
+  - Add secrets package
+  - Fix rabbitmq reconnect
+  - Fix remote branches fetch
+  - Increase timeout for poller
+
 * 0.8.0
 
   - Add Bitbucket integration
