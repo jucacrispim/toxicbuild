@@ -20,13 +20,13 @@
 import asyncio
 import base64
 import json
+from unittest import TestCase
 from unittest.mock import Mock, patch, AsyncMock
-from tornado.testing import AsyncTestCase, gen_test
 from toxicbuild.integrations import webhook_receivers
 from tests import async_test, create_autospec
 
 
-class BaseWebhookReceiverTest(AsyncTestCase):
+class BaseWebhookReceiverTest(TestCase):
 
     def setUp(self):
         super().setUp()
@@ -141,26 +141,26 @@ class BaseWebhookReceiverTest(AsyncTestCase):
             await self.webhook_receiver.receive_webhook()
 
     @patch.object(webhook_receivers, 'settings', Mock())
-    @gen_test
-    def test_setup_without_user(self):
+    @async_test
+    async def test_setup_without_user(self):
         # if trying to setup wihtout a user, we should be redireced
         # to the login page of the webui.
         self.webhook_receiver._get_user_from_cookie = AsyncMock(
             return_value=None)
         self.webhook_receiver.redirect = Mock()
-        yield self.webhook_receiver.setup()
+        await self.webhook_receiver.setup()
         url = self.webhook_receiver.redirect.call_args[0][0]
         self.assertIn('redirect=', url)
         self.assertTrue(self.webhook_receiver.request.full_url.called)
 
     @patch.object(webhook_receivers, 'settings', Mock())
-    @gen_test
-    def test_setup_ok(self):
+    @async_test
+    async def test_setup_ok(self):
         self.webhook_receiver._get_user_from_cookie = AsyncMock(
             return_value=Mock())
         self.webhook_receiver.redirect = Mock()
         self.webhook_receiver.create_installation = Mock()
-        yield self.webhook_receiver.setup()
+        await self.webhook_receiver.setup()
 
         self.assertTrue(self.webhook_receiver.create_installation.called)
 
@@ -271,7 +271,7 @@ class BaseWebhookReceiverTest(AsyncTestCase):
         self.assertTrue(self.webhook_receiver.INSTALL_CLS.objects.get.called)
 
 
-class GithubWebhookReceiverTest(AsyncTestCase):
+class GithubWebhookReceiverTest(TestCase):
 
     def setUp(self):
         super().setUp()
@@ -307,25 +307,23 @@ class GithubWebhookReceiverTest(AsyncTestCase):
             application, request)
 
     @patch.object(webhook_receivers, 'settings', Mock())
-    @gen_test
     def test_create_installation_without_installation_id(self):
         # installation_id is sent as a get param by github
         user = Mock()
         self.webhook_receiver.params = {}
         self.webhook_receiver.redirect = Mock()
         with self.assertRaises(webhook_receivers.HTTPError):
-            yield self.webhook_receiver.create_installation(user)
+            self.webhook_receiver.create_installation(user)
 
     @patch.object(
         webhook_receivers.GithubIntegration, 'create', AsyncMock())
     @patch.object(webhook_receivers, 'settings', Mock())
-    @gen_test
     def test_create_installation_ok(self):
         # if everything ok, we create a installation.
         user = Mock()
         self.webhook_receiver.params = {'installation_id': 1234}
         self.webhook_receiver.redirect = Mock()
-        yield self.webhook_receiver.create_installation(user)
+        self.webhook_receiver.create_installation(user)
         self.assertTrue(webhook_receivers.GithubIntegration.create.called)
 
     def test_check_event_type_ping(self):
@@ -460,7 +458,7 @@ class GithubWebhookReceiverTest(AsyncTestCase):
         self.assertEqual(r, expected)
 
 
-class GitlabWebhookReceiverTest(AsyncTestCase):
+class GitlabWebhookReceiverTest(TestCase):
 
     def setUp(self):
         super().setUp()
@@ -723,7 +721,7 @@ class GitlabWebhookReceiverTest(AsyncTestCase):
         self.assertEqual(r, 'token')
 
 
-class BitbucketWebhookReceriverTest(AsyncTestCase):
+class BitbucketWebhookReceriverTest(TestCase):
 
     def setUp(self):
         super().setUp()
