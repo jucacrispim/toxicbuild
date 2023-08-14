@@ -112,7 +112,7 @@ sphinxcontrib-serializinghtml==1.1.5
 sphinxcontrib-websupport==1.2.4
 tempora==5.2.1
 terminaltables==3.1.10
-tornado==6.3.2
+tornado==6.3.3
 toxicjasmine==0.2.3
 tqdm==4.65.0
 traitlets==5.9.0
