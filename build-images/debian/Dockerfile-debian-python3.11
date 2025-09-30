@@ -1,4 +1,4 @@
-FROM python:3.11.3-slim-bullseye
+FROM python:3.11-slim-bookworm
 
 RUN apt-get update && apt-get install -y sudo
 
@@ -16,7 +16,7 @@ RUN echo "exit 0" > /usr/sbin/policy-rc.d
 
 COPY sudoers /etc/sudoers
 RUN useradd -ms /bin/bash toxicuser
-RUN addgroup toxicuser sudo
+RUN adduser toxicuser sudo
 USER toxicuser
 WORKDIR /home/toxicuser
 RUN python -m venv /home/toxicuser/.venv

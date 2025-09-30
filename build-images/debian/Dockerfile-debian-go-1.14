@@ -1,4 +1,4 @@
-FROM debian:buster-slim
+FROM debian:bookworm-slim
 
 
 RUN apt-get update && apt-get install -y sudo curl make gcc
@@ -22,7 +22,7 @@ RUN echo "exit 0" > /usr/sbin/policy-rc.d
 
 COPY sudoers /etc/sudoers
 RUN useradd -ms /bin/bash toxicuser
-RUN addgroup toxicuser sudo
+RUN adduser toxicuser sudo
 USER toxicuser
 ENV PATH="$PATH:$HOME/go/bin"
 WORKDIR /home/toxicuser

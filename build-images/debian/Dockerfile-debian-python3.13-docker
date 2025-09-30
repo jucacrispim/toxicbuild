@@ -1,4 +1,4 @@
-FROM jucacrispim/toxiccontainers:debian-go1.14
+FROM jucacrispim/toxiccontainers:debian-python3.13
 
 USER root
 
@@ -12,7 +12,7 @@ RUN add-apt-repository \
    stable"
 
 RUN echo "exit 101" > /usr/sbin/policy-rc.d
-RUN apt-get update && apt-get install -y docker adduser docker.io docker-compose
+RUN apt-get update && apt-get install -y docker docker.io docker-compose
 RUN echo "exit 0" > /usr/sbin/policy-rc.d
 
 RUN usermod -aG docker toxicuser
