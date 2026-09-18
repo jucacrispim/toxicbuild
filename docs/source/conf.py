@@ -12,17 +12,17 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sphinx_pdj_theme
-from toxicbuild import VERSION
-from toxicbuild.master import create_settings_and_connect
-from toxicbuild.slave import create_settings
-from toxicbuild.ui import create_settings as create_settings_ui
-from toxicbuild.output import create_settings_and_connect as create_output
+import os
+import sys
 
-create_settings_and_connect()
-create_settings()
-create_settings_ui()
-create_output()
+import sphinx_pdj_theme
+
+# doctools.py lives on the repo root and docs/extensions.py on the docs
+# dir, so we need the repo root on sys.path to import them as extensions.
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', '..')))
+
+from toxicbuild import VERSION  # noqa: E402
 
 
 # If extensions (or modules to document with autodoc) are in another directory,

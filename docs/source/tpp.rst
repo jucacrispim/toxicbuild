@@ -30,12 +30,13 @@ And you can send it using nc, for example.
   # here you should see the response from the slave.
 
 
-Or, using the :class:`toxicbuild.core.BaseToxicClient` in the python
+Or, using the :class:`toxiccore.client.BaseToxicClient` in the python
 API.
 
 .. code-block:: python
 
     >>> import asyncio
+    >>> from toxiccore.client import BaseToxicClient
     >>> loop = asycio.get_event_loop()
     >>> async def healthcheck():
     ...     client = BaseToxicClient('localhost', 6666)
@@ -50,8 +51,7 @@ API.
 
 
 For for information about the actions supported by the slave look at
-:class:`toxicbuild.slave.protocols.BuildServerProtocol` and
-:source:`tests/functional/test_slave.py`.
+:class:`toxicslave.protocols.BuildServerProtocol`.
 
 
 Requests to the master
@@ -79,5 +79,4 @@ So, first authenticate:
 
 
 For more information about the actions supported by the master look at
-:class:`toxicbuild.master.hole.HoleHandler` and
-:source:`tests/functional/test_master.py`.
+:class:`toxicmaster.hole.HoleHandler`.

@@ -40,7 +40,6 @@ If you are interested in messing around with toxicbuild, read:
 
    hacking
    tpp
-   apidoc/modules
 
 
 Issue Tracker

@@ -1,0 +1,44 @@
+[build-system]
+requires = [
+    "setuptools >= 65",
+    "wheel >= 0.38",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "toxicbuild"
+dynamic = ["version"]
+authors = [
+  { name="me@myself.com" },
+]
+description = "toxicbuild: orchestrator for the toxicbuild components"
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+    'mando==0.6.4',
+]
+
+classifiers = [
+    'Development Status :: 3 - Alpha',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: GNU General Public License (GPL)',
+    'Natural Language :: English',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python :: 3',
+    'Topic :: Software Development :: Build Tools',
+    'Topic :: Software Development :: Testing',
+    'License :: OSI Approved :: GNU General Public License v3 (GPLv3)'
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests*"]
+include = ["toxicbuild"]
+namespaces = true
+
+[tool.setuptools.dynamic]
+version = {attr = "toxicbuild.VERSION"}
+
+[project.scripts]
+toxicbuild = "toxicbuild.cmds:main"
