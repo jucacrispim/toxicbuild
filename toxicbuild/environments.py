@@ -207,7 +207,8 @@ class Component:
 
     def stop(self):
         """Stops the component."""
-        return self._run([self.entrypoint, 'stop', self.workdir], capture=False)
+        return self._run([self.entrypoint, 'stop', self.workdir],
+                         capture=False)
 
     def restart(self, loglevel=None):
         """Restarts the component."""

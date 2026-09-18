@@ -1,117 +1,63 @@
 # CI confs for toxicbuild
 
+language: python
+
+versions:
+  - '3.12'
+  - '3.13'
+
+extra_indexes:
+  - 'https://pypi.poraodojuca.dev'
+
+branches:
+  - master
+  - bug-*
+  - feature-*
+  - refactor-*
+
+system_packages:
+  - make
+  - git
+  - curl
+
+steps:
+  - name: Linter checks
+    command: ./scripts/run_linter.sh
+
+  - name: Build docs
+    command: ./build-scripts/build_docs.sh
+
+
 builders:
 
-  # Python builder
-  - name: python
-    platform: docker
-
-    branches:
-      - master
-      - 'feature-*'
-      - 'bug-*'
-      - 'refactor-*'
-
-    envvars:
-      ENV: ci
-      TEST: python
-      DBHOST: mongo
-      AMQPHOST: rabbitmq
-      ZK_SERVERS: "zookeeper:2181"
-
-
-    steps:
-
-      - name: Create test environment
-        command: ./build-scripts/toxicinstall.sh create-test-env
-        stop_on_fail: true
-
-      - name: Linter checks
-        command: docker-compose -f ops/docker/docker-compose.yml run pylint
-
-      - name: Code style checks
-        command: docker-compose -f ops/docker/docker-compose.yml run pep8
-        warning_on_fail: true
-
-      - name: Code complexity checks
-        command: docker-compose -f ops/docker/docker-compose.yml run xenon
-        warning_on_fail: true
-
-      - name: Unit tests
-        command: docker-compose -f ops/docker/docker-compose.yml run unit-tests
-        timeout: 20
-
-      - name: Functional tests
-        command: docker-compose -f ops/docker/docker-compose.yml run functional-tests
-        timeout: 45
-
-      - name: Clean old images
-        command: ./build-scripts/clean_images.sh
-
-
-  # Selenium builder
-  - name: selenium
-    platform: docker
-
-    branches:
-      - master
-      - 'feature-*'
-      - 'bug-*'
-      - 'refactor-*'
-
-    triggered_by:
-      - builder_name: python
-        statuses:
-          - success
-
-    envvars:
-      ENV: ci
-      TEST: selenium
-      DBHOST: mongo
-      AMQPHOST: rabbitmq
-      ZK_SERVERS: "zookeeper:2181"
-
-
-    steps:
-
-      - name: Create test environment
-        command: ./build-scripts/toxicinstall.sh create-test-selenium-env
-        stop_on_fail: true
-
-      - name: JS unit tests
-        command: docker-compose -f ops/docker/docker-compose.yml run js-unit-tests
-
-      - name: Selenium tests
-        command: docker-compose -f ops/docker/docker-compose.yml up selenium-tests
-        timeout: 45
-        warning_on_fail: true
-
-      - name: Selenium integration tests
-        command: docker-compose -f ops/docker/docker-compose.yml up selenium-integration-tests
-        timeout: 40
-
-      - name: Clean old images
-        command: ./build-scripts/clean_images.sh
-
-  # Docs builder
-  - name: docs
-    platform: docker
-
+  - name: Docs & Release
     branches:
       - release
 
+    platform: python3.13
+
     envvars:
       ENV: ci
-      DBHOST: mongo
-      AMQPHOST: rabbitmq
-      ZK_SERVERS: "zookeeper:2181"
 
+    plugins:
+      - name: apt-install
+        packages:
+          - build-essential
+          - curl
+
+      - name: python-venv
+        pyversion: python3.13
+        extra_indexes:
+          - 'https://pypi.poraodojuca.dev'
 
     steps:
-
-      - name: Create test environment
-        command: ./build-scripts/toxicinstall.sh create-test-env
+      - name: Build docs
+        command: ./build-scripts/build_docs.sh
         stop_on_fail: true
 
-      - name: build docs
-        command: docker-compose -f ops/docker/docker-compose.yml run js-unit-tests
+      - name: Build package
+        command: ./scripts/release.sh
+        stop_on_fail: true
+
+      - name: Upload docs
+        command: ./scripts/upload_docs.sh
